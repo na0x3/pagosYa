@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SettlementMode {
+  AGGREGATOR
+  FACILITATOR
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum ApiKeyMode {
+  TEST
+  LIVE
+}
+
+enum ApiKeyType {
+  PUBLISHABLE
+  SECRET
+}
+
+enum PaymentMethodType {
+  CARD
+  TIGO_MONEY
+  BANK_TRANSFER
+  QR
+}
+
+enum PaymentIntentStatus {
+  REQUIRES_PAYMENT_METHOD
+  REQUIRES_CONFIRMATION
+  PROCESSING
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum TransactionType {
+  AUTHORIZATION
+  CAPTURE
+  REFUND
+  PAYOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum LedgerAccount {
+  RAIL_CLEARING
+  MERCHANT_PAYABLE
+  PAGOSYA_FEE_REVENUE
+  RESERVE
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum WebhookEventStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+model Merchant {
+  id               String            @id @default(cuid())
+  name             String
+  email            String            @unique
+  settlementMode   SettlementMode    @default(FACILITATOR)
+  status           MerchantStatus    @default(PENDING)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  apiKeys          ApiKey[]
+  paymentIntents   PaymentIntent[]
+  webhookEndpoints WebhookEndpoint[]
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  merchantId   String
+  merchant     Merchant   @relation(fields: [merchantId], references: [id])
+  mode         ApiKeyMode
+  type         ApiKeyType
+  keyPrefix    String
+  hashedSecret String
+  revokedAt    DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([keyPrefix])
+}
+
+model PaymentIntent {
+  id                String              @id @default(cuid())
+  merchantId        String
+  merchant          Merchant            @relation(fields: [merchantId], references: [id])
+  amount            Int
+  currency          String              @default("BOB")
+  status            PaymentIntentStatus @default(REQUIRES_PAYMENT_METHOD)
+  paymentMethodType PaymentMethodType?
+  paymentMethodId   String?
+  paymentMethod     PaymentMethod?      @relation(fields: [paymentMethodId], references: [id])
+  clientSecret      String              @unique
+  livemode          Boolean             @default(false)
+  description       String?
+  metadata          Json?
+  railId            String?
+  confirmationAttempts Int              @default(0)
+  lastError         Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  transactions      Transaction[]
+
+  @@index([merchantId, createdAt])
+}
+
+model PaymentMethod {
+  id             String            @id @default(cuid())
+  merchantId     String
+  type           PaymentMethodType
+  token          String
+  last4          String?
+  brand          String?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  paymentIntents PaymentIntent[]
+
+  @@unique([merchantId, token])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  paymentIntentId String
+  paymentIntent   PaymentIntent     @relation(fields: [paymentIntentId], references: [id])
+  type            TransactionType
+  railId          String
+  amount          Int
+  status          TransactionStatus
+  railReference   String?
+  rawResponse     Json?
+  createdAt       DateTime          @default(now())
+  ledgerEntries   LedgerEntry[]
+
+  @@index([paymentIntentId])
+}
+
+model LedgerEntry {
+  id                 String          @id @default(cuid())
+  transactionGroupId String
+  transactionId      String?
+  transaction        Transaction?    @relation(fields: [transactionId], references: [id])
+  merchantId         String?
+  account            LedgerAccount
+  direction          LedgerDirection
+  amount             Int
+  currency           String          @default("BOB")
+  createdAt          DateTime        @default(now())
+
+  @@index([transactionGroupId])
+  @@index([merchantId, account])
+}
+
+model WebhookEndpoint {
+  id            String         @id @default(cuid())
+  merchantId    String
+  merchant      Merchant       @relation(fields: [merchantId], references: [id])
+  url           String
+  secret        String
+  enabledEvents String[]
+  status        String         @default("ACTIVE")
+  createdAt     DateTime       @default(now())
+  events        WebhookEvent[]
+}
+
+model WebhookEvent {
+  id                 String             @id @default(cuid())
+  merchantId         String
+  webhookEndpointId  String
+  webhookEndpoint    WebhookEndpoint    @relation(fields: [webhookEndpointId], references: [id])
+  eventType          String
+  payload            Json
+  status             WebhookEventStatus @default(PENDING)
+  attempts           Int                @default(0)
+  nextRetryAt        DateTime?
+  lastAttemptAt      DateTime?
+  lastResponseStatus Int?
+  createdAt          DateTime           @default(now())
+
+  @@index([status, nextRetryAt])
+}
+
+model IdempotencyKey {
+  id             String    @id @default(cuid())
+  merchantId     String
+  key            String
+  requestHash    String
+  responseStatus Int?
+  responseBody   Json?
+  status         String    @default("IN_PROGRESS")
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@unique([merchantId, key])
+}

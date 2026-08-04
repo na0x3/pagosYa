@@ -1,0 +1,121 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.amount {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.description {
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tab.active {
+  background: #111827;
+  color: white;
+  border-color: #111827;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.field select,
+.field input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+button.primary {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #111827;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+button.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px dashed #9ca3af;
+  background: white;
+  color: #374151;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.status {
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.status.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.status.failed {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.status.action {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}

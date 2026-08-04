@@ -1,0 +1,17 @@
+{
+  "name": "@pagosya/widget-js",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/pagosya.js",
+  "scripts": {
+    "build": "tsup && node scripts/rename-output.mjs",
+    "dev": "tsup --watch --minify=false"
+  },
+  "dependencies": {
+    "@pagosya/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3"
+  }
+}
