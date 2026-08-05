@@ -88,6 +88,12 @@ enum InvoiceStatus {
   FAILED
 }
 
+enum PayoutStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
 model Merchant {
   id               String            @id @default(cuid())
   name             String
@@ -102,6 +108,7 @@ model Merchant {
   kycSubmissions   MerchantKycSubmission[]
   invoicingProfile MerchantInvoicingProfile?
   invoices         Invoice[]
+  payouts          Payout[]
 }
 
 // NIT/branch/point-of-sale registration a merchant needs on file before
@@ -148,6 +155,31 @@ model Invoice {
   createdAt        DateTime      @default(now())
 
   @@index([status, nextRetryAt])
+}
+
+// Payout is the payout-side analog of Transaction (which is always scoped to
+// one PaymentIntent): a payout nets a merchant's *unpaid* MERCHANT_PAYABLE
+// ledger balance across many PaymentIntents into one disbursement. Only ever
+// created for AGGREGATOR merchants — FACILITATOR merchants' MERCHANT_PAYABLE
+// entries are informational only, since the rail already settled funds
+// straight to them; paying those out too would be sending money twice.
+model Payout {
+  id            String       @id @default(cuid())
+  merchantId    String
+  merchant      Merchant     @relation(fields: [merchantId], references: [id])
+  amount        Int
+  currency      String       @default("BOB")
+  bankAccount   String
+  status        PayoutStatus @default(PENDING)
+  railReference String?
+  failureReason String?
+  attempts      Int          @default(0)
+  nextRetryAt   DateTime?
+  paidOutAt     DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([status, nextRetryAt])
+  @@index([merchantId, createdAt])
 }
 
 model MerchantKycSubmission {

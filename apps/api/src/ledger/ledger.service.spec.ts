@@ -32,6 +32,14 @@ describe("LedgerService", () => {
     expect(netsToZero(lines)).toBe(true);
   });
 
+  it("builds a balanced payout journal that draws down MERCHANT_PAYABLE", () => {
+    const lines = ledger.buildPayoutJournal({ merchantId: "merch_1", amount: 975 });
+    expect(netsToZero(lines)).toBe(true);
+    const payable = lines.find((l) => l.account === LedgerAccount.MERCHANT_PAYABLE);
+    expect(payable?.direction).toBe(LedgerDirection.DEBIT);
+    expect(payable?.amount).toBe(975);
+  });
+
   it("throws when postJournalEntry lines do not balance", async () => {
     const badLines = [
       { account: LedgerAccount.RAIL_CLEARING, direction: LedgerDirection.DEBIT, amount: 100 },

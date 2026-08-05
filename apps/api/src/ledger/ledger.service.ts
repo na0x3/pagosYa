@@ -103,4 +103,18 @@ export class LedgerService {
       { account: LedgerAccount.RAIL_CLEARING, direction: LedgerDirection.CREDIT, amount, merchantId, transactionId },
     ];
   }
+
+  /**
+   * Draws down what pagosYa owes a merchant by the disbursed amount, and the
+   * matching decrease in the pooled clearing cash that funded it. This is
+   * what makes `sum(MERCHANT_PAYABLE entries)` always equal the *unpaid*
+   * balance — PayoutsService.getPayableBalance relies on that invariant.
+   */
+  buildPayoutJournal(params: { merchantId: string; amount: number }): JournalLine[] {
+    const { merchantId, amount } = params;
+    return [
+      { account: LedgerAccount.MERCHANT_PAYABLE, direction: LedgerDirection.DEBIT, amount, merchantId },
+      { account: LedgerAccount.RAIL_CLEARING, direction: LedgerDirection.CREDIT, amount, merchantId },
+    ];
+  }
 }
