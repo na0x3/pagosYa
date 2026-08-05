@@ -67,4 +67,4 @@ export enum WebhookEventStatus {
   FAILED = "FAILED",
 }
 
-export type RailId = "mock_card" | "mock_tigo_money" | "mock_bank_transfer" | "mock_qr";
+export type RailId = "mock_card" | "mock_tigo_money" | "mock_bank_transfer" | "mock_qr" | "baneco_qr";

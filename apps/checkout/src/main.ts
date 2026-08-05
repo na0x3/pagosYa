@@ -157,17 +157,26 @@ function renderFailed(paymentIntentId: string, message: string) {
 
 function renderRequiresAction(paymentIntentId: string, railId: string, actionRequired: unknown) {
   const action = actionRequired as { type: string; data: Record<string, string> } | undefined;
+  // Real bank QR (e.g. Baneco) returns a ready-to-scan PNG; the mock rail only has a raw
+  // EMV-ish payload string to render as text — support both without the adapter caring.
+  const qrImageHtml =
+    action?.type === "qr_display" && action.data.qrImageBase64
+      ? `<img class="qr-image" alt="Código QR" src="data:image/png;base64,${action.data.qrImageBase64}" />`
+      : "";
   const message =
     action?.type === "ussd_prompt"
       ? action.data.message
       : action?.type === "qr_display"
-        ? `Escanee el código QR: ${action.data.qrPayload}`
+        ? qrImageHtml
+          ? "Escanee el código QR con su app bancaria"
+          : `Escanee el código QR: ${action.data.qrPayload}`
         : action?.type === "redirect"
           ? `Confirme en: ${action.data.redirectUrl}`
           : "Esperando confirmación...";
 
   app.innerHTML = `
     <div class="status action">${ICON_CLOCK}<span>${message}</span></div>
+    ${qrImageHtml}
     ${import.meta.env.DEV ? `<button class="secondary" id="simulate">[dev] Simular confirmación exitosa</button>` : ""}
   `;
 

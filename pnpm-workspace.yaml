@@ -7,6 +7,7 @@ overrides:
   node-releases: "2.0.51"
   terser: "5.49.0"
 allowBuilds:
+  '@embedded-postgres/darwin-arm64': true
   '@embedded-postgres/linux-x64': true
   '@nestjs/core': true
   '@prisma/client': true

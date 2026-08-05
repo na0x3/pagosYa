@@ -300,6 +300,17 @@ button.secondary:hover {
   animation: pg-pulse 1.6s ease-in-out infinite;
 }
 
+.qr-image {
+  display: block;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
 @keyframes pg-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }

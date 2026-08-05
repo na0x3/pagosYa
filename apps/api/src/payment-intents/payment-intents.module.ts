@@ -3,6 +3,7 @@ import { PaymentIntentsService } from "./payment-intents.service";
 import { PaymentIntentsController } from "./payment-intents.controller";
 import { CheckoutSessionController } from "./checkout-session.controller";
 import { RailCallbackController } from "./rail-callback.controller";
+import { BanecoQrWebhookController } from "./baneco-qr-webhook.controller";
 import { RailsModule } from "../rails/rails.module";
 import { PaymentMethodsModule } from "../payment-methods/payment-methods.module";
 import { LedgerModule } from "../ledger/ledger.module";
@@ -13,7 +14,7 @@ import { DashboardModule } from "../dashboard/dashboard.module";
 
 @Module({
   imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule],
-  controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController],
+  controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController, BanecoQrWebhookController],
   providers: [PaymentIntentsService],
   exports: [PaymentIntentsService],
 })
