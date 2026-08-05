@@ -4,78 +4,185 @@
 <meta charset="utf-8">
 <title>pagosYa — Ops Console</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 16px; }
-  h1 { font-size: 1.4rem; margin-bottom: 4px; }
-  h2 { font-size: 1.05rem; margin: 32px 0 8px; }
-  .muted { color: #6b7280; font-size: 0.9rem; }
-  .whoami { font-size: 0.85rem; margin-top: 4px; }
-  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
-  .setup label { display: block; font-size: 0.8rem; margin-bottom: 4px; }
-  .setup input { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 220px; }
-  button { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; }
-  button.primary { background: #111827; color: white; border-color: #111827; }
-  button.approve { background: #059669; color: white; border-color: #059669; }
-  button.reject { background: #dc2626; color: white; border-color: #dc2626; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem; vertical-align: top; }
-  #error { color: #dc2626; margin-top: 12px; white-space: pre-wrap; }
-  #empty { color: #6b7280; margin-top: 16px; }
-  #auditEmpty { color: #6b7280; margin-top: 8px; }
-  code { font-size: 0.8rem; }
+  :root {
+    color-scheme: light dark;
+    --pg-bg: #f8fafc;
+    --pg-surface: #ffffff;
+    --pg-border: #e5e7eb;
+    --pg-border-strong: #d1d5db;
+    --pg-text: #0f172a;
+    --pg-text-muted: #64748b;
+    --pg-text-faint: #94a3b8;
+    --pg-primary: #0f172a;
+    --pg-primary-hover: #1e293b;
+    --pg-primary-text: #ffffff;
+    --pg-accent: #4f46e5;
+    --pg-accent-soft: #eef2ff;
+    --pg-success: #059669;
+    --pg-success-soft: #ecfdf5;
+    --pg-error: #dc2626;
+    --pg-error-soft: #fef2f2;
+    --pg-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 1px 8px -2px rgba(15,23,42,0.06);
+    --pg-focus-ring: rgba(79, 70, 229, 0.3);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --pg-bg: #0b1120;
+      --pg-surface: #0f1629;
+      --pg-border: #1e293b;
+      --pg-border-strong: #334155;
+      --pg-text: #f1f5f9;
+      --pg-text-muted: #94a3b8;
+      --pg-text-faint: #64748b;
+      --pg-primary: #f1f5f9;
+      --pg-primary-hover: #ffffff;
+      --pg-primary-text: #0f172a;
+      --pg-accent: #818cf8;
+      --pg-accent-soft: #1e1b4b;
+      --pg-success: #34d399;
+      --pg-success-soft: #052e1f;
+      --pg-error: #f87171;
+      --pg-error-soft: #2c0b0b;
+      --pg-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 8px -2px rgba(0,0,0,0.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Inter", "Segoe UI", system-ui, sans-serif;
+    background: var(--pg-bg);
+    color: var(--pg-text);
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px 100px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 6px; flex-wrap: wrap; gap: 8px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 32px; height: 32px; border-radius: 9px; background: var(--pg-accent); color: white;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0;
+  }
+  .brand h1 { font-size: 1.05rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .brand .subtitle { font-size: 0.78rem; color: var(--pg-text-muted); margin: 0; }
+  .muted { color: var(--pg-text-muted); font-size: 0.88rem; }
+  p.intro { margin: 4px 0 20px; }
+  .whoami { font-size: 0.85rem; color: var(--pg-text-muted); font-weight: 600; }
+
+  .panel {
+    background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: 14px;
+    padding: 20px; box-shadow: var(--pg-shadow); margin-bottom: 20px;
+  }
+  .panel-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  label { display: block; font-size: 0.76rem; font-weight: 600; color: var(--pg-text-muted); margin-bottom: 5px; }
+  input {
+    padding: 9px 11px; border: 1.5px solid var(--pg-border); border-radius: 9px; font-size: 0.88rem;
+    background: var(--pg-surface); color: var(--pg-text); font-family: inherit; min-width: 220px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input:focus { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+
+  button {
+    padding: 9px 14px; border-radius: 9px; border: 1.5px solid var(--pg-border-strong); background: var(--pg-surface);
+    color: var(--pg-text); cursor: pointer; font-size: 0.85rem; font-weight: 600; font-family: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  }
+  button:hover { border-color: var(--pg-text-faint); }
+  button.primary { background: var(--pg-primary); color: var(--pg-primary-text); border-color: var(--pg-primary); }
+  button.primary:hover { background: var(--pg-primary-hover); }
+  button.approve { background: var(--pg-success); color: white; border-color: var(--pg-success); padding: 6px 12px; font-size: 0.8rem; }
+  button.approve:hover { opacity: 0.88; }
+  button.reject { background: var(--pg-error); color: white; border-color: var(--pg-error); padding: 6px 12px; font-size: 0.8rem; }
+  button.reject:hover { opacity: 0.88; }
+
+  h2 { font-size: 0.98rem; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.005em; }
+  .section-head { margin-bottom: 14px; }
+  section.block { margin-bottom: 24px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 9px 10px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--pg-text-faint); border-bottom: 1.5px solid var(--pg-border); }
+  td { padding: 11px 10px; font-size: 0.85rem; border-bottom: 1px solid var(--pg-border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--pg-bg); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78rem; color: var(--pg-text-muted); }
+  .actions-cell { display: flex; gap: 6px; }
+
+  .empty-state { text-align: center; padding: 36px 16px; color: var(--pg-text-faint); font-size: 0.88rem; }
+
+  #error { color: var(--pg-error); background: var(--pg-error-soft); border: 1px solid var(--pg-error); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; white-space: pre-wrap; }
+  #error:empty { display: none; }
 </style>
 </head>
 <body>
-  <h1>pagosYa — Ops Console</h1>
-  <p class="muted">Internal-only. KYC review queue — approving flips the merchant to ACTIVE and unlocks live keys/payouts for them.</p>
-
-  <div class="setup">
-    <div>
-      <label for="apiOrigin">API origin</label>
-      <input id="apiOrigin" value="http://localhost:3000">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">pY</div>
+      <div>
+        <h1>pagosYa</h1>
+        <p class="subtitle">Ops Console</p>
+      </div>
     </div>
-    <div>
-      <label for="opsToken">Your ops token</label>
-      <input id="opsToken" type="password" placeholder="ops_...">
-    </div>
-    <button class="primary" id="connect">Connect &amp; refresh</button>
+    <div class="whoami" id="whoami"></div>
   </div>
-  <div class="whoami muted" id="whoami"></div>
+  <p class="muted intro">Internal-only. KYC review queue — approving flips the merchant to ACTIVE and unlocks live keys/payouts for them.</p>
+
+  <div class="panel">
+    <div class="panel-row">
+      <div>
+        <label for="apiOrigin">API origin</label>
+        <input id="apiOrigin" value="http://localhost:3000">
+      </div>
+      <div>
+        <label for="opsToken">Your ops token</label>
+        <input id="opsToken" type="password" placeholder="ops_...">
+      </div>
+      <button class="primary" id="connect">Connect &amp; refresh</button>
+    </div>
+  </div>
 
   <div id="error"></div>
 
-  <h2>Pending KYC review</h2>
-  <div id="empty" style="display:none">No submissions pending review.</div>
-  <table id="table" style="display:none">
-    <thead>
-      <tr>
-        <th>Merchant</th>
-        <th>Settlement</th>
-        <th>Legal name / NIT</th>
-        <th>Legal rep</th>
-        <th>Payout account</th>
-        <th>Submitted</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <section class="block">
+    <div class="panel">
+      <div class="section-head"><h2>Pending KYC review</h2></div>
+      <div id="empty" class="empty-state" style="display:none">No submissions pending review.</div>
+      <table id="table" style="display:none">
+        <thead>
+          <tr>
+            <th>Merchant</th>
+            <th>Settlement</th>
+            <th>Legal name / NIT</th>
+            <th>Legal rep</th>
+            <th>Payout account</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
 
-  <h2>Audit log</h2>
-  <p class="muted">Every review decision, attributed to the reviewer who made it.</p>
-  <div id="auditEmpty" style="display:none">No entries yet.</div>
-  <table id="auditTable" style="display:none">
-    <thead>
-      <tr>
-        <th>When</th>
-        <th>Actor</th>
-        <th>Action</th>
-        <th>Target</th>
-        <th>Note</th>
-      </tr>
-    </thead>
-    <tbody id="auditRows"></tbody>
-  </table>
+  <section class="block">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Audit log</h2>
+        <p class="muted" style="margin: 2px 0 0">Every review decision, attributed to the reviewer who made it.</p>
+      </div>
+      <div id="auditEmpty" class="empty-state" style="display:none">No entries yet.</div>
+      <table id="auditTable" style="display:none">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Target</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="auditRows"></tbody>
+      </table>
+    </div>
+  </section>
 
 <script>
   const apiOriginEl = document.getElementById("apiOrigin");
@@ -130,8 +237,10 @@
         <td>${esc(s.payoutBankAccount)}</td>
         <td>${esc(new Date(s.createdAt).toLocaleString())}</td>
         <td>
-          <button class="approve" data-action="approve">Approve</button>
-          <button class="reject" data-action="reject">Reject</button>
+          <div class="actions-cell">
+            <button class="approve" data-action="approve">Approve</button>
+            <button class="reject" data-action="reject">Reject</button>
+          </div>
         </td>
       </tr>`,
       )
