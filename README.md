@@ -43,7 +43,7 @@ Cada decisión de revisión de KYC queda atribuida a una persona concreta, no a 
 
 ### Login del dashboard de comercio (`apps/api/src/dashboard/`)
 
-`MerchantAuthGuard` acepta llave secreta (`sk_...`) **o** token de sesión (`dash_...`) por prefijo, así que todos los endpoints de solo-lectura/configuración del comercio (`balance`, `payouts`, `payment_intents` list/get, `kyc`, `invoicing_profile`, `live_keys`) funcionan igual desde un backend (llave secreta) o desde `apps/merchant-dashboard` (sesión). Los endpoints que mueven dinero (`POST /v1/payment_intents`, `confirm`, `refunds`) siguen exigiendo llave secreta explícitamente — una sesión de dashboard nunca puede crear pagos.
+`MerchantAuthGuard` acepta llave secreta (`sk_...`) **o** token de sesión (`dash_...`) por prefijo, así que los endpoints de solo-lectura/configuración del comercio (`balance`, `payouts`, `payment_intents` list/get, `kyc`, `invoicing_profile`) funcionan igual desde un backend (llave secreta) o desde `apps/merchant-dashboard` (sesión). Dos categorías de endpoints exigen llave secreta explícitamente, nunca sesión: los que mueven dinero (`POST /v1/payment_intents`, `confirm`, `refunds`) y `POST /v1/merchants/live_keys` — emitir una llave `live` nueva es una credencial permanente y de mayor alcance que cualquier otra cosa que una sesión pueda hacer, así que una sesión comprometida no debe poder generar una.
 
 `POST /v1/dashboard/signup` (con la llave secreta, desde el backend del comercio) crea el login; `POST /v1/dashboard/login` (público, email/contraseña) devuelve el token de sesión; `POST /v1/dashboard/logout` lo revoca.
 

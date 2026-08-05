@@ -27,7 +27,6 @@
   form.inline label { display: block; font-size: 0.75rem; margin-bottom: 2px; }
   form.inline input { padding: 5px 7px; border: 1px solid #d1d5db; border-radius: 6px; }
   #error { color: #dc2626; margin: 12px 0; white-space: pre-wrap; }
-  #liveKeysResult { font-family: monospace; font-size: 0.8rem; margin-top: 8px; white-space: pre-wrap; }
   #loggedInBar { display: none; margin-bottom: 20px; align-items: center; gap: 12px; }
   section { display: none; }
 </style>
@@ -88,8 +87,12 @@
     </div>
 
     <h2>Live keys</h2>
-    <button id="requestLiveKeys">Request live keys</button>
-    <div id="liveKeysResult"></div>
+    <p class="muted">
+      Minting a live secret key isn't done from this page: a compromised dashboard session must never be able to
+      produce a permanent, full-power credential. Once KYC is approved, call
+      <code>POST /v1/dashboard/signup</code>'s sibling — <code>POST /v1/merchants/live_keys</code> — from your own
+      backend, authenticated with your existing secret key.
+    </p>
 
     <h2>Invoicing profile (Factura Electrónica)</h2>
     <div id="invoicingSection">
@@ -273,15 +276,6 @@
     try {
       await api("/merchants/invoicing_profile", { method: "POST", body: JSON.stringify(data) });
       await refresh();
-    } catch (err) {
-      errorEl.textContent = "Error: " + err.message;
-    }
-  });
-
-  document.getElementById("requestLiveKeys").addEventListener("click", async () => {
-    try {
-      const result = await api("/merchants/live_keys", { method: "POST" });
-      document.getElementById("liveKeysResult").textContent = JSON.stringify(result, null, 2);
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     }

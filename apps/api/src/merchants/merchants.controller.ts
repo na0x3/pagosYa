@@ -5,6 +5,7 @@ import { KycService } from "./kyc.service";
 import { CreateMerchantDto } from "./dto/create-merchant.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
+import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { OpsAuthGuard } from "../ops/guards/ops-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -38,9 +39,17 @@ export class MerchantsController {
     return this.kyc.latest(merchant.id);
   }
 
+  /**
+   * Deliberately SecretApiKeyGuard-only, not MerchantAuthGuard: this mints a
+   * new, non-expiring sk_live_... credential — a strictly bigger and longer-
+   * lived capability than anything else a dashboard session grants, and one
+   * that would outlive the session itself (survives logout/expiry). A
+   * compromised session token must not be able to escalate into a permanent
+   * secret key.
+   */
   @Post("live_keys")
   @ApiBearerAuth()
-  @UseGuards(MerchantAuthGuard)
+  @UseGuards(SecretApiKeyGuard)
   issueLiveKeys(@CurrentMerchant() merchant: { id: string }) {
     return this.merchants.issueLiveKeys(merchant.id);
   }
