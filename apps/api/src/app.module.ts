@@ -11,6 +11,7 @@ import { RailsModule } from "./rails/rails.module";
 import { IdempotencyModule } from "./idempotency/idempotency.module";
 import { InvoicingModule } from "./invoicing/invoicing.module";
 import { PayoutsModule } from "./payouts/payouts.module";
+import { OpsModule } from "./ops/ops.module";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PayoutsModule } from "./payouts/payouts.module";
     IdempotencyModule,
     InvoicingModule,
     PayoutsModule,
+    OpsModule,
   ],
 })
 export class AppModule {}

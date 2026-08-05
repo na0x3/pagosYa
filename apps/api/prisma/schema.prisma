@@ -94,6 +94,37 @@ enum PayoutStatus {
   FAILED
 }
 
+// A named pagosYa staff member allowed to review KYC — replaces a single
+// shared INTERNAL_OPS_SECRET so every review decision is attributable to a
+// specific, revocable person instead of "whoever had the secret."
+model OpsUser {
+  id          String                  @id @default(cuid())
+  name        String
+  email       String                  @unique
+  hashedToken String
+  revokedAt   DateTime?
+  createdAt   DateTime                @default(now())
+  kycReviews  MerchantKycSubmission[]
+}
+
+// Generic append-only trail for sensitive ops actions (KYC review today;
+// intentionally generic so other ops actions can log to it later without a
+// schema change).
+model AuditLogEntry {
+  id         String   @id @default(cuid())
+  actorType  String
+  actorId    String
+  actorLabel String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
 model Merchant {
   id               String            @id @default(cuid())
   name             String
@@ -194,6 +225,11 @@ model MerchantKycSubmission {
   status             KycStatus @default(PENDING_REVIEW)
   reviewNote         String?
   reviewedAt         DateTime?
+  reviewedByOpsUserId String?
+  reviewedByOpsUser   OpsUser?  @relation(fields: [reviewedByOpsUserId], references: [id])
+  // Snapshot of the reviewer's name/email at review time — the audit record
+  // shouldn't change retroactively if the OpsUser is later renamed/revoked.
+  reviewedByLabel     String?
   createdAt          DateTime  @default(now())
 
   @@index([merchantId, createdAt])

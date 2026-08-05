@@ -24,14 +24,22 @@ Monorepo (pnpm workspaces):
 - `packages/widget-js` — script embebible (`pagosya.js`), análogo a Stripe.js, que monta el iframe de checkout y se comunica vía `postMessage`.
 - `packages/sdk-node` — SDK tipado en TypeScript para el backend de los comercios.
 - `packages/shared-types` — tipos compartidos entre api, checkout y widget.
-- `apps/ops` — consola interna (HTML + JS sin build) para revisar/aprobar KYC. Autentica con `INTERNAL_OPS_SECRET`.
+- `apps/ops` — consola interna (HTML + JS sin build) para revisar/aprobar KYC. Cada revisor se autentica con su propio token `ops_...` (ver Ops/auditoría abajo), no con un secreto compartido.
 - `apps/merchant-dashboard` — dashboard de comercio (HTML + JS sin build): balance, pagos, payouts, estado de KYC/facturación. **Placeholder de desarrollo**: autentica pegando la llave secreta en el navegador — una versión real necesita login propio del comercio, nunca la llave secreta en el browser.
 
 ### Onboarding, facturación y payouts
 
-- **KYC** (`apps/api/src/merchants/kyc.service.ts`): un comercio nace en estado `PENDING`, envía sus datos (`POST /v1/merchants/kyc`) y pagosYa los aprueba/rechaza (`POST /v1/merchants/kyc/:id/review`, protegido por `INTERNAL_OPS_SECRET`, distinto del secreto de los rieles). Solo al aprobar pasa a `ACTIVE` y puede pedir llaves `live` (`POST /v1/merchants/live_keys`).
+- **KYC** (`apps/api/src/merchants/kyc.service.ts`): un comercio nace en estado `PENDING`, envía sus datos (`POST /v1/merchants/kyc`) y pagosYa los aprueba/rechaza (`POST /v1/merchants/kyc/:id/review`). Solo al aprobar pasa a `ACTIVE` y puede pedir llaves `live` (`POST /v1/merchants/live_keys`).
 - **Factura Electrónica** (`apps/api/src/invoicing/`): mismo patrón que los rieles de pago — un `InvoicingProvider` con un mock de SIN/SIAT detrás, y un worker que emite facturas de forma asíncrona (outbox + reintentos) cuando un pago tiene éxito. **No implementa el algoritmo real de CUF/CUFD ni el XML de SIN** — la documentación técnica de SIN no fue accesible al construir esto (cadena de certificados TLS rota en siatinfo.impuestos.gob.bo); hace falta el spec real antes de un adaptador de producción.
 - **Payouts** (`apps/api/src/payouts/`): un worker calcula el saldo no pagado de cada comercio `AGGREGATOR` (a partir del ledger) y lo transfiere vía un `PayoutProvider` (mock de un banco real). Los comercios `FACILITATOR` nunca se pagan aquí — sus asientos de `MERCHANT_PAYABLE` son solo informativos porque el riel ya liquidó directo a su cuenta.
+
+### Ops y auditoría (`apps/api/src/ops/`)
+
+Cada decisión de revisión de KYC queda atribuida a una persona concreta, no a "quien tuviera el secreto compartido":
+
+- `OpsUser` — credencial por persona (token `ops_...`, ver `OpsUserService`). `INTERNAL_OPS_SECRET` ya solo protege `POST /internal/ops_users` (crear/revocar revisores) — el día a día de revisión usa el token propio de cada revisor (`OpsAuthGuard`).
+- `AuditLogEntry` — registro de cada decisión (actor, acción, objetivo, metadata), escrito en la misma transacción que el cambio que audita. Consultable en `GET /internal/audit_log`.
+- `pnpm run seed` crea un revisor demo (`ana@pagosya.bo`) e imprime su token la primera vez que corre.
 
 ### Rieles de pago (rails)
 

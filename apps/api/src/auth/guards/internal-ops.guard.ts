@@ -3,9 +3,12 @@ import { ConfigService } from "@nestjs/config";
 import { timingSafeEqual } from "node:crypto";
 
 /**
- * Authenticates pagosYa staff/ops actions (e.g. KYC review) — deliberately a
- * separate secret from InternalSecretGuard's rail-callback one, so a leaked
- * rail-driver credential can't also approve merchants.
+ * Bootstrapping-only secret, deliberately separate from InternalSecretGuard's
+ * rail-callback one. It now gates a single thing: creating/revoking named
+ * OpsUser accounts (see apps/api/src/ops/). Day-to-day actions like KYC
+ * review use OpsAuthGuard's per-person tokens instead, so every decision is
+ * attributed to a specific, revocable reviewer rather than "whoever has this
+ * shared secret."
  */
 @Injectable()
 export class InternalOpsGuard implements CanActivate {

@@ -10,6 +10,8 @@ const submitDto = {
   payoutBankAccount: "BNB 4012345678",
 };
 
+const actor = { id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo" };
+
 function makeFakePrisma() {
   const prisma = {
     merchant: {
@@ -30,6 +32,10 @@ function makeFakePrisma() {
   return prisma;
 }
 
+function makeFakeAuditLog() {
+  return { record: jest.fn().mockResolvedValue(undefined) };
+}
+
 describe("KycService.submit", () => {
   it("creates a PENDING_REVIEW submission for a non-active merchant", async () => {
     const prisma = makeFakePrisma();
@@ -37,7 +43,7 @@ describe("KycService.submit", () => {
     prisma.merchantKycSubmission.findFirst.mockResolvedValue(null);
     prisma.merchantKycSubmission.create.mockResolvedValue({ id: "kyc_1", ...submitDto, status: KycStatus.PENDING_REVIEW });
 
-    const service = new KycService(prisma as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
     const result = await service.submit("m_1", submitDto);
 
     expect(result.status).toBe(KycStatus.PENDING_REVIEW);
@@ -50,7 +56,7 @@ describe("KycService.submit", () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.ACTIVE });
 
-    const service = new KycService(prisma as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
     await expect(service.submit("m_1", submitDto)).rejects.toThrow(BadRequestException);
   });
 
@@ -59,13 +65,13 @@ describe("KycService.submit", () => {
     prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.PENDING });
     prisma.merchantKycSubmission.findFirst.mockResolvedValue({ id: "kyc_0", status: KycStatus.PENDING_REVIEW });
 
-    const service = new KycService(prisma as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
     await expect(service.submit("m_1", submitDto)).rejects.toThrow(BadRequestException);
   });
 });
 
 describe("KycService.review", () => {
-  it("approving a submission activates the merchant", async () => {
+  it("approving a submission activates the merchant and attributes it to the reviewing actor", async () => {
     const prisma = makeFakePrisma();
     prisma.merchantKycSubmission.findUnique.mockResolvedValue({
       id: "kyc_1",
@@ -73,17 +79,36 @@ describe("KycService.review", () => {
       status: KycStatus.PENDING_REVIEW,
     });
     prisma.merchantKycSubmission.update.mockResolvedValue({ id: "kyc_1", status: KycStatus.APPROVED });
+    const auditLog = makeFakeAuditLog();
 
-    const service = new KycService(prisma as any);
-    await service.review("kyc_1", { decision: KycStatus.APPROVED });
+    const service = new KycService(prisma as any, auditLog as any);
+    await service.review("kyc_1", { decision: KycStatus.APPROVED }, actor);
 
     expect(prisma.merchant.update).toHaveBeenCalledWith({
       where: { id: "m_1" },
       data: { status: MerchantStatus.ACTIVE },
     });
+    expect(prisma.merchantKycSubmission.update).toHaveBeenCalledWith({
+      where: { id: "kyc_1" },
+      data: expect.objectContaining({
+        reviewedByOpsUserId: "ops_1",
+        reviewedByLabel: "Ana Gutierrez <ana@pagosya.bo>",
+      }),
+    });
+    expect(auditLog.record).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({
+        actorType: "OPS_USER",
+        actorId: "ops_1",
+        actorLabel: "Ana Gutierrez <ana@pagosya.bo>",
+        action: "kyc.approved",
+        targetType: "MerchantKycSubmission",
+        targetId: "kyc_1",
+      }),
+    );
   });
 
-  it("rejecting a submission does not touch merchant status", async () => {
+  it("rejecting a submission does not touch merchant status but still logs the actor", async () => {
     const prisma = makeFakePrisma();
     prisma.merchantKycSubmission.findUnique.mockResolvedValue({
       id: "kyc_1",
@@ -91,19 +116,24 @@ describe("KycService.review", () => {
       status: KycStatus.PENDING_REVIEW,
     });
     prisma.merchantKycSubmission.update.mockResolvedValue({ id: "kyc_1", status: KycStatus.REJECTED });
+    const auditLog = makeFakeAuditLog();
 
-    const service = new KycService(prisma as any);
-    await service.review("kyc_1", { decision: KycStatus.REJECTED, note: "Missing NIT" });
+    const service = new KycService(prisma as any, auditLog as any);
+    await service.review("kyc_1", { decision: KycStatus.REJECTED, note: "Missing NIT" }, actor);
 
     expect(prisma.merchant.update).not.toHaveBeenCalled();
+    expect(auditLog.record).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({ action: "kyc.rejected", metadata: expect.objectContaining({ note: "Missing NIT" }) }),
+    );
   });
 
   it("throws for an unknown submission", async () => {
     const prisma = makeFakePrisma();
     prisma.merchantKycSubmission.findUnique.mockResolvedValue(null);
 
-    const service = new KycService(prisma as any);
-    await expect(service.review("missing", { decision: KycStatus.APPROVED })).rejects.toThrow(NotFoundException);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    await expect(service.review("missing", { decision: KycStatus.APPROVED }, actor)).rejects.toThrow(NotFoundException);
   });
 
   it("throws when reviewing a submission that was already decided", async () => {
@@ -114,7 +144,7 @@ describe("KycService.review", () => {
       status: KycStatus.APPROVED,
     });
 
-    const service = new KycService(prisma as any);
-    await expect(service.review("kyc_1", { decision: KycStatus.APPROVED })).rejects.toThrow(BadRequestException);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    await expect(service.review("kyc_1", { decision: KycStatus.APPROVED }, actor)).rejects.toThrow(BadRequestException);
   });
 });

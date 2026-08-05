@@ -5,10 +5,12 @@
 <title>pagosYa — Ops Console</title>
 <style>
   :root { color-scheme: light dark; }
-  body { font-family: system-ui, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 16px; }
-  h1 { font-size: 1.4rem; }
+  body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  h2 { font-size: 1.05rem; margin: 32px 0 8px; }
   .muted { color: #6b7280; font-size: 0.9rem; }
-  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
+  .whoami { font-size: 0.85rem; margin-top: 4px; }
+  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
   .setup label { display: block; font-size: 0.8rem; margin-bottom: 4px; }
   .setup input { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 220px; }
   button { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; }
@@ -16,9 +18,11 @@
   button.approve { background: #059669; color: white; border-color: #059669; }
   button.reject { background: #dc2626; color: white; border-color: #dc2626; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; vertical-align: top; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem; vertical-align: top; }
   #error { color: #dc2626; margin-top: 12px; white-space: pre-wrap; }
   #empty { color: #6b7280; margin-top: 16px; }
+  #auditEmpty { color: #6b7280; margin-top: 8px; }
+  code { font-size: 0.8rem; }
 </style>
 </head>
 <body>
@@ -27,17 +31,20 @@
 
   <div class="setup">
     <div>
-      <label for="apiBase">API base URL</label>
-      <input id="apiBase" value="http://localhost:3000/v1">
+      <label for="apiOrigin">API origin</label>
+      <input id="apiOrigin" value="http://localhost:3000">
     </div>
     <div>
-      <label for="opsSecret">Internal ops secret</label>
-      <input id="opsSecret" type="password" placeholder="INTERNAL_OPS_SECRET">
+      <label for="opsToken">Your ops token</label>
+      <input id="opsToken" type="password" placeholder="ops_...">
     </div>
     <button class="primary" id="connect">Connect &amp; refresh</button>
   </div>
+  <div class="whoami muted" id="whoami"></div>
 
   <div id="error"></div>
+
+  <h2>Pending KYC review</h2>
   <div id="empty" style="display:none">No submissions pending review.</div>
   <table id="table" style="display:none">
     <thead>
@@ -54,23 +61,43 @@
     <tbody id="rows"></tbody>
   </table>
 
+  <h2>Audit log</h2>
+  <p class="muted">Every review decision, attributed to the reviewer who made it.</p>
+  <div id="auditEmpty" style="display:none">No entries yet.</div>
+  <table id="auditTable" style="display:none">
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Actor</th>
+        <th>Action</th>
+        <th>Target</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody id="auditRows"></tbody>
+  </table>
+
 <script>
-  const apiBaseEl = document.getElementById("apiBase");
-  const opsSecretEl = document.getElementById("opsSecret");
+  const apiOriginEl = document.getElementById("apiOrigin");
+  const opsTokenEl = document.getElementById("opsToken");
+  const whoamiEl = document.getElementById("whoami");
   const errorEl = document.getElementById("error");
   const emptyEl = document.getElementById("empty");
   const tableEl = document.getElementById("table");
   const rowsEl = document.getElementById("rows");
+  const auditEmptyEl = document.getElementById("auditEmpty");
+  const auditTableEl = document.getElementById("auditTable");
+  const auditRowsEl = document.getElementById("auditRows");
 
-  apiBaseEl.value = sessionStorage.getItem("pagosya_ops_api_base") || apiBaseEl.value;
-  opsSecretEl.value = sessionStorage.getItem("pagosya_ops_secret") || "";
+  apiOriginEl.value = sessionStorage.getItem("pagosya_ops_api_origin") || apiOriginEl.value;
+  opsTokenEl.value = sessionStorage.getItem("pagosya_ops_token") || "";
 
   async function api(path, options = {}) {
-    const res = await fetch(apiBaseEl.value.replace(/\/$/, "") + path, {
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + path, {
       ...options,
       headers: {
         "content-type": "application/json",
-        authorization: "Bearer " + opsSecretEl.value,
+        authorization: "Bearer " + opsTokenEl.value,
         ...(options.headers || {}),
       },
     });
@@ -83,41 +110,73 @@
     return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
+  async function refreshQueue() {
+    const pending = await api("/v1/merchants/kyc/pending");
+    if (pending.length === 0) {
+      tableEl.style.display = "none";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+    tableEl.style.display = "table";
+    rowsEl.innerHTML = pending
+      .map(
+        (s) => `
+      <tr data-id="${esc(s.id)}">
+        <td><strong>${esc(s.merchant.name)}</strong><br><span class="muted">${esc(s.merchant.email)}</span></td>
+        <td>${esc(s.merchant.settlementMode)}</td>
+        <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
+        <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
+        <td>${esc(s.payoutBankAccount)}</td>
+        <td>${esc(new Date(s.createdAt).toLocaleString())}</td>
+        <td>
+          <button class="approve" data-action="approve">Approve</button>
+          <button class="reject" data-action="reject">Reject</button>
+        </td>
+      </tr>`,
+      )
+      .join("");
+  }
+
+  async function refreshAuditLog() {
+    const entries = await api("/internal/audit_log");
+    if (entries.length === 0) {
+      auditTableEl.style.display = "none";
+      auditEmptyEl.style.display = "block";
+      return;
+    }
+    auditEmptyEl.style.display = "none";
+    auditTableEl.style.display = "table";
+    auditRowsEl.innerHTML = entries
+      .map(
+        (e) => `
+      <tr>
+        <td>${esc(new Date(e.createdAt).toLocaleString())}</td>
+        <td>${esc(e.actorLabel)}</td>
+        <td>${esc(e.action)}</td>
+        <td>${esc(e.targetType)} <code>${esc(e.targetId)}</code></td>
+        <td>${esc(e.metadata && e.metadata.note ? e.metadata.note : "")}</td>
+      </tr>`,
+      )
+      .join("");
+  }
+
   async function refresh() {
     errorEl.textContent = "";
-    sessionStorage.setItem("pagosya_ops_api_base", apiBaseEl.value);
-    sessionStorage.setItem("pagosya_ops_secret", opsSecretEl.value);
+    sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
+    sessionStorage.setItem("pagosya_ops_token", opsTokenEl.value);
 
     try {
-      const pending = await api("/merchants/kyc/pending");
-      if (pending.length === 0) {
-        tableEl.style.display = "none";
-        emptyEl.style.display = "block";
-        return;
-      }
-      emptyEl.style.display = "none";
-      tableEl.style.display = "table";
-      rowsEl.innerHTML = pending
-        .map(
-          (s) => `
-        <tr data-id="${esc(s.id)}">
-          <td><strong>${esc(s.merchant.name)}</strong><br><span class="muted">${esc(s.merchant.email)}</span></td>
-          <td>${esc(s.merchant.settlementMode)}</td>
-          <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
-          <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
-          <td>${esc(s.payoutBankAccount)}</td>
-          <td>${esc(new Date(s.createdAt).toLocaleString())}</td>
-          <td>
-            <button class="approve" data-action="approve">Approve</button>
-            <button class="reject" data-action="reject">Reject</button>
-          </td>
-        </tr>`,
-        )
-        .join("");
+      const me = await api("/internal/ops_users/me");
+      whoamiEl.textContent = `Logged in as ${me.name} <${me.email}>`;
+      await Promise.all([refreshQueue(), refreshAuditLog()]);
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
+      whoamiEl.textContent = "";
       tableEl.style.display = "none";
       emptyEl.style.display = "none";
+      auditTableEl.style.display = "none";
+      auditEmptyEl.style.display = "none";
     }
   }
 
@@ -129,10 +188,10 @@
 
     try {
       if (action === "approve") {
-        await api(`/merchants/kyc/${id}/review`, { method: "POST", body: JSON.stringify({ decision: "APPROVED" }) });
+        await api(`/v1/merchants/kyc/${id}/review`, { method: "POST", body: JSON.stringify({ decision: "APPROVED" }) });
       } else {
         const note = prompt("Rejection reason (shown to the merchant):") || undefined;
-        await api(`/merchants/kyc/${id}/review`, { method: "POST", body: JSON.stringify({ decision: "REJECTED", note }) });
+        await api(`/v1/merchants/kyc/${id}/review`, { method: "POST", body: JSON.stringify({ decision: "REJECTED", note }) });
       }
       await refresh();
     } catch (err) {
@@ -141,7 +200,7 @@
   });
 
   document.getElementById("connect").addEventListener("click", refresh);
-  if (opsSecretEl.value) refresh();
+  if (opsTokenEl.value) refresh();
 </script>
 </body>
 </html>

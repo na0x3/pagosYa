@@ -6,8 +6,10 @@ import { CreateMerchantDto } from "./dto/create-merchant.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
-import { InternalOpsGuard } from "../auth/guards/internal-ops.guard";
+import { OpsAuthGuard } from "../ops/guards/ops-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
+import { CurrentOpsUser } from "../ops/decorators/current-ops-user.decorator";
+import { OpsActor } from "./kyc.service";
 
 @ApiTags("merchants")
 @Controller("v1/merchants")
@@ -46,7 +48,7 @@ export class MerchantsController {
   /** pagosYa ops/compliance queue — not merchant- or public-facing. */
   @Get("kyc/pending")
   @ApiBearerAuth()
-  @UseGuards(InternalOpsGuard)
+  @UseGuards(OpsAuthGuard)
   listPendingKyc() {
     return this.kyc.listPending();
   }
@@ -54,8 +56,12 @@ export class MerchantsController {
   /** pagosYa ops/compliance review action — not merchant- or public-facing. */
   @Post("kyc/:submissionId/review")
   @ApiBearerAuth()
-  @UseGuards(InternalOpsGuard)
-  reviewKyc(@Param("submissionId") submissionId: string, @Body() dto: ReviewKycDto) {
-    return this.kyc.review(submissionId, dto);
+  @UseGuards(OpsAuthGuard)
+  reviewKyc(
+    @CurrentOpsUser() opsUser: OpsActor,
+    @Param("submissionId") submissionId: string,
+    @Body() dto: ReviewKycDto,
+  ) {
+    return this.kyc.review(submissionId, dto, opsUser);
   }
 }

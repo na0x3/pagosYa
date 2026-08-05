@@ -3,13 +3,26 @@ import { PrismaClient, ApiKeyMode, ApiKeyType, KycStatus, SettlementMode } from 
 import { ApiKeyService } from "../src/auth/api-key.service";
 import { KycService } from "../src/merchants/kyc.service";
 import { MerchantsService } from "../src/merchants/merchants.service";
+import { OpsUserService } from "../src/ops/ops-user.service";
+import { AuditLogService } from "../src/ops/audit-log.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 
 async function main() {
   const prisma = new PrismaClient();
   const apiKeys = new ApiKeyService(prisma as unknown as PrismaService);
-  const kyc = new KycService(prisma as unknown as PrismaService);
+  const auditLog = new AuditLogService(prisma as unknown as PrismaService);
+  const kyc = new KycService(prisma as unknown as PrismaService, auditLog);
   const merchantsService = new MerchantsService(prisma as unknown as PrismaService, apiKeys);
+  const opsUsers = new OpsUserService(prisma as unknown as PrismaService);
+
+  const opsUserEmail = "ana@pagosya.bo";
+  let opsUser = await prisma.opsUser.findUnique({ where: { email: opsUserEmail } });
+  if (!opsUser) {
+    const created = await opsUsers.create("Ana Gutierrez", opsUserEmail);
+    opsUser = await prisma.opsUser.findUniqueOrThrow({ where: { id: created.user.id } });
+    console.log(`\nOps reviewer: ${created.user.name} <${created.user.email}>`);
+    console.log(`  ops token:       ${created.fullToken}`);
+  }
 
   const merchants = [
     { name: "pagosYa Demo Store (Aggregator)", email: "demo-aggregator@pagosya.bo", settlementMode: SettlementMode.AGGREGATOR },
@@ -49,8 +62,12 @@ async function main() {
         legalRepDocumentId: "7654321 LP",
         payoutBankAccount: "BNB 4012345678",
       });
-      const reviewed = await kyc.review(submission.id, { decision: KycStatus.APPROVED, note: "Seed data auto-approval" });
-      console.log(`  kyc:             ${reviewed.status} (reviewed ${reviewed.reviewedAt?.toISOString()})`);
+      const reviewed = await kyc.review(
+        submission.id,
+        { decision: KycStatus.APPROVED, note: "Seed data auto-approval" },
+        opsUser,
+      );
+      console.log(`  kyc:             ${reviewed.status} (reviewed by ${reviewed.reviewedByLabel} at ${reviewed.reviewedAt?.toISOString()})`);
 
       const { liveKeys } = await merchantsService.issueLiveKeys(merchant.id);
       console.log(`  live secret key: ${liveKeys.secretKey}`);
