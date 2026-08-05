@@ -109,7 +109,7 @@
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
   .badge.ACTIVE, .badge.APPROVED, .badge.EMITTED, .badge.SUCCEEDED { background: var(--pg-success-soft); color: var(--pg-success); }
-  .badge.PENDING, .badge.PENDING_REVIEW, .badge.NOT_SUBMITTED, .badge.NOT_CONFIGURED, .badge.REQUIRES_ACTION, .badge.PROCESSING { background: var(--pg-warning-soft); color: var(--pg-warning); }
+  .badge.PENDING, .badge.PENDING_REVIEW, .badge.NOT_SUBMITTED, .badge.NOT_CONFIGURED, .badge.REQUIRES_ACTION, .badge.PROCESSING, .badge.ARCHIVED { background: var(--pg-warning-soft); color: var(--pg-warning); }
   .badge.REJECTED, .badge.FAILED, .badge.SUSPENDED { background: var(--pg-error-soft); color: var(--pg-error); }
 
   table { width: 100%; border-collapse: collapse; }
@@ -219,6 +219,29 @@
       </div>
     </div>
 
+    <section class="block" id="paymentLinksSection">
+      <div class="panel">
+        <div class="section-head">
+          <h2>Payment Links</h2>
+          <p class="muted" style="margin:4px 0 0">Create a link, share it on WhatsApp/Instagram/your site — no website or developer needed.</p>
+        </div>
+        <form class="inline" id="paymentLinkForm">
+          <div><label>What are you selling</label><input name="name" placeholder="Corte de cabello" required></div>
+          <div><label>Description (optional)</label><input name="description" placeholder="Incluye lavado y peinado"></div>
+          <div><label>Price (BOB)</label><input name="amount" type="number" step="0.01" min="0.01" placeholder="50.00" required></div>
+          <button class="primary" type="submit">Create link</button>
+        </form>
+        <p class="faint" id="checkoutOriginRow" style="margin:10px 0 0">
+          Checkout page:
+          <input id="checkoutOrigin" style="width:220px;display:inline-block" value="http://localhost:5173">
+        </p>
+        <table style="margin-top:14px">
+          <thead><tr><th>Name</th><th>Price</th><th>Status</th><th>Link</th><th></th></tr></thead>
+          <tbody id="paymentLinkRows"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="block" id="kycSection">
       <div class="panel">
         <div class="section-head"><h2>KYC</h2></div>
@@ -294,11 +317,61 @@
   apiBaseEl.value = sessionStorage.getItem("pagosya_merchant_api_base") || apiBaseEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
 
+  const checkoutOriginEl = document.getElementById("checkoutOrigin");
+  checkoutOriginEl.value = sessionStorage.getItem("pagosya_checkout_origin") || checkoutOriginEl.value;
+  let lastPaymentLinks = [];
+  checkoutOriginEl.addEventListener("change", () => {
+    sessionStorage.setItem("pagosya_checkout_origin", checkoutOriginEl.value);
+    renderPaymentLinkRows(lastPaymentLinks);
+  });
+
   function money(cents) {
     return (cents / 100).toFixed(2) + " BOB";
   }
   function esc(s) {
     return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function paymentLinkUrl(link) {
+    return checkoutOriginEl.value.replace(/\/$/, "") + "/?link=" + link.slug;
+  }
+
+  function renderPaymentLinkRows(links) {
+    lastPaymentLinks = links;
+    document.getElementById("paymentLinkRows").innerHTML = links
+      .map((link) => {
+        const url = paymentLinkUrl(link);
+        return `<tr>
+          <td>${esc(link.name)}</td>
+          <td>${money(link.amount)}</td>
+          <td><span class="badge ${esc(link.status)}">${esc(link.status)}</span></td>
+          <td><input readonly value="${esc(url)}" style="width:220px" onclick="this.select()"></td>
+          <td>
+            <button class="ghost copy-link" data-url="${esc(url)}">Copy</button>
+            ${link.status === "ACTIVE" ? `<button class="ghost archive-link" data-id="${esc(link.id)}">Archive</button>` : ""}
+          </td>
+        </tr>`;
+      })
+      .join("") || `<tr><td colspan="5" class="muted">No payment links yet — create one above.</td></tr>`;
+
+    document.querySelectorAll(".copy-link").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(btn.dataset.url);
+        const original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => (btn.textContent = original), 1200);
+      });
+    });
+    document.querySelectorAll(".archive-link").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          await api(`/payment_links/${btn.dataset.id}/archive`, { method: "POST" });
+          await refresh();
+        } catch (err) {
+          errorEl.textContent = "Error: " + err.message;
+        }
+      });
+    });
   }
 
   async function api(path, options = {}) {
@@ -332,12 +405,13 @@
     sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
 
     try {
-      const [balance, kyc, invoicing, payments, payouts] = await Promise.all([
+      const [balance, kyc, invoicing, payments, payouts, paymentLinks] = await Promise.all([
         api("/merchants/balance"),
         api("/merchants/kyc"),
         api("/merchants/invoicing_profile"),
         api("/payment_intents"),
         api("/merchants/payouts"),
+        api("/payment_links"),
       ]);
 
       showLoggedIn();
@@ -355,6 +429,8 @@
       invBadge.textContent = invStatus;
       invBadge.className = "badge " + (invoicing.cuis ? "APPROVED" : "NOT_CONFIGURED");
       document.getElementById("invoicingSection").style.display = invoicing.cuis ? "none" : "block";
+
+      renderPaymentLinkRows(paymentLinks);
 
       document.getElementById("paymentRows").innerHTML = payments
         .map(
@@ -463,6 +539,30 @@
     const data = Object.fromEntries(new FormData(e.target));
     try {
       await api("/merchants/kyc", { method: "POST", body: JSON.stringify(data) });
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  document.getElementById("paymentLinkForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const amountBob = parseFloat(data.amount);
+    if (!(amountBob > 0)) {
+      errorEl.textContent = "Error: enter a price greater than 0";
+      return;
+    }
+    try {
+      await api("/payment_links", {
+        method: "POST",
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description || undefined,
+          amount: Math.round(amountBob * 100),
+        }),
+      });
+      e.target.reset();
       await refresh();
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;

@@ -27,6 +27,16 @@ export async function fetchSession(clientSecret: string): Promise<CheckoutSessio
   return parseOrThrow<CheckoutSession>(response);
 }
 
+/**
+ * No-code entry point: a merchant with no developer shares this page's URL
+ * directly (?link=<slug>) instead of embedding the widget. This call is what
+ * would otherwise be a merchant backend's own POST /v1/payment_intents.
+ */
+export async function createCheckoutFromLink(slug: string): Promise<{ clientSecret: string; merchantName: string }> {
+  const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/checkout`, { method: "POST" });
+  return parseOrThrow<{ clientSecret: string; merchantName: string }>(response);
+}
+
 export async function confirmPaymentIntent(
   paymentIntentId: string,
   clientSecret: string,

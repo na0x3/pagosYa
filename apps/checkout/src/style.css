@@ -120,6 +120,15 @@ body {
   color: var(--pg-text-muted);
 }
 
+.merchant-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pg-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
 .amount {
   font-size: 30px;
   font-weight: 700;

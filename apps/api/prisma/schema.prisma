@@ -141,6 +141,7 @@ model Merchant {
   invoices         Invoice[]
   payouts          Payout[]
   users            MerchantUser[]
+  paymentLinks     PaymentLink[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -334,6 +335,32 @@ model PaymentIntent {
   updatedAt         DateTime            @updatedAt
   transactions      Transaction[]
   invoice           Invoice?
+
+  @@index([merchantId, createdAt])
+}
+
+enum PaymentLinkStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// No-code entry point: a merchant with no developer creates one of these from
+// the dashboard and gets a shareable URL/QR. The public checkout page
+// (apps/checkout, ?link=<slug>) turns a visit into a PaymentIntent via
+// PaymentLinksService — same PaymentIntent/rail/ledger machinery as the full
+// API path, just without requiring a merchant backend to call anything.
+model PaymentLink {
+  id          String            @id @default(cuid())
+  merchantId  String
+  merchant    Merchant          @relation(fields: [merchantId], references: [id])
+  slug        String            @unique
+  name        String
+  description String?
+  amount      Int
+  currency    String            @default("BOB")
+  status      PaymentLinkStatus @default(ACTIVE)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([merchantId, createdAt])
 }

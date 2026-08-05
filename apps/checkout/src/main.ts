@@ -1,5 +1,5 @@
 import { PaymentMethodType } from "@pagosya/shared-types";
-import { confirmPaymentIntent, fetchSession, simulateRailCallback, CheckoutSession } from "./api";
+import { confirmPaymentIntent, createCheckoutFromLink, fetchSession, simulateRailCallback, CheckoutSession } from "./api";
 import { observeResize, postToParent } from "./postmessage";
 
 const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]> = {
@@ -54,6 +54,7 @@ const ICON_LOCK =
 
 const app = document.getElementById("app")!;
 let selectedType: PaymentMethodType = PaymentMethodType.CARD;
+let merchantHeaderName: string | null = null;
 
 function formatAmount(amount: number, currency: string): string {
   return `${(amount / 100).toFixed(2)} ${currency}`;
@@ -61,10 +62,27 @@ function formatAmount(amount: number, currency: string): string {
 
 async function main() {
   const params = new URLSearchParams(window.location.search);
-  const clientSecret = params.get("client_secret");
+  const linkSlug = params.get("link");
+  let clientSecret = params.get("client_secret");
+
+  // Payment Links (no-code path): the URL carries a link slug instead of an
+  // already-created client_secret, so create the PaymentIntent here — the
+  // step a merchant backend would otherwise take server-side. Unlike the
+  // embedded-widget path, this page is usually opened standalone (shared
+  // directly via WhatsApp/Instagram), so it also gets its own branded header.
+  if (linkSlug && !clientSecret) {
+    try {
+      const result = await createCheckoutFromLink(linkSlug);
+      clientSecret = result.clientSecret;
+      merchantHeaderName = result.merchantName;
+    } catch (err) {
+      app.innerHTML = `<div class="status failed">Este link de pago ya no está disponible: ${(err as Error).message}</div>`;
+      return;
+    }
+  }
 
   if (!clientSecret) {
-    app.innerHTML = `<div class="status failed">Falta client_secret en la URL.</div>`;
+    app.innerHTML = `<div class="status failed">Falta client_secret o link en la URL.</div>`;
     return;
   }
 
@@ -85,6 +103,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
   const tokens = TEST_TOKENS[selectedType];
 
   app.innerHTML = `
+    ${merchantHeaderName ? `<div class="merchant-header">${merchantHeaderName}</div>` : ""}
     <div class="amount">${formatAmount(session.amount, session.currency)}</div>
     <div class="description">${session.description ?? "Pago a comercio"}</div>
     <div class="tabs">
