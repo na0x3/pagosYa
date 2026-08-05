@@ -8,6 +8,7 @@ import { EmailProvider } from "./interfaces/email-provider.interface";
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
 /**
  * Human logins for the merchant dashboard. Provisioned via
@@ -73,6 +74,60 @@ export class MerchantUserService {
       }
     }
     return { verified: false };
+  }
+
+  /**
+   * Always resolves the same way regardless of whether `email` has an
+   * account — same enumeration-safety reasoning as signup(). Only issues a
+   * reset email when a user actually exists for it.
+   */
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.merchantUser.findUnique({ where: { email } });
+    if (user) {
+      const token = generateSecretPart();
+      const hashedToken = await argon2.hash(token);
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+
+      // A fresh reset request invalidates any earlier one still outstanding.
+      await this.prisma.passwordResetToken.deleteMany({ where: { merchantUserId: user.id } });
+      await this.prisma.passwordResetToken.create({ data: { merchantUserId: user.id, hashedToken, expiresAt } });
+      await this.emailProvider.send({
+        to: email,
+        subject: "Reset your pagosYa dashboard password",
+        body: `Reset your password:\nPOST /v1/dashboard/reset_password  { "token": "${token}", "newPassword": "..." }\n\nThis link expires in 1 hour. If you didn't request this, ignore it.`,
+      });
+    }
+
+    return { message: "If that email has a dashboard login, check your inbox for a reset link." };
+  }
+
+  /**
+   * Consuming a valid token is itself proof of controlling the mailbox, so
+   * this also verifies the email if it wasn't already — and revokes every
+   * existing session, since a password reset is often prompted by a
+   * suspected compromise and old sessions shouldn't survive it.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ reset: boolean }> {
+    const candidates = await this.prisma.passwordResetToken.findMany({
+      where: { expiresAt: { gt: new Date() } },
+    });
+
+    for (const candidate of candidates) {
+      if (await argon2.verify(candidate.hashedToken, token)) {
+        const hashedPassword = await argon2.hash(newPassword);
+        await this.prisma.merchantUser.update({
+          where: { id: candidate.merchantUserId },
+          data: { hashedPassword, emailVerifiedAt: new Date() },
+        });
+        await this.prisma.passwordResetToken.delete({ where: { id: candidate.id } });
+        await this.prisma.merchantSession.updateMany({
+          where: { merchantUserId: candidate.merchantUserId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        return { reset: true };
+      }
+    }
+    return { reset: false };
   }
 
   private isStaleUnverified(user: { emailVerifiedAt: Date | null; createdAt: Date }): boolean {

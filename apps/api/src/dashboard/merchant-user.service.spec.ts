@@ -15,6 +15,15 @@ function makeFakePrisma() {
       deleteMany: jest.fn(),
       findMany: jest.fn(),
     },
+    passwordResetToken: {
+      create: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      findMany: jest.fn(),
+    },
+    merchantSession: {
+      updateMany: jest.fn(),
+    },
   };
 }
 
@@ -141,5 +150,82 @@ describe("MerchantUserService.verifyEmail", () => {
 
     await expect(service.verifyEmail("totally-made-up")).resolves.toEqual({ verified: false });
     expect(prisma.merchantUser.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("MerchantUserService.requestPasswordReset", () => {
+  it("issues a reset token and email when the account exists", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
+    const email = makeFakeEmailProvider();
+
+    const service = new MerchantUserService(prisma as any, email);
+    const result = await service.requestPasswordReset("owner@tienda.bo");
+
+    expect(prisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { merchantUserId: "user_1" } });
+    expect(prisma.passwordResetToken.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ merchantUserId: "user_1" }),
+    });
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ to: "owner@tienda.bo" }));
+    expect(result).toEqual({ message: "If that email has a dashboard login, check your inbox for a reset link." });
+  });
+
+  it("returns the identical response for an unknown email, without sending anything", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantUser.findUnique.mockResolvedValue(null);
+    const email = makeFakeEmailProvider();
+
+    const service = new MerchantUserService(prisma as any, email);
+    const result = await service.requestPasswordReset("nobody@tienda.bo");
+
+    expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
+    expect(email.send).not.toHaveBeenCalled();
+    expect(result).toEqual({ message: "If that email has a dashboard login, check your inbox for a reset link." });
+  });
+});
+
+describe("MerchantUserService.resetPassword", () => {
+  it("updates the password, verifies the email, and revokes existing sessions for a valid token", async () => {
+    const prisma = makeFakePrisma();
+    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider());
+
+    // Drive a real requestPasswordReset first so token/hash pairing is genuine.
+    prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
+    let issuedToken = "";
+    const capturingEmail = { send: jest.fn(async (req: { body: string }) => { issuedToken = req.body.match(/"token": "(\w+)"/)![1]; }) };
+    (service as any).emailProvider = capturingEmail;
+    let storedHashedToken = "";
+    prisma.passwordResetToken.create.mockImplementation(({ data }: any) => {
+      storedHashedToken = data.hashedToken;
+      return Promise.resolve({});
+    });
+    await service.requestPasswordReset("owner@tienda.bo");
+
+    prisma.passwordResetToken.findMany.mockResolvedValue([
+      { id: "reset_1", merchantUserId: "user_1", hashedToken: storedHashedToken },
+    ]);
+
+    const result = await service.resetPassword(issuedToken, "a-new-strong-password");
+
+    expect(result).toEqual({ reset: true });
+    expect(prisma.merchantUser.update).toHaveBeenCalledWith({
+      where: { id: "user_1" },
+      data: { hashedPassword: expect.any(String), emailVerifiedAt: expect.any(Date) },
+    });
+    expect(prisma.passwordResetToken.delete).toHaveBeenCalledWith({ where: { id: "reset_1" } });
+    expect(prisma.merchantSession.updateMany).toHaveBeenCalledWith({
+      where: { merchantUserId: "user_1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+
+  it("returns unreset for an unknown/expired token without mutating anything", async () => {
+    const prisma = makeFakePrisma();
+    prisma.passwordResetToken.findMany.mockResolvedValue([]);
+    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider());
+
+    await expect(service.resetPassword("totally-made-up", "new-password")).resolves.toEqual({ reset: false });
+    expect(prisma.merchantUser.update).not.toHaveBeenCalled();
+    expect(prisma.merchantSession.updateMany).not.toHaveBeenCalled();
   });
 });

@@ -158,12 +158,27 @@ model MerchantUser {
   createdAt          DateTime                 @default(now())
   sessions           MerchantSession[]
   verificationTokens EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 // Single-use, short-lived proof that whoever called signup actually
 // controls the email they claimed — closes the account-squatting/
 // enumeration gap a bare email-uniqueness check would otherwise open.
 model EmailVerificationToken {
+  id             String       @id @default(cuid())
+  merchantUserId String
+  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
+  hashedToken    String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
+}
+
+// Single-use, short-lived (1h) password reset token. requestPasswordReset()
+// always responds identically regardless of whether the email exists — same
+// enumeration-safety reasoning as MerchantUserService.signup.
+model PasswordResetToken {
   id             String       @id @default(cuid())
   merchantUserId String
   merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])

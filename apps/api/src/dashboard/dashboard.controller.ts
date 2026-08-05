@@ -7,6 +7,8 @@ import { MerchantUserService } from "./merchant-user.service";
 import { MerchantSessionService } from "./merchant-session.service";
 import { DashboardSignupDto } from "./dto/dashboard-signup.dto";
 import { DashboardLoginDto } from "./dto/dashboard-login.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 
 @ApiTags("dashboard")
 @Controller("v1/dashboard")
@@ -43,5 +45,15 @@ export class DashboardController {
   async logout(@Req() req: { sessionToken: string }) {
     await this.sessions.revoke(req.sessionToken);
     return { success: true };
+  }
+
+  @Post("forgot_password")
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.merchantUsers.requestPasswordReset(dto.email);
+  }
+
+  @Post("reset_password")
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.merchantUsers.resetPassword(dto.token, dto.newPassword);
   }
 }
