@@ -8,4 +8,13 @@ export default defineConfig({
   // esbuild's CJS->ESM interop. Forcing it into dependency pre-bundling
   // fixes that without giving up the CJS build the backend needs.
   optimizeDeps: { include: ["@pagosya/shared-types"] },
+  // Same symlink issue applies to the production build, which goes through
+  // Rollup's commonjs plugin instead of esbuild. That plugin only transforms
+  // files under node_modules/** by default, so it must be told to also treat
+  // the (real, symlinked-to) shared-types path as CommonJS.
+  build: {
+    commonjsOptions: {
+      include: [/shared-types/, /node_modules/],
+    },
+  },
 });
