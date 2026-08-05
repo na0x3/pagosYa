@@ -1,0 +1,57 @@
+import { ArgumentsHost, BadRequestException, Logger, ServiceUnavailableException } from "@nestjs/common";
+import { AllExceptionsFilter } from "./all-exceptions.filter";
+
+function makeHost(request: { method: string; url: string }) {
+  const response = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  const host = {
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => response,
+    }),
+  } as unknown as ArgumentsHost;
+  return { host, response };
+}
+
+describe("AllExceptionsFilter", () => {
+  it("preserves status/body for a known HttpException and does not log it (4xx, expected)", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const { host, response } = makeHost({ method: "POST", url: "/v1/merchants/kyc" });
+
+    filter.catch(new BadRequestException("Merchant is already active"), host);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 400, message: "Merchant is already active" }),
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("logs and returns a generic 500 for an unexpected thrown Error", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const { host, response } = makeHost({ method: "GET", url: "/v1/merchants/balance" });
+
+    filter.catch(new Error("prisma connection reset"), host);
+
+    expect(response.status).toHaveBeenCalledWith(500);
+    expect(response.json).toHaveBeenCalledWith({ statusCode: 500, message: "Internal server error" });
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("prisma connection reset"),
+      expect.any(String),
+    );
+    errorSpy.mockRestore();
+  });
+
+  it("logs a 5xx HttpException too, not just raw Errors", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const { host } = makeHost({ method: "POST", url: "/v1/payouts" });
+
+    filter.catch(new ServiceUnavailableException("Database unavailable"), host);
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});

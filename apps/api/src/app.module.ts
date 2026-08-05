@@ -15,6 +15,7 @@ import { InvoicingModule } from "./invoicing/invoicing.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { OpsModule } from "./ops/ops.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     PayoutsModule,
     OpsModule,
     DashboardModule,
+    HealthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
