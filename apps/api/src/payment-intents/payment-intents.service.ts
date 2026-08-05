@@ -6,6 +6,7 @@ import { RailRegistry } from "../rails/rail-registry.service";
 import { PaymentMethodsService } from "../payment-methods/payment-methods.service";
 import { LedgerService } from "../ledger/ledger.service";
 import { WebhookDispatcherService } from "../webhooks/webhook-dispatcher.service";
+import { InvoicingService } from "../invoicing/invoicing.service";
 import { RailResult } from "../rails/interfaces/payment-rail-adapter.interface";
 import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
@@ -22,6 +23,7 @@ export class PaymentIntentsService {
     private readonly paymentMethods: PaymentMethodsService,
     private readonly ledger: LedgerService,
     private readonly webhooks: WebhookDispatcherService,
+    private readonly invoicing: InvoicingService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -90,6 +92,8 @@ export class PaymentIntentsService {
           paymentMethodId: paymentMethod.id,
           railId: rail.railId,
           confirmationAttempts: { increment: 1 },
+          customerName: dto.customerName,
+          customerDocument: dto.customerDocument,
         },
       });
 
@@ -132,8 +136,10 @@ export class PaymentIntentsService {
     transactionType: TransactionType,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ status: PaymentIntentStatus; amount: number }[]>`
-        SELECT status, amount FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
+      const rows = await tx.$queryRaw<
+        { status: PaymentIntentStatus; amount: number; customerName: string | null; customerDocument: string | null }[]
+      >`
+        SELECT status, amount, "customerName", "customerDocument" FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
@@ -179,6 +185,13 @@ export class PaymentIntentsService {
           amount: updated.amount,
           currency: updated.currency,
           status: updated.status,
+        });
+        await this.invoicing.enqueueInvoice(tx, merchantId, {
+          paymentIntentId: updated.id,
+          amount: updated.amount,
+          currency: updated.currency,
+          customerName: current.customerName,
+          customerDocument: current.customerDocument,
         });
       } else if (result.status === "failed") {
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.failed", {

@@ -9,6 +9,7 @@ import { RefundsModule } from "./refunds/refunds.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
 import { RailsModule } from "./rails/rails.module";
 import { IdempotencyModule } from "./idempotency/idempotency.module";
+import { InvoicingModule } from "./invoicing/invoicing.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { IdempotencyModule } from "./idempotency/idempotency.module";
     RefundsModule,
     WebhooksModule,
     IdempotencyModule,
+    InvoicingModule,
   ],
 })
 export class AppModule {}

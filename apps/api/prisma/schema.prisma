@@ -76,6 +76,18 @@ enum WebhookEventStatus {
   FAILED
 }
 
+enum KycStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  PENDING
+  EMITTED
+  FAILED
+}
+
 model Merchant {
   id               String            @id @default(cuid())
   name             String
@@ -87,6 +99,72 @@ model Merchant {
   apiKeys          ApiKey[]
   paymentIntents   PaymentIntent[]
   webhookEndpoints WebhookEndpoint[]
+  kycSubmissions   MerchantKycSubmission[]
+  invoicingProfile MerchantInvoicingProfile?
+  invoices         Invoice[]
+}
+
+// NIT/branch/point-of-sale registration a merchant needs on file before
+// pagosYa can emit a Factura Electrónica on their behalf. `cuis` is issued
+// once per (nit, sucursal, puntoVenta); `cufd`/`cufdExpiresAt` cache SIN's
+// daily invoicing code (valid ~24h — see InvoicingService/InvoiceEmissionWorker).
+model MerchantInvoicingProfile {
+  id            String    @id @default(cuid())
+  merchantId    String    @unique
+  merchant      Merchant  @relation(fields: [merchantId], references: [id])
+  nit           String
+  razonSocial   String
+  sucursal      Int       @default(0)
+  puntoVenta    Int       @default(0)
+  cuis          String?
+  cuisIssuedAt  DateTime?
+  cufd          String?
+  cufdExpiresAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// One Factura Electrónica per succeeded PaymentIntent. Created PENDING in the
+// same transaction as the payment's success (transactional outbox, same
+// pattern as WebhookEvent) and emitted asynchronously by InvoiceEmissionWorker
+// — SIN's real service is external, can be slow/down, and needs retries.
+model Invoice {
+  id               String        @id @default(cuid())
+  merchantId       String
+  merchant         Merchant      @relation(fields: [merchantId], references: [id])
+  paymentIntentId  String        @unique
+  paymentIntent    PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  amount           Int
+  currency         String        @default("BOB")
+  customerName     String        @default("SIN NOMBRE")
+  customerDocument String        @default("0")
+  status           InvoiceStatus @default(PENDING)
+  cuf              String?
+  cufd             String?
+  attempts         Int           @default(0)
+  nextRetryAt      DateTime?
+  failureReason    String?
+  emittedAt        DateTime?
+  createdAt        DateTime      @default(now())
+
+  @@index([status, nextRetryAt])
+}
+
+model MerchantKycSubmission {
+  id                 String    @id @default(cuid())
+  merchantId         String
+  merchant           Merchant  @relation(fields: [merchantId], references: [id])
+  legalName          String
+  taxId              String
+  legalRepName       String
+  legalRepDocumentId String
+  payoutBankAccount  String
+  status             KycStatus @default(PENDING_REVIEW)
+  reviewNote         String?
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@index([merchantId, createdAt])
 }
 
 model ApiKey {
@@ -120,9 +198,12 @@ model PaymentIntent {
   railId            String?
   confirmationAttempts Int              @default(0)
   lastError         Json?
+  customerName      String?
+  customerDocument  String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   transactions      Transaction[]
+  invoice           Invoice?
 
   @@index([merchantId, createdAt])
 }

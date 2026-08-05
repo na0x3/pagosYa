@@ -7,10 +7,11 @@ import { RailsModule } from "../rails/rails.module";
 import { PaymentMethodsModule } from "../payment-methods/payment-methods.module";
 import { LedgerModule } from "../ledger/ledger.module";
 import { WebhooksModule } from "../webhooks/webhooks.module";
+import { InvoicingModule } from "../invoicing/invoicing.module";
 import { AuthModule } from "../auth/auth.module";
 
 @Module({
-  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, AuthModule],
+  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule],
   controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController],
   providers: [PaymentIntentsService],
   exports: [PaymentIntentsService],

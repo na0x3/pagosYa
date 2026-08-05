@@ -26,4 +26,18 @@ export class ConfirmPaymentIntentDto {
   @ValidateNested()
   @Type(() => PaymentMethodInputDto)
   paymentMethod!: PaymentMethodInputDto;
+
+  @ApiPropertyOptional({
+    description: "Buyer name for the Factura Electrónica, if the merchant has invoicing configured. Defaults to \"SIN NOMBRE\".",
+  })
+  @IsOptional()
+  @IsString()
+  customerName?: string;
+
+  @ApiPropertyOptional({
+    description: "Buyer NIT/CI for the Factura Electrónica, if the merchant has invoicing configured. Defaults to \"0\".",
+  })
+  @IsOptional()
+  @IsString()
+  customerDocument?: string;
 }
