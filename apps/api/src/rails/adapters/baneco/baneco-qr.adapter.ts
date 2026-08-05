@@ -49,7 +49,8 @@ export class BanecoQrAdapter implements PaymentRailAdapter {
     try {
       const { qrId, qrImage } = await this.client.generateQr({
         transactionId: req.paymentIntentId,
-        amount: req.amount,
+        // req.amount is minor units (centavos); Baneco wants a decimal in whole currency units.
+        amount: Math.round(req.amount) / 100,
         currency: req.currency,
         description: `pagosYa ${req.paymentIntentId}`,
         dueDate,
