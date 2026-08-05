@@ -47,6 +47,8 @@ Cada decisión de revisión de KYC queda atribuida a una persona concreta, no a 
 
 `POST /v1/dashboard/signup` (con la llave secreta, desde el backend del comercio) crea el login; `POST /v1/dashboard/login` (público, email/contraseña) devuelve el token de sesión; `POST /v1/dashboard/logout` lo revoca.
 
+`signup` siempre responde igual sin importar si el email ya está en uso — devolver una respuesta distinta sería un oráculo de existencia gratuito, dado que crear un comercio (`POST /v1/merchants`) es público y ya alcanza para llegar a `signup`. El email real solo queda confirmado (y el login habilitado) al usar el link de `GET /v1/dashboard/verify_email?token=...` (`EmailVerificationToken`, `EmailProvider`/`MockEmailProvider` — mismo patrón mock que los rieles/facturación/payouts). Un intento sin confirmar no bloquea el email para siempre: expira a las 24h y un `signup` posterior para ese email lo reemplaza.
+
 ### Rieles de pago (rails)
 
 Cada riel (tarjeta, Tigo Money, transferencia bancaria, QR) implementa la misma interfaz `PaymentRailAdapter` (`authorize`, `capture`, `refund`, `getStatus`), resuelta en tiempo de ejecución por un `RailRegistry`. Mientras no existan credenciales reales de banco/adquirente/Tigo Money, cada riel corre contra un adaptador simulado (mock) con tokens de prueba deterministas — reemplazar un mock por una integración real implica escribir una nueva clase, sin tocar la lógica central.

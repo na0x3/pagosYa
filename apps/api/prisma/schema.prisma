@@ -147,13 +147,31 @@ model Merchant {
 // ApiKey. The dashboard must never need a merchant's secret key in the
 // browser; this is what apps/merchant-dashboard authenticates with instead.
 model MerchantUser {
-  id             String            @id @default(cuid())
-  merchantId     String
-  merchant       Merchant          @relation(fields: [merchantId], references: [id])
-  email          String            @unique
-  hashedPassword String
-  createdAt      DateTime          @default(now())
-  sessions       MerchantSession[]
+  id                 String                   @id @default(cuid())
+  merchantId         String
+  merchant           Merchant                 @relation(fields: [merchantId], references: [id])
+  email              String                   @unique
+  hashedPassword     String
+  // Null until the confirmation link is used. An unverified row doesn't
+  // permanently claim its email — see MerchantUserService.signup for why.
+  emailVerifiedAt    DateTime?
+  createdAt          DateTime                 @default(now())
+  sessions           MerchantSession[]
+  verificationTokens EmailVerificationToken[]
+}
+
+// Single-use, short-lived proof that whoever called signup actually
+// controls the email they claimed — closes the account-squatting/
+// enumeration gap a bare email-uniqueness check would otherwise open.
+model EmailVerificationToken {
+  id             String       @id @default(cuid())
+  merchantUserId String
+  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
+  hashedToken    String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
 }
 
 // Short-lived, revocable dashboard session token (dash_...) — what

@@ -1,0 +1,16 @@
+import { Injectable, Logger } from "@nestjs/common";
+import { EmailProvider, SendEmailRequest } from "../interfaces/email-provider.interface";
+
+/**
+ * Stands in for a real transactional-email sender — no such integration
+ * exists yet. Logs instead of sending, so local dev/testing can read the
+ * verification link straight out of the API server's console.
+ */
+@Injectable()
+export class MockEmailProvider implements EmailProvider {
+  private readonly logger = new Logger(MockEmailProvider.name);
+
+  async send(req: SendEmailRequest): Promise<void> {
+    this.logger.log(`[mock email] to=${req.to} subject="${req.subject}"\n${req.body}`);
+  }
+}

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -28,6 +28,13 @@ export class DashboardController {
   @Post("login")
   login(@Body() dto: DashboardLoginDto) {
     return this.sessions.login(dto.email, dto.password);
+  }
+
+  /** GET, not POST: this is meant to be clicked directly out of an email client. */
+  @Get("verify_email")
+  verifyEmail(@Query("token") token: string) {
+    if (!token) throw new BadRequestException("Missing token");
+    return this.merchantUsers.verifyEmail(token);
   }
 
   @Post("logout")

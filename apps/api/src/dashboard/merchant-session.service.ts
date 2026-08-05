@@ -23,6 +23,12 @@ export class MerchantSessionService {
     if (!user || !(await argon2.verify(user.hashedPassword, password))) {
       throw new UnauthorizedException("Invalid email or password");
     }
+    // Checked after the password match, so this never adds a new
+    // enumeration signal — reaching this point already requires knowing
+    // both the email and its correct password.
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException("Confirm your email before logging in — check your inbox for the verification link.");
+    }
 
     const token = `dash_${generateSecretPart()}`;
     const hashedToken = await argon2.hash(token);

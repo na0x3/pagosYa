@@ -10,10 +10,16 @@ function makeFakePrisma() {
 }
 
 describe("MerchantSessionService.login", () => {
-  it("issues a dash_ token for a correct password", async () => {
+  it("issues a dash_ token for a correct password on a verified account", async () => {
     const prisma = makeFakePrisma();
     const hashedPassword = await argon2.hash("correct-password");
-    prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", merchantId: "m_1", email: "owner@tienda.bo", hashedPassword });
+    prisma.merchantUser.findUnique.mockResolvedValue({
+      id: "user_1",
+      merchantId: "m_1",
+      email: "owner@tienda.bo",
+      hashedPassword,
+      emailVerifiedAt: new Date(),
+    });
     prisma.merchantSession.create.mockResolvedValue({});
 
     const service = new MerchantSessionService(prisma as any);
@@ -24,10 +30,32 @@ describe("MerchantSessionService.login", () => {
     expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
+  it("rejects login for a correct password on an unverified account", async () => {
+    const prisma = makeFakePrisma();
+    const hashedPassword = await argon2.hash("correct-password");
+    prisma.merchantUser.findUnique.mockResolvedValue({
+      id: "user_1",
+      merchantId: "m_1",
+      email: "owner@tienda.bo",
+      hashedPassword,
+      emailVerifiedAt: null,
+    });
+
+    const service = new MerchantSessionService(prisma as any);
+    await expect(service.login("owner@tienda.bo", "correct-password")).rejects.toThrow(UnauthorizedException);
+    expect(prisma.merchantSession.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a wrong password", async () => {
     const prisma = makeFakePrisma();
     const hashedPassword = await argon2.hash("correct-password");
-    prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", merchantId: "m_1", email: "owner@tienda.bo", hashedPassword });
+    prisma.merchantUser.findUnique.mockResolvedValue({
+      id: "user_1",
+      merchantId: "m_1",
+      email: "owner@tienda.bo",
+      hashedPassword,
+      emailVerifiedAt: new Date(),
+    });
 
     const service = new MerchantSessionService(prisma as any);
     await expect(service.login("owner@tienda.bo", "wrong-password")).rejects.toThrow(UnauthorizedException);
@@ -50,7 +78,13 @@ describe("MerchantSessionService.verify", () => {
 
     // Drive a real login first so the token/hash pairing is genuine, not hand-rolled.
     const hashedPassword = await argon2.hash("correct-password");
-    prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", merchantId: "m_1", email: "owner@tienda.bo", hashedPassword });
+    prisma.merchantUser.findUnique.mockResolvedValue({
+      id: "user_1",
+      merchantId: "m_1",
+      email: "owner@tienda.bo",
+      hashedPassword,
+      emailVerifiedAt: new Date(),
+    });
     let storedHashedToken = "";
     prisma.merchantSession.create.mockImplementation(({ data }: any) => {
       storedHashedToken = data.hashedToken;
