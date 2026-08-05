@@ -29,20 +29,47 @@ export async function fetchSession(clientSecret: string): Promise<CheckoutSessio
 
 /**
  * No-code entry point: a merchant with no developer shares this page's URL
- * directly (?link=<slug>) instead of embedding the widget. This call is what
- * would otherwise be a merchant backend's own POST /v1/payment_intents.
+ * directly (?link=<slug>) instead of embedding the widget. Any of a merchant's
+ * link slugs opens their whole catalog (Store), not just that one item — a
+ * customer buying several things adds them to one Cart and pays once.
  */
-export interface LinkCheckout {
-  clientSecret: string;
-  merchantName: string;
+export interface StoreItem {
+  id: string;
   name: string;
-  linkDescription: string | null;
+  description: string | null;
   imageUrl: string | null;
+  amount: number;
+  currency: string;
 }
 
-export async function createCheckoutFromLink(slug: string): Promise<LinkCheckout> {
-  const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/checkout`, { method: "POST" });
-  return parseOrThrow<LinkCheckout>(response);
+export interface Store {
+  merchantName: string;
+  items: StoreItem[];
+}
+
+export async function fetchStore(slug: string): Promise<Store> {
+  const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/store`);
+  return parseOrThrow<Store>(response);
+}
+
+export interface CartCheckoutResult {
+  clientSecret: string;
+  merchantName: string;
+  cartDescription: string;
+}
+
+/** This call is what would otherwise be a merchant backend's own POST /v1/payment_intents —
+ * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
+export async function checkoutCart(
+  slug: string,
+  items: { paymentLinkId: string; quantity: number }[],
+): Promise<CartCheckoutResult> {
+  const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/cart-checkout`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  return parseOrThrow<CartCheckoutResult>(response);
 }
 
 export async function confirmPaymentIntent(

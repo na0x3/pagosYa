@@ -1,12 +1,19 @@
 import { PaymentMethodType } from "@pagosya/shared-types";
-import { confirmPaymentIntent, createCheckoutFromLink, fetchSession, simulateRailCallback, CheckoutSession } from "./api";
+import {
+  checkoutCart,
+  confirmPaymentIntent,
+  fetchSession,
+  fetchStore,
+  simulateRailCallback,
+  CheckoutSession,
+  Store,
+  StoreItem,
+} from "./api";
 import { observeResize, postToParent } from "./postmessage";
 
 interface LinkHeader {
   merchantName: string;
-  name: string;
-  description: string | null;
-  imageUrl: string | null;
+  description: string;
 }
 
 const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]> = {
@@ -78,27 +85,21 @@ function escapeHtml(value: string): string {
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const linkSlug = params.get("link");
-  let clientSecret = params.get("client_secret");
+  const clientSecret = params.get("client_secret");
 
   // Payment Links (no-code path): the URL carries a link slug instead of an
-  // already-created client_secret, so create the PaymentIntent here — the
-  // step a merchant backend would otherwise take server-side. Unlike the
-  // embedded-widget path, this page is usually opened standalone (shared
-  // directly via WhatsApp/Instagram), so it also gets its own branded header.
+  // already-created client_secret. Any of a merchant's link slugs opens their
+  // whole catalog (Store) — a customer buying several things adds them all
+  // to one Cart and pays once, instead of needing a separate QR per item.
   if (linkSlug && !clientSecret) {
     try {
-      const result = await createCheckoutFromLink(linkSlug);
-      clientSecret = result.clientSecret;
-      linkHeader = {
-        merchantName: result.merchantName,
-        name: result.name,
-        description: result.linkDescription,
-        imageUrl: result.imageUrl,
-      };
+      const store = await fetchStore(linkSlug);
+      renderStore(linkSlug, store);
+      observeResize(app);
     } catch (err) {
       app.innerHTML = `<div class="status failed">Este link de pago ya no está disponible: ${(err as Error).message}</div>`;
-      return;
     }
+    return;
   }
 
   if (!clientSecret) {
@@ -106,6 +107,10 @@ async function main() {
     return;
   }
 
+  await enterPaymentFlow(clientSecret);
+}
+
+async function enterPaymentFlow(clientSecret: string) {
   let session: CheckoutSession;
   try {
     session = await fetchSession(clientSecret);
@@ -119,15 +124,91 @@ async function main() {
   observeResize(app);
 }
 
+// paymentLinkId -> quantity. Cleared on each store visit; nothing persists across reloads.
+const cart = new Map<string, number>();
+
+function cartTotal(items: StoreItem[]): number {
+  return items.reduce((sum, item) => sum + item.amount * (cart.get(item.id) ?? 0), 0);
+}
+
+function cartCount(): number {
+  return [...cart.values()].reduce((sum, qty) => sum + qty, 0);
+}
+
+function renderStore(slug: string, store: Store) {
+  if (store.items.length === 0) {
+    app.innerHTML = `<div class="status failed">Esta tienda no tiene productos disponibles todavía.</div>`;
+    return;
+  }
+  const currency = store.items[0].currency;
+
+  app.innerHTML = `
+    <div class="merchant-header">${escapeHtml(store.merchantName)}</div>
+    <div class="store-items">
+      ${store.items
+        .map((item) => {
+          const qty = cart.get(item.id) ?? 0;
+          return `
+            <div class="store-item" data-id="${item.id}">
+              ${item.imageUrl ? `<img class="store-item-image" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" />` : `<div class="store-item-image placeholder"></div>`}
+              <div class="store-item-info">
+                <div class="store-item-name">${escapeHtml(item.name)}</div>
+                ${item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
+                <div class="store-item-price">${formatAmount(item.amount, item.currency)}</div>
+              </div>
+              <div class="qty-stepper">
+                <button type="button" class="qty-minus" ${qty === 0 ? "disabled" : ""}>−</button>
+                <span class="qty-value">${qty}</span>
+                <button type="button" class="qty-plus">+</button>
+              </div>
+            </div>`;
+        })
+        .join("")}
+    </div>
+    <div class="cart-bar">
+      <span class="cart-summary">${cartCount()} ${cartCount() === 1 ? "producto" : "productos"} — ${formatAmount(cartTotal(store.items), currency)}</span>
+      <button class="primary" id="cart-pay" ${cartCount() === 0 ? "disabled" : ""}>Ir a pagar</button>
+    </div>
+    <div class="secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
+  `;
+
+  app.querySelectorAll<HTMLElement>(".store-item").forEach((row) => {
+    const id = row.dataset.id!;
+    row.querySelector(".qty-plus")!.addEventListener("click", () => {
+      cart.set(id, (cart.get(id) ?? 0) + 1);
+      renderStore(slug, store);
+    });
+    row.querySelector(".qty-minus")!.addEventListener("click", () => {
+      const next = (cart.get(id) ?? 0) - 1;
+      if (next <= 0) cart.delete(id);
+      else cart.set(id, next);
+      renderStore(slug, store);
+    });
+  });
+
+  const payButton = app.querySelector<HTMLButtonElement>("#cart-pay");
+  payButton?.addEventListener("click", async () => {
+    payButton.disabled = true;
+    payButton.textContent = "Procesando...";
+    try {
+      const items = [...cart.entries()].map(([paymentLinkId, quantity]) => ({ paymentLinkId, quantity }));
+      const result = await checkoutCart(slug, items);
+      linkHeader = { merchantName: result.merchantName, description: result.cartDescription };
+      await enterPaymentFlow(result.clientSecret);
+    } catch (err) {
+      app.innerHTML = `<div class="status failed">No se pudo iniciar el pago: ${(err as Error).message}</div>`;
+    }
+  });
+}
+
 function renderForm(session: CheckoutSession, clientSecret: string) {
   const tokens = TEST_TOKENS[selectedType];
 
   const headerHtml = linkHeader
     ? `
-      ${linkHeader.imageUrl ? `<img class="product-image" src="${escapeHtml(linkHeader.imageUrl)}" alt="${escapeHtml(linkHeader.name)}" />` : ""}
       <div class="merchant-header">${escapeHtml(linkHeader.merchantName)}</div>
       <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-      <div class="description">${escapeHtml(linkHeader.name)}${linkHeader.description ? ` — ${escapeHtml(linkHeader.description)}` : ""}</div>
+      <div class="description">${escapeHtml(linkHeader.description)}</div>
     `
     : `
       <div class="amount">${formatAmount(session.amount, session.currency)}</div>
