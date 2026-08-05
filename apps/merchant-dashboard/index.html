@@ -4,137 +4,279 @@
 <meta charset="utf-8">
 <title>pagosYa — Merchant Dashboard</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 24px auto 80px; padding: 0 16px; }
-  h1 { font-size: 1.4rem; margin-bottom: 4px; }
-  h2 { font-size: 1.1rem; margin: 32px 0 8px; }
-  .muted { color: #6b7280; font-size: 0.9rem; }
-  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 8px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
-  .setup label { display: block; font-size: 0.8rem; margin-bottom: 4px; }
-  .setup input { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 220px; }
-  button { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; font-size: 0.85rem; }
-  button.primary { background: #111827; color: white; border-color: #111827; }
-  .cards { display: flex; gap: 16px; flex-wrap: wrap; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; min-width: 200px; }
-  .card .value { font-size: 1.6rem; font-weight: 700; }
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
-  .badge.ACTIVE, .badge.APPROVED, .badge.EMITTED, .badge.SUCCEEDED { background: #d1fae5; color: #065f46; }
-  .badge.PENDING, .badge.PENDING_REVIEW, .badge.NOT_SUBMITTED, .badge.NOT_CONFIGURED, .badge.REQUIRES_ACTION, .badge.PROCESSING { background: #fef3c7; color: #92400e; }
-  .badge.REJECTED, .badge.FAILED, .badge.SUSPENDED { background: #fee2e2; color: #991b1b; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem; }
-  form.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-top: 8px; }
-  form.inline label { display: block; font-size: 0.75rem; margin-bottom: 2px; }
-  form.inline input { padding: 5px 7px; border: 1px solid #d1d5db; border-radius: 6px; }
-  #error { color: #dc2626; margin: 12px 0; white-space: pre-wrap; }
-  #loggedInBar { display: none; margin-bottom: 20px; align-items: center; gap: 12px; }
-  section { display: none; }
+  :root {
+    color-scheme: light dark;
+    --pg-bg: #f8fafc;
+    --pg-surface: #ffffff;
+    --pg-border: #e5e7eb;
+    --pg-border-strong: #d1d5db;
+    --pg-text: #0f172a;
+    --pg-text-muted: #64748b;
+    --pg-text-faint: #94a3b8;
+    --pg-primary: #0f172a;
+    --pg-primary-hover: #1e293b;
+    --pg-primary-text: #ffffff;
+    --pg-accent: #4f46e5;
+    --pg-accent-soft: #eef2ff;
+    --pg-success: #059669;
+    --pg-success-soft: #ecfdf5;
+    --pg-warning: #b45309;
+    --pg-warning-soft: #fffbeb;
+    --pg-error: #dc2626;
+    --pg-error-soft: #fef2f2;
+    --pg-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 1px 8px -2px rgba(15,23,42,0.06);
+    --pg-focus-ring: rgba(79, 70, 229, 0.3);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --pg-bg: #0b1120;
+      --pg-surface: #0f1629;
+      --pg-border: #1e293b;
+      --pg-border-strong: #334155;
+      --pg-text: #f1f5f9;
+      --pg-text-muted: #94a3b8;
+      --pg-text-faint: #64748b;
+      --pg-primary: #f1f5f9;
+      --pg-primary-hover: #ffffff;
+      --pg-primary-text: #0f172a;
+      --pg-accent: #818cf8;
+      --pg-accent-soft: #1e1b4b;
+      --pg-success: #34d399;
+      --pg-success-soft: #052e1f;
+      --pg-warning: #fbbf24;
+      --pg-warning-soft: #2c1a04;
+      --pg-error: #f87171;
+      --pg-error-soft: #2c0b0b;
+      --pg-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 8px -2px rgba(0,0,0,0.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Inter", "Segoe UI", system-ui, sans-serif;
+    background: var(--pg-bg);
+    color: var(--pg-text);
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 20px 100px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 32px; height: 32px; border-radius: 9px; background: var(--pg-primary); color: var(--pg-primary-text);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0;
+  }
+  .brand h1 { font-size: 1.05rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .brand .subtitle { font-size: 0.78rem; color: var(--pg-text-muted); margin: 0; }
+  .muted { color: var(--pg-text-muted); font-size: 0.88rem; }
+  .faint { color: var(--pg-text-faint); font-size: 0.8rem; }
+
+  .panel {
+    background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: 14px;
+    padding: 20px; box-shadow: var(--pg-shadow); margin-bottom: 20px;
+  }
+  .panel-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  label { display: block; font-size: 0.76rem; font-weight: 600; color: var(--pg-text-muted); margin-bottom: 5px; }
+  input {
+    padding: 9px 11px; border: 1.5px solid var(--pg-border); border-radius: 9px; font-size: 0.88rem;
+    background: var(--pg-surface); color: var(--pg-text); font-family: inherit; min-width: 200px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input:focus { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+
+  button {
+    padding: 9px 14px; border-radius: 9px; border: 1.5px solid var(--pg-border-strong); background: var(--pg-surface);
+    color: var(--pg-text); cursor: pointer; font-size: 0.85rem; font-weight: 600; font-family: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  button:hover { border-color: var(--pg-text-faint); }
+  button.primary { background: var(--pg-primary); color: var(--pg-primary-text); border-color: var(--pg-primary); }
+  button.primary:hover { background: var(--pg-primary-hover); }
+  button.ghost { background: transparent; border-color: transparent; color: var(--pg-text-muted); }
+  button.ghost:hover { background: var(--pg-accent-soft); color: var(--pg-text); border-color: transparent; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .card { background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: 14px; padding: 18px; box-shadow: var(--pg-shadow); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .card-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--pg-accent-soft); color: var(--pg-accent); display: flex; align-items: center; justify-content: center; }
+  .card-icon svg { width: 16px; height: 16px; }
+  .card .value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+
+  h2 { font-size: 0.98rem; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.005em; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  section.block { margin-bottom: 24px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+  .badge.ACTIVE, .badge.APPROVED, .badge.EMITTED, .badge.SUCCEEDED { background: var(--pg-success-soft); color: var(--pg-success); }
+  .badge.PENDING, .badge.PENDING_REVIEW, .badge.NOT_SUBMITTED, .badge.NOT_CONFIGURED, .badge.REQUIRES_ACTION, .badge.PROCESSING { background: var(--pg-warning-soft); color: var(--pg-warning); }
+  .badge.REJECTED, .badge.FAILED, .badge.SUSPENDED { background: var(--pg-error-soft); color: var(--pg-error); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 9px 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--pg-text-faint); border-bottom: 1.5px solid var(--pg-border); }
+  td { padding: 11px 10px; font-size: 0.85rem; border-bottom: 1px solid var(--pg-border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--pg-bg); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78rem; color: var(--pg-text-muted); }
+
+  form.inline { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  form.inline > div { display: flex; flex-direction: column; }
+
+  #error { color: var(--pg-error); background: var(--pg-error-soft); border: 1px solid var(--pg-error); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; white-space: pre-wrap; }
+  #error:empty { display: none; }
+  #info { background: var(--pg-accent-soft); color: var(--pg-accent); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; }
+  #info:empty { display: none; padding: 0; margin: 0; }
+  #loggedInBar { display: none; align-items: center; gap: 12px; margin-bottom: 20px; }
+  #liveKeysResult { font-family: ui-monospace, monospace; font-size: 0.78rem; margin-top: 10px; white-space: pre-wrap; background: var(--pg-bg); border-radius: 9px; padding: 10px; }
+  section#app { display: none; }
 </style>
 </head>
 <body>
-  <h1>pagosYa — Merchant Dashboard</h1>
-
-  <div class="setup" id="loginForm">
-    <div>
-      <label for="apiBase">API base URL</label>
-      <input id="apiBase" value="http://localhost:3000/v1">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">pY</div>
+      <div>
+        <h1>pagosYa</h1>
+        <p class="subtitle">Merchant Dashboard</p>
+      </div>
     </div>
-    <div>
-      <label for="email">Email</label>
-      <input id="email" type="email" placeholder="owner@tienda-ejemplo.bo">
+    <div id="loggedInBar">
+      <span class="muted" id="loggedInAs"></span>
+      <button class="ghost" id="logout">Log out</button>
     </div>
-    <div>
-      <label for="password">Password</label>
-      <input id="password" type="password">
-    </div>
-    <button class="primary" id="login">Log in</button>
-    <button id="showForgot">Forgot password?</button>
-  </div>
-  <p class="muted">No login yet? Have your integration call <code>POST /v1/dashboard/signup</code> once with your secret key to create one — never from this page.</p>
-
-  <div class="setup" id="forgotForm" style="display:none">
-    <div>
-      <label for="forgotEmail">Email</label>
-      <input id="forgotEmail" type="email" placeholder="owner@tienda-ejemplo.bo">
-    </div>
-    <button id="requestReset">Send reset link</button>
-    <div>
-      <label for="resetToken">Reset token (from email)</label>
-      <input id="resetToken">
-    </div>
-    <div>
-      <label for="newPassword">New password</label>
-      <input id="newPassword" type="password">
-    </div>
-    <button class="primary" id="submitReset">Set new password</button>
   </div>
 
-  <div id="loggedInBar">
-    <span class="muted" id="loggedInAs"></span>
-    <button id="logout">Log out</button>
+  <div class="panel" id="loginForm">
+    <div class="panel-row">
+      <div>
+        <label for="apiBase">API base URL</label>
+        <input id="apiBase" value="http://localhost:3000/v1">
+      </div>
+      <div>
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="owner@tienda-ejemplo.bo">
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password">
+      </div>
+      <button class="primary" id="login">Log in</button>
+      <button class="ghost" id="showForgot">Forgot password?</button>
+    </div>
+    <p class="faint" style="margin: 12px 0 0">No login yet? Have your integration call <code>POST /v1/dashboard/signup</code> once with your secret key to create one — never from this page.</p>
+  </div>
+
+  <div class="panel" id="forgotForm" style="display:none">
+    <div class="panel-row">
+      <div>
+        <label for="forgotEmail">Email</label>
+        <input id="forgotEmail" type="email" placeholder="owner@tienda-ejemplo.bo">
+      </div>
+      <button id="requestReset">Send reset link</button>
+      <div>
+        <label for="resetToken">Reset token (from email)</label>
+        <input id="resetToken">
+      </div>
+      <div>
+        <label for="newPassword">New password</label>
+        <input id="newPassword" type="password">
+      </div>
+      <button class="primary" id="submitReset">Set new password</button>
+    </div>
   </div>
 
   <div id="error"></div>
-  <div id="info" class="muted"></div>
+  <div id="info"></div>
 
   <section id="app">
     <div class="cards">
       <div class="card">
-        <div class="muted">Payable balance</div>
+        <div class="card-head">
+          <span class="muted">Payable balance</span>
+          <span class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+        </div>
         <div class="value" id="balanceValue">—</div>
       </div>
       <div class="card">
-        <div class="muted">KYC status</div>
+        <div class="card-head">
+          <span class="muted">KYC status</span>
+          <span class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          </span>
+        </div>
         <div class="value"><span class="badge" id="kycBadge">—</span></div>
       </div>
       <div class="card">
-        <div class="muted">Invoicing (SIN)</div>
+        <div class="card-head">
+          <span class="muted">Invoicing (SIN)</span>
+          <span class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 16h6"/></svg>
+          </span>
+        </div>
         <div class="value"><span class="badge" id="invoicingBadge">—</span></div>
       </div>
     </div>
 
-    <h2>KYC</h2>
-    <div id="kycSection">
-      <form class="inline" id="kycForm">
-        <div><label>Legal name</label><input name="legalName" required></div>
-        <div><label>NIT</label><input name="taxId" required></div>
-        <div><label>Legal rep name</label><input name="legalRepName" required></div>
-        <div><label>Legal rep CI</label><input name="legalRepDocumentId" required></div>
-        <div><label>Payout bank account</label><input name="payoutBankAccount" required></div>
-        <button class="primary" type="submit">Submit KYC</button>
-      </form>
-    </div>
+    <section class="block" id="kycSection">
+      <div class="panel">
+        <div class="section-head"><h2>KYC</h2></div>
+        <form class="inline" id="kycForm">
+          <div><label>Legal name</label><input name="legalName" required></div>
+          <div><label>NIT</label><input name="taxId" required></div>
+          <div><label>Legal rep name</label><input name="legalRepName" required></div>
+          <div><label>Legal rep CI</label><input name="legalRepDocumentId" required></div>
+          <div><label>Payout bank account</label><input name="payoutBankAccount" required></div>
+          <button class="primary" type="submit">Submit KYC</button>
+        </form>
+      </div>
+    </section>
 
-    <h2>Live keys</h2>
-    <p class="muted">
-      Minting a live secret key isn't done from this page: a compromised dashboard session must never be able to
-      produce a permanent, full-power credential. Once KYC is approved, call
-      <code>POST /v1/dashboard/signup</code>'s sibling — <code>POST /v1/merchants/live_keys</code> — from your own
-      backend, authenticated with your existing secret key.
-    </p>
+    <section class="block">
+      <div class="panel">
+        <div class="section-head"><h2>Live keys</h2></div>
+        <p class="muted" style="margin:0">
+          Minting a live secret key isn't done from this page: a compromised dashboard session must never be able to
+          produce a permanent, full-power credential. Once KYC is approved, call
+          <code>POST /v1/dashboard/signup</code>'s sibling — <code>POST /v1/merchants/live_keys</code> — from your own
+          backend, authenticated with your existing secret key.
+        </p>
+      </div>
+    </section>
 
-    <h2>Invoicing profile (Factura Electrónica)</h2>
-    <div id="invoicingSection">
-      <form class="inline" id="invoicingForm">
-        <div><label>NIT</label><input name="nit" required></div>
-        <div><label>Razón social</label><input name="razonSocial" required></div>
-        <div><label>Sucursal</label><input name="sucursal" type="number" value="0"></div>
-        <div><label>Punto de venta</label><input name="puntoVenta" type="number" value="0"></div>
-        <button class="primary" type="submit">Save &amp; issue CUIS</button>
-      </form>
-    </div>
+    <section class="block" id="invoicingSection">
+      <div class="panel">
+        <div class="section-head"><h2>Invoicing profile (Factura Electrónica)</h2></div>
+        <form class="inline" id="invoicingForm">
+          <div><label>NIT</label><input name="nit" required></div>
+          <div><label>Razón social</label><input name="razonSocial" required></div>
+          <div><label>Sucursal</label><input name="sucursal" type="number" value="0"></div>
+          <div><label>Punto de venta</label><input name="puntoVenta" type="number" value="0"></div>
+          <button class="primary" type="submit">Save &amp; issue CUIS</button>
+        </form>
+      </div>
+    </section>
 
-    <h2>Recent payments</h2>
-    <table>
-      <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Method</th><th>Created</th></tr></thead>
-      <tbody id="paymentRows"></tbody>
-    </table>
+    <section class="block">
+      <div class="panel">
+        <div class="section-head"><h2>Recent payments</h2></div>
+        <table>
+          <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Method</th><th>Created</th></tr></thead>
+          <tbody id="paymentRows"></tbody>
+        </table>
+      </div>
+    </section>
 
-    <h2>Payouts</h2>
-    <table>
-      <thead><tr><th>ID</th><th>Amount</th><th>Bank account</th><th>Status</th><th>Paid out</th></tr></thead>
-      <tbody id="payoutRows"></tbody>
-    </table>
+    <section class="block">
+      <div class="panel">
+        <div class="section-head"><h2>Payouts</h2></div>
+        <table>
+          <thead><tr><th>ID</th><th>Amount</th><th>Bank account</th><th>Status</th><th>Paid out</th></tr></thead>
+          <tbody id="payoutRows"></tbody>
+        </table>
+      </div>
+    </section>
   </section>
 
 <script>
@@ -174,7 +316,7 @@
   }
 
   function showLoggedOut() {
-    loginFormEl.style.display = "flex";
+    loginFormEl.style.display = "block";
     loggedInBarEl.style.display = "none";
     appEl.style.display = "none";
   }
@@ -270,7 +412,7 @@
   document.getElementById("showForgot").addEventListener("click", () => {
     errorEl.textContent = "";
     infoEl.textContent = "";
-    forgotFormEl.style.display = forgotFormEl.style.display === "none" ? "flex" : "none";
+    forgotFormEl.style.display = forgotFormEl.style.display === "none" ? "block" : "none";
   });
 
   document.getElementById("requestReset").addEventListener("click", async () => {
