@@ -19,6 +19,7 @@
     "@nestjs/platform-express": "^10.4.6",
     "@nestjs/schedule": "^4.1.1",
     "@nestjs/swagger": "^7.4.2",
+    "@nestjs/throttler": "^6.2.1",
     "@pagosya/shared-types": "workspace:*",
     "@prisma/client": "^5.20.0",
     "argon2": "^0.41.1",

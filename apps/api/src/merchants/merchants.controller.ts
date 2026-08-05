@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantsService } from "./merchants.service";
 import { KycService } from "./kyc.service";
@@ -20,7 +21,9 @@ export class MerchantsController {
     private readonly kyc: KycService,
   ) {}
 
+  /** Public self-serve signup — tighter limit than the global default since it's the free entry point to everything else (instant TEST keys, dashboard signup). */
   @Post()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   create(@Body() dto: CreateMerchantDto) {
     return this.merchants.create(dto);
   }
