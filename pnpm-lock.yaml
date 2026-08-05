@@ -4,6 +4,10 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  node-releases: 2.0.51
+  terser: 5.49.0
+
 importers:
 
   .:
@@ -2548,8 +2552,8 @@ packages:
   node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
 
-  node-releases@2.0.52:
-    resolution: {integrity: sha512-MRlTqhAfoMx/4mhEbPo3Hi02g9LJZaJkka69V6h67Cb1gjrAG0jsTE4CZX1eptNx+VCAwJmfpnDIF4P0Nh1A7A==}
+  node-releases@2.0.51:
+    resolution: {integrity: sha512-wRNIrw4DmVLKQlbgOMdkMx27Wrpzes2hh5Jtbi2bjPd+4wJstWIqP5A+lscnqbm0xxmT5Bpg8Lec5ItEBwx6BQ==}
     engines: {node: '>=18'}
 
   normalize-path@3.0.0:
@@ -3105,8 +3109,8 @@ packages:
       uglify-js:
         optional: true
 
-  terser@5.49.1:
-    resolution: {integrity: sha512-7A2xlQ5EnGT8KPA92dUh6RbRYTVw8hEaEN9L1K68l4UOXFuV511NnAqObGoRqGOQofQcMypisu1s3xawCEHrvA==}
+  terser@5.49.0:
+    resolution: {integrity: sha512-SNiDnXyHSrxVcIOtVbULzcTmniUiwcV7Nwdyj1twVubeTmbjoa8p69KKDpfkdoOavuM4/GRm1+ykI8qqnavHoA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -4773,7 +4777,7 @@ snapshots:
       baseline-browser-mapping: 2.11.12
       caniuse-lite: 1.0.30001806
       electron-to-chromium: 1.5.400
-      node-releases: 2.0.52
+      node-releases: 2.0.51
       update-browserslist-db: 1.2.3(browserslist@4.28.7)
 
   bs-logger@0.2.6:
@@ -6105,7 +6109,7 @@ snapshots:
 
   node-int64@0.4.0: {}
 
-  node-releases@2.0.52: {}
+  node-releases@2.0.51: {}
 
   normalize-path@3.0.0: {}
 
@@ -6629,10 +6633,10 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
-      terser: 5.49.1
+      terser: 5.49.0
       webpack: 5.97.1
 
-  terser@5.49.1:
+  terser@5.49.0:
     dependencies:
       '@jridgewell/source-map': 0.3.11
       acorn: 8.18.0
@@ -6837,7 +6841,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.19.43
       fsevents: 2.3.3
-      terser: 5.49.1
+      terser: 5.49.0
 
   walker@1.0.8:
     dependencies:

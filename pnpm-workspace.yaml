@@ -1,6 +1,11 @@
 packages:
   - "apps/*"
   - "packages/*"
+overrides:
+  # Pin transitive browserslist-data deps to versions old enough that a
+  # supply-chain "minimum release age" check won't flag them as too-fresh.
+  node-releases: "2.0.51"
+  terser: "5.49.0"
 allowBuilds:
   '@embedded-postgres/linux-x64': true
   '@nestjs/core': true
