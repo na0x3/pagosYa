@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
+import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { PayoutsService } from "./payouts.service";
 
@@ -11,7 +11,7 @@ export class PayoutsController {
 
   @Get("balance")
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   async getBalance(@CurrentMerchant() merchant: { id: string }) {
     const payableBalance = await this.payouts.getPayableBalance(merchant.id);
     return { payableBalance, currency: "BOB" };
@@ -19,7 +19,7 @@ export class PayoutsController {
 
   @Get("payouts")
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   list(@CurrentMerchant() merchant: { id: string }) {
     return this.payouts.listForMerchant(merchant.id);
   }

@@ -12,6 +12,7 @@ import { IdempotencyModule } from "./idempotency/idempotency.module";
 import { InvoicingModule } from "./invoicing/invoicing.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { OpsModule } from "./ops/ops.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { OpsModule } from "./ops/ops.module";
     InvoicingModule,
     PayoutsModule,
     OpsModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

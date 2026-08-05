@@ -140,6 +140,35 @@ model Merchant {
   invoicingProfile MerchantInvoicingProfile?
   invoices         Invoice[]
   payouts          Payout[]
+  users            MerchantUser[]
+}
+
+// A human login for the merchant dashboard — deliberately separate from
+// ApiKey. The dashboard must never need a merchant's secret key in the
+// browser; this is what apps/merchant-dashboard authenticates with instead.
+model MerchantUser {
+  id             String            @id @default(cuid())
+  merchantId     String
+  merchant       Merchant          @relation(fields: [merchantId], references: [id])
+  email          String            @unique
+  hashedPassword String
+  createdAt      DateTime          @default(now())
+  sessions       MerchantSession[]
+}
+
+// Short-lived, revocable dashboard session token (dash_...) — what
+// MerchantAuthGuard accepts alongside a secret API key.
+model MerchantSession {
+  id             String       @id @default(cuid())
+  merchantUserId String
+  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
+  merchantId     String
+  hashedToken    String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
 }
 
 // NIT/branch/point-of-sale registration a merchant needs on file before

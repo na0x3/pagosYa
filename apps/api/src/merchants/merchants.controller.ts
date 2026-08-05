@@ -5,7 +5,7 @@ import { KycService } from "./kyc.service";
 import { CreateMerchantDto } from "./dto/create-merchant.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
-import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
+import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { OpsAuthGuard } from "../ops/guards/ops-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { CurrentOpsUser } from "../ops/decorators/current-ops-user.decorator";
@@ -26,21 +26,21 @@ export class MerchantsController {
 
   @Post("kyc")
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   submitKyc(@CurrentMerchant() merchant: { id: string }, @Body() dto: SubmitKycDto) {
     return this.kyc.submit(merchant.id, dto);
   }
 
   @Get("kyc")
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   getKyc(@CurrentMerchant() merchant: { id: string }) {
     return this.kyc.latest(merchant.id);
   }
 
   @Post("live_keys")
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   issueLiveKeys(@CurrentMerchant() merchant: { id: string }) {
     return this.merchants.issueLiveKeys(merchant.id);
   }

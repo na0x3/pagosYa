@@ -6,9 +6,10 @@ import { MockBankDisbursementAdapter } from "./adapters/mock-bank-disbursement.a
 import { PAYOUT_PROVIDER } from "./tokens";
 import { AuthModule } from "../auth/auth.module";
 import { LedgerModule } from "../ledger/ledger.module";
+import { DashboardModule } from "../dashboard/dashboard.module";
 
 @Module({
-  imports: [AuthModule, LedgerModule],
+  imports: [AuthModule, LedgerModule, DashboardModule],
   controllers: [PayoutsController],
   providers: [
     PayoutsService,

@@ -9,8 +9,7 @@
   h1 { font-size: 1.4rem; margin-bottom: 4px; }
   h2 { font-size: 1.1rem; margin: 32px 0 8px; }
   .muted { color: #6b7280; font-size: 0.9rem; }
-  .warning { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; }
-  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
+  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 8px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
   .setup label { display: block; font-size: 0.8rem; margin-bottom: 4px; }
   .setup input { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 220px; }
   button { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; font-size: 0.85rem; }
@@ -29,29 +28,33 @@
   form.inline input { padding: 5px 7px; border: 1px solid #d1d5db; border-radius: 6px; }
   #error { color: #dc2626; margin: 12px 0; white-space: pre-wrap; }
   #liveKeysResult { font-family: monospace; font-size: 0.8rem; margin-top: 8px; white-space: pre-wrap; }
+  #loggedInBar { display: none; margin-bottom: 20px; align-items: center; gap: 12px; }
   section { display: none; }
 </style>
 </head>
 <body>
   <h1>pagosYa — Merchant Dashboard</h1>
-  <div class="warning">
-    Dev-only placeholder: this authenticates by pasting your <strong>secret key</strong> directly into the browser
-    (stored in sessionStorage). That's never how a real merchant-facing dashboard should work — a secret key must
-    never touch browser JS/storage in production. A real version needs its own merchant login (email/password or
-    similar) that maps to the account server-side, the way the publishable key / checkout iframe split already
-    keeps the secret key out of the browser for actual payment flows.
-  </div>
 
-  <div class="setup">
+  <div class="setup" id="loginForm">
     <div>
       <label for="apiBase">API base URL</label>
       <input id="apiBase" value="http://localhost:3000/v1">
     </div>
     <div>
-      <label for="secretKey">Secret key</label>
-      <input id="secretKey" type="password" placeholder="sk_test_...">
+      <label for="email">Email</label>
+      <input id="email" type="email" placeholder="owner@tienda-ejemplo.bo">
     </div>
-    <button class="primary" id="connect">Connect &amp; refresh</button>
+    <div>
+      <label for="password">Password</label>
+      <input id="password" type="password">
+    </div>
+    <button class="primary" id="login">Log in</button>
+  </div>
+  <p class="muted">No login yet? Have your integration call <code>POST /v1/dashboard/signup</code> once with your secret key to create one — never from this page.</p>
+
+  <div id="loggedInBar">
+    <span class="muted" id="loggedInAs"></span>
+    <button id="logout">Log out</button>
   </div>
 
   <div id="error"></div>
@@ -114,12 +117,16 @@
 
 <script>
   const apiBaseEl = document.getElementById("apiBase");
-  const secretKeyEl = document.getElementById("secretKey");
+  const emailEl = document.getElementById("email");
+  const passwordEl = document.getElementById("password");
   const errorEl = document.getElementById("error");
   const appEl = document.getElementById("app");
+  const loginFormEl = document.getElementById("loginForm");
+  const loggedInBarEl = document.getElementById("loggedInBar");
+  const loggedInAsEl = document.getElementById("loggedInAs");
 
   apiBaseEl.value = sessionStorage.getItem("pagosya_merchant_api_base") || apiBaseEl.value;
-  secretKeyEl.value = sessionStorage.getItem("pagosya_merchant_secret") || "";
+  let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
 
   function money(cents) {
     return (cents / 100).toFixed(2) + " BOB";
@@ -133,7 +140,7 @@
       ...options,
       headers: {
         "content-type": "application/json",
-        authorization: "Bearer " + secretKeyEl.value,
+        authorization: "Bearer " + sessionToken,
         ...(options.headers || {}),
       },
     });
@@ -142,10 +149,21 @@
     return body;
   }
 
+  function showLoggedOut() {
+    loginFormEl.style.display = "flex";
+    loggedInBarEl.style.display = "none";
+    appEl.style.display = "none";
+  }
+
+  function showLoggedIn() {
+    loginFormEl.style.display = "none";
+    loggedInBarEl.style.display = "flex";
+    loggedInAsEl.textContent = `Logged in as ${emailEl.value || "your dashboard account"}`;
+  }
+
   async function refresh() {
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
-    sessionStorage.setItem("pagosya_merchant_secret", secretKeyEl.value);
 
     try {
       const [balance, kyc, invoicing, payments, payouts] = await Promise.all([
@@ -156,6 +174,7 @@
         api("/merchants/payouts"),
       ]);
 
+      showLoggedIn();
       appEl.style.display = "block";
 
       document.getElementById("balanceValue").textContent = money(balance.payableBalance);
@@ -196,11 +215,44 @@
         .join("") || `<tr><td colspan="5" class="muted">No payouts yet.</td></tr>`;
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
-      appEl.style.display = "none";
+      // An expired/invalid session should drop back to the login form, not
+      // just show an error over a blank dashboard.
+      if (err.message.match(/session|credentials/i)) {
+        sessionToken = "";
+        sessionStorage.removeItem("pagosya_merchant_session");
+        showLoggedOut();
+      } else {
+        appEl.style.display = "none";
+      }
     }
   }
 
-  document.getElementById("connect").addEventListener("click", refresh);
+  document.getElementById("login").addEventListener("click", async () => {
+    errorEl.textContent = "";
+    sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
+    try {
+      const result = await api("/dashboard/login", {
+        method: "POST",
+        body: JSON.stringify({ email: emailEl.value, password: passwordEl.value }),
+      });
+      sessionToken = result.token;
+      sessionStorage.setItem("pagosya_merchant_session", sessionToken);
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  document.getElementById("logout").addEventListener("click", async () => {
+    try {
+      await api("/dashboard/logout", { method: "POST" });
+    } catch {
+      // best-effort — clear local state regardless
+    }
+    sessionToken = "";
+    sessionStorage.removeItem("pagosya_merchant_session");
+    showLoggedOut();
+  });
 
   document.getElementById("kycForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -235,7 +287,8 @@
     }
   });
 
-  if (secretKeyEl.value) refresh();
+  if (sessionToken) refresh();
+  else showLoggedOut();
 </script>
 </body>
 </html>

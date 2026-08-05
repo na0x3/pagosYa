@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/comm
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
 import { ClientSecretGuard } from "../auth/guards/client-secret.guard";
+import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { PaymentIntentsService } from "./payment-intents.service";
 import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
@@ -26,14 +27,14 @@ export class PaymentIntentsController {
 
   @Get()
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   list(@CurrentMerchant() merchant: { id: string }) {
     return this.paymentIntents.listForMerchant(merchant.id);
   }
 
   @Get(":id")
   @ApiBearerAuth()
-  @UseGuards(SecretApiKeyGuard)
+  @UseGuards(MerchantAuthGuard)
   get(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string) {
     return this.paymentIntents.findByIdForMerchant(merchant.id, id);
   }

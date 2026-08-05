@@ -25,7 +25,7 @@ Monorepo (pnpm workspaces):
 - `packages/sdk-node` — SDK tipado en TypeScript para el backend de los comercios.
 - `packages/shared-types` — tipos compartidos entre api, checkout y widget.
 - `apps/ops` — consola interna (HTML + JS sin build) para revisar/aprobar KYC. Cada revisor se autentica con su propio token `ops_...` (ver Ops/auditoría abajo), no con un secreto compartido.
-- `apps/merchant-dashboard` — dashboard de comercio (HTML + JS sin build): balance, pagos, payouts, estado de KYC/facturación. **Placeholder de desarrollo**: autentica pegando la llave secreta en el navegador — una versión real necesita login propio del comercio, nunca la llave secreta en el browser.
+- `apps/merchant-dashboard` — dashboard de comercio (HTML + JS sin build): balance, pagos, payouts, estado de KYC/facturación. Login propio (email/contraseña, `MerchantUser`/`MerchantSession`) — la llave secreta nunca toca el navegador; se usa una sola vez, desde el backend del comercio, para crear el login (`POST /v1/dashboard/signup`).
 
 ### Onboarding, facturación y payouts
 
@@ -40,6 +40,12 @@ Cada decisión de revisión de KYC queda atribuida a una persona concreta, no a 
 - `OpsUser` — credencial por persona (token `ops_...`, ver `OpsUserService`). `INTERNAL_OPS_SECRET` ya solo protege `POST /internal/ops_users` (crear/revocar revisores) — el día a día de revisión usa el token propio de cada revisor (`OpsAuthGuard`).
 - `AuditLogEntry` — registro de cada decisión (actor, acción, objetivo, metadata), escrito en la misma transacción que el cambio que audita. Consultable en `GET /internal/audit_log`.
 - `pnpm run seed` crea un revisor demo (`ana@pagosya.bo`) e imprime su token la primera vez que corre.
+
+### Login del dashboard de comercio (`apps/api/src/dashboard/`)
+
+`MerchantAuthGuard` acepta llave secreta (`sk_...`) **o** token de sesión (`dash_...`) por prefijo, así que todos los endpoints de solo-lectura/configuración del comercio (`balance`, `payouts`, `payment_intents` list/get, `kyc`, `invoicing_profile`, `live_keys`) funcionan igual desde un backend (llave secreta) o desde `apps/merchant-dashboard` (sesión). Los endpoints que mueven dinero (`POST /v1/payment_intents`, `confirm`, `refunds`) siguen exigiendo llave secreta explícitamente — una sesión de dashboard nunca puede crear pagos.
+
+`POST /v1/dashboard/signup` (con la llave secreta, desde el backend del comercio) crea el login; `POST /v1/dashboard/login` (público, email/contraseña) devuelve el token de sesión; `POST /v1/dashboard/logout` lo revoca.
 
 ### Rieles de pago (rails)
 
