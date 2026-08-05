@@ -50,6 +50,10 @@ export class PaymentIntentsService {
     return intent;
   }
 
+  async listForMerchant(merchantId: string) {
+    return this.prisma.paymentIntent.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" }, take: 50 });
+  }
+
   async findByClientSecret(clientSecret: string) {
     const intent = await this.prisma.paymentIntent.findUnique({ where: { clientSecret } });
     if (!intent) throw new NotFoundException("PaymentIntent not found");

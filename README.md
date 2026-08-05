@@ -19,11 +19,19 @@ Libélula integra vía un manual PDF (v2.7.1, 2020) y plugins de e-commerce, sin
 
 Monorepo (pnpm workspaces):
 
-- `apps/api` — backend NestJS + TypeScript + PostgreSQL/Prisma. Núcleo del gateway: cuentas de comercio, `PaymentIntent` (máquina de estados), métodos de pago tokenizados, ledger de doble entrada, webhooks firmados (HMAC) con reintentos, claves de idempotencia.
+- `apps/api` — backend NestJS + TypeScript + PostgreSQL/Prisma. Núcleo del gateway: cuentas de comercio, `PaymentIntent` (máquina de estados), métodos de pago tokenizados, ledger de doble entrada, webhooks firmados (HMAC) con reintentos, claves de idempotencia, KYC/onboarding, Factura Electrónica (SIN) y payouts.
 - `apps/checkout` — página de checkout (Vite + TS) servida en iframe desde el origen de pagosYa; es el único lugar donde los datos de pago tocan el DOM (reducción de alcance PCI estilo SAQ-A).
 - `packages/widget-js` — script embebible (`pagosya.js`), análogo a Stripe.js, que monta el iframe de checkout y se comunica vía `postMessage`.
 - `packages/sdk-node` — SDK tipado en TypeScript para el backend de los comercios.
 - `packages/shared-types` — tipos compartidos entre api, checkout y widget.
+- `apps/ops` — consola interna (HTML + JS sin build) para revisar/aprobar KYC. Autentica con `INTERNAL_OPS_SECRET`.
+- `apps/merchant-dashboard` — dashboard de comercio (HTML + JS sin build): balance, pagos, payouts, estado de KYC/facturación. **Placeholder de desarrollo**: autentica pegando la llave secreta en el navegador — una versión real necesita login propio del comercio, nunca la llave secreta en el browser.
+
+### Onboarding, facturación y payouts
+
+- **KYC** (`apps/api/src/merchants/kyc.service.ts`): un comercio nace en estado `PENDING`, envía sus datos (`POST /v1/merchants/kyc`) y pagosYa los aprueba/rechaza (`POST /v1/merchants/kyc/:id/review`, protegido por `INTERNAL_OPS_SECRET`, distinto del secreto de los rieles). Solo al aprobar pasa a `ACTIVE` y puede pedir llaves `live` (`POST /v1/merchants/live_keys`).
+- **Factura Electrónica** (`apps/api/src/invoicing/`): mismo patrón que los rieles de pago — un `InvoicingProvider` con un mock de SIN/SIAT detrás, y un worker que emite facturas de forma asíncrona (outbox + reintentos) cuando un pago tiene éxito. **No implementa el algoritmo real de CUF/CUFD ni el XML de SIN** — la documentación técnica de SIN no fue accesible al construir esto (cadena de certificados TLS rota en siatinfo.impuestos.gob.bo); hace falta el spec real antes de un adaptador de producción.
+- **Payouts** (`apps/api/src/payouts/`): un worker calcula el saldo no pagado de cada comercio `AGGREGATOR` (a partir del ledger) y lo transfiere vía un `PayoutProvider` (mock de un banco real). Los comercios `FACILITATOR` nunca se pagan aquí — sus asientos de `MERCHANT_PAYABLE` son solo informativos porque el riel ya liquidó directo a su cuenta.
 
 ### Rieles de pago (rails)
 
@@ -47,6 +55,10 @@ pnpm --filter @pagosya/checkout run dev        # checkout iframe en :5173
 pnpm --filter @pagosya/widget-js run build     # genera packages/widget-js/dist/pagosya.js
 
 PAGOSYA_SECRET_KEY=sk_test_... pnpm --filter @pagosya/demo run start   # demo de comercio en :4321
+pnpm --filter @pagosya/ops run start                                  # consola de ops en :4322
+pnpm --filter @pagosya/merchant-dashboard run start                   # dashboard de comercio en :4323
 ```
 
 `apps/demo` es el ejemplo end-to-end: un servidor mínimo que hace de "backend del comercio" (usa `@pagosya/sdk-node` para crear el `PaymentIntent`) y sirve una página que monta el widget contra ese pago — el mismo camino que seguiría cualquier integrador real.
+
+`apps/ops` y `apps/merchant-dashboard` llaman a la API directo desde el navegador, así que sus orígenes deben estar en `ADDITIONAL_CORS_ORIGINS` (ver `.env.example`).

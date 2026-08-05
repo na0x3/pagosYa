@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pagosYa — Merchant Dashboard</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 24px auto 80px; padding: 0 16px; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; margin: 32px 0 8px; }
+  .muted { color: #6b7280; font-size: 0.9rem; }
+  .warning { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; }
+  .setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
+  .setup label { display: block; font-size: 0.8rem; margin-bottom: 4px; }
+  .setup input { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 220px; }
+  button { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; font-size: 0.85rem; }
+  button.primary { background: #111827; color: white; border-color: #111827; }
+  .cards { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; min-width: 200px; }
+  .card .value { font-size: 1.6rem; font-weight: 700; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+  .badge.ACTIVE, .badge.APPROVED, .badge.EMITTED, .badge.SUCCEEDED { background: #d1fae5; color: #065f46; }
+  .badge.PENDING, .badge.PENDING_REVIEW, .badge.NOT_SUBMITTED, .badge.NOT_CONFIGURED, .badge.REQUIRES_ACTION, .badge.PROCESSING { background: #fef3c7; color: #92400e; }
+  .badge.REJECTED, .badge.FAILED, .badge.SUSPENDED { background: #fee2e2; color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem; }
+  form.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-top: 8px; }
+  form.inline label { display: block; font-size: 0.75rem; margin-bottom: 2px; }
+  form.inline input { padding: 5px 7px; border: 1px solid #d1d5db; border-radius: 6px; }
+  #error { color: #dc2626; margin: 12px 0; white-space: pre-wrap; }
+  #liveKeysResult { font-family: monospace; font-size: 0.8rem; margin-top: 8px; white-space: pre-wrap; }
+  section { display: none; }
+</style>
+</head>
+<body>
+  <h1>pagosYa — Merchant Dashboard</h1>
+  <div class="warning">
+    Dev-only placeholder: this authenticates by pasting your <strong>secret key</strong> directly into the browser
+    (stored in sessionStorage). That's never how a real merchant-facing dashboard should work — a secret key must
+    never touch browser JS/storage in production. A real version needs its own merchant login (email/password or
+    similar) that maps to the account server-side, the way the publishable key / checkout iframe split already
+    keeps the secret key out of the browser for actual payment flows.
+  </div>
+
+  <div class="setup">
+    <div>
+      <label for="apiBase">API base URL</label>
+      <input id="apiBase" value="http://localhost:3000/v1">
+    </div>
+    <div>
+      <label for="secretKey">Secret key</label>
+      <input id="secretKey" type="password" placeholder="sk_test_...">
+    </div>
+    <button class="primary" id="connect">Connect &amp; refresh</button>
+  </div>
+
+  <div id="error"></div>
+
+  <section id="app">
+    <div class="cards">
+      <div class="card">
+        <div class="muted">Payable balance</div>
+        <div class="value" id="balanceValue">—</div>
+      </div>
+      <div class="card">
+        <div class="muted">KYC status</div>
+        <div class="value"><span class="badge" id="kycBadge">—</span></div>
+      </div>
+      <div class="card">
+        <div class="muted">Invoicing (SIN)</div>
+        <div class="value"><span class="badge" id="invoicingBadge">—</span></div>
+      </div>
+    </div>
+
+    <h2>KYC</h2>
+    <div id="kycSection">
+      <form class="inline" id="kycForm">
+        <div><label>Legal name</label><input name="legalName" required></div>
+        <div><label>NIT</label><input name="taxId" required></div>
+        <div><label>Legal rep name</label><input name="legalRepName" required></div>
+        <div><label>Legal rep CI</label><input name="legalRepDocumentId" required></div>
+        <div><label>Payout bank account</label><input name="payoutBankAccount" required></div>
+        <button class="primary" type="submit">Submit KYC</button>
+      </form>
+    </div>
+
+    <h2>Live keys</h2>
+    <button id="requestLiveKeys">Request live keys</button>
+    <div id="liveKeysResult"></div>
+
+    <h2>Invoicing profile (Factura Electrónica)</h2>
+    <div id="invoicingSection">
+      <form class="inline" id="invoicingForm">
+        <div><label>NIT</label><input name="nit" required></div>
+        <div><label>Razón social</label><input name="razonSocial" required></div>
+        <div><label>Sucursal</label><input name="sucursal" type="number" value="0"></div>
+        <div><label>Punto de venta</label><input name="puntoVenta" type="number" value="0"></div>
+        <button class="primary" type="submit">Save &amp; issue CUIS</button>
+      </form>
+    </div>
+
+    <h2>Recent payments</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Method</th><th>Created</th></tr></thead>
+      <tbody id="paymentRows"></tbody>
+    </table>
+
+    <h2>Payouts</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Amount</th><th>Bank account</th><th>Status</th><th>Paid out</th></tr></thead>
+      <tbody id="payoutRows"></tbody>
+    </table>
+  </section>
+
+<script>
+  const apiBaseEl = document.getElementById("apiBase");
+  const secretKeyEl = document.getElementById("secretKey");
+  const errorEl = document.getElementById("error");
+  const appEl = document.getElementById("app");
+
+  apiBaseEl.value = sessionStorage.getItem("pagosya_merchant_api_base") || apiBaseEl.value;
+  secretKeyEl.value = sessionStorage.getItem("pagosya_merchant_secret") || "";
+
+  function money(cents) {
+    return (cents / 100).toFixed(2) + " BOB";
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  async function api(path, options = {}) {
+    const res = await fetch(apiBaseEl.value.replace(/\/$/, "") + path, {
+      ...options,
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer " + secretKeyEl.value,
+        ...(options.headers || {}),
+      },
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((body && body.message) || res.statusText);
+    return body;
+  }
+
+  async function refresh() {
+    errorEl.textContent = "";
+    sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
+    sessionStorage.setItem("pagosya_merchant_secret", secretKeyEl.value);
+
+    try {
+      const [balance, kyc, invoicing, payments, payouts] = await Promise.all([
+        api("/merchants/balance"),
+        api("/merchants/kyc"),
+        api("/merchants/invoicing_profile"),
+        api("/payment_intents"),
+        api("/merchants/payouts"),
+      ]);
+
+      appEl.style.display = "block";
+
+      document.getElementById("balanceValue").textContent = money(balance.payableBalance);
+
+      const kycBadge = document.getElementById("kycBadge");
+      kycBadge.textContent = kyc.status;
+      kycBadge.className = "badge " + kyc.status;
+      document.getElementById("kycSection").style.display = kyc.status === "APPROVED" ? "none" : "block";
+
+      const invBadge = document.getElementById("invoicingBadge");
+      const invStatus = invoicing.status || (invoicing.cuis ? "CONFIGURED" : "NOT_CONFIGURED");
+      invBadge.textContent = invStatus;
+      invBadge.className = "badge " + (invoicing.cuis ? "APPROVED" : "NOT_CONFIGURED");
+      document.getElementById("invoicingSection").style.display = invoicing.cuis ? "none" : "block";
+
+      document.getElementById("paymentRows").innerHTML = payments
+        .map(
+          (p) => `<tr>
+            <td><code>${esc(p.id)}</code></td>
+            <td>${money(p.amount)}</td>
+            <td><span class="badge ${esc(p.status)}">${esc(p.status)}</span></td>
+            <td>${esc(p.paymentMethodType || "—")}</td>
+            <td>${esc(new Date(p.createdAt).toLocaleString())}</td>
+          </tr>`,
+        )
+        .join("") || `<tr><td colspan="5" class="muted">No payments yet.</td></tr>`;
+
+      document.getElementById("payoutRows").innerHTML = payouts
+        .map(
+          (p) => `<tr>
+            <td><code>${esc(p.id)}</code></td>
+            <td>${money(p.amount)}</td>
+            <td>${esc(p.bankAccount)}</td>
+            <td><span class="badge ${esc(p.status)}">${esc(p.status)}</span></td>
+            <td>${p.paidOutAt ? esc(new Date(p.paidOutAt).toLocaleString()) : "—"}</td>
+          </tr>`,
+        )
+        .join("") || `<tr><td colspan="5" class="muted">No payouts yet.</td></tr>`;
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+      appEl.style.display = "none";
+    }
+  }
+
+  document.getElementById("connect").addEventListener("click", refresh);
+
+  document.getElementById("kycForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    try {
+      await api("/merchants/kyc", { method: "POST", body: JSON.stringify(data) });
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  document.getElementById("invoicingForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    data.sucursal = Number(data.sucursal) || 0;
+    data.puntoVenta = Number(data.puntoVenta) || 0;
+    try {
+      await api("/merchants/invoicing_profile", { method: "POST", body: JSON.stringify(data) });
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  document.getElementById("requestLiveKeys").addEventListener("click", async () => {
+    try {
+      const result = await api("/merchants/live_keys", { method: "POST" });
+      document.getElementById("liveKeysResult").textContent = JSON.stringify(result, null, 2);
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  if (secretKeyEl.value) refresh();
+</script>
+</body>
+</html>

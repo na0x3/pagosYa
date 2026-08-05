@@ -24,6 +24,13 @@ export class PaymentIntentsController {
     return this.paymentIntents.create(merchant.id, req.apiKeyMode === ApiKeyMode.LIVE, dto);
   }
 
+  @Get()
+  @ApiBearerAuth()
+  @UseGuards(SecretApiKeyGuard)
+  list(@CurrentMerchant() merchant: { id: string }) {
+    return this.paymentIntents.listForMerchant(merchant.id);
+  }
+
   @Get(":id")
   @ApiBearerAuth()
   @UseGuards(SecretApiKeyGuard)

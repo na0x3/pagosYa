@@ -119,6 +119,10 @@ importers:
         specifier: workspace:*
         version: link:../../packages/sdk-node
 
+  apps/merchant-dashboard: {}
+
+  apps/ops: {}
+
   packages/sdk-node:
     dependencies:
       '@pagosya/shared-types':

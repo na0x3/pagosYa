@@ -1,0 +1,25 @@
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = process.env.PORT ?? 4323;
+
+const server = createServer(async (req, res) => {
+  try {
+    if (req.url === "/" || req.url === "/index.html") {
+      const html = await readFile(path.join(dirname, "index.html"));
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(html);
+      return;
+    }
+    res.writeHead(404);
+    res.end("not found");
+  } catch (err) {
+    res.writeHead(500);
+    res.end(String(err));
+  }
+});
+
+server.listen(PORT, () => console.log(`pagosYa merchant dashboard on http://localhost:${PORT}`));

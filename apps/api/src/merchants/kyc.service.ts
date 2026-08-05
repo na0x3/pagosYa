@@ -38,6 +38,15 @@ export class KycService {
     return submission ?? { status: "NOT_SUBMITTED" as const };
   }
 
+  /** Ops queue: submissions awaiting a human decision, oldest first. */
+  async listPending() {
+    return this.prisma.merchantKycSubmission.findMany({
+      where: { status: KycStatus.PENDING_REVIEW },
+      include: { merchant: { select: { id: true, name: true, email: true, settlementMode: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
   async review(submissionId: string, dto: ReviewKycDto) {
     const submission = await this.prisma.merchantKycSubmission.findUnique({ where: { id: submissionId } });
     if (!submission) throw new NotFoundException("KYC submission not found");

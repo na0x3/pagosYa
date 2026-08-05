@@ -10,7 +10,7 @@ async function bootstrap() {
   const config = app.get(ConfigService);
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: config.get<string>("app.checkoutOrigin"), credentials: false });
+  app.enableCors({ origin: config.get<string[]>("app.corsOrigins"), credentials: false });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("pagosYa API")

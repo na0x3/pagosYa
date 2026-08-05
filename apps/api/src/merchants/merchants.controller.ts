@@ -43,6 +43,14 @@ export class MerchantsController {
     return this.merchants.issueLiveKeys(merchant.id);
   }
 
+  /** pagosYa ops/compliance queue — not merchant- or public-facing. */
+  @Get("kyc/pending")
+  @ApiBearerAuth()
+  @UseGuards(InternalOpsGuard)
+  listPendingKyc() {
+    return this.kyc.listPending();
+  }
+
   /** pagosYa ops/compliance review action — not merchant- or public-facing. */
   @Post("kyc/:submissionId/review")
   @ApiBearerAuth()
