@@ -7,3 +7,4 @@ build/
 .pgdata/
 .turbo/
 .DS_Store
+screenshots/

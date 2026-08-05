@@ -32,6 +32,26 @@ const TAB_LABELS: Record<PaymentMethodType, string> = {
   [PaymentMethodType.QR]: "QR",
 };
 
+const TAB_ICONS: Record<PaymentMethodType, string> = {
+  [PaymentMethodType.CARD]:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>',
+  [PaymentMethodType.TIGO_MONEY]:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>',
+  [PaymentMethodType.BANK_TRANSFER]:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M10 10v9M14 10v9M19 10v9"/><path d="M3 21h18"/></svg>',
+  [PaymentMethodType.QR]:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14h2M14 19h2M19 19h2"/></svg>',
+};
+
+const ICON_CHECK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>';
+const ICON_X =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.5 9.5l-5 5M9.5 9.5l5 5"/></svg>';
+const ICON_CLOCK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 3"/></svg>';
+const ICON_LOCK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+
 const app = document.getElementById("app")!;
 let selectedType: PaymentMethodType = PaymentMethodType.CARD;
 
@@ -71,7 +91,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
       ${Object.values(PaymentMethodType)
         .map(
           (type) =>
-            `<div class="tab ${type === selectedType ? "active" : ""}" data-type="${type}">${TAB_LABELS[type]}</div>`,
+            `<button type="button" class="tab ${type === selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,
         )
         .join("")}
     </div>
@@ -83,6 +103,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
       <div class="hint">En producción este campo lo reemplaza el rail real (tokenización de tarjeta, deep link Tigo Money, etc).</div>
     </div>
     <button class="primary" id="pay">Pagar ${formatAmount(session.amount, session.currency)}</button>
+    <div class="secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
   `;
 
   app.querySelectorAll<HTMLElement>(".tab").forEach((tab) => {
@@ -125,12 +146,12 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
 }
 
 function renderSuccess(paymentIntentId: string) {
-  app.innerHTML = `<div class="status success">Pago exitoso</div>`;
+  app.innerHTML = `<div class="status success">${ICON_CHECK}<span>Pago exitoso</span></div>`;
   postToParent("PAYMENT_SUCCEEDED", { paymentIntentId, status: "succeeded" });
 }
 
 function renderFailed(paymentIntentId: string, message: string) {
-  app.innerHTML = `<div class="status failed">Pago fallido: ${message}</div>`;
+  app.innerHTML = `<div class="status failed">${ICON_X}<span>Pago fallido: ${message}</span></div>`;
   postToParent("PAYMENT_FAILED", { paymentIntentId, error: { message } });
 }
 
@@ -146,7 +167,7 @@ function renderRequiresAction(paymentIntentId: string, railId: string, actionReq
           : "Esperando confirmación...";
 
   app.innerHTML = `
-    <div class="status action">${message}</div>
+    <div class="status action">${ICON_CLOCK}<span>${message}</span></div>
     ${import.meta.env.DEV ? `<button class="secondary" id="simulate">[dev] Simular confirmación exitosa</button>` : ""}
   `;
 
