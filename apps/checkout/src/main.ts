@@ -2,6 +2,13 @@ import { PaymentMethodType } from "@pagosya/shared-types";
 import { confirmPaymentIntent, createCheckoutFromLink, fetchSession, simulateRailCallback, CheckoutSession } from "./api";
 import { observeResize, postToParent } from "./postmessage";
 
+interface LinkHeader {
+  merchantName: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+}
+
 const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]> = {
   [PaymentMethodType.CARD]: [
     { label: "Visa (aprobada)", value: "tok_visa_success" },
@@ -54,10 +61,18 @@ const ICON_LOCK =
 
 const app = document.getElementById("app")!;
 let selectedType: PaymentMethodType = PaymentMethodType.CARD;
-let merchantHeaderName: string | null = null;
+let linkHeader: LinkHeader | null = null;
 
 function formatAmount(amount: number, currency: string): string {
   return `${(amount / 100).toFixed(2)} ${currency}`;
+}
+
+// Payment Link name/description/merchant name are merchant-supplied and rendered via
+// innerHTML — escape them so a malicious link can't script-inject into a customer's page.
+function escapeHtml(value: string): string {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
 }
 
 async function main() {
@@ -74,7 +89,12 @@ async function main() {
     try {
       const result = await createCheckoutFromLink(linkSlug);
       clientSecret = result.clientSecret;
-      merchantHeaderName = result.merchantName;
+      linkHeader = {
+        merchantName: result.merchantName,
+        name: result.name,
+        description: result.linkDescription,
+        imageUrl: result.imageUrl,
+      };
     } catch (err) {
       app.innerHTML = `<div class="status failed">Este link de pago ya no está disponible: ${(err as Error).message}</div>`;
       return;
@@ -102,10 +122,20 @@ async function main() {
 function renderForm(session: CheckoutSession, clientSecret: string) {
   const tokens = TEST_TOKENS[selectedType];
 
+  const headerHtml = linkHeader
+    ? `
+      ${linkHeader.imageUrl ? `<img class="product-image" src="${escapeHtml(linkHeader.imageUrl)}" alt="${escapeHtml(linkHeader.name)}" />` : ""}
+      <div class="merchant-header">${escapeHtml(linkHeader.merchantName)}</div>
+      <div class="amount">${formatAmount(session.amount, session.currency)}</div>
+      <div class="description">${escapeHtml(linkHeader.name)}${linkHeader.description ? ` — ${escapeHtml(linkHeader.description)}` : ""}</div>
+    `
+    : `
+      <div class="amount">${formatAmount(session.amount, session.currency)}</div>
+      <div class="description">${session.description ? escapeHtml(session.description) : "Pago a comercio"}</div>
+    `;
+
   app.innerHTML = `
-    ${merchantHeaderName ? `<div class="merchant-header">${merchantHeaderName}</div>` : ""}
-    <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-    <div class="description">${session.description ?? "Pago a comercio"}</div>
+    ${headerHtml}
     <div class="tabs">
       ${Object.values(PaymentMethodType)
         .map(

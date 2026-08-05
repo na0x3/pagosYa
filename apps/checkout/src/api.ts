@@ -32,9 +32,17 @@ export async function fetchSession(clientSecret: string): Promise<CheckoutSessio
  * directly (?link=<slug>) instead of embedding the widget. This call is what
  * would otherwise be a merchant backend's own POST /v1/payment_intents.
  */
-export async function createCheckoutFromLink(slug: string): Promise<{ clientSecret: string; merchantName: string }> {
+export interface LinkCheckout {
+  clientSecret: string;
+  merchantName: string;
+  name: string;
+  linkDescription: string | null;
+  imageUrl: string | null;
+}
+
+export async function createCheckoutFromLink(slug: string): Promise<LinkCheckout> {
   const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/checkout`, { method: "POST" });
-  return parseOrThrow<{ clientSecret: string; merchantName: string }>(response);
+  return parseOrThrow<LinkCheckout>(response);
 }
 
 export async function confirmPaymentIntent(

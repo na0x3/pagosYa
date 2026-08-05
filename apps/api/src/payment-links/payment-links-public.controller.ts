@@ -17,6 +17,7 @@ export class PaymentLinksPublicController {
     return this.paymentLinks.findActiveBySlugPublic(slug).then((link) => ({
       name: link.name,
       description: link.description,
+      imageUrl: link.imageUrl,
       amount: link.amount,
       currency: link.currency,
       merchantName: link.merchant.name,

@@ -120,6 +120,15 @@ body {
   color: var(--pg-text-muted);
 }
 
+.product-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
 .merchant-header {
   font-size: 13px;
   font-weight: 600;

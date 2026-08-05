@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
-<title>pagosYa — Merchant Dashboard</title>
+<title>pagosYa — Panel de Comercio</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -83,6 +83,7 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   input:focus { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+  input[type="file"] { min-width: 220px; padding: 7px; }
 
   button {
     padding: 9px 14px; border-radius: 9px; border: 1.5px solid var(--pg-border-strong); background: var(--pg-surface);
@@ -122,6 +123,9 @@
   form.inline { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   form.inline > div { display: flex; flex-direction: column; }
 
+  .link-thumb { width: 34px; height: 34px; border-radius: 7px; object-fit: cover; vertical-align: middle; margin-right: 8px; background: var(--pg-bg); }
+  .image-preview { width: 64px; height: 64px; border-radius: 9px; object-fit: cover; display: none; border: 1.5px solid var(--pg-border); }
+
   #error { color: var(--pg-error); background: var(--pg-error-soft); border: 1px solid var(--pg-error); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; white-space: pre-wrap; }
   #error:empty { display: none; }
   #info { background: var(--pg-accent-soft); color: var(--pg-accent); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; }
@@ -137,51 +141,51 @@
       <div class="brand-mark">pY</div>
       <div>
         <h1>pagosYa</h1>
-        <p class="subtitle">Merchant Dashboard</p>
+        <p class="subtitle">Panel de Comercio</p>
       </div>
     </div>
     <div id="loggedInBar">
       <span class="muted" id="loggedInAs"></span>
-      <button class="ghost" id="logout">Log out</button>
+      <button class="ghost" id="logout">Cerrar sesión</button>
     </div>
   </div>
 
   <div class="panel" id="loginForm">
     <div class="panel-row">
       <div>
-        <label for="apiBase">API base URL</label>
+        <label for="apiBase">URL base de la API</label>
         <input id="apiBase" value="http://localhost:3000/v1">
       </div>
       <div>
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="owner@tienda-ejemplo.bo">
+        <label for="email">Correo electrónico</label>
+        <input id="email" type="email" placeholder="dueno@tienda-ejemplo.bo">
       </div>
       <div>
-        <label for="password">Password</label>
+        <label for="password">Contraseña</label>
         <input id="password" type="password">
       </div>
-      <button class="primary" id="login">Log in</button>
-      <button class="ghost" id="showForgot">Forgot password?</button>
+      <button class="primary" id="login">Iniciar sesión</button>
+      <button class="ghost" id="showForgot">¿Olvidaste tu contraseña?</button>
     </div>
-    <p class="faint" style="margin: 12px 0 0">No login yet? Have your integration call <code>POST /v1/dashboard/signup</code> once with your secret key to create one — never from this page.</p>
+    <p class="faint" style="margin: 12px 0 0">¿Todavía no tienes acceso? Pide a tu integración que llame una vez a <code>POST /v1/dashboard/signup</code> con tu llave secreta para crear tu acceso — nunca desde esta página.</p>
   </div>
 
   <div class="panel" id="forgotForm" style="display:none">
     <div class="panel-row">
       <div>
-        <label for="forgotEmail">Email</label>
-        <input id="forgotEmail" type="email" placeholder="owner@tienda-ejemplo.bo">
+        <label for="forgotEmail">Correo electrónico</label>
+        <input id="forgotEmail" type="email" placeholder="dueno@tienda-ejemplo.bo">
       </div>
-      <button id="requestReset">Send reset link</button>
+      <button id="requestReset">Enviar link de recuperación</button>
       <div>
-        <label for="resetToken">Reset token (from email)</label>
+        <label for="resetToken">Token de recuperación (del correo)</label>
         <input id="resetToken">
       </div>
       <div>
-        <label for="newPassword">New password</label>
+        <label for="newPassword">Nueva contraseña</label>
         <input id="newPassword" type="password">
       </div>
-      <button class="primary" id="submitReset">Set new password</button>
+      <button class="primary" id="submitReset">Guardar nueva contraseña</button>
     </div>
   </div>
 
@@ -192,7 +196,7 @@
     <div class="cards">
       <div class="card">
         <div class="card-head">
-          <span class="muted">Payable balance</span>
+          <span class="muted">Saldo por pagar</span>
           <span class="card-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </span>
@@ -201,7 +205,7 @@
       </div>
       <div class="card">
         <div class="card-head">
-          <span class="muted">KYC status</span>
+          <span class="muted">Estado de verificación (KYC)</span>
           <span class="card-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
           </span>
@@ -210,7 +214,7 @@
       </div>
       <div class="card">
         <div class="card-head">
-          <span class="muted">Invoicing (SIN)</span>
+          <span class="muted">Facturación (SIN)</span>
           <span class="card-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 16h6"/></svg>
           </span>
@@ -222,21 +226,26 @@
     <section class="block" id="paymentLinksSection">
       <div class="panel">
         <div class="section-head">
-          <h2>Payment Links</h2>
-          <p class="muted" style="margin:4px 0 0">Create a link, share it on WhatsApp/Instagram/your site — no website or developer needed.</p>
+          <h2>Links de Pago</h2>
+          <p class="muted" style="margin:4px 0 0">Crea un link y compártelo por WhatsApp, Instagram o tu sitio — no necesitas página web ni programador.</p>
         </div>
         <form class="inline" id="paymentLinkForm">
-          <div><label>What are you selling</label><input name="name" placeholder="Corte de cabello" required></div>
-          <div><label>Description (optional)</label><input name="description" placeholder="Incluye lavado y peinado"></div>
-          <div><label>Price (BOB)</label><input name="amount" type="number" step="0.01" min="0.01" placeholder="50.00" required></div>
-          <button class="primary" type="submit">Create link</button>
+          <div><label>¿Qué estás vendiendo?</label><input name="name" placeholder="Corte de cabello" required></div>
+          <div><label>Descripción (opcional)</label><input name="description" placeholder="Incluye lavado y peinado"></div>
+          <div><label>Precio (Bs)</label><input name="amount" type="number" step="0.01" min="0.01" placeholder="50.00" required></div>
+          <div>
+            <label for="paymentLinkImage">Foto (opcional)</label>
+            <input id="paymentLinkImage" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+          <img class="image-preview" id="paymentLinkImagePreview" alt="Vista previa">
+          <button class="primary" type="submit">Crear link</button>
         </form>
         <p class="faint" id="checkoutOriginRow" style="margin:10px 0 0">
-          Checkout page:
+          Página de pago:
           <input id="checkoutOrigin" style="width:220px;display:inline-block" value="http://localhost:5173">
         </p>
         <table style="margin-top:14px">
-          <thead><tr><th>Name</th><th>Price</th><th>Status</th><th>Link</th><th></th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Precio</th><th>Estado</th><th>Link</th><th></th></tr></thead>
           <tbody id="paymentLinkRows"></tbody>
         </table>
       </div>
@@ -244,48 +253,48 @@
 
     <section class="block" id="kycSection">
       <div class="panel">
-        <div class="section-head"><h2>KYC</h2></div>
+        <div class="section-head"><h2>Verificación (KYC)</h2></div>
         <form class="inline" id="kycForm">
-          <div><label>Legal name</label><input name="legalName" required></div>
+          <div><label>Razón social</label><input name="legalName" required></div>
           <div><label>NIT</label><input name="taxId" required></div>
-          <div><label>Legal rep name</label><input name="legalRepName" required></div>
-          <div><label>Legal rep CI</label><input name="legalRepDocumentId" required></div>
-          <div><label>Payout bank account</label><input name="payoutBankAccount" required></div>
-          <button class="primary" type="submit">Submit KYC</button>
+          <div><label>Nombre del representante legal</label><input name="legalRepName" required></div>
+          <div><label>CI del representante legal</label><input name="legalRepDocumentId" required></div>
+          <div><label>Cuenta bancaria para pagos</label><input name="payoutBankAccount" required></div>
+          <button class="primary" type="submit">Enviar KYC</button>
         </form>
       </div>
     </section>
 
     <section class="block">
       <div class="panel">
-        <div class="section-head"><h2>Live keys</h2></div>
+        <div class="section-head"><h2>Llaves de producción (Live)</h2></div>
         <p class="muted" style="margin:0">
-          Minting a live secret key isn't done from this page: a compromised dashboard session must never be able to
-          produce a permanent, full-power credential. Once KYC is approved, call
-          <code>POST /v1/dashboard/signup</code>'s sibling — <code>POST /v1/merchants/live_keys</code> — from your own
-          backend, authenticated with your existing secret key.
+          Emitir una llave secreta de producción no se hace desde esta página: una sesión del panel comprometida
+          nunca debe poder generar una credencial permanente y de máximo alcance. Una vez aprobado el KYC, llama a
+          <code>POST /v1/merchants/live_keys</code> — hermana de <code>POST /v1/dashboard/signup</code> — desde tu
+          propio backend, autenticado con tu llave secreta actual.
         </p>
       </div>
     </section>
 
     <section class="block" id="invoicingSection">
       <div class="panel">
-        <div class="section-head"><h2>Invoicing profile (Factura Electrónica)</h2></div>
+        <div class="section-head"><h2>Perfil de facturación (Factura Electrónica)</h2></div>
         <form class="inline" id="invoicingForm">
           <div><label>NIT</label><input name="nit" required></div>
           <div><label>Razón social</label><input name="razonSocial" required></div>
           <div><label>Sucursal</label><input name="sucursal" type="number" value="0"></div>
           <div><label>Punto de venta</label><input name="puntoVenta" type="number" value="0"></div>
-          <button class="primary" type="submit">Save &amp; issue CUIS</button>
+          <button class="primary" type="submit">Guardar y emitir CUIS</button>
         </form>
       </div>
     </section>
 
     <section class="block">
       <div class="panel">
-        <div class="section-head"><h2>Recent payments</h2></div>
+        <div class="section-head"><h2>Pagos recientes</h2></div>
         <table>
-          <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Method</th><th>Created</th></tr></thead>
+          <thead><tr><th>ID</th><th>Monto</th><th>Estado</th><th>Método</th><th>Fecha</th></tr></thead>
           <tbody id="paymentRows"></tbody>
         </table>
       </div>
@@ -293,9 +302,9 @@
 
     <section class="block">
       <div class="panel">
-        <div class="section-head"><h2>Payouts</h2></div>
+        <div class="section-head"><h2>Desembolsos</h2></div>
         <table>
-          <thead><tr><th>ID</th><th>Amount</th><th>Bank account</th><th>Status</th><th>Paid out</th></tr></thead>
+          <thead><tr><th>ID</th><th>Monto</th><th>Cuenta bancaria</th><th>Estado</th><th>Fecha de pago</th></tr></thead>
           <tbody id="payoutRows"></tbody>
         </table>
       </div>
@@ -325,6 +334,36 @@
     renderPaymentLinkRows(lastPaymentLinks);
   });
 
+  // Payment Links: la imagen se lee en el navegador como data URL (base64) y se
+  // manda tal cual al crear el link — no hay almacenamiento de archivos separado.
+  const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+  const paymentLinkImageEl = document.getElementById("paymentLinkImage");
+  const paymentLinkImagePreviewEl = document.getElementById("paymentLinkImagePreview");
+  let pendingImageDataUrl = null;
+
+  paymentLinkImageEl.addEventListener("change", () => {
+    const file = paymentLinkImageEl.files[0];
+    if (!file) {
+      pendingImageDataUrl = null;
+      paymentLinkImagePreviewEl.style.display = "none";
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      errorEl.textContent = "Error: la foto no puede pesar más de 2MB";
+      paymentLinkImageEl.value = "";
+      pendingImageDataUrl = null;
+      paymentLinkImagePreviewEl.style.display = "none";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingImageDataUrl = reader.result;
+      paymentLinkImagePreviewEl.src = pendingImageDataUrl;
+      paymentLinkImagePreviewEl.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  });
+
   function money(cents) {
     return (cents / 100).toFixed(2) + " BOB";
   }
@@ -341,24 +380,25 @@
     document.getElementById("paymentLinkRows").innerHTML = links
       .map((link) => {
         const url = paymentLinkUrl(link);
+        const thumb = link.imageUrl ? `<img class="link-thumb" src="${esc(link.imageUrl)}" alt="">` : "";
         return `<tr>
-          <td>${esc(link.name)}</td>
+          <td>${thumb}${esc(link.name)}</td>
           <td>${money(link.amount)}</td>
           <td><span class="badge ${esc(link.status)}">${esc(link.status)}</span></td>
           <td><input readonly value="${esc(url)}" style="width:220px" onclick="this.select()"></td>
           <td>
-            <button class="ghost copy-link" data-url="${esc(url)}">Copy</button>
-            ${link.status === "ACTIVE" ? `<button class="ghost archive-link" data-id="${esc(link.id)}">Archive</button>` : ""}
+            <button class="ghost copy-link" data-url="${esc(url)}">Copiar</button>
+            ${link.status === "ACTIVE" ? `<button class="ghost archive-link" data-id="${esc(link.id)}">Archivar</button>` : ""}
           </td>
         </tr>`;
       })
-      .join("") || `<tr><td colspan="5" class="muted">No payment links yet — create one above.</td></tr>`;
+      .join("") || `<tr><td colspan="5" class="muted">Todavía no tienes links de pago — crea uno arriba.</td></tr>`;
 
     document.querySelectorAll(".copy-link").forEach((btn) => {
       btn.addEventListener("click", async () => {
         await navigator.clipboard.writeText(btn.dataset.url);
         const original = btn.textContent;
-        btn.textContent = "Copied!";
+        btn.textContent = "¡Copiado!";
         setTimeout(() => (btn.textContent = original), 1200);
       });
     });
@@ -397,7 +437,7 @@
   function showLoggedIn() {
     loginFormEl.style.display = "none";
     loggedInBarEl.style.display = "flex";
-    loggedInAsEl.textContent = `Logged in as ${emailEl.value || "your dashboard account"}`;
+    loggedInAsEl.textContent = `Sesión iniciada como ${emailEl.value || "tu cuenta del panel"}`;
   }
 
   async function refresh() {
@@ -442,7 +482,7 @@
             <td>${esc(new Date(p.createdAt).toLocaleString())}</td>
           </tr>`,
         )
-        .join("") || `<tr><td colspan="5" class="muted">No payments yet.</td></tr>`;
+        .join("") || `<tr><td colspan="5" class="muted">Todavía no hay pagos.</td></tr>`;
 
       document.getElementById("payoutRows").innerHTML = payouts
         .map(
@@ -454,11 +494,11 @@
             <td>${p.paidOutAt ? esc(new Date(p.paidOutAt).toLocaleString()) : "—"}</td>
           </tr>`,
         )
-        .join("") || `<tr><td colspan="5" class="muted">No payouts yet.</td></tr>`;
+        .join("") || `<tr><td colspan="5" class="muted">Todavía no hay desembolsos.</td></tr>`;
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
-      // An expired/invalid session should drop back to the login form, not
-      // just show an error over a blank dashboard.
+      // Una sesión vencida o inválida debe volver al formulario de acceso, no
+      // solo mostrar un error sobre un panel vacío.
       if (err.message.match(/session|credentials/i)) {
         sessionToken = "";
         sessionStorage.removeItem("pagosya_merchant_session");
@@ -516,7 +556,7 @@
           newPassword: document.getElementById("newPassword").value,
         }),
       });
-      infoEl.textContent = "Password updated — log in with your new password.";
+      infoEl.textContent = "Contraseña actualizada — inicia sesión con tu nueva contraseña.";
       forgotFormEl.style.display = "none";
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
@@ -527,7 +567,7 @@
     try {
       await api("/dashboard/logout", { method: "POST" });
     } catch {
-      // best-effort — clear local state regardless
+      // mejor esfuerzo — igual limpiamos el estado local
     }
     sessionToken = "";
     sessionStorage.removeItem("pagosya_merchant_session");
@@ -550,7 +590,7 @@
     const data = Object.fromEntries(new FormData(e.target));
     const amountBob = parseFloat(data.amount);
     if (!(amountBob > 0)) {
-      errorEl.textContent = "Error: enter a price greater than 0";
+      errorEl.textContent = "Error: ingresa un precio mayor a 0";
       return;
     }
     try {
@@ -559,10 +599,13 @@
         body: JSON.stringify({
           name: data.name,
           description: data.description || undefined,
+          imageUrl: pendingImageDataUrl || undefined,
           amount: Math.round(amountBob * 100),
         }),
       });
       e.target.reset();
+      pendingImageDataUrl = null;
+      paymentLinkImagePreviewEl.style.display = "none";
       await refresh();
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;

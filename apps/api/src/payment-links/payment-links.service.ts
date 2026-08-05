@@ -25,6 +25,7 @@ export class PaymentLinksService {
             slug: slugPart(),
             name: dto.name,
             description: dto.description,
+            imageUrl: dto.imageUrl,
             amount: dto.amount,
             currency: dto.currency ?? "BOB",
           },
@@ -72,6 +73,12 @@ export class PaymentLinksService {
       metadata: { paymentLinkId: link.id },
     });
 
-    return { ...intent, merchantName: merchant.name };
+    return {
+      ...intent,
+      merchantName: merchant.name,
+      name: link.name,
+      linkDescription: link.description,
+      imageUrl: link.imageUrl,
+    };
   }
 }

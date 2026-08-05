@@ -356,6 +356,9 @@ model PaymentLink {
   slug        String            @unique
   name        String
   description String?
+  // Base64 data URL (e.g. "data:image/png;base64,..."), not a hosted file — no object
+  // storage is wired up yet. Fine at this scale; swap for real storage + a URL here later.
+  imageUrl    String?
   amount      Int
   currency    String            @default("BOB")
   status      PaymentLinkStatus @default(ACTIVE)
