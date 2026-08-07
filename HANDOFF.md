@@ -1,4 +1,4 @@
-<!-- last-updated-commit: ca11d1d2ecd6430cf71eda98a7eb532d8add1dc1 -->
+<!-- last-updated-commit: 5250002dbfeca96eabc007032aa31e61d0c95628 -->
 # HANDOFF
 
 Session handoff notes for pagosYa. Updated at the end of each Claude Code
@@ -15,29 +15,26 @@ see "Leftover test data" below.
 
 ## This session
 
-Chrome connected for the first time (prior session's tooling never came
-up) — did a full visual QA pass on the multi-store UI: storefront browse,
-add-to-cart, checkout, test payment, dashboard store creation, product
-create/edit/cancel, and a CSS audit for mobile (window resize doesn't
-actually change the captured viewport in this sandbox, so verified via
-`style.css` instead — global `border-box`, fluid `max-width:640px`
-container, no fixed widths that would overflow narrow screens). Local
-Postgres had died since the prior session (`/health` was 503); restarted
-with `pnpm run dev:db`, no data lost.
+Chrome connected for the first time — did a full visual QA pass on the
+multi-store UI (storefront, cart, checkout, dashboard CRUD flows) and
+fixed two real bugs found along the way:
+1. Empty-store message reused the red error style — gave it a neutral
+   `.status.empty` variant (`apps/checkout/src/{style.css,main.ts}`).
+2. Dashboard's product-create button silently relabeled itself "Crear
+   link" (a pre-multi-store leftover) after first use — fixed in
+   `resetPaymentLinkForm()`, `apps/merchant-dashboard/index.html`.
 
-**Two real bugs found and fixed, both committed to `origin/main`:**
-1. Empty-store message ("Esta tienda no tiene productos disponibles
-   todavía") reused the red `.status.failed` error style, indistinguishable
-   from a genuinely broken link. Added a neutral `.status.empty` variant
-   (`apps/checkout/src/style.css`) and pointed `renderStore`'s empty branch
-   at it (`apps/checkout/src/main.ts`).
-2. In the merchant dashboard, `resetPaymentLinkForm()`
-   (`apps/merchant-dashboard/index.html`) hardcoded the product-form submit
-   button to "Crear link" — a leftover label from before products were
-   grouped into stores. It fired after every successful create, so the
-   button silently went stale/wrong right after first use. Changed to
-   "Crear producto" (matches the static HTML default and the real create
-   endpoint being `/stores/:id/payment_links`).
+**Branding applied.** User dropped the real pagosYa logo (meerkat mark,
+amber `#ffbd59`) at the repo root — moved the source to
+`assets/brand/logo.png`, cropped a mark-only variant, and used it to
+replace the placeholder "pY" square in the merchant dashboard + ops
+console headers and as the favicon on all three apps. Primary buttons in
+both dashboards re-themed from navy to the brand amber (dark text,
+10.8:1 contrast, checked). Checkout's own storefront palette was left
+alone on purpose — each store already shows the *merchant's* logo/colors,
+not pagosYa's, and per-store "Color de fondo" (background color) already
+existed in the dashboard before this session, wired end-to-end — it
+wasn't new work, just confirmed working.
 
 **Leftover test data, not cleaned up:** two duplicate stores named "Tienda
 QA Test" (ids `cmsiekdis000cbeezgjf6h8mp` and `cmsiejum0000abeezl50yzcia`,
@@ -61,6 +58,14 @@ dashboard session token.
 - No other known open bugs — check `git log` for anything past this file's
   `last-updated-commit`.
 
+## Persistence model (came up this session, worth stating once)
+
+Stores/products live in Postgres — permanent, survive any browser closing.
+The merchant dashboard's login token is `sessionStorage` — cleared when the
+tab/window closes, so re-login is needed next time (nothing is lost, just
+re-auth). A buyer's cart is `localStorage` per store — survives closing the
+tab until checkout completes.
+
 ## Local dev notes
 
 - `pnpm` isn't on PATH as a real binary, only a corepack shim that fails
@@ -75,8 +80,10 @@ dashboard session token.
   (ports 54329/3000/5173/4323) — check
   `ps aux | grep -E "nest start|vite|node server.mjs|postgres -D"` before
   starting fresh copies. Note the wrapper `sh -c` process can survive while
-  the real process underneath has died (happened this session with
-  Postgres) — `pnpm run dev:db` restarts just the DB.
+  the real process underneath has died (happened once this session with
+  Postgres) — `pnpm run dev:db` restarts just the DB. The ops console
+  (port 4322, `apps/ops`) isn't normally left running — only started for a
+  one-off branding check this session, then stopped again.
 - If the dev DB gets reset (`prisma migrate reset` / breaking schema
   changes), re-run `pnpm run seed` after — doesn't happen automatically,
   and the ops reviewer/demo merchants silently disappear otherwise.
