@@ -9,6 +9,7 @@
   "scripts": {
     "dev:db": "node scripts/dev-db.mjs start",
     "dev:db:stop": "node scripts/dev-db.mjs stop",
+    "demo:store": "node scripts/demo-store.mjs",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test"
   },
