@@ -1,4 +1,4 @@
-<!-- last-updated-commit: c67ffa97a6f2863e9e71cd3a1697a635afee740b -->
+<!-- last-updated-commit: fa9a6e6dc5846aa925e9d7353f066b1330f1b4a2 -->
 # HANDOFF
 
 Session handoff notes for pagosYa. Updated at the end of each Claude Code
@@ -48,6 +48,22 @@ dashboard session token.
 
 ## Known problems / open gaps
 
+- **`settlementMode` (AGGREGATOR vs FACILITATOR) is API-only, no dashboard
+  toggle, and defaults to FACILITATOR.** Explained to the user this
+  session: FACILITATOR merchants are explicitly skipped by pagosYa's own
+  payout worker (`payouts.service.ts` `createDuePayouts` filters to
+  `AGGREGATOR` only) — the design intent is the card network/bank settles
+  directly to the merchant, pagosYa never holds the money. AGGREGATOR is
+  the "I collect it, then I credit merchants" model the user actually
+  described wanting — pagosYa pools funds, deducts its fee, and
+  auto-sweeps the payable balance to the KYC bank account once the
+  merchant is `ACTIVE`. Every merchant actually used this session so far
+  is FACILITATOR + still PENDING KYC. `seed.ts` already seeds one of each
+  mode side by side (`demo-aggregator@pagosya.bo` walked to ACTIVE,
+  `demo-facilitator@pagosya.bo` left PENDING) to demonstrate the contrast.
+  User hasn't asked for a fix yet — flagged that AGGREGATOR probably
+  should be easier to reach (a dashboard toggle, or just the new-signup
+  default) if that's really the intended business model.
 - **No per-merchant/per-store payment-method opt-out.** Every checkout
   always shows all four rails (Tarjeta, Tigo Money, Transferencia, QR);
   QR's only toggle is the single global `BANECO_QR_ENABLED` env flag, not
