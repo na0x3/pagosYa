@@ -171,28 +171,51 @@ body {
   border-radius: 12px;
 }
 
+/* Store/cart view is meant to be opened as its own page (shared link), not
+   just embedded in a narrow iframe like the payment form — give it room to
+   look like an actual storefront instead of a compact list. */
+body.store-page #app {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+body.store-page .merchant-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--pg-text);
+  margin-bottom: 22px;
+}
+body.store-page .merchant-logo {
+  margin-bottom: 0;
+}
+
 .store-items {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 24px;
   margin-bottom: 18px;
 }
 
 .store-item {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
+  flex-direction: column;
   border: 1px solid var(--pg-border);
-  border-radius: 12px;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 .store-item-image {
-  width: 56px;
-  height: 56px;
-  border-radius: 9px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
-  flex-shrink: 0;
   background: var(--pg-accent-soft);
 }
 .store-item-image.placeholder {
@@ -202,27 +225,41 @@ body {
 .store-item-info {
   flex: 1;
   min-width: 0;
+  padding: 14px 16px 4px;
 }
 .store-item-name {
-  font-weight: 600;
-  font-size: 14.5px;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.store-item-color {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
 }
 .store-item-description {
   color: var(--pg-text-muted);
-  font-size: 13px;
-  margin-top: 1px;
+  font-size: 15px;
+  line-height: 1.45;
+  margin-top: 5px;
 }
 .store-item-price {
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 17px;
   font-variant-numeric: tabular-nums;
-  margin-top: 3px;
+  margin-top: 8px;
 }
 
 .qty-stepper {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  flex-shrink: 0;
+  padding: 12px 16px 16px;
 }
 .qty-stepper button {
   width: 28px;

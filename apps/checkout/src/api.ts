@@ -38,31 +38,32 @@ export interface StoreItem {
   name: string;
   description: string | null;
   imageUrl: string | null;
+  color: string | null;
   amount: number;
   currency: string;
 }
 
 export interface Store {
-  merchantId: string;
-  merchantName: string;
+  storeId: string;
+  storeName: string;
   logoUrl: string | null;
   backgroundColor: string | null;
   items: StoreItem[];
 }
 
-/** Resolve a "/v1/uploads/..." path (product photo, merchant logo) against the API host. */
+/** Resolve a "/v1/uploads/..." path (product photo, store logo) against the API host. */
 export function assetUrl(path: string | null): string | null {
   return path ? `${API_ROOT_URL}${path}` : null;
 }
 
 export async function fetchStore(slug: string): Promise<Store> {
-  const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/store`);
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/store`);
   return parseOrThrow<Store>(response);
 }
 
 export interface CartCheckoutResult {
   clientSecret: string;
-  merchantName: string;
+  storeName: string;
   cartDescription: string;
 }
 
@@ -72,7 +73,7 @@ export async function checkoutCart(
   slug: string,
   items: { paymentLinkId: string; quantity: number }[],
 ): Promise<CartCheckoutResult> {
-  const response = await fetch(`${API_BASE_URL}/payment_links/public/${slug}/cart-checkout`, {
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/cart-checkout`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ items }),

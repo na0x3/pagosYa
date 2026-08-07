@@ -13,7 +13,7 @@ import {
 import { observeResize, postToParent } from "./postmessage";
 
 interface LinkHeader {
-  merchantName: string;
+  storeName: string;
   description: string;
 }
 
@@ -113,6 +113,7 @@ async function main() {
 }
 
 async function enterPaymentFlow(clientSecret: string) {
+  document.body.classList.remove("store-page");
   let session: CheckoutSession;
   try {
     session = await fetchSession(clientSecret);
@@ -127,18 +128,18 @@ async function enterPaymentFlow(clientSecret: string) {
 }
 
 // paymentLinkId -> quantity, persisted to localStorage (see loadCart/saveCart) keyed by
-// merchantId — any of a merchant's link slugs opens the same shared catalog, so the cart
-// should follow the merchant, not the particular slug a customer happened to land on.
+// storeId — a merchant can run several independent stores, so the cart must follow the
+// particular store a customer is shopping, not bleed across the merchant's other stores.
 const cart = new Map<string, number>();
 
-function cartStorageKey(merchantId: string): string {
-  return `pagosya_cart_${merchantId}`;
+function cartStorageKey(storeId: string): string {
+  return `pagosya_cart_${storeId}`;
 }
 
 function loadCart(store: Store): void {
   cart.clear();
   try {
-    const raw = localStorage.getItem(cartStorageKey(store.merchantId));
+    const raw = localStorage.getItem(cartStorageKey(store.storeId));
     if (!raw) return;
     const saved = JSON.parse(raw) as Record<string, number>;
     for (const [id, qty] of Object.entries(saved)) {
@@ -154,7 +155,7 @@ function loadCart(store: Store): void {
 }
 
 function saveCart(store: Store): void {
-  const key = cartStorageKey(store.merchantId);
+  const key = cartStorageKey(store.storeId);
   if (cart.size === 0) localStorage.removeItem(key);
   else localStorage.setItem(key, JSON.stringify(Object.fromEntries(cart)));
 }
@@ -168,15 +169,16 @@ function cartCount(): number {
 }
 
 function renderStore(slug: string, store: Store) {
+  document.body.classList.add("store-page");
   if (store.items.length === 0) {
     app.innerHTML = `<div class="status failed">Esta tienda no tiene productos disponibles todavía.</div>`;
     return;
   }
   const currency = store.items[0].currency;
 
-  // Storefront branding is per-merchant, not per-page — set it fresh on every render so
-  // switching between two different merchants' links in one browser never bleeds one
-  // merchant's background/logo into the other's page.
+  // Storefront branding is per-store, not per-page — set it fresh on every render so
+  // switching between two different stores in one browser never bleeds one store's
+  // background/logo into another's page.
   document.documentElement.style.setProperty("--pg-bg", store.backgroundColor || "");
   // A merchant-chosen background is a color they picked to look good with dark text —
   // force the light text/border palette so it doesn't collide with a visitor's dark-mode
@@ -188,7 +190,7 @@ function renderStore(slug: string, store: Store) {
   app.innerHTML = `
     <div class="merchant-header">
       ${logoUrl ? `<img class="merchant-logo" src="${escapeHtml(logoUrl)}" alt="" />` : ""}
-      ${escapeHtml(store.merchantName)}
+      ${escapeHtml(store.storeName)}
     </div>
     <div class="store-items">
       ${store.items
@@ -199,7 +201,7 @@ function renderStore(slug: string, store: Store) {
             <div class="store-item" data-id="${item.id}">
               ${itemImageUrl ? `<img class="store-item-image" src="${escapeHtml(itemImageUrl)}" alt="${escapeHtml(item.name)}" />` : `<div class="store-item-image placeholder"></div>`}
               <div class="store-item-info">
-                <div class="store-item-name">${escapeHtml(item.name)}</div>
+                <div class="store-item-name">${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" title="${escapeHtml(item.color)}"></span>` : ""}${escapeHtml(item.name)}</div>
                 ${item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
                 <div class="store-item-price">${formatAmount(item.amount, item.currency)}</div>
               </div>
@@ -242,7 +244,7 @@ function renderStore(slug: string, store: Store) {
     try {
       const items = [...cart.entries()].map(([paymentLinkId, quantity]) => ({ paymentLinkId, quantity }));
       const result = await checkoutCart(slug, items);
-      linkHeader = { merchantName: result.merchantName, description: result.cartDescription };
+      linkHeader = { storeName: result.storeName, description: result.cartDescription };
       // Checkout for this cart is now underway — clear it so a buyer who returns to the
       // same storefront link later doesn't see an already-paid cart still populated.
       cart.clear();
@@ -259,7 +261,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
 
   const headerHtml = linkHeader
     ? `
-      <div class="merchant-header">${escapeHtml(linkHeader.merchantName)}</div>
+      <div class="merchant-header">${escapeHtml(linkHeader.storeName)}</div>
       <div class="amount">${formatAmount(session.amount, session.currency)}</div>
       <div class="description">${escapeHtml(linkHeader.description)}</div>
     `

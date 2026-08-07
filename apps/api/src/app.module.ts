@@ -17,6 +17,7 @@ import { OpsModule } from "./ops/ops.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HealthModule } from "./health/health.module";
 import { PaymentLinksModule } from "./payment-links/payment-links.module";
+import { StoresModule } from "./stores/stores.module";
 import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
@@ -39,6 +40,7 @@ import { UploadsModule } from "./uploads/uploads.module";
     OpsModule,
     DashboardModule,
     HealthModule,
+    StoresModule,
     PaymentLinksModule,
     UploadsModule,
   ],

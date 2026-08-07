@@ -31,4 +31,10 @@ export class CreatePaymentLinkDto {
   @IsString()
   @Length(3, 3)
   currency?: string;
+
+  @ApiPropertyOptional({ description: "6-digit hex color swatch for this product, e.g. a T-shirt color.", example: "#1d4ed8" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "color must be a 6-digit hex color, e.g. #1d4ed8" })
+  color?: string;
 }

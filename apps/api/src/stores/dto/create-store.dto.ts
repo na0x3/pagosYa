@@ -1,8 +1,13 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MaxLength, Matches } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, Matches, MaxLength } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 
-export class UpdateMerchantBrandingDto {
+export class CreateStoreDto {
+  @ApiProperty({ example: "Mi Tienda de Ropa" })
+  @IsString()
+  @MaxLength(120)
+  name!: string;
+
   @ApiPropertyOptional({ description: "Path returned by POST /v1/uploads for the store logo." })
   @IsOptional()
   @IsString()

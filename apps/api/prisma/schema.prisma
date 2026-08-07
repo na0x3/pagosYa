@@ -141,12 +141,7 @@ model Merchant {
   invoices         Invoice[]
   payouts          Payout[]
   users            MerchantUser[]
-  paymentLinks     PaymentLink[]
-  // Storefront branding for the shared Payment Links catalog (apps/checkout).
-  // "/v1/uploads/<uuid>.<ext>", set via POST /v1/merchants/branding.
-  logoUrl          String?
-  // "#RRGGBB", validated at the DTO layer only.
-  backgroundColor  String?
+  stores           Store[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -350,26 +345,53 @@ enum PaymentLinkStatus {
 }
 
 // No-code entry point: a merchant with no developer creates one of these from
-// the dashboard and gets a shareable URL/QR. The public checkout page
+// the dashboard and gets a shareable storefront URL/QR. A merchant can run
+// several independent Stores (e.g. two different shops under one account) —
+// each has its own slug/branding/product catalog. The public checkout page
 // (apps/checkout, ?link=<slug>) turns a visit into a PaymentIntent via
-// PaymentLinksService — same PaymentIntent/rail/ledger machinery as the full
-// API path, just without requiring a merchant backend to call anything.
+// StoresService — same PaymentIntent/rail/ledger machinery as the full API
+// path, just without requiring a merchant backend to call anything.
+model Store {
+  id              String        @id @default(cuid())
+  merchantId      String
+  merchant        Merchant      @relation(fields: [merchantId], references: [id])
+  slug            String        @unique
+  name            String
+  // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
+  logoUrl         String?
+  // "#RRGGBB", validated at the DTO layer only.
+  backgroundColor String?
+  status          StoreStatus   @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  paymentLinks    PaymentLink[]
+
+  @@index([merchantId, createdAt])
+}
+
+enum StoreStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// A product within a Store's catalog.
 model PaymentLink {
   id          String            @id @default(cuid())
-  merchantId  String
-  merchant    Merchant          @relation(fields: [merchantId], references: [id])
-  slug        String            @unique
+  storeId     String
+  store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name        String
   description String?
   // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
   imageUrl    String?
+  // "#RRGGBB" product color swatch (e.g. a T-shirt color), validated at the DTO layer only.
+  color       String?
   amount      Int
   currency    String            @default("BOB")
   status      PaymentLinkStatus @default(ACTIVE)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
 }
 
 model PaymentMethod {
