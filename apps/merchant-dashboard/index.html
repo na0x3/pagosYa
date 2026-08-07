@@ -238,7 +238,8 @@
             <input id="paymentLinkImage" type="file" accept="image/png,image/jpeg,image/webp">
           </div>
           <img class="image-preview" id="paymentLinkImagePreview" alt="Vista previa">
-          <button class="primary" type="submit">Crear link</button>
+          <button class="primary" type="submit" id="paymentLinkSubmit">Crear link</button>
+          <button class="ghost" type="button" id="paymentLinkCancel" style="display:none">Cancelar</button>
         </form>
         <p class="faint" id="checkoutOriginRow" style="margin:10px 0 0">
           Página de pago:
@@ -248,6 +249,24 @@
           <thead><tr><th>Nombre</th><th>Precio</th><th>Estado</th><th>Link</th><th></th></tr></thead>
           <tbody id="paymentLinkRows"></tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="block" id="storeSettingsSection">
+      <div class="panel">
+        <div class="section-head">
+          <h2>Apariencia de tu tienda</h2>
+          <p class="muted" style="margin:4px 0 0">Logo y color de fondo que ven tus clientes en la página de pago.</p>
+        </div>
+        <form class="inline" id="storeSettingsForm">
+          <div>
+            <label for="storeLogoInput">Logo (opcional)</label>
+            <input id="storeLogoInput" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+          <img class="image-preview" id="storeLogoPreview" alt="Logo">
+          <div><label for="storeBackgroundColor">Color de fondo</label><input id="storeBackgroundColor" name="backgroundColor" type="color" value="#f8fafc"></div>
+          <button class="primary" type="submit">Guardar apariencia</button>
+        </form>
       </div>
     </section>
 
@@ -334,35 +353,87 @@
     renderPaymentLinkRows(lastPaymentLinks);
   });
 
-  // Payment Links: la imagen se lee en el navegador como data URL (base64) y se
-  // manda tal cual al crear el link — no hay almacenamiento de archivos separado.
-  const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+  // Payment Links: la foto se sube de inmediato a POST /uploads al elegir el
+  // archivo; el formulario solo manda la ruta ("/v1/uploads/...") que devuelve.
+  const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
   const paymentLinkImageEl = document.getElementById("paymentLinkImage");
   const paymentLinkImagePreviewEl = document.getElementById("paymentLinkImagePreview");
-  let pendingImageDataUrl = null;
+  let pendingImageUrl = null;
+  let editingLinkId = null;
 
-  paymentLinkImageEl.addEventListener("change", () => {
+  paymentLinkImageEl.addEventListener("change", async () => {
     const file = paymentLinkImageEl.files[0];
     if (!file) {
-      pendingImageDataUrl = null;
+      pendingImageUrl = null;
       paymentLinkImagePreviewEl.style.display = "none";
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      errorEl.textContent = "Error: la foto no puede pesar más de 2MB";
+      errorEl.textContent = "Error: la foto no puede pesar más de 3MB";
       paymentLinkImageEl.value = "";
-      pendingImageDataUrl = null;
+      pendingImageUrl = null;
       paymentLinkImagePreviewEl.style.display = "none";
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      pendingImageDataUrl = reader.result;
-      paymentLinkImagePreviewEl.src = pendingImageDataUrl;
+    try {
+      pendingImageUrl = await uploadFile(file);
+      paymentLinkImagePreviewEl.src = apiRoot() + pendingImageUrl;
       paymentLinkImagePreviewEl.style.display = "block";
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      errorEl.textContent = "Error subiendo la foto: " + err.message;
+      paymentLinkImageEl.value = "";
+      pendingImageUrl = null;
+      paymentLinkImagePreviewEl.style.display = "none";
+    }
   });
+
+  const storeLogoInputEl = document.getElementById("storeLogoInput");
+  const storeLogoPreviewEl = document.getElementById("storeLogoPreview");
+  const storeBackgroundColorEl = document.getElementById("storeBackgroundColor");
+  let pendingLogoUrl = null;
+
+  storeLogoInputEl.addEventListener("change", async () => {
+    const file = storeLogoInputEl.files[0];
+    if (!file) return;
+    if (file.size > MAX_IMAGE_BYTES) {
+      errorEl.textContent = "Error: el logo no puede pesar más de 3MB";
+      storeLogoInputEl.value = "";
+      return;
+    }
+    try {
+      pendingLogoUrl = await uploadFile(file);
+      storeLogoPreviewEl.src = apiRoot() + pendingLogoUrl;
+      storeLogoPreviewEl.style.display = "block";
+    } catch (err) {
+      errorEl.textContent = "Error subiendo el logo: " + err.message;
+      storeLogoInputEl.value = "";
+    }
+  });
+
+  document.getElementById("storeSettingsForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await api("/merchants/branding", {
+        method: "POST",
+        body: JSON.stringify({
+          logoUrl: pendingLogoUrl || undefined,
+          backgroundColor: storeBackgroundColorEl.value,
+        }),
+      });
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  function resetPaymentLinkForm() {
+    editingLinkId = null;
+    document.getElementById("paymentLinkForm").reset();
+    pendingImageUrl = null;
+    paymentLinkImagePreviewEl.style.display = "none";
+    document.getElementById("paymentLinkSubmit").textContent = "Crear link";
+    document.getElementById("paymentLinkCancel").style.display = "none";
+  }
 
   function money(cents) {
     return (cents / 100).toFixed(2) + " BOB";
@@ -380,7 +451,7 @@
     document.getElementById("paymentLinkRows").innerHTML = links
       .map((link) => {
         const url = paymentLinkUrl(link);
-        const thumb = link.imageUrl ? `<img class="link-thumb" src="${esc(link.imageUrl)}" alt="">` : "";
+        const thumb = link.imageUrl ? `<img class="link-thumb" src="${esc(apiRoot() + link.imageUrl)}" alt="">` : "";
         return `<tr>
           <td>${thumb}${esc(link.name)}</td>
           <td>${money(link.amount)}</td>
@@ -388,6 +459,7 @@
           <td><input readonly value="${esc(url)}" style="width:220px" onclick="this.select()"></td>
           <td>
             <button class="ghost copy-link" data-url="${esc(url)}">Copiar</button>
+            ${link.status === "ACTIVE" ? `<button class="ghost edit-link" data-id="${esc(link.id)}">Editar</button>` : ""}
             ${link.status === "ACTIVE" ? `<button class="ghost archive-link" data-id="${esc(link.id)}">Archivar</button>` : ""}
           </td>
         </tr>`;
@@ -412,13 +484,37 @@
         }
       });
     });
+    document.querySelectorAll(".edit-link").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const link = lastPaymentLinks.find((l) => l.id === btn.dataset.id);
+        if (!link) return;
+        editingLinkId = link.id;
+        const form = document.getElementById("paymentLinkForm");
+        form.name.value = link.name;
+        form.description.value = link.description || "";
+        form.amount.value = (link.amount / 100).toFixed(2);
+        pendingImageUrl = link.imageUrl || null;
+        if (link.imageUrl) {
+          paymentLinkImagePreviewEl.src = apiRoot() + link.imageUrl;
+          paymentLinkImagePreviewEl.style.display = "block";
+        } else {
+          paymentLinkImagePreviewEl.style.display = "none";
+        }
+        document.getElementById("paymentLinkSubmit").textContent = "Guardar cambios";
+        document.getElementById("paymentLinkCancel").style.display = "inline-block";
+        form.scrollIntoView({ behavior: "smooth" });
+      });
+    });
   }
 
   async function api(path, options = {}) {
+    const isFormData = options.body instanceof FormData;
     const res = await fetch(apiBaseEl.value.replace(/\/$/, "") + path, {
       ...options,
       headers: {
-        "content-type": "application/json",
+        // Skip content-type for FormData bodies — the browser sets the
+        // multipart boundary itself; overriding it here breaks parsing.
+        ...(isFormData ? {} : { "content-type": "application/json" }),
         authorization: "Bearer " + sessionToken,
         ...(options.headers || {}),
       },
@@ -426,6 +522,18 @@
     const body = await res.json().catch(() => null);
     if (!res.ok) throw new Error((body && body.message) || res.statusText);
     return body;
+  }
+
+  // apiBase is ".../v1" — strip that to build <img src> from a "/v1/uploads/..." path.
+  function apiRoot() {
+    return apiBaseEl.value.replace(/\/v1\/?$/, "");
+  }
+
+  async function uploadFile(file) {
+    const form = new FormData();
+    form.append("file", file);
+    const { url } = await api("/uploads", { method: "POST", body: form });
+    return url;
   }
 
   function showLoggedOut() {
@@ -445,13 +553,14 @@
     sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
 
     try {
-      const [balance, kyc, invoicing, payments, payouts, paymentLinks] = await Promise.all([
+      const [balance, kyc, invoicing, payments, payouts, paymentLinks, branding] = await Promise.all([
         api("/merchants/balance"),
         api("/merchants/kyc"),
         api("/merchants/invoicing_profile"),
         api("/payment_intents"),
         api("/merchants/payouts"),
         api("/payment_links"),
+        api("/merchants/branding"),
       ]);
 
       showLoggedIn();
@@ -471,6 +580,15 @@
       document.getElementById("invoicingSection").style.display = invoicing.cuis ? "none" : "block";
 
       renderPaymentLinkRows(paymentLinks);
+
+      pendingLogoUrl = branding.logoUrl || null;
+      if (branding.logoUrl) {
+        storeLogoPreviewEl.src = apiRoot() + branding.logoUrl;
+        storeLogoPreviewEl.style.display = "block";
+      }
+      if (branding.backgroundColor) {
+        storeBackgroundColorEl.value = branding.backgroundColor;
+      }
 
       document.getElementById("paymentRows").innerHTML = payments
         .map(
@@ -593,23 +711,27 @@
       errorEl.textContent = "Error: ingresa un precio mayor a 0";
       return;
     }
+    const payload = {
+      name: data.name,
+      description: data.description || undefined,
+      imageUrl: pendingImageUrl || undefined,
+      amount: Math.round(amountBob * 100),
+    };
     try {
-      await api("/payment_links", {
-        method: "POST",
-        body: JSON.stringify({
-          name: data.name,
-          description: data.description || undefined,
-          imageUrl: pendingImageDataUrl || undefined,
-          amount: Math.round(amountBob * 100),
-        }),
-      });
-      e.target.reset();
-      pendingImageDataUrl = null;
-      paymentLinkImagePreviewEl.style.display = "none";
+      if (editingLinkId) {
+        await api(`/payment_links/${editingLinkId}`, { method: "PATCH", body: JSON.stringify(payload) });
+      } else {
+        await api("/payment_links", { method: "POST", body: JSON.stringify(payload) });
+      }
+      resetPaymentLinkForm();
       await refresh();
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     }
+  });
+
+  document.getElementById("paymentLinkCancel").addEventListener("click", () => {
+    resetPaymentLinkForm();
   });
 
   document.getElementById("invoicingForm").addEventListener("submit", async (e) => {

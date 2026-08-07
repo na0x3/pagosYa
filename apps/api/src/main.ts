@@ -11,9 +11,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
-  // Default 100kb body limit is too small for Payment Links' base64 product photos
-  // (up to ~2MB image, see CreatePaymentLinkDto).
-  app.use(json({ limit: "3mb" }));
+  // Slightly above Express's 100kb default for general headroom. Product photos and
+  // merchant logos go through multipart uploads (see UploadsModule), not JSON bodies,
+  // so this limit no longer needs to accommodate base64 image payloads.
+  app.use(json({ limit: "1mb" }));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: config.get<string[]>("app.corsOrigins"), credentials: false });

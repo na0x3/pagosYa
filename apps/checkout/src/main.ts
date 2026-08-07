@@ -1,5 +1,6 @@
 import { PaymentMethodType } from "@pagosya/shared-types";
 import {
+  assetUrl,
   checkoutCart,
   confirmPaymentIntent,
   fetchSession,
@@ -94,6 +95,7 @@ async function main() {
   if (linkSlug && !clientSecret) {
     try {
       const store = await fetchStore(linkSlug);
+      loadCart(store);
       renderStore(linkSlug, store);
       observeResize(app);
     } catch (err) {
@@ -124,8 +126,38 @@ async function enterPaymentFlow(clientSecret: string) {
   observeResize(app);
 }
 
-// paymentLinkId -> quantity. Cleared on each store visit; nothing persists across reloads.
+// paymentLinkId -> quantity, persisted to localStorage (see loadCart/saveCart) keyed by
+// merchantId — any of a merchant's link slugs opens the same shared catalog, so the cart
+// should follow the merchant, not the particular slug a customer happened to land on.
 const cart = new Map<string, number>();
+
+function cartStorageKey(merchantId: string): string {
+  return `pagosya_cart_${merchantId}`;
+}
+
+function loadCart(store: Store): void {
+  cart.clear();
+  try {
+    const raw = localStorage.getItem(cartStorageKey(store.merchantId));
+    if (!raw) return;
+    const saved = JSON.parse(raw) as Record<string, number>;
+    for (const [id, qty] of Object.entries(saved)) {
+      // Drop entries for items archived/deleted since the cart was saved, and any
+      // corrupt values — a stale or tampered cart must never crash the storefront.
+      if (Number.isInteger(qty) && qty > 0 && store.items.some((item) => item.id === id)) {
+        cart.set(id, qty);
+      }
+    }
+  } catch {
+    // Corrupt localStorage — fall back to an empty cart rather than throwing.
+  }
+}
+
+function saveCart(store: Store): void {
+  const key = cartStorageKey(store.merchantId);
+  if (cart.size === 0) localStorage.removeItem(key);
+  else localStorage.setItem(key, JSON.stringify(Object.fromEntries(cart)));
+}
 
 function cartTotal(items: StoreItem[]): number {
   return items.reduce((sum, item) => sum + item.amount * (cart.get(item.id) ?? 0), 0);
@@ -142,15 +174,30 @@ function renderStore(slug: string, store: Store) {
   }
   const currency = store.items[0].currency;
 
+  // Storefront branding is per-merchant, not per-page — set it fresh on every render so
+  // switching between two different merchants' links in one browser never bleeds one
+  // merchant's background/logo into the other's page.
+  document.documentElement.style.setProperty("--pg-bg", store.backgroundColor || "");
+  // A merchant-chosen background is a color they picked to look good with dark text —
+  // force the light text/border palette so it doesn't collide with a visitor's dark-mode
+  // browser (--pg-text would otherwise stay near-white, unreadable on a light custom bg).
+  if (store.backgroundColor) document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  const logoUrl = assetUrl(store.logoUrl);
+
   app.innerHTML = `
-    <div class="merchant-header">${escapeHtml(store.merchantName)}</div>
+    <div class="merchant-header">
+      ${logoUrl ? `<img class="merchant-logo" src="${escapeHtml(logoUrl)}" alt="" />` : ""}
+      ${escapeHtml(store.merchantName)}
+    </div>
     <div class="store-items">
       ${store.items
         .map((item) => {
           const qty = cart.get(item.id) ?? 0;
+          const itemImageUrl = assetUrl(item.imageUrl);
           return `
             <div class="store-item" data-id="${item.id}">
-              ${item.imageUrl ? `<img class="store-item-image" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" />` : `<div class="store-item-image placeholder"></div>`}
+              ${itemImageUrl ? `<img class="store-item-image" src="${escapeHtml(itemImageUrl)}" alt="${escapeHtml(item.name)}" />` : `<div class="store-item-image placeholder"></div>`}
               <div class="store-item-info">
                 <div class="store-item-name">${escapeHtml(item.name)}</div>
                 ${item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
@@ -176,12 +223,14 @@ function renderStore(slug: string, store: Store) {
     const id = row.dataset.id!;
     row.querySelector(".qty-plus")!.addEventListener("click", () => {
       cart.set(id, (cart.get(id) ?? 0) + 1);
+      saveCart(store);
       renderStore(slug, store);
     });
     row.querySelector(".qty-minus")!.addEventListener("click", () => {
       const next = (cart.get(id) ?? 0) - 1;
       if (next <= 0) cart.delete(id);
       else cart.set(id, next);
+      saveCart(store);
       renderStore(slug, store);
     });
   });
@@ -194,6 +243,10 @@ function renderStore(slug: string, store: Store) {
       const items = [...cart.entries()].map(([paymentLinkId, quantity]) => ({ paymentLinkId, quantity }));
       const result = await checkoutCart(slug, items);
       linkHeader = { merchantName: result.merchantName, description: result.cartDescription };
+      // Checkout for this cart is now underway — clear it so a buyer who returns to the
+      // same storefront link later doesn't see an already-paid cart still populated.
+      cart.clear();
+      saveCart(store);
       await enterPaymentFlow(result.clientSecret);
     } catch (err) {
       app.innerHTML = `<div class="status failed">No se pudo iniciar el pago: ${(err as Error).message}</div>`;

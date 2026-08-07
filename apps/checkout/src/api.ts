@@ -43,8 +43,16 @@ export interface StoreItem {
 }
 
 export interface Store {
+  merchantId: string;
   merchantName: string;
+  logoUrl: string | null;
+  backgroundColor: string | null;
   items: StoreItem[];
+}
+
+/** Resolve a "/v1/uploads/..." path (product photo, merchant logo) against the API host. */
+export function assetUrl(path: string | null): string | null {
+  return path ? `${API_ROOT_URL}${path}` : null;
 }
 
 export async function fetchStore(slug: string): Promise<Store> {

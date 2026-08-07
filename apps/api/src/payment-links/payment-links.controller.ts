@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { PaymentLinksService } from "./payment-links.service";
 import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
+import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's payment links (the
  * no-code entry point — see PaymentLinksPublicController for the customer-facing side). */
@@ -27,5 +28,14 @@ export class PaymentLinksController {
   @Post(":id/archive")
   archive(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string) {
     return this.paymentLinks.archive(merchant.id, id);
+  }
+
+  @Patch(":id")
+  update(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Body() dto: UpdatePaymentLinkDto,
+  ) {
+    return this.paymentLinks.update(merchant.id, id, dto);
   }
 }

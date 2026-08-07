@@ -3,6 +3,7 @@ import { ApiKeyMode, ApiKeyType, MerchantStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { ApiKeyService } from "../auth/api-key.service";
 import { CreateMerchantDto } from "./dto/create-merchant.dto";
+import { UpdateMerchantBrandingDto } from "./dto/update-branding.dto";
 
 @Injectable()
 export class MerchantsService {
@@ -56,5 +57,24 @@ export class MerchantsService {
         publishableKey: publishableKey.fullKey,
       },
     };
+  }
+
+  /** Storefront branding (logo + background color) for the shared Payment Links catalog — see apps/checkout. */
+  async updateBranding(merchantId: string, dto: UpdateMerchantBrandingDto) {
+    return this.prisma.merchant.update({
+      where: { id: merchantId },
+      data: {
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+        ...(dto.backgroundColor !== undefined && { backgroundColor: dto.backgroundColor }),
+      },
+      select: { logoUrl: true, backgroundColor: true },
+    });
+  }
+
+  async getBranding(merchantId: string) {
+    return this.prisma.merchant.findUniqueOrThrow({
+      where: { id: merchantId },
+      select: { logoUrl: true, backgroundColor: true },
+    });
   }
 }

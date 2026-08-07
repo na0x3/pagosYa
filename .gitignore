@@ -5,6 +5,7 @@ build/
 .env.local
 *.log
 .pgdata/
+apps/api/uploads/
 .turbo/
 .DS_Store
 screenshots/

@@ -1,3 +1,5 @@
+import * as path from "path";
+
 export interface BanecoQrConfig {
   enabled: boolean;
   baseUrl: string;
@@ -16,6 +18,7 @@ export interface AppConfig {
   checkoutOrigin: string;
   corsOrigins: string[];
   banecoQr: BanecoQrConfig;
+  uploadsDir: string;
 }
 
 export default (): { app: AppConfig } => ({
@@ -44,5 +47,9 @@ export default (): { app: AppConfig } => ({
       creditAccount: process.env.BANECO_CREDIT_ACCOUNT ?? "",
       webhookSecret: process.env.BANECO_WEBHOOK_SECRET ?? "",
     },
+    // Where product photos / merchant logos land on disk (see UploadsModule).
+    // Default keeps dev/test self-contained, same "no Docker required" ethos as
+    // embedded-postgres — no object storage dependency needed at this scale.
+    uploadsDir: process.env.UPLOADS_DIR ?? path.join(process.cwd(), "uploads"),
   },
 });

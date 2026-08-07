@@ -138,6 +138,15 @@ body {
   margin-bottom: 10px;
 }
 
+.merchant-logo {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+
 .amount {
   font-size: 30px;
   font-weight: 700;

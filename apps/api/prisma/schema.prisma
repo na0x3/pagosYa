@@ -142,6 +142,11 @@ model Merchant {
   payouts          Payout[]
   users            MerchantUser[]
   paymentLinks     PaymentLink[]
+  // Storefront branding for the shared Payment Links catalog (apps/checkout).
+  // "/v1/uploads/<uuid>.<ext>", set via POST /v1/merchants/branding.
+  logoUrl          String?
+  // "#RRGGBB", validated at the DTO layer only.
+  backgroundColor  String?
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -356,8 +361,7 @@ model PaymentLink {
   slug        String            @unique
   name        String
   description String?
-  // Base64 data URL (e.g. "data:image/png;base64,..."), not a hosted file — no object
-  // storage is wired up yet. Fine at this scale; swap for real storage + a URL here later.
+  // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
   imageUrl    String?
   amount      Int
   currency    String            @default("BOB")

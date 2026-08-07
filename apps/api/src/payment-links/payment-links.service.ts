@@ -4,6 +4,7 @@ import { MerchantStatus, PaymentLinkStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
+import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
 import { CartCheckoutDto } from "./dto/cart-checkout.dto";
 
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
@@ -50,11 +51,28 @@ export class PaymentLinksService {
     return this.prisma.paymentLink.update({ where: { id }, data: { status: PaymentLinkStatus.ARCHIVED } });
   }
 
+  async update(merchantId: string, id: string, dto: UpdatePaymentLinkDto) {
+    const link = await this.prisma.paymentLink.findFirst({ where: { id, merchantId } });
+    if (!link) throw new NotFoundException("Payment link not found");
+    // Explicit-field spread, not `{...dto}` — an edit call that omits a field (e.g. no
+    // new photo) must leave it untouched, not clobber it to undefined.
+    return this.prisma.paymentLink.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+        ...(dto.amount !== undefined && { amount: dto.amount }),
+        ...(dto.currency !== undefined && { currency: dto.currency }),
+      },
+    });
+  }
+
   /** Public — no auth, called by the checkout page's landing view before any payment exists. */
   async findActiveBySlugPublic(slug: string) {
     const link = await this.prisma.paymentLink.findUnique({
       where: { slug },
-      include: { merchant: { select: { name: true } } },
+      include: { merchant: { select: { name: true, logoUrl: true, backgroundColor: true } } },
     });
     if (!link || link.status !== PaymentLinkStatus.ACTIVE) throw new NotFoundException("Payment link not found");
     return link;
@@ -73,7 +91,10 @@ export class PaymentLinksService {
       orderBy: { createdAt: "asc" },
     });
     return {
+      merchantId: link.merchantId,
       merchantName: link.merchant.name,
+      logoUrl: link.merchant.logoUrl,
+      backgroundColor: link.merchant.backgroundColor,
       items: items.map((item) => ({
         id: item.id,
         name: item.name,

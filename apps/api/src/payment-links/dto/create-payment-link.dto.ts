@@ -1,8 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsInt, IsOptional, IsPositive, IsString, Length, Matches, MaxLength } from "class-validator";
-
-// ~2MB of image, base64-inflated (~4/3x) plus the "data:image/...;base64," prefix.
-const MAX_IMAGE_DATA_URL_LENGTH = 2_900_000;
+import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 
 export class CreatePaymentLinkDto {
   @ApiProperty({ example: "Corte de cabello" })
@@ -16,13 +14,11 @@ export class CreatePaymentLinkDto {
   @MaxLength(500)
   description?: string;
 
-  @ApiPropertyOptional({ description: "Base64 data URL of a product photo (JPEG/PNG/WEBP, max ~2MB)." })
+  @ApiPropertyOptional({ description: "Path returned by POST /v1/uploads for a product photo (JPEG/PNG/WEBP)." })
   @IsOptional()
   @IsString()
-  @MaxLength(MAX_IMAGE_DATA_URL_LENGTH)
-  @Matches(/^data:image\/(png|jpeg|jpg|webp);base64,/, {
-    message: "imageUrl must be a base64 data URL (data:image/png|jpeg|webp;base64,...)",
-  })
+  @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  @Matches(UPLOADED_FILE_URL_PATTERN, { message: "imageUrl must be a path returned by POST /v1/uploads" })
   imageUrl?: string;
 
   @ApiProperty({ description: "Amount in minor units (centavos). e.g. 1000 = 10.00 BOB", example: 5000 })

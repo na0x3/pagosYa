@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantsService } from "./merchants.service";
 import { KycService } from "./kyc.service";
 import { CreateMerchantDto } from "./dto/create-merchant.dto";
+import { UpdateMerchantBrandingDto } from "./dto/update-branding.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
@@ -40,6 +41,21 @@ export class MerchantsController {
   @UseGuards(MerchantAuthGuard)
   getKyc(@CurrentMerchant() merchant: { id: string }) {
     return this.kyc.latest(merchant.id);
+  }
+
+  /** Storefront branding (logo + background color) shown on the shared Payment Links catalog. */
+  @Post("branding")
+  @ApiBearerAuth()
+  @UseGuards(MerchantAuthGuard)
+  updateBranding(@CurrentMerchant() merchant: { id: string }, @Body() dto: UpdateMerchantBrandingDto) {
+    return this.merchants.updateBranding(merchant.id, dto);
+  }
+
+  @Get("branding")
+  @ApiBearerAuth()
+  @UseGuards(MerchantAuthGuard)
+  getBranding(@CurrentMerchant() merchant: { id: string }) {
+    return this.merchants.getBranding(merchant.id);
   }
 
   /**
