@@ -9,27 +9,45 @@ duplicate it here.
 
 ## Project state
 
-Working tree has one **uncommitted** change (see below). `main` otherwise
-matches `origin/main` at `e371ccc`. CI (GitHub Actions build+test) configured.
+Working tree clean, `main` matches `origin/main`. CI (GitHub Actions
+build+test) configured. Two leftover test stores in the live local DB —
+see "Leftover test data" below.
 
 ## This session
 
 Chrome connected for the first time (prior session's tooling never came
-up) — did a visual QA pass on the multi-store UI shipped previously.
-Local Postgres had died since the last session (`/health` was 503);
-restarted with `pnpm run dev:db`, no data lost. Confirmed working as
-designed: centered store name/logo, stacked full-width product photos,
-color swatches, per-store scoping in the dashboard, archive/delete
-buttons.
+up) — did a full visual QA pass on the multi-store UI: storefront browse,
+add-to-cart, checkout, test payment, dashboard store creation, product
+create/edit/cancel, and a CSS audit for mobile (window resize doesn't
+actually change the captured viewport in this sandbox, so verified via
+`style.css` instead — global `border-box`, fluid `max-width:640px`
+container, no fixed widths that would overflow narrow screens). Local
+Postgres had died since the prior session (`/health` was 503); restarted
+with `pnpm run dev:db`, no data lost.
 
-**Found + fixed one real bug:** the empty-store message ("Esta tienda no
-tiene productos disponibles todavía") reused the red `.status.failed`
-error style, indistinguishable from a genuinely broken link. Added a
-neutral `.status.empty` variant (`apps/checkout/src/style.css`) and
-pointed `renderStore`'s empty branch at it (`apps/checkout/src/main.ts`).
-Verified both states render distinctly. **Uncommitted** — plain edits on
-top of a clean tree; ask the user before committing (solo-dev repo,
-direct-to-`origin/main`, no PR, per established convention).
+**Two real bugs found and fixed, both committed to `origin/main`:**
+1. Empty-store message ("Esta tienda no tiene productos disponibles
+   todavía") reused the red `.status.failed` error style, indistinguishable
+   from a genuinely broken link. Added a neutral `.status.empty` variant
+   (`apps/checkout/src/style.css`) and pointed `renderStore`'s empty branch
+   at it (`apps/checkout/src/main.ts`).
+2. In the merchant dashboard, `resetPaymentLinkForm()`
+   (`apps/merchant-dashboard/index.html`) hardcoded the product-form submit
+   button to "Crear link" — a leftover label from before products were
+   grouped into stores. It fired after every successful create, so the
+   button silently went stale/wrong right after first use. Changed to
+   "Crear producto" (matches the static HTML default and the real create
+   endpoint being `/stores/:id/payment_links`).
+
+**Leftover test data, not cleaned up:** two duplicate stores named "Tienda
+QA Test" (ids `cmsiekdis000cbeezgjf6h8mp` and `cmsiejum0000abeezl50yzcia`,
+one has a product "Producto QA") from manually testing store/product
+creation. Deleting them via the dashboard's "Eliminar" button trips a
+native `confirm()` dialog, which hangs Claude-in-Chrome's automation (no
+way to dismiss it programmatically) — left them rather than risk getting
+stuck unattended. Delete both from "Tus Tiendas" next time a human's at
+the keyboard, or ask a fresh session to do it via curl with the merchant's
+dashboard session token.
 
 ## Known problems / open gaps
 
