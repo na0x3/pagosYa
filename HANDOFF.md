@@ -1,4 +1,4 @@
-<!-- last-updated-commit: f1258c0a27851a6baf32b523af4d8035cc81af83 -->
+<!-- last-updated-commit: c67ffa97a6f2863e9e71cd3a1697a635afee740b -->
 # HANDOFF
 
 Session handoff notes for pagosYa. Updated at the end of each Claude Code
@@ -48,10 +48,22 @@ dashboard session token.
 
 ## Known problems / open gaps
 
+- **No per-merchant/per-store payment-method opt-out.** Every checkout
+  always shows all four rails (Tarjeta, Tigo Money, Transferencia, QR);
+  QR's only toggle is the single global `BANECO_QR_ENABLED` env flag, not
+  a per-merchant setting. Confirmed via code read this session (no such
+  field on `Merchant`/`Store` in `schema.prisma`) — user asked, this is a
+  real gap, not a hidden feature. Not built yet; user hasn't asked for it
+  to be built, just knows about it now.
 - **SIN/SIAT e-invoicing is a mock** — no real CUF/CUFD algorithm or XML
   (siatinfo.impuestos.gob.bo was unreachable when built, broken TLS chain).
 - **All payment rails are mocks** except Banco Económico QR Simple (real,
-  flagged off by default via `BANECO_QR_ENABLED`).
+  flagged off by default via `BANECO_QR_ENABLED`). This also covers
+  payouts: the KYC → ops-review → automatic-payout workflow is fully
+  built (`apps/api/src/payouts/payout-delivery.worker.ts` sweeps payable
+  balances every 10s to the bank account merchants give in KYC), but the
+  actual disbursement is `mock-bank-disbursement.adapter.ts` — no real
+  bank integration yet.
 - Product data on "Ropa Urbana" is inconsistent (names say "Camiseta" /
   t-shirt, uploaded photos are caps) — leftover from manual testing, not a
   code bug, safe to ignore or reseed over.
