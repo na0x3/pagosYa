@@ -171,7 +171,7 @@ function cartCount(): number {
 function renderStore(slug: string, store: Store) {
   document.body.classList.add("store-page");
   if (store.items.length === 0) {
-    app.innerHTML = `<div class="status failed">Esta tienda no tiene productos disponibles todavía.</div>`;
+    app.innerHTML = `<div class="status empty">Esta tienda no tiene productos disponibles todavía.</div>`;
     return;
   }
   const currency = store.items[0].currency;

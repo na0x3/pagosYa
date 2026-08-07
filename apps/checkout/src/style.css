@@ -446,6 +446,12 @@ button.secondary:hover {
   border-color: var(--pg-error-border);
 }
 
+.status.empty {
+  background: var(--pg-bg);
+  color: var(--pg-text-muted);
+  border-color: var(--pg-border);
+}
+
 .status.action {
   background: var(--pg-warning-soft);
   color: var(--pg-warning);
