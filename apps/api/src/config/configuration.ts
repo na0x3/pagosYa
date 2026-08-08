@@ -10,6 +10,12 @@ export interface BanecoQrConfig {
   webhookSecret: string;
 }
 
+export interface EmailConfig {
+  resendApiKey: string;
+  fromAddress: string;
+  webOrigin: string;
+}
+
 export interface AppConfig {
   port: number;
   databaseUrl: string;
@@ -19,6 +25,7 @@ export interface AppConfig {
   corsOrigins: string[];
   banecoQr: BanecoQrConfig;
   uploadsDir: string;
+  email: EmailConfig;
 }
 
 export default (): { app: AppConfig } => ({
@@ -51,5 +58,15 @@ export default (): { app: AppConfig } => ({
     // Default keeps dev/test self-contained, same "no Docker required" ethos as
     // embedded-postgres — no object storage dependency needed at this scale.
     uploadsDir: process.env.UPLOADS_DIR ?? path.join(process.cwd(), "uploads"),
+    // RESEND_API_KEY is the same switch pattern as BANECO_QR_ENABLED: set it
+    // to swap DashboardModule's EmailProvider from MockEmailProvider (logs to
+    // console) to ResendEmailProvider (real send) — see DashboardModule.
+    email: {
+      resendApiKey: process.env.RESEND_API_KEY ?? "",
+      fromAddress: process.env.EMAIL_FROM_ADDRESS ?? "PagosYa <onboarding@resend.dev>",
+      // Where verification/reset links point — the marketing site (apps.checkout
+      // is the payment iframe, not a page a human browses to). Not CHECKOUT_ORIGIN.
+      webOrigin: process.env.PAGOSYA_WEB_ORIGIN ?? "http://localhost:3001",
+    },
   },
 });

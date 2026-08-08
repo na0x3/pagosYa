@@ -14,6 +14,12 @@ const server = createServer(async (req, res) => {
       res.end(html);
       return;
     }
+    if (req.url === "/fonts/0xProtoNerdFontMono-Bold.ttf") {
+      const font = await readFile(path.join(dirname, "fonts/0xProtoNerdFontMono-Bold.ttf"));
+      res.writeHead(200, { "content-type": "font/ttf" });
+      res.end(font);
+      return;
+    }
     res.writeHead(404);
     res.end("not found");
   } catch (err) {

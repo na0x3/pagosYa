@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { StoresService } from "./stores.service";
 import { CreateStoreDto } from "./dto/create-store.dto";
 import { UpdateStoreDto } from "./dto/update-store.dto";
+import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -31,6 +32,11 @@ export class StoresController {
   @Patch(":id")
   update(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: UpdateStoreDto) {
     return this.stores.update(merchant.id, id, dto);
+  }
+
+  @Put(":id/links")
+  setLinks(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: SetStoreLinksDto) {
+    return this.stores.setLinks(merchant.id, id, dto);
   }
 
   @Post(":id/archive")

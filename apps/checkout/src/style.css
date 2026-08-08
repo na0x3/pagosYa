@@ -1,13 +1,57 @@
+@font-face {
+  font-family: "0xProto Mono";
+  src: url("/fonts/0xProtoNerdFontMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Dark gray is the default look everywhere, matching the pagosYaWeb site.
+   The light variant below only exists for contrast over a merchant's own
+   background photo (see body.has-bg-image and main.ts's data-theme logic). */
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
+  --pg-bg: #171717;
+  --pg-page-bg: #0a0a0a;
+  --pg-border: #404040;
+  --pg-border-strong: #525252;
+  --pg-text: #f5f5f5;
+  --pg-text-muted: #a3a3a3;
+  --pg-text-faint: #737373;
+  --pg-primary: #f5f5f5;
+  --pg-primary-hover: #fafafa;
+  --pg-primary-text: #171717;
+  --pg-accent: #818cf8;
+  --pg-accent-soft: #1e1b4b;
+  --pg-success: #34d399;
+  --pg-success-soft: #052e1f;
+  --pg-success-border: #065f46;
+  --pg-warning: #fbbf24;
+  --pg-warning-soft: #2c1a04;
+  --pg-warning-border: #78350f;
+  --pg-error: #f87171;
+  --pg-error-soft: #2c0b0b;
+  --pg-error-border: #7f1d1d;
+  --pg-focus-ring: rgba(129, 140, 248, 0.35);
+  --pg-page-bg-image: none;
+  --pg-accent-2: #c084fc;
+  --pg-rose: #f472b6;
+  --pg-rose-soft: #4a0d2e;
+  --pg-teal: #2dd4bf;
+  --pg-teal-soft: #042f2c;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
   --pg-bg: #ffffff;
-  --pg-border: #e5e7eb;
-  --pg-border-strong: #d1d5db;
-  --pg-text: #0f172a;
-  --pg-text-muted: #64748b;
-  --pg-text-faint: #94a3b8;
-  --pg-primary: #0f172a;
-  --pg-primary-hover: #1e293b;
+  --pg-page-bg: #f5f5f5;
+  --pg-border: #e5e5e5;
+  --pg-border-strong: #d4d4d4;
+  --pg-text: #171717;
+  --pg-text-muted: #737373;
+  --pg-text-faint: #a3a3a3;
+  --pg-primary: #171717;
+  --pg-primary-hover: #262626;
   --pg-primary-text: #ffffff;
   --pg-accent: #4f46e5;
   --pg-accent-soft: #eef2ff;
@@ -21,54 +65,11 @@
   --pg-error-soft: #fef2f2;
   --pg-error-border: #fecaca;
   --pg-focus-ring: rgba(79, 70, 229, 0.35);
-}
-
-:root[data-theme="dark"] {
-  --pg-bg: #0b1120;
-  --pg-border: #1e293b;
-  --pg-border-strong: #334155;
-  --pg-text: #f1f5f9;
-  --pg-text-muted: #94a3b8;
-  --pg-text-faint: #64748b;
-  --pg-primary: #f1f5f9;
-  --pg-primary-hover: #ffffff;
-  --pg-primary-text: #0f172a;
-  --pg-accent: #818cf8;
-  --pg-accent-soft: #1e1b4b;
-  --pg-success: #34d399;
-  --pg-success-soft: #052e1f;
-  --pg-success-border: #065f46;
-  --pg-warning: #fbbf24;
-  --pg-warning-soft: #2c1a04;
-  --pg-warning-border: #78350f;
-  --pg-error: #f87171;
-  --pg-error-soft: #2c0b0b;
-  --pg-error-border: #7f1d1d;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --pg-bg: #0b1120;
-    --pg-border: #1e293b;
-    --pg-border-strong: #334155;
-    --pg-text: #f1f5f9;
-    --pg-text-muted: #94a3b8;
-    --pg-text-faint: #64748b;
-    --pg-primary: #f1f5f9;
-    --pg-primary-hover: #ffffff;
-    --pg-primary-text: #0f172a;
-    --pg-accent: #818cf8;
-    --pg-accent-soft: #1e1b4b;
-    --pg-success: #34d399;
-    --pg-success-soft: #052e1f;
-    --pg-success-border: #065f46;
-    --pg-warning: #fbbf24;
-    --pg-warning-soft: #2c1a04;
-    --pg-warning-border: #78350f;
-    --pg-error: #f87171;
-    --pg-error-soft: #2c0b0b;
-    --pg-error-border: #7f1d1d;
-  }
+  --pg-accent-2: #a855f7;
+  --pg-rose: #db2777;
+  --pg-rose-soft: #fdf2f8;
+  --pg-teal: #0d9488;
+  --pg-teal-soft: #f0fdfa;
 }
 
 * {
@@ -78,14 +79,50 @@
 body {
   margin: 0;
   padding: 20px;
-  background: var(--pg-bg);
+  background-color: var(--pg-page-bg);
+  background-image: var(--pg-page-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--pg-text);
-  font-family: -apple-system, "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace;
   -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* A dark scrim over the merchant's background photo — the page can't know
+   in advance whether a given photo is light or busy enough to fight with
+   the text sitting on top of it, so this guarantees contrast regardless of
+   what was uploaded, the same way the header itself gets a glass backdrop
+   (see .has-bg-image .merchant-header below). */
+body.has-bg-image::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.12) 35%, rgba(0, 0, 0, 0.38));
+  pointer-events: none;
+  z-index: 0;
 }
 
 #app {
+  position: relative;
+  z-index: 1;
   animation: pg-fade-in 0.2s ease-out;
+}
+
+/* The payment form/status view (as opposed to the storefront) is meant to read
+   as a self-contained card — it's usually embedded borderless in a merchant's
+   own page via iframe, so it needs its own visual edge rather than floating
+   text directly on the host page's background. */
+body:not(.store-page) #app {
+  max-width: 400px;
+  margin: 0 auto;
+  background: var(--pg-bg);
+  border: 1px solid var(--pg-border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 @keyframes pg-fade-in {
@@ -179,35 +216,231 @@ body.store-page #app {
   margin: 0 auto;
 }
 
+.store-hero {
+  position: relative;
+  display: flex;
+  animation: pg-fade-in 0.5s ease-out backwards;
+}
+
+.store-banner {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.store-hero .merchant-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--pg-bg);
+  border: 3px solid var(--pg-page-bg);
+  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.35);
+}
+.store-hero:not(.has-banner) .merchant-logo {
+  margin: 10px 0 0;
+}
+.store-hero.has-banner .merchant-logo {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+}
+
 body.store-page .merchant-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   text-align: center;
-  font-size: 24px;
-  font-weight: 700;
   text-transform: none;
-  letter-spacing: -0.01em;
-  color: var(--pg-text);
-  margin-bottom: 22px;
+  margin: 14px 0 26px;
+  padding: 0;
+  border-radius: 20px;
+  animation: pg-fade-in 0.5s ease-out 0.08s backwards;
 }
-body.store-page .merchant-logo {
-  margin-bottom: 0;
+/* No card behind the header — transparent, sitting right on the page (or
+   photo) background. A photo's brightness is unpredictable, so instead of a
+   frosted panel for contrast, the photo case switches to light text with a
+   drop shadow (the standard hero-text-over-photo technique) rather than
+   guessing a flat text color per image. */
+body.has-bg-image.store-page .merchant-header .store-tagline {
+  color: #f5f5f5;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+body.has-bg-image.store-page .merchant-header .store-title {
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+.store-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--pg-text);
+}
+.store-tagline {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--pg-text-muted);
+}
+
+.store-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 18px;
+  padding: 10px 0;
+  background: var(--pg-page-bg);
+}
+
+.store-search {
+  width: 100%;
+  padding: 11px 14px 11px 40px;
+  border-radius: 12px;
+  border: 1.5px solid var(--pg-border);
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font-size: 14px;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.store-search::placeholder {
+  color: var(--pg-text-faint);
+}
+.store-search:focus {
+  outline: none;
+  border-color: var(--pg-accent);
+  box-shadow: 0 0 0 3px var(--pg-focus-ring);
+}
+/* Search icon lives in a wrapper (not the input's own background-image) so
+   its color can follow --pg-text-faint in both themes instead of being
+   baked into a static SVG data URI. */
+.store-search-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.store-search-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--pg-text-faint);
+  pointer-events: none;
+}
+
+.store-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.category-chip-filter {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--pg-border);
+  background: var(--pg-bg);
+  color: var(--pg-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.category-chip-filter:hover {
+  border-color: var(--pg-text-faint);
+  color: var(--pg-text);
+}
+.category-chip-filter.active {
+  background: var(--pg-accent-soft);
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+}
+
+.category-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pg-text-muted);
+  margin: 28px 0 14px;
+}
+.category-section-title:first-of-type {
+  margin-top: 0;
+}
+.category-section-title::before {
+  content: "";
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pg-accent), var(--pg-rose));
+  flex-shrink: 0;
+}
+/* Same reasoning as the header's glass card — these sit directly on the
+   page background further down, past the hero, so they need their own
+   guaranteed contrast against an arbitrary photo. */
+body.has-bg-image .category-section-title {
+  width: max-content;
+  padding: 5px 12px 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #404040;
 }
 
 .store-items {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
   margin-bottom: 18px;
 }
 
 .store-item {
   display: flex;
   flex-direction: column;
+  background: var(--pg-bg);
   border: 1px solid var(--pg-border);
-  border-radius: 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  animation: pg-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+.store-item:hover {
+  transform: translateY(-5px);
+  border-color: var(--pg-border-strong);
+  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.18), 0 4px 10px -4px rgba(0, 0, 0, 0.1);
+}
+.store-item.sold-out {
+  opacity: 0.6;
+}
+.store-item.sold-out:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes pg-card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.store-item-gallery {
+  position: relative;
   overflow: hidden;
 }
 
@@ -217,15 +450,76 @@ body.store-page .merchant-logo {
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: var(--pg-accent-soft);
+  transition: opacity 0.18s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .store-item-image.placeholder {
-  background: var(--pg-accent-soft);
+  background: linear-gradient(135deg, var(--pg-accent-soft), var(--pg-rose-soft));
+}
+.store-item:hover .store-item-image {
+  transform: scale(1.045);
+}
+
+.gallery-thumbs {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.gallery-thumb-btn {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.gallery-thumb-btn:hover {
+  transform: scale(1.3);
+  background: rgba(255, 255, 255, 0.85);
+}
+.gallery-thumb-btn.active {
+  background: #fff;
+  transform: scale(1.2);
 }
 
 .store-item-info {
   flex: 1;
   min-width: 0;
   padding: 14px 16px 4px;
+}
+.store-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+.tag-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--pg-accent-soft);
+  color: var(--pg-accent);
+}
+/* A little color variety across tags reads livelier than every badge being
+   the same accent — rotates through a small fixed palette by position. */
+.tag-badge:nth-of-type(4n+2) {
+  background: var(--pg-rose-soft);
+  color: var(--pg-rose);
+}
+.tag-badge:nth-of-type(4n+3) {
+  background: var(--pg-teal-soft);
+  color: var(--pg-teal);
+}
+.tag-badge:nth-of-type(4n+4) {
+  background: var(--pg-warning-soft);
+  color: var(--pg-warning);
 }
 .store-item-name {
   font-weight: 700;
@@ -248,10 +542,21 @@ body.store-page .merchant-logo {
   margin-top: 5px;
 }
 .store-item-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   font-weight: 600;
   font-size: 17px;
   font-variant-numeric: tabular-nums;
   margin-top: 8px;
+}
+.stock-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pg-text-faint);
+}
+.stock-note.out {
+  color: var(--pg-error);
 }
 
 .qty-stepper {
@@ -262,15 +567,25 @@ body.store-page .merchant-logo {
   padding: 12px 16px 16px;
 }
 .qty-stepper button {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   border: 1.5px solid var(--pg-border);
   background: none;
   color: inherit;
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.qty-stepper button:hover:not(:disabled) {
+  background: var(--pg-accent-soft);
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+  transform: scale(1.08);
+}
+.qty-stepper button:active:not(:disabled) {
+  transform: scale(0.94);
 }
 .qty-stepper button:disabled {
   opacity: 0.35;
@@ -326,7 +641,7 @@ body.store-page .merchant-logo {
 .tab.active {
   background: var(--pg-bg);
   color: var(--pg-text);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .tab.active svg {
@@ -391,6 +706,26 @@ button.primary:hover:not(:disabled) {
 
 button.primary:active:not(:disabled) {
   transform: scale(0.99);
+}
+
+/* The storefront's "Ir a pagar" gets the vibrant treatment — the payment
+   form (button.primary above) stays on the neutral card palette since it's
+   embedded on a merchant's own page and isn't the place for pagosYa's own
+   brand colors to dominate. */
+.cart-bar .primary {
+  width: auto;
+  background: linear-gradient(120deg, var(--pg-accent), var(--pg-accent-2));
+  color: #fff;
+  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--pg-accent) 60%, transparent);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, filter 0.2s ease;
+}
+.cart-bar .primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -6px color-mix(in srgb, var(--pg-accent) 65%, transparent);
+  filter: brightness(1.06);
+}
+.cart-bar .primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
 }
 
 button.primary:disabled {
@@ -478,6 +813,86 @@ button.secondary:hover {
   50% { opacity: 0.5; }
 }
 
+.field-error {
+  color: var(--pg-error);
+  font-size: 12.5px;
+  font-weight: 600;
+  margin: -8px 0 12px;
+}
+.field-error:empty {
+  display: none;
+}
+
+.receipt {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--pg-border);
+  border-radius: 12px;
+  background: var(--pg-page-bg);
+}
+
+.receipt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.receipt-row code {
+  font-size: 12.5px;
+  color: var(--pg-text-muted);
+}
+.muted-label {
+  color: var(--pg-text-muted);
+}
+
+.receipt-items {
+  margin: 12px 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--pg-border);
+  border-bottom: 1px solid var(--pg-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receipt-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.receipt-qty {
+  color: var(--pg-text-muted);
+  font-size: 12.5px;
+}
+
+.receipt-subtotal {
+  font-size: 15.5px;
+  margin-top: 2px;
+}
+
+.receipt-contact {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pg-border);
+  font-size: 12.5px;
+  color: var(--pg-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.receipt-contact a {
+  color: var(--pg-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.receipt-contact a:hover {
+  text-decoration: underline;
+}
+
 .hint {
   font-size: 11.5px;
   color: var(--pg-text-faint);
@@ -498,4 +913,210 @@ button.secondary:hover {
 .secure-note svg {
   width: 12px;
   height: 12px;
+}
+
+/* ---------- Merchant brand customization (storefront) ---------- */
+
+/* One merchant hex (--pg-accent, set inline from Store.accentColor) becomes
+   the whole accent family — the companion shades derive from it here so they
+   track the custom color in either theme instead of needing more DB fields. */
+body.has-custom-accent {
+  --pg-accent-2: var(--pg-accent);
+  --pg-accent-soft: color-mix(in srgb, var(--pg-accent) 14%, var(--pg-bg));
+  --pg-focus-ring: color-mix(in srgb, var(--pg-accent) 35%, transparent);
+}
+
+/* Short promo/notice line pinned above the hero. */
+.store-announcement {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(120deg, var(--pg-accent), var(--pg-accent-2));
+  padding: 9px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--pg-accent) 60%, transparent);
+  animation: pg-fade-in 0.4s ease-out backwards;
+}
+
+/* Merchant-defined link buttons (socials, catalog, map, ...) under the title. */
+.store-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.store-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  border: 1.5px solid var(--pg-border);
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.store-link-btn::after {
+  content: "↗";
+  font-size: 11px;
+  color: var(--pg-text-faint);
+}
+.store-link-icon {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+}
+.store-link-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.store-link-btn:hover {
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+  background: var(--pg-accent-soft);
+  transform: translateY(-1px);
+}
+.store-link-btn:hover::after {
+  color: var(--pg-accent);
+}
+.store-link-btn.has-icon[href*="instagram.com"]:hover {
+  border-color: #e1306c;
+  color: #e1306c;
+  background: color-mix(in srgb, #e1306c 10%, transparent);
+}
+.store-link-btn.has-icon[href*="whatsapp.com"]:hover,
+.store-link-btn.has-icon[href*="wa.me"]:hover {
+  border-color: #25d366;
+  color: #25d366;
+  background: color-mix(in srgb, #25d366 10%, transparent);
+}
+
+/* Long-form brand story ("Nuestra historia") — transparent, sits directly on
+   the page (or photo) background, same as .merchant-header above. */
+.store-about {
+  background: transparent;
+  padding: 0;
+  margin: 0 0 26px;
+  animation: pg-fade-in 0.5s ease-out 0.12s backwards;
+}
+.store-about-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--pg-text-faint);
+  margin-bottom: 8px;
+}
+.store-about-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pg-text-muted);
+  margin-bottom: 12px;
+}
+.store-about-title::before {
+  content: "";
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pg-accent), var(--pg-rose));
+  flex-shrink: 0;
+}
+.store-about p {
+  margin: 0 0 12px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--pg-text-muted);
+}
+/* Same hero-text-over-photo technique as .merchant-header — light text with a
+   drop shadow reads regardless of what's underneath, without needing a card. */
+body.has-bg-image.store-page .store-about-icon,
+body.has-bg-image.store-page .store-about-title,
+body.has-bg-image.store-page .store-about p {
+  color: #f5f5f5;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+.store-about p:last-child {
+  margin-bottom: 0;
+}
+
+/* Search and sort are two distinct components, not one split control — a
+   generous gap plus each one having its own rounded corners, border, and
+   soft shadow keeps them from reading as a single divided rectangle. */
+.store-toolbar-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.store-sort-field {
+  position: relative;
+  flex-shrink: 0;
+}
+.store-sort {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  min-width: 190px;
+  padding: 11px 38px 11px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--pg-border);
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font-size: 13px;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.store-sort:focus {
+  outline: none;
+  border-color: var(--pg-accent);
+  box-shadow: 0 0 0 3px var(--pg-focus-ring);
+}
+.store-sort-icon {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--pg-text-faint);
+  pointer-events: none;
+}
+
+/* Corner treatment, set from Store.buttonStyle via body[data-button-style].
+   "rounded" is the default look above; the variants only override radii. */
+body[data-button-style="pill"] .store-search,
+body[data-button-style="pill"] .store-sort,
+body[data-button-style="pill"] button.primary,
+body[data-button-style="pill"] .store-announcement {
+  border-radius: 999px;
+}
+body[data-button-style="pill"] .qty-stepper button {
+  border-radius: 50%;
+}
+
+/* "square" also flattens the cards so the whole page reads cohesive. */
+body[data-button-style="square"] .store-search,
+body[data-button-style="square"] .store-sort,
+body[data-button-style="square"] button.primary,
+body[data-button-style="square"] .qty-stepper button,
+body[data-button-style="square"] .category-chip-filter,
+body[data-button-style="square"] .store-link-btn,
+body[data-button-style="square"] .store-announcement,
+body[data-button-style="square"] .tag-badge {
+  border-radius: 4px;
+}
+body[data-button-style="square"] .store-item,
+body[data-button-style="square"] .store-about,
+body[data-button-style="square"] .merchant-header {
+  border-radius: 8px;
 }

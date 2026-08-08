@@ -10,6 +10,7 @@ export interface MountOptions {
   onSuccess?: (result: { paymentIntentId: string }) => void;
   onError?: (error: { paymentIntentId: string; message: string }) => void;
   onProcessing?: (info: { paymentIntentId: string }) => void;
+  onCancel?: (info: { paymentIntentId: string }) => void;
 }
 
 export interface CheckoutInstance {
@@ -68,6 +69,9 @@ function PagosYa(_publishableKey: string, options: PagosYaOptions = {}) {
           mountOptions.onError?.({ paymentIntentId, message: error.message });
           break;
         }
+        case "PAYMENT_CANCELED":
+          mountOptions.onCancel?.(payload as { paymentIntentId: string });
+          break;
       }
     }
 

@@ -87,19 +87,30 @@ export class InvoiceEmissionWorker {
 
       await this.scheduleRetry(invoice.id, invoice.attempts, result.failureReason ?? "unknown_error");
     } catch (error) {
-      this.logger.warn(`Invoice emission failed for ${invoice.id}: ${(error as Error).message}`);
       await this.scheduleRetry(invoice.id, invoice.attempts, (error as Error).message);
     }
   }
 
+  /**
+   * Logs here, not at each call site, so severity always reflects whether
+   * this failure is still retrying (warn — expected, self-healing) or has
+   * exhausted every attempt (error — nobody is coming back to this invoice,
+   * worth a human's attention; also visible via GET /internal/delivery_failures).
+   */
   private async scheduleRetry(invoiceId: string, attempts: number, failureReason: string): Promise<void> {
+    const exhausted = attempts >= MAX_ATTEMPTS;
     const backoffMs = BACKOFF_BASE_MS * 2 ** (attempts - 1);
+    if (exhausted) {
+      this.logger.error(`Invoice ${invoiceId} exhausted all ${MAX_ATTEMPTS} attempts, giving up: ${failureReason}`);
+    } else {
+      this.logger.warn(`Invoice ${invoiceId} emission attempt ${attempts}/${MAX_ATTEMPTS} failed, retrying: ${failureReason}`);
+    }
     await this.prisma.invoice.update({
       where: { id: invoiceId },
       data: {
         status: InvoiceStatus.FAILED,
         failureReason,
-        nextRetryAt: attempts < MAX_ATTEMPTS ? new Date(Date.now() + backoffMs) : null,
+        nextRetryAt: exhausted ? null : new Date(Date.now() + backoffMs),
       },
     });
   }

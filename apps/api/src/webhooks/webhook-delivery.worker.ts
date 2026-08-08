@@ -64,22 +64,39 @@ export class WebhookDeliveryWorker {
         });
         return;
       }
-      await this.scheduleRetry(event.id, event.attempts, response.status);
+      await this.scheduleRetry(event.id, event.attempts, response.status, null);
     } catch (error) {
-      this.logger.warn(`Webhook delivery failed for event ${event.id}: ${(error as Error).message}`);
-      await this.scheduleRetry(event.id, event.attempts, null);
+      await this.scheduleRetry(event.id, event.attempts, null, (error as Error).message);
     }
   }
 
-  /** `attempts` here is already the post-claim count (this attempt included). */
-  private async scheduleRetry(eventId: string, attempts: number, responseStatus: number | null): Promise<void> {
+  /**
+   * `attempts` here is already the post-claim count (this attempt included).
+   * Logs here, not at each call site, so severity always reflects whether
+   * this failure is still retrying (warn — expected, self-healing) or has
+   * exhausted every attempt (error — nobody is coming back to this event,
+   * worth a human's attention; also visible via GET /internal/delivery_failures).
+   */
+  private async scheduleRetry(
+    eventId: string,
+    attempts: number,
+    responseStatus: number | null,
+    errorMessage: string | null,
+  ): Promise<void> {
+    const exhausted = attempts >= MAX_ATTEMPTS;
     const backoffMs = BACKOFF_BASE_MS * 2 ** (attempts - 1);
+    const reason = errorMessage ?? `HTTP ${responseStatus}`;
+    if (exhausted) {
+      this.logger.error(`Webhook event ${eventId} exhausted all ${MAX_ATTEMPTS} attempts, giving up: ${reason}`);
+    } else {
+      this.logger.warn(`Webhook event ${eventId} delivery attempt ${attempts}/${MAX_ATTEMPTS} failed, retrying: ${reason}`);
+    }
     await this.prisma.webhookEvent.update({
       where: { id: eventId },
       data: {
         status: WebhookEventStatus.FAILED,
         lastResponseStatus: responseStatus,
-        nextRetryAt: attempts < MAX_ATTEMPTS ? new Date(Date.now() + backoffMs) : null,
+        nextRetryAt: exhausted ? null : new Date(Date.now() + backoffMs),
       },
     });
   }

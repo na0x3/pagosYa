@@ -7,7 +7,8 @@ export type CheckoutEventType =
   | "CHECKOUT_RESIZE"
   | "PAYMENT_PROCESSING"
   | "PAYMENT_SUCCEEDED"
-  | "PAYMENT_FAILED";
+  | "PAYMENT_FAILED"
+  | "PAYMENT_CANCELED";
 
 export interface CheckoutEventEnvelope<T = unknown> {
   source: "pagosya-checkout";
@@ -31,4 +32,8 @@ export interface PaymentSucceededPayload {
 export interface PaymentFailedPayload {
   paymentIntentId: string;
   error: { message: string };
+}
+
+export interface PaymentCanceledPayload {
+  paymentIntentId: string;
 }

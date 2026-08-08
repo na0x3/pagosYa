@@ -12,7 +12,7 @@ export class CreateMerchantDto {
   @IsEmail()
   email!: string;
 
-  @ApiPropertyOptional({ enum: SettlementMode, default: SettlementMode.FACILITATOR })
+  @ApiPropertyOptional({ enum: SettlementMode, default: SettlementMode.AGGREGATOR })
   @IsOptional()
   @IsEnum(SettlementMode)
   settlementMode?: SettlementMode;

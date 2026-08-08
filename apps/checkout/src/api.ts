@@ -9,6 +9,8 @@ export interface CheckoutSession {
   currency: string;
   status: string;
   description: string | null;
+  merchantName: string;
+  metadata: Record<string, unknown> | null;
 }
 
 async function parseOrThrow<T>(response: Response): Promise<T> {
@@ -35,19 +37,52 @@ export async function fetchSession(clientSecret: string): Promise<CheckoutSessio
  */
 export interface StoreItem {
   id: string;
+  categoryId: string | null;
   name: string;
   description: string | null;
-  imageUrl: string | null;
+  imageUrls: string[];
+  tags: string[];
+  // null = unlimited/not tracked, 0 = genuinely sold out.
+  stock: number | null;
   color: string | null;
   amount: number;
   currency: string;
+  // Units sold via store-checkout carts — powers the "Más vendidos" sort.
+  soldCount: number;
+}
+
+export interface StoreCategory {
+  id: string;
+  name: string;
+}
+
+/** Merchant-defined link button (social profile, catalog, map, ...) shown under the store header. */
+export interface StoreLink {
+  id: string;
+  label: string;
+  url: string;
 }
 
 export interface Store {
   storeId: string;
   storeName: string;
+  tagline: string | null;
   logoUrl: string | null;
+  bannerUrl: string | null;
   backgroundColor: string | null;
+  backgroundImageUrl: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  // Long-form brand story; blank lines separate paragraphs.
+  aboutText: string | null;
+  // "#RRGGBB" brand accent; null = default palette accent.
+  accentColor: string | null;
+  // "rounded" | "pill" | "square"
+  buttonStyle: string;
+  // Short promo/notice bar text shown at the very top of the storefront.
+  announcement: string | null;
+  links: StoreLink[];
+  categories: StoreCategory[];
   items: StoreItem[];
 }
 
@@ -65,6 +100,8 @@ export interface CartCheckoutResult {
   clientSecret: string;
   storeName: string;
   cartDescription: string;
+  contactPhone: string | null;
+  contactEmail: string | null;
 }
 
 /** This call is what would otherwise be a merchant backend's own POST /v1/payment_intents —
@@ -81,15 +118,35 @@ export async function checkoutCart(
   return parseOrThrow<CartCheckoutResult>(response);
 }
 
+export interface CustomerContact {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export async function confirmPaymentIntent(
   paymentIntentId: string,
   clientSecret: string,
   paymentMethod: { type: PaymentMethodType; token: string },
+  customer: CustomerContact,
 ): Promise<{ paymentIntent: PaymentIntent; railResult: { status: string; actionRequired?: unknown; failureReason?: string } }> {
   const response = await fetch(`${API_BASE_URL}/payment_intents/${paymentIntentId}/confirm`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${clientSecret}` },
-    body: JSON.stringify({ paymentMethod }),
+    body: JSON.stringify({
+      paymentMethod,
+      customerName: customer.name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+    }),
+  });
+  return parseOrThrow(response);
+}
+
+export async function cancelPaymentIntent(clientSecret: string): Promise<{ id: string; status: string }> {
+  const response = await fetch(`${API_BASE_URL}/checkout/session/cancel`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${clientSecret}` },
   });
   return parseOrThrow(response);
 }

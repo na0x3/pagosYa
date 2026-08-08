@@ -5,9 +5,10 @@ import { StoresPublicController } from "./stores-public.controller";
 import { PaymentIntentsModule } from "../payment-intents/payment-intents.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
 import { AuthModule } from "../auth/auth.module";
+import { UploadsModule } from "../uploads/uploads.module";
 
 @Module({
-  imports: [PaymentIntentsModule, DashboardModule, AuthModule],
+  imports: [PaymentIntentsModule, DashboardModule, AuthModule, UploadsModule],
   controllers: [StoresController, StoresPublicController],
   providers: [StoresService],
   exports: [StoresService],

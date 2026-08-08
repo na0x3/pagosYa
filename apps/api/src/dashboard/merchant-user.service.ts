@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import * as argon2 from "argon2";
 import { customAlphabet } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
@@ -22,6 +23,7 @@ export class MerchantUserService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(EMAIL_PROVIDER) private readonly emailProvider: EmailProvider,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -37,25 +39,26 @@ export class MerchantUserService {
    * blocks the real owner from getting their email back.
    */
   async signup(merchantId: string, email: string, password: string): Promise<{ message: string }> {
-    const existing = await this.prisma.merchantUser.findUnique({ where: { email } });
-
-    if (!existing || this.isStaleUnverified(existing)) {
-      const hashedPassword = await argon2.hash(password);
-      const user = existing
-        ? await this.prisma.merchantUser.update({
-            where: { id: existing.id },
-            data: { merchantId, hashedPassword, emailVerifiedAt: null, createdAt: new Date() },
-          })
-        : await this.prisma.merchantUser.create({ data: { merchantId, email, hashedPassword } });
-
-      // Invalidate any token from a prior (now-superseded) claim attempt.
-      await this.prisma.emailVerificationToken.deleteMany({ where: { merchantUserId: user.id } });
-      await this.issueVerification(user.id, email);
-    }
-    // Else: a verified account, or a still-fresh unverified one, already
-    // owns this email — do nothing, but the response below never says so.
+    const user = await this.upsertUnverifiedUser(merchantId, email, password);
+    if (user) await this.issueVerification(user.id, email);
 
     return { message: "If that email can be used, check your inbox for a confirmation link." };
+  }
+
+  /**
+   * Same account-creation path as signup(), but for callers with no password
+   * to hand over yet (e.g. a signup form that only asks for name/email —
+   * see pagosYaWeb's /signup). Sets an unguessable placeholder password the
+   * merchant will never see, then goes straight to the password-reset email
+   * instead of the plain confirmation one — one link, one click, and it both
+   * sets their real password and verifies the email (see resetPassword()).
+   */
+  async signupPasswordless(merchantId: string, email: string): Promise<{ message: string }> {
+    const placeholderPassword = generateSecretPart() + generateSecretPart();
+    const user = await this.upsertUnverifiedUser(merchantId, email, placeholderPassword);
+    if (user) await this.issuePasswordReset(user.id, email);
+
+    return { message: "If that email can be used, check your inbox for a link to set your password." };
   }
 
   async verifyEmail(token: string): Promise<{ verified: boolean }> {
@@ -83,20 +86,7 @@ export class MerchantUserService {
    */
   async requestPasswordReset(email: string): Promise<{ message: string }> {
     const user = await this.prisma.merchantUser.findUnique({ where: { email } });
-    if (user) {
-      const token = generateSecretPart();
-      const hashedToken = await argon2.hash(token);
-      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
-
-      // A fresh reset request invalidates any earlier one still outstanding.
-      await this.prisma.passwordResetToken.deleteMany({ where: { merchantUserId: user.id } });
-      await this.prisma.passwordResetToken.create({ data: { merchantUserId: user.id, hashedToken, expiresAt } });
-      await this.emailProvider.send({
-        to: email,
-        subject: "Reset your pagosYa dashboard password",
-        body: `Reset your password:\nPOST /v1/dashboard/reset_password  { "token": "${token}", "newPassword": "..." }\n\nThis link expires in 1 hour. If you didn't request this, ignore it.`,
-      });
-    }
+    if (user) await this.issuePasswordReset(user.id, email);
 
     return { message: "If that email has a dashboard login, check your inbox for a reset link." };
   }
@@ -134,16 +124,56 @@ export class MerchantUserService {
     return !user.emailVerifiedAt && Date.now() - user.createdAt.getTime() > VERIFICATION_TTL_MS;
   }
 
+  /**
+   * Shared by signup() and signupPasswordless(): creates a fresh MerchantUser
+   * for `email`, or reclaims a stale (>24h, still-unverified) one — returns
+   * null (and does nothing) if the email is already verified or has a still-
+   * fresh unverified claim, so callers can skip sending anything in that case.
+   */
+  private async upsertUnverifiedUser(merchantId: string, email: string, password: string) {
+    const existing = await this.prisma.merchantUser.findUnique({ where: { email } });
+    if (existing && !this.isStaleUnverified(existing)) return null;
+
+    const hashedPassword = await argon2.hash(password);
+    const user = existing
+      ? await this.prisma.merchantUser.update({
+          where: { id: existing.id },
+          data: { merchantId, hashedPassword, emailVerifiedAt: null, createdAt: new Date() },
+        })
+      : await this.prisma.merchantUser.create({ data: { merchantId, email, hashedPassword } });
+
+    // Invalidate any token from a prior (now-superseded) claim attempt.
+    await this.prisma.emailVerificationToken.deleteMany({ where: { merchantUserId: user.id } });
+    return user;
+  }
+
   private async issueVerification(merchantUserId: string, email: string): Promise<void> {
     const token = generateSecretPart();
     const hashedToken = await argon2.hash(token);
     const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
 
     await this.prisma.emailVerificationToken.create({ data: { merchantUserId, hashedToken, expiresAt } });
+    const webOrigin = this.config.get<string>("app.email.webOrigin");
     await this.emailProvider.send({
       to: email,
-      subject: "Confirm your pagosYa dashboard login",
-      body: `Confirm this email to activate your pagosYa dashboard login:\nGET /v1/dashboard/verify_email?token=${token}\n\nThis link expires in 24 hours. If you didn't request this, ignore it.`,
+      subject: "Confirma tu cuenta de pagosYa",
+      body: `¡Gracias por crear tu cuenta en pagosYa! Confirma tu correo para activar tu acceso al dashboard:\n${webOrigin}/verify?token=${token}\n\nEste link expira en 24 horas. Si no fuiste tú, ignora este correo.`,
+    });
+  }
+
+  private async issuePasswordReset(merchantUserId: string, email: string): Promise<void> {
+    const token = generateSecretPart();
+    const hashedToken = await argon2.hash(token);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+
+    // A fresh reset request invalidates any earlier one still outstanding.
+    await this.prisma.passwordResetToken.deleteMany({ where: { merchantUserId } });
+    await this.prisma.passwordResetToken.create({ data: { merchantUserId, hashedToken, expiresAt } });
+    const webOrigin = this.config.get<string>("app.email.webOrigin");
+    await this.emailProvider.send({
+      to: email,
+      subject: "Elige tu contraseña de pagosYa",
+      body: `Elige tu contraseña para activar tu cuenta de pagosYa:\n${webOrigin}/reset-password?token=${token}\n\nEste link expira en 1 hora. Si no fuiste tú, ignora este correo.`,
     });
   }
 }

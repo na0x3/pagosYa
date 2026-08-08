@@ -1,7 +1,12 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   server: { port: 5173 },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./test/setup.ts"],
+    include: ["test/**/*.test.ts"],
+  },
   // @pagosya/shared-types builds as CommonJS (apps/api/NestJS needs that),
   // but pnpm symlinks workspace packages to a path outside node_modules
   // proper, so Vite serves it as raw source instead of running it through

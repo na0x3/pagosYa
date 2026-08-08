@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsEmail, IsEnum, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
 import { PaymentMethodType } from "@prisma/client";
 
 export class PaymentMethodInputDto {
@@ -40,4 +40,18 @@ export class ConfirmPaymentIntentDto {
   @IsOptional()
   @IsString()
   customerDocument?: string;
+
+  @ApiPropertyOptional({
+    description: "Buyer email, so the merchant can contact them about this order.",
+  })
+  @IsOptional()
+  @IsEmail()
+  customerEmail?: string;
+
+  @ApiPropertyOptional({
+    description: "Buyer phone number, so the merchant can contact them about this order.",
+  })
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
 }

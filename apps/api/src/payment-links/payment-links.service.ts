@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PaymentLinkStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { UploadsService } from "../uploads/uploads.service";
 import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
 import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
 
 @Injectable()
 export class PaymentLinksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploads: UploadsService,
+  ) {}
 
   /** Every mutation here is scoped to a store the caller owns — never trust a bare storeId. */
   private async ownedStoreOrThrow(merchantId: string, storeId: string) {
@@ -15,14 +19,25 @@ export class PaymentLinksService {
     return store;
   }
 
+  /** A categoryId must belong to the same store — otherwise a merchant could
+   * point a product at another store's (or another merchant's) category. */
+  private async ownedCategoryOrThrow(storeId: string, categoryId: string) {
+    const category = await this.prisma.category.findFirst({ where: { id: categoryId, storeId } });
+    if (!category) throw new NotFoundException("Category not found");
+  }
+
   async create(merchantId: string, storeId: string, dto: CreatePaymentLinkDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
+    if (dto.categoryId) await this.ownedCategoryOrThrow(storeId, dto.categoryId);
     return this.prisma.paymentLink.create({
       data: {
         storeId,
+        categoryId: dto.categoryId,
         name: dto.name,
         description: dto.description,
-        imageUrl: dto.imageUrl,
+        imageUrls: dto.imageUrls ?? [],
+        tags: dto.tags ?? [],
+        stock: dto.stock,
         color: dto.color,
         amount: dto.amount,
         currency: dto.currency ?? "BOB",
@@ -51,6 +66,7 @@ export class PaymentLinksService {
     const link = await this.prisma.paymentLink.findFirst({ where: { id, storeId } });
     if (!link) throw new NotFoundException("Payment link not found");
     await this.prisma.paymentLink.delete({ where: { id } });
+    await this.uploads.deleteFiles(link.imageUrls);
     return { success: true };
   }
 
@@ -58,6 +74,7 @@ export class PaymentLinksService {
     await this.ownedStoreOrThrow(merchantId, storeId);
     const link = await this.prisma.paymentLink.findFirst({ where: { id, storeId } });
     if (!link) throw new NotFoundException("Payment link not found");
+    if (dto.categoryId) await this.ownedCategoryOrThrow(storeId, dto.categoryId);
     // Explicit-field spread, not `{...dto}` — an edit call that omits a field (e.g. no
     // new photo) must leave it untouched, not clobber it to undefined.
     return this.prisma.paymentLink.update({
@@ -65,7 +82,10 @@ export class PaymentLinksService {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+        ...(dto.imageUrls !== undefined && { imageUrls: dto.imageUrls }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.stock !== undefined && { stock: dto.stock }),
+        ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
         ...(dto.color !== undefined && { color: dto.color }),
         ...(dto.amount !== undefined && { amount: dto.amount }),
         ...(dto.currency !== undefined && { currency: dto.currency }),

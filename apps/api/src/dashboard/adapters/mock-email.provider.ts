@@ -2,9 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import { EmailProvider, SendEmailRequest } from "../interfaces/email-provider.interface";
 
 /**
- * Stands in for a real transactional-email sender — no such integration
- * exists yet. Logs instead of sending, so local dev/testing can read the
- * verification link straight out of the API server's console.
+ * Default when RESEND_API_KEY isn't set (see DashboardModule/ResendEmailProvider).
+ * Logs instead of sending, so local dev/testing can read the verification
+ * link straight out of the API server's console without needing real email.
  */
 @Injectable()
 export class MockEmailProvider implements EmailProvider {

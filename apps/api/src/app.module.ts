@@ -18,6 +18,8 @@ import { DashboardModule } from "./dashboard/dashboard.module";
 import { HealthModule } from "./health/health.module";
 import { PaymentLinksModule } from "./payment-links/payment-links.module";
 import { StoresModule } from "./stores/stores.module";
+import { CategoriesModule } from "./categories/categories.module";
+import { FinancesModule } from "./finances/finances.module";
 import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
@@ -42,6 +44,8 @@ import { UploadsModule } from "./uploads/uploads.module";
     HealthModule,
     StoresModule,
     PaymentLinksModule,
+    CategoriesModule,
+    FinancesModule,
     UploadsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

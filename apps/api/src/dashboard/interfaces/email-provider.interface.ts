@@ -1,8 +1,9 @@
 /**
- * pagosYa-side contract for sending transactional email (just verification
- * links today). Modeled on PaymentRailAdapter/InvoicingProvider/PayoutProvider:
- * swap MockEmailProvider for a real sender (SES, Postmark, etc.) once one
- * exists, without touching MerchantUserService.
+ * pagosYa-side contract for sending transactional email — merchant dashboard
+ * verification links (MerchantUserService) and customer purchase receipts
+ * (PaymentIntentsService) both go through this. Modeled on
+ * PaymentRailAdapter/InvoicingProvider/PayoutProvider: swap MockEmailProvider
+ * for a real sender (SES, Postmark, etc.) without touching either caller.
  */
 export interface SendEmailRequest {
   to: string;

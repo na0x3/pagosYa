@@ -129,7 +129,7 @@ model Merchant {
   id               String            @id @default(cuid())
   name             String
   email            String            @unique
-  settlementMode   SettlementMode    @default(FACILITATOR)
+  settlementMode   SettlementMode    @default(AGGREGATOR)
   status           MerchantStatus    @default(PENDING)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -331,6 +331,10 @@ model PaymentIntent {
   lastError         Json?
   customerName      String?
   customerDocument  String?
+  // Buyer contact info, collected at checkout so the merchant can reach out
+  // about this order — separate from customerDocument (tax ID, for invoicing).
+  customerEmail     String?
+  customerPhone     String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   transactions      Transaction[]
@@ -357,16 +361,65 @@ model Store {
   merchant        Merchant      @relation(fields: [merchantId], references: [id])
   slug            String        @unique
   name            String
+  // Short about/tagline text shown under the store name on the storefront.
+  tagline         String?
   // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
   logoUrl         String?
+  // Wide header image, separate from logoUrl (which stays small/square).
+  bannerUrl       String?
   // "#RRGGBB", validated at the DTO layer only.
   backgroundColor String?
+  // "/v1/uploads/<uuid>.<ext>" — full-page storefront background photo.
+  // Independent of backgroundColor: when set, the image is what's shown
+  // (backgroundColor still renders behind it while the image loads / behind
+  // any transparent areas), when unset backgroundColor (or the default) is
+  // used as before.
+  backgroundImageUrl String?
+  // Support channel shown to customers on the receipt/success screen — e.g.
+  // for a refund request or an order question. Both optional and independent
+  // (a merchant may only want to expose one).
+  contactPhone    String?
+  contactEmail    String?
+  // Long-form brand story ("Nuestra historia") rendered as its own storefront
+  // section — multi-paragraph (blank-line separated), unlike the one-line tagline.
+  aboutText       String?
+  // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
+  // title gradient). Null = pagosYa's default palette accent, per theme.
+  accentColor     String?
+  // Corner treatment for the storefront's interactive elements:
+  // "rounded" (default) | "pill" | "square". Validated at the DTO layer.
+  buttonStyle     String        @default("rounded")
+  // Short promo/notice line shown in a bar at the very top of the storefront.
+  announcement    String?
   status          StoreStatus   @default(ACTIVE)
+  // Incremented once per storefront page load (getStorePublic) — a simple
+  // visit counter, not deduplicated per visitor. Good enough for "is anyone
+  // looking at this store" without building real analytics infra.
+  viewCount       Int           @default(0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   paymentLinks    PaymentLink[]
+  categories      Category[]
+  links           StoreLink[]
 
   @@index([merchantId, createdAt])
+}
+
+// Merchant-defined buttons rendered under the storefront header — social
+// profiles, a catalog PDF, a map pin, anything the merchant wants to link out
+// to. Replaced wholesale via PUT /v1/stores/:id/links (order = sortOrder), so
+// there's no per-row CRUD.
+model StoreLink {
+  id        String @id @default(cuid())
+  storeId   String
+  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  label     String
+  // http(s) only, enforced at the DTO layer — these render as clickable
+  // buttons on a customer-facing page, so no javascript:/data: schemes.
+  url       String
+  sortOrder Int    @default(0)
+
+  @@index([storeId, sortOrder])
 }
 
 enum StoreStatus {
@@ -374,15 +427,42 @@ enum StoreStatus {
   ARCHIVED
 }
 
+// Groups a Store's products into sections on the storefront (e.g. "Bebidas",
+// "Postres") — optional per product; uncategorized products still render,
+// just outside any section.
+model Category {
+  id           String        @id @default(cuid())
+  storeId      String
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  paymentLinks PaymentLink[]
+
+  @@index([storeId, sortOrder])
+}
+
 // A product within a Store's catalog.
 model PaymentLink {
   id          String            @id @default(cuid())
   storeId     String
   store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   name        String
   description String?
-  // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
-  imageUrl    String?
+  // "/v1/uploads/<uuid>.<ext>" paths returned by POST /v1/uploads — first
+  // entry is the cover photo, rest render as a gallery. Replaces the old
+  // single `imageUrl` column (see migration 20260807150000_store_catalog_v2).
+  imageUrls   String[]          @default([])
+  // Free-form small labels the merchant types, e.g. "Nuevo", "Agotado" —
+  // rendered as pill badges on the storefront. Not a controlled vocabulary.
+  tags        String[]          @default([])
+  // Remaining units, null = not tracked (unlimited, today's behavior for
+  // every existing product). When set, the storefront caps cart quantity to
+  // it and cart-checkout/payment success enforce it server-side.
+  stock       Int?
   // "#RRGGBB" product color swatch (e.g. a T-shirt color), validated at the DTO layer only.
   color       String?
   amount      Int
@@ -392,6 +472,7 @@ model PaymentLink {
   updatedAt   DateTime          @updatedAt
 
   @@index([storeId, createdAt])
+  @@index([categoryId])
 }
 
 model PaymentMethod {

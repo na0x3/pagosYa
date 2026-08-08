@@ -1,5 +1,7 @@
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { PaymentIntent } from "@prisma/client";
+import { ClientSecretGuard } from "../auth/guards/client-secret.guard";
 import { PaymentIntentsService } from "./payment-intents.service";
 
 /**
@@ -21,6 +23,22 @@ export class CheckoutSessionController {
       currency: intent.currency,
       status: intent.status,
       description: intent.description,
+      merchantName: intent.merchant.name,
+      metadata: intent.metadata,
     };
+  }
+
+  /**
+   * Lets the customer back out of an in-progress checkout. Guarded by the
+   * client_secret rather than a merchant credential — the same scoping the
+   * confirm endpoint uses — and only ever moves REQUIRES_PAYMENT_METHOD /
+   * REQUIRES_CONFIRMATION to CANCELED (see the state machine); anything
+   * already PROCESSING or beyond rejects via IllegalStateTransitionError.
+   */
+  @Post("session/cancel")
+  @UseGuards(ClientSecretGuard)
+  async cancelSession(@Req() req: { paymentIntent: PaymentIntent }) {
+    const intent = await this.paymentIntents.cancelById(req.paymentIntent.id);
+    return { id: intent.id, status: intent.status };
   }
 }

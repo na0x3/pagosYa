@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
-import { PaymentIntentStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RailRegistry } from "../rails/rail-registry.service";
 import { PaymentMethodsService } from "../payment-methods/payment-methods.service";
@@ -8,6 +8,8 @@ import { LedgerService } from "../ledger/ledger.service";
 import { WebhookDispatcherService } from "../webhooks/webhook-dispatcher.service";
 import { InvoicingService } from "../invoicing/invoicing.service";
 import { RailResult } from "../rails/interfaces/payment-rail-adapter.interface";
+import { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
+import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
@@ -15,8 +17,14 @@ import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
 
+function formatAmount(amount: number, currency: string): string {
+  return `${(amount / 100).toFixed(2)} ${currency}`;
+}
+
 @Injectable()
 export class PaymentIntentsService {
+  private readonly logger = new Logger(PaymentIntentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly railRegistry: RailRegistry,
@@ -24,6 +32,7 @@ export class PaymentIntentsService {
     private readonly ledger: LedgerService,
     private readonly webhooks: WebhookDispatcherService,
     private readonly invoicing: InvoicingService,
+    @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -55,13 +64,28 @@ export class PaymentIntentsService {
   }
 
   async findByClientSecret(clientSecret: string) {
-    const intent = await this.prisma.paymentIntent.findUnique({ where: { clientSecret } });
+    const intent = await this.prisma.paymentIntent.findUnique({
+      where: { clientSecret },
+      include: { merchant: { select: { name: true } } },
+    });
     if (!intent) throw new NotFoundException("PaymentIntent not found");
     return intent;
   }
 
   async cancel(merchantId: string, id: string) {
-    const intent = await this.findByIdForMerchant(merchantId, id);
+    await this.findByIdForMerchant(merchantId, id);
+    return this.cancelById(id);
+  }
+
+  /**
+   * Shared by the merchant-facing cancel() above and the customer-facing
+   * checkout cancel — the latter is reached via ClientSecretGuard, which
+   * already scopes the caller to exactly this PaymentIntent, so there's no
+   * separate ownership check to do here.
+   */
+  async cancelById(id: string) {
+    const intent = await this.prisma.paymentIntent.findUnique({ where: { id } });
+    if (!intent) throw new NotFoundException("PaymentIntent not found");
     const nextStatus = transition(intent.status, PaymentIntentEvent.CANCEL);
     return this.prisma.paymentIntent.update({ where: { id }, data: { status: nextStatus } });
   }
@@ -75,14 +99,16 @@ export class PaymentIntentsService {
   async confirm(paymentIntentId: string, dto: ConfirmPaymentIntentDto) {
     const { intentId, railId, amount, currency, merchantId } = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
-        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string }[]
+        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; metadata: Prisma.JsonValue }[]
       >`
-        SELECT id, status, "confirmationAttempts", "merchantId" FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
+        SELECT id, status, "confirmationAttempts", "merchantId", metadata FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
 
       const confirmedStatus = transition(current.status, PaymentIntentEvent.CONFIRM);
+
+      await this.assertCartStillAvailable(tx, current.metadata);
 
       const paymentMethod = await this.paymentMethods.findOrCreate(tx, current.merchantId, dto.paymentMethod);
       const rail = this.railRegistry.getForMethodType(paymentMethod.type);
@@ -98,6 +124,8 @@ export class PaymentIntentsService {
           confirmationAttempts: { increment: 1 },
           customerName: dto.customerName,
           customerDocument: dto.customerDocument,
+          customerEmail: dto.customerEmail,
+          customerPhone: dto.customerPhone,
         },
       });
 
@@ -139,11 +167,17 @@ export class PaymentIntentsService {
     result: RailResult,
     transactionType: TransactionType,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    const outcome = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
-        { status: PaymentIntentStatus; amount: number; customerName: string | null; customerDocument: string | null }[]
+        {
+          status: PaymentIntentStatus;
+          amount: number;
+          customerName: string | null;
+          customerDocument: string | null;
+          metadata: Prisma.JsonValue;
+        }[]
       >`
-        SELECT status, amount, "customerName", "customerDocument" FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
+        SELECT status, amount, "customerName", "customerDocument", metadata FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
@@ -197,6 +231,7 @@ export class PaymentIntentsService {
           customerName: current.customerName,
           customerDocument: current.customerDocument,
         });
+        await this.decrementStockForCart(tx, current.metadata);
       } else if (result.status === "failed") {
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.failed", {
           id: updated.id,
@@ -207,8 +242,100 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name };
     });
+
+    // Sent outside the transaction — it's a real network call (unlike the
+    // webhook/invoice enqueues above, which just write an outbox row), so it
+    // must never hold a DB row lock open while it runs.
+    if (outcome.railResult.status === "succeeded") {
+      await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
+    }
+
+    return { paymentIntent: outcome.paymentIntent, railResult: outcome.railResult };
+  }
+
+  /**
+   * This is the customer's own receipt for their order — sent on the
+   * store/merchant's behalf (subject line, no pagosYa branding), same as the
+   * WhatsApp/email contact shown on the checkout receipt screen. Both
+   * EmailProvider implementations already catch and log send failures
+   * internally, but the try/catch here is a second layer: nothing in this
+   * method — a malformed cart, a missing field — should ever be able to turn
+   * an already-succeeded payment into a failed confirm() response.
+   */
+  private async sendReceiptEmail(
+    intent: {
+      id: string;
+      amount: number;
+      currency: string;
+      customerEmail: string | null;
+      customerName: string | null;
+      metadata: Prisma.JsonValue;
+    },
+    merchantName: string,
+  ): Promise<void> {
+    if (!intent.customerEmail) return;
+    try {
+      const cart = (intent.metadata as { cart?: { name: string; quantity: number; unitAmount: number }[] } | null)?.cart;
+      const itemLines = cart
+        ? cart.map((line) => `- ${line.name} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`).join("\n") + "\n"
+        : "";
+
+      await this.email.send({
+        to: intent.customerEmail,
+        subject: `Recibo de tu compra en ${merchantName}`,
+        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}\n\nGracias por tu compra.`,
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to send receipt email for ${intent.id}: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Cart-checkout intents snapshot name/price at creation time (see
+   * StoresService.createCartCheckout) but stock and availability can still
+   * drift while the customer is filling out the payment form — another
+   * buyer checking out first, or the merchant editing/archiving the product.
+   * Re-check right before authorizing so a sold-out or removed item blocks
+   * the charge outright, instead of charging successfully and only then
+   * silently no-oping the stock decrement (see decrementStockForCart's
+   * `gte` guard) with an order the merchant can't actually fulfill.
+   */
+  private async assertCartStillAvailable(tx: Prisma.TransactionClient, metadata: Prisma.JsonValue): Promise<void> {
+    const cart = (metadata as { cart?: { paymentLinkId: string; quantity: number; name: string }[] } | null)?.cart;
+    if (!cart) return;
+
+    const links = await tx.paymentLink.findMany({ where: { id: { in: cart.map((line) => line.paymentLinkId) } } });
+    for (const line of cart) {
+      const link = links.find((l) => l.id === line.paymentLinkId);
+      if (!link || link.status !== PaymentLinkStatus.ACTIVE) {
+        throw new BadRequestException(`"${line.name}" ya no está disponible`);
+      }
+      if (link.stock !== null && link.stock < line.quantity) {
+        throw new BadRequestException(`Solo quedan ${link.stock} unidades de "${line.name}"`);
+      }
+    }
+  }
+
+  /**
+   * Only cart-checkout intents (StoresService.createCartCheckout) carry a
+   * `cart` in metadata — a plain API-created PaymentIntent has none, and
+   * that's fine, there's nothing to decrement. The `stock: { gte: quantity }`
+   * guard is what actually prevents overselling: it excludes both unlimited
+   * stock (null, since `NULL >= n` is never true in SQL) and any row that
+   * doesn't have enough left, so a race between two carts can never push
+   * stock negative — worst case one decrement silently no-ops.
+   */
+  private async decrementStockForCart(tx: Prisma.TransactionClient, metadata: Prisma.JsonValue): Promise<void> {
+    const cart = (metadata as { cart?: { paymentLinkId: string; quantity: number }[] } | null)?.cart;
+    if (!cart) return;
+    for (const line of cart) {
+      await tx.paymentLink.updateMany({
+        where: { id: line.paymentLinkId, stock: { gte: line.quantity } },
+        data: { stock: { decrement: line.quantity } },
+      });
+    }
   }
 
   private eventForRailResult(from: PaymentIntentStatus, resultStatus: RailResult["status"]): PaymentIntentEvent {

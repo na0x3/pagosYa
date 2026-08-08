@@ -29,3 +29,67 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  migration-safety:
+    name: Migration safety (apply against pre-existing data)
+    runs-on: ubuntu-latest
+    # pnpm test's Jest suites all mock PrismaService, so they never actually
+    # run `prisma migrate deploy` against a real database — this job exists
+    # because that gap let a real bug through once already: a migration that
+    # added a NOT NULL column with no backfill, which only breaks once a
+    # table already has rows (an empty CI database would never catch it).
+    # Simulate that by seeding data on the base branch's schema first, then
+    # applying this branch's new migrations on top of it, same as upgrading
+    # a real deployment.
+    if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pagosya
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pagosya?schema=public
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies (PR branch)
+        run: pnpm install --frozen-lockfile
+
+      - name: Check out base branch into a worktree
+        run: git worktree add /tmp/base-ref ${{ github.event.pull_request.base.sha }}
+
+      - name: Apply base-branch migrations and seed representative data
+        working-directory: /tmp/base-ref/apps/api
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec prisma generate
+          pnpm exec prisma migrate deploy
+          pnpm exec ts-node prisma/seed.ts
+
+      - name: Apply this PR's migrations on top of that pre-existing data
+        working-directory: apps/api
+        run: |
+          pnpm exec prisma generate
+          pnpm exec prisma migrate deploy
+
+      - name: Run the test suite against the upgraded, pre-populated database
+        working-directory: apps/api
+        run: pnpm test

@@ -82,19 +82,30 @@ export class PayoutDeliveryWorker {
 
       await this.scheduleRetry(payout.id, payout.attempts, result.failureReason ?? "unknown_error");
     } catch (error) {
-      this.logger.warn(`Payout delivery failed for ${payout.id}: ${(error as Error).message}`);
       await this.scheduleRetry(payout.id, payout.attempts, (error as Error).message);
     }
   }
 
+  /**
+   * Logs here, not at each call site, so severity always reflects whether
+   * this failure is still retrying (warn — expected, self-healing) or has
+   * exhausted every attempt (error — nobody is coming back to this payout,
+   * worth a human's attention; also visible via GET /internal/delivery_failures).
+   */
   private async scheduleRetry(payoutId: string, attempts: number, failureReason: string): Promise<void> {
+    const exhausted = attempts >= MAX_ATTEMPTS;
     const backoffMs = BACKOFF_BASE_MS * 2 ** (attempts - 1);
+    if (exhausted) {
+      this.logger.error(`Payout ${payoutId} exhausted all ${MAX_ATTEMPTS} attempts, giving up: ${failureReason}`);
+    } else {
+      this.logger.warn(`Payout ${payoutId} delivery attempt ${attempts}/${MAX_ATTEMPTS} failed, retrying: ${failureReason}`);
+    }
     await this.prisma.payout.update({
       where: { id: payoutId },
       data: {
         status: PayoutStatus.FAILED,
         failureReason,
-        nextRetryAt: attempts < MAX_ATTEMPTS ? new Date(Date.now() + backoffMs) : null,
+        nextRetryAt: exhausted ? null : new Date(Date.now() + backoffMs),
       },
     });
   }
