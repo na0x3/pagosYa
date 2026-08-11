@@ -13,7 +13,7 @@ import zlib from "node:zlib";
 // Requires the API running locally (pnpm --filter @pagosya/api run start:dev).
 
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:3000/v1";
-const CHECKOUT_ORIGIN = process.env.CHECKOUT_ORIGIN ?? "http://localhost:5173";
+const CHECKOUT_ORIGIN = process.env.CHECKOUT_ORIGIN ?? "http://localhost:5174";
 
 async function api(path, { method = "GET", body, secretKey, isForm = false } = {}) {
   const headers = {};

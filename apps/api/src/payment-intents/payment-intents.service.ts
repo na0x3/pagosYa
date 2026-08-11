@@ -21,6 +21,27 @@ function formatAmount(amount: number, currency: string): string {
   return `${(amount / 100).toFixed(2)} ${currency}`;
 }
 
+type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
+type CartInventoryLine = { paymentLinkId: string; variantId?: string; quantity: number; name: string; variantName?: string };
+
+function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is ProductVariant =>
+      !!entry &&
+      typeof entry === "object" &&
+      !Array.isArray(entry) &&
+      typeof (entry as Record<string, unknown>).id === "string" &&
+      typeof (entry as Record<string, unknown>).name === "string" &&
+      Number.isInteger((entry as Record<string, unknown>).amount) &&
+      ((entry as Record<string, unknown>).amount as number) > 0 &&
+      (!("stock" in entry) ||
+        (entry as Record<string, unknown>).stock === null ||
+        (Number.isInteger((entry as Record<string, unknown>).stock) &&
+          ((entry as Record<string, unknown>).stock as number) >= 0)),
+  );
+}
+
 @Injectable()
 export class PaymentIntentsService {
   private readonly logger = new Logger(PaymentIntentsService.name);
@@ -277,9 +298,14 @@ export class PaymentIntentsService {
   ): Promise<void> {
     if (!intent.customerEmail) return;
     try {
-      const cart = (intent.metadata as { cart?: { name: string; quantity: number; unitAmount: number }[] } | null)?.cart;
+      const cart = (intent.metadata as { cart?: { name: string; variantName?: string; quantity: number; unitAmount: number }[] } | null)?.cart;
       const itemLines = cart
-        ? cart.map((line) => `- ${line.name} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`).join("\n") + "\n"
+        ? cart
+            .map(
+              (line) =>
+                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`,
+            )
+            .join("\n") + "\n"
         : "";
 
       await this.email.send({
@@ -303,17 +329,45 @@ export class PaymentIntentsService {
    * `gte` guard) with an order the merchant can't actually fulfill.
    */
   private async assertCartStillAvailable(tx: Prisma.TransactionClient, metadata: Prisma.JsonValue): Promise<void> {
-    const cart = (metadata as { cart?: { paymentLinkId: string; quantity: number; name: string }[] } | null)?.cart;
+    const cart = (metadata as { cart?: CartInventoryLine[] } | null)?.cart;
     if (!cart) return;
 
     const links = await tx.paymentLink.findMany({ where: { id: { in: cart.map((line) => line.paymentLinkId) } } });
+    const requestedByLinkId = new Map<string, number>();
+    const requestedByVariant = new Map<string, { quantity: number; variant: ProductVariant; productName: string }>();
     for (const line of cart) {
       const link = links.find((l) => l.id === line.paymentLinkId);
       if (!link || link.status !== PaymentLinkStatus.ACTIVE) {
         throw new BadRequestException(`"${line.name}" ya no está disponible`);
       }
-      if (link.stock !== null && link.stock < line.quantity) {
-        throw new BadRequestException(`Solo quedan ${link.stock} unidades de "${line.name}"`);
+
+      const variants = readProductVariants(link.variants);
+      if (variants.length > 0) {
+        const variant = line.variantId ? variants.find((candidate) => candidate.id === line.variantId) : undefined;
+        if (!variant) throw new BadRequestException(`La opción de "${line.name}" ya no está disponible`);
+        const key = `${line.paymentLinkId}:${variant.id}`;
+        const requested = requestedByVariant.get(key);
+        requestedByVariant.set(key, {
+          quantity: (requested?.quantity ?? 0) + line.quantity,
+          variant,
+          productName: link.name,
+        });
+      }
+      if (variants.length === 0 && line.variantId) {
+        throw new BadRequestException(`"${line.name}" ya no ofrece esa opción`);
+      }
+      requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
+    }
+
+    for (const [paymentLinkId, quantity] of requestedByLinkId) {
+      const link = links.find((candidate) => candidate.id === paymentLinkId)!;
+      if (link.stock !== null && link.stock < quantity) {
+        throw new BadRequestException(`Solo quedan ${link.stock} unidades de "${link.name}"`);
+      }
+    }
+    for (const { quantity, variant, productName } of requestedByVariant.values()) {
+      if (variant.stock !== undefined && variant.stock !== null && variant.stock < quantity) {
+        throw new BadRequestException(`Solo quedan ${variant.stock} unidades de "${productName} (${variant.name})"`);
       }
     }
   }
@@ -328,13 +382,72 @@ export class PaymentIntentsService {
    * stock negative — worst case one decrement silently no-ops.
    */
   private async decrementStockForCart(tx: Prisma.TransactionClient, metadata: Prisma.JsonValue): Promise<void> {
-    const cart = (metadata as { cart?: { paymentLinkId: string; quantity: number }[] } | null)?.cart;
+    const cart = (metadata as { cart?: CartInventoryLine[] } | null)?.cart;
     if (!cart) return;
+    const requestedByLinkId = new Map<string, number>();
+    const requestedByVariant = new Map<string, { paymentLinkId: string; variantId: string; quantity: number; label: string }>();
     for (const line of cart) {
+      if (line.variantId) {
+        const key = `${line.paymentLinkId}:${line.variantId}`;
+        const requested = requestedByVariant.get(key);
+        requestedByVariant.set(key, {
+          paymentLinkId: line.paymentLinkId,
+          variantId: line.variantId,
+          quantity: (requested?.quantity ?? 0) + line.quantity,
+          label: `${line.name}${line.variantName ? ` (${line.variantName})` : ""}`,
+        });
+      } else {
+        requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
+      }
+    }
+    for (const [paymentLinkId, quantity] of requestedByLinkId) {
       await tx.paymentLink.updateMany({
-        where: { id: line.paymentLinkId, stock: { gte: line.quantity } },
-        data: { stock: { decrement: line.quantity } },
+        where: { id: paymentLinkId, stock: { gte: quantity } },
+        data: { stock: { decrement: quantity } },
       });
+    }
+    for (const { paymentLinkId, variantId, quantity, label } of requestedByVariant.values()) {
+      // The option inventory lives in the validated JSON snapshot, so update
+      // the matching element and the product's derived total in one guarded
+      // row update. Missing `stock` keeps legacy shared-stock semantics; null
+      // is unlimited; a number is decremented. The WHERE guards make the
+      // operation safe against a second checkout racing this transaction.
+      const updated = await tx.$executeRaw`
+        UPDATE "PaymentLink"
+        SET
+          "variants" = (
+            SELECT jsonb_agg(
+              CASE
+                WHEN option_value ->> 'id' = ${variantId}
+                  AND option_value ? 'stock'
+                  AND option_value -> 'stock' <> 'null'::jsonb
+                THEN jsonb_set(
+                  option_value,
+                  '{stock}',
+                  to_jsonb((option_value ->> 'stock')::int - ${quantity}),
+                  true
+                )
+                ELSE option_value
+              END
+              ORDER BY ordinal
+            )
+            FROM jsonb_array_elements("variants") WITH ORDINALITY AS options(option_value, ordinal)
+          ),
+          "stock" = CASE WHEN "stock" IS NULL THEN NULL ELSE "stock" - ${quantity} END
+        WHERE "id" = ${paymentLinkId}
+          AND ("stock" IS NULL OR "stock" >= ${quantity})
+          AND EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements("variants") AS options(option_value)
+            WHERE option_value ->> 'id' = ${variantId}
+              AND (
+                NOT (option_value ? 'stock')
+                OR option_value -> 'stock' = 'null'::jsonb
+                OR (option_value ->> 'stock')::int >= ${quantity}
+              )
+          )
+      `;
+      if (updated !== 1) throw new BadRequestException(`Ya no hay suficiente stock de "${label}"`);
     }
   }
 

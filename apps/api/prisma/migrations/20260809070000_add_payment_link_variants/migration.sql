@@ -1,0 +1,2 @@
+ALTER TABLE "PaymentLink"
+ADD COLUMN "variants" JSONB NOT NULL DEFAULT '[]';

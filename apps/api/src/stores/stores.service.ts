@@ -1,16 +1,79 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
-import { MerchantStatus, PaymentIntentStatus, PaymentLinkStatus, StoreStatus } from "@prisma/client";
+import { MerchantStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, StoreStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { UploadsService } from "../uploads/uploads.service";
-import { CreateStoreDto } from "./dto/create-store.dto";
+import { CreateStoreDto, STORE_CONTENT_SECTIONS } from "./dto/create-store.dto";
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
+type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
+type StoreHeroSlide = { imageUrl: string; title?: string; body?: string; ctaLabel?: string; ctaUrl?: string };
+type StoreContentSection = (typeof STORE_CONTENT_SECTIONS)[number];
+type StoreEditorialImage = { imageUrl: string; caption?: string };
+
+function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is ProductVariant =>
+      !!entry &&
+      typeof entry === "object" &&
+      !Array.isArray(entry) &&
+      typeof (entry as Record<string, unknown>).id === "string" &&
+      typeof (entry as Record<string, unknown>).name === "string" &&
+      Number.isInteger((entry as Record<string, unknown>).amount) &&
+      ((entry as Record<string, unknown>).amount as number) > 0 &&
+      (!("stock" in entry) ||
+        (entry as Record<string, unknown>).stock === null ||
+        (Number.isInteger((entry as Record<string, unknown>).stock) &&
+          ((entry as Record<string, unknown>).stock as number) >= 0)),
+  );
+}
+
+function readStoreHeroSlides(value: Prisma.JsonValue): StoreHeroSlide[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (entry): entry is Prisma.JsonObject =>
+        !!entry && typeof entry === "object" && !Array.isArray(entry) && typeof entry.imageUrl === "string",
+    )
+    .slice(0, 5)
+    .map((entry) => ({
+      imageUrl: entry.imageUrl as string,
+      ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
+      ...(typeof entry.body === "string" && entry.body ? { body: entry.body } : {}),
+      ...(typeof entry.ctaLabel === "string" && entry.ctaLabel ? { ctaLabel: entry.ctaLabel } : {}),
+      ...(typeof entry.ctaUrl === "string" && entry.ctaUrl ? { ctaUrl: entry.ctaUrl } : {}),
+    }));
+}
+
+function readStoreContentOrder(value: unknown): StoreContentSection[] {
+  const ordered = Array.isArray(value)
+    ? value.filter((entry): entry is StoreContentSection =>
+        typeof entry === "string" && (STORE_CONTENT_SECTIONS as readonly string[]).includes(entry),
+      )
+    : [];
+  const unique = [...new Set(ordered)];
+  return [...unique, ...STORE_CONTENT_SECTIONS.filter((section) => !unique.includes(section))];
+}
+
+function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (entry): entry is Prisma.JsonObject =>
+        !!entry && typeof entry === "object" && !Array.isArray(entry) && typeof entry.imageUrl === "string",
+    )
+    .slice(0, 8)
+    .map((entry) => ({
+      imageUrl: entry.imageUrl as string,
+      ...(typeof entry.caption === "string" && entry.caption ? { caption: entry.caption } : {}),
+    }));
+}
 
 @Injectable()
 export class StoresService {
@@ -37,9 +100,25 @@ export class StoresService {
             contactPhone: dto.contactPhone,
             contactEmail: dto.contactEmail,
             aboutText: dto.aboutText,
+            aboutImageUrl: dto.aboutImageUrl,
             accentColor: dto.accentColor,
+            fontStyle: dto.fontStyle,
             buttonStyle: dto.buttonStyle,
+            boardTexture: dto.boardTexture,
             announcement: dto.announcement,
+            announcementMode: dto.announcementMode,
+            announcementSpeed: dto.announcementSpeed,
+            promotionEnabled: dto.promotionEnabled,
+            promotionTitle: dto.promotionTitle,
+            promotionBody: dto.promotionBody,
+            promotionCtaLabel: dto.promotionCtaLabel,
+            promotionCtaUrl: dto.promotionCtaUrl,
+            ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
+            ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
+            ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
+            buttonVariant: dto.buttonVariant,
+            buttonMotion: dto.buttonMotion,
+            cartButtonLabel: dto.cartButtonLabel,
           },
         });
       } catch (err) {
@@ -75,9 +154,25 @@ export class StoresService {
         ...(dto.contactPhone !== undefined && { contactPhone: dto.contactPhone }),
         ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail }),
         ...(dto.aboutText !== undefined && { aboutText: dto.aboutText }),
+        ...(dto.aboutImageUrl !== undefined && { aboutImageUrl: dto.aboutImageUrl }),
         ...(dto.accentColor !== undefined && { accentColor: dto.accentColor }),
+        ...(dto.fontStyle !== undefined && { fontStyle: dto.fontStyle }),
         ...(dto.buttonStyle !== undefined && { buttonStyle: dto.buttonStyle }),
+        ...(dto.boardTexture !== undefined && { boardTexture: dto.boardTexture }),
         ...(dto.announcement !== undefined && { announcement: dto.announcement }),
+        ...(dto.announcementMode !== undefined && { announcementMode: dto.announcementMode }),
+        ...(dto.announcementSpeed !== undefined && { announcementSpeed: dto.announcementSpeed }),
+        ...(dto.promotionEnabled !== undefined && { promotionEnabled: dto.promotionEnabled }),
+        ...(dto.promotionTitle !== undefined && { promotionTitle: dto.promotionTitle }),
+        ...(dto.promotionBody !== undefined && { promotionBody: dto.promotionBody }),
+        ...(dto.promotionCtaLabel !== undefined && { promotionCtaLabel: dto.promotionCtaLabel }),
+        ...(dto.promotionCtaUrl !== undefined && { promotionCtaUrl: dto.promotionCtaUrl }),
+        ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
+        ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
+        ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
+        ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
+        ...(dto.buttonMotion !== undefined && { buttonMotion: dto.buttonMotion }),
+        ...(dto.cartButtonLabel !== undefined && { cartButtonLabel: dto.cartButtonLabel }),
       },
     });
   }
@@ -116,7 +211,15 @@ export class StoresService {
     // photo files those rows pointed at — gather every url this store owns
     // before the rows disappear, then clean them off disk once they're gone.
     const links = await this.prisma.paymentLink.findMany({ where: { storeId: id }, select: { imageUrls: true } });
-    const fileUrls = [store.logoUrl, store.bannerUrl, store.backgroundImageUrl, ...links.flatMap((l) => l.imageUrls)];
+    const fileUrls = [
+      store.logoUrl,
+      store.bannerUrl,
+      store.backgroundImageUrl,
+      store.aboutImageUrl,
+      ...readStoreHeroSlides(store.heroSlides).map((slide) => slide.imageUrl),
+      ...readStoreEditorialGallery(store.editorialGallery).map((image) => image.imageUrl),
+      ...links.flatMap((l) => l.imageUrls),
+    ];
 
     await this.prisma.store.delete({ where: { id } });
     await this.uploads.deleteFiles(fileUrls);
@@ -136,11 +239,12 @@ export class StoresService {
   }
 
   /** Public — no auth, called by the checkout page's landing view before any payment exists. */
-  async getStorePublic(slug: string) {
+  async getStorePublic(slug: string, options: { trackView?: boolean } = {}) {
     const store = await this.findActiveBySlugPublic(slug);
     // Not deduplicated per visitor/session — a simple "is anyone looking at
     // this store" counter for the merchant's Finanzas view, not real
     // analytics. Every call here is a genuine page load, never a poll.
+    const trackView = options.trackView !== false;
     const [items, categories, links, cartIntents] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
@@ -160,7 +264,7 @@ export class StoresService {
         },
         select: { metadata: true },
       }),
-      this.prisma.store.update({ where: { id: store.id }, data: { viewCount: { increment: 1 } } }),
+      trackView ? this.prisma.store.update({ where: { id: store.id }, data: { viewCount: { increment: 1 } } }) : Promise.resolve(null),
     ]);
 
     const soldByProduct = new Map<string, number>();
@@ -182,9 +286,25 @@ export class StoresService {
       contactPhone: store.contactPhone,
       contactEmail: store.contactEmail,
       aboutText: store.aboutText,
+      aboutImageUrl: store.aboutImageUrl,
       accentColor: store.accentColor,
+      fontStyle: store.fontStyle,
       buttonStyle: store.buttonStyle,
+      boardTexture: store.boardTexture,
       announcement: store.announcement,
+      announcementMode: store.announcementMode,
+      announcementSpeed: store.announcementSpeed,
+      promotionEnabled: store.promotionEnabled,
+      promotionTitle: store.promotionTitle,
+      promotionBody: store.promotionBody,
+      promotionCtaLabel: store.promotionCtaLabel,
+      promotionCtaUrl: store.promotionCtaUrl,
+      heroSlides: readStoreHeroSlides(store.heroSlides),
+      contentOrder: readStoreContentOrder(store.contentOrder),
+      editorialGallery: readStoreEditorialGallery(store.editorialGallery),
+      buttonVariant: store.buttonVariant,
+      buttonMotion: store.buttonMotion,
+      cartButtonLabel: store.cartButtonLabel,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
       categories: categories.map((c) => ({ id: c.id, name: c.name })),
       items: items.map((item) => ({
@@ -199,6 +319,7 @@ export class StoresService {
         // tell them apart.
         stock: item.stock,
         color: item.color,
+        variants: readProductVariants(item.variants),
         amount: item.amount,
         currency: item.currency,
         soldCount: soldByProduct.get(item.id) ?? 0,
@@ -240,15 +361,58 @@ export class StoresService {
       }
     }
 
-    let amount = 0;
-    const cartLines: { paymentLinkId: string; name: string; quantity: number; unitAmount: number }[] = [];
-    for (const l of links) {
-      const quantity = quantityByLinkId.get(l.id)!;
-      amount += l.amount * quantity;
-      cartLines.push({ paymentLinkId: l.id, name: l.name, quantity, unitAmount: l.amount });
+    const linksById = new Map(links.map((link) => [link.id, link]));
+    const selectedLines = new Map<
+      string,
+      {
+        paymentLinkId: string;
+        variantId?: string;
+        name: string;
+        variantName?: string;
+        quantity: number;
+        unitAmount: number;
+        optionStock?: number | null;
+      }
+    >();
+    for (const item of dto.items) {
+      const link = linksById.get(item.paymentLinkId)!;
+      const variants = readProductVariants(link.variants);
+      let variant: ProductVariant | undefined;
+      if (variants.length > 0) {
+        if (!item.variantId) throw new BadRequestException(`Elige una opción para "${link.name}"`);
+        variant = variants.find((candidate) => candidate.id === item.variantId);
+        if (!variant) throw new BadRequestException(`Una opción de "${link.name}" ya no está disponible`);
+      } else if (item.variantId) {
+        throw new BadRequestException(`"${link.name}" no tiene opciones`);
+      }
+
+      const lineKey = `${link.id}:${variant?.id ?? "base"}`;
+      const existing = selectedLines.get(lineKey);
+      if (existing) existing.quantity += item.quantity;
+      else {
+        selectedLines.set(lineKey, {
+          paymentLinkId: link.id,
+          ...(variant && { variantId: variant.id, variantName: variant.name }),
+          ...(variant && variant.stock !== undefined && { optionStock: variant.stock }),
+          name: link.name,
+          quantity: item.quantity,
+          unitAmount: variant?.amount ?? link.amount,
+        });
+      }
     }
 
-    let description = cartLines.map((line) => `${line.name} x${line.quantity}`).join(", ");
+    for (const line of selectedLines.values()) {
+      if (line.optionStock !== undefined && line.optionStock !== null && line.quantity > line.optionStock) {
+        throw new BadRequestException(`Solo quedan ${line.optionStock} unidades de "${line.name} (${line.variantName})"`);
+      }
+    }
+
+    const cartLines = [...selectedLines.values()].map(({ optionStock: _optionStock, ...line }) => line);
+    const amount = cartLines.reduce((sum, line) => sum + line.unitAmount * line.quantity, 0);
+
+    let description = cartLines
+      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""} x${line.quantity}`)
+      .join(", ");
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       description = description.slice(0, MAX_DESCRIPTION_LENGTH - 1) + "…";
     }

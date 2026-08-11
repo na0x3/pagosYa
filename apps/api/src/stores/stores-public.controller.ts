@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ApiTags } from "@nestjs/swagger";
 import { StoresService } from "./stores.service";
@@ -14,8 +14,8 @@ export class StoresPublicController {
   constructor(private readonly stores: StoresService) {}
 
   @Get(":slug/store")
-  getStore(@Param("slug") slug: string) {
-    return this.stores.getStorePublic(slug);
+  getStore(@Param("slug") slug: string, @Query("preview") preview?: string) {
+    return this.stores.getStorePublic(slug, { trackView: preview !== "1" });
   }
 
   @Post(":slug/cart-checkout")

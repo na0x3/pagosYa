@@ -45,6 +45,7 @@ export interface StoreItem {
   // null = unlimited/not tracked, 0 = genuinely sold out.
   stock: number | null;
   color: string | null;
+  variants: Array<{ id: string; name: string; amount: number; stock?: number | null }>;
   amount: number;
   currency: string;
   // Units sold via store-checkout carts — powers the "Más vendidos" sort.
@@ -63,6 +64,23 @@ export interface StoreLink {
   url: string;
 }
 
+export interface StoreHeroSlide {
+  // Kept as imageUrl for backwards compatibility; may point to an image, GIF,
+  // MP4, or WEBM returned by the uploads endpoint.
+  imageUrl: string;
+  title?: string;
+  body?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+}
+
+export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "links";
+
+export interface StoreEditorialImage {
+  imageUrl: string;
+  caption?: string;
+}
+
 export interface Store {
   storeId: string;
   storeName: string;
@@ -75,12 +93,33 @@ export interface Store {
   contactEmail: string | null;
   // Long-form brand story; blank lines separate paragraphs.
   aboutText: string | null;
+  // Optional background image for the brand-story section.
+  aboutImageUrl: string | null;
   // "#RRGGBB" brand accent; null = default palette accent.
   accentColor: string | null;
+  // Curated merchant storefront font family.
+  fontStyle: "mono" | "modern" | "editorial" | "friendly";
   // "rounded" | "pill" | "square"
   buttonStyle: string;
+  // "chalkboard" | "kraft" | "painted" — storefront ground material.
+  boardTexture: string;
   // Short promo/notice bar text shown at the very top of the storefront.
   announcement: string | null;
+  announcementMode: "static" | "marquee";
+  announcementSpeed: number;
+  promotionEnabled: boolean;
+  promotionTitle: string | null;
+  promotionBody: string | null;
+  promotionCtaLabel: string | null;
+  promotionCtaUrl: string | null;
+  heroSlides: StoreHeroSlide[];
+  // Optional while older previews/cached responses roll forward; checkout
+  // supplies the canonical order and an empty gallery when absent.
+  contentOrder?: StoreContentSection[];
+  editorialGallery?: StoreEditorialImage[];
+  buttonVariant: "solid" | "outline" | "soft";
+  buttonMotion: "none" | "lift" | "pulse";
+  cartButtonLabel: string;
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];
@@ -91,8 +130,9 @@ export function assetUrl(path: string | null): string | null {
   return path ? `${API_ROOT_URL}${path}` : null;
 }
 
-export async function fetchStore(slug: string): Promise<Store> {
-  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/store`);
+export async function fetchStore(slug: string, options: { preview?: boolean } = {}): Promise<Store> {
+  const previewQuery = options.preview ? "?preview=1" : "";
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/store${previewQuery}`);
   return parseOrThrow<Store>(response);
 }
 
@@ -108,7 +148,7 @@ export interface CartCheckoutResult {
  * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
 export async function checkoutCart(
   slug: string,
-  items: { paymentLinkId: string; quantity: number }[],
+  items: { paymentLinkId: string; variantId?: string; quantity: number }[],
 ): Promise<CartCheckoutResult> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/cart-checkout`, {
     method: "POST",

@@ -72,11 +72,16 @@
     transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
   }
   button:hover { border-color: var(--pg-text-faint); }
+  button:focus-visible { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+  button:disabled { opacity: 0.6; cursor: default; }
   button.primary { background: var(--pg-brand); color: var(--pg-brand-text); border-color: var(--pg-brand); }
   button.primary:hover { background: var(--pg-brand-hover); border-color: var(--pg-brand-hover); }
-  button.approve { background: var(--pg-success); color: white; border-color: var(--pg-success); padding: 6px 12px; font-size: 0.8rem; }
+  /* White text on these fills is ~1.9:1 / ~2.8:1 — well under WCAG AA's 4.5:1.
+     Dark text keeps the same solid-fill affordance (a status badge's soft
+     background would read as demoted for what's still a primary action). */
+  button.approve { background: var(--pg-success); color: var(--pg-bg); border-color: var(--pg-success); padding: 6px 12px; font-size: 0.8rem; font-weight: 700; }
   button.approve:hover { opacity: 0.88; }
-  button.reject { background: var(--pg-error); color: white; border-color: var(--pg-error); padding: 6px 12px; font-size: 0.8rem; }
+  button.reject { background: var(--pg-error); color: var(--pg-bg); border-color: var(--pg-error); padding: 6px 12px; font-size: 0.8rem; font-weight: 700; }
   button.reject:hover { opacity: 0.88; }
 
   h2 { font-size: 0.98rem; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.005em; }
@@ -90,9 +95,12 @@
   tbody tr:hover td { background: var(--pg-bg); }
   code { font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78rem; color: var(--pg-text-muted); }
   .actions-cell { display: flex; gap: 6px; }
-  .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
   .badge-exhausted { background: var(--pg-error-soft); color: var(--pg-error); }
   .badge-retrying { background: var(--pg-accent-soft); color: var(--pg-accent); }
+  .badge-aggregator { background: var(--pg-accent-soft); color: var(--pg-accent); }
+  .badge-facilitator { background: rgba(245, 245, 245, 0.08); color: var(--pg-text-muted); }
 
   .empty-state { text-align: center; padding: 36px 16px; color: var(--pg-text-faint); font-size: 0.88rem; }
 
@@ -132,6 +140,7 @@
   <section class="block">
     <div class="panel">
       <div class="section-head"><h2>Pending KYC review</h2></div>
+      <div id="notConnected1" class="empty-state">Enter your ops token above and connect to load the queue.</div>
       <div id="empty" class="empty-state" style="display:none">No submissions pending review.</div>
       <table id="table" style="display:none">
         <thead>
@@ -156,6 +165,7 @@
         <h2>Delivery failures</h2>
         <p class="muted" style="margin: 2px 0 0">Payouts, invoices, and webhooks that failed at least once. "Exhausted" means every retry attempt ran out — nothing will happen to these automatically.</p>
       </div>
+      <div id="notConnected2" class="empty-state">Enter your ops token above and connect to load this.</div>
       <div id="failuresEmpty" class="empty-state" style="display:none">No delivery failures.</div>
       <table id="failuresTable" style="display:none">
         <thead>
@@ -179,6 +189,7 @@
         <h2>Audit log</h2>
         <p class="muted" style="margin: 2px 0 0">Every review decision, attributed to the reviewer who made it.</p>
       </div>
+      <div id="notConnected3" class="empty-state">Enter your ops token above and connect to load this.</div>
       <div id="auditEmpty" class="empty-state" style="display:none">No entries yet.</div>
       <table id="auditTable" style="display:none">
         <thead>
@@ -245,7 +256,7 @@
         (s) => `
       <tr data-id="${esc(s.id)}">
         <td><strong>${esc(s.merchant.name)}</strong><br><span class="muted">${esc(s.merchant.email)}</span></td>
-        <td>${esc(s.merchant.settlementMode)}</td>
+        <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
         <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
         <td>${esc(s.payoutBankAccount)}</td>
@@ -318,6 +329,11 @@
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
     sessionStorage.setItem("pagosya_ops_token", opsTokenEl.value);
+    // A real connection attempt is underway — past the cold "nothing entered
+    // yet" state, regardless of whether this attempt succeeds.
+    document.getElementById("notConnected1").style.display = "none";
+    document.getElementById("notConnected2").style.display = "none";
+    document.getElementById("notConnected3").style.display = "none";
 
     try {
       const me = await api("/internal/ops_users/me");
@@ -338,23 +354,52 @@
   rowsEl.addEventListener("click", async (e) => {
     const button = e.target.closest("button[data-action]");
     if (!button) return;
-    const id = button.closest("tr").dataset.id;
+    const row = button.closest("tr");
+    const id = row.dataset.id;
     const action = button.dataset.action;
+    const legalName = row.querySelector("td strong")?.textContent?.trim() || "this merchant";
+
+    if (action === "approve" && !confirm(`Approve ${legalName} for live payouts? This unlocks live keys and payouts for them.`)) return;
+    let note;
+    if (action === "reject") {
+      const raw = prompt("Rejection reason (shown to the merchant):");
+      if (raw === null) return;
+      note = raw || undefined;
+    }
+
+    // Disable both buttons in the row (not just the clicked one) so a slow
+    // request can't be double-submitted via the other action either.
+    const rowButtons = [...row.querySelectorAll("button[data-action]")];
+    const originalLabels = rowButtons.map((b) => b.textContent);
+    rowButtons.forEach((b) => (b.disabled = true));
+    button.textContent = action === "approve" ? "Approving…" : "Rejecting…";
 
     try {
-      if (action === "approve") {
-        await api(`/v1/merchants/kyc/${id}/review`, { method: "POST", body: JSON.stringify({ decision: "APPROVED" }) });
-      } else {
-        const note = prompt("Rejection reason (shown to the merchant):") || undefined;
-        await api(`/v1/merchants/kyc/${id}/review`, { method: "POST", body: JSON.stringify({ decision: "REJECTED", note }) });
-      }
+      await api(`/v1/merchants/kyc/${id}/review`, {
+        method: "POST",
+        body: JSON.stringify(action === "approve" ? { decision: "APPROVED" } : { decision: "REJECTED", note }),
+      });
       await refresh();
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
+      rowButtons.forEach((b, i) => {
+        b.disabled = false;
+        b.textContent = originalLabels[i];
+      });
     }
   });
 
-  document.getElementById("connect").addEventListener("click", refresh);
+  document.getElementById("connect").addEventListener("click", async () => {
+    const connectBtn = document.getElementById("connect");
+    connectBtn.disabled = true;
+    connectBtn.textContent = "Connecting…";
+    try {
+      await refresh();
+    } finally {
+      connectBtn.disabled = false;
+      connectBtn.textContent = "Connect & refresh";
+    }
+  });
   if (opsTokenEl.value) refresh();
 </script>
 </body>

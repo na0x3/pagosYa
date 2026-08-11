@@ -1,0 +1,2 @@
+ALTER TABLE "Store"
+ADD COLUMN "fontStyle" TEXT NOT NULL DEFAULT 'mono';

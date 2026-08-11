@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   IsArray,
@@ -11,13 +12,47 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
   ValidateIf,
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
+import { IsSafeText } from "../../common/validation/safe-text.decorator";
+
+export class ProductVariantDto {
+  @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  id?: string;
+
+  @ApiProperty({ example: "Grande" })
+  @IsString()
+  @IsSafeText()
+  @MaxLength(60)
+  name!: string;
+
+  @ApiProperty({ description: "Option price in minor units (centavos).", example: 6500 })
+  @IsInt()
+  @IsPositive()
+  amount!: number;
+
+  @ApiPropertyOptional({
+    description: "Remaining units for this option. Send null for unlimited stock.",
+    example: 8,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  stock?: number | null;
+}
 
 export class CreatePaymentLinkDto {
   @ApiProperty({ example: "Corte de cabello" })
   @IsString()
+  @IsSafeText()
   @MaxLength(120)
   name!: string;
 
@@ -25,6 +60,7 @@ export class CreatePaymentLinkDto {
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()
+  @IsSafeText()
   @MaxLength(500)
   description?: string | null;
 
@@ -44,6 +80,7 @@ export class CreatePaymentLinkDto {
   @IsArray()
   @ArrayMaxSize(6)
   @IsString({ each: true })
+  @IsSafeText({ each: true })
   @MaxLength(24, { each: true })
   tags?: string[];
 
@@ -58,6 +95,18 @@ export class CreatePaymentLinkDto {
   @Min(0)
   @Max(1_000_000)
   stock?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      "Purchasable choices such as Pequeña/Grande. Each choice supplies its customer-facing price and may track its own stock.",
+    type: [ProductVariantDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantDto)
+  variants?: ProductVariantDto[];
 
   @ApiPropertyOptional({
     description: "Category (within the same store) this product belongs to. Omit to leave unchanged, or send null to clear.",

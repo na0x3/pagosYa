@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  server: { port: 5173 },
+  server: { port: 5174 },
   test: {
     environment: "jsdom",
     setupFiles: ["./test/setup.ts"],

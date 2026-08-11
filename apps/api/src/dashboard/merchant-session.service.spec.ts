@@ -5,7 +5,7 @@ import { MerchantSessionService } from "./merchant-session.service";
 function makeFakePrisma() {
   return {
     merchantUser: { findUnique: jest.fn() },
-    merchantSession: { create: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+    merchantSession: { create: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
   };
 }
 
@@ -28,6 +28,9 @@ describe("MerchantSessionService.login", () => {
     expect(result.token).toMatch(/^dash_/);
     expect(result.merchant).toEqual({ id: "m_1" });
     expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(prisma.merchantSession.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ hashedToken: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) }),
+    });
   });
 
   it("rejects login for a correct password on an unverified account", async () => {
@@ -92,15 +95,13 @@ describe("MerchantSessionService.verify", () => {
     });
     const { token } = await service.login("owner@tienda.bo", "correct-password");
 
-    prisma.merchantSession.findMany.mockResolvedValue([
-      {
-        id: "sess_1",
-        merchantId: "m_1",
-        merchantUserId: "user_1",
-        hashedToken: storedHashedToken,
-        merchantUser: { email: "owner@tienda.bo" },
-      },
-    ]);
+    prisma.merchantSession.findFirst.mockResolvedValue({
+      id: "sess_1",
+      merchantId: "m_1",
+      merchantUserId: "user_1",
+      hashedToken: storedHashedToken,
+      merchantUser: { email: "owner@tienda.bo" },
+    });
 
     await expect(service.verify(token)).resolves.toEqual({
       merchantId: "m_1",
@@ -114,15 +115,43 @@ describe("MerchantSessionService.verify", () => {
     const service = new MerchantSessionService(prisma as any);
 
     await expect(service.verify("sk_test_something")).resolves.toBeNull();
+    expect(prisma.merchantSession.findFirst).not.toHaveBeenCalled();
     expect(prisma.merchantSession.findMany).not.toHaveBeenCalled();
   });
 
   it("rejects a token that matches no active session (e.g. expired/revoked, already excluded by the query)", async () => {
     const prisma = makeFakePrisma();
+    prisma.merchantSession.findFirst.mockResolvedValue(null);
     prisma.merchantSession.findMany.mockResolvedValue([]);
 
     const service = new MerchantSessionService(prisma as any);
     await expect(service.verify("dash_nonexistent")).resolves.toBeNull();
+  });
+
+  it("upgrades a matching legacy Argon2 session after one verification", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantSession.findFirst.mockResolvedValue(null);
+    const hashedToken = await argon2.hash("dash_legacy");
+    prisma.merchantSession.findMany.mockResolvedValue([
+      {
+        id: "sess_legacy",
+        merchantId: "m_1",
+        merchantUserId: "user_1",
+        hashedToken,
+        merchantUser: { email: "owner@tienda.bo" },
+      },
+    ]);
+
+    const service = new MerchantSessionService(prisma as any);
+    await expect(service.verify("dash_legacy")).resolves.toEqual({
+      merchantId: "m_1",
+      merchantUserId: "user_1",
+      email: "owner@tienda.bo",
+    });
+    expect(prisma.merchantSession.update).toHaveBeenCalledWith({
+      where: { id: "sess_legacy" },
+      data: { hashedToken: expect.stringMatching(/^sha256:/) },
+    });
   });
 });
 
@@ -130,6 +159,7 @@ describe("MerchantSessionService.revoke", () => {
   it("marks the matching session revoked", async () => {
     const prisma = makeFakePrisma();
     const hashedToken = await argon2.hash("dash_abc123");
+    prisma.merchantSession.findFirst.mockResolvedValue(null);
     prisma.merchantSession.findMany.mockResolvedValue([{ id: "sess_1", hashedToken }]);
 
     const service = new MerchantSessionService(prisma as any);
@@ -137,6 +167,20 @@ describe("MerchantSessionService.revoke", () => {
 
     expect(prisma.merchantSession.update).toHaveBeenCalledWith({
       where: { id: "sess_1" },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+
+  it("revokes a digest session without scanning legacy sessions", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantSession.findFirst.mockResolvedValue({ id: "sess_fast" });
+
+    const service = new MerchantSessionService(prisma as any);
+    await service.revoke("dash_fast");
+
+    expect(prisma.merchantSession.findMany).not.toHaveBeenCalled();
+    expect(prisma.merchantSession.update).toHaveBeenCalledWith({
+      where: { id: "sess_fast" },
       data: { revokedAt: expect.any(Date) },
     });
   });

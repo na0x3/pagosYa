@@ -17,11 +17,12 @@
   --pg-border-strong: #525252;
   --pg-text: #f5f5f5;
   --pg-text-muted: #a3a3a3;
-  --pg-text-faint: #737373;
+  --pg-text-faint: #8c8c8c;
   --pg-primary: #f5f5f5;
   --pg-primary-hover: #fafafa;
   --pg-primary-text: #171717;
   --pg-accent: #818cf8;
+  --pg-accent-contrast: #000000;
   --pg-accent-soft: #1e1b4b;
   --pg-success: #34d399;
   --pg-success-soft: #052e1f;
@@ -39,6 +40,9 @@
   --pg-rose-soft: #4a0d2e;
   --pg-teal: #2dd4bf;
   --pg-teal-soft: #042f2c;
+  /* Icons8 Hand Cursor (SF Black), rendered white at 32px for dark-surface contrast.
+     Source: https://icons8.com/icon/omvTrBbOYlAj/hand-cursor */
+  --pg-hand-cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAACHElEQVR4nO2WT0gVURTGp5KKNG1jCy2ICNEHbovCBCGoLI3cBJLQIiRQCpRatA6UoDAIiWpRuRBctGoRCJIKtRCEIAhqWdCfRSqlVlC/OPINnR7zcGaYZvU+OHDvuefPx51zzp0gKKOMGAA2AF3ANaAXqAzyBHCHf/EW2JlX8gLReJQXgW6XtA94qfUPoCoPAm2OwGXgktsfz4NAJbCihJPAbuC39neBDuAgsFH2m/4HiSdKuApsA15E1ITppoFfwCJwHajIisAFl+gYMEg8PAc+ilhz0qS1wDngjDohvPabwB7tPwAXgXGd/QRmgOUIMq+TJG8APjnnzy7oK9nMAae1rgCW7Ka0t2EVhR1xCYyvc7VWmJ3A5qI62aL1CeAZcFafIMSuuATm5bAAHFVBLYZXGVXpXgfUAFu1vp+GwJhzapeuWi1XEyvI31i3XKz6uE6NwHc5fQH2JUlaFOuBI7A9iWO/c5wrce3tEuuKQeluF9nMKsa3NE/wpCNxJcJmQGKTcEK6d+68Xm+GYSoRAQOw15grgAU6FCQj4GupN0gD4LwL8hU4EoeAJqb/f1jrirQkRl0wew9apT8sqbOpKd1Ve5iAN7K3idmWOrmrhxuOxPtw6JSYAy3O9mGQFYARF3hANWLSo6H1GNgP3HN2J7Mk0ERyHMiSQJVqIApPXct5FDIjYLBWBIaAYYmtT+msoCIMz/rXnMooIyiNP4WvbuoDEM5GAAAAAElFTkSuQmCC") 5 2, pointer;
 }
 
 :root[data-theme="light"] {
@@ -49,11 +53,12 @@
   --pg-border-strong: #d4d4d4;
   --pg-text: #171717;
   --pg-text-muted: #737373;
-  --pg-text-faint: #a3a3a3;
+  --pg-text-faint: #666666;
   --pg-primary: #171717;
   --pg-primary-hover: #262626;
   --pg-primary-text: #ffffff;
   --pg-accent: #4f46e5;
+  --pg-accent-contrast: #ffffff;
   --pg-accent-soft: #eef2ff;
   --pg-success: #059669;
   --pg-success-soft: #ecfdf5;
@@ -65,15 +70,57 @@
   --pg-error-soft: #fef2f2;
   --pg-error-border: #fecaca;
   --pg-focus-ring: rgba(79, 70, 229, 0.35);
-  --pg-accent-2: #a855f7;
+  --pg-accent-2: #7e22ce;
   --pg-rose: #db2777;
   --pg-rose-soft: #fdf2f8;
   --pg-teal: #0d9488;
   --pg-teal-soft: #f0fdfa;
+  /* Matching black Icons8 cursor keeps the pointer visible on light merchant themes. */
+  --pg-hand-cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAACDUlEQVR4nO2WS0gWYRSGH0sq0tKNLjRBJMIEt4mSgSBolkptglBwEREUBoouXAeGYCRIhLrwshBctHIRCOIFdCEEQRDUMsHLwozuQiofvAOHYayZaZzV/8KBb77vXF7Ofy4/ZJBBOGQBt4EnwH0gh5TxEjgw8hEoTCt4hS+4J5NpEbhrgj4E3ur8G8hNg0CdIdADPDbf19MgkAP8UMA5oATY1/cI0AxUAyekf/I4SMwq4E/gLLAaUBPubhH4A+wCA0B2UgQemECNQPcRhemXFWBTxCqjBi0AOoA76gQv7c+AUn1vAJ3AtN72gCXgewCZ91GCXwK2jPG2cfpOOmvALZ1dqr8oU2hYBWUkPyyB6X+k1hVmC3DKVyendb4BLABt+gk8uwthCbyRwWegQQW1a1IZVOn2Lg84o/NYHAJTxqhJd+fVcs55FAwZX8VhjcqBXzLaAS4SH+OGwLkoho+M4doRaW+SlKo1HYZ9Osvy8S3OCp4zJHoDdLokbhLO6O6TeS/WznD288RAmZh7y6cmIgFbS641Y+GecfIVqA9JoNH3/8Hrilh4YZy5fXBN97WSIk1Nhz4tpg/S39dG/S9kAYOGxLoZOh5skV41uhMkiOfGcZdqxEm7htYr4AowavRuJkngcsgtaKUqSQK5qoGgQK9Ny1lxmzRR1AD9wFOJO7fqrUJF6L25YZZBBvwNh8NVzVP2qksuAAAAAElFTkSuQmCC") 5 2, pointer;
 }
 
 * {
   box-sizing: border-box;
+}
+
+button,
+a,
+select,
+input[type="checkbox"],
+label[for] {
+  cursor: var(--pg-hand-cursor);
+}
+
+@media (pointer: fine) {
+  html.has-pg-custom-pointer,
+  html.has-pg-custom-pointer * { cursor: none !important; }
+  .pg-custom-pointer {
+    position: fixed;
+    inset: 0 auto auto 0;
+    z-index: 2147483647;
+    width: 32px;
+    height: 32px;
+    opacity: 0;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: 32px 32px;
+    transform: translate3d(var(--pointer-x, -40px), var(--pointer-y, -40px), 0) scale(1) rotate(0deg);
+    transform-origin: 5px 2px;
+    transition: transform 110ms cubic-bezier(.16, 1, .3, 1), opacity 80ms ease;
+    will-change: transform;
+  }
+  .pg-custom-pointer.is-visible { opacity: 1; }
+  .pg-custom-pointer.is-pressing {
+    transform: translate3d(var(--pointer-x, -40px), var(--pointer-y, -40px), 0) scale(.76) rotate(-6deg);
+  }
+  :root[data-theme="light"] .pg-custom-pointer { filter: invert(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-custom-pointer { transition: none; }
+  .pg-custom-pointer.is-pressing {
+    transform: translate3d(var(--pointer-x, -40px), var(--pointer-y, -40px), 0) scale(.9);
+  }
 }
 
 body {
@@ -90,6 +137,14 @@ body {
   -webkit-font-smoothing: antialiased;
   position: relative;
 }
+
+/* The pagosYa payment surface keeps 0xProto Mono. A merchant may choose one
+   curated family for the whole hosted storefront without loading third-party
+   font files or risking an invisible-text flash. */
+body.store-page { --store-font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace; font-family: var(--store-font-family); }
+body.store-page[data-font-style="modern"] { --store-font-family: "Avenir Next", Avenir, system-ui, sans-serif; }
+body.store-page[data-font-style="editorial"] { --store-font-family: Georgia, "Times New Roman", serif; }
+body.store-page[data-font-style="friendly"] { --store-font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif; }
 
 /* A dark scrim over the merchant's background photo — the page can't know
    in advance whether a given photo is light or busy enough to fight with
@@ -354,7 +409,7 @@ body.has-bg-image.store-page .merchant-header .store-title {
   font-size: 12.5px;
   font-weight: 600;
   font-family: inherit;
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .category-chip-filter:hover {
@@ -367,39 +422,29 @@ body.has-bg-image.store-page .merchant-header .store-title {
   color: var(--pg-accent);
 }
 
+/* A real section heading, not a kicker above one — no uppercase/tracking
+   treatment, no decorative dash marker. The category name IS the heading. */
 .category-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--pg-text-muted);
-  margin: 28px 0 14px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--pg-text);
+  margin: 30px 0 14px;
 }
 .category-section-title:first-of-type {
   margin-top: 0;
-}
-.category-section-title::before {
-  content: "";
-  width: 14px;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--pg-accent), var(--pg-rose));
-  flex-shrink: 0;
 }
 /* Same reasoning as the header's glass card — these sit directly on the
    page background further down, past the hero, so they need their own
    guaranteed contrast against an arbitrary photo. */
 body.has-bg-image .category-section-title {
   width: max-content;
-  padding: 5px 12px 5px 10px;
+  padding: 5px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  color: #404040;
+  color: #262626;
 }
 
 .store-items {
@@ -475,7 +520,7 @@ body.has-bg-image .category-section-title {
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   transition: transform 0.15s ease, background 0.15s ease;
 }
 .gallery-thumb-btn:hover {
@@ -541,6 +586,34 @@ body.has-bg-image .category-section-title {
   line-height: 1.45;
   margin-top: 5px;
 }
+.store-item-option {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+}
+.store-item-option label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--pg-text-faint);
+}
+.store-item-option select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 32px 9px 10px;
+  border: 1.5px solid var(--pg-border);
+  border-radius: 9px;
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: var(--pg-hand-cursor);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.store-item-option select:focus {
+  outline: none;
+  border-color: var(--pg-accent);
+  box-shadow: 0 0 0 3px var(--pg-focus-ring);
+}
 .store-item-price {
   display: flex;
   align-items: baseline;
@@ -575,7 +648,7 @@ body.has-bg-image .category-section-title {
   color: inherit;
   font-size: 16px;
   line-height: 1;
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .qty-stepper button:hover:not(:disabled) {
@@ -598,13 +671,24 @@ body.has-bg-image .category-section-title {
   font-weight: 600;
 }
 
+/* Sticks to the bottom of the viewport so "Ir a pagar" stays reachable on a
+   long catalog instead of only appearing after scrolling past every item —
+   same reasoning as .store-toolbar sticking to the top. */
 .cart-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 4px;
   margin-bottom: 6px;
+  background: var(--pg-page-bg);
+  border-top: 1px solid var(--pg-border);
+}
+.cart-bar[hidden] {
+  display: none;
 }
 .cart-summary {
   font-size: 13.5px;
@@ -625,7 +709,7 @@ body.has-bg-image .category-section-title {
   border: none;
   background: transparent;
   color: var(--pg-text-muted);
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   font-size: 12px;
   font-weight: 600;
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
@@ -685,6 +769,13 @@ body.has-bg-image .category-section-title {
   box-shadow: 0 0 0 3px var(--pg-focus-ring);
 }
 
+.field input[aria-invalid="true"] {
+  border-color: var(--pg-error);
+}
+.field input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pg-error) 35%, transparent);
+}
+
 button.primary {
   width: 100%;
   padding: 13px;
@@ -695,7 +786,7 @@ button.primary {
   font-size: 15px;
   font-weight: 600;
   font-family: inherit;
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   margin-top: 4px;
   transition: background 0.15s ease, transform 0.05s ease;
 }
@@ -715,14 +806,13 @@ button.primary:active:not(:disabled) {
 .cart-bar .primary {
   width: auto;
   background: linear-gradient(120deg, var(--pg-accent), var(--pg-accent-2));
-  color: #fff;
+  color: var(--pg-accent-contrast);
   box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--pg-accent) 60%, transparent);
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, filter 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
 }
 .cart-bar .primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px -6px color-mix(in srgb, var(--pg-accent) 65%, transparent);
-  filter: brightness(1.06);
 }
 .cart-bar .primary:active:not(:disabled) {
   transform: translateY(0) scale(0.97);
@@ -742,11 +832,34 @@ button.secondary {
   color: var(--pg-text-muted);
   font-size: 12.5px;
   font-family: inherit;
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   margin-top: 10px;
 }
 
 button.secondary:hover {
+  border-color: var(--pg-text-faint);
+  color: var(--pg-text);
+}
+
+/* Same look as button.secondary, on an <a> instead of a <button> — the
+   recovery link on failed/canceled payment screens (see backToStoreHtml). */
+.back-to-store {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border-radius: 9px;
+  border: 1.5px dashed var(--pg-border-strong);
+  background: transparent;
+  color: var(--pg-text-muted);
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: center;
+  text-decoration: none;
+  cursor: var(--pg-hand-cursor);
+  margin-top: 10px;
+}
+.back-to-store:hover {
   border-color: var(--pg-text-faint);
   color: var(--pg-text);
 }
@@ -931,13 +1044,96 @@ body.has-custom-accent {
   text-align: center;
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--pg-accent-contrast);
   background: linear-gradient(120deg, var(--pg-accent), var(--pg-accent-2));
   padding: 9px 16px;
   border-radius: 12px;
   margin-bottom: 16px;
   box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--pg-accent) 60%, transparent);
   animation: pg-fade-in 0.4s ease-out backwards;
+}
+.store-announcement.marquee {
+  overflow: hidden;
+  padding-inline: 0;
+  white-space: nowrap;
+}
+.store-announcement-track {
+  display: flex;
+  width: max-content;
+  gap: 48px;
+  animation: store-marquee var(--marquee-duration, 18s) linear infinite;
+}
+.store-announcement-copy {
+  display: block;
+  padding-inline: 18px;
+}
+@keyframes store-marquee {
+  to { transform: translateX(calc(-50% - 24px)); }
+}
+
+.promotion-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  animation: promotion-backdrop-in 0.2s ease-out both;
+}
+.promotion-dialog {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 28px;
+  border: 1px solid color-mix(in srgb, var(--pg-accent) 45%, var(--pg-border));
+  border-radius: 18px;
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  box-shadow: 0 18px 60px -24px rgba(0, 0, 0, 0.8);
+  animation: promotion-dialog-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.promotion-dialog h2 {
+  margin: 0 36px 10px 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.promotion-dialog p {
+  margin: 0 0 20px;
+  color: var(--pg-text-muted);
+  line-height: 1.6;
+}
+.promotion-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--pg-border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--pg-text);
+  font: inherit;
+}
+.promotion-dialog .promotion-action {
+  display: inline-flex;
+  width: auto;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 10px 18px;
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  background: linear-gradient(120deg, var(--pg-accent), var(--pg-accent-2));
+  color: var(--pg-accent-contrast);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--pg-accent) 60%, transparent);
+  font: inherit;
+  font-weight: 700;
+}
+body.promotion-open { overflow: hidden; }
+@keyframes promotion-backdrop-in { from { opacity: 0; } }
+@keyframes promotion-dialog-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); filter: blur(5px); }
 }
 
 /* Merchant-defined link buttons (socials, catalog, map, ...) under the title. */
@@ -1000,52 +1196,106 @@ body.has-custom-accent {
 /* Long-form brand story ("Nuestra historia") — transparent, sits directly on
    the page (or photo) background, same as .merchant-header above. */
 .store-about {
-  background: transparent;
+  display: grid;
+  grid-template-columns: minmax(180px, .72fr) minmax(0, 1.4fr);
+  gap: clamp(28px, 5vw, 64px);
+  margin: 44px 0 30px;
   padding: 0;
-  margin: 0 0 26px;
+  border: 0;
+  background: transparent;
   animation: pg-fade-in 0.5s ease-out 0.12s backwards;
 }
-.store-about-icon {
-  width: 24px;
-  height: 24px;
-  color: var(--pg-text-faint);
-  margin-bottom: 8px;
-}
-.store-about-title {
-  display: flex;
+.store-about.has-image {
+  min-height: 360px;
+  padding: clamp(32px, 6vw, 72px);
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--pg-text-muted);
-  margin-bottom: 12px;
+  background-image:
+    linear-gradient(90deg, rgba(8, 8, 8, .9) 0%, rgba(8, 8, 8, .72) 58%, rgba(8, 8, 8, .46) 100%),
+    var(--store-about-image);
+  background-position: center;
+  background-size: cover;
 }
-.store-about-title::before {
-  content: "";
-  width: 14px;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--pg-accent), var(--pg-rose));
-  flex-shrink: 0;
+.store-about-heading {
+  display: block;
+}
+.store-about-heading h2 {
+  margin: 2px 0 7px;
+  color: var(--pg-text);
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -.02em;
 }
 .store-about p {
-  margin: 0 0 12px;
-  font-size: 17px;
-  line-height: 1.65;
+  margin: 0 0 16px;
+  max-width: 68ch;
+  font-size: 16px;
+  line-height: 1.75;
   color: var(--pg-text-muted);
 }
+.store-about-body p:first-child { color: var(--pg-text); font-size: 18px; line-height: 1.68; }
 /* Same hero-text-over-photo technique as .merchant-header — light text with a
    drop shadow reads regardless of what's underneath, without needing a card. */
-body.has-bg-image.store-page .store-about-icon,
-body.has-bg-image.store-page .store-about-title,
+body.has-bg-image.store-page .store-about-heading h2,
 body.has-bg-image.store-page .store-about p {
   color: #f5f5f5;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 2px 14px rgba(0, 0, 0, 0.5);
 }
+.store-about.has-image .store-about-heading h2,
+.store-about.has-image p {
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .66), 0 2px 14px rgba(0, 0, 0, .52);
+}
 .store-about p:last-child {
   margin-bottom: 0;
+}
+
+.store-products {
+  min-width: 0;
+}
+.store-editorial-gallery {
+  max-width: 1080px;
+  margin: 52px auto 34px;
+}
+.store-editorial-gallery h2,
+.store-footer-label {
+  margin: 0 0 18px;
+  color: var(--pg-text);
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -.02em;
+}
+.store-editorial-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 36px);
+}
+.store-editorial-item {
+  min-width: 0;
+  margin: 0;
+}
+.store-editorial-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 18px;
+}
+.store-editorial-item figcaption {
+  max-width: 62ch;
+  margin-top: 11px;
+  color: var(--pg-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.store-footer {
+  max-width: 980px;
+  margin: 48px auto 28px;
+  text-align: center;
+}
+.store-footer-label {
+  margin-bottom: 14px;
+  font-size: 18px;
 }
 
 /* Search and sort are two distinct components, not one split control — a
@@ -1073,7 +1323,7 @@ body.has-bg-image.store-page .store-about p {
   font-size: 13px;
   font-family: inherit;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  cursor: pointer;
+  cursor: var(--pg-hand-cursor);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .store-sort:focus {
@@ -1096,7 +1346,9 @@ body.has-bg-image.store-page .store-about p {
    "rounded" is the default look above; the variants only override radii. */
 body[data-button-style="pill"] .store-search,
 body[data-button-style="pill"] .store-sort,
+body[data-button-style="pill"] .store-item-option select,
 body[data-button-style="pill"] button.primary,
+body[data-button-style="pill"] .promotion-action,
 body[data-button-style="pill"] .store-announcement {
   border-radius: 999px;
 }
@@ -1107,7 +1359,9 @@ body[data-button-style="pill"] .qty-stepper button {
 /* "square" also flattens the cards so the whole page reads cohesive. */
 body[data-button-style="square"] .store-search,
 body[data-button-style="square"] .store-sort,
+body[data-button-style="square"] .store-item-option select,
 body[data-button-style="square"] button.primary,
+body[data-button-style="square"] .promotion-action,
 body[data-button-style="square"] .qty-stepper button,
 body[data-button-style="square"] .category-chip-filter,
 body[data-button-style="square"] .store-link-btn,
@@ -1119,4 +1373,285 @@ body[data-button-style="square"] .store-item,
 body[data-button-style="square"] .store-about,
 body[data-button-style="square"] .merchant-header {
   border-radius: 8px;
+}
+body[data-button-style="square"] .promotion-dialog { border-radius: 8px; }
+
+body.store-page[data-button-variant="outline"] .cart-bar .primary,
+body.store-page[data-button-variant="outline"] .promotion-action {
+  border: 1.5px solid var(--pg-accent);
+  background: transparent;
+  color: var(--pg-text);
+  box-shadow: none;
+}
+body.store-page[data-button-variant="soft"] .cart-bar .primary,
+body.store-page[data-button-variant="soft"] .promotion-action {
+  border: 1.5px solid color-mix(in srgb, var(--pg-accent) 45%, var(--pg-border));
+  background: var(--pg-accent-soft);
+  color: var(--pg-text);
+  box-shadow: none;
+}
+body.store-page[data-button-motion="none"] .cart-bar .primary:hover,
+body.store-page[data-button-motion="none"] .store-link-btn:hover,
+body.store-page[data-button-motion="none"] .qty-stepper button:hover {
+  transform: none;
+}
+body.store-page[data-button-motion="pulse"] .cart-bar .primary:hover,
+body.store-page[data-button-motion="pulse"] .promotion-action:hover {
+  animation: pg-button-pulse 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes pg-button-pulse {
+  50% { transform: scale(1.045); box-shadow: 0 12px 30px -8px color-mix(in srgb, var(--pg-accent) 65%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-announcement-track { animation: none; }
+  .store-announcement-copy[aria-hidden="true"] { display: none; }
+  .promotion-backdrop,
+  .promotion-dialog,
+  body.store-page[data-button-motion="pulse"] .cart-bar .primary:hover,
+  body.store-page[data-button-motion="pulse"] .promotion-action:hover { animation: none; }
+}
+
+/* ============================================================
+   Professional merchant storefront — a calm, merchant-owned retail
+   canvas. pagosYa stays in the secure-payment note; the merchant's
+   identity, imagery and catalog lead the page. ============================================================ */
+
+body.store-page[data-board-texture="chalkboard"]:not(.has-bg-image) { --pg-page-bg: #11100f; }
+body.store-page[data-board-texture="kraft"]:not(.has-bg-image) { --pg-page-bg: #211c17; }
+body.store-page[data-board-texture="painted"]:not(.has-bg-image) {
+  --pg-page-bg: color-mix(in srgb, var(--pg-accent) 12%, #111113);
+}
+
+body.store-page #app {
+  max-width: 1120px;
+  padding: 0 24px 40px;
+}
+body.store-page .merchant-header {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 14px;
+  margin: 22px 0 18px;
+  text-align: left;
+}
+.merchant-header-copy { min-width: 0; }
+.merchant-header-logo {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  border: 1px solid var(--pg-border);
+  border-radius: 15px;
+  object-fit: cover;
+  background: var(--pg-bg);
+}
+body.store-page .store-title {
+  display: block;
+  font-size: clamp(26px, 4vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  transform: none;
+}
+body.store-page .store-title::after { content: none; }
+body.store-page .store-tagline {
+  max-width: 70ch;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  transform: none;
+}
+.store-hero { margin-bottom: 20px; }
+.store-banner {
+  max-height: 430px;
+  aspect-ratio: 16 / 7;
+  border-radius: 20px;
+}
+
+.store-carousel {
+  position: relative;
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid var(--pg-border);
+  border-radius: 22px;
+  background: var(--pg-bg);
+  animation: pg-fade-in .55s cubic-bezier(.22,1,.36,1) backwards;
+}
+.store-carousel-viewport { position: relative; aspect-ratio: 16 / 7; min-height: 330px; }
+.store-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .45s ease, visibility .45s ease;
+}
+.store-slide.active { opacity: 1; visibility: visible; }
+.store-slide img,
+.store-slide video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.store-slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(5,5,5,.82) 0%, rgba(5,5,5,.56) 38%, rgba(5,5,5,.04) 72%);
+  pointer-events: none;
+}
+.store-slide-overlay {
+  position: absolute;
+  left: clamp(24px, 5vw, 58px);
+  bottom: clamp(28px, 5vw, 58px);
+  z-index: 1;
+  width: min(480px, calc(100% - 112px));
+  color: #fff;
+}
+.store-slide-overlay h2 {
+  max-width: 18ch;
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: clamp(26px, 4vw, 46px);
+  line-height: 1.02;
+  letter-spacing: -.03em;
+}
+.store-slide-overlay p {
+  max-width: 48ch;
+  margin: 0 0 18px;
+  color: rgba(255,255,255,.86);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.store-slide-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1.5px solid var(--pg-accent);
+  border-radius: 9px;
+  background: var(--pg-accent);
+  color: var(--pg-accent-contrast);
+  font-family: var(--store-font-family);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: var(--pg-hand-cursor);
+  transition: transform .25s cubic-bezier(.22,1,.36,1), filter .15s ease;
+}
+.store-slide-cta:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.store-slide-cta:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--pg-accent) 42%, transparent); }
+.store-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.34);
+  border-radius: 50%;
+  background: rgba(10,10,10,.58);
+  color: #fff;
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.store-carousel-arrow.previous { left: 12px; }
+.store-carousel-arrow.next { right: 12px; }
+.store-carousel-arrow svg { width: 20px; height: 20px; }
+.store-carousel-arrow:hover { background: rgba(10,10,10,.82); }
+.store-carousel-arrow:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+.store-carousel-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 2;
+  display: flex;
+  gap: 7px;
+  transform: translateX(-50%);
+}
+.store-carousel-dots button {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: var(--pg-hand-cursor);
+}
+.store-carousel-dots button::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.56);
+  transition: background .15s ease;
+}
+.store-carousel-dots button[aria-current="true"]::before { inset-inline: 3px; background: #fff; }
+.store-carousel-dots button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.store-carousel-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 999px;
+  background: rgba(10,10,10,.72);
+  color: #fff;
+  font: inherit;
+  font-size: .72rem;
+  backdrop-filter: blur(8px);
+}
+.store-carousel-toggle:hover { background: rgba(10,10,10,.9); }
+.store-carousel-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+
+.store-toolbar {
+  top: 10px;
+  z-index: 3;
+  margin: 0 0 24px;
+  padding: 10px;
+  border: 1px solid var(--pg-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--pg-page-bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.store-items {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: stretch;
+  gap: 20px;
+}
+.store-item,
+.store-item:nth-child(n) {
+  margin-top: 0;
+  transform: none;
+}
+.store-item::before { content: none; }
+.store-item:hover { transform: translateY(-5px); }
+.store-item-price { font-size: 19px; font-weight: 800; letter-spacing: -.015em; }
+.category-section-title { margin-top: 38px; }
+.store-about { max-width: 980px; margin-left: auto; margin-right: auto; }
+
+@media (max-width: 720px) {
+  .store-editorial-grid { grid-template-columns: 1fr; }
+  .store-editorial-gallery { margin-top: 38px; }
+  body.store-page #app { padding: 0 14px 28px; }
+  body.store-page .merchant-header { margin-top: 16px; }
+  .merchant-header-logo { width: 48px; height: 48px; border-radius: 12px; }
+  body.store-page .store-title { font-size: 25px; }
+  .store-carousel { border-radius: 16px; }
+  .store-carousel-viewport { aspect-ratio: 4 / 5; min-height: 0; }
+  .store-slide::after { background: linear-gradient(0deg, rgba(5,5,5,.86) 0%, rgba(5,5,5,.42) 52%, rgba(5,5,5,.02) 78%); }
+  .store-slide-overlay { left: 22px; right: 22px; bottom: 52px; width: auto; }
+  .store-slide-overlay h2 { font-size: 29px; }
+  .store-carousel-arrow { width: 36px; height: 36px; }
+  .store-toolbar { top: 6px; }
+  .store-items { grid-template-columns: 1fr; gap: 16px; }
+  .store-item-image { aspect-ratio: 16 / 10; }
+  .store-about { grid-template-columns: 1fr; gap: 22px; }
+  .store-about.has-image { min-height: 420px; padding: 32px 22px; align-content: end; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-slide { transition: none; }
+  .store-slide-cta:hover { transform: none; }
 }

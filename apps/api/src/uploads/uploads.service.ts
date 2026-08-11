@@ -7,14 +7,26 @@ export const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
 
 // Matches exactly what the multer diskStorage filename() in uploads.module.ts ever
 // writes (randomUUID() + one of the extensions above) — anything else, including any
 // ".." or "/", is rejected by the pattern itself rather than by explicit traversal checks.
-export const UPLOAD_FILENAME_PATTERN = /^[0-9a-f-]{36}\.(png|jpe?g|webp)$/;
+export const UPLOAD_FILENAME_PATTERN = /^[0-9a-f-]{36}\.(png|jpe?g|webp|gif|mp4|webm)$/;
 
-export const MAX_UPLOAD_BYTES = 3_000_000;
+export const MAX_IMAGE_UPLOAD_BYTES = 3_000_000;
+export const MAX_GIF_UPLOAD_BYTES = 8_000_000;
+export const MAX_VIDEO_UPLOAD_BYTES = 20_000_000;
+export const MAX_UPLOAD_BYTES = MAX_VIDEO_UPLOAD_BYTES;
+
+export function maxUploadBytesForMime(mime: string): number {
+  if (mime === "image/gif") return MAX_GIF_UPLOAD_BYTES;
+  if (mime.startsWith("video/")) return MAX_VIDEO_UPLOAD_BYTES;
+  return MAX_IMAGE_UPLOAD_BYTES;
+}
 
 @Injectable()
 export class UploadsService implements OnModuleInit {
@@ -34,6 +46,9 @@ export class UploadsService implements OnModuleInit {
     const ext = filename.split(".").pop()?.toLowerCase();
     if (ext === "png") return "image/png";
     if (ext === "webp") return "image/webp";
+    if (ext === "gif") return "image/gif";
+    if (ext === "mp4") return "video/mp4";
+    if (ext === "webm") return "video/webm";
     return "image/jpeg";
   }
 

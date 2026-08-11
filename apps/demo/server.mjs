@@ -13,7 +13,7 @@ if (!SECRET_KEY) {
 }
 
 const API_BASE_URL = process.env.PAGOSYA_API_BASE_URL ?? "http://localhost:3000/v1";
-const CHECKOUT_ORIGIN = process.env.PAGOSYA_CHECKOUT_ORIGIN ?? "http://localhost:5173";
+const CHECKOUT_ORIGIN = process.env.PAGOSYA_CHECKOUT_ORIGIN ?? "http://localhost:5174";
 const PORT = process.env.PORT ?? 4321;
 
 const client = new PagosYa(SECRET_KEY, { baseUrl: API_BASE_URL });

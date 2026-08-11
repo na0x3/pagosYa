@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
@@ -42,6 +42,21 @@ export class CategoriesService {
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
       },
     });
+  }
+
+  async reorder(merchantId: string, storeId: string, categoryIds: string[]) {
+    await this.ownedStoreOrThrow(merchantId, storeId);
+    const categories = await this.prisma.category.findMany({ where: { storeId }, select: { id: true } });
+    const currentIds = new Set(categories.map((category) => category.id));
+    const hasExactCategorySet = categoryIds.length === currentIds.size && categoryIds.every((id) => currentIds.has(id));
+    if (!hasExactCategorySet) {
+      throw new BadRequestException("Envía todas las categorías de la tienda una sola vez para guardar el orden");
+    }
+
+    await this.prisma.$transaction(
+      categoryIds.map((id, sortOrder) => this.prisma.category.update({ where: { id }, data: { sortOrder } })),
+    );
+    return this.prisma.category.findMany({ where: { storeId }, orderBy: { sortOrder: "asc" } });
   }
 
   /** Products in this category aren't deleted — categoryId just goes back to

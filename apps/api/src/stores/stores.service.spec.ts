@@ -76,9 +76,143 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
 
     expect(paymentIntents.create).toHaveBeenCalled();
   });
+
+  it("prices each selected option separately while sharing the product stock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      {
+        id: "link_1",
+        name: "Hamburguesa",
+        amount: 5000,
+        currency: "BOB",
+        stock: 3,
+        variants: [
+          { id: "var_small", name: "Pequeña", amount: 5000 },
+          { id: "var_large", name: "Grande", amount: 8000 },
+        ],
+      },
+    ]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await service.createCartCheckout("abc123", {
+      items: [
+        { paymentLinkId: "link_1", variantId: "var_small", quantity: 1 },
+        { paymentLinkId: "link_1", variantId: "var_large", quantity: 2 },
+      ],
+    });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith(
+      "m_1",
+      true,
+      expect.objectContaining({
+        amount: 21000,
+        description: "Hamburguesa (Pequeña) x1, Hamburguesa (Grande) x2",
+        metadata: {
+          storeId: "store_1",
+          cart: [
+            { paymentLinkId: "link_1", variantId: "var_small", variantName: "Pequeña", name: "Hamburguesa", quantity: 1, unitAmount: 5000 },
+            { paymentLinkId: "link_1", variantId: "var_large", variantName: "Grande", name: "Hamburguesa", quantity: 2, unitAmount: 8000 },
+          ],
+        },
+      }),
+    );
+  });
+
+  it("rejects mixed options when their combined quantity exceeds shared stock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      {
+        id: "link_1",
+        name: "Hamburguesa",
+        amount: 5000,
+        currency: "BOB",
+        stock: 2,
+        variants: [
+          { id: "var_small", name: "Pequeña", amount: 5000 },
+          { id: "var_large", name: "Grande", amount: 8000 },
+        ],
+      },
+    ]);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(
+      service.createCartCheckout("abc123", {
+        items: [
+          { paymentLinkId: "link_1", variantId: "var_small", quantity: 1 },
+          { paymentLinkId: "link_1", variantId: "var_large", quantity: 2 },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("requires a valid option when the product defines options", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      {
+        id: "link_1",
+        name: "Hamburguesa",
+        amount: 5000,
+        currency: "BOB",
+        stock: null,
+        variants: [
+          { id: "var_small", name: "Pequeña", amount: 5000 },
+          { id: "var_large", name: "Grande", amount: 8000 },
+        ],
+      },
+    ]);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 1 }] })).rejects.toThrow(
+      'Elige una opción para "Hamburguesa"',
+    );
+  });
+
+  it("rejects a cart above the selected option's own stock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      {
+        id: "link_1",
+        name: "Hamburguesa",
+        amount: 5000,
+        currency: "BOB",
+        stock: 5,
+        variants: [
+          { id: "var_small", name: "Pequeña", amount: 5000, stock: 1 },
+          { id: "var_large", name: "Grande", amount: 8000, stock: 4 },
+        ],
+      },
+    ]);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(
+      service.createCartCheckout("abc123", {
+        items: [{ paymentLinkId: "link_1", variantId: "var_small", quantity: 2 }],
+      }),
+    ).rejects.toThrow('Solo quedan 1 unidades de "Hamburguesa (Pequeña)"');
+  });
 });
 
 describe("StoresService.getStorePublic — sold counts", () => {
+  it("does not inflate store views when the merchant loads an editor preview", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await service.getStorePublic("abc123", { trackView: false });
+
+    expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+
   it("attaches per-product units sold from this store's succeeded cart checkouts", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
@@ -186,6 +320,9 @@ describe("StoresService.remove", () => {
       logoUrl: "/v1/uploads/logo.png",
       bannerUrl: "/v1/uploads/banner.png",
       backgroundImageUrl: null,
+      aboutImageUrl: "/v1/uploads/story.png",
+      heroSlides: [{ imageUrl: "/v1/uploads/hero.png" }],
+      editorialGallery: [{ imageUrl: "/v1/uploads/workshop.png", caption: "Nuestro taller" }],
     });
     prisma.paymentLink.findMany.mockResolvedValue([
       { imageUrls: ["/v1/uploads/product-a-1.png", "/v1/uploads/product-a-2.png"] },
@@ -201,6 +338,9 @@ describe("StoresService.remove", () => {
       "/v1/uploads/logo.png",
       "/v1/uploads/banner.png",
       null,
+      "/v1/uploads/story.png",
+      "/v1/uploads/hero.png",
+      "/v1/uploads/workshop.png",
       "/v1/uploads/product-a-1.png",
       "/v1/uploads/product-a-2.png",
       "/v1/uploads/product-b-1.png",

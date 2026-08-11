@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-09T16:19:11Z",
+  "title": "Design System: pagosYa",
+  "extensions": {
+    "colorMeta": {
+      "void": { "role": "neutral", "displayName": "Void", "canonical": "#0a0a0a", "tonalRamp": ["#0a0a0a", "#171717", "#262626", "#404040", "#525252", "#737373", "#a3a3a3", "#f5f5f5"] },
+      "panel": { "role": "neutral", "displayName": "Panel", "canonical": "#171717", "tonalRamp": ["#0a0a0a", "#171717", "#262626", "#404040", "#525252", "#737373", "#a3a3a3", "#f5f5f5"] },
+      "focus-indigo": { "role": "primary", "displayName": "Focus Indigo", "canonical": "#818cf8", "tonalRamp": ["#1e1b4b", "#312e81", "#4338ca", "#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe", "#e0e7ff"] },
+      "focus-violet": { "role": "primary", "displayName": "Focus Violet", "canonical": "#c084fc", "tonalRamp": ["#3b0764", "#581c87", "#7e22ce", "#a855f7", "#c084fc", "#d8b4fe", "#e9d5ff", "#f3e8ff"] },
+      "signal-amber": { "role": "secondary", "displayName": "Signal Amber", "canonical": "#ffbd59", "tonalRamp": ["#241804", "#4a2e05", "#7a4b08", "#c47f14", "#ffab2e", "#ffbd59", "#ffd08a", "#ffe6bd"] },
+      "success": { "role": "status", "displayName": "Success", "canonical": "#34d399", "tonalRamp": ["#052e1f", "#064e3b", "#065f46", "#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"] },
+      "warning": { "role": "status", "displayName": "Warning", "canonical": "#fbbf24", "tonalRamp": ["#2c1a04", "#451a03", "#78350f", "#b45309", "#d97706", "#fbbf24", "#fcd34d", "#fde68a"] },
+      "error": { "role": "status", "displayName": "Error", "canonical": "#f87171", "tonalRamp": ["#2c0b0b", "#450a0a", "#7f1d1d", "#b91c1c", "#dc2626", "#f87171", "#fca5a5", "#fecaca"] }
+    },
+    "typographyMeta": {
+      "amount": { "displayName": "Amount", "purpose": "Money only — PaymentIntent amount, order total. The system's one display-scale role." },
+      "title": { "displayName": "Title", "purpose": "Page and section titles." },
+      "body": { "displayName": "Body", "purpose": "Default paragraph, table cell, and input text." },
+      "label": { "displayName": "Label", "purpose": "Field labels, table headers, and badge text — usually uppercase." }
+    },
+    "shadows": [
+      { "name": "admin-ambient", "value": "0 1px 2px rgba(0,0,0,0.3), 0 1px 8px -2px rgba(0,0,0,0.4)", "purpose": "Constant resting elevation on every merchant-dashboard/ops panel and card." },
+      { "name": "checkout-hover-lift", "value": "0 16px 32px -12px rgba(0,0,0,0.18), 0 4px 10px -4px rgba(0,0,0,0.1)", "purpose": "Checkout store-item card hover only — flat at rest." },
+      { "name": "checkout-card-float", "value": "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)", "purpose": "The payment-form card floating over a merchant's host page." },
+      { "name": "checkout-accent-glow", "value": "0 8px 20px -6px color-mix(in srgb, var(--pg-accent) 60%, transparent)", "purpose": "Colored glow under the storefront's gradient primary CTA." }
+    ],
+    "motion": [
+      { "name": "ease-state", "value": "0.15s ease", "purpose": "Default for color/border/background state changes (hover, focus, active) across all three surfaces." },
+      { "name": "ease-expressive", "value": "0.2s-0.4s cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Signature overshoot-free ease-out for transform-based motion: card hover lift, entrance stagger, cart-bar interactions." }
+    ],
+    "breakpoints": [
+      { "name": "dashboard-wide-stack", "value": "900px" },
+      { "name": "checkout-mobile", "value": "720px" },
+      { "name": "dashboard-narrow", "value": "640px" },
+      { "name": "dashboard-finance-stack", "value": "480px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (Admin)",
+      "kind": "button",
+      "refersTo": "button-primary-admin",
+      "description": "pagosYa's own brand color, used only in merchant-dashboard and ops.",
+      "html": "<button class=\"ds-btn-primary-admin\">Guardar</button>",
+      "css": ".ds-btn-primary-admin { background: #ffbd59; color: #241804; border: 1.5px solid #ffbd59; border-radius: 9px; padding: 9px 14px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-primary-admin:hover { background: #ffab2e; border-color: #ffab2e; } .ds-btn-primary-admin:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(129,140,248,0.3); }"
+    },
+    {
+      "name": "Primary Button (Checkout Payment Form)",
+      "kind": "button",
+      "refersTo": "button-primary-checkout-neutral",
+      "description": "Deliberately neutral — embedded inside a merchant's own page, doesn't compete with their brand.",
+      "html": "<button class=\"ds-btn-primary-neutral\">Pagar 50.00 BOB</button>",
+      "css": ".ds-btn-primary-neutral { width: 100%; background: #f5f5f5; color: #171717; border: none; border-radius: 10px; padding: 13px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-weight: 600; font-size: 15px; cursor: pointer; transition: background 0.15s ease, transform 0.05s ease; } .ds-btn-primary-neutral:hover { background: #fafafa; } .ds-btn-primary-neutral:active { transform: scale(0.99); }"
+    },
+    {
+      "name": "Primary Button (Checkout Storefront CTA)",
+      "kind": "button",
+      "refersTo": "button-primary-checkout-gradient",
+      "description": "pagosYa's own hosted storefront default, yields to a merchant's custom accent color when set.",
+      "html": "<button class=\"ds-btn-primary-gradient\">Ir a pagar</button>",
+      "css": ".ds-btn-primary-gradient { background: linear-gradient(120deg, #818cf8, #c084fc); color: #fff; border: none; border-radius: 10px; padding: 13px 20px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 8px 20px -6px rgba(129,140,248,0.5); transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease, filter 0.2s ease; } .ds-btn-primary-gradient:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -6px rgba(129,140,248,0.55); filter: brightness(1.06); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Pill with a leading colored dot; color set by semantic status keyword, never by position or guesswork.",
+      "html": "<span class=\"ds-badge ds-badge-success\">SUCCEEDED</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; } .ds-badge::before { content: \"\"; width: 6px; height: 6px; border-radius: 999px; background: currentColor; } .ds-badge-success { background: #052e1f; color: #34d399; } .ds-badge-warning { background: #2c1a04; color: #fbbf24; } .ds-badge-error { background: #2c0b0b; color: #f87171; }"
+    },
+    {
+      "name": "Panel / Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The base container for both admin surfaces and checkout's storefront items.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-label\">SALDO POR PAGAR</div><div class=\"ds-card-value\">0.00 BOB</div></div>",
+      "css": ".ds-card { background: #171717; border: 1px solid #404040; border-radius: 14px; padding: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 8px -2px rgba(0,0,0,0.4); font-family: \"0xProto Mono\", ui-monospace, monospace; } .ds-card-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: #a3a3a3; margin-bottom: 8px; } .ds-card-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; color: #f5f5f5; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "Labeled field with a real <label>, never a placeholder-only field.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-demo-input\">Correo electrónico</label><input id=\"ds-demo-input\" type=\"email\" placeholder=\"tu@correo.com\"></div>",
+      "css": ".ds-field label { display: block; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 0.76rem; font-weight: 600; color: #a3a3a3; margin-bottom: 6px; } .ds-field input { width: 100%; padding: 11px 12px; border-radius: 9px; border: 1.5px solid #404040; background: #171717; color: #f5f5f5; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 14px; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-field input:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.3); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Terminal Ledger",
+    "overview": "pagosYa reads like a precise financial tool that happens to render in a developer's terminal, not a fintech marketing site that happens to show numbers. pagosYa-owned surfaces stay in 0xProto Mono. Hosted storefronts belong to the merchant and may choose one curated store-wide type family while pagosYa's own dashboard and payment assurance remain consistent. Dark is the resting state everywhere. Color is spent sparingly: a single indigo (#818cf8) carries focus rings and links, a single amber (#ffbd59) is pagosYa's own brand signal, and status colors (success/warning/error) are the only other saturation allowed in. Numbers get tabular alignment and their own oversized weight; everything else stays quiet so the numbers can be trusted. The system is explicitly context-aware about whose brand is on screen — see the Whose-Page-Is-It Rule under Colors. This is not incidental restraint; it's load-bearing, since pagosYa's checkout is frequently embedded inside a merchant's own page. The hosted storefront extends this incumbent world into a professional, merchant-first lookbook: merchant identity, authored imagery, and catalog content lead, while pagosYa recedes to the secure-payment assurance.",
+    "keyCharacteristics": [
+      "Monospace-only typography on pagosYa-owned surfaces; merchant storefronts may choose one curated store-wide family",
+      "Dark-first; checkout is the only surface with a light variant, and only for contrast over a merchant's own photo background",
+      "Amber is pagosYa's brand signal, reserved for pagosYa's own tools — not used as checkout's default primary action color",
+      "Hosted storefronts behave like authored merchant lookbooks, not a generic marketplace shell; merchant imagery and merchandising lead the composition",
+      "Soft, continuous rounding (8-20px) plus true pills (999px) for chips/badges/status pills; no sharp corners except the opt-in \"square\" merchant theme variant",
+      "Motion is fast and utilitarian (0.15s ease) for color/border state changes; a single signature overshoot-free ease (cubic-bezier(0.22, 1, 0.36, 1)) marks the larger, more expressive transitions"
+    ],
+    "rules": [
+      { "name": "The Whose-Page-Is-It Rule", "body": "The primary action's color is not fixed — it depends on whose page is showing. pagosYa's own tools (merchant-dashboard, ops) put pagosYa's amber on the primary button. Checkout's payment form is usually embedded inside a merchant's page, so its primary button stays neutral rather than competing with the host page. Checkout's own hosted storefront defaults to the Focus Indigo -> Focus Violet gradient as pagosYa's fallback identity, but yields to a merchant's own accentColor the moment one is set.", "section": "colors" },
+      { "name": "The Merchant Ground Rule", "body": "Keep panels anchored to the shared neutral system, but let the hosted storefront's page ground express the merchant's selected board material. Texture may warm or tint the canvas; it must not compete with product imagery, copy, or the merchant accent.", "section": "colors" },
+      { "name": "The One Store, One Face Rule", "body": "Never mix type families within a surface. pagosYa-owned UI stays on 0xProto Mono. A hosted storefront may use the merchant's single curated selection, applied consistently to the entire store.", "section": "typography" },
+      { "name": "The Flat-Until-It-Moves Rule", "body": "Checkout storefront surfaces stay flat at rest; a shadow only appears on hover, focus, or as the floating-card treatment for an embedded payment form. Don't add resting shadows to new checkout components.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do set every pagosYa-owned UI element in 0xProto Mono and apply a merchant's selected family consistently across their entire hosted storefront.",
+      "Do reserve Signal Amber for pagosYa's own tools (merchant-dashboard, ops); keep checkout's default primary action neutral or Focus Indigo, per the Whose-Page-Is-It Rule.",
+      "Do give every status a Badge (pill + dot + semantic color), never raw enum text or color-only signaling.",
+      "Do use real <label for> elements on every form field; placeholders are never a substitute for a label.",
+      "Do preserve the authored hero's visible pause/resume control, reduced-motion behavior, inactive-slide tab-order exclusion, and 24px minimum dot targets.",
+      "Do use the cubic-bezier(0.22, 1, 0.36, 1) ease for any new transform-based transition, and plain ease at 0.15s for color/border state changes."
+    ],
+    "donts": [
+      "Don't add a resting (non-hover) shadow to a checkout storefront component — checkout is flat until it moves.",
+      "Don't invent a new accent color; the system has exactly two (Focus Indigo, Signal Amber) plus the three status colors and checkout's Focus Violet gradient partner.",
+      "Don't ship a new interactive control without a 3px Focus Indigo focus ring.",
+      "Don't treat the current single-page, no-navigation admin layout as a new-work exemplar to copy forward without checking PRODUCT.md's known-gaps note."
+    ]
+  }
+}

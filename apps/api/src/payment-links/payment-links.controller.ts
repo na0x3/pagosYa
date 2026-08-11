@@ -5,6 +5,7 @@ import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { PaymentLinksService } from "./payment-links.service";
 import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
 import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
+import { ImportInventoryDto } from "./dto/import-inventory.dto";
 
 /** Dashboard/backend-authenticated management of a single store's products (Payment
  * Links) — nested under the store they belong to, since a merchant can run several
@@ -28,6 +29,15 @@ export class PaymentLinksController {
   @Get()
   list(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string) {
     return this.paymentLinks.listForStore(merchant.id, storeId);
+  }
+
+  @Post("import")
+  importInventory(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("storeId") storeId: string,
+    @Body() dto: ImportInventoryDto,
+  ) {
+    return this.paymentLinks.importInventory(merchant.id, storeId, dto);
   }
 
   @Post(":id/archive")

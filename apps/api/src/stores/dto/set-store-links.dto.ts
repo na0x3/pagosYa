@@ -1,10 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { ArrayMaxSize, IsArray, IsString, Matches, MaxLength, ValidateNested } from "class-validator";
+import { IsSafeText } from "../../common/validation/safe-text.decorator";
 
 export class StoreLinkDto {
   @ApiProperty({ example: "Instagram" })
   @IsString()
+  @IsSafeText()
   @MaxLength(40)
   label!: string;
 
@@ -12,6 +14,7 @@ export class StoreLinkDto {
   // page, so javascript:/data: and friends must never get through.
   @ApiProperty({ example: "https://instagram.com/mitienda" })
   @IsString()
+  @IsSafeText()
   @MaxLength(500)
   @Matches(/^https?:\/\/\S+$/i, { message: "url must start with http:// or https://" })
   url!: string;

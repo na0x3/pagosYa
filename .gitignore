@@ -6,6 +6,8 @@ build/
 *.log
 .pgdata/
 apps/api/uploads/
+/uploads/
 .turbo/
 .DS_Store
 screenshots/
+graphify-out/

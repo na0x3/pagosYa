@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import {
+  BadRequestException,
   Controller,
   Get,
   NotFoundException,
@@ -15,7 +16,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
-import { UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
+import { maxUploadBytesForMime, UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
 import { UploadResponseDto } from "./dto/upload-response.dto";
 
 /**
@@ -40,6 +41,16 @@ export class UploadsController {
   @UseGuards(MerchantAuthGuard)
   @UseInterceptors(FileInterceptor("file"))
   uploadFile(@UploadedFile() file: Express.Multer.File): UploadResponseDto {
+    const limit = maxUploadBytesForMime(file.mimetype);
+    if (file.size > limit) {
+      try {
+        fs.unlinkSync(file.path);
+      } catch {
+        // The validation error is still the useful response if cleanup races.
+      }
+      const limitMb = Math.floor(limit / 1_000_000);
+      throw new BadRequestException(`El archivo supera el máximo de ${limitMb} MB para este formato`);
+    }
     return { url: `/v1/uploads/${file.filename}` };
   }
 

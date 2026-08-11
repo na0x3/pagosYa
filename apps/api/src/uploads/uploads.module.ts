@@ -21,7 +21,7 @@ import { AuthModule } from "../auth/auth.module";
           filename: (_req, file, cb) => {
             const ext = ALLOWED_MIME_TO_EXT[file.mimetype];
             if (!ext) {
-              cb(new BadRequestException("Formato de imagen no soportado (usa PNG, JPEG o WEBP)"), "");
+              cb(new BadRequestException("Formato no soportado (usa PNG, JPEG, WEBP, GIF, MP4 o WEBM)"), "");
               return;
             }
             cb(null, `${randomUUID()}.${ext}`);
@@ -29,7 +29,7 @@ import { AuthModule } from "../auth/auth.module";
         }),
         fileFilter: (_req, file, cb) => {
           if (!ALLOWED_MIME_TO_EXT[file.mimetype]) {
-            cb(new BadRequestException("Formato de imagen no soportado (usa PNG, JPEG o WEBP)"), false);
+            cb(new BadRequestException("Formato no soportado (usa PNG, JPEG, WEBP, GIF, MP4 o WEBM)"), false);
             return;
           }
           cb(null, true);
