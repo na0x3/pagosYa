@@ -8,6 +8,7 @@ build/
 apps/api/uploads/
 /uploads/
 .turbo/
+.pnpm-store/
 .DS_Store
 screenshots/
 graphify-out/

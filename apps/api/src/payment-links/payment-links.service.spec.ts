@@ -120,6 +120,7 @@ describe("PaymentLinksService inventory import", () => {
     expect(drinkData.categoryId).toBe("cat_bebidas");
     expect(drinkData.amount).toBe(1200);
     expect(drinkData.stock).toBe(11);
+    expect(drinkData.imageUrls).toEqual(["/v1/uploads/00000000-0000-4000-8000-000000000000.webp"]);
     expect(drinkData.variants).toEqual([
       expect.objectContaining({ name: "Vaso", amount: 1200, stock: 8 }),
       expect.objectContaining({ name: "Jarra", amount: 3000, stock: 3 }),

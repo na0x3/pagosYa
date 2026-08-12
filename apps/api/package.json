@@ -22,6 +22,7 @@
     "@nestjs/throttler": "^6.2.1",
     "@pagosya/shared-types": "workspace:*",
     "@prisma/client": "^5.20.0",
+    "@aws-sdk/client-s3": "^3.864.0",
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

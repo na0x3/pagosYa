@@ -71,6 +71,7 @@
     --pg-focus-ring: rgba(79, 70, 229, 0.2);
   }
   * { box-sizing: border-box; }
+  :root { --pg-hand-cursor: pointer; }
   html { background: var(--pg-bg); }
   body {
     font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -82,7 +83,7 @@
     -webkit-font-smoothing: antialiased;
   }
   .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 28px 0 20px; }
-  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
   .brand-mark { width: 34px; height: 34px; flex-shrink: 0; }
   .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
   html[data-dashboard-theme="light"] .brand-mark img { filter: brightness(0.62) saturate(1.45) contrast(1.08); }
@@ -91,7 +92,7 @@
   .muted { color: var(--pg-text-muted); font-size: 0.88rem; }
   .faint { color: var(--pg-text-faint); font-size: 0.8rem; }
 
-  .topbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+  .topbar-actions { min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px; }
   .theme-control { display: inline-flex; align-items: center; gap: 8px; }
   .theme-control-label { color: var(--pg-text-faint); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
   .theme-switcher { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--pg-border); border-radius: 11px; background: var(--pg-bg); }
@@ -102,7 +103,12 @@
   .theme-swatch { width: 12px; height: 12px; border: 1px solid rgba(37, 33, 28, 0.34); border-radius: 4px; flex: 0 0 auto; }
   .theme-swatch.beige { background: #eee7dc; }
   .theme-swatch.graphite { background: #171717; border-color: rgba(255, 255, 255, 0.34); }
-  html[data-dashboard-theme="light"] .pg-custom-pointer { filter: invert(1); }
+  .visibility-toggle { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .visibility-toggle svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .visibility-toggle .visibility-off-icon { display: none; }
+  .visibility-toggle[aria-pressed="true"] .visibility-on-icon { display: none; }
+  .visibility-toggle[aria-pressed="true"] .visibility-off-icon { display: block; }
+  .visibility-toggle:focus-visible { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
 
   .panel {
     background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: 14px;
@@ -117,6 +123,15 @@
   }
   input:focus { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
   input[type="file"] { min-width: 220px; padding: 7px; }
+  .password-input-wrap { position: relative; }
+  .password-input-wrap input { width: 100%; padding-right: 44px; }
+  .password-visibility-toggle {
+    position: absolute; top: 0; right: 0; width: 42px; height: 100%; min-height: 38px; padding: 0;
+    display: grid; place-items: center; border: 0; border-radius: 0 9px 9px 0; background: transparent; color: var(--pg-text-muted);
+  }
+  .password-visibility-toggle:hover { border-color: transparent; background: var(--pg-accent-soft); color: var(--pg-text); }
+  .password-visibility-toggle:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--pg-accent), 0 0 0 3px var(--pg-focus-ring); }
+  .password-visibility-toggle svg { width: 17px; height: 17px; }
 
   button {
     padding: 9px 14px; border-radius: 9px; border: 1.5px solid var(--pg-border-strong); background: var(--pg-surface);
@@ -138,26 +153,6 @@
   button.ghost:hover { background: var(--pg-accent-soft); color: var(--pg-text); border-color: transparent; }
   a, select, input[type="checkbox"], input[type="color"], input[type="file"], label[for] { cursor: var(--pg-hand-cursor); }
 
-  @media (pointer: fine) {
-    html.has-pg-custom-pointer, html.has-pg-custom-pointer * { cursor: none !important; }
-    .pg-custom-pointer {
-      position: fixed; inset: 0 auto auto 0; z-index: 2147483647; width: 32px; height: 32px;
-      opacity: 0; pointer-events: none; background-repeat: no-repeat; background-size: 32px 32px;
-      transform: translate3d(var(--pointer-x, -40px), var(--pointer-y, -40px), 0) scale(1) rotate(0deg);
-      transform-origin: 5px 2px; transition: transform 110ms cubic-bezier(.16, 1, .3, 1), opacity 80ms ease;
-      will-change: transform;
-    }
-    .pg-custom-pointer.is-visible { opacity: 1; }
-    .pg-custom-pointer.is-pressing {
-      transform: translate3d(var(--pointer-x, -40px), var(--pointer-y, -40px), 0) scale(.76) rotate(-6deg);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .pg-custom-pointer { transition: none; }
-    .pg-custom-pointer.is-pressing {
-      transform: translate3d(var(--pointer-x, -40px), var(--pointer-y, -40px), 0) scale(.9);
-    }
-  }
 
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 28px; }
   .card { background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: 14px; padding: 18px; box-shadow: var(--pg-shadow); }
@@ -187,8 +182,9 @@
   .finance-legend-row strong { font-variant-numeric: tabular-nums; }
   .finance-legend-empty { color: var(--pg-text-muted); font-size: .8rem; line-height: 1.5; }
 
-  h2 { font-size: 0.98rem; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.005em; }
+  h2 { font-size: 1.04rem; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.005em; }
   .section-head { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; padding-right: 92px; }
+  .section-head > .muted { max-width: 62ch; color: var(--pg-text-muted); font-size: .8rem; font-weight: 600; line-height: 1.45; }
   section.block { margin-bottom: 24px; }
   .section-toggle {
     position: absolute; top: -5px; right: 0; display: inline-flex; align-items: center; gap: 6px;
@@ -297,9 +293,7 @@
   .category-order-actions svg { width: 15px; height: 15px; display: block; }
   .category-delete { color: var(--pg-error); }
 
-  .inventory-importer {
-    margin: 0 0 18px; padding: 16px; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-bg);
-  }
+  .inventory-importer { margin: 0 0 18px; padding: 16px; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-bg); }
   .inventory-import-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .inventory-import-head h3 { margin: 0 0 5px; font-size: 0.92rem; }
   .inventory-import-head p { margin: 0; max-width: 70ch; line-height: 1.5; }
@@ -334,24 +328,87 @@
   .current-store-banner strong { color: var(--pg-text); }
   .current-store-banner input { min-width: 200px; font-size: 0.8rem; padding: 6px 9px; }
 
+  .visual-onboarding {
+    margin: 4px 0 24px; padding: 18px; border: 1px solid var(--pg-border-strong); border-radius: 13px;
+    background: color-mix(in srgb, var(--pg-accent-soft) 42%, var(--pg-surface));
+  }
+  .visual-onboarding-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+  .visual-onboarding-head h3 { margin: 0 0 6px; font-size: 1rem; letter-spacing: -.02em; }
+  .visual-onboarding-head p { margin: 0; max-width: 68ch; color: var(--pg-text-muted); font-size: .8rem; line-height: 1.55; }
+  .visual-safety-note { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; color: var(--pg-success); font-size: .74rem; font-weight: 700; }
+  .visual-safety-note svg { width: 15px; height: 15px; flex: 0 0 auto; }
+  .visual-progress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 18px 0 16px; padding: 0; list-style: none; }
+  .visual-progress li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border-top: 2px solid var(--pg-border); color: var(--pg-text-faint); font-size: .72rem; }
+  .visual-progress li.is-active { border-color: var(--pg-accent); color: var(--pg-text); }
+  .visual-progress span { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 7px; background: var(--pg-bg); font-size: .68rem; font-weight: 700; }
+  .visual-step[hidden] { display: none; }
+  .visual-input-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(180px, .8fr); gap: 12px; }
+  .visual-input-grid input, .visual-input-grid select { width: 100%; min-width: 0; }
+  .visual-upload-zone { grid-column: 1 / -1; padding: 14px; border: 1px dashed var(--pg-border-strong); border-radius: 11px; background: var(--pg-surface); }
+  .visual-upload-zone p { margin: 5px 0 10px; max-width: 65ch; color: var(--pg-text-faint); font-size: .75rem; line-height: 1.5; }
+  .visual-source-previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; margin-top: 10px; }
+  .visual-source-thumb { position: relative; min-width: 0; }
+  .visual-source-thumb img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--pg-bg); }
+  .visual-source-thumb button { position: absolute; top: 4px; right: 4px; width: 27px; height: 27px; padding: 0; border-radius: 50%; background: rgba(17,17,17,.82); border-color: rgba(255,255,255,.35); color: white; }
+  .visual-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .visual-actions .faint { margin: 0; line-height: 1.45; }
+  .visual-generating { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 13px; align-items: center; padding: 18px 0 6px; }
+  .visual-generating-mark { width: 42px; height: 42px; border: 2px solid var(--pg-border); border-top-color: var(--pg-accent); border-radius: 50%; animation: button-spin .8s linear infinite; }
+  .visual-generating strong { display: block; margin-bottom: 5px; font-size: .85rem; }
+  .visual-generating p { margin: 0; color: var(--pg-text-faint); font-size: .76rem; line-height: 1.5; }
+  .visual-proposals { display: grid; gap: 10px; }
+  .visual-proposal { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; gap: 13px; align-items: center; padding: 11px; border: 1px solid var(--pg-border); border-radius: 11px; background: var(--pg-surface); }
+  .visual-proposal img { width: 116px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--pg-bg); }
+  .visual-proposal-copy { min-width: 0; }
+  .visual-proposal-copy strong { display: block; margin-bottom: 4px; font-size: .84rem; }
+  .visual-proposal-copy p { margin: 0; color: var(--pg-text-faint); font-size: .73rem; line-height: 1.45; }
+  .visual-proposal-meta { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--pg-text-muted); font-size: .68rem; }
+  .visual-swatch { width: 17px; height: 17px; border: 1px solid var(--pg-border-strong); border-radius: 5px; }
+  .visual-proposal-actions { display: flex; flex-direction: column; gap: 6px; }
+  .visual-proposal-actions button { white-space: nowrap; padding: 7px 10px; font-size: .73rem; }
+  .visual-history { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--pg-border); }
+  .visual-history summary { color: var(--pg-text-muted); font-size: .75rem; font-weight: 700; }
+  .visual-history-list { display: grid; gap: 7px; margin-top: 9px; }
+  .visual-version { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .72rem; }
+  .visual-version span { color: var(--pg-text-faint); }
+  .visual-version button { padding: 6px 9px; font-size: .7rem; }
+
+  .nested-section-body[hidden], .store-editor-section-body[hidden] { display: none; }
+  .inline-section-toggle, .editor-section-toggle { display: inline-flex; align-items: center; gap: 6px; }
+  .inline-section-toggle svg, .editor-section-toggle svg { width: 15px; height: 15px; transition: transform .18s cubic-bezier(.22, 1, .36, 1); }
+  .inline-section-toggle[aria-expanded="false"] svg, .editor-section-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+  .visual-onboarding.is-collapsed, .inventory-importer.is-collapsed { padding-bottom: 12px; }
+  .visual-onboarding.is-collapsed .visual-onboarding-head, .inventory-importer.is-collapsed .inventory-import-head { align-items: center; }
+
   .store-studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr); gap: 22px; align-items: start; }
-  .store-editor { display: grid; gap: 0; min-width: 0; }
+  .store-editor { display: grid; gap: 12px; min-width: 0; }
   .store-editor input:not([type="checkbox"]):not([type="color"]),
   .store-editor textarea,
   .store-editor select { width: 100%; min-width: 0; }
   .store-editor input[type="color"] { width: 54px; min-width: 54px; height: 38px; padding: 3px; }
-  .store-editor-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 20px 0; border-top: 1px solid var(--pg-border); }
-  .store-editor-section:first-child { padding-top: 2px; border-top: 0; }
-  .store-editor-section > div { display: flex; flex-direction: column; min-width: 0; }
-  .store-editor-section > .editor-section-head,
-  .store-editor-section > .full { grid-column: 1 / -1; }
-  .editor-section-head { margin-bottom: 2px; }
-  .editor-section-head h3 { margin: 0 0 4px; font-size: 0.9rem; color: var(--pg-text); }
-  .editor-section-head p { margin: 0; font-size: 0.78rem; color: var(--pg-text-faint); line-height: 1.5; }
+  .store-editor-section { min-width: 0; overflow: hidden; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-surface); }
+  .store-editor-section.is-expanded { border-color: var(--pg-border-strong); }
+  .editor-section-head {
+    position: relative; display: block !important; min-width: 0; margin: 0; padding: 14px 52px 13px 14px;
+    border-bottom: 1px solid transparent; background: color-mix(in srgb, var(--pg-accent-soft) 58%, var(--pg-surface));
+  }
+  .store-editor-section.is-expanded .editor-section-head { border-bottom-color: var(--pg-border); }
+  .editor-section-head h3 { margin: 0 0 4px; color: var(--pg-text); font-size: .96rem; letter-spacing: -.01em; }
+  .editor-section-head p { margin: 0; color: var(--pg-text-muted); font-size: .76rem; font-weight: 600; line-height: 1.45; }
+  .editor-section-toggle { position: absolute; top: 50%; right: 10px; width: 34px; height: 34px; padding: 0; justify-content: center; transform: translateY(-50%); }
+  .store-editor-section-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px 14px 18px; }
+  .store-editor-section-body > div:not(.editor-feature) { display: flex; flex-direction: column; min-width: 0; }
+  .store-editor-section-body > .full { grid-column: 1 / -1; }
   .story-editor-field .faint { margin: 0 0 8px; max-width: 68ch; line-height: 1.5; }
   .brand-upload { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
   .brand-upload .image-preview { grid-column: 2; grid-row: 1 / span 2; width: 70px; height: 70px; }
   .brand-upload button { justify-self: start; padding: 5px 8px; font-size: 0.76rem; }
+  .background-image-quality {
+    margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--pg-border); border-radius: 9px;
+    background: var(--pg-bg); color: var(--pg-text-muted); font-size: .72rem; line-height: 1.5;
+  }
+  .background-image-quality[data-quality="sharp"] { border-color: var(--pg-success); background: var(--pg-success-soft); color: var(--pg-success); }
+  .background-image-quality[data-quality="soft"] { border-color: var(--pg-warning); background: var(--pg-warning-soft); color: var(--pg-warning); }
   .hero-slides-editor { display: grid !important; gap: 12px; padding: 14px; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-bg); }
   .hero-slides-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
   .hero-slides-head strong { display: block; margin-bottom: 4px; font-size: .86rem; }
@@ -395,10 +452,20 @@
   .editorial-gallery-upload label:focus-within { border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
   .editorial-gallery-upload svg { width: 15px; height: 15px; }
   .editorial-gallery-list { display: grid; gap: 9px; }
-  .editorial-gallery-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 11px; padding: 11px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); }
-  .editorial-gallery-row img { width: 112px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--pg-bg); }
+  .editorial-gallery-row { display: grid; grid-template-columns: 164px minmax(0, 1fr); gap: 12px; padding: 11px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); }
+  .editorial-card-preview {
+    min-width: 0; margin: 0; overflow: hidden; align-self: start;
+    border: 1px solid color-mix(in srgb, var(--editorial-card-ink) 16%, transparent); border-radius: 10px;
+    background: var(--editorial-card-bg); color: var(--editorial-card-ink);
+  }
+  .editorial-card-preview img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--pg-bg); }
+  .editorial-card-preview figcaption { min-height: 52px; padding: 10px 11px 11px; color: inherit; font-size: .72rem; line-height: 1.45; overflow-wrap: anywhere; opacity: .86; }
+  .editorial-card-preview figcaption.is-placeholder { font-style: italic; opacity: .58; }
   .editorial-gallery-fields { display: grid; gap: 8px; min-width: 0; }
   .editorial-gallery-fields textarea { width: 100%; min-width: 0; resize: vertical; }
+  .editorial-color-control { display: flex; align-items: center; gap: 9px; min-height: 38px; }
+  .editorial-color-control input[type="color"] { width: 52px; min-width: 52px; height: 38px; padding: 3px; }
+  .editorial-color-control output { color: var(--pg-text-faint); font-size: .74rem; font-variant-numeric: tabular-nums; text-transform: uppercase; }
   .editorial-gallery-actions { display: flex; flex-wrap: wrap; gap: 6px; }
   .editorial-gallery-actions button { padding: 6px 9px; font-size: .73rem; }
   .editorial-gallery-actions .remove-editorial-image { margin-left: auto; color: var(--pg-error); }
@@ -446,7 +513,8 @@
   #error:empty { display: none; }
   #info { background: var(--pg-accent-soft); color: var(--pg-accent); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; }
   #info:empty { display: none; padding: 0; margin: 0; }
-  #loggedInBar { display: none; align-items: center; justify-content: flex-end; gap: 12px; }
+  #loggedInBar { display: none; align-items: center; justify-content: flex-end; gap: 6px; }
+  #loggedInAs { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #liveKeysResult { font-family: "0xProto Mono", ui-monospace, monospace; font-size: 0.78rem; margin-top: 10px; white-space: pre-wrap; background: var(--pg-bg); border-radius: 9px; padding: 10px; }
   section#app { display: none; }
 
@@ -468,13 +536,12 @@
     body { overflow-x: hidden; }
     .panel { overflow-x: auto; }
     .topbar { flex-wrap: wrap; row-gap: 10px; }
-    .topbar-actions { width: 100%; flex-wrap: wrap; justify-content: space-between; }
+    .topbar-actions { width: 100%; align-items: stretch; }
     .section-head { flex-direction: column; align-items: flex-start; gap: 4px; }
-    #loggedInBar { flex-wrap: wrap; row-gap: 8px; }
-    #loggedInBar span { min-width: 0; overflow-wrap: break-word; }
-    .store-editor-section { grid-template-columns: 1fr; }
-    .store-editor-section > .editor-section-head,
-    .store-editor-section > .full { grid-column: 1; }
+    #loggedInBar { flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
+    #loggedInAs { flex: 1 1 100%; max-width: none; white-space: normal; overflow-wrap: break-word; }
+    .store-editor-section-body { grid-template-columns: 1fr; }
+    .store-editor-section-body > .full { grid-column: 1; }
     .editor-feature { grid-template-columns: 1fr; }
     .editor-feature > .full, .editor-feature-head { grid-column: 1; }
     .store-preview-toolbar { flex-wrap: wrap; }
@@ -493,11 +560,18 @@
     .editorial-gallery-head { align-items: stretch; flex-direction: column; }
     .editorial-gallery-upload label { justify-content: center; }
     .editorial-gallery-row { grid-template-columns: 1fr; }
-    .editorial-gallery-row img { width: 100%; max-height: 240px; }
+    .editorial-card-preview { width: min(100%, 420px); }
+    .editorial-card-preview img { max-height: 240px; }
     .product-variant-row { grid-template-columns: minmax(0, 1fr) minmax(100px, 0.72fr) minmax(100px, 0.72fr); }
     .product-variant-remove { grid-column: 1 / -1; justify-self: start; }
     .inventory-import-head { flex-direction: column; }
     .inventory-import-grid { grid-template-columns: 1fr; }
+    .visual-onboarding-head { flex-direction: column; }
+    .visual-input-grid { grid-template-columns: 1fr; }
+    .visual-upload-zone { grid-column: 1; }
+    .visual-proposal { grid-template-columns: 88px minmax(0, 1fr); }
+    .visual-proposal img { width: 88px; }
+    .visual-proposal-actions { grid-column: 1 / -1; flex-direction: row; }
   }
 
   @media (max-width: 480px) {
@@ -535,6 +609,11 @@
       </div>
       <div id="loggedInBar">
         <span class="muted" id="loggedInAs"></span>
+        <button class="ghost visibility-toggle" id="moneyVisibilityToggle" type="button" aria-pressed="false" aria-label="Ocultar valores monetarios">
+          <svg class="visibility-on-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="visibility-off-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.2A11.5 11.5 0 0 1 12 6c6.5 0 10 6 10 6a17.4 17.4 0 0 1-2.1 2.8M6.6 6.6C3.6 8.4 2 12 2 12s3.5 6 10 6c1.4 0 2.6-.3 3.7-.7"/><path d="M10.1 10.1a3 3 0 0 0 3.8 3.8"/></svg>
+          <span id="moneyVisibilityLabel">Ocultar montos</span>
+        </button>
         <button class="ghost" id="logout">Cerrar sesión</button>
       </div>
     </div>
@@ -552,7 +631,13 @@
       </div>
       <div>
         <label for="password">Contraseña</label>
-        <input id="password" type="password" autocomplete="current-password" required>
+        <div class="password-input-wrap">
+          <input id="password" type="password" autocomplete="current-password" required>
+          <button class="password-visibility-toggle visibility-toggle" id="passwordVisibilityToggle" type="button" aria-controls="password" aria-pressed="false" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+            <svg class="visibility-on-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="visibility-off-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.2A11.5 11.5 0 0 1 12 6c6.5 0 10 6 10 6s-1.1 1.9-3.2 3.6M6.6 6.6C3.6 8.4 2 12 2 12s3.5 6 10 6c1.4 0 2.6-.3 3.7-.7"/><path d="M10.1 10.1a3 3 0 0 0 3.8 3.8"/></svg>
+          </button>
+        </div>
       </div>
       <button class="primary" id="login" type="submit">Iniciar sesión</button>
       <button class="ghost" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
@@ -685,7 +770,7 @@
       <div class="panel">
         <div class="section-head">
           <h2>Tus Tiendas</h2>
-          <p class="muted" style="margin:4px 0 0">Puedes tener varias tiendas separadas bajo tu cuenta, cada una con su propio link y catálogo de productos.</p>
+          <p class="muted" style="margin:4px 0 0">Cada tienda mantiene su propio enlace y catálogo.</p>
         </div>
         <form class="inline" id="createStoreForm">
           <div><label>Nombre de la tienda nueva</label><input name="name" placeholder="Mi Tienda de Ropa" required></div>
@@ -703,7 +788,7 @@
       <div class="panel">
         <div class="section-head">
           <h2>Categorías</h2>
-          <p class="muted" style="margin:4px 0 0">Agrupa tus productos y decide el orden exacto que verán tus clientes: comida, bebidas, postres o como prefieras.</p>
+          <p class="muted" style="margin:4px 0 0">Agrupa y ordena lo que ven tus clientes.</p>
         </div>
         <form class="inline" id="categoryForm">
           <div><label>Nombre de categoría</label><input name="name" placeholder="Bebidas" required maxlength="60"></div>
@@ -721,18 +806,18 @@
       <div class="panel">
         <div class="section-head">
           <h2>Productos</h2>
-          <p class="muted" style="margin:4px 0 0">Crea un producto. Todos los productos de una tienda comparten el mismo link y tus clientes pueden comprar varios en un solo pago.</p>
+          <p class="muted" style="margin:4px 0 0">Administra el catálogo de la tienda seleccionada.</p>
         </div>
         <p class="current-store-banner" id="currentStoreBanner">
           Link de <strong id="currentStoreLabel">esta tienda</strong>:
           <input readonly id="currentStoreLink" onclick="this.select()">
           <button class="ghost" type="button" id="copyCurrentStoreLink">Copiar</button>
         </p>
-        <section class="inventory-importer" aria-labelledby="inventoryImportTitle">
+        <section class="inventory-importer" id="inventoryImporter" aria-labelledby="inventoryImportTitle">
           <div class="inventory-import-head">
             <div>
               <h3 id="inventoryImportTitle">Importar inventario</h3>
-              <p class="muted">Carga muchos productos desde un CSV y empareja sus fotos por nombre de archivo. Admite precio, categoría, stock, descripción, etiquetas, color y tamaños con precio y stock propios.</p>
+              <p class="muted">Carga un CSV y empareja sus fotos por nombre de archivo.</p>
             </div>
             <button class="ghost" type="button" id="inventoryTemplateDownload">Descargar plantilla CSV</button>
           </div>
@@ -767,7 +852,7 @@
         </section>
         <form class="inline" id="paymentLinkForm">
           <div><label>¿Qué estás vendiendo?</label><input name="name" placeholder="Corte de cabello" required></div>
-          <div><label>Descripción (opcional)</label><input name="description" placeholder="Incluye lavado y peinado"></div>
+          <div><label>Descripción para la página del producto</label><input name="description" placeholder="Incluye lavado y peinado"></div>
           <div id="paymentLinkBasePrice"><label>Precio (Bs)</label><input name="amount" type="number" step="0.01" min="0.01" placeholder="50.00" required></div>
           <div><label for="paymentLinkColor">Color (opcional)</label><input id="paymentLinkColor" name="color" type="color" value="#1d4ed8"></div>
           <div><label>Etiquetas (opcional, separadas por coma)</label><input name="tags" placeholder="Nuevo, Popular"></div>
@@ -777,7 +862,7 @@
               <input type="checkbox" id="paymentLinkOptionsToggle">
               <label for="paymentLinkOptionsToggle" style="margin:0;color:var(--pg-text)">Este producto tiene opciones</label>
             </span>
-            <span class="faint">Para tamaños o presentaciones con precios distintos.</span>
+            <span class="faint">Los tipos aparecerán para elegir en la página del producto.</span>
           </div>
           <div class="product-options-panel" id="paymentLinkOptionsPanel" hidden>
             <p class="product-options-copy faint">Agrega entre 2 y 8 opciones. Cada tamaño puede tener su propio precio y stock; deja el stock vacío si esa opción es ilimitada.</p>
@@ -789,8 +874,9 @@
             <select id="paymentLinkCategory" name="categoryId"><option value="">Sin categoría</option></select>
           </div>
           <div>
-            <label for="paymentLinkImages">Fotos (opcional, hasta 6)</label>
+            <label for="paymentLinkImages">Galería del producto (hasta 6 fotos)</label>
             <input id="paymentLinkImages" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+            <span class="faint">La primera será la portada; las demás aparecerán en su página.</span>
           </div>
           <div class="image-gallery-preview" id="paymentLinkImagesPreview"></div>
           <button class="primary" type="submit" id="paymentLinkSubmit">Crear producto</button>
@@ -809,6 +895,70 @@
           <h2>Datos y apariencia de la tienda</h2>
           <p class="muted" style="margin:4px 0 0">Edita tu marca y mira el resultado antes de guardar.</p>
         </div>
+        <section class="visual-onboarding" id="visualOnboarding" aria-labelledby="visualOnboardingTitle">
+          <div class="visual-onboarding-head">
+            <div>
+              <h3 id="visualOnboardingTitle">Crea el look de tu tienda con tus propias fotos</h3>
+              <p>Sube tus fotos y elige entre tres propuestas editables.</p>
+              <span class="visual-safety-note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Nada cambia hasta que apruebes una propuesta.
+              </span>
+            </div>
+            <button type="button" class="ghost inline-section-toggle" id="visualAssistantToggle">Mostrar IA</button>
+          </div>
+          <ol class="visual-progress" id="visualProgress" aria-label="Progreso del asistente visual">
+            <li class="is-active" data-step="1"><span>1</span> Tus imágenes</li>
+            <li data-step="2"><span>2</span> Preparando</li>
+            <li data-step="3"><span>3</span> Elige y aprueba</li>
+          </ol>
+          <div class="visual-step" id="visualStep1">
+            <div class="visual-input-grid">
+              <div>
+                <label for="visualBusinessCategory">¿Qué vendes?</label>
+                <input id="visualBusinessCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil">
+              </div>
+              <div>
+                <label for="visualPersonality">¿Cómo quieres sentirte?</label>
+                <select id="visualPersonality">
+                  <option value="">Déjame sorprender</option>
+                  <option value="warm">Cálida y artesanal</option>
+                  <option value="bold">Audaz y enérgica</option>
+                  <option value="minimal">Limpia y minimal</option>
+                  <option value="elegant">Elegante y serena</option>
+                  <option value="playful">Alegre y cercana</option>
+                </select>
+              </div>
+              <div class="visual-upload-zone">
+                <label for="visualSourceInput">Fotos originales</label>
+                <p>Usa fotos claras del producto, espacio, equipo o proceso. JPG, PNG o WEBP; máximo 8 MB por imagen.</p>
+                <input id="visualSourceInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                <div class="visual-source-previews" id="visualSourcePreviews"></div>
+              </div>
+            </div>
+            <div class="visual-actions">
+              <button type="button" class="primary" id="visualGenerate" disabled>Crear 3 propuestas</button>
+              <p class="faint" id="visualSourceStatus" role="status">Agrega al menos una imagen para empezar.</p>
+            </div>
+          </div>
+          <div class="visual-step" id="visualStep2" hidden>
+            <div class="visual-generating">
+              <span class="visual-generating-mark" aria-hidden="true"></span>
+              <div><strong>Diseñando tres apariencias completas</strong><p>Estamos analizando tus fotos y definiendo paleta, tipografía, secciones, botones e imagen principal. Tus productos y originales no se modifican.</p></div>
+            </div>
+          </div>
+          <div class="visual-step" id="visualStep3" hidden>
+            <div class="visual-proposals" id="visualProposals"></div>
+            <div class="visual-actions">
+              <button type="button" class="ghost" id="visualStartOver">Crear propuestas nuevas</button>
+              <p class="faint" id="visualProposalStatus" role="status"></p>
+            </div>
+          </div>
+          <details class="visual-history" id="visualHistory" hidden>
+            <summary>Versiones anteriores</summary>
+            <div class="visual-history-list" id="visualHistoryList"></div>
+          </details>
+        </section>
         <div class="store-studio">
           <form class="store-editor" id="storeSettingsForm">
             <div class="store-editor-section">
@@ -832,7 +982,7 @@
                 <div class="hero-slides-head">
                   <div>
                     <strong>Slider principal</strong>
-                    <p class="faint">Sube hasta 5 imágenes, GIFs o videos. Cada slide puede llevar título, texto y un botón; el orden de esta lista es el orden público.</p>
+                    <p class="faint">Hasta 5 imágenes, GIFs o videos con texto y botón opcionales.</p>
                   </div>
                   <div class="hero-slide-upload">
                     <input id="storeHeroSlidesInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" multiple>
@@ -849,18 +999,17 @@
             <div class="store-editor-section">
               <div class="editor-section-head">
                 <h3>Contenido y orden</h3>
-                <p>Decide qué ve primero un cliente. El encabezado con el nombre de la tienda siempre permanece arriba.</p>
+                <p>Ordena las secciones públicas de la tienda.</p>
               </div>
               <div class="full">
                 <label>Jerarquía de secciones</label>
-                <p class="faint" style="margin:0 0 9px">Usa las flechas para ordenar slider, productos, historia, galería y redes sociales.</p>
                 <div class="store-content-order" id="storeContentOrderList"></div>
               </div>
               <div class="editorial-gallery-editor full">
                 <div class="editorial-gallery-head">
                   <div>
                     <strong>Fotos editoriales</strong>
-                    <p class="faint">Imágenes que cuentan algo sobre tu tienda sin convertirse en productos. El texto aparece debajo de cada foto.</p>
+                    <p class="faint">Fotos de marca con texto debajo.</p>
                   </div>
                   <div class="editorial-gallery-upload">
                     <input id="storeEditorialGalleryInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
@@ -877,7 +1026,7 @@
             <div class="store-editor-section">
               <div class="editor-section-head">
                 <h3>Estilo</h3>
-                <p>Elige el material, el color y la forma de tus controles. La vista previa cambia al instante.</p>
+                <p>Color, tipografía, fondo y botones.</p>
               </div>
               <div>
                 <label for="storeBoardTexture">Material de fondo</label>
@@ -931,19 +1080,27 @@
               </div>
               <div><label for="storeBackgroundColor">Color de carga</label><input id="storeBackgroundColor" name="backgroundColor" type="color" value="#f8fafc"></div>
               <div class="brand-upload full">
-                <div><label for="storeBackgroundImageInput">Foto de fondo (opcional)</label><input id="storeBackgroundImageInput" type="file" accept="image/png,image/jpeg,image/webp"></div>
+                <div>
+                  <label for="storeBackgroundImageInput">Foto de fondo (opcional)</label>
+                  <input id="storeBackgroundImageInput" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="storeBackgroundImageQuality storeBackgroundImageHint">
+                  <p class="background-image-quality" id="storeBackgroundImageQuality" data-quality="empty" aria-live="polite">Sin foto de fondo.</p>
+                </div>
                 <img class="image-preview" id="storeBackgroundImagePreview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Vista previa de la imagen de fondo">
                 <button type="button" class="ghost" id="storeBackgroundImageRemoveBtn" style="display:none">Quitar fondo</button>
               </div>
-              <p class="faint full" style="margin:0">Una foto reemplaza el material. Sin foto, el color de carga solo aparece brevemente mientras abre la tienda.</p>
+              <p class="faint full" id="storeBackgroundImageHint" style="margin:0">Una foto reemplaza el material. Para verla nítida en pantallas Retina, usa al menos 2880 × 1800 px y máximo 8 MB; conservamos el archivo original sin comprimirlo. Sin foto, el color de carga solo aparece brevemente mientras abre la tienda.</p>
             </div>
 
             <div class="store-editor-section">
               <div class="editor-section-head">
                 <h3>Mensaje y contacto</h3>
-                <p>Ayuda a tus clientes a entender tu marca y encontrarte después de comprar.</p>
+                <p>Anuncios, promoción, historia y soporte.</p>
               </div>
-              <div class="full"><label for="storeAnnouncementInput">Anuncio (opcional)</label><input id="storeAnnouncementInput" maxlength="160" placeholder="Envío gratis desde Bs 200"></div>
+              <div class="full">
+                <label for="storeAnnouncementInput">Anuncio (opcional)</label>
+                <input id="storeAnnouncementInput" maxlength="160" placeholder="MATCHA GREEN • MATCHA STRAWBERRY • MATCHA BLACK">
+                <p class="faint" style="margin:6px 0 0">En Marquesina, separa varias frases con • para crear una cinta continua.</p>
+              </div>
               <div>
                 <label for="storeAnnouncementMode">Movimiento del anuncio</label>
                 <select id="storeAnnouncementMode">
@@ -952,6 +1109,15 @@
                 </select>
               </div>
               <div><label for="storeAnnouncementSpeed">Duración de una vuelta (segundos)</label><input id="storeAnnouncementSpeed" type="number" min="8" max="40" step="1" value="18"></div>
+              <div>
+                <label for="storeAnnouncementSize">Tamaño del anuncio</label>
+                <select id="storeAnnouncementSize">
+                  <option value="small">Pequeño</option>
+                  <option value="medium" selected>Mediano</option>
+                  <option value="large">Grande</option>
+                </select>
+              </div>
+              <div><label for="storeAnnouncementColor">Color del anuncio</label><input id="storeAnnouncementColor" type="color" value="#c58b3c"></div>
               <div class="editor-feature" id="storePromotionEditor" aria-disabled="true">
                 <div class="editor-feature-head">
                   <strong>Promoción emergente</strong>
@@ -975,7 +1141,7 @@
               <div class="brand-upload full">
                 <div>
                   <label for="storeAboutImageInput">Fondo de Nuestra historia (opcional)</label>
-                  <p class="faint" id="storeAboutImageHelp">Aparece detrás del texto cuando hayas escrito tu historia. Sin foto, la sección queda completamente plana; puedes reemplazarla cuando quieras.</p>
+                  <p class="faint" id="storeAboutImageHelp">Aparece detrás del texto de tu historia.</p>
                   <input id="storeAboutImageInput" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="storeAboutImageHelp">
                 </div>
                 <img class="image-preview" id="storeAboutImagePreview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Vista previa del fondo de Nuestra historia">
@@ -1121,39 +1287,12 @@
   });
   setDashboardTheme(document.documentElement.dataset.dashboardTheme, false);
 
-  function installCustomPointer() {
-    if (typeof window.matchMedia !== "function" || !window.matchMedia("(pointer: fine)").matches) return;
-    const cursorValue = getComputedStyle(document.documentElement).getPropertyValue("--pg-hand-cursor");
-    const imageMatch = cursorValue.match(/url\(["']?([^"')]+)["']?\)/);
-    if (!imageMatch) return;
-
-    const pointer = document.createElement("span");
-    pointer.className = "pg-custom-pointer";
-    pointer.setAttribute("aria-hidden", "true");
-    pointer.style.backgroundImage = `url("${imageMatch[1]}")`;
-    document.body.append(pointer);
-    document.documentElement.classList.add("has-pg-custom-pointer");
-
-    document.addEventListener("pointermove", (event) => {
-      if (event.pointerType && event.pointerType !== "mouse") return;
-      pointer.style.setProperty("--pointer-x", `${event.clientX - 5}px`);
-      pointer.style.setProperty("--pointer-y", `${event.clientY - 2}px`);
-      pointer.classList.add("is-visible");
-    }, { passive: true });
-    document.addEventListener("pointerdown", (event) => {
-      if (!event.pointerType || event.pointerType === "mouse") pointer.classList.add("is-pressing");
-    }, { passive: true });
-    const releasePointer = () => pointer.classList.remove("is-pressing");
-    document.addEventListener("pointerup", releasePointer, { passive: true });
-    document.addEventListener("pointercancel", releasePointer, { passive: true });
-    document.documentElement.addEventListener("mouseleave", () => pointer.classList.remove("is-visible"));
-    window.addEventListener("blur", releasePointer);
-  }
-  installCustomPointer();
-
   const apiBaseEl = document.getElementById("apiBase");
   const emailEl = document.getElementById("email");
   const passwordEl = document.getElementById("password");
+  const passwordVisibilityToggleEl = document.getElementById("passwordVisibilityToggle");
+  const moneyVisibilityToggleEl = document.getElementById("moneyVisibilityToggle");
+  const moneyVisibilityLabelEl = document.getElementById("moneyVisibilityLabel");
   const errorEl = document.getElementById("error");
   const infoEl = document.getElementById("info");
   const appEl = document.getElementById("app");
@@ -1169,6 +1308,16 @@
   checkoutOriginEl.value = sessionStorage.getItem("pagosya_checkout_origin") || checkoutOriginEl.value;
   let lastPaymentLinks = [];
   let lastPayments = [];
+  let lastPayouts = [];
+  let lastFinances = null;
+  let lastPayableBalance = null;
+  const MONEY_VISIBILITY_KEY = "pagosya_dashboard_hide_money";
+  let monetaryValuesHidden = false;
+  try {
+    monetaryValuesHidden = localStorage.getItem(MONEY_VISIBILITY_KEY) === "true";
+  } catch {
+    // Keep the control usable for this visit if browser storage is unavailable.
+  }
   let paymentStatusFilter = "active";
   let paymentPage = 1;
   const PAYMENT_PAGE_SIZE = 20;
@@ -1177,6 +1326,7 @@
   let draggedCategoryId = null;
   let categoryOrderSaveTimer = null;
   let categoryOrderSaveVersion = 0;
+  let dashboardRefreshVersion = 0;
   let currentStoreId = sessionStorage.getItem("pagosya_current_store_id") || null;
   const DEFAULT_OPEN_SECTIONS = new Set(["storesSection", "paymentLinksSection"]);
   const dashboardSections = new Map();
@@ -1222,7 +1372,83 @@
     });
   }
 
+  const COLLAPSE_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function savedExpandedState(key, fallback) {
+    const saved = localStorage.getItem(key);
+    return saved === null ? fallback : saved === "true";
+  }
+
+  function initInlineCollapsible(sectionId, headSelector, toggleId, storageKey, label, defaultExpanded) {
+    const section = document.getElementById(sectionId);
+    const head = section?.querySelector(headSelector);
+    const toggle = document.getElementById(toggleId);
+    if (!section || !head || !toggle) return;
+
+    const body = document.createElement("div");
+    body.className = "nested-section-body";
+    body.id = `${sectionId}Body`;
+    while (head.nextSibling) body.appendChild(head.nextSibling);
+    section.appendChild(body);
+    toggle.classList.add("inline-section-toggle");
+    toggle.setAttribute("aria-controls", body.id);
+
+    const setExpanded = (expanded, remember = true) => {
+      body.hidden = !expanded;
+      section.classList.toggle("is-collapsed", !expanded);
+      toggle.setAttribute("aria-expanded", String(expanded));
+      toggle.setAttribute("aria-label", `${expanded ? "Ocultar" : "Mostrar"} ${label}`);
+      toggle.innerHTML = `<span>${expanded ? "Ocultar" : "Mostrar"}</span>${COLLAPSE_CHEVRON}`;
+      if (remember) localStorage.setItem(storageKey, String(expanded));
+    };
+
+    setExpanded(savedExpandedState(storageKey, defaultExpanded), false);
+    toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
+  }
+
+  function initStoreEditorSections() {
+    document.querySelectorAll(".store-editor-section").forEach((section, index) => {
+      const head = section.querySelector(":scope > .editor-section-head");
+      const title = head?.querySelector("h3")?.textContent?.trim();
+      if (!head || !title) return;
+
+      const body = document.createElement("div");
+      body.className = "store-editor-section-body";
+      body.id = `storeEditorSectionBody${index + 1}`;
+      while (head.nextSibling) body.appendChild(head.nextSibling);
+      section.appendChild(body);
+
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "ghost editor-section-toggle";
+      toggle.setAttribute("aria-controls", body.id);
+      toggle.innerHTML = COLLAPSE_CHEVRON;
+      head.appendChild(toggle);
+
+      const storageKey = `pagosya_store_editor_section_${index + 1}`;
+      const setExpanded = (expanded, remember = true) => {
+        body.hidden = !expanded;
+        section.classList.toggle("is-expanded", expanded);
+        toggle.setAttribute("aria-expanded", String(expanded));
+        toggle.setAttribute("aria-label", `${expanded ? "Ocultar" : "Mostrar"} ${title}`);
+        toggle.title = `${expanded ? "Ocultar" : "Mostrar"} ${title}`;
+        if (remember) localStorage.setItem(storageKey, String(expanded));
+      };
+
+      setExpanded(savedExpandedState(storageKey, index === 0), false);
+      toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
+    });
+  }
+
   initDashboardSections();
+  initInlineCollapsible("visualOnboarding", ".visual-onboarding-head", "visualAssistantToggle", "pagosya_visual_assistant_expanded", "asistente de IA", false);
+  const inventoryToggle = document.createElement("button");
+  inventoryToggle.type = "button";
+  inventoryToggle.id = "inventoryImporterToggle";
+  inventoryToggle.className = "ghost inline-section-toggle";
+  document.querySelector(".inventory-import-head")?.appendChild(inventoryToggle);
+  initInlineCollapsible("inventoryImporter", ".inventory-import-head", "inventoryImporterToggle", "pagosya_inventory_importer_expanded", "importador de inventario", false);
+  initStoreEditorSections();
   checkoutOriginEl.addEventListener("change", () => {
     sessionStorage.setItem("pagosya_checkout_origin", checkoutOriginEl.value);
     renderCurrentStoreBanner();
@@ -1231,7 +1457,9 @@
   // Payment Links: cada foto se sube de inmediato a POST /uploads al elegirla;
   // el formulario solo manda las rutas ("/v1/uploads/...") que devuelve —
   // pendingImageUrls es la galería completa, primera entrada = foto de portada.
-  const MAX_IMAGE_BYTES = 3_000_000;
+  const MAX_IMAGE_BYTES = 8_000_000;
+  const BACKGROUND_TARGET_WIDTH = 2880;
+  const BACKGROUND_TARGET_HEIGHT = 1800;
   const MAX_GIF_BYTES = 8_000_000;
   const MAX_VIDEO_BYTES = 20_000_000;
   const MAX_GALLERY_IMAGES = 6;
@@ -1256,6 +1484,9 @@
   const inventoryImportStatusEl = document.getElementById("inventoryImportStatus");
   const inventoryCommitEl = document.getElementById("inventoryCommit");
   let preparedInventoryRows = [];
+  let preparedInventoryStoreId = null;
+  let inventoryImportInProgress = false;
+  let inventoryImportVersion = 0;
 
   function renderProductVariants() {
     const enabled = paymentLinkOptionsToggleEl.checked;
@@ -1336,7 +1567,7 @@
         break;
       }
       if (file.size > MAX_IMAGE_BYTES) {
-        errorEl.textContent = "Error: cada foto no puede pesar más de 3MB";
+        errorEl.textContent = "Error: cada foto no puede pesar más de 8MB";
         errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
         continue;
       }
@@ -1365,6 +1596,7 @@
   const storeBackgroundImageInputEl = document.getElementById("storeBackgroundImageInput");
   const storeBackgroundImagePreviewEl = document.getElementById("storeBackgroundImagePreview");
   const storeBackgroundImageRemoveBtnEl = document.getElementById("storeBackgroundImageRemoveBtn");
+  const storeBackgroundImageQualityEl = document.getElementById("storeBackgroundImageQuality");
   const storeTaglineInputEl = document.getElementById("storeTaglineInput");
   const storeBackgroundColorEl = document.getElementById("storeBackgroundColor");
   const storeContactPhoneInputEl = document.getElementById("storeContactPhoneInput");
@@ -1376,6 +1608,8 @@
   const storeAnnouncementInputEl = document.getElementById("storeAnnouncementInput");
   const storeAnnouncementModeEl = document.getElementById("storeAnnouncementMode");
   const storeAnnouncementSpeedEl = document.getElementById("storeAnnouncementSpeed");
+  const storeAnnouncementSizeEl = document.getElementById("storeAnnouncementSize");
+  const storeAnnouncementColorEl = document.getElementById("storeAnnouncementColor");
   const storePromotionEditorEl = document.getElementById("storePromotionEditor");
   const storePromotionEnabledEl = document.getElementById("storePromotionEnabled");
   const storePromotionTitleEl = document.getElementById("storePromotionTitle");
@@ -1401,6 +1635,19 @@
   const previewOpenEl = document.getElementById("previewOpen");
   const previewDesktopEl = document.getElementById("previewDesktop");
   const previewMobileEl = document.getElementById("previewMobile");
+  const visualProgressEl = document.getElementById("visualProgress");
+  const visualStepEls = [document.getElementById("visualStep1"), document.getElementById("visualStep2"), document.getElementById("visualStep3")];
+  const visualSourceInputEl = document.getElementById("visualSourceInput");
+  const visualSourcePreviewsEl = document.getElementById("visualSourcePreviews");
+  const visualSourceStatusEl = document.getElementById("visualSourceStatus");
+  const visualGenerateEl = document.getElementById("visualGenerate");
+  const visualProposalsEl = document.getElementById("visualProposals");
+  const visualProposalStatusEl = document.getElementById("visualProposalStatus");
+  const visualHistoryEl = document.getElementById("visualHistory");
+  const visualHistoryListEl = document.getElementById("visualHistoryList");
+  let visualSourceFiles = [];
+  let visualProposals = [];
+  let visualVersions = [];
   let pendingLogoUrl = null;
   let pendingBannerUrl = null;
   let pendingBackgroundImageUrl = null;
@@ -1416,6 +1663,7 @@
   };
   let pendingContentOrder = [...DEFAULT_STORE_CONTENT_ORDER];
   let pendingEditorialGallery = [];
+  const DEFAULT_EDITORIAL_BOX_COLOR = "#f4ead7";
   let storeSettingsDirty = false;
   let previewPostTimer = null;
   let previewReadyTimer = null;
@@ -1425,6 +1673,19 @@
   // y se guardan todos juntos vía PUT /stores/:id/links al guardar la tienda.
   let pendingStoreLinks = [];
   const MAX_STORE_LINKS = 8;
+
+  function editorialBoxColor(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value).toLowerCase() : DEFAULT_EDITORIAL_BOX_COLOR;
+  }
+
+  function editorialBoxInk(value) {
+    const color = editorialBoxColor(value);
+    const channels = [1, 3, 5].map((offset) => parseInt(color.slice(offset, offset + 2), 16) / 255);
+    const [red, green, blue] = channels.map((channel) =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+    );
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue >= 0.179 ? "#000000" : "#ffffff";
+  }
 
   storeAccentToggleEl.addEventListener("change", () => {
     storeAccentColorEl.disabled = !storeAccentToggleEl.checked;
@@ -1462,6 +1723,8 @@
       announcement: storeAnnouncementInputEl.value || null,
       announcementMode: storeAnnouncementModeEl.value,
       announcementSpeed: Number(storeAnnouncementSpeedEl.value) || 18,
+      announcementSize: storeAnnouncementSizeEl.value,
+      announcementColor: storeAnnouncementColorEl.value,
       promotionEnabled: storePromotionEnabledEl.checked,
       promotionTitle: storePromotionTitleEl.value || null,
       promotionBody: storePromotionBodyEl.value || null,
@@ -1475,7 +1738,11 @@
         ctaUrl: slide.ctaUrl.trim(),
       })),
       contentOrder: [...pendingContentOrder],
-      editorialGallery: pendingEditorialGallery.map((image) => ({ imageUrl: image.imageUrl, caption: image.caption.trim() })),
+      editorialGallery: pendingEditorialGallery.map((image) => ({
+        imageUrl: image.imageUrl,
+        caption: image.caption.trim(),
+        boxColor: editorialBoxColor(image.boxColor),
+      })),
       accentColor: storeAccentToggleEl.checked ? storeAccentColorEl.value : null,
       fontStyle: storeFontStyleEl.value,
       buttonStyle: storeButtonStyleEl.value,
@@ -1503,6 +1770,128 @@
       { type: "PAGOSYA_STORE_PREVIEW", patch: currentStorePreviewPatch() },
       targetOrigin,
     );
+  }
+
+  function postVisualPreview(config) {
+    if (!currentStoreId || !storePreviewFrameEl.contentWindow) return;
+    let targetOrigin = "*";
+    try { targetOrigin = new URL(storePreviewFrameEl.src).origin; } catch {}
+    storePreviewFrameEl.contentWindow.postMessage(
+      { type: "PAGOSYA_STORE_PREVIEW", patch: { ...currentStorePreviewPatch(), ...(config || {}) } },
+      targetOrigin,
+    );
+    storePreviewStageEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function setVisualStep(step) {
+    visualStepEls.forEach((element, index) => (element.hidden = index + 1 !== step));
+    visualProgressEl.querySelectorAll("li").forEach((item) => item.classList.toggle("is-active", Number(item.dataset.step) <= step));
+  }
+
+  function renderVisualSources() {
+    visualSourcePreviewsEl.innerHTML = visualSourceFiles.map((file, index) => {
+      if (!file.previewUrl) file.previewUrl = URL.createObjectURL(file);
+      return `<div class="visual-source-thumb"><img src="${esc(file.previewUrl)}" alt="${esc(file.name)}"><button type="button" data-index="${index}" aria-label="Quitar ${esc(file.name)}">×</button></div>`;
+    }).join("");
+    visualSourcePreviewsEl.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
+      const [removed] = visualSourceFiles.splice(Number(button.dataset.index), 1);
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      renderVisualSources();
+    }));
+    visualGenerateEl.disabled = visualSourceFiles.length === 0;
+    visualSourceStatusEl.textContent = visualSourceFiles.length
+      ? `${visualSourceFiles.length} ${visualSourceFiles.length === 1 ? "imagen lista" : "imágenes listas"}. Los originales quedarán guardados por separado.`
+      : "Agrega al menos una imagen para empezar. Al continuar, autorizas su procesamiento por el proveedor de IA configurado; pagosYa conserva tus originales.";
+  }
+
+  function proposalImageUrl(proposal) {
+    const config = proposal.config || {};
+    return config.bannerUrl || config.heroSlides?.[0]?.imageUrl || proposal.sourceAssetUrls?.[0] || "";
+  }
+
+  function renderVisualStudio() {
+    const visible = visualProposals.filter((proposal) => proposal.status !== "DISMISSED");
+    if (visible.length) {
+      setVisualStep(3);
+      visualProposalsEl.innerHTML = visible.map((proposal) => {
+        const config = proposal.config || {};
+        const imageUrl = proposalImageUrl(proposal);
+        const applied = proposal.status === "APPLIED";
+        return `<article class="visual-proposal" data-id="${esc(proposal.id)}">
+          <img src="${esc(apiRoot() + imageUrl)}" alt="Vista de ${esc(proposal.title)}">
+          <div class="visual-proposal-copy">
+            <strong>${esc(proposal.title)}${applied ? " · En uso" : ""}</strong>
+            <p>${esc(proposal.rationale)}</p>
+            <div class="visual-proposal-meta">
+              <span class="visual-swatch" style="background:${esc(config.backgroundColor || "#f8fafc")}" title="Fondo"></span>
+              <span class="visual-swatch" style="background:${esc(config.accentColor || "#4f46e5")}" title="Acento"></span>
+              <span>${esc(config.fontStyle || "mono")} · ${esc(config.boardTexture || "chalkboard")} · ${proposal.provider?.includes("+") ? "apariencia e imagen con IA" : proposal.provider?.startsWith("openai:") ? "apariencia asistida por IA" : "composición local"}</span>
+            </div>
+          </div>
+          <div class="visual-proposal-actions">
+            <button type="button" class="ghost visual-preview-proposal">Vista previa</button>
+            <button type="button" class="primary visual-apply-proposal" ${applied ? "disabled" : ""}>${applied ? "Aplicada" : "Usar propuesta"}</button>
+          </div>
+        </article>`;
+      }).join("");
+      visualProposalsEl.querySelectorAll(".visual-proposal").forEach((row) => {
+        const proposal = visible.find((item) => item.id === row.dataset.id);
+        row.querySelector(".visual-preview-proposal").addEventListener("click", () => {
+          postVisualPreview(proposal.config);
+          visualProposalStatusEl.textContent = `Vista previa: ${proposal.title}. La tienda publicada no cambió.`;
+        });
+        row.querySelector(".visual-apply-proposal").addEventListener("click", async (event) => {
+          const button = event.currentTarget;
+          setButtonBusy(button, true, "Aplicando…");
+          try {
+            await api(`/stores/${currentStoreId}/visual-proposals/${proposal.id}/apply`, { method: "POST" });
+            await refresh();
+            infoEl.textContent = `“${proposal.title}” ya está aplicada. Guardamos la versión anterior para que puedas volver.`;
+          } catch (err) {
+            errorEl.textContent = "No se pudo aplicar la propuesta: " + err.message;
+          } finally {
+            setButtonBusy(button, false, "Usar propuesta");
+          }
+        });
+      });
+    } else {
+      setVisualStep(1);
+    }
+
+    visualHistoryEl.hidden = visualVersions.length === 0;
+    visualHistoryListEl.innerHTML = visualVersions.map((version) => `<div class="visual-version" data-id="${esc(version.id)}"><span>${esc(version.label)} · ${esc(new Date(version.createdAt).toLocaleString())}</span><button type="button" class="ghost">Restaurar</button></div>`).join("");
+    visualHistoryListEl.querySelectorAll(".visual-version").forEach((row) => row.querySelector("button").addEventListener("click", async () => {
+      if (!confirm("¿Restaurar esta apariencia? La apariencia actual también quedará guardada para poder volver.")) return;
+      const button = row.querySelector("button");
+      setButtonBusy(button, true, "Restaurando…");
+      try {
+        await api(`/stores/${currentStoreId}/visual-versions/${row.dataset.id}/restore`, { method: "POST" });
+        await refresh();
+        infoEl.textContent = "Apariencia restaurada. También guardamos la versión que acabas de reemplazar.";
+      } catch (err) {
+        errorEl.textContent = "No se pudo restaurar la versión: " + err.message;
+      } finally {
+        setButtonBusy(button, false, "Restaurar");
+      }
+    }));
+  }
+
+  async function loadVisualStudioState(storeId = currentStoreId) {
+    if (!storeId) {
+      visualProposals = [];
+      visualVersions = [];
+      renderVisualStudio();
+      return;
+    }
+    try {
+      const state = await api(`/stores/${storeId}/visual-studio`);
+      if (storeId !== currentStoreId) return;
+      visualProposals = state.proposals || [];
+      visualVersions = state.versions || [];
+      renderVisualStudio();
+    } catch (err) {
+      visualProposalStatusEl.textContent = "No pudimos cargar las propuestas anteriores: " + err.message;
+    }
   }
 
   function scheduleStorePreview() {
@@ -1582,6 +1971,62 @@
   previewDesktopEl.addEventListener("click", () => setPreviewDevice(false));
   previewMobileEl.addEventListener("click", () => setPreviewDevice(true));
   setPreviewDevice(window.matchMedia("(max-width: 640px)").matches);
+
+  document.getElementById("visualStartOver").addEventListener("click", () => {
+    visualProposalStatusEl.textContent = "";
+    setVisualStep(1);
+  });
+  visualSourceInputEl.addEventListener("change", () => {
+    errorEl.textContent = "";
+    const incoming = [...visualSourceInputEl.files];
+    visualSourceInputEl.value = "";
+    for (const file of incoming) {
+      if (visualSourceFiles.length >= 8) break;
+      if (!new Set(["image/png", "image/jpeg", "image/webp"]).has(file.type)) {
+        errorEl.textContent = `${file.name} no es JPG, PNG o WEBP.`;
+        continue;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        errorEl.textContent = `${file.name} supera el máximo de 8 MB.`;
+        continue;
+      }
+      visualSourceFiles.push(file);
+    }
+    renderVisualSources();
+  });
+  visualGenerateEl.addEventListener("click", async () => {
+    if (!currentStoreId || visualSourceFiles.length === 0) return;
+    errorEl.textContent = "";
+    setVisualStep(2);
+    visualGenerateEl.disabled = true;
+    try {
+      const assetUrls = [];
+      for (let index = 0; index < visualSourceFiles.length; index++) {
+        visualSourceStatusEl.textContent = `Guardando original ${index + 1} de ${visualSourceFiles.length}…`;
+        assetUrls.push(await uploadFile(visualSourceFiles[index]));
+      }
+      visualSourceStatusEl.textContent = "Creando propuestas…";
+      const result = await api(`/stores/${currentStoreId}/visual-proposals`, {
+        method: "POST",
+        body: JSON.stringify({
+          assetUrls,
+          businessCategory: document.getElementById("visualBusinessCategory").value.trim() || undefined,
+          personality: document.getElementById("visualPersonality").value || undefined,
+        }),
+      });
+      visualProposals = [...(result.proposals || []), ...visualProposals];
+      renderVisualStudio();
+      visualProposalStatusEl.textContent = result.mode === "ai"
+        ? "Las imágenes fueron compuestas con IA. Revisa cada vista antes de aplicar."
+        : "Modo local activo: creamos tres direcciones con tus originales. Agrega OPENAI_API_KEY para generar nuevas composiciones fotográficas.";
+    } catch (err) {
+      setVisualStep(1);
+      errorEl.textContent = "No se pudieron crear las propuestas: " + err.message;
+    } finally {
+      visualGenerateEl.disabled = visualSourceFiles.length === 0;
+    }
+  });
+  renderVisualSources();
 
   storeSettingsFormEl.addEventListener("input", () => {
     setStoreSettingsDirty(true);
@@ -1665,24 +2110,50 @@
       return;
     }
     storeEditorialGalleryListEl.innerHTML = pendingEditorialGallery
-      .map(
-        (image, index) => `<article class="editorial-gallery-row" data-index="${index}">
-          <img src="${esc(apiRoot() + image.imageUrl)}" alt="Vista previa de foto editorial ${index + 1}">
+      .map((image, index) => {
+        const boxColor = editorialBoxColor(image.boxColor);
+        const caption = image.caption.trim();
+        return `<article class="editorial-gallery-row" data-index="${index}">
+          <figure class="editorial-card-preview" style="--editorial-card-bg:${boxColor};--editorial-card-ink:${editorialBoxInk(boxColor)}">
+            <img src="${esc(apiRoot() + image.imageUrl)}" alt="Vista previa de foto editorial ${index + 1}">
+            <figcaption class="${caption ? "" : "is-placeholder"}">${esc(caption || "Tu texto aparecerá aquí.")}</figcaption>
+          </figure>
           <div class="editorial-gallery-fields">
             <div><label for="editorialCaption${index}">Texto debajo de la foto</label><textarea id="editorialCaption${index}" class="editorial-caption" rows="3" maxlength="180" placeholder="Cuenta qué está viendo el cliente.">${esc(image.caption)}</textarea></div>
+            <div class="editorial-color-field">
+              <label for="editorialBoxColor${index}">Color del cuadro</label>
+              <div class="editorial-color-control">
+                <input id="editorialBoxColor${index}" class="editorial-box-color" type="color" value="${boxColor}" aria-describedby="editorialBoxColorValue${index}">
+                <output id="editorialBoxColorValue${index}" for="editorialBoxColor${index}">${boxColor}</output>
+              </div>
+            </div>
             <div class="editorial-gallery-actions">
               <button type="button" class="ghost move-editorial-up" ${index === 0 ? "disabled" : ""}>Subir</button>
               <button type="button" class="ghost move-editorial-down" ${index === pendingEditorialGallery.length - 1 ? "disabled" : ""}>Bajar</button>
               <button type="button" class="ghost remove-editorial-image">Quitar foto</button>
             </div>
           </div>
-        </article>`,
-      )
+        </article>`;
+      })
       .join("");
     storeEditorialGalleryListEl.querySelectorAll(".editorial-gallery-row").forEach((row) => {
       const index = Number(row.dataset.index);
       row.querySelector(".editorial-caption").addEventListener("input", (event) => {
         pendingEditorialGallery[index].caption = event.target.value;
+        const previewCaption = row.querySelector(".editorial-card-preview figcaption");
+        const caption = event.target.value.trim();
+        previewCaption.textContent = caption || "Tu texto aparecerá aquí.";
+        previewCaption.classList.toggle("is-placeholder", !caption);
+        setStoreSettingsDirty(true);
+        scheduleStorePreview();
+      });
+      row.querySelector(".editorial-box-color").addEventListener("input", (event) => {
+        const boxColor = editorialBoxColor(event.target.value);
+        pendingEditorialGallery[index].boxColor = boxColor;
+        const preview = row.querySelector(".editorial-card-preview");
+        preview.style.setProperty("--editorial-card-bg", boxColor);
+        preview.style.setProperty("--editorial-card-ink", editorialBoxInk(boxColor));
+        row.querySelector("output").textContent = boxColor;
         setStoreSettingsDirty(true);
         scheduleStorePreview();
       });
@@ -1716,7 +2187,7 @@
     if (unsupported || oversized) {
       errorEl.textContent = unsupported
         ? `Formato no soportado para ${unsupported.name}. Usa PNG, JPEG o WEBP.`
-        : `${oversized.name} supera el máximo de 3 MB.`;
+        : `${oversized.name} supera el máximo de 8 MB.`;
       storeEditorialGalleryInputEl.value = "";
       return;
     }
@@ -1724,7 +2195,7 @@
     storeSaveStatusEl.textContent = "Subiendo fotos editoriales…";
     try {
       for (const file of files) {
-        pendingEditorialGallery.push({ imageUrl: await uploadFile(file), caption: "" });
+        pendingEditorialGallery.push({ imageUrl: await uploadFile(file), caption: "", boxColor: DEFAULT_EDITORIAL_BOX_COLOR });
       }
       renderEditorialGalleryEditor();
       setStoreSettingsDirty(true);
@@ -1856,16 +2327,83 @@
     setStoreSettingsDirty(true);
   });
 
-  async function handleBrandImageUpload(input, preview, removeBtn, label, onSuccess) {
+  function readImageDimensions(source) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      image.onerror = () => reject(new Error("No pudimos leer las dimensiones de la imagen"));
+      image.src = source;
+    });
+  }
+
+  async function readImageFileDimensions(file) {
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      return await readImageDimensions(objectUrl);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  function setBackgroundImageQuality(width, height) {
+    if (!width || !height) {
+      storeBackgroundImageQualityEl.dataset.quality = "empty";
+      storeBackgroundImageQualityEl.textContent = "Sin foto de fondo.";
+      return;
+    }
+
+    const scale = Math.max(BACKGROUND_TARGET_WIDTH / width, BACKGROUND_TARGET_HEIGHT / height);
+    const dimensions = `${width} × ${height} px`;
+    if (scale <= 1) {
+      storeBackgroundImageQualityEl.dataset.quality = "sharp";
+      storeBackgroundImageQualityEl.textContent = `${dimensions} · Alta resolución: no necesita ampliarse en una pantalla Retina.`;
+      return;
+    }
+
+    const enlargement = Math.round((scale - 1) * 100);
+    storeBackgroundImageQualityEl.dataset.quality = "soft";
+    storeBackgroundImageQualityEl.textContent = `${dimensions} · Resolución insuficiente: se ampliará cerca de ${enlargement}% y puede verse borrosa. Reemplázala por una imagen de al menos ${BACKGROUND_TARGET_WIDTH} × ${BACKGROUND_TARGET_HEIGHT} px.`;
+  }
+
+  let backgroundQualityVersion = 0;
+  async function inspectStoredBackgroundImage(source) {
+    const version = ++backgroundQualityVersion;
+    if (!source) {
+      setBackgroundImageQuality(0, 0);
+      return;
+    }
+    storeBackgroundImageQualityEl.dataset.quality = "empty";
+    storeBackgroundImageQualityEl.textContent = "Comprobando resolución…";
+    try {
+      const dimensions = await readImageDimensions(source);
+      if (version === backgroundQualityVersion) setBackgroundImageQuality(dimensions.width, dimensions.height);
+    } catch {
+      if (version === backgroundQualityVersion) {
+        storeBackgroundImageQualityEl.dataset.quality = "soft";
+        storeBackgroundImageQualityEl.textContent = "No pudimos comprobar la resolución de esta imagen.";
+      }
+    }
+  }
+
+  async function validateBackgroundImage(file) {
+    const dimensions = await readImageFileDimensions(file);
+    setBackgroundImageQuality(dimensions.width, dimensions.height);
+    if (dimensions.width < BACKGROUND_TARGET_WIDTH || dimensions.height < BACKGROUND_TARGET_HEIGHT) {
+      throw new Error(`la imagen mide ${dimensions.width} × ${dimensions.height} px. Para evitar que se vea borrosa, usa al menos ${BACKGROUND_TARGET_WIDTH} × ${BACKGROUND_TARGET_HEIGHT} px`);
+    }
+  }
+
+  async function handleBrandImageUpload(input, preview, removeBtn, label, onSuccess, validateFile) {
     const file = input.files[0];
     if (!file) return;
     if (file.size > MAX_IMAGE_BYTES) {
-      errorEl.textContent = `Error: ${label} no puede pesar más de 3MB`;
+      errorEl.textContent = `Error: ${label} no puede pesar más de 8MB`;
       errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
       input.value = "";
       return;
     }
     try {
+      if (validateFile) await validateFile(file);
       const url = await uploadFile(file);
       onSuccess(url);
       preview.src = apiRoot() + url;
@@ -1908,6 +2446,7 @@
       storeBackgroundImageRemoveBtnEl,
       "la imagen de fondo",
       (url) => (pendingBackgroundImageUrl = url),
+      validateBackgroundImage,
     ),
   );
   storeAboutImageInputEl.addEventListener("change", () =>
@@ -1921,7 +2460,11 @@
   );
   wireBrandImageRemove(storeLogoInputEl, storeLogoPreviewEl, storeLogoRemoveBtnEl, (v) => (pendingLogoUrl = v));
   wireBrandImageRemove(storeBannerInputEl, storeBannerPreviewEl, storeBannerRemoveBtnEl, (v) => (pendingBannerUrl = v));
-  wireBrandImageRemove(storeBackgroundImageInputEl, storeBackgroundImagePreviewEl, storeBackgroundImageRemoveBtnEl, (v) => (pendingBackgroundImageUrl = v));
+  wireBrandImageRemove(storeBackgroundImageInputEl, storeBackgroundImagePreviewEl, storeBackgroundImageRemoveBtnEl, (v) => {
+    pendingBackgroundImageUrl = v;
+    backgroundQualityVersion += 1;
+    setBackgroundImageQuality(0, 0);
+  });
   wireBrandImageRemove(storeAboutImageInputEl, storeAboutImagePreviewEl, storeAboutImageRemoveBtnEl, (v) => (pendingAboutImageUrl = v));
 
   storeSettingsFormEl.addEventListener("submit", async (e) => {
@@ -1954,6 +2497,8 @@
           announcement: storeAnnouncementInputEl.value || null,
           announcementMode: storeAnnouncementModeEl.value,
           announcementSpeed: Number(storeAnnouncementSpeedEl.value) || 18,
+          announcementSize: storeAnnouncementSizeEl.value,
+          announcementColor: storeAnnouncementColorEl.value,
           promotionEnabled: storePromotionEnabledEl.checked,
           promotionTitle: storePromotionTitleEl.value || null,
           promotionBody: storePromotionBodyEl.value || null,
@@ -1970,6 +2515,7 @@
           editorialGallery: pendingEditorialGallery.map((image) => ({
             imageUrl: image.imageUrl,
             ...(image.caption.trim() && { caption: image.caption.trim() }),
+            boxColor: editorialBoxColor(image.boxColor),
           })),
           accentColor: storeAccentToggleEl.checked ? storeAccentColorEl.value : null,
           fontStyle: storeFontStyleEl.value,
@@ -2146,9 +2692,11 @@
   });
 
   function selectStore(storeId) {
+    const storeChanged = storeId !== currentStoreId;
     currentStoreId = storeId;
     if (storeId) sessionStorage.setItem("pagosya_current_store_id", storeId);
     else sessionStorage.removeItem("pagosya_current_store_id");
+    if (storeChanged) resetInventoryImportState();
   }
 
   function currentStoreUrl() {
@@ -2236,6 +2784,7 @@
       pendingEditorialGallery = (store.editorialGallery || []).slice(0, 8).map((image) => ({
         imageUrl: image.imageUrl,
         caption: image.caption || "",
+        boxColor: editorialBoxColor(image.boxColor),
       }));
       renderStoreContentOrderEditor();
       renderEditorialGalleryEditor();
@@ -2243,6 +2792,7 @@
       storeBackgroundImagePreviewEl.style.display = store.backgroundImageUrl ? "block" : "none";
       if (store.backgroundImageUrl) storeBackgroundImagePreviewEl.src = apiRoot() + store.backgroundImageUrl;
       storeBackgroundImageRemoveBtnEl.style.display = store.backgroundImageUrl ? "inline-block" : "none";
+      inspectStoredBackgroundImage(store.backgroundImageUrl ? apiRoot() + store.backgroundImageUrl : "");
       storeBackgroundColorEl.value = store.backgroundColor || "#f8fafc";
       storeContactPhoneInputEl.value = store.contactPhone || "";
       storeContactEmailInputEl.value = store.contactEmail || "";
@@ -2254,6 +2804,8 @@
       storeAnnouncementInputEl.value = store.announcement || "";
       storeAnnouncementModeEl.value = store.announcementMode || "static";
       storeAnnouncementSpeedEl.value = String(store.announcementSpeed || 18);
+      storeAnnouncementSizeEl.value = store.announcementSize || "medium";
+      storeAnnouncementColorEl.value = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#c58b3c";
       storePromotionEnabledEl.checked = !!store.promotionEnabled;
       storePromotionTitleEl.value = store.promotionTitle || "";
       storePromotionBodyEl.value = store.promotionBody || "";
@@ -2272,8 +2824,12 @@
       pendingStoreLinks = (store.links || []).map((l) => ({ label: l.label, url: l.url }));
       renderStoreLinksEditor();
       renderCurrentStoreBanner();
+      loadVisualStudioState(store.id);
     } else {
+      backgroundQualityVersion += 1;
+      setBackgroundImageQuality(0, 0);
       refreshStorePreview();
+      loadVisualStudioState(null);
     }
   }
 
@@ -2310,8 +2866,65 @@
   }
 
   function money(cents) {
+    if (monetaryValuesHidden) return "•••••• BOB";
     return (cents / 100).toFixed(2) + " BOB";
   }
+
+  function moneyNumber(cents) {
+    return monetaryValuesHidden ? "••••••" : (cents / 100).toFixed(2);
+  }
+
+  function setPasswordVisible(visible) {
+    passwordEl.type = visible ? "text" : "password";
+    passwordVisibilityToggleEl.setAttribute("aria-pressed", String(visible));
+    const label = visible ? "Ocultar contraseña" : "Mostrar contraseña";
+    passwordVisibilityToggleEl.setAttribute("aria-label", label);
+    passwordVisibilityToggleEl.title = label;
+  }
+
+  passwordVisibilityToggleEl.addEventListener("click", () => {
+    setPasswordVisible(passwordEl.type === "password");
+    passwordEl.focus({ preventScroll: true });
+  });
+
+  function renderPayoutRows(payouts) {
+    lastPayouts = payouts;
+    document.getElementById("payoutRows").innerHTML = payouts
+      .map(
+        (p) => `<tr>
+          <td><code>${esc(p.id)}</code></td>
+          <td>${money(p.amount)}</td>
+          <td>${esc(maskBankAccount(p.bankAccount))}</td>
+          <td><span class="badge ${esc(p.status)}">${esc(p.status)}</span></td>
+          <td>${p.paidOutAt ? esc(new Date(p.paidOutAt).toLocaleString()) : "—"}</td>
+        </tr>`,
+      )
+      .join("") || `<tr><td colspan="5" class="muted">Todavía no hay desembolsos.</td></tr>`;
+  }
+
+  function setMonetaryValuesHidden(hidden, remember = true) {
+    monetaryValuesHidden = hidden;
+    moneyVisibilityToggleEl.setAttribute("aria-pressed", String(hidden));
+    moneyVisibilityToggleEl.setAttribute("aria-label", hidden ? "Mostrar valores monetarios" : "Ocultar valores monetarios");
+    moneyVisibilityToggleEl.title = hidden ? "Mostrar valores monetarios" : "Ocultar valores monetarios";
+    moneyVisibilityLabelEl.textContent = hidden ? "Mostrar montos" : "Ocultar montos";
+    if (remember) {
+      try {
+        localStorage.setItem(MONEY_VISIBILITY_KEY, String(hidden));
+      } catch {
+        // The privacy choice still applies for this visit when storage is unavailable.
+      }
+    }
+    if (lastPayableBalance !== null) document.getElementById("balanceValue").textContent = money(lastPayableBalance);
+    if (lastFinances) renderFinances(lastFinances);
+    if (lastPayments.length) renderPaymentRows();
+    if (lastPayouts.length) renderPayoutRows(lastPayouts);
+    if (lastPaymentLinks.length) renderPaymentLinkRows(lastPaymentLinks);
+    if (preparedInventoryRows.length) renderInventoryReview();
+  }
+
+  moneyVisibilityToggleEl.addEventListener("click", () => setMonetaryValuesHidden(!monetaryValuesHidden));
+  setMonetaryValuesHidden(monetaryValuesHidden, false);
   const PAYMENT_METHOD_META = {
     CARD: { label: "Tarjeta", color: "#818cf8" },
     QR: { label: "Código QR", color: "#34d399" },
@@ -2324,7 +2937,7 @@
     const donut = document.getElementById("financeDonut");
     const legend = document.getElementById("financeLegend");
     const total = segments.reduce((sum, segment) => sum + segment.amount, 0);
-    document.getElementById("financeDonutTotal").textContent = (total / 100).toFixed(2);
+    document.getElementById("financeDonutTotal").textContent = moneyNumber(total);
     if (total <= 0) {
       donut.style.background = "conic-gradient(var(--pg-border) 0 100%)";
       donut.setAttribute("aria-label", "Todavía no hay ingresos para graficar");
@@ -2356,6 +2969,7 @@
   }
 
   function renderFinances(finances) {
+    lastFinances = finances;
     document.getElementById("financeRevenueValue").textContent = money(finances.totalRevenue);
     document.getElementById("financeInventoryValue").textContent = money(finances.inventoryValue);
     document.getElementById("financeViewsValue").textContent = String(finances.totalStoreViews);
@@ -2637,6 +3251,22 @@
       .replace(/\s+/g, "_");
   }
 
+  function inventoryFilenameKey(value) {
+    let filename = String(value || "").trim();
+    try { filename = decodeURIComponent(filename); } catch {}
+    filename = filename.split(/[?#]/, 1)[0].replace(/\\/g, "/").split("/").pop() || filename;
+    return filename.normalize("NFC").toLocaleLowerCase("es");
+  }
+
+  function inventoryStemKey(value) {
+    return inventoryFilenameKey(value)
+      .replace(/\.[^.]+$/, "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
   function parseInventoryMoney(value) {
     const amount = Number(String(value || "").trim().replace(",", "."));
     return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : null;
@@ -2689,7 +3319,10 @@
       stock: "stock", inventario: "stock",
       descripcion: "description", description: "description",
       etiquetas: "tags", tags: "tags",
-      imagenes: "images", fotos: "images", images: "images",
+      imagen: "images", imagenes: "images", foto: "images", fotos: "images",
+      image: "images", images: "images", photo: "images", photos: "images", picture: "images", pictures: "images",
+      image_url: "images", image_urls: "images", photo_url: "images", photo_urls: "images",
+      picture_url: "images", picture_urls: "images", foto_producto: "images", product_image: "images",
       tamanos: "variants", tallas: "variants", opciones: "variants", sizes: "variants",
       color: "color",
     };
@@ -2697,8 +3330,14 @@
     if (!headers.includes("name")) throw new Error('Falta la columna obligatoria "nombre"');
 
     const imagesByName = new Map();
-    imageFiles.forEach((file) => imagesByName.set(file.name.trim().toLocaleLowerCase("es"), file));
-    return parsedRows.slice(1, 101).map((values, index) => {
+    const imagesByStem = new Map();
+    const matchedImageFiles = new Set();
+    imageFiles.forEach((file) => {
+      imagesByName.set(inventoryFilenameKey(file.name), file);
+      const stem = inventoryStemKey(file.name);
+      imagesByStem.set(stem, [...(imagesByStem.get(stem) || []), file]);
+    });
+    const rows = parsedRows.slice(1, 101).map((values, index) => {
       const source = Object.fromEntries(headers.map((header, column) => [header, values[column] || ""]));
       const errors = [];
       const name = (source.name || "").trim();
@@ -2720,12 +3359,32 @@
       const requestedImages = (source.images || "").split("|").map((filename) => filename.trim()).filter(Boolean);
       if (requestedImages.length > MAX_GALLERY_IMAGES) errors.push(`Máximo ${MAX_GALLERY_IMAGES} fotos por producto`);
       const matchedImages = requestedImages.map((filename) => {
-        const file = imagesByName.get(filename.toLocaleLowerCase("es"));
-        if (!file) errors.push(`No se seleccionó la foto "${filename}"`);
-        else if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) errors.push(`Formato no admitido para "${filename}"`);
-        else if (file.size > MAX_IMAGE_BYTES) errors.push(`"${filename}" supera 3 MB`);
+        const filenameKey = inventoryFilenameKey(filename);
+        const stemMatches = imagesByStem.get(inventoryStemKey(filename)) || [];
+        const file = imagesByName.get(filenameKey) || (stemMatches.length === 1 ? stemMatches[0] : undefined);
+        if (!file) {
+          errors.push(`No se seleccionó la foto "${filename}"`);
+        } else {
+          matchedImageFiles.add(file);
+          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) errors.push(`Formato no admitido para "${filename}"`);
+          else if (file.size > MAX_IMAGE_BYTES) errors.push(`"${filename}" supera 8 MB`);
+        }
         return file;
       }).filter(Boolean);
+      if (requestedImages.length === 0 && name) {
+        const nameMatches = imagesByStem.get(inventoryStemKey(name)) || [];
+        if (nameMatches.length === 1) {
+          const [file] = nameMatches;
+          matchedImageFiles.add(file);
+          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+            errors.push(`Formato no admitido para "${file.name}"`);
+          } else if (file.size > MAX_IMAGE_BYTES) {
+            errors.push(`"${file.name}" supera 8 MB`);
+          } else {
+            matchedImages.push(file);
+          }
+        }
+      }
 
       return {
         rowNumber: index + 2,
@@ -2744,14 +3403,20 @@
         },
       };
     });
+    if (imageFiles.length > 0 && matchedImageFiles.size === 0) {
+      throw new Error('Seleccionaste fotos, pero ninguna coincide con el CSV. Usa una columna "imagen" con el nombre exacto del archivo, o pon a la foto el mismo nombre del producto.');
+    }
+    return rows;
   }
 
   function renderInventoryReview() {
     const invalidCount = preparedInventoryRows.filter((row) => row.errors.length).length;
     const categoryCount = new Set(preparedInventoryRows.map((row) => row.product.categoryName).filter(Boolean).map((name) => name.toLocaleLowerCase("es"))).size;
+    const preparedStore = lastStores.find((store) => store.id === preparedInventoryStoreId);
+    const belongsToCurrentStore = !!preparedInventoryStoreId && preparedInventoryStoreId === currentStoreId;
     inventoryReviewEl.hidden = preparedInventoryRows.length === 0;
-    inventoryReviewSummaryEl.innerHTML = `<strong>${preparedInventoryRows.length} productos</strong> · ${categoryCount} categorías · ${invalidCount ? `${invalidCount} filas por corregir` : "listos para importar"}`;
-    inventoryCommitEl.disabled = preparedInventoryRows.length === 0 || invalidCount > 0;
+    inventoryReviewSummaryEl.innerHTML = `<strong>${preparedInventoryRows.length} productos</strong> · destino: <strong>${esc(preparedStore?.name || "tienda seleccionada")}</strong> · ${categoryCount} categorías · ${invalidCount ? `${invalidCount} filas por corregir` : "listos para importar"}`;
+    inventoryCommitEl.disabled = preparedInventoryRows.length === 0 || invalidCount > 0 || !belongsToCurrentStore || inventoryImportInProgress;
     inventoryReviewRowsEl.innerHTML = preparedInventoryRows.map((row) => {
       const amounts = row.product.variants.length ? row.product.variants.map((variant) => variant.amount) : [row.product.amount];
       const price = Math.min(...amounts) === Math.max(...amounts)
@@ -2767,6 +3432,16 @@
         <td>${row.errors.length ? `<span class="inventory-row-error">${row.errors.map(esc).join("<br>")}</span>` : '<span class="inventory-row-ready">Lista</span>'}</td>
       </tr>`;
     }).join("");
+  }
+
+  function resetInventoryImportState(status = "Aún no hay un archivo preparado.") {
+    inventoryImportVersion++;
+    preparedInventoryRows = [];
+    preparedInventoryStoreId = null;
+    inventoryCsvInputEl.value = "";
+    inventoryImagesInputEl.value = "";
+    inventoryImportStatusEl.textContent = status;
+    renderInventoryReview();
   }
 
   async function runWithConcurrency(items, limit, worker) {
@@ -2803,58 +3478,82 @@
       inventoryCsvInputEl.focus();
       return;
     }
+    if (!currentStoreId) {
+      inventoryImportStatusEl.textContent = "Selecciona una tienda antes de revisar el CSV.";
+      return;
+    }
+    const targetStoreId = currentStoreId;
+    const prepareVersion = ++inventoryImportVersion;
     try {
-      preparedInventoryRows = prepareInventoryRows(await csvFile.text(), [...inventoryImagesInputEl.files]);
+      const rows = prepareInventoryRows(await csvFile.text(), [...inventoryImagesInputEl.files]);
+      if (prepareVersion !== inventoryImportVersion || targetStoreId !== currentStoreId) return;
+      preparedInventoryRows = rows;
+      preparedInventoryStoreId = targetStoreId;
       renderInventoryReview();
       const invalidCount = preparedInventoryRows.filter((row) => row.errors.length).length;
       inventoryImportStatusEl.textContent = invalidCount
         ? `Revisa ${invalidCount} ${invalidCount === 1 ? "fila marcada" : "filas marcadas"}.`
         : "Archivo revisado y listo.";
     } catch (err) {
+      if (prepareVersion !== inventoryImportVersion || targetStoreId !== currentStoreId) return;
       preparedInventoryRows = [];
+      preparedInventoryStoreId = null;
       renderInventoryReview();
       inventoryImportStatusEl.textContent = err.message;
     }
   });
 
   inventoryCommitEl.addEventListener("click", async () => {
-    if (!currentStoreId || preparedInventoryRows.length === 0 || preparedInventoryRows.some((row) => row.errors.length)) return;
+    if (
+      inventoryImportInProgress ||
+      !currentStoreId ||
+      preparedInventoryStoreId !== currentStoreId ||
+      preparedInventoryRows.length === 0 ||
+      preparedInventoryRows.some((row) => row.errors.length)
+    ) return;
     errorEl.textContent = "";
     infoEl.textContent = "";
+    const importStoreId = currentStoreId;
+    const importVersion = inventoryImportVersion;
+    const rowsToImport = preparedInventoryRows;
+    inventoryImportInProgress = true;
     inventoryCommitEl.disabled = true;
-    const uniqueFiles = [...new Map(preparedInventoryRows.flatMap((row) => row.imageFiles).map((file) => [file.name.toLocaleLowerCase("es"), file])).values()];
+    const uniqueFiles = [...new Map(rowsToImport.flatMap((row) => row.imageFiles).map((file) => [file.name.toLocaleLowerCase("es"), file])).values()];
+    const importStillVisible = () => importVersion === inventoryImportVersion && importStoreId === currentStoreId;
     try {
       let uploadedCount = 0;
       const uploadedUrls = await runWithConcurrency(uniqueFiles, 3, async (file) => {
         const url = await uploadFile(file);
         uploadedCount++;
-        inventoryImportStatusEl.textContent = `Subiendo fotos ${uploadedCount} de ${uniqueFiles.length}…`;
+        if (importStillVisible()) inventoryImportStatusEl.textContent = `Subiendo fotos ${uploadedCount} de ${uniqueFiles.length}…`;
         return [file.name.toLocaleLowerCase("es"), url];
       });
       const urlByFilename = new Map(uploadedUrls);
-      inventoryImportStatusEl.textContent = "Creando productos y categorías…";
-      const products = preparedInventoryRows.map((row) => ({
+      if (importStillVisible()) inventoryImportStatusEl.textContent = "Creando productos y categorías…";
+      const products = rowsToImport.map((row) => ({
         ...row.product,
         imageUrls: row.imageFiles.map((file) => urlByFilename.get(file.name.toLocaleLowerCase("es"))).filter(Boolean),
       }));
-      const result = await api(`/stores/${currentStoreId}/payment_links/import`, {
+      const result = await api(`/stores/${importStoreId}/payment_links/import`, {
         method: "POST",
         body: JSON.stringify({ products }),
       });
-      renderCategoryRows([...lastCategories, ...result.categoriesCreated]);
-      renderPaymentLinkRows([...result.products, ...lastPaymentLinks]);
-      inventoryCsvInputEl.value = "";
-      inventoryImagesInputEl.value = "";
-      preparedInventoryRows = [];
-      renderInventoryReview();
-      inventoryImportStatusEl.textContent = "Importación completada.";
-      infoEl.textContent = `${result.products.length} ${result.products.length === 1 ? "producto importado" : "productos importados"}${result.categoriesCreated.length ? ` y ${result.categoriesCreated.length} categorías nuevas` : ""}.`;
+      if (importStillVisible()) {
+        renderCategoryRows([...lastCategories, ...result.categoriesCreated]);
+        renderPaymentLinkRows([...result.products, ...lastPaymentLinks]);
+        resetInventoryImportState("Importación completada.");
+        infoEl.textContent = `${result.products.length} ${result.products.length === 1 ? "producto importado" : "productos importados"}${result.categoriesCreated.length ? ` y ${result.categoriesCreated.length} categorías nuevas` : ""}.`;
+        refreshStorePreview(true);
+      }
       refreshFinancesInBackground();
-      refreshStorePreview(true);
     } catch (err) {
-      errorEl.textContent = "Error importando el inventario: " + err.message;
-      inventoryImportStatusEl.textContent = "La importación no se completó. Corrige el problema e intenta otra vez.";
-      inventoryCommitEl.disabled = false;
+      if (importStillVisible()) {
+        errorEl.textContent = "Error importando el inventario: " + err.message;
+        inventoryImportStatusEl.textContent = "La importación no se completó. Corrige el problema e intenta otra vez.";
+      }
+    } finally {
+      inventoryImportInProgress = false;
+      renderInventoryReview();
     }
   });
 
@@ -2871,6 +3570,7 @@
   }
 
   async function refresh() {
+    const refreshVersion = ++dashboardRefreshVersion;
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
     appEl.setAttribute("aria-busy", "true");
@@ -2887,6 +3587,10 @@
         api("/merchants/finances"),
       ]);
       const stores = await api("/stores");
+      if (refreshVersion !== dashboardRefreshVersion) {
+        await overviewPromise.catch(() => undefined);
+        return;
+      }
 
       showLoggedIn();
       appEl.style.display = "block";
@@ -2898,8 +3602,10 @@
         selectedStoreId ? api(`/stores/${selectedStoreId}/categories`) : Promise.resolve([]),
         selectedStoreId ? api(`/stores/${selectedStoreId}/payment_links`) : Promise.resolve([]),
       ]);
+      if (refreshVersion !== dashboardRefreshVersion || selectedStoreId !== currentStoreId) return;
 
-      document.getElementById("balanceValue").textContent = money(balance.payableBalance);
+      lastPayableBalance = balance.payableBalance;
+      document.getElementById("balanceValue").textContent = money(lastPayableBalance);
 
       const kycBadge = document.getElementById("kycBadge");
       kycBadge.textContent = kyc.status;
@@ -2921,18 +3627,9 @@
       paymentPage = 1;
       renderPaymentRows();
 
-      document.getElementById("payoutRows").innerHTML = payouts
-        .map(
-          (p) => `<tr>
-            <td><code>${esc(p.id)}</code></td>
-            <td>${money(p.amount)}</td>
-            <td>${esc(maskBankAccount(p.bankAccount))}</td>
-            <td><span class="badge ${esc(p.status)}">${esc(p.status)}</span></td>
-            <td>${p.paidOutAt ? esc(new Date(p.paidOutAt).toLocaleString()) : "—"}</td>
-          </tr>`,
-        )
-        .join("") || `<tr><td colspan="5" class="muted">Todavía no hay desembolsos.</td></tr>`;
+      renderPayoutRows(payouts);
     } catch (err) {
+      if (refreshVersion !== dashboardRefreshVersion) return;
       errorEl.textContent = "Error: " + err.message;
       // Una sesión vencida o inválida debe volver al formulario de acceso, no
       // solo mostrar un error sobre un panel vacío.
@@ -2946,7 +3643,7 @@
         appEl.style.display = "block";
       }
     } finally {
-      appEl.removeAttribute("aria-busy");
+      if (refreshVersion === dashboardRefreshVersion) appEl.removeAttribute("aria-busy");
     }
   }
 

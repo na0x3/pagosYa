@@ -6,6 +6,8 @@ import { StoresService } from "./stores.service";
 import { CreateStoreDto } from "./dto/create-store.dto";
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
+import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
+import { VisualStudioService } from "./visual-studio.service";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -17,7 +19,7 @@ import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 @ApiBearerAuth()
 @UseGuards(MerchantAuthGuard)
 export class StoresController {
-  constructor(private readonly stores: StoresService) {}
+  constructor(private readonly stores: StoresService, private readonly visualStudio: VisualStudioService) {}
 
   @Post()
   create(@CurrentMerchant() merchant: { id: string }, @Body() dto: CreateStoreDto) {
@@ -37,6 +39,31 @@ export class StoresController {
   @Put(":id/links")
   setLinks(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: SetStoreLinksDto) {
     return this.stores.setLinks(merchant.id, id, dto);
+  }
+
+  @Get(":id/visual-studio")
+  visualStudioState(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string) {
+    return this.visualStudio.list(merchant.id, id);
+  }
+
+  @Post(":id/visual-proposals")
+  generateVisualProposals(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: GenerateVisualProposalsDto) {
+    return this.visualStudio.generate(merchant.id, id, dto);
+  }
+
+  @Post(":id/visual-proposals/:proposalId/apply")
+  applyVisualProposal(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("proposalId") proposalId: string) {
+    return this.visualStudio.apply(merchant.id, id, proposalId);
+  }
+
+  @Post(":id/visual-proposals/:proposalId/dismiss")
+  dismissVisualProposal(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("proposalId") proposalId: string) {
+    return this.visualStudio.dismiss(merchant.id, id, proposalId);
+  }
+
+  @Post(":id/visual-versions/:versionId/restore")
+  restoreVisualVersion(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("versionId") versionId: string) {
+    return this.visualStudio.restore(merchant.id, id, versionId);
   }
 
   @Post(":id/archive")

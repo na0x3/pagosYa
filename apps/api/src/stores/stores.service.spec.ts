@@ -213,6 +213,26 @@ describe("StoresService.getStorePublic — sold counts", () => {
     expect(prisma.store.update).not.toHaveBeenCalled();
   });
 
+  it("returns validated editorial card colors and drops unsafe legacy values", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      editorialGallery: [
+        { imageUrl: "/v1/uploads/workshop.png", caption: "Nuestro taller", boxColor: "#f4ead7" },
+        { imageUrl: "/v1/uploads/team.png", caption: "El equipo", boxColor: "not-a-color" },
+      ],
+    });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.editorialGallery).toEqual([
+      { imageUrl: "/v1/uploads/workshop.png", caption: "Nuestro taller", boxColor: "#f4ead7" },
+      { imageUrl: "/v1/uploads/team.png", caption: "El equipo" },
+    ]);
+  });
+
   it("attaches per-product units sold from this store's succeeded cart checkouts", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);

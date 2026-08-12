@@ -24,3 +24,5 @@ allowBuilds:
   argon2: true
   esbuild: true
   prisma: true
+  sharp: set this to true or false
+  workerd: set this to true or false

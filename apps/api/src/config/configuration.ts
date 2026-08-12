@@ -25,7 +25,27 @@ export interface AppConfig {
   corsOrigins: string[];
   banecoQr: BanecoQrConfig;
   uploadsDir: string;
+  objectStorage: {
+    bucket: string;
+    region: string;
+    endpoint: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    forcePathStyle: boolean;
+  };
+  openAi: {
+    apiKey: string;
+    designModel: string;
+    imageModel: string;
+    enabled: boolean;
+  };
   email: EmailConfig;
+}
+
+function apiRootFromCwd(): string {
+  // Nest is started from both the repository root and apps/api in local tools.
+  // Anchor the default once so the same bytes are served in either case.
+  return path.basename(process.cwd()) === "api" ? process.cwd() : path.join(process.cwd(), "apps", "api");
 }
 
 export default (): { app: AppConfig } => ({
@@ -54,10 +74,23 @@ export default (): { app: AppConfig } => ({
       creditAccount: process.env.BANECO_CREDIT_ACCOUNT ?? "",
       webhookSecret: process.env.BANECO_WEBHOOK_SECRET ?? "",
     },
-    // Where product photos / merchant logos land on disk (see UploadsModule).
-    // Default keeps dev/test self-contained, same "no Docker required" ethos as
-    // embedded-postgres — no object storage dependency needed at this scale.
-    uploadsDir: process.env.UPLOADS_DIR ?? path.join(process.cwd(), "uploads"),
+    // The local fallback resolves to the same directory regardless of process
+    // cwd. Set object storage in production for multi-instance durability.
+    uploadsDir: process.env.UPLOADS_DIR ?? path.join(apiRootFromCwd(), "uploads"),
+    objectStorage: {
+      bucket: process.env.OBJECT_STORAGE_BUCKET ?? "",
+      region: process.env.OBJECT_STORAGE_REGION ?? "us-east-1",
+      endpoint: process.env.OBJECT_STORAGE_ENDPOINT ?? "",
+      accessKeyId: process.env.OBJECT_STORAGE_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? "",
+      forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE !== "false",
+    },
+    openAi: {
+      apiKey: process.env.OPENAI_API_KEY ?? "",
+      designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-luna",
+      imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2",
+      enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
+    },
     // RESEND_API_KEY is the same switch pattern as BANECO_QR_ENABLED: set it
     // to swap DashboardModule's EmailProvider from MockEmailProvider (logs to
     // console) to ResendEmailProvider (real send) — see DashboardModule.

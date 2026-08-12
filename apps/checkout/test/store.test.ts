@@ -50,6 +50,8 @@ const baseStoreFields = {
   announcement: null,
   announcementMode: "static",
   announcementSpeed: 18,
+  announcementSize: "medium",
+  announcementColor: "#c58b3c",
   promotionEnabled: false,
   promotionTitle: null,
   promotionBody: null,
@@ -85,6 +87,8 @@ describe("storefront (?link=...)", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda Vacía",
+        backgroundColor: "#f5f1e8",
+        accentColor: "#7c3aed",
         items: [],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
@@ -97,6 +101,11 @@ describe("storefront (?link=...)", () => {
     expect(status!.classList.contains("empty")).toBe(true);
     expect(status!.classList.contains("failed")).toBe(false);
     expect(document.querySelector(".store-title")?.textContent).toBe("Tienda Vacía");
+    const entrance = document.querySelector<HTMLElement>(".store-entry-loader")!;
+    expect(entrance.getAttribute("aria-label")).toBe("Cargando Tienda Vacía");
+    expect(document.querySelector(".store-entry-loader-brand")?.textContent).toBe("Tienda Vacía");
+    expect(entrance.style.getPropertyValue("--store-entry-bg")).toBe("#f5f1e8");
+    expect(entrance.style.getPropertyValue("--store-entry-accent")).toBe("#7c3aed");
   });
 
   it("renders store items with name, price, and a working quantity stepper", async () => {
@@ -123,6 +132,65 @@ describe("storefront (?link=...)", () => {
     });
     expect(document.querySelector<HTMLButtonElement>("#cart-pay")!.disabled).toBe(false);
     expect(document.querySelector(".cart-summary")?.textContent).toContain("50.00 BOB");
+  });
+
+  it("opens a product's own shareable page from its catalog card and returns to the store", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Norte",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=taller-norte");
+    const productLink = document.querySelector<HTMLAnchorElement>(".store-item-name")!;
+    expect(productLink.href).toContain("product=link_1");
+
+    productLink.click();
+    expect(new URLSearchParams(window.location.search).get("product")).toBe("link_1");
+    expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
+    expect(document.querySelector(".product-detail-description")?.textContent).toBe("Incluye lavado y peinado");
+
+    document.querySelector<HTMLAnchorElement>(".product-back-link")!.click();
+    expect(new URLSearchParams(window.location.search).get("product")).toBeNull();
+    expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
+  });
+
+  it("renders multiple photos and selectable product types on a direct product URL", async () => {
+    const productWithGallery = {
+      ...baseItem,
+      imageUrls: ["/v1/uploads/frente.webp", "/v1/uploads/detalle.webp"],
+      variants: [
+        { id: "small", name: "Pequeño", amount: 4000, stock: 2 },
+        { id: "large", name: "Grande", amount: 6500, stock: 4 },
+      ],
+    };
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Norte",
+        items: [productWithGallery],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=taller-norte&product=link_1");
+
+    expect(document.querySelectorAll(".product-detail-thumbnail")).toHaveLength(2);
+    expect(document.querySelectorAll(".product-detail-option")).toHaveLength(2);
+    expect(document.querySelector(".product-detail-price")?.textContent).toBe("40.00 BOB");
+
+    document.querySelectorAll<HTMLButtonElement>(".product-detail-thumbnail")[1].click();
+    expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.src).toContain("detalle.webp");
+
+    document.querySelector<HTMLButtonElement>('[data-variant-id="large"]')!.click();
+    expect(document.querySelector(".product-detail-price")?.textContent).toBe("65.00 BOB");
+    document.querySelector<HTMLButtonElement>(".product-add")!.click();
+    expect(document.querySelector(".qty-value")?.textContent).toBe("1");
+    expect(document.querySelector(".cart-summary")?.textContent).toContain("65.00 BOB");
+    expect(document.querySelector<HTMLButtonElement>("#cart-pay")?.disabled).toBe(false);
   });
 
   it("renders merchant hero slides and lets the shopper move between them", async () => {
@@ -346,9 +414,11 @@ describe("storefront (?link=...)", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda Promo",
-        announcement: "Envío gratis hoy",
+        announcement: "Envío gratis hoy • Compra local",
         announcementMode: "marquee",
         announcementSpeed: 12,
+        announcementSize: "large",
+        announcementColor: "#f5d90a",
         promotionEnabled: true,
         promotionTitle: "20% de descuento",
         promotionBody: "Solo por este fin de semana.",
@@ -366,6 +436,11 @@ describe("storefront (?link=...)", () => {
 
     expect(document.querySelector(".store-announcement.marquee")).toBeTruthy();
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("12s");
+    expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("--announcement-bg:#f5d90a");
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-large")).toBe(true);
+    expect(document.querySelectorAll(".store-announcement-sequence")).toHaveLength(2);
+    expect(document.querySelectorAll(".store-announcement-phrase")).toHaveLength(4);
+    expect(document.querySelector(".store-announcement-a11y")?.textContent).toBe("Envío gratis hoy • Compra local");
     expect(document.querySelector(".promotion-dialog")?.textContent).toContain("20% de descuento");
     expect(document.body.dataset.buttonStyle).toBe("pill");
     expect(document.body.dataset.buttonVariant).toBe("outline");
@@ -397,6 +472,8 @@ describe("storefront (?link=...)", () => {
             announcement: "Oferta de fin de semana",
             announcementMode: "marquee",
             announcementSpeed: 14,
+            announcementSize: "small",
+            announcementColor: "#123456",
             promotionEnabled: true,
             promotionTitle: "Solo hoy",
             promotionBody: "Aprovecha antes de que termine.",
@@ -411,6 +488,8 @@ describe("storefront (?link=...)", () => {
     );
 
     expect(document.querySelector(".store-announcement.marquee")?.textContent).toContain("Oferta de fin de semana");
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-small")).toBe(true);
+    expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("--announcement-bg:#123456");
     expect(document.querySelector(".promotion-dialog")?.textContent).toContain("Solo hoy");
     expect(document.body.dataset.buttonVariant).toBe("soft");
     expect(document.body.dataset.buttonMotion).toBe("pulse");
@@ -453,6 +532,48 @@ describe("storefront (?link=...)", () => {
     // Cart-checkout flow shows the store name as a big header, not the
     // avatar+name row used for direct client_secret links.
     expect(document.querySelector(".merchant-row")).toBeFalsy();
+  });
+
+  it("keeps the cart available and lets the customer retry when checkout fails", async () => {
+    const checkoutCart = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Servicio temporalmente no disponible"))
+      .mockResolvedValueOnce({
+        clientSecret: "pi_retry_secret_abc",
+        storeName: "Tienda reintento",
+        cartDescription: "Producto x1",
+      } satisfies CartCheckoutResult);
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda reintento",
+        items: [baseItem],
+      } satisfies Store),
+      checkoutCart,
+      fetchSession: vi.fn().mockResolvedValue({
+        id: "pi_retry",
+        amount: 5000,
+        currency: "BOB",
+        status: "REQUIRES_PAYMENT_METHOD",
+        description: null,
+        merchantName: "Tienda reintento",
+      }),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=retry-store");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    const payButton = document.querySelector<HTMLButtonElement>("#cart-pay")!;
+    payButton.click();
+
+    await vi.waitFor(() => expect(document.querySelector(".cart-checkout-error")?.textContent).toContain("Intenta nuevamente"));
+    expect(document.querySelector(".store-products")).toBeTruthy();
+    expect(payButton.disabled).toBe(false);
+    expect(payButton.textContent).toBe("Ir a pagar");
+
+    payButton.click();
+    await vi.waitFor(() => expect(document.querySelector(".amount")?.textContent).toBe("50.00 BOB"));
+    expect(checkoutCart).toHaveBeenCalledTimes(2);
   });
 
   it("groups products under category section headers, with uncategorized ones under 'Otros'", async () => {
@@ -741,6 +862,7 @@ describe("storefront (?link=...)", () => {
           {
             imageUrl: "/v1/uploads/taller.webp",
             caption: '<img id="injected-caption" src=x onerror="alert(1)"> Hecho a mano',
+            boxColor: "#f4ead7",
           },
         ],
         items: [baseItem],
@@ -757,6 +879,9 @@ describe("storefront (?link=...)", () => {
     expect(products.compareDocumentPosition(story) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.querySelector("#injected-caption")).toBeNull();
     expect(document.querySelector(".store-editorial-item figcaption")?.textContent).toContain("<img");
+    const editorialCard = document.querySelector<HTMLElement>(".store-editorial-item")!;
+    expect(editorialCard.style.getPropertyValue("--store-editorial-card-bg")).toBe("#f4ead7");
+    expect(editorialCard.style.getPropertyValue("--store-editorial-card-ink")).toBe("#000000");
   });
 
   it("applies the merchant's selected font to the entire storefront", async () => {

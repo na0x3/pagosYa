@@ -6,11 +6,12 @@ import { PaymentIntentsModule } from "../payment-intents/payment-intents.module"
 import { DashboardModule } from "../dashboard/dashboard.module";
 import { AuthModule } from "../auth/auth.module";
 import { UploadsModule } from "../uploads/uploads.module";
+import { VisualStudioService } from "./visual-studio.service";
 
 @Module({
   imports: [PaymentIntentsModule, DashboardModule, AuthModule, UploadsModule],
   controllers: [StoresController, StoresPublicController],
-  providers: [StoresService],
+  providers: [StoresService, VisualStudioService],
   exports: [StoresService],
 })
 export class StoresModule {}

@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import {
   BadRequestException,
   Controller,
@@ -16,6 +15,8 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
+import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
+import { PrismaService } from "../prisma/prisma.service";
 import { maxUploadBytesForMime, UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
 import { UploadResponseDto } from "./dto/upload-response.dto";
 
@@ -32,7 +33,7 @@ import { UploadResponseDto } from "./dto/upload-response.dto";
 @ApiTags("uploads")
 @Controller("v1/uploads")
 export class UploadsController {
-  constructor(private readonly uploads: UploadsService) {}
+  constructor(private readonly uploads: UploadsService, private readonly prisma: PrismaService) {}
 
   @Post()
   @ApiBearerAuth()
@@ -40,26 +41,32 @@ export class UploadsController {
   @ApiOkResponse({ type: UploadResponseDto })
   @UseGuards(MerchantAuthGuard)
   @UseInterceptors(FileInterceptor("file"))
-  uploadFile(@UploadedFile() file: Express.Multer.File): UploadResponseDto {
+  async uploadFile(@CurrentMerchant() merchant: { id: string }, @UploadedFile() file: Express.Multer.File): Promise<UploadResponseDto> {
+    if (!file) throw new BadRequestException("Selecciona un archivo");
     const limit = maxUploadBytesForMime(file.mimetype);
     if (file.size > limit) {
-      try {
-        fs.unlinkSync(file.path);
-      } catch {
-        // The validation error is still the useful response if cleanup races.
-      }
       const limitMb = Math.floor(limit / 1_000_000);
       throw new BadRequestException(`El archivo supera el máximo de ${limitMb} MB para este formato`);
     }
-    return { url: `/v1/uploads/${file.filename}` };
+    const stored = await this.uploads.saveUpload(file);
+    const asset = await this.prisma.mediaAsset.create({
+      data: {
+        merchantId: merchant.id,
+        url: stored.url,
+        storageKey: stored.filename,
+        mimeType: stored.mimeType,
+        byteSize: stored.byteSize,
+      },
+    });
+    return { url: stored.url, assetId: asset.id };
   }
 
   /** Public — buyers on a checkout/storefront page must be able to load product photos and the merchant logo without any credential. */
   @Get(":filename")
-  getFile(@Param("filename") filename: string, @Res({ passthrough: true }) res: Response): StreamableFile {
+  async getFile(@Param("filename") filename: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
     if (!UPLOAD_FILENAME_PATTERN.test(filename)) throw new NotFoundException("Not found");
-    const filePath = this.uploads.resolvePath(filename);
-    if (!fs.existsSync(filePath)) throw new NotFoundException("Not found");
+    const body = await this.uploads.getBuffer(filename);
+    if (!body) throw new NotFoundException("Not found");
 
     res.set({
       "Content-Type": this.uploads.contentTypeFor(filename),
@@ -67,6 +74,6 @@ export class UploadsController {
       // immutable cache is always safe.
       "Cache-Control": "public, max-age=31536000, immutable",
     });
-    return new StreamableFile(fs.createReadStream(filePath));
+    return new StreamableFile(body);
   }
 }

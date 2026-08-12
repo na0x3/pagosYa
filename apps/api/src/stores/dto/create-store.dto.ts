@@ -73,6 +73,12 @@ export class StoreEditorialImageDto {
   @IsSafeText()
   @MaxLength(180)
   caption?: string;
+
+  @ApiPropertyOptional({ example: "#f4ead7", description: "Background color of the image-and-caption card." })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-f]{6}$/i, { message: "editorial boxColor must be a 6-digit hex color" })
+  boxColor?: string;
 }
 
 export class CreateStoreDto {
@@ -220,6 +226,16 @@ export class CreateStoreDto {
   @Min(8)
   @Max(40)
   announcementSpeed?: number;
+
+  @ApiPropertyOptional({ description: "Announcement text and strip size.", enum: ["small", "medium", "large"] })
+  @IsOptional()
+  @IsIn(["small", "medium", "large"])
+  announcementSize?: string;
+
+  @ApiPropertyOptional({ description: "Announcement strip color.", example: "#c58b3c" })
+  @IsOptional()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "announcementColor must be a 6-digit hex color, e.g. #c58b3c" })
+  announcementColor?: string;
 
   @ApiPropertyOptional({ description: "Whether the storefront promotion dialog is active." })
   @IsOptional()

@@ -79,6 +79,7 @@ export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "l
 export interface StoreEditorialImage {
   imageUrl: string;
   caption?: string;
+  boxColor?: string;
 }
 
 export interface Store {
@@ -107,6 +108,8 @@ export interface Store {
   announcement: string | null;
   announcementMode: "static" | "marquee";
   announcementSpeed: number;
+  announcementSize: "small" | "medium" | "large";
+  announcementColor: string;
   promotionEnabled: boolean;
   promotionTitle: string | null;
   promotionBody: string | null;

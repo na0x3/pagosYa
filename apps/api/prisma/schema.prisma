@@ -126,13 +126,13 @@ model AuditLogEntry {
 }
 
 model Merchant {
-  id               String            @id @default(cuid())
+  id               String                    @id @default(cuid())
   name             String
-  email            String            @unique
-  settlementMode   SettlementMode    @default(AGGREGATOR)
-  status           MerchantStatus    @default(PENDING)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  email            String                    @unique
+  settlementMode   SettlementMode            @default(AGGREGATOR)
+  status           MerchantStatus            @default(PENDING)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
   apiKeys          ApiKey[]
   paymentIntents   PaymentIntent[]
   webhookEndpoints WebhookEndpoint[]
@@ -142,23 +142,24 @@ model Merchant {
   payouts          Payout[]
   users            MerchantUser[]
   stores           Store[]
+  mediaAssets      MediaAsset[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
 // ApiKey. The dashboard must never need a merchant's secret key in the
 // browser; this is what apps/merchant-dashboard authenticates with instead.
 model MerchantUser {
-  id                 String                   @id @default(cuid())
-  merchantId         String
-  merchant           Merchant                 @relation(fields: [merchantId], references: [id])
-  email              String                   @unique
-  hashedPassword     String
+  id                  String                   @id @default(cuid())
+  merchantId          String
+  merchant            Merchant                 @relation(fields: [merchantId], references: [id])
+  email               String                   @unique
+  hashedPassword      String
   // Null until the confirmation link is used. An unverified row doesn't
   // permanently claim its email — see MerchantUserService.signup for why.
-  emailVerifiedAt    DateTime?
-  createdAt          DateTime                 @default(now())
-  sessions           MerchantSession[]
-  verificationTokens EmailVerificationToken[]
+  emailVerifiedAt     DateTime?
+  createdAt           DateTime                 @default(now())
+  sessions            MerchantSession[]
+  verificationTokens  EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -278,23 +279,23 @@ model Payout {
 }
 
 model MerchantKycSubmission {
-  id                 String    @id @default(cuid())
-  merchantId         String
-  merchant           Merchant  @relation(fields: [merchantId], references: [id])
-  legalName          String
-  taxId              String
-  legalRepName       String
-  legalRepDocumentId String
-  payoutBankAccount  String
-  status             KycStatus @default(PENDING_REVIEW)
-  reviewNote         String?
-  reviewedAt         DateTime?
+  id                  String    @id @default(cuid())
+  merchantId          String
+  merchant            Merchant  @relation(fields: [merchantId], references: [id])
+  legalName           String
+  taxId               String
+  legalRepName        String
+  legalRepDocumentId  String
+  payoutBankAccount   String
+  status              KycStatus @default(PENDING_REVIEW)
+  reviewNote          String?
+  reviewedAt          DateTime?
   reviewedByOpsUserId String?
   reviewedByOpsUser   OpsUser?  @relation(fields: [reviewedByOpsUserId], references: [id])
   // Snapshot of the reviewer's name/email at review time — the audit record
   // shouldn't change retroactively if the OpsUser is later renamed/revoked.
   reviewedByLabel     String?
-  createdAt          DateTime  @default(now())
+  createdAt           DateTime  @default(now())
 
   @@index([merchantId, createdAt])
 }
@@ -314,32 +315,32 @@ model ApiKey {
 }
 
 model PaymentIntent {
-  id                String              @id @default(cuid())
-  merchantId        String
-  merchant          Merchant            @relation(fields: [merchantId], references: [id])
-  amount            Int
-  currency          String              @default("BOB")
-  status            PaymentIntentStatus @default(REQUIRES_PAYMENT_METHOD)
-  paymentMethodType PaymentMethodType?
-  paymentMethodId   String?
-  paymentMethod     PaymentMethod?      @relation(fields: [paymentMethodId], references: [id])
-  clientSecret      String              @unique
-  livemode          Boolean             @default(false)
-  description       String?
-  metadata          Json?
-  railId            String?
-  confirmationAttempts Int              @default(0)
-  lastError         Json?
-  customerName      String?
-  customerDocument  String?
+  id                   String              @id @default(cuid())
+  merchantId           String
+  merchant             Merchant            @relation(fields: [merchantId], references: [id])
+  amount               Int
+  currency             String              @default("BOB")
+  status               PaymentIntentStatus @default(REQUIRES_PAYMENT_METHOD)
+  paymentMethodType    PaymentMethodType?
+  paymentMethodId      String?
+  paymentMethod        PaymentMethod?      @relation(fields: [paymentMethodId], references: [id])
+  clientSecret         String              @unique
+  livemode             Boolean             @default(false)
+  description          String?
+  metadata             Json?
+  railId               String?
+  confirmationAttempts Int                 @default(0)
+  lastError            Json?
+  customerName         String?
+  customerDocument     String?
   // Buyer contact info, collected at checkout so the merchant can reach out
   // about this order — separate from customerDocument (tax ID, for invoicing).
-  customerEmail     String?
-  customerPhone     String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  transactions      Transaction[]
-  invoice           Invoice?
+  customerEmail        String?
+  customerPhone        String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  transactions         Transaction[]
+  invoice              Invoice?
 
   @@index([merchantId, createdAt])
 }
@@ -357,19 +358,19 @@ enum PaymentLinkStatus {
 // StoresService — same PaymentIntent/rail/ledger machinery as the full API
 // path, just without requiring a merchant backend to call anything.
 model Store {
-  id              String        @id @default(cuid())
-  merchantId      String
-  merchant        Merchant      @relation(fields: [merchantId], references: [id])
-  slug            String        @unique
-  name            String
+  id                 String                @id @default(cuid())
+  merchantId         String
+  merchant           Merchant              @relation(fields: [merchantId], references: [id])
+  slug               String                @unique
+  name               String
   // Short about/tagline text shown under the store name on the storefront.
-  tagline         String?
+  tagline            String?
   // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
-  logoUrl         String?
+  logoUrl            String?
   // Wide header image, separate from logoUrl (which stays small/square).
-  bannerUrl       String?
+  bannerUrl          String?
   // "#RRGGBB", validated at the DTO layer only.
-  backgroundColor String?
+  backgroundColor    String?
   // "/v1/uploads/<uuid>.<ext>" — full-page storefront background photo.
   // Independent of backgroundColor: when set, the image is what's shown
   // (backgroundColor still renders behind it while the image loads / behind
@@ -379,67 +380,141 @@ model Store {
   // Support channel shown to customers on the receipt/success screen — e.g.
   // for a refund request or an order question. Both optional and independent
   // (a merchant may only want to expose one).
-  contactPhone    String?
-  contactEmail    String?
+  contactPhone       String?
+  contactEmail       String?
   // Long-form brand story ("Nuestra historia") rendered as its own storefront
   // section — multi-paragraph (blank-line separated), unlike the one-line tagline.
-  aboutText       String?
+  aboutText          String?
   // Optional background photo for the "Nuestra historia" section. The section
   // remains plain and transparent when this is null.
-  aboutImageUrl   String?
+  aboutImageUrl      String?
   // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
   // title gradient). Null = pagosYa's default palette accent, per theme.
-  accentColor     String?
+  accentColor        String?
   // Curated storefront typography: "mono" (default) | "modern" |
   // "editorial" | "friendly". The dashboard itself always keeps pagosYa's
   // 0xProto Mono identity; this choice belongs only to the merchant storefront.
-  fontStyle       String        @default("mono")
+  fontStyle          String                @default("mono")
   // Corner treatment for the storefront's interactive elements:
   // "rounded" (default) | "pill" | "square". Validated at the DTO layer.
-  buttonStyle     String        @default("rounded")
+  buttonStyle        String                @default("rounded")
   // Storefront ground material for the "El Tablero" (hand-lettered price
   // board) visual world: "chalkboard" (default) | "kraft" | "painted".
   // Validated at the DTO layer.
-  boardTexture    String        @default("chalkboard")
+  boardTexture       String                @default("chalkboard")
   // Short promo/notice line shown in a bar at the very top of the storefront.
-  announcement    String?
+  announcement       String?
   // "static" (default) | "marquee". Speed is one full marquee pass in seconds.
-  announcementMode String       @default("static")
-  announcementSpeed Int         @default(18)
+  announcementMode   String                @default("static")
+  announcementSpeed  Int                   @default(18)
+  // Merchant-controlled announcement presentation. Color is the strip
+  // background; storefront code derives a contrasting ink color automatically.
+  announcementSize   String                @default("medium")
+  announcementColor  String                @default("#c58b3c")
   // Merchant-authored promotion dialog. The customer can dismiss it for the
   // current browser session; preview mode always renders it for editing.
-  promotionEnabled  Boolean     @default(false)
-  promotionTitle    String?
-  promotionBody     String?
-  promotionCtaLabel String?
-  promotionCtaUrl   String?
+  promotionEnabled   Boolean               @default(false)
+  promotionTitle     String?
+  promotionBody      String?
+  promotionCtaLabel  String?
+  promotionCtaUrl    String?
   // Ordered, merchant-authored storefront hero slides. JSON keeps this
   // lightweight customization atomic with the rest of the appearance editor;
   // every entry is validated by CreateStoreDto before it reaches Prisma.
-  heroSlides        Json          @default("[]")
+  heroSlides         Json                  @default("[]")
   // Every public content section appears exactly once. The dashboard edits
   // this array as an ordered list; empty sections simply do not render.
-  contentOrder       Json          @default("[\"hero\",\"products\",\"about\",\"gallery\",\"links\"]")
+  contentOrder       Json                  @default("[\"hero\",\"products\",\"about\",\"gallery\",\"links\"]")
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
-  editorialGallery  Json          @default("[]")
+  editorialGallery   Json                  @default("[]")
   // Button customization layers: corner shape lives in buttonStyle; these
   // control fill treatment, motion, and the customer-facing cart CTA copy.
-  buttonVariant    String        @default("solid")
-  buttonMotion     String        @default("lift")
-  cartButtonLabel  String        @default("Ir a pagar")
-  status          StoreStatus   @default(ACTIVE)
+  buttonVariant      String                @default("solid")
+  buttonMotion       String                @default("lift")
+  cartButtonLabel    String                @default("Ir a pagar")
+  status             StoreStatus           @default(ACTIVE)
   // Incremented once per storefront page load (getStorePublic) — a simple
   // visit counter, not deduplicated per visitor. Good enough for "is anyone
   // looking at this store" without building real analytics infra.
-  viewCount       Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  paymentLinks    PaymentLink[]
-  categories      Category[]
-  links           StoreLink[]
+  viewCount          Int                   @default(0)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  paymentLinks       PaymentLink[]
+  categories         Category[]
+  links              StoreLink[]
+  mediaAssets        MediaAsset[]
+  visualProposals    StoreVisualProposal[]
+  visualVersions     StoreVisualVersion[]
 
   @@index([merchantId, createdAt])
+}
+
+enum MediaAssetKind {
+  ORIGINAL
+  AI_DERIVED
+}
+
+// Upload ownership and lineage live in the database even when the bytes move
+// from local disk to object storage. Original merchant files are never
+// overwritten by AI output; derived files point back to their source.
+model MediaAsset {
+  id            String         @id @default(cuid())
+  merchantId    String
+  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId       String?
+  store         Store?         @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  url           String         @unique
+  storageKey    String         @unique
+  kind          MediaAssetKind @default(ORIGINAL)
+  mimeType      String
+  byteSize      Int
+  parentAssetId String?
+  parentAsset   MediaAsset?    @relation("MediaAssetLineage", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  derivatives   MediaAsset[]   @relation("MediaAssetLineage")
+  createdAt     DateTime       @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+enum VisualProposalStatus {
+  READY
+  APPLIED
+  DISMISSED
+}
+
+// A proposal stores only the bounded storefront configuration accepted by the
+// API. It never stores or executes model-generated HTML, CSS, or JavaScript.
+model StoreVisualProposal {
+  id              String               @id @default(cuid())
+  storeId         String
+  store           Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  title           String
+  rationale       String
+  provider        String
+  status          VisualProposalStatus @default(READY)
+  config          Json
+  sourceAssetUrls Json                 @default("[]")
+  generatedUrls   Json                 @default("[]")
+  appliedAt       DateTime?
+  createdAt       DateTime             @default(now())
+
+  @@index([storeId, createdAt])
+}
+
+// Snapshots are created before applying an AI proposal or restoring an older
+// version, making every visual change reversible without touching products.
+model StoreVisualVersion {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  label     String
+  source    String
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt])
 }
 
 // Merchant-defined buttons rendered under the storefront header — social

@@ -95,13 +95,49 @@ async function uploadPng(hex, secretKey) {
   return url;
 }
 
-async function createStore(secretKey, { name, brandColor, backgroundColor, products }) {
+async function createStore(secretKey, { name, brandColor, backgroundColor, products, studio }) {
   const store = await api("/stores", { method: "POST", secretKey, body: { name } });
   const logoUrl = await uploadPng(brandColor, secretKey);
   await api(`/stores/${store.id}`, { method: "PATCH", secretKey, body: { logoUrl, backgroundColor } });
 
   console.log(`\nStore: ${name} (${store.id})`);
   console.log(`  Link: ${CHECKOUT_ORIGIN}/?link=${store.slug}`);
+
+  // Exercises the Store Studio surface (hero carousel, promotions,
+  // about/editorial imagery, button/font/board presentation) end to end
+  // with real uploaded assets, not just the base catalog fields above —
+  // otherwise these fields only ever get touched by hand in the dashboard.
+  if (studio) {
+    const heroImageUrl = await uploadPng(studio.heroColor, secretKey);
+    const aboutImageUrl = await uploadPng(studio.aboutColor, secretKey);
+    const galleryImageUrl = await uploadPng(studio.galleryColor, secretKey);
+    await api(`/stores/${store.id}`, {
+      method: "PATCH",
+      secretKey,
+      body: {
+        aboutText: studio.aboutText,
+        aboutImageUrl,
+        fontStyle: studio.fontStyle,
+        buttonStyle: studio.buttonStyle,
+        boardTexture: studio.boardTexture,
+        buttonVariant: studio.buttonVariant,
+        buttonMotion: studio.buttonMotion,
+        announcement: studio.announcement,
+        announcementMode: "marquee",
+        announcementSpeed: 18,
+        promotionEnabled: true,
+        promotionTitle: studio.promotionTitle,
+        promotionBody: studio.promotionBody,
+        promotionCtaLabel: "Ver catálogo",
+        heroSlides: [
+          { imageUrl: heroImageUrl, title: studio.heroTitle, body: studio.heroBody, ctaLabel: "Descubrir" },
+        ],
+        editorialGallery: [{ imageUrl: galleryImageUrl, caption: studio.galleryCaption }],
+        contentOrder: ["hero", "products", "gallery", "about", "links"],
+      },
+    });
+    console.log(`  Store Studio: hero/about/gallery imagery + promotion + ${studio.fontStyle}/${studio.buttonStyle}/${studio.boardTexture} presentation configured`);
+  }
 
   const links = [];
   for (const p of products) {
@@ -155,6 +191,24 @@ async function main() {
       { name: "Gorra Bordada", description: "Ajustable, bordado pagosYa", amount: 4500, color: "#f59e0b" },
       { name: "Tote Bag", description: "Bolsa de tela resistente", amount: 3500, color: "#059669" },
     ],
+    studio: {
+      heroColor: "#1e3a8a",
+      aboutColor: "#dbeafe",
+      galleryColor: "#93c5fd",
+      heroTitle: "Nueva colección urbana",
+      heroBody: "Piezas pensadas para todos los días.",
+      aboutText:
+        "Ropa Urbana nace en La Paz en 2022. Cada pieza se corta y cose a mano en nuestro taller, con algodón boliviano de origen responsable.",
+      galleryCaption: "Terminado a mano, pieza por pieza.",
+      fontStyle: "modern",
+      buttonStyle: "pill",
+      boardTexture: "chalkboard",
+      buttonVariant: "solid",
+      buttonMotion: "lift",
+      announcement: "Envío gratis en compras desde Bs 200",
+      promotionTitle: "20% en tu primera compra",
+      promotionBody: "Usa el código BIENVENIDA al pagar.",
+    },
   });
 
   await createStore(testKeys.secretKey, {

@@ -81,7 +81,6 @@ const ICON_ARROW_RIGHT =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 
 const app = document.getElementById("app")!;
-installCustomPointer();
 let selectedType: PaymentMethodType = PaymentMethodType.CARD;
 let linkHeader: LinkHeader | null = null;
 // Survives renderForm() re-renders (e.g. switching payment method tabs) so
@@ -113,38 +112,6 @@ function escapeHtml(value: string): string {
 
 function isVideoMediaUrl(url: string): boolean {
   return /\.(mp4|webm)(?:$|[?#])/i.test(url);
-}
-
-function installCustomPointer() {
-  if (typeof window.matchMedia !== "function" || !window.matchMedia("(pointer: fine)").matches) return;
-  const cursorValue = getComputedStyle(document.documentElement).getPropertyValue("--pg-hand-cursor");
-  const imageMatch = cursorValue.match(/url\(["']?([^"')]+)["']?\)/);
-  if (!imageMatch) return;
-
-  const pointer = document.createElement("span");
-  pointer.className = "pg-custom-pointer";
-  pointer.setAttribute("aria-hidden", "true");
-  pointer.style.backgroundImage = `url("${imageMatch[1]}")`;
-  document.body.append(pointer);
-  document.documentElement.classList.add("has-pg-custom-pointer");
-
-  const movePointer = (event: PointerEvent) => {
-    if (event.pointerType && event.pointerType !== "mouse") return;
-    pointer.style.setProperty("--pointer-x", `${event.clientX - 5}px`);
-    pointer.style.setProperty("--pointer-y", `${event.clientY - 2}px`);
-    pointer.classList.add("is-visible");
-  };
-  const pressPointer = (event: PointerEvent) => {
-    if (!event.pointerType || event.pointerType === "mouse") pointer.classList.add("is-pressing");
-  };
-  const releasePointer = () => pointer.classList.remove("is-pressing");
-
-  document.addEventListener("pointermove", movePointer, { passive: true });
-  document.addEventListener("pointerdown", pressPointer, { passive: true });
-  document.addEventListener("pointerup", releasePointer, { passive: true });
-  document.addEventListener("pointercancel", releasePointer, { passive: true });
-  document.documentElement.addEventListener("mouseleave", () => pointer.classList.remove("is-visible"));
-  window.addEventListener("blur", releasePointer);
 }
 
 // A stray "." or "-" left in the announcement field is still a truthy string,
@@ -219,6 +186,66 @@ function accentContrastColor(hex: string): "#ffffff" | "#000000" {
   return luminance >= 0.179 ? "#000000" : "#ffffff";
 }
 
+function createStoreEntrance(): HTMLElement {
+  const entrance = document.createElement("div");
+  entrance.className = "store-entry-loader";
+  entrance.setAttribute("role", "status");
+  entrance.setAttribute("aria-live", "polite");
+  entrance.setAttribute("aria-label", "Cargando tienda");
+
+  const content = document.createElement("div");
+  content.className = "store-entry-loader-content";
+
+  const brand = document.createElement("div");
+  brand.className = "store-entry-loader-brand";
+  brand.textContent = "Cargando tienda";
+
+  const track = document.createElement("div");
+  track.className = "store-entry-loader-track";
+  track.setAttribute("aria-hidden", "true");
+  const bar = document.createElement("span");
+  track.append(bar);
+  content.append(brand, track);
+  entrance.append(content);
+  document.body.append(entrance);
+  return entrance;
+}
+
+function finishStoreEntrance(entrance: HTMLElement, store: Store) {
+  const storeName = store.storeName.trim() || "Tienda";
+  const brand = entrance.querySelector<HTMLElement>(".store-entry-loader-brand")!;
+  const logoUrl = assetUrl(store.logoUrl);
+  const accent = store.accentColor ? clampAccentLightness(store.accentColor) : DEFAULT_ACCENT_PALETTES.dark.accent;
+  const background = store.backgroundColor || "#11100f";
+
+  entrance.style.setProperty("--store-entry-bg", background);
+  entrance.style.setProperty("--store-entry-accent", accent);
+  entrance.style.setProperty("--store-entry-ink", accentContrastColor(background));
+  entrance.setAttribute("aria-label", `Cargando ${storeName}`);
+  brand.replaceChildren();
+
+  if (logoUrl) {
+    const logo = document.createElement("img");
+    logo.className = "store-entry-loader-logo";
+    logo.src = logoUrl;
+    logo.alt = "";
+    logo.addEventListener("error", () => {
+      brand.textContent = storeName;
+    }, { once: true });
+    const accessibleName = document.createElement("span");
+    accessibleName.className = "sr-only";
+    accessibleName.textContent = storeName;
+    brand.append(logo, accessibleName);
+  } else {
+    brand.textContent = storeName;
+  }
+
+  window.setTimeout(() => {
+    entrance.classList.add("is-leaving");
+    window.setTimeout(() => entrance.remove(), 360);
+  }, 1050);
+}
+
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const linkSlug = params.get("link");
@@ -229,12 +256,15 @@ async function main() {
   // whole catalog (Store) — a customer buying several things adds them all
   // to one Cart and pays once, instead of needing a separate QR per item.
   if (linkSlug && !clientSecret) {
+    const entrance = storePreviewMode ? null : createStoreEntrance();
     try {
       const store = await fetchStore(linkSlug, { preview: storePreviewMode });
       loadCart(store);
-      renderStore(linkSlug, store);
+      renderStoreRoute(linkSlug, store);
+      if (entrance) finishStoreEntrance(entrance, store);
       observeResize(app);
     } catch (err) {
+      entrance?.remove();
       // The API's message is already a complete, customer-facing Spanish
       // sentence for the realistic failure here (store deleted/archived) —
       // no need to wrap or prefix it, that just produces a redundant phrase.
@@ -271,6 +301,7 @@ async function enterPaymentFlow(clientSecret: string) {
 // as separate cart lines without duplicating the product in the catalog.
 const cart = new Map<string, number>();
 const selectedVariantByItem = new Map<string, string>();
+const selectedProductImageByItem = new Map<string, number>();
 const CART_VARIANT_SEPARATOR = "::";
 
 function itemVariants(item: StoreItem): StoreItem["variants"] {
@@ -315,6 +346,7 @@ function optionStock(item: StoreItem, variant: StoreItem["variants"][number] | u
 // real first paint, not replay/flash on every cart interaction.
 let hasStoreAnimatedIn = false;
 let activePromotionCleanup: (() => void) | null = null;
+let activeAnnouncementCleanup: (() => void) | null = null;
 let activeHeroCleanup: (() => void) | null = null;
 
 // Search/category filter state for large catalogs — lives outside
@@ -407,7 +439,20 @@ function cartCount(): number {
   return [...cart.values()].reduce((sum, qty) => sum + qty, 0);
 }
 
-function renderProductCard(item: StoreItem, index: number): string {
+function storeCatalogUrl(slug: string): string {
+  const params = new URLSearchParams();
+  params.set("link", slug);
+  if (storePreviewMode) params.set("preview", "1");
+  return `?${params.toString()}`;
+}
+
+function productPageUrl(slug: string, productId: string): string {
+  const params = new URLSearchParams(storeCatalogUrl(slug).slice(1));
+  params.set("product", productId);
+  return `?${params.toString()}`;
+}
+
+function renderProductCard(slug: string, item: StoreItem, index: number): string {
   const variants = itemVariants(item);
   const selectedVariant = selectedVariantFor(item);
   const key = cartItemKey(item.id, selectedVariant?.id);
@@ -422,11 +467,14 @@ function renderProductCard(item: StoreItem, index: number): string {
   // long catalog doesn't leave the last cards waiting a visible beat to
   // appear.
   const staggerStyle = hasStoreAnimatedIn ? "" : ` style="--stagger-delay: ${Math.min(index * 45, 360)}ms"`;
+  const detailUrl = productPageUrl(slug, item.id);
 
   const galleryHtml = images.length
     ? `
       <div class="store-item-gallery">
-        <img class="store-item-image" src="${escapeHtml(images[0])}" alt="${escapeHtml(item.name)}" />
+        <a class="store-item-image-link product-page-link" href="${escapeHtml(detailUrl)}" aria-label="Ver ${escapeHtml(item.name)}">
+          <img class="store-item-image" src="${escapeHtml(images[0])}" alt="${escapeHtml(item.name)}" />
+        </a>
         ${
           images.length > 1
             ? `<div class="gallery-thumbs">
@@ -435,7 +483,7 @@ function renderProductCard(item: StoreItem, index: number): string {
             : ""
         }
       </div>`
-    : `<div class="store-item-image placeholder"></div>`;
+    : `<a class="store-item-image store-item-image-link placeholder product-page-link" href="${escapeHtml(detailUrl)}" aria-label="Ver ${escapeHtml(item.name)}"><span>${escapeHtml(initials(item.name))}</span></a>`;
 
   const tagsHtml = item.tags.length
     ? `<div class="store-item-tags">${item.tags.map((t) => `<span class="tag-badge">${escapeHtml(t)}</span>`).join("")}</div>`
@@ -466,7 +514,7 @@ function renderProductCard(item: StoreItem, index: number): string {
       ${galleryHtml}
       <div class="store-item-info">
         ${tagsHtml}
-        <div class="store-item-name">${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" title="${escapeHtml(item.color)}"></span>` : ""}${escapeHtml(item.name)}</div>
+        <a class="store-item-name product-page-link" href="${escapeHtml(detailUrl)}">${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" title="${escapeHtml(item.color)}"></span>` : ""}${escapeHtml(item.name)}</a>
         ${item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
         ${variantsHtml}
         <div class="store-item-price">${formatAmount(selectedVariant?.amount ?? item.amount, item.currency)}${stockNote}</div>
@@ -511,6 +559,8 @@ type StorePreviewPatch = Partial<
     | "announcement"
     | "announcementMode"
     | "announcementSpeed"
+    | "announcementSize"
+    | "announcementColor"
     | "promotionEnabled"
     | "promotionTitle"
     | "promotionBody"
@@ -563,6 +613,10 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (Number.isInteger(source.announcementSpeed)) {
     clean.announcementSpeed = Math.min(40, Math.max(8, source.announcementSpeed as number));
   }
+  if (["small", "medium", "large"].includes(String(source.announcementSize))) clean.announcementSize = source.announcementSize;
+  if (typeof source.announcementColor === "string" && /^#[0-9a-f]{6}$/i.test(source.announcementColor)) {
+    clean.announcementColor = source.announcementColor.toLowerCase();
+  }
   if (typeof source.promotionEnabled === "boolean") clean.promotionEnabled = source.promotionEnabled;
   if (Array.isArray(source.heroSlides)) {
     clean.heroSlides = source.heroSlides
@@ -588,6 +642,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
       .map((image) => ({
         imageUrl: typeof image.imageUrl === "string" && /^\/v1\/uploads\//.test(image.imageUrl) ? image.imageUrl : "",
         caption: typeof image.caption === "string" ? image.caption.slice(0, 180) : "",
+        ...(typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? { boxColor: image.boxColor } : {}),
       }))
       .filter((image) => image.imageUrl)
       .slice(0, 8);
@@ -606,41 +661,21 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   return clean as StorePreviewPatch;
 }
 
-function renderStore(slug: string, store: Store) {
-  activeHeroCleanup?.();
-  activeHeroCleanup = null;
+function applyStoreTheme(slug: string, store: Store): void {
   currentStoreSlug = slug;
   if (storePreviewMode) activePreviewStore = { slug, store };
   document.body.classList.add("store-page");
-  const currency = store.items[0]?.currency ?? "BOB";
 
-  // Storefront branding is per-store, not per-page — set it fresh on every render so
-  // switching between two different stores in one browser never bleeds one store's
-  // background/logo into another's page. This sets the *page* background (the space
-  // around the cards), not the cards themselves — those stay on --pg-bg, the normal
-  // light/dark surface color, so they read as cards sitting on the merchant's page
-  // rather than the whole storefront changing color scheme.
+  // Storefront branding is per-store, not per-page. Set it for both the
+  // catalog and product routes so a shared product link still feels wholly
+  // owned by the merchant and never inherits another store's appearance.
   document.documentElement.style.setProperty("--pg-page-bg", store.backgroundColor || "");
   const backgroundImageUrl = assetUrl(store.backgroundImageUrl);
   document.documentElement.style.setProperty("--pg-page-bg-image", backgroundImageUrl ? `url("${backgroundImageUrl}")` : "none");
-  // Keep the store identity as plain typography rather than wrapping it in a
-  // panel. When it sits over a photo, CSS uses light text and a restrained
-  // shadow to preserve contrast without adding another visual container.
   document.body.classList.toggle("has-bg-image", !!backgroundImageUrl);
-  // A merchant-chosen background PHOTO is meant to sit behind content that
-  // assumes dark text — force the light text/border palette so it doesn't
-  // collide with a visitor's dark-mode browser. backgroundColor is
-  // deliberately excluded here: it's only ever a brief flash color before an
-  // image loads (see the dashboard's own copy on this field) — with no image,
-  // El Tablero's board texture paints the persistent background instead, and
-  // that's always dark, so switching to the light (dark-text) palette on
-  // backgroundColor alone would put dark text on a dark board.
   if (backgroundImageUrl) document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
-  // A merchant-chosen accent recolors every highlight (chips, title gradient,
-  // links, pay button). Only the one hex comes from the API — the companion
-  // soft/ring shades derive from it in CSS via color-mix (see
-  // body.has-custom-accent in style.css), so they stay readable in either theme.
+
   if (store.accentColor) {
     const effectiveAccent = clampAccentLightness(store.accentColor);
     document.documentElement.style.setProperty("--pg-accent", effectiveAccent);
@@ -654,13 +689,265 @@ function renderStore(slug: string, store: Store) {
   }
   document.body.classList.toggle("has-custom-accent", !!store.accentColor);
   document.body.dataset.fontStyle = store.fontStyle || "mono";
-  // Corner treatment ("rounded" | "pill" | "square") is a pure-CSS switch.
   document.body.dataset.buttonStyle = store.buttonStyle || "rounded";
   document.body.dataset.buttonVariant = store.buttonVariant || "solid";
   document.body.dataset.buttonMotion = store.buttonMotion || "lift";
-  // Board ground material ("chalkboard" | "kraft" | "painted") — pure-CSS
-  // switch, same pattern as buttonStyle above.
   document.body.dataset.boardTexture = store.boardTexture || "chalkboard";
+}
+
+let activeStoreRoute: { slug: string; store: Store } | null = null;
+
+function productIdFromLocation(): string | null {
+  return new URLSearchParams(window.location.search).get("product");
+}
+
+function renderStoreRoute(slug: string, store: Store): void {
+  activeStoreRoute = { slug, store };
+  const productId = productIdFromLocation();
+  if (productId) renderProductPage(slug, store, productId);
+  else renderStore(slug, store);
+}
+
+function navigateWithinStore(slug: string, store: Store, productId?: string): void {
+  window.history.pushState({}, "", productId ? productPageUrl(slug, productId) : storeCatalogUrl(slug));
+  renderStoreRoute(slug, store);
+  app.focus({ preventScroll: true });
+}
+
+function bindInternalStoreLinks(slug: string, store: Store): void {
+  app.querySelectorAll<HTMLAnchorElement>(".product-page-link").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      const productId = new URL(link.href).searchParams.get("product");
+      if (productId) navigateWithinStore(slug, store, productId);
+    });
+  });
+  app.querySelectorAll<HTMLAnchorElement>(".store-catalog-link").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      navigateWithinStore(slug, store);
+    });
+  });
+}
+
+function bindCartCheckout(slug: string, store: Store): void {
+  const payButton = app.querySelector<HTMLButtonElement>("#cart-pay");
+  payButton?.addEventListener("click", async () => {
+    if (cartCount() === 0) return;
+    const checkoutError = app.querySelector<HTMLElement>(".cart-checkout-error");
+    const buttonLabel = store.cartButtonLabel || "Ir a pagar";
+    if (checkoutError) {
+      checkoutError.hidden = true;
+      checkoutError.textContent = "";
+    }
+    payButton.disabled = true;
+    payButton.setAttribute("aria-busy", "true");
+    payButton.textContent = "Abriendo pago…";
+    try {
+      const items = [...cart.entries()].map(([key, quantity]) => ({ ...parseCartItemKey(key), quantity }));
+      const result = await checkoutCart(slug, items);
+      linkHeader = {
+        storeName: result.storeName,
+        description: result.cartDescription,
+        contactPhone: result.contactPhone,
+        contactEmail: result.contactEmail,
+      };
+      cart.clear();
+      saveCart(store);
+      await enterPaymentFlow(result.clientSecret);
+    } catch (err) {
+      payButton.disabled = false;
+      payButton.removeAttribute("aria-busy");
+      payButton.textContent = buttonLabel;
+      if (checkoutError) {
+        checkoutError.textContent = `No se pudo abrir el pago: ${(err as Error).message}. Intenta nuevamente.`;
+        checkoutError.hidden = false;
+      }
+    }
+  });
+}
+
+function renderProductPage(slug: string, store: Store, productId: string): void {
+  activeHeroCleanup?.();
+  activeHeroCleanup = null;
+  activeAnnouncementCleanup?.();
+  activeAnnouncementCleanup = null;
+  activePromotionCleanup?.();
+  activePromotionCleanup = null;
+  document.body.classList.remove("promotion-open");
+  applyStoreTheme(slug, store);
+
+  const item = store.items.find((candidate) => candidate.id === productId);
+  const catalogUrl = storeCatalogUrl(slug);
+  const logoUrl = assetUrl(store.logoUrl);
+  if (!item) {
+    app.innerHTML = `
+      <header class="product-page-header">
+        <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>Volver a ${escapeHtml(store.storeName)}</span></a>
+      </header>
+      <main class="product-not-found">
+        <span class="product-not-found-mark">?</span>
+        <h1>Este producto ya no está disponible</h1>
+        <p>Puede que haya sido retirado o que el enlace haya cambiado.</p>
+        <a class="primary store-catalog-link" href="${escapeHtml(catalogUrl)}">Ver todos los productos</a>
+      </main>`;
+    bindInternalStoreLinks(slug, store);
+    return;
+  }
+
+  const variants = itemVariants(item);
+  const selectedVariant = selectedVariantFor(item);
+  const selectedStock = optionStock(item, selectedVariant);
+  const key = cartItemKey(item.id, selectedVariant?.id);
+  const qty = cart.get(key) ?? 0;
+  const soldOut = item.stock === 0 || selectedStock === 0;
+  const atProductLimit = item.stock !== null && productCartQuantity(item.id) >= item.stock;
+  const atOptionLimit = selectedStock !== null && qty >= selectedStock;
+  const images = item.imageUrls.map(assetUrl).filter((url): url is string => !!url);
+  const rememberedImageIndex = selectedProductImageByItem.get(item.id) ?? 0;
+  const selectedImageIndex = Math.min(Math.max(rememberedImageIndex, 0), Math.max(images.length - 1, 0));
+  selectedProductImageByItem.set(item.id, selectedImageIndex);
+  const category = store.categories.find((candidate) => candidate.id === item.categoryId);
+  const stockLabel = soldOut
+    ? "Agotado"
+    : selectedStock !== null
+      ? `${selectedStock} disponibles`
+      : "Disponible";
+
+  const galleryHtml = images.length
+    ? `<div class="product-detail-main-image-wrap">
+        <img class="product-detail-main-image" src="${escapeHtml(images[selectedImageIndex])}" alt="${escapeHtml(item.name)}, foto ${selectedImageIndex + 1} de ${images.length}">
+       </div>
+       ${
+         images.length > 1
+           ? `<div class="product-detail-thumbnails" aria-label="Fotos de ${escapeHtml(item.name)}">
+              ${images
+                .map(
+                  (url, index) =>
+                    `<button type="button" class="product-detail-thumbnail${index === selectedImageIndex ? " active" : ""}" data-image-index="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === selectedImageIndex}"><img src="${escapeHtml(url)}" alt=""></button>`,
+                )
+                .join("")}
+             </div>`
+           : ""
+       }`
+    : `<div class="product-detail-main-image-wrap product-detail-placeholder" aria-label="${escapeHtml(item.name)}"><span>${escapeHtml(initials(item.name))}</span></div>`;
+
+  const variantsHtml = variants.length
+    ? `<fieldset class="product-detail-variants">
+        <legend>Elige un tipo</legend>
+        <div class="product-detail-option-list">
+          ${variants
+            .map((variant) => {
+              const variantStock = optionStock(item, variant);
+              const unavailable = variantStock === 0;
+              return `<button type="button" class="product-detail-option${variant.id === selectedVariant?.id ? " active" : ""}" data-variant-id="${escapeHtml(variant.id)}" aria-pressed="${variant.id === selectedVariant?.id}" ${unavailable ? "disabled" : ""}>
+                <span>${escapeHtml(variant.name)}</span>
+                <strong>${formatAmount(variant.amount, item.currency)}</strong>
+                ${unavailable ? `<small>Agotado</small>` : typeof variantStock === "number" ? `<small>${variantStock} disp.</small>` : ""}
+              </button>`;
+            })
+            .join("")}
+        </div>
+       </fieldset>`
+    : "";
+
+  app.innerHTML = `
+    <header class="product-page-header">
+      <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>Volver a ${escapeHtml(store.storeName)}</span></a>
+      <a class="product-store-brand store-catalog-link" href="${escapeHtml(catalogUrl)}" aria-label="Ir a ${escapeHtml(store.storeName)}">
+        ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="">` : `<span class="product-store-monogram">${escapeHtml(initials(store.storeName))}</span>`}
+        <strong>${escapeHtml(store.storeName)}</strong>
+      </a>
+    </header>
+    <main class="product-detail-layout">
+      <section class="product-detail-gallery" aria-label="Galería del producto">${galleryHtml}</section>
+      <section class="product-detail-content">
+        ${category ? `<div class="product-detail-category">${escapeHtml(category.name)}</div>` : ""}
+        ${item.tags.length ? `<div class="store-item-tags">${item.tags.map((tag) => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+        <h1>${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" aria-hidden="true"></span>` : ""}${escapeHtml(item.name)}</h1>
+        ${item.description ? `<p class="product-detail-description">${escapeHtml(item.description)}</p>` : ""}
+        ${variantsHtml}
+        <div class="product-detail-purchase">
+          <div>
+            <div class="product-detail-price">${formatAmount(selectedVariant?.amount ?? item.amount, item.currency)}</div>
+            <div class="product-detail-stock${soldOut ? " out" : ""}">${stockLabel}</div>
+          </div>
+          ${
+            soldOut
+              ? `<button type="button" class="primary product-add" disabled>Agotado</button>`
+              : qty === 0
+                ? `<button type="button" class="primary product-add">Agregar al carrito</button>`
+                : `<div class="qty-stepper product-detail-stepper" aria-label="Cantidad de ${escapeHtml(item.name)}">
+                    <button type="button" class="qty-minus" aria-label="Quitar uno">−</button>
+                    <span class="qty-value" aria-live="polite">${qty}</span>
+                    <button type="button" class="qty-plus" aria-label="Agregar uno" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
+                  </div>`
+          }
+        </div>
+      </section>
+    </main>
+    <div class="cart-bar product-detail-cart-bar">
+      <span class="cart-summary" aria-live="polite"></span>
+      <button type="button" class="primary" id="cart-pay">${escapeHtml(store.cartButtonLabel || "Ir a pagar")}</button>
+      <span class="cart-checkout-error" role="alert" hidden></span>
+    </div>
+    <div class="secure-note product-detail-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>`;
+
+  bindInternalStoreLinks(slug, store);
+  app.querySelectorAll<HTMLButtonElement>(".product-detail-thumbnail").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedProductImageByItem.set(item.id, Number(button.dataset.imageIndex));
+      renderProductPage(slug, store, item.id);
+      app.querySelector<HTMLButtonElement>(`.product-detail-thumbnail[data-image-index="${button.dataset.imageIndex}"]`)?.focus();
+    });
+  });
+  app.querySelectorAll<HTMLButtonElement>(".product-detail-option").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedVariantByItem.set(item.id, button.dataset.variantId!);
+      renderProductPage(slug, store, item.id);
+      app.querySelector<HTMLButtonElement>(`.product-detail-option[data-variant-id="${button.dataset.variantId}"]`)?.focus();
+    });
+  });
+
+  const addOne = () => {
+    if (item.stock !== null && productCartQuantity(item.id) >= item.stock) return;
+    const variant = selectedVariantFor(item);
+    const cartKey = cartItemKey(item.id, variant?.id);
+    const available = optionStock(item, variant);
+    if (available !== null && (cart.get(cartKey) ?? 0) >= available) return;
+    cart.set(cartKey, (cart.get(cartKey) ?? 0) + 1);
+    saveCart(store);
+    renderProductPage(slug, store, item.id);
+    app.querySelector<HTMLButtonElement>(".qty-plus")?.focus();
+  };
+  app.querySelector<HTMLButtonElement>(".product-add")?.addEventListener("click", addOne);
+  app.querySelector<HTMLButtonElement>(".qty-plus")?.addEventListener("click", addOne);
+  app.querySelector<HTMLButtonElement>(".qty-minus")?.addEventListener("click", () => {
+    const cartKey = cartItemKey(item.id, selectedVariantFor(item)?.id);
+    const next = (cart.get(cartKey) ?? 0) - 1;
+    if (next <= 0) cart.delete(cartKey);
+    else cart.set(cartKey, next);
+    saveCart(store);
+    renderProductPage(slug, store, item.id);
+    app.querySelector<HTMLButtonElement>(next > 0 ? ".qty-minus" : ".product-add")?.focus();
+  });
+
+  updateCartBar(store, item.currency);
+  bindCartCheckout(slug, store);
+  if (storePreviewMode && !previewReadyAnnounced) {
+    previewReadyAnnounced = true;
+    postToParent("CHECKOUT_READY", { mode: "store-preview" });
+  }
+}
+
+function renderStore(slug: string, store: Store) {
+  activeHeroCleanup?.();
+  activeHeroCleanup = null;
+  applyStoreTheme(slug, store);
+  const currency = store.items[0]?.currency ?? "BOB";
+  const backgroundImageUrl = assetUrl(store.backgroundImageUrl);
   const logoUrl = assetUrl(store.logoUrl);
   const bannerUrl = assetUrl(store.bannerUrl);
   const heroSlides = (store.heroSlides ?? [])
@@ -708,16 +995,31 @@ function renderStore(slug: string, store: Store) {
 
   const announcementMode = store.announcementMode === "marquee" ? "marquee" : "static";
   const announcementDuration = Math.min(40, Math.max(8, Number(store.announcementSpeed) || 18));
+  const announcementSize = ["small", "medium", "large"].includes(store.announcementSize) ? store.announcementSize : "medium";
+  const announcementColor = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#c58b3c";
+  const announcementInk = accentContrastColor(announcementColor);
+  const announcementStyle = `--announcement-bg:${announcementColor};--announcement-ink:${announcementInk};--marquee-duration:${announcementDuration}s`;
+  const announcementPhrases = (store.announcement ?? "")
+    .split(/\s*(?:[•·|]|\r?\n)\s*/u)
+    .map((phrase) => phrase.trim())
+    .filter(Boolean);
+  const announcementSequenceHtml = announcementPhrases
+    .map(
+      (phrase) =>
+        `<span class="store-announcement-phrase">${escapeHtml(phrase)}</span><span class="store-announcement-separator">•</span>`,
+    )
+    .join("");
   const announcementHtml =
     store.announcement && hasReadableContent(store.announcement)
       ? announcementMode === "marquee"
-        ? `<div class="store-announcement marquee" style="--marquee-duration:${announcementDuration}s" aria-label="${escapeHtml(store.announcement)}">
-            <div class="store-announcement-track">
-              <span class="store-announcement-copy">${escapeHtml(store.announcement)}</span>
-              <span class="store-announcement-copy" aria-hidden="true">${escapeHtml(store.announcement)}</span>
+        ? `<aside class="store-announcement marquee announcement-size-${announcementSize}" style="${announcementStyle}" aria-label="Anuncio">
+            <span class="store-announcement-a11y">${escapeHtml(store.announcement)}</span>
+            <div class="store-announcement-track" aria-hidden="true">
+              <span class="store-announcement-sequence">${announcementSequenceHtml}</span>
+              <span class="store-announcement-sequence" data-marquee-copy="duplicate">${announcementSequenceHtml}</span>
             </div>
-          </div>`
-        : `<div class="store-announcement">${escapeHtml(store.announcement)}</div>`
+          </aside>`
+        : `<div class="store-announcement announcement-size-${announcementSize}" style="${announcementStyle}">${escapeHtml(store.announcement)}</div>`
       : "";
 
   const safePromotionUrl = store.promotionCtaUrl && /^https?:\/\//i.test(store.promotionCtaUrl) ? store.promotionCtaUrl : null;
@@ -838,8 +1140,9 @@ function renderStore(slug: string, store: Store) {
     ${toolbarHtml}
     <div id="store-grid"></div>
     <div class="cart-bar">
-      <span class="cart-summary"></span>
-      <button class="primary" id="cart-pay">${escapeHtml(store.cartButtonLabel || "Ir a pagar")}</button>
+      <span class="cart-summary" aria-live="polite"></span>
+      <button type="button" class="primary" id="cart-pay">${escapeHtml(store.cartButtonLabel || "Ir a pagar")}</button>
+      <span class="cart-checkout-error" role="alert" hidden></span>
     </div>
   </section>`;
 
@@ -856,10 +1159,16 @@ function renderStore(slug: string, store: Store) {
         <div class="store-editorial-grid">
           ${editorialImages
             .map(
-              (image, index) => `<figure class="store-editorial-item">
-                <img src="${escapeHtml(image.resolvedImageUrl)}" alt="${escapeHtml(image.caption || `Imagen de la tienda ${index + 1}`)}" loading="lazy">
-                ${image.caption ? `<figcaption>${escapeHtml(image.caption)}</figcaption>` : ""}
-              </figure>`,
+              (image, index) => {
+                const boxColor = typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? image.boxColor : null;
+                const boxStyle = boxColor
+                  ? ` style="--store-editorial-card-bg:${boxColor};--store-editorial-card-ink:${accentContrastColor(boxColor)}"`
+                  : "";
+                return `<figure class="store-editorial-item"${boxStyle}>
+                  <img src="${escapeHtml(image.resolvedImageUrl)}" alt="${escapeHtml(image.caption || `Imagen de la tienda ${index + 1}`)}" loading="lazy">
+                  ${image.caption ? `<figcaption>${escapeHtml(image.caption)}</figcaption>` : ""}
+                </figure>`;
+              },
             )
             .join("")}
         </div>
@@ -900,6 +1209,30 @@ function renderStore(slug: string, store: Store) {
     <div class="secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
     ${promotionHtml}
   `;
+
+  activeAnnouncementCleanup?.();
+  activeAnnouncementCleanup = null;
+  const movingAnnouncement = app.querySelector<HTMLElement>(".store-announcement.marquee");
+  if (movingAnnouncement) {
+    let isInView = true;
+    const syncAnnouncementPlayback = () => {
+      movingAnnouncement.classList.toggle("is-paused", document.hidden || !isInView);
+    };
+    const observer =
+      typeof IntersectionObserver === "function"
+        ? new IntersectionObserver(([entry]) => {
+            isInView = entry?.isIntersecting ?? true;
+            syncAnnouncementPlayback();
+          })
+        : null;
+    observer?.observe(movingAnnouncement);
+    document.addEventListener("visibilitychange", syncAnnouncementPlayback);
+    syncAnnouncementPlayback();
+    activeAnnouncementCleanup = () => {
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", syncAnnouncementPlayback);
+    };
+  }
 
   activePromotionCleanup?.();
   activePromotionCleanup = null;
@@ -1063,28 +1396,8 @@ function renderStore(slug: string, store: Store) {
     });
   });
 
-  const payButton = app.querySelector<HTMLButtonElement>("#cart-pay");
-  payButton?.addEventListener("click", async () => {
-    payButton.disabled = true;
-    payButton.textContent = "Procesando...";
-    try {
-      const items = [...cart.entries()].map(([key, quantity]) => ({ ...parseCartItemKey(key), quantity }));
-      const result = await checkoutCart(slug, items);
-      linkHeader = {
-        storeName: result.storeName,
-        description: result.cartDescription,
-        contactPhone: result.contactPhone,
-        contactEmail: result.contactEmail,
-      };
-      // Checkout for this cart is now underway — clear it so a buyer who returns to the
-      // same storefront link later doesn't see an already-paid cart still populated.
-      cart.clear();
-      saveCart(store);
-      await enterPaymentFlow(result.clientSecret);
-    } catch (err) {
-      app.innerHTML = `<div class="status failed">${ICON_X}<span>No se pudo iniciar el pago: ${escapeHtml((err as Error).message)}</span></div>`;
-    }
-  });
+  bindCartCheckout(slug, store);
+  bindInternalStoreLinks(slug, store);
 
   renderStoreGrid(slug, store, currency);
   hasStoreAnimatedIn = true;
@@ -1103,7 +1416,7 @@ if (storePreviewMode) {
     if (!event.data || event.data.type !== "PAGOSYA_STORE_PREVIEW") return;
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
-    renderStore(activePreviewStore.slug, { ...activePreviewStore.store, ...patch });
+    renderStoreRoute(activePreviewStore.slug, { ...activePreviewStore.store, ...patch });
   });
 }
 
@@ -1151,7 +1464,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
       .map(
         (section) => `
           ${section.name ? `<div class="category-section-title">${escapeHtml(section.name)}</div>` : ""}
-          <div class="store-items">${section.items.map((item) => renderProductCard(item, cardIndex++)).join("")}</div>`,
+          <div class="store-items">${section.items.map((item) => renderProductCard(slug, item, cardIndex++)).join("")}</div>`,
       )
       .join("");
   }
@@ -1201,6 +1514,8 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
       updateCartBar(store, currency);
     });
   });
+
+  bindInternalStoreLinks(slug, store);
 
   updateCartBar(store, currency);
 }
@@ -1505,5 +1820,9 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
     });
   }
 }
+
+window.onpopstate = () => {
+  if (activeStoreRoute) renderStoreRoute(activeStoreRoute.slug, activeStoreRoute.store);
+};
 
 main();

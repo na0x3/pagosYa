@@ -14,7 +14,7 @@ const MAX_DESCRIPTION_LENGTH = 480;
 type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
 type StoreHeroSlide = { imageUrl: string; title?: string; body?: string; ctaLabel?: string; ctaUrl?: string };
 type StoreContentSection = (typeof STORE_CONTENT_SECTIONS)[number];
-type StoreEditorialImage = { imageUrl: string; caption?: string };
+type StoreEditorialImage = { imageUrl: string; caption?: string; boxColor?: string };
 
 function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
   if (!Array.isArray(value)) return [];
@@ -72,6 +72,7 @@ function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
     .map((entry) => ({
       imageUrl: entry.imageUrl as string,
       ...(typeof entry.caption === "string" && entry.caption ? { caption: entry.caption } : {}),
+      ...(typeof entry.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.boxColor) ? { boxColor: entry.boxColor } : {}),
     }));
 }
 
@@ -108,6 +109,8 @@ export class StoresService {
             announcement: dto.announcement,
             announcementMode: dto.announcementMode,
             announcementSpeed: dto.announcementSpeed,
+            announcementSize: dto.announcementSize,
+            announcementColor: dto.announcementColor,
             promotionEnabled: dto.promotionEnabled,
             promotionTitle: dto.promotionTitle,
             promotionBody: dto.promotionBody,
@@ -162,6 +165,8 @@ export class StoresService {
         ...(dto.announcement !== undefined && { announcement: dto.announcement }),
         ...(dto.announcementMode !== undefined && { announcementMode: dto.announcementMode }),
         ...(dto.announcementSpeed !== undefined && { announcementSpeed: dto.announcementSpeed }),
+        ...(dto.announcementSize !== undefined && { announcementSize: dto.announcementSize }),
+        ...(dto.announcementColor !== undefined && { announcementColor: dto.announcementColor }),
         ...(dto.promotionEnabled !== undefined && { promotionEnabled: dto.promotionEnabled }),
         ...(dto.promotionTitle !== undefined && { promotionTitle: dto.promotionTitle }),
         ...(dto.promotionBody !== undefined && { promotionBody: dto.promotionBody }),
@@ -294,6 +299,8 @@ export class StoresService {
       announcement: store.announcement,
       announcementMode: store.announcementMode,
       announcementSpeed: store.announcementSpeed,
+      announcementSize: store.announcementSize,
+      announcementColor: store.announcementColor,
       promotionEnabled: store.promotionEnabled,
       promotionTitle: store.promotionTitle,
       promotionBody: store.promotionBody,
