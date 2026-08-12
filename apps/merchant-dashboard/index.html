@@ -321,6 +321,13 @@
   .store-row.active { border-color: var(--pg-accent); background: var(--pg-accent-soft); }
   .store-row-logo { width: 30px; height: 30px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--pg-bg); }
   .store-row-name { font-weight: 600; font-size: 0.88rem; flex: 1; }
+  .store-row-open {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1.5px solid var(--pg-border-strong);
+    border-radius: 8px; color: var(--pg-text); font-size: .74rem; font-weight: 700; text-decoration: none;
+  }
+  .store-row-open:hover { border-color: var(--pg-text-faint); background: var(--pg-surface); }
+  .store-row-open:focus-visible { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+  .store-row-open svg { width: 14px; height: 14px; }
   .current-store-banner {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -4px 0 16px;
     font-size: 0.85rem; color: var(--pg-text-muted);
@@ -622,6 +629,9 @@
     .topbar-actions { width: 100%; align-items: stretch; }
     .workspace-header { align-items: flex-start; flex-direction: column; margin-bottom: 16px; }
     .section-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .store-row { flex-wrap: wrap; }
+    .store-row-name { min-width: calc(100% - 50px); }
+    .store-row-open { margin-left: 40px; }
     #loggedInBar { flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
     #loggedInAs { flex: 1 1 100%; max-width: none; white-space: normal; overflow-wrap: break-word; }
     .store-editor-section-body { grid-template-columns: 1fr; }
@@ -2863,7 +2873,11 @@
   function currentStoreUrl() {
     const store = lastStores.find((s) => s.id === currentStoreId);
     if (!store) return "";
-    return checkoutOriginEl.value.replace(/\/$/, "") + "/?link=" + store.slug;
+    return publicStoreUrl(store);
+  }
+
+  function publicStoreUrl(store) {
+    return checkoutOriginEl.value.replace(/\/$/, "") + "/?link=" + encodeURIComponent(store.slug);
   }
 
   function renderCurrentStoreBanner() {
@@ -2884,10 +2898,15 @@
     document.getElementById("storeRows").innerHTML = stores
       .map((store) => {
         const logo = store.logoUrl ? `<img class="store-row-logo" src="${esc(apiRoot() + store.logoUrl)}" alt="">` : "";
+        const publicUrl = publicStoreUrl(store);
         return `<div class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
           ${logo}
           <span class="store-row-name">${esc(store.name)}</span>
           <span class="badge ${esc(store.status)}">${esc(store.status)}</span>
+          <a class="store-row-open" href="${esc(publicUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir tienda ${esc(store.name)}">
+            Abrir tienda
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+          </a>
           <button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}">Eliminar</button>
         </div>`;
       })
@@ -2913,6 +2932,9 @@
           errorEl.textContent = "Error: " + err.message;
         }
       });
+    });
+    document.querySelectorAll(".store-row-open").forEach((link) => {
+      link.addEventListener("click", (event) => event.stopPropagation());
     });
 
     const hasStore = !!currentStoreId;
