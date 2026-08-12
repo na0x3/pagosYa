@@ -56,7 +56,7 @@
     --pg-border-strong: #746655;
     --pg-text: #25211c;
     --pg-text-muted: #625a50;
-    --pg-text-faint: #756b5f;
+    --pg-text-faint: #665d53;
     --pg-accent: #4f46e5;
     --pg-accent-soft: #e8e4fa;
     --pg-brand: #ffbd59;
@@ -77,7 +77,7 @@
     font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace;
     background: var(--pg-bg);
     color: var(--pg-text);
-    max-width: 1040px;
+    max-width: 1480px;
     margin: 0 auto;
     padding: 0 20px 100px;
     -webkit-font-smoothing: antialiased;
@@ -518,6 +518,74 @@
   #liveKeysResult { font-family: "0xProto Mono", ui-monospace, monospace; font-size: 0.78rem; margin-top: 10px; white-space: pre-wrap; background: var(--pg-bg); border-radius: 9px; padding: 10px; }
   section#app { display: none; }
 
+  .dashboard-shell {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  .dashboard-sidebar {
+    position: sticky;
+    top: 18px;
+    display: flex;
+    min-height: calc(100vh - 36px);
+    flex-direction: column;
+    padding: 14px 12px;
+    border: 1px solid var(--pg-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--pg-surface) 94%, var(--pg-bg));
+    box-shadow: var(--pg-shadow);
+  }
+  .dashboard-sidebar-head { padding: 8px 10px 16px; border-bottom: 1px solid var(--pg-border); }
+  .dashboard-sidebar-kicker,
+  .dashboard-nav-label,
+  .workspace-kicker {
+    display: block;
+    color: var(--pg-text-faint);
+    font-size: .67rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .dashboard-sidebar-head strong { display: block; margin-top: 5px; font-size: .88rem; }
+  .dashboard-nav { display: grid; gap: 4px; padding: 16px 0; }
+  .dashboard-nav-label { padding: 0 10px 7px; }
+  .dashboard-nav-button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 9px 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--pg-text-muted);
+    text-align: left;
+    font-size: .78rem;
+    text-decoration: none;
+  }
+  .dashboard-nav-button:hover { border-color: transparent; background: var(--pg-bg); color: var(--pg-text); }
+  .dashboard-nav-button:focus-visible { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+  .dashboard-nav-button[aria-current="page"] {
+    border-color: color-mix(in srgb, var(--pg-brand) 48%, var(--pg-border));
+    background: color-mix(in srgb, var(--pg-brand) 14%, var(--pg-surface));
+    color: var(--pg-text);
+  }
+  .dashboard-nav-button[aria-current="page"] .dashboard-nav-icon { color: var(--pg-brand); }
+  .dashboard-nav-icon { display: grid; width: 20px; height: 20px; flex: 0 0 auto; place-items: center; color: var(--pg-text-faint); }
+  .dashboard-nav-icon svg { width: 18px; height: 18px; }
+  .dashboard-sidebar-foot { margin-top: auto; padding: 14px 10px 5px; border-top: 1px solid var(--pg-border); }
+  .dashboard-sidebar-foot strong { display: block; margin-bottom: 4px; color: var(--pg-success); font-size: .72rem; }
+  .dashboard-sidebar-foot p { margin: 0; color: var(--pg-text-faint); font-size: .68rem; line-height: 1.5; }
+  .mobile-nav-hint { display: none; }
+  .dashboard-workspace { min-width: 0; }
+  .workspace-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin: 2px 0 20px; }
+  .workspace-title { margin: 5px 0 4px; font-size: clamp(1.35rem, 2vw, 1.8rem); letter-spacing: -.035em; }
+  .workspace-description { margin: 0; max-width: 64ch; color: var(--pg-text-muted); font-size: .8rem; line-height: 1.5; }
+  [data-dashboard-page][hidden] { display: none !important; }
+  .dashboard-workspace > section.block { margin-bottom: 20px; }
+
   /* Narrow-viewport pass: .topbar and #loggedInBar are non-wrapping flex rows,
      so a long email string forces horizontal overflow that pushes the whole
      page — including the balance card — into scroll territory. Wrap them and
@@ -525,6 +593,21 @@
      1 column on its own (auto-fit + minmax), this just removes the two rows
      that were fighting it. */
   @media (max-width: 900px) {
+    .dashboard-shell { grid-template-columns: 1fr; gap: 18px; }
+    .dashboard-sidebar { position: static; min-height: 0; padding: 10px; }
+    .dashboard-sidebar-head, .dashboard-sidebar-foot { display: none; }
+    .dashboard-nav {
+      display: flex;
+      gap: 6px;
+      padding: 0;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-width: thin;
+      scrollbar-color: var(--pg-border-strong) transparent;
+    }
+    .dashboard-nav-label { display: none; }
+    .dashboard-nav-button { width: auto; min-width: max-content; padding: 8px 10px; }
+    .mobile-nav-hint { display: block; margin: 7px 2px 0; color: var(--pg-text-faint); font-size: .66rem; text-align: right; }
     .finance-detail-grid { grid-template-columns: 1fr; }
     .store-studio { grid-template-columns: 1fr; }
     .store-preview-panel { position: static; }
@@ -537,6 +620,7 @@
     .panel { overflow-x: auto; }
     .topbar { flex-wrap: wrap; row-gap: 10px; }
     .topbar-actions { width: 100%; align-items: stretch; }
+    .workspace-header { align-items: flex-start; flex-direction: column; margin-bottom: 16px; }
     .section-head { flex-direction: column; align-items: flex-start; gap: 4px; }
     #loggedInBar { flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
     #loggedInAs { flex: 1 1 100%; max-width: none; white-space: normal; overflow-wrap: break-word; }
@@ -668,7 +752,39 @@
   <div id="info"></div>
 
   <section id="app">
-    <div class="cards">
+    <div class="dashboard-shell">
+      <aside class="dashboard-sidebar" aria-label="Navegación del panel">
+        <div class="dashboard-sidebar-head">
+          <span class="dashboard-sidebar-kicker">Espacio de trabajo</span>
+          <strong>Gestión del comercio</strong>
+        </div>
+        <nav class="dashboard-nav" aria-label="Secciones del panel">
+          <span class="dashboard-nav-label">Principal</span>
+          <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
+          <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Tiendas</a>
+          <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
+          <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
+          <a class="dashboard-nav-button" href="#dashboard-appearance" data-dashboard-view="appearance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Apariencia</a>
+          <span class="dashboard-nav-label" style="padding-top:12px">Operaciones</span>
+          <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
+          <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
+          <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
+        </nav>
+        <span class="mobile-nav-hint" aria-hidden="true">Desliza para ver más →</span>
+        <div class="dashboard-sidebar-foot">
+          <strong>Conexión protegida</strong>
+          <p>Las credenciales y operaciones sensibles permanecen en el backend.</p>
+        </div>
+      </aside>
+      <main class="dashboard-workspace" id="dashboardWorkspace">
+        <header class="workspace-header" aria-live="polite">
+          <div>
+            <span class="workspace-kicker">Panel de comercio</span>
+            <h2 class="workspace-title" id="workspaceTitle">Resumen</h2>
+            <p class="workspace-description" id="workspaceDescription">Tu operación, ventas y estado general en un solo lugar.</p>
+          </div>
+        </header>
+    <div class="cards" data-dashboard-page="overview">
       <div class="card">
         <div class="card-head">
           <span class="muted">Saldo por pagar</span>
@@ -699,7 +815,7 @@
       </div>
     </div>
 
-    <section class="block" id="financesSection">
+    <section class="block" id="financesSection" data-dashboard-page="overview">
       <div class="panel">
         <div class="section-head">
           <h2>Finanzas</h2>
@@ -766,7 +882,7 @@
       </div>
     </section>
 
-    <section class="block" id="storesSection">
+    <section class="block" id="storesSection" data-dashboard-page="stores">
       <div class="panel">
         <div class="section-head">
           <h2>Tus Tiendas</h2>
@@ -784,7 +900,7 @@
       </div>
     </section>
 
-    <section class="block" id="categoriesSection">
+    <section class="block" id="categoriesSection" data-dashboard-page="categories">
       <div class="panel">
         <div class="section-head">
           <h2>Categorías</h2>
@@ -802,7 +918,7 @@
       </div>
     </section>
 
-    <section class="block" id="paymentLinksSection">
+    <section class="block" id="paymentLinksSection" data-dashboard-page="products">
       <div class="panel">
         <div class="section-head">
           <h2>Productos</h2>
@@ -889,7 +1005,7 @@
       </div>
     </section>
 
-    <section class="block" id="storeSettingsSection">
+    <section class="block" id="storeSettingsSection" data-dashboard-page="appearance">
       <div class="panel">
         <div class="section-head">
           <h2>Datos y apariencia de la tienda</h2>
@@ -1189,9 +1305,9 @@
       </div>
     </section>
 
-    <p class="muted" id="noStoreMessage" style="display:none">Crea tu primera tienda arriba para empezar a agregar productos.</p>
+    <p class="muted" id="noStoreMessage" data-dashboard-page="products" style="display:none">Crea tu primera tienda arriba para empezar a agregar productos.</p>
 
-    <section class="block" id="kycSection">
+    <section class="block" id="kycSection" data-dashboard-page="compliance">
       <div class="panel">
         <div class="section-head"><h2>Verificación (KYC)</h2></div>
         <form class="inline" id="kycForm">
@@ -1205,7 +1321,7 @@
       </div>
     </section>
 
-    <section class="block" id="liveKeysSection">
+    <section class="block" id="liveKeysSection" data-dashboard-page="compliance">
       <div class="panel">
         <div class="section-head"><h2>Llaves de producción (Live)</h2></div>
         <p class="muted" style="margin:0">
@@ -1217,7 +1333,7 @@
       </div>
     </section>
 
-    <section class="block" id="invoicingSection">
+    <section class="block" id="invoicingSection" data-dashboard-page="compliance">
       <div class="panel">
         <div class="section-head"><h2>Perfil de facturación (Factura Electrónica)</h2></div>
         <form class="inline" id="invoicingForm">
@@ -1230,7 +1346,7 @@
       </div>
     </section>
 
-    <section class="block" id="paymentsSection">
+    <section class="block" id="paymentsSection" data-dashboard-page="payments">
       <div class="panel">
         <div class="section-head">
           <h2>Pagos recientes</h2>
@@ -1251,7 +1367,7 @@
       </div>
     </section>
 
-    <section class="block" id="payoutsSection">
+    <section class="block" id="payoutsSection" data-dashboard-page="payouts">
       <div class="panel">
         <div class="section-head"><h2>Desembolsos</h2></div>
         <table>
@@ -1260,6 +1376,8 @@
         </table>
       </div>
     </section>
+      </main>
+    </div>
   </section>
 
 <script>
@@ -1441,6 +1559,49 @@
   }
 
   initDashboardSections();
+  const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
+  const DASHBOARD_VIEW_COPY = {
+    overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
+    stores: ["Tiendas", "Crea y administra cada escaparate de tu comercio."],
+    categories: ["Categorías", "Organiza el catálogo en el orden que verán tus clientes."],
+    products: ["Productos", "Gestiona productos, precios, inventario y enlaces de pago."],
+    appearance: ["Apariencia", "Personaliza la identidad visual y revisa los cambios en vivo."],
+    payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
+    payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
+    compliance: ["Cumplimiento y credenciales", "Completa KYC, facturación electrónica y credenciales de producción."],
+  };
+
+  function setDashboardView(view, { remember = true } = {}) {
+    const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
+    document.querySelectorAll("[data-dashboard-page]").forEach((element) => {
+      element.hidden = element.dataset.dashboardPage !== nextView;
+    });
+    document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
+      if (button.dataset.dashboardView === nextView) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    const [title, description] = DASHBOARD_VIEW_COPY[nextView];
+    document.getElementById("workspaceTitle").textContent = title;
+    document.getElementById("workspaceDescription").textContent = description;
+    if (remember) {
+      try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
+    }
+  }
+
+  document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      history.pushState(null, "", button.href);
+      setDashboardView(button.dataset.dashboardView);
+      button.scrollIntoView({ block: "nearest", inline: "center" });
+      document.querySelector(".workspace-header")?.scrollIntoView({ block: "start" });
+    });
+  });
+  let initialDashboardView = "overview";
+  const viewFromHash = location.hash.startsWith("#dashboard-") ? location.hash.slice(11) : "";
+  try { initialDashboardView = viewFromHash || localStorage.getItem(DASHBOARD_VIEW_KEY) || "overview"; } catch { initialDashboardView = viewFromHash || "overview"; }
+  setDashboardView(initialDashboardView, { remember: false });
+  window.addEventListener("popstate", () => setDashboardView(location.hash.slice(11), { remember: false }));
   initInlineCollapsible("visualOnboarding", ".visual-onboarding-head", "visualAssistantToggle", "pagosya_visual_assistant_expanded", "asistente de IA", false);
   const inventoryToggle = document.createElement("button");
   inventoryToggle.type = "button";
@@ -3608,13 +3769,14 @@
       document.getElementById("balanceValue").textContent = money(lastPayableBalance);
 
       const kycBadge = document.getElementById("kycBadge");
-      kycBadge.textContent = kyc.status;
+      const dashboardStatusLabels = { NOT_SUBMITTED: "Pendiente de envío", NOT_CONFIGURED: "Sin configurar" };
+      kycBadge.textContent = dashboardStatusLabels[kyc.status] || kyc.status;
       kycBadge.className = "badge " + kyc.status;
       document.getElementById("kycSection").style.display = kyc.status === "APPROVED" ? "none" : "block";
 
       const invBadge = document.getElementById("invoicingBadge");
       const invStatus = invoicing.status || (invoicing.cuis ? "CONFIGURED" : "NOT_CONFIGURED");
-      invBadge.textContent = invStatus;
+      invBadge.textContent = dashboardStatusLabels[invStatus] || invStatus;
       invBadge.className = "badge " + (invoicing.cuis ? "APPROVED" : "NOT_CONFIGURED");
       document.getElementById("invoicingSection").style.display = invoicing.cuis ? "none" : "block";
 
