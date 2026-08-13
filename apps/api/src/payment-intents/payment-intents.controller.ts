@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
 import { ClientSecretGuard } from "../auth/guards/client-secret.guard";
@@ -28,8 +28,8 @@ export class PaymentIntentsController {
   @Get()
   @ApiBearerAuth()
   @UseGuards(MerchantAuthGuard)
-  list(@CurrentMerchant() merchant: { id: string }) {
-    return this.paymentIntents.listForMerchant(merchant.id);
+  list(@CurrentMerchant() merchant: { id: string }, @Query("storeId") storeId?: string) {
+    return this.paymentIntents.listForMerchant(merchant.id, storeId);
   }
 
   @Get(":id")

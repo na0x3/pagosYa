@@ -542,9 +542,9 @@ function renderProductCard(slug: string, item: StoreItem, index: number): string
         soldOut
           ? ""
           : `<div class="qty-stepper">
-              <button type="button" class="qty-minus" ${qty === 0 ? "disabled" : ""}>−</button>
+              <button type="button" class="qty-minus" aria-label="Quitar una unidad de ${escapeHtml(item.name)}" ${qty === 0 ? "disabled" : ""}>−</button>
               <span class="qty-value">${qty}</span>
-              <button type="button" class="qty-plus" ${atStockLimit ? "disabled" : ""}>+</button>
+              <button type="button" class="qty-plus" aria-label="Agregar una unidad de ${escapeHtml(item.name)}" ${atStockLimit ? "disabled" : ""}>+</button>
             </div>`
       }
     </div>`;
@@ -567,7 +567,13 @@ type StorePreviewPatch = Partial<
     | "contactPhone"
     | "contactEmail"
     | "aboutText"
+    | "aboutTitle"
+    | "aboutSubtitle"
     | "aboutImageUrl"
+    | "catalogTitle"
+    | "catalogSubtitle"
+    | "galleryTitle"
+    | "gallerySubtitle"
     | "accentColor"
     | "fontStyle"
     | "buttonStyle"
@@ -608,7 +614,13 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     "contactPhone",
     "contactEmail",
     "aboutText",
+    "aboutTitle",
+    "aboutSubtitle",
     "aboutImageUrl",
+    "catalogTitle",
+    "catalogSubtitle",
+    "galleryTitle",
+    "gallerySubtitle",
     "accentColor",
     "announcement",
     "promotionTitle",
@@ -726,11 +738,11 @@ function productIdFromLocation(): string | null {
   return new URLSearchParams(window.location.search).get("product");
 }
 
-function renderStoreRoute(slug: string, store: Store): void {
+function renderStoreRoute(slug: string, store: Store, options: { focusPromotion?: boolean } = {}): void {
   activeStoreRoute = { slug, store };
   const productId = productIdFromLocation();
   if (productId) renderProductPage(slug, store, productId);
-  else renderStore(slug, store);
+  else renderStore(slug, store, options);
 }
 
 function navigateWithinStore(slug: string, store: Store, productId?: string): void {
@@ -905,9 +917,9 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
               : qty === 0
                 ? `<button type="button" class="primary product-add">Agregar al carrito</button>`
                 : `<div class="qty-stepper product-detail-stepper" aria-label="Cantidad de ${escapeHtml(item.name)}">
-                    <button type="button" class="qty-minus" aria-label="Quitar uno">−</button>
+                    <button type="button" class="qty-minus" aria-label="Quitar una unidad de ${escapeHtml(item.name)}">−</button>
                     <span class="qty-value" aria-live="polite">${qty}</span>
-                    <button type="button" class="qty-plus" aria-label="Agregar uno" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
+                    <button type="button" class="qty-plus" aria-label="Agregar una unidad de ${escapeHtml(item.name)}" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
                   </div>`
           }
         </div>
@@ -967,7 +979,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   }
 }
 
-function renderStore(slug: string, store: Store) {
+function renderStore(slug: string, store: Store, options: { focusPromotion?: boolean } = {}) {
   activeHeroCleanup?.();
   activeHeroCleanup = null;
   applyStoreTheme(slug, store);
@@ -1004,7 +1016,7 @@ function renderStore(slug: string, store: Store) {
     .map((p) => p.trim())
     .filter(Boolean);
   const aboutImageUrl = assetUrl(store.aboutImageUrl);
-  const defaultContentOrder = ["hero", "products", "about", "gallery", "links"] as const;
+  const defaultContentOrder = ["hero", "about", "products", "gallery", "links"] as const;
   const requestedContentOrder = Array.isArray(store.contentOrder) ? store.contentOrder : [];
   const validContentOrder = requestedContentOrder.filter(
     (section, index) => defaultContentOrder.includes(section) && requestedContentOrder.indexOf(section) === index,
@@ -1161,7 +1173,13 @@ function renderStore(slug: string, store: Store) {
       </div>`
     : "";
 
-  const productsHtml = `<section class="store-products" aria-label="Productos">
+  const catalogTitle = store.catalogTitle?.trim() || "La tienda";
+  const catalogSubtitle = store.catalogSubtitle?.trim() || `Explora la selección de ${store.storeName}.`;
+  const productsHtml = `<section class="store-products" aria-labelledby="store-products-title">
+    <div class="store-section-heading store-catalog-heading">
+      <h2 id="store-products-title">${escapeHtml(catalogTitle)}</h2>
+      <p>${escapeHtml(catalogSubtitle)}</p>
+    </div>
     ${toolbarHtml}
     <div id="store-grid"></div>
     <div class="cart-bar">
@@ -1171,16 +1189,24 @@ function renderStore(slug: string, store: Store) {
     </div>
   </section>`;
 
-  const aboutHtml = aboutParagraphs.length
+  const aboutTitle = store.aboutTitle?.trim() || "Conoce la marca";
+  const aboutSubtitle = store.aboutSubtitle?.trim() || store.tagline?.trim() || "Una mirada a la intención detrás de cada elección.";
+  const aboutHtml = aboutParagraphs.length || aboutImageUrl || store.aboutTitle || store.aboutSubtitle
     ? `<section class="store-about${aboutImageUrl ? " has-image" : ""}" aria-labelledby="store-about-title"${aboutImageUrl ? ` style="--store-about-image:url(&quot;${escapeHtml(aboutImageUrl)}&quot;)"` : ""}>
-        <div class="store-about-heading"><h2 id="store-about-title">Nuestra historia</h2></div>
-        <div class="store-about-body">${aboutParagraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}</div>
+        <div class="store-about-heading">
+          <h2 id="store-about-title">${escapeHtml(aboutTitle)}</h2>
+          <p class="store-about-subtitle">${escapeHtml(aboutSubtitle)}</p>
+        </div>
+        <div class="store-about-body">${aboutParagraphs.length ? aboutParagraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("") : `<p>Pronto conocerás más sobre ${escapeHtml(store.storeName)}.</p>`}</div>
       </section>`
     : "";
 
   const editorialGalleryHtml = editorialImages.length
     ? `<section class="store-editorial-gallery" aria-labelledby="store-gallery-title">
-        <h2 id="store-gallery-title">Más de nuestra tienda</h2>
+        <div class="store-section-heading">
+          <h2 id="store-gallery-title">${escapeHtml(store.galleryTitle?.trim() || "La marca en imágenes")}</h2>
+          <p>${escapeHtml(store.gallerySubtitle?.trim() || "Detalles, atmósferas y perspectivas que completan la historia.")}</p>
+        </div>
         <div class="store-editorial-grid">
           ${editorialImages
             .map(
@@ -1226,7 +1252,7 @@ function renderStore(slug: string, store: Store) {
     <header class="merchant-header">
       ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="">` : ""}
       <div class="merchant-header-copy">
-        <div class="store-title">${escapeHtml(store.storeName)}</div>
+        <h1 class="store-title">${escapeHtml(store.storeName)}</h1>
         ${store.tagline ? `<div class="store-tagline">${escapeHtml(store.tagline)}</div>` : ""}
       </div>
     </header>
@@ -1303,7 +1329,7 @@ function renderStore(slug: string, store: Store) {
     });
     document.addEventListener("keydown", onPromotionKeydown);
     activePromotionCleanup = () => document.removeEventListener("keydown", onPromotionKeydown);
-    closeButton.focus();
+    if (options.focusPromotion !== false) closeButton.focus();
   }
 
   const carousel = app.querySelector<HTMLElement>(".store-carousel");
@@ -1441,7 +1467,7 @@ if (storePreviewMode) {
     if (!event.data || event.data.type !== "PAGOSYA_STORE_PREVIEW") return;
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
-    renderStoreRoute(activePreviewStore.slug, { ...activePreviewStore.store, ...patch });
+    renderStoreRoute(activePreviewStore.slug, { ...activePreviewStore.store, ...patch }, { focusPromotion: false });
   });
 }
 

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
-import { MerchantStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, StoreStatus } from "@prisma/client";
+import { MerchantStatus, PaymentLinkStatus, Prisma, StoreStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { UploadsService } from "../uploads/uploads.service";
@@ -8,6 +8,7 @@ import { CreateStoreDto, STORE_CONTENT_SECTIONS } from "./dto/create-store.dto";
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
+import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
 
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
@@ -76,6 +77,47 @@ function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
     }));
 }
 
+function storeUpdateData(dto: UpdateStoreDto): Prisma.StoreUpdateInput {
+  return {
+    ...(dto.name !== undefined && { name: dto.name }),
+    ...(dto.tagline !== undefined && { tagline: dto.tagline }),
+    ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+    ...(dto.bannerUrl !== undefined && { bannerUrl: dto.bannerUrl }),
+    ...(dto.backgroundColor !== undefined && { backgroundColor: dto.backgroundColor }),
+    ...(dto.backgroundImageUrl !== undefined && { backgroundImageUrl: dto.backgroundImageUrl }),
+    ...(dto.contactPhone !== undefined && { contactPhone: dto.contactPhone }),
+    ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail }),
+    ...(dto.aboutText !== undefined && { aboutText: dto.aboutText }),
+    ...(dto.aboutTitle !== undefined && { aboutTitle: dto.aboutTitle }),
+    ...(dto.aboutSubtitle !== undefined && { aboutSubtitle: dto.aboutSubtitle }),
+    ...(dto.aboutImageUrl !== undefined && { aboutImageUrl: dto.aboutImageUrl }),
+    ...(dto.catalogTitle !== undefined && { catalogTitle: dto.catalogTitle }),
+    ...(dto.catalogSubtitle !== undefined && { catalogSubtitle: dto.catalogSubtitle }),
+    ...(dto.galleryTitle !== undefined && { galleryTitle: dto.galleryTitle }),
+    ...(dto.gallerySubtitle !== undefined && { gallerySubtitle: dto.gallerySubtitle }),
+    ...(dto.accentColor !== undefined && { accentColor: dto.accentColor }),
+    ...(dto.fontStyle !== undefined && { fontStyle: dto.fontStyle }),
+    ...(dto.buttonStyle !== undefined && { buttonStyle: dto.buttonStyle }),
+    ...(dto.boardTexture !== undefined && { boardTexture: dto.boardTexture }),
+    ...(dto.announcement !== undefined && { announcement: dto.announcement }),
+    ...(dto.announcementMode !== undefined && { announcementMode: dto.announcementMode }),
+    ...(dto.announcementSpeed !== undefined && { announcementSpeed: dto.announcementSpeed }),
+    ...(dto.announcementSize !== undefined && { announcementSize: dto.announcementSize }),
+    ...(dto.announcementColor !== undefined && { announcementColor: dto.announcementColor }),
+    ...(dto.promotionEnabled !== undefined && { promotionEnabled: dto.promotionEnabled }),
+    ...(dto.promotionTitle !== undefined && { promotionTitle: dto.promotionTitle }),
+    ...(dto.promotionBody !== undefined && { promotionBody: dto.promotionBody }),
+    ...(dto.promotionCtaLabel !== undefined && { promotionCtaLabel: dto.promotionCtaLabel }),
+    ...(dto.promotionCtaUrl !== undefined && { promotionCtaUrl: dto.promotionCtaUrl }),
+    ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
+    ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
+    ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
+    ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
+    ...(dto.buttonMotion !== undefined && { buttonMotion: dto.buttonMotion }),
+    ...(dto.cartButtonLabel !== undefined && { cartButtonLabel: dto.cartButtonLabel }),
+  };
+}
+
 @Injectable()
 export class StoresService {
   constructor(
@@ -101,7 +143,13 @@ export class StoresService {
             contactPhone: dto.contactPhone,
             contactEmail: dto.contactEmail,
             aboutText: dto.aboutText,
+            aboutTitle: dto.aboutTitle,
+            aboutSubtitle: dto.aboutSubtitle,
             aboutImageUrl: dto.aboutImageUrl,
+            catalogTitle: dto.catalogTitle,
+            catalogSubtitle: dto.catalogSubtitle,
+            galleryTitle: dto.galleryTitle,
+            gallerySubtitle: dto.gallerySubtitle,
             accentColor: dto.accentColor,
             fontStyle: dto.fontStyle,
             buttonStyle: dto.buttonStyle,
@@ -147,38 +195,24 @@ export class StoresService {
     if (!store) throw new NotFoundException("Store not found");
     return this.prisma.store.update({
       where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.tagline !== undefined && { tagline: dto.tagline }),
-        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
-        ...(dto.bannerUrl !== undefined && { bannerUrl: dto.bannerUrl }),
-        ...(dto.backgroundColor !== undefined && { backgroundColor: dto.backgroundColor }),
-        ...(dto.backgroundImageUrl !== undefined && { backgroundImageUrl: dto.backgroundImageUrl }),
-        ...(dto.contactPhone !== undefined && { contactPhone: dto.contactPhone }),
-        ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail }),
-        ...(dto.aboutText !== undefined && { aboutText: dto.aboutText }),
-        ...(dto.aboutImageUrl !== undefined && { aboutImageUrl: dto.aboutImageUrl }),
-        ...(dto.accentColor !== undefined && { accentColor: dto.accentColor }),
-        ...(dto.fontStyle !== undefined && { fontStyle: dto.fontStyle }),
-        ...(dto.buttonStyle !== undefined && { buttonStyle: dto.buttonStyle }),
-        ...(dto.boardTexture !== undefined && { boardTexture: dto.boardTexture }),
-        ...(dto.announcement !== undefined && { announcement: dto.announcement }),
-        ...(dto.announcementMode !== undefined && { announcementMode: dto.announcementMode }),
-        ...(dto.announcementSpeed !== undefined && { announcementSpeed: dto.announcementSpeed }),
-        ...(dto.announcementSize !== undefined && { announcementSize: dto.announcementSize }),
-        ...(dto.announcementColor !== undefined && { announcementColor: dto.announcementColor }),
-        ...(dto.promotionEnabled !== undefined && { promotionEnabled: dto.promotionEnabled }),
-        ...(dto.promotionTitle !== undefined && { promotionTitle: dto.promotionTitle }),
-        ...(dto.promotionBody !== undefined && { promotionBody: dto.promotionBody }),
-        ...(dto.promotionCtaLabel !== undefined && { promotionCtaLabel: dto.promotionCtaLabel }),
-        ...(dto.promotionCtaUrl !== undefined && { promotionCtaUrl: dto.promotionCtaUrl }),
-        ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
-        ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
-        ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
-        ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
-        ...(dto.buttonMotion !== undefined && { buttonMotion: dto.buttonMotion }),
-        ...(dto.cartButtonLabel !== undefined && { cartButtonLabel: dto.cartButtonLabel }),
-      },
+      data: storeUpdateData(dto),
+    });
+  }
+
+  /** Commits appearance and links together, so a failed link write can never
+   * leave the storefront half-saved. */
+  async saveSettings(merchantId: string, id: string, dto: SaveStoreSettingsDto) {
+    const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
+    if (!store) throw new NotFoundException("Store not found");
+    const { links, ...storeDto } = dto;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.store.update({ where: { id }, data: storeUpdateData(storeDto) });
+      await tx.storeLink.deleteMany({ where: { storeId: id } });
+      await tx.storeLink.createMany({
+        data: links.map((link, index) => ({ storeId: id, label: link.label, url: link.url, sortOrder: index })),
+      });
+      const savedLinks = await tx.storeLink.findMany({ where: { storeId: id }, orderBy: { sortOrder: "asc" } });
+      return { ...updated, links: savedLinks };
     });
   }
 
@@ -250,35 +284,18 @@ export class StoresService {
     // this store" counter for the merchant's Finanzas view, not real
     // analytics. Every call here is a genuine page load, never a poll.
     const trackView = options.trackView !== false;
-    const [items, categories, links, cartIntents] = await Promise.all([
+    const [items, categories, links, productStats] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
       }),
       this.prisma.category.findMany({ where: { storeId: store.id }, orderBy: { sortOrder: "asc" } }),
       this.prisma.storeLink.findMany({ where: { storeId: store.id }, orderBy: { sortOrder: "asc" } }),
-      // Per-product sold counts feed the storefront's "Más vendidos" sort.
-      // Same source of truth as the Finanzas top-products list: cart lines in
-      // succeeded store-checkout intents (metadata.storeId scopes them to this
-      // store; API-created intents have no cart and correctly count nothing).
-      this.prisma.paymentIntent.findMany({
-        where: {
-          merchantId: store.merchantId,
-          status: PaymentIntentStatus.SUCCEEDED,
-          metadata: { path: ["storeId"], equals: store.id },
-        },
-        select: { metadata: true },
-      }),
+      this.prisma.storeProductStat.findMany({ where: { storeId: store.id }, select: { paymentLinkId: true, quantity: true } }),
       trackView ? this.prisma.store.update({ where: { id: store.id }, data: { viewCount: { increment: 1 } } }) : Promise.resolve(null),
     ]);
 
-    const soldByProduct = new Map<string, number>();
-    for (const intent of cartIntents) {
-      const cart = (intent.metadata as { cart?: { paymentLinkId: string; quantity: number }[] } | null)?.cart;
-      for (const line of cart ?? []) {
-        soldByProduct.set(line.paymentLinkId, (soldByProduct.get(line.paymentLinkId) ?? 0) + line.quantity);
-      }
-    }
+    const soldByProduct = new Map(productStats.map((stat) => [stat.paymentLinkId, stat.quantity]));
 
     return {
       storeId: store.id,
@@ -291,7 +308,13 @@ export class StoresService {
       contactPhone: store.contactPhone,
       contactEmail: store.contactEmail,
       aboutText: store.aboutText,
+      aboutTitle: store.aboutTitle,
+      aboutSubtitle: store.aboutSubtitle,
       aboutImageUrl: store.aboutImageUrl,
+      catalogTitle: store.catalogTitle,
+      catalogSubtitle: store.catalogSubtitle,
+      galleryTitle: store.galleryTitle,
+      gallerySubtitle: store.gallerySubtitle,
       accentColor: store.accentColor,
       fontStyle: store.fontStyle,
       buttonStyle: store.buttonStyle,

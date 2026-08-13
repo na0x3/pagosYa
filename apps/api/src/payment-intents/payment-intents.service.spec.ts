@@ -73,4 +73,41 @@ describe("PaymentIntentsService cart option inventory", () => {
       }),
     ).rejects.toThrow('Solo quedan 0 unidades de "Hamburguesa (Pequeña)"');
   });
+
+  it("aggregates option lines into one persisted product total", async () => {
+    const service = makeService();
+    const tx = { storeProductStat: { upsert: jest.fn().mockResolvedValue({}) } };
+
+    await (service as any).recordProductStats(tx, "merchant_1", {
+      storeId: "store_1",
+      cart: [
+        { paymentLinkId: "link_1", variantId: "small", name: "Hamburguesa", quantity: 2, unitAmount: 5000 },
+        { paymentLinkId: "link_1", variantId: "large", name: "Hamburguesa", quantity: 1, unitAmount: 8000 },
+      ],
+    });
+
+    expect(tx.storeProductStat.upsert).toHaveBeenCalledWith({
+      where: { storeId_paymentLinkId: { storeId: "store_1", paymentLinkId: "link_1" } },
+      create: { merchantId: "merchant_1", storeId: "store_1", paymentLinkId: "link_1", productName: "Hamburguesa", quantity: 3, revenue: 18000 },
+      update: { productName: "Hamburguesa", quantity: { increment: 3 }, revenue: { increment: 18000 } },
+    });
+  });
+});
+
+describe("PaymentIntentsService merchant transaction list", () => {
+  it("filters transactions by the selected store when requested", async () => {
+    const prisma = { paymentIntent: { findMany: jest.fn().mockResolvedValue([]) } };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    await service.listForMerchant("merchant_1", "store_1");
+
+    expect(prisma.paymentIntent.findMany).toHaveBeenCalledWith({
+      where: {
+        merchantId: "merchant_1",
+        metadata: { path: ["storeId"], equals: "store_1" },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+  });
 });

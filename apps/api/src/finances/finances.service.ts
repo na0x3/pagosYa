@@ -1,13 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { PaymentIntentStatus, PaymentLinkStatus } from "@prisma/client";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PaymentIntentStatus, PaymentLinkStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-
-interface CartLine {
-  paymentLinkId: string;
-  name: string;
-  quantity: number;
-  unitAmount: number;
-}
 
 type InventoryVariant = { amount: number; stock?: number | null };
 
@@ -31,30 +24,55 @@ function readInventoryVariants(value: unknown): InventoryVariant[] {
 export class FinancesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async summary(merchantId: string) {
-    const [revenue, inventoryLinks, storeViews, succeededIntents] = await Promise.all([
+  async summary(merchantId: string, storeId?: string) {
+    const selectedStore = storeId
+      ? await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, name: true, viewCount: true } })
+      : null;
+    if (storeId && !selectedStore) throw new NotFoundException("Store not found");
+
+    const succeededWhere = {
+      merchantId,
+      status: PaymentIntentStatus.SUCCEEDED,
+      ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
+    };
+    const [revenue, inventoryLinks, storeViews, methodTotals, productStats, unattributedRows] = await Promise.all([
       this.prisma.paymentIntent.aggregate({
-        where: { merchantId, status: PaymentIntentStatus.SUCCEEDED },
+        where: succeededWhere,
         _sum: { amount: true },
+        _count: { _all: true },
       }),
       // "Money in products": what the current catalog would be worth if
       // every tracked unit sold at its listed price. Only counts products
       // with stock actually tracked — an unlimited (null-stock) product has
       // no meaningful "units on hand" to value.
       this.prisma.paymentLink.findMany({
-        where: { store: { merchantId }, status: PaymentLinkStatus.ACTIVE },
+        where: { store: { merchantId }, ...(storeId ? { storeId } : {}), status: PaymentLinkStatus.ACTIVE },
         select: { amount: true, stock: true, variants: true },
       }),
-      this.prisma.store.aggregate({ where: { merchantId }, _sum: { viewCount: true } }),
-      // Cart line items (product id/name/quantity) are only present in
-      // metadata for store-checkout PaymentIntents (see
-      // StoresService.createCartCheckout) — a plain API-created intent has
-      // none, and correctly can't contribute to "most sold product" since
-      // it isn't tied to a specific catalog product.
-      this.prisma.paymentIntent.findMany({
-        where: { merchantId, status: PaymentIntentStatus.SUCCEEDED },
-        select: { amount: true, paymentMethodType: true, metadata: true },
+      storeId
+        ? Promise.resolve({ _sum: { viewCount: selectedStore?.viewCount ?? 0 } })
+        : this.prisma.store.aggregate({ where: { merchantId }, _sum: { viewCount: true } }),
+      this.prisma.paymentIntent.groupBy({
+        by: ["paymentMethodType"],
+        where: succeededWhere,
+        _sum: { amount: true },
+        _count: { _all: true },
       }),
+      this.prisma.storeProductStat.findMany({
+        where: { merchantId, ...(storeId ? { storeId } : {}) },
+        orderBy: [{ quantity: "desc" }, { paymentLinkId: "asc" }],
+        take: 10,
+        select: { paymentLinkId: true, productName: true, quantity: true, revenue: true },
+      }),
+      storeId
+        ? Promise.resolve([])
+        : this.prisma.$queryRaw<Array<{ amount: bigint | null; count: bigint }>>(Prisma.sql`
+            SELECT COALESCE(SUM(amount), 0) AS amount, COUNT(*) AS count
+            FROM "PaymentIntent"
+            WHERE "merchantId" = ${merchantId}
+              AND status = 'SUCCEEDED'
+              AND NULLIF(metadata ->> 'storeId', '') IS NULL
+          `),
     ]);
 
     const inventoryValue = inventoryLinks.reduce((sum, link) => {
@@ -69,38 +87,31 @@ export class FinancesService {
       return sum + (usesOnlyLegacySharedStock ? link.amount * (link.stock ?? 0) : finiteOptionValue);
     }, 0);
 
-    const soldByProduct = new Map<string, { name: string; quantity: number; revenue: number }>();
-    const revenueByMethod = new Map<string, { amount: number; paymentCount: number }>();
-    for (const intent of succeededIntents) {
-      const method = intent.paymentMethodType ?? "UNSPECIFIED";
-      const methodRevenue = revenueByMethod.get(method) ?? { amount: 0, paymentCount: 0 };
-      methodRevenue.amount += intent.amount;
-      methodRevenue.paymentCount += 1;
-      revenueByMethod.set(method, methodRevenue);
-
-      const cart = (intent.metadata as { cart?: CartLine[] } | null)?.cart;
-      if (!cart) continue;
-      for (const line of cart) {
-        const existing = soldByProduct.get(line.paymentLinkId) ?? { name: line.name, quantity: 0, revenue: 0 };
-        existing.quantity += line.quantity;
-        existing.revenue += line.unitAmount * line.quantity;
-        soldByProduct.set(line.paymentLinkId, existing);
-      }
-    }
-    const topProducts = [...soldByProduct.entries()]
-      .map(([paymentLinkId, v]) => ({ paymentLinkId, ...v }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 10);
-    const revenueByPaymentMethod = [...revenueByMethod.entries()]
-      .map(([paymentMethodType, values]) => ({ paymentMethodType, ...values }))
+    const topProducts = productStats.map((stat) => ({
+      paymentLinkId: stat.paymentLinkId,
+      name: stat.productName,
+      quantity: stat.quantity,
+      revenue: stat.revenue,
+    }));
+    const revenueByPaymentMethod = methodTotals
+      .map((row) => ({
+        paymentMethodType: row.paymentMethodType ?? "UNSPECIFIED",
+        amount: row._sum.amount ?? 0,
+        paymentCount: row._count._all,
+      }))
       .sort((a, b) => b.amount - a.amount);
+    const unattributed = unattributedRows[0];
 
     return {
       totalRevenue: revenue._sum.amount ?? 0,
+      paymentCount: revenue._count._all,
+      unattributedRevenue: Number(unattributed?.amount ?? 0),
+      unattributedPaymentCount: Number(unattributed?.count ?? 0),
       inventoryValue,
       totalStoreViews: storeViews._sum.viewCount ?? 0,
       revenueByPaymentMethod,
       topProducts,
+      scope: storeId ? { type: "STORE", storeId, storeName: selectedStore?.name } : { type: "MERCHANT" },
       currency: "BOB",
     };
   }

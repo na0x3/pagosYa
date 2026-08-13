@@ -491,6 +491,7 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-small")).toBe(true);
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("--announcement-bg:#123456");
     expect(document.querySelector(".promotion-dialog")?.textContent).toContain("Solo hoy");
+    expect(document.activeElement).not.toBe(document.querySelector(".promotion-close"));
     expect(document.body.dataset.buttonVariant).toBe("soft");
     expect(document.body.dataset.buttonMotion).toBe("pulse");
     expect(document.querySelector("#cart-pay")?.textContent).toBe("Completar pedido");
@@ -825,10 +826,10 @@ describe("storefront (?link=...)", () => {
     const paragraphs = [...document.querySelectorAll(".store-about-body p")].map((p) => p.textContent);
     expect(paragraphs).toEqual(["Empezamos en 2020.", "Hoy enviamos a todo el país."]);
     expect(
-      document.querySelector("#store-grid")!.compareDocumentPosition(document.querySelector(".store-about")!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      document.querySelector(".store-about")!.compareDocumentPosition(document.querySelector("#store-grid")!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(document.querySelector(".store-about")?.classList.contains("has-image")).toBe(false);
-    expect(document.querySelector(".store-about-heading")?.textContent?.trim()).toBe("Nuestra historia");
+    expect(document.querySelector(".store-about-heading h2")?.textContent?.trim()).toBe("Conoce la marca");
     expect(document.querySelector(".store-about-icon")).toBeFalsy();
   });
 

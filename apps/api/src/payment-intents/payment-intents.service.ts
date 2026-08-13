@@ -22,7 +22,7 @@ function formatAmount(amount: number, currency: string): string {
 }
 
 type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
-type CartInventoryLine = { paymentLinkId: string; variantId?: string; quantity: number; name: string; variantName?: string };
+type CartInventoryLine = { paymentLinkId: string; variantId?: string; quantity: number; name: string; variantName?: string; unitAmount: number };
 
 function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
   if (!Array.isArray(value)) return [];
@@ -80,8 +80,15 @@ export class PaymentIntentsService {
     return intent;
   }
 
-  async listForMerchant(merchantId: string) {
-    return this.prisma.paymentIntent.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" }, take: 50 });
+  async listForMerchant(merchantId: string, storeId?: string) {
+    return this.prisma.paymentIntent.findMany({
+      where: {
+        merchantId,
+        ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
   }
 
   async findByClientSecret(clientSecret: string) {
@@ -253,6 +260,7 @@ export class PaymentIntentsService {
           customerDocument: current.customerDocument,
         });
         await this.decrementStockForCart(tx, current.metadata);
+        await this.recordProductStats(tx, merchantId, current.metadata);
       } else if (result.status === "failed") {
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.failed", {
           id: updated.id,
@@ -448,6 +456,44 @@ export class PaymentIntentsService {
           )
       `;
       if (updated !== 1) throw new BadRequestException(`Ya no hay suficiente stock de "${label}"`);
+    }
+  }
+
+  /** Increment compact per-product totals in the same transaction that marks
+   * the payment successful. This makes retries atomic and avoids rescanning
+   * every historical PaymentIntent for storefront and finance reads. */
+  private async recordProductStats(tx: Prisma.TransactionClient, merchantId: string, metadata: Prisma.JsonValue): Promise<void> {
+    const snapshot = metadata as { storeId?: string; cart?: CartInventoryLine[] } | null;
+    if (!snapshot?.storeId || !Array.isArray(snapshot.cart)) return;
+
+    const totals = new Map<string, { productName: string; quantity: number; revenue: number }>();
+    for (const line of snapshot.cart) {
+      if (!line?.paymentLinkId || !Number.isInteger(line.quantity) || line.quantity <= 0) continue;
+      const unitAmount = Number.isInteger(line.unitAmount) && line.unitAmount > 0 ? line.unitAmount : 0;
+      const current = totals.get(line.paymentLinkId) ?? { productName: line.name, quantity: 0, revenue: 0 };
+      current.productName = line.name || current.productName;
+      current.quantity += line.quantity;
+      current.revenue += unitAmount * line.quantity;
+      totals.set(line.paymentLinkId, current);
+    }
+
+    for (const [paymentLinkId, total] of totals) {
+      await tx.storeProductStat.upsert({
+        where: { storeId_paymentLinkId: { storeId: snapshot.storeId, paymentLinkId } },
+        create: {
+          merchantId,
+          storeId: snapshot.storeId,
+          paymentLinkId,
+          productName: total.productName,
+          quantity: total.quantity,
+          revenue: total.revenue,
+        },
+        update: {
+          productName: total.productName,
+          quantity: { increment: total.quantity },
+          revenue: { increment: total.revenue },
+        },
+      });
     }
   }
 

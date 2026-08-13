@@ -59,7 +59,7 @@ El comercio crea un `PaymentIntent` desde su backend con su llave secreta y entr
 
 ### Rate limiting y observabilidad
 
-`@nestjs/throttler` corre global (20 req/min/IP por defecto) con límites más estrictos (5-10 req/min) en los endpoints de auth: `POST /v1/merchants`, `/v1/dashboard/login`, `signup`, `verify_email`, `forgot_password`, `reset_password`. `GET /health` (chequeo de conectividad a la base) está exento — así un balanceador/orquestador puede pollearlo sin activar el límite. `AllExceptionsFilter` (global, en `main.ts`) loguea con stack trace cualquier excepción que no sea un `HttpException` bien formado, o que lo sea pero con status 5xx — sin eso, un error inesperado en cualquiera de los cuatro workers en background podía terminar siendo solo "un 500" sin nada en los logs que explique por qué.
+`@nestjs/throttler` corre global (120 req/min/IP por defecto, con margen para la carga paralela del dashboard) con límites más estrictos (5-10 req/min) en los endpoints de auth: `POST /v1/merchants`, `/v1/dashboard/login`, `signup`, `verify_email`, `forgot_password`, `reset_password`. `GET /health` (chequeo de conectividad a la base) está exento — así un balanceador/orquestador puede pollearlo sin activar el límite. `AllExceptionsFilter` (global, en `main.ts`) loguea con stack trace cualquier excepción que no sea un `HttpException` bien formado, o que lo sea pero con status 5xx — sin eso, un error inesperado en cualquiera de los cuatro workers en background podía terminar siendo solo "un 500" sin nada en los logs que explique por qué.
 
 ## Cómo correrlo localmente
 

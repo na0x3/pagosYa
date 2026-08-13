@@ -8,6 +8,7 @@ import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
 import { VisualStudioService } from "./visual-studio.service";
+import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -34,6 +35,11 @@ export class StoresController {
   @Patch(":id")
   update(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: UpdateStoreDto) {
     return this.stores.update(merchant.id, id, dto);
+  }
+
+  @Put(":id/settings")
+  saveSettings(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: SaveStoreSettingsDto) {
+    return this.stores.saveSettings(merchant.id, id, dto);
   }
 
   @Put(":id/links")

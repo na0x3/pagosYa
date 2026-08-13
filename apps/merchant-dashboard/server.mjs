@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ?? 4323;
+const mascotAssets = new Map([
+  ["/assets/yapi-idle.png", "yapi-idle.png"],
+  ["/assets/yapi-wave.png", "yapi-wave.png"],
+  ["/assets/yapi-walk-a.png", "yapi-walk-a.png"],
+  ["/assets/yapi-walk-b.png", "yapi-walk-b.png"],
+]);
 
 const server = createServer(async (req, res) => {
   try {
@@ -18,6 +24,15 @@ const server = createServer(async (req, res) => {
       const font = await readFile(path.join(dirname, "fonts/0xProtoNerdFontMono-Bold.ttf"));
       res.writeHead(200, { "content-type": "font/ttf" });
       res.end(font);
+      return;
+    }
+    if (mascotAssets.has(req.url)) {
+      const image = await readFile(path.join(dirname, "assets", mascotAssets.get(req.url)));
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "cache-control": "public, max-age=86400",
+      });
+      res.end(image);
       return;
     }
     res.writeHead(404);

@@ -94,8 +94,14 @@ export interface Store {
   contactEmail: string | null;
   // Long-form brand story; blank lines separate paragraphs.
   aboutText: string | null;
+  aboutTitle?: string | null;
+  aboutSubtitle?: string | null;
   // Optional background image for the brand-story section.
   aboutImageUrl: string | null;
+  catalogTitle?: string | null;
+  catalogSubtitle?: string | null;
+  galleryTitle?: string | null;
+  gallerySubtitle?: string | null;
   // "#RRGGBB" brand accent; null = default palette accent.
   accentColor: string | null;
   // Curated merchant storefront font family.

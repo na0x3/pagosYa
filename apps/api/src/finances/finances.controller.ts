@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -12,7 +12,7 @@ export class FinancesController {
   @Get("finances")
   @ApiBearerAuth()
   @UseGuards(MerchantAuthGuard)
-  summary(@CurrentMerchant() merchant: { id: string }) {
-    return this.finances.summary(merchant.id);
+  summary(@CurrentMerchant() merchant: { id: string }, @Query("storeId") storeId?: string) {
+    return this.finances.summary(merchant.id, storeId);
   }
 }

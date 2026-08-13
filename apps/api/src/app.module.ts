@@ -25,10 +25,11 @@ import { UploadsModule } from "./uploads/uploads.module";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
-    // Global default: 20 req/min per IP. Auth-adjacent endpoints (merchant
-    // signup, dashboard login/signup/password-reset) set a tighter @Throttle
-    // override on the route itself — see their controllers.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
+    // A dashboard refresh intentionally fans out across finances, stores,
+    // products, payments, compliance, and visual-studio state. Keep enough
+    // headroom for normal navigation and store switching while auth-adjacent
+    // endpoints retain their tighter 5–10 req/min route overrides below.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     AuthModule,
     MerchantsModule,

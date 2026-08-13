@@ -3,7 +3,7 @@ import { MerchantStatus, StoreStatus } from "@prisma/client";
 import { StoresService } from "./stores.service";
 
 function makeFakePrisma() {
-  return {
+  const prisma = {
     store: { findUnique: jest.fn(), findFirst: jest.fn(), delete: jest.fn(), update: jest.fn() },
     merchant: { findUniqueOrThrow: jest.fn() },
     paymentLink: { findMany: jest.fn() },
@@ -13,11 +13,14 @@ function makeFakePrisma() {
       deleteMany: jest.fn(),
       createMany: jest.fn(),
     },
-    paymentIntent: { findMany: jest.fn().mockResolvedValue([]) },
-    // The service builds the queries and hands them to $transaction — resolving
-    // them is enough here, the batch itself is Postgres's job.
-    $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+    storeProductStat: { findMany: jest.fn().mockResolvedValue([]) },
+    $transaction: jest.fn(),
   };
+  // Batch transactions resolve their prepared operations; interactive ones
+  // receive the same delegate mocks as the root client.
+  prisma.$transaction.mockImplementation((ops: Promise<unknown>[] | ((tx: any) => unknown)) =>
+    typeof ops === "function" ? ops(prisma) : Promise.all(ops));
+  return prisma;
 }
 
 function makeFakePaymentIntents() {
@@ -241,9 +244,9 @@ describe("StoresService.getStorePublic — sold counts", () => {
       { id: "link_1", name: "Corte", imageUrls: [], tags: [], stock: null, color: null, amount: 5000, currency: "BOB", categoryId: null, description: null },
       { id: "link_2", name: "Tinte", imageUrls: [], tags: [], stock: null, color: null, amount: 8000, currency: "BOB", categoryId: null, description: null },
     ]);
-    prisma.paymentIntent.findMany.mockResolvedValue([
-      { metadata: { storeId: "store_1", cart: [{ paymentLinkId: "link_1", quantity: 2 }] } },
-      { metadata: { storeId: "store_1", cart: [{ paymentLinkId: "link_1", quantity: 3 }, { paymentLinkId: "link_2", quantity: 1 }] } },
+    prisma.storeProductStat.findMany.mockResolvedValue([
+      { paymentLinkId: "link_1", quantity: 5 },
+      { paymentLinkId: "link_2", quantity: 1 },
     ]);
 
     const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
@@ -328,6 +331,27 @@ describe("StoresService.setLinks", () => {
 
     await expect(service.setLinks("other_merchant", "store_1", { links: [] })).rejects.toThrow(NotFoundException);
     expect(prisma.storeLink.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("StoresService.saveSettings", () => {
+  it("writes appearance and ordered links inside one transaction", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue({ ...store, name: "Renamed" });
+    prisma.storeLink.findMany.mockResolvedValue([{ label: "Instagram", url: "https://instagram.com/x", sortOrder: 0 }]);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).saveSettings(
+      "m_1",
+      "store_1",
+      { name: "Renamed", links: [{ label: "Instagram", url: "https://instagram.com/x" }] } as any,
+    );
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { name: "Renamed" } });
+    expect(prisma.storeLink.createMany).toHaveBeenCalledWith({
+      data: [{ storeId: "store_1", label: "Instagram", url: "https://instagram.com/x", sortOrder: 0 }],
+    });
   });
 });
 

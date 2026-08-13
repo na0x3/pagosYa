@@ -143,6 +143,7 @@ model Merchant {
   users            MerchantUser[]
   stores           Store[]
   mediaAssets      MediaAsset[]
+  productStats     StoreProductStat[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -385,9 +386,15 @@ model Store {
   // Long-form brand story ("Nuestra historia") rendered as its own storefront
   // section — multi-paragraph (blank-line separated), unlike the one-line tagline.
   aboutText          String?
+  aboutTitle         String?
+  aboutSubtitle      String?
   // Optional background photo for the "Nuestra historia" section. The section
   // remains plain and transparent when this is null.
   aboutImageUrl      String?
+  catalogTitle       String?
+  catalogSubtitle    String?
+  galleryTitle       String?
+  gallerySubtitle    String?
   // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
   // title gradient). Null = pagosYa's default palette accent, per theme.
   accentColor        String?
@@ -424,7 +431,7 @@ model Store {
   heroSlides         Json                  @default("[]")
   // Every public content section appears exactly once. The dashboard edits
   // this array as an ordered list; empty sections simply do not render.
-  contentOrder       Json                  @default("[\"hero\",\"products\",\"about\",\"gallery\",\"links\"]")
+  contentOrder       Json                  @default("[\"hero\",\"about\",\"products\",\"gallery\",\"links\"]")
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
   editorialGallery   Json                  @default("[]")
@@ -590,6 +597,24 @@ model PaymentLink {
 
   @@index([storeId, createdAt])
   @@index([categoryId])
+}
+
+// Persisted checkout totals keep storefront sorting and finance summaries
+// bounded as payment history grows. storeId/paymentLinkId are snapshots, not
+// foreign keys, so deleting a storefront never erases its financial history.
+model StoreProductStat {
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId       String
+  paymentLinkId String
+  productName   String
+  quantity      Int      @default(0)
+  revenue       Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@id([storeId, paymentLinkId])
+  @@index([merchantId, quantity])
+  @@index([storeId, quantity])
 }
 
 model PaymentMethod {

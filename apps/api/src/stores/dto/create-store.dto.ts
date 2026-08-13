@@ -152,6 +152,22 @@ export class CreateStoreDto {
   @MaxLength(4000)
   aboutText?: string | null;
 
+  @ApiPropertyOptional({ description: "Heading for the brand-story section.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  aboutTitle?: string | null;
+
+  @ApiPropertyOptional({ description: "Supporting line below the brand-story heading.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(220)
+  aboutSubtitle?: string | null;
+
   @ApiPropertyOptional({
     description:
       "Path returned by POST /v1/uploads for the optional Nuestra historia background image. Omit to leave unchanged, or send null to clear.",
@@ -163,6 +179,38 @@ export class CreateStoreDto {
   @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
   @Matches(UPLOADED_FILE_URL_PATTERN, { message: "aboutImageUrl must be a path returned by POST /v1/uploads" })
   aboutImageUrl?: string | null;
+
+  @ApiPropertyOptional({ description: "Heading shown before the product catalog.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  catalogTitle?: string | null;
+
+  @ApiPropertyOptional({ description: "Supporting line shown before the product catalog.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(220)
+  catalogSubtitle?: string | null;
+
+  @ApiPropertyOptional({ description: "Heading for the editorial image gallery.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  galleryTitle?: string | null;
+
+  @ApiPropertyOptional({ description: "Supporting line for the editorial image gallery.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(220)
+  gallerySubtitle?: string | null;
 
   @ApiPropertyOptional({
     description:

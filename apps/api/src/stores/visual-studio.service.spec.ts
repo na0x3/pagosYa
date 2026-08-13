@@ -14,7 +14,13 @@ const store = {
   contactPhone: null,
   contactEmail: null,
   aboutText: null,
+  aboutTitle: null,
+  aboutSubtitle: null,
   aboutImageUrl: null,
+  catalogTitle: null,
+  catalogSubtitle: null,
+  galleryTitle: null,
+  gallerySubtitle: null,
   accentColor: null,
   fontStyle: "mono",
   buttonStyle: "rounded",
@@ -83,6 +89,17 @@ describe("VisualStudioService", () => {
     }
   });
 
+  it("explains how to continue when the store has no usable imagery", async () => {
+    const { service, prisma } = setup();
+    prisma.paymentLink.findMany.mockResolvedValue([{ name: "Servicio", description: null, imageUrls: [], tags: [] }]);
+    prisma.mediaAsset.findMany.mockResolvedValue([]);
+
+    await expect(service.generate("merchant_1", "store_1", {})).rejects.toThrow(
+      "Agrega al menos una foto a la tienda o a un producto antes de crear el sitio con IA",
+    );
+    expect(prisma.storeVisualProposal.create).not.toHaveBeenCalled();
+  });
+
   it("snapshots the current look and ignores proposal fields outside the visual allowlist", async () => {
     const { service, prisma } = setup();
     prisma.storeVisualProposal.findFirst.mockResolvedValue({
@@ -113,6 +130,12 @@ describe("VisualStudioService", () => {
       rationale: "Una dirección completa que organiza el contenido real de la tienda con una jerarquía clara.",
       tagline: "Matcha preparado para tu ritual diario",
       aboutText: "Texto borrador para contar la historia real de MATCHO; el comercio debe revisarlo antes de publicar.",
+      aboutTitle: "Conoce MATCHO",
+      aboutSubtitle: "La intención que guía cada elección de la marca.",
+      catalogTitle: "La tienda",
+      catalogSubtitle: "Explora la selección actual de MATCHO.",
+      galleryTitle: "La marca en imágenes",
+      gallerySubtitle: "Una mirada más cercana al universo de MATCHO.",
       backgroundColor: "#f7f5f0",
       accentColor: "#274c43",
       fontStyle: "editorial",
@@ -121,7 +144,7 @@ describe("VisualStudioService", () => {
       buttonVariant: "outline",
       buttonMotion: "none",
       cartButtonLabel: "Completar pedido",
-      contentOrder: ["hero", "products", "about", "gallery", "links"],
+      contentOrder: ["hero", "about", "products", "gallery", "links"],
       announcement: "MATCHO • Explora la selección actual",
       announcementMode: "marquee",
       announcementSpeed: 18,
@@ -132,14 +155,14 @@ describe("VisualStudioService", () => {
       promotionBody: "",
       promotionCtaLabel: "",
       backgroundImageIndex: -1,
-      heroSlides: [{ assetIndex: 0, title: "Tu ritual empieza aquí", body: "Explora el catálogo actual de MATCHO.", ctaLabel: "Ver productos" }],
+      heroSlides: Array.from({ length: 3 }, (_, index) => ({ assetIndex: 0, title: index ? `Descubre MATCHO ${index}` : "Tu ritual empieza aquí", body: "Explora el catálogo actual de MATCHO.", ctaLabel: "Ver productos" })),
       editorialGallery: [{ assetIndex: 0, caption: "Matcha ceremonial", boxColor: "#f4ead7" }],
       ...overrides,
     });
     const directions = [
       direction("Bosque editorial"),
-      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", contentOrder: ["hero", "products", "gallery", "about", "links"] }),
-      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", contentOrder: ["hero", "gallery", "products", "links", "about"] }),
+      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar" }),
+      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar" }),
     ];
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ directions }) }] }] }) });
@@ -159,8 +182,8 @@ describe("VisualStudioService", () => {
         buttonVariant: "outline",
         buttonMotion: "none",
         cartButtonLabel: "Completar pedido",
-        contentOrder: ["hero", "products", "about", "gallery", "links"],
-        heroSlides: [{ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí", body: "Explora el catálogo actual de MATCHO.", ctaLabel: "Ver productos", ctaUrl: "" }],
+        contentOrder: ["hero", "about", "products", "gallery", "links"],
+        heroSlides: expect.arrayContaining([expect.objectContaining({ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí" })]),
       }));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).not.toHaveProperty("html");
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.provider).toBe("openai:gpt-5.6-luna");
