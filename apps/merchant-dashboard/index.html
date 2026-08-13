@@ -585,6 +585,14 @@
   .dashboard-sidebar-foot { margin-top: auto; padding: 14px 10px 5px; border-top: 1px solid var(--pg-border); }
   .dashboard-sidebar-foot strong { display: block; margin-bottom: 4px; color: var(--pg-success); font-size: .72rem; }
   .dashboard-sidebar-foot p { margin: 0; color: var(--pg-text-faint); font-size: .68rem; line-height: 1.5; }
+  .ai-setup-launch {
+    display: flex; align-items: center; gap: 9px; width: 100%; margin: 2px 0 12px; padding: 10px;
+    border-color: color-mix(in srgb, var(--pg-brand) 55%, var(--pg-border));
+    background: color-mix(in srgb, var(--pg-brand) 10%, var(--pg-surface)); color: var(--pg-text); text-align: left;
+  }
+  .ai-setup-launch svg { width: 17px; height: 17px; flex: 0 0 auto; color: var(--pg-brand); }
+  .ai-setup-launch span { display: block; }
+  .ai-setup-launch small { display: block; margin-top: 2px; color: var(--pg-text-faint); font-size: .62rem; }
   .mobile-nav-hint { display: none; }
   .dashboard-workspace { min-width: 0; }
   .workspace-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin: 2px 0 20px; }
@@ -592,6 +600,45 @@
   .workspace-description { margin: 0; max-width: 64ch; color: var(--pg-text-muted); font-size: .8rem; line-height: 1.5; }
   [data-dashboard-page][hidden] { display: none !important; }
   .dashboard-workspace > section.block { margin-bottom: 20px; }
+
+  .onboarding-dialog {
+    width: min(820px, calc(100vw - 32px)); height: min(720px, calc(100dvh - 32px)); max-height: calc(100dvh - 32px); padding: 0;
+    overflow: hidden; border: 1px solid var(--pg-border-strong); border-radius: 18px;
+    background: var(--pg-surface); color: var(--pg-text); box-shadow: 0 26px 80px rgba(0,0,0,.48);
+  }
+  .onboarding-dialog::backdrop { background: rgba(5,5,5,.76); backdrop-filter: blur(5px); }
+  .onboarding-frame { display: grid; grid-template-columns: 220px minmax(0, 1fr); height: 100%; min-height: 0; }
+  .onboarding-rail { padding: 24px 18px; border-right: 1px solid var(--pg-border); background: var(--pg-bg); }
+  .onboarding-rail strong { display: block; margin-bottom: 18px; font-size: .82rem; }
+  .onboarding-progress { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+  .onboarding-progress li { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 8px; align-items: center; padding: 8px; border-radius: 9px; color: var(--pg-text-faint); font-size: .69rem; line-height: 1.35; overflow-wrap: normal; }
+  .onboarding-progress li > span:first-child { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--pg-border); border-radius: 7px; font-size: .66rem; }
+  .onboarding-progress li.is-active { background: var(--pg-accent-soft); color: var(--pg-text); }
+  .onboarding-progress li.is-active > span:first-child { border-color: var(--pg-accent); color: var(--pg-accent); }
+  .onboarding-progress li.is-complete > span:first-child { border-color: var(--pg-success); background: var(--pg-success-soft); color: var(--pg-success); }
+  .onboarding-content { display: flex; min-width: 0; min-height: 0; flex-direction: column; padding: 24px 30px 18px; overflow-y: auto; }
+  .onboarding-top { display: flex; justify-content: space-between; gap: 16px; }
+  .onboarding-step-label { color: var(--pg-brand); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .onboarding-close { width: 34px; height: 34px; padding: 0; border-color: transparent; background: transparent; color: var(--pg-text-muted); }
+  .onboarding-close:hover { border-color: transparent; background: var(--pg-bg); }
+  .onboarding-title { margin: 10px 0 8px; font-size: clamp(1.3rem, 3vw, 2rem); letter-spacing: -.035em; }
+  .onboarding-title:focus { outline: none; }
+  .onboarding-copy { margin: 0; max-width: 58ch; color: var(--pg-text-muted); font-size: .82rem; line-height: 1.65; }
+  .onboarding-tour { display: grid; gap: 9px; margin: 22px 0 0; }
+  .onboarding-tour-item { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 11px; align-items: start; padding: 11px; border: 1px solid var(--pg-border); border-radius: 11px; background: var(--pg-bg); }
+  .onboarding-tour-item svg { width: 18px; height: 18px; margin: 2px 0 0 7px; color: var(--pg-accent); }
+  .onboarding-tour-item strong { display: block; margin-bottom: 3px; font-size: .78rem; }
+  .onboarding-tour-item p { margin: 0; color: var(--pg-text-faint); font-size: .7rem; line-height: 1.5; }
+  .onboarding-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 13px; margin-top: 18px; }
+  .onboarding-form-grid .full { grid-column: 1 / -1; }
+  .onboarding-form-grid input, .onboarding-form-grid select { width: 100%; min-width: 0; }
+  .onboarding-file { padding: 13px; border: 1px dashed var(--pg-border-strong); border-radius: 11px; background: var(--pg-bg); }
+  .onboarding-file .faint { display: block; margin-top: 6px; line-height: 1.45; }
+  .onboarding-safety { display: flex; gap: 8px; align-items: flex-start; margin-top: 17px; color: var(--pg-success); font-size: .7rem; line-height: 1.5; }
+  .onboarding-safety svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .onboarding-status { min-height: 20px; margin: 14px 0 0; color: var(--pg-text-muted); font-size: .72rem; line-height: 1.5; }
+  .onboarding-actions { position: sticky; bottom: -18px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: auto; padding: 16px 0 18px; background: var(--pg-surface); }
+  .onboarding-actions .ghost:last-child { margin-left: auto; }
 
   /* Narrow-viewport pass: .topbar and #loggedInBar are non-wrapping flex rows,
      so a long email string forces horizontal overflow that pushes the whole
@@ -603,6 +650,8 @@
     .dashboard-shell { grid-template-columns: 1fr; gap: 18px; }
     .dashboard-sidebar { position: static; min-height: 0; padding: 10px; }
     .dashboard-sidebar-head, .dashboard-sidebar-foot { display: none; }
+    .ai-setup-launch { width: auto; min-width: max-content; margin: 0 6px 0 0; }
+    .ai-setup-launch small { display: none; }
     .dashboard-nav {
       display: flex;
       gap: 6px;
@@ -666,6 +715,18 @@
     .visual-proposal { grid-template-columns: 88px minmax(0, 1fr); }
     .visual-proposal img { width: 88px; }
     .visual-proposal-actions { grid-column: 1 / -1; flex-direction: row; }
+    .onboarding-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+    .onboarding-frame { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+    .onboarding-rail { padding: 13px 16px; border-right: 0; border-bottom: 1px solid var(--pg-border); }
+    .onboarding-rail strong { margin-bottom: 9px; }
+    .onboarding-progress { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+    .onboarding-progress li { display: flex; justify-content: center; padding: 5px; }
+    .onboarding-progress li > :last-child { display: none; }
+    .onboarding-content { padding: 20px 18px; }
+    .onboarding-form-grid { grid-template-columns: 1fr; }
+    .onboarding-form-grid .full { grid-column: 1; }
+    .onboarding-actions .ghost:last-child { margin-left: 0; }
+    .onboarding-close { width: 44px; height: 44px; }
   }
 
   @media (max-width: 480px) {
@@ -781,6 +842,10 @@
           <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
         </nav>
         <span class="mobile-nav-hint" aria-hidden="true">Desliza para ver más →</span>
+        <button class="ai-setup-launch" type="button" id="aiSetupLaunch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3zM5 14l.9 2.1L8 17l-2.1.9L5 20l-.9-2.1L2 17l2.1-.9zM18 13l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></svg>
+          <span>Configurar sitio con IA<small id="aiSetupLaunchStatus">Guía paso a paso</small></span>
+        </button>
         <div class="dashboard-sidebar-foot">
           <strong>Conexión protegida</strong>
           <p>Las credenciales y operaciones sensibles permanecen en el backend.</p>
@@ -1390,6 +1455,31 @@
     </div>
   </section>
 
+  <dialog class="onboarding-dialog" id="onboardingDialog" aria-labelledby="onboardingTitle">
+    <div class="onboarding-frame">
+      <aside class="onboarding-rail" aria-label="Progreso de configuración">
+        <strong>Tu primera tienda</strong>
+        <ol class="onboarding-progress" id="onboardingProgress">
+          <li data-step="1"><span>1</span><span>Conoce el panel</span></li>
+          <li data-step="2"><span>2</span><span>Importa el catálogo</span></li>
+          <li data-step="3"><span>3</span><span>Diseña con IA</span></li>
+          <li data-step="4"><span>4</span><span>Revisa y publica</span></li>
+        </ol>
+      </aside>
+      <section class="onboarding-content">
+        <div class="onboarding-top">
+          <span class="onboarding-step-label" id="onboardingStepLabel">Paso 1 de 4</span>
+          <button class="onboarding-close" type="button" id="onboardingClose" aria-label="Cerrar tutorial">×</button>
+        </div>
+        <h2 class="onboarding-title" id="onboardingTitle" tabindex="-1">Tu panel, sin vueltas</h2>
+        <p class="onboarding-copy" id="onboardingCopy"></p>
+        <div id="onboardingBody"></div>
+        <p class="onboarding-status" id="onboardingStatus" role="status" aria-live="polite"></p>
+        <div class="onboarding-actions" id="onboardingActions"></div>
+      </section>
+    </div>
+  </dialog>
+
 <script>
   const DASHBOARD_THEME_KEY = "pagosya_dashboard_theme";
   const dashboardThemeButtons = [...document.querySelectorAll("[data-dashboard-theme-value]")];
@@ -1430,6 +1520,7 @@
   const loggedInAsEl = document.getElementById("loggedInAs");
 
   apiBaseEl.value = sessionStorage.getItem("pagosya_merchant_api_base") || apiBaseEl.value;
+  emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
 
   const checkoutOriginEl = document.getElementById("checkoutOrigin");
@@ -1819,6 +1910,240 @@
   let visualSourceFiles = [];
   let visualProposals = [];
   let visualVersions = [];
+  const AI_ONBOARDING_SEEN_KEY = "pagosya_ai_onboarding_seen_v1";
+  const AI_ONBOARDING_STEP_KEY = "pagosya_ai_onboarding_step_v1";
+  const onboardingDialogEl = document.getElementById("onboardingDialog");
+  const onboardingProgressEl = document.getElementById("onboardingProgress");
+  const onboardingStepLabelEl = document.getElementById("onboardingStepLabel");
+  const onboardingTitleEl = document.getElementById("onboardingTitle");
+  const onboardingCopyEl = document.getElementById("onboardingCopy");
+  const onboardingBodyEl = document.getElementById("onboardingBody");
+  const onboardingStatusEl = document.getElementById("onboardingStatus");
+  const onboardingActionsEl = document.getElementById("onboardingActions");
+  const aiSetupLaunchStatusEl = document.getElementById("aiSetupLaunchStatus");
+  let onboardingStep = 1;
+  let onboardingCompleted = false;
+  let onboardingCsvFile = null;
+  let onboardingSourceFiles = [];
+  let firstTimeOnboardingIdentity = "";
+
+  function onboardingStorageKey(base) {
+    const identity = (emailEl.value || sessionStorage.getItem("pagosya_merchant_email") || "visitor").trim().toLocaleLowerCase("es");
+    let hash = 2166136261;
+    for (let index = 0; index < identity.length; index++) hash = Math.imul(hash ^ identity.charCodeAt(index), 16777619);
+    return `${base}_${(hash >>> 0).toString(36)}`;
+  }
+
+  function loadOnboardingState() {
+    try {
+      const savedOnboardingStep = localStorage.getItem(onboardingStorageKey(AI_ONBOARDING_STEP_KEY));
+      onboardingCompleted = savedOnboardingStep === "complete";
+      onboardingStep = onboardingCompleted ? 4 : Math.min(4, Math.max(1, Number(savedOnboardingStep) || 1));
+    } catch {}
+  }
+
+  loadOnboardingState();
+
+  function setOnboardingStep(step, { open = false } = {}) {
+    onboardingStep = Math.min(4, Math.max(1, step));
+    onboardingCompleted = false;
+    try { localStorage.setItem(onboardingStorageKey(AI_ONBOARDING_STEP_KEY), String(onboardingStep)); } catch {}
+    renderOnboarding();
+    if (open) showOnboarding();
+    else requestAnimationFrame(() => onboardingTitleEl.focus({ preventScroll: true }));
+  }
+
+  function onboardingGoToView(view, sectionId) {
+    const link = document.querySelector(`[data-dashboard-view="${view}"]`);
+    if (link) history.pushState(null, "", link.href);
+    setDashboardView(view);
+    if (sectionId && dashboardSections.has(sectionId)) setDashboardSectionExpanded(sectionId, true, false);
+    onboardingDialogEl.close();
+    const targetHeading = document.querySelector(`[data-dashboard-page="${view}"]:not([hidden]) h2`) || document.getElementById("workspaceTitle");
+    targetHeading?.setAttribute("tabindex", "-1");
+    targetHeading?.scrollIntoView({ block: "start" });
+    requestAnimationFrame(() => targetHeading?.focus({ preventScroll: true }));
+  }
+
+  function renderOnboardingProgress() {
+    onboardingProgressEl.querySelectorAll("li").forEach((item) => {
+      const step = Number(item.dataset.step);
+      item.classList.toggle("is-active", step === onboardingStep);
+      item.classList.toggle("is-complete", onboardingCompleted || step < onboardingStep);
+      item.setAttribute("aria-current", step === onboardingStep ? "step" : "false");
+    });
+    aiSetupLaunchStatusEl.textContent = onboardingCompleted ? "Configuración completada" : `Paso ${onboardingStep} de 4`;
+  }
+
+  function onboardingTourMarkup() {
+    return `<div class="onboarding-tour">
+      <div class="onboarding-tour-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h6v16H4zM14 4h6v7h-6zM14 15h6v5h-6z"/></svg><div><strong>Opciones a la izquierda</strong><p>Cambia entre tiendas, productos, apariencia, pagos y cumplimiento sin perder tu trabajo.</p></div></div>
+      <div class="onboarding-tour-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg><div><strong>Trabajo en el centro</strong><p>Cada opción abre una sola tarea para que el panel sea más fácil de recorrer.</p></div></div>
+      <div class="onboarding-tour-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg><div><strong>Siempre bajo tu control</strong><p>La IA crea borradores. Tu tienda publicada solo cambia cuando revisas y apruebas una propuesta.</p></div></div>
+    </div>`;
+  }
+
+  function renderOnboarding() {
+    renderOnboardingProgress();
+    onboardingStepLabelEl.textContent = `Paso ${onboardingStep} de 4`;
+    onboardingStatusEl.setAttribute("role", "status");
+    onboardingStatusEl.textContent = "";
+    onboardingBodyEl.innerHTML = "";
+    onboardingActionsEl.innerHTML = "";
+
+    if (onboardingCompleted) {
+      onboardingStepLabelEl.textContent = "Configuración completada";
+      onboardingTitleEl.textContent = "Tu tienda está lista para crecer";
+      onboardingCopyEl.textContent = "La propuesta elegida ya está aplicada y guardamos la versión anterior para que puedas restaurarla cuando quieras.";
+      onboardingBodyEl.innerHTML = onboardingTourMarkup();
+      onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingOpenStore">Abrir mi tienda</button><button class="ghost" type="button" id="onboardingFinish">Volver al panel</button>`;
+      document.getElementById("onboardingOpenStore").addEventListener("click", () => {
+        const url = currentStoreUrl();
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+        else onboardingStatusEl.textContent = "Selecciona una tienda para abrirla.";
+      });
+      document.getElementById("onboardingFinish").addEventListener("click", () => onboardingDialogEl.close());
+      return;
+    }
+
+    if (onboardingStep === 1) {
+      onboardingTitleEl.textContent = "Tu panel, sin vueltas";
+      onboardingCopyEl.textContent = "En menos de diez minutos puedes importar tu catálogo, crear una dirección visual completa y verla antes de publicar.";
+      onboardingBodyEl.innerHTML = onboardingTourMarkup();
+      onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingStartAi">Configurar mi sitio con IA</button><button class="ghost" type="button" id="onboardingExplore">Explorar por mi cuenta</button>`;
+      document.getElementById("onboardingStartAi").addEventListener("click", () => setOnboardingStep(2));
+      document.getElementById("onboardingExplore").addEventListener("click", () => onboardingDialogEl.close());
+      return;
+    }
+
+    if (onboardingStep === 2) {
+      onboardingTitleEl.textContent = "Empieza por tu catálogo";
+      onboardingCopyEl.textContent = currentStoreId
+        ? "Importa productos, categorías, precios, stock y fotos desde un CSV. Primero podrás revisar cada fila; nada se crea todavía."
+        : "Antes de importar necesitamos una tienda donde guardar el catálogo.";
+      if (currentStoreId) {
+        onboardingBodyEl.innerHTML = `<div class="onboarding-form-grid">
+          <div class="onboarding-file full"><label for="onboardingCsv">Inventario CSV</label><input id="onboardingCsv" type="file" accept=".csv,text/csv" aria-describedby="onboardingCsvHelp"><span class="faint" id="onboardingCsvHelp">Columnas compatibles: nombre, precio, categoría, stock, descripción, etiquetas, imágenes, opciones y color.</span></div>
+          <div class="onboarding-file full"><label for="onboardingImages">Fotos mencionadas en el CSV</label><input id="onboardingImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingImagesHelp"><span class="faint" id="onboardingImagesHelp">Relacionamos cada foto por su nombre de archivo y también la reutilizamos como referencia visual para la IA.</span></div>
+        </div>`;
+        onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingReviewCsv">Revisar importación</button><button type="button" id="onboardingTemplate">Descargar plantilla</button><button class="ghost" type="button" id="onboardingSkipCsv">Ya tengo productos</button>`;
+        document.getElementById("onboardingCsv").addEventListener("change", (event) => (onboardingCsvFile = event.target.files[0] || null));
+        document.getElementById("onboardingImages").addEventListener("change", (event) => (onboardingSourceFiles = [...event.target.files]));
+        document.getElementById("onboardingTemplate").addEventListener("click", () => document.getElementById("inventoryTemplateDownload").click());
+        document.getElementById("onboardingSkipCsv").addEventListener("click", () => setOnboardingStep(3));
+        document.getElementById("onboardingReviewCsv").addEventListener("click", () => {
+          if (!onboardingCsvFile) {
+            onboardingStatusEl.textContent = "Selecciona un archivo CSV para continuar.";
+            onboardingStatusEl.setAttribute("role", "alert");
+            document.getElementById("onboardingCsv").setAttribute("aria-invalid", "true");
+            document.getElementById("onboardingCsv").focus();
+            return;
+          }
+          onboardingStatusEl.setAttribute("role", "status");
+          document.getElementById("onboardingCsv").removeAttribute("aria-invalid");
+          const csvTransfer = new DataTransfer();
+          csvTransfer.items.add(onboardingCsvFile);
+          inventoryCsvInputEl.files = csvTransfer.files;
+          const imageTransfer = new DataTransfer();
+          onboardingSourceFiles.forEach((file) => imageTransfer.items.add(file));
+          inventoryImagesInputEl.files = imageTransfer.files;
+          onboardingGoToView("products", "paymentLinksSection");
+          const inventoryToggleButton = document.getElementById("inventoryImporterToggle");
+          if (inventoryToggleButton?.getAttribute("aria-expanded") !== "true") inventoryToggleButton?.click();
+          document.getElementById("inventoryPrepare").click();
+        });
+      } else {
+        onboardingBodyEl.innerHTML = `<div class="onboarding-tour"><div class="onboarding-tour-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l2-5h14l2 5M5 13v7h14v-7M9 20v-5h6v5"/></svg><div><strong>Crea tu primera tienda</strong><p>Solo necesitamos un nombre. Después volveremos aquí para cargar el catálogo.</p></div></div></div>`;
+        onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingCreateStore">Ir a crear tienda</button>`;
+        document.getElementById("onboardingCreateStore").addEventListener("click", () => onboardingGoToView("stores", "storesSection"));
+      }
+      return;
+    }
+
+    if (onboardingStep === 3) {
+      onboardingTitleEl.textContent = "Define la dirección de tu marca";
+      onboardingCopyEl.textContent = "La IA combinará tus fotos con una paleta, tipografía, portada, orden de secciones y estilo de botones. Generará tres opciones completas.";
+      onboardingBodyEl.innerHTML = `<div class="onboarding-form-grid">
+        <div><label for="onboardingCategory">¿Qué vendes?</label><input id="onboardingCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil"></div>
+        <div><label for="onboardingPersonality">Personalidad</label><select id="onboardingPersonality"><option value="">Déjame sorprender</option><option value="warm">Cálida y artesanal</option><option value="bold">Audaz y enérgica</option><option value="minimal">Limpia y minimal</option><option value="elegant">Elegante y serena</option><option value="playful">Alegre y cercana</option></select></div>
+        <div class="onboarding-file full"><label for="onboardingBrandImages">Fotos de referencia</label><input id="onboardingBrandImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingImageCount onboardingAiDisclosure"><span class="faint" id="onboardingImageCount">${onboardingSourceFiles.length ? `${onboardingSourceFiles.length} fotos de la importación ya están listas.` : "Agrega al menos una foto clara de tus productos, espacio o proceso."}</span></div>
+      </div><div class="onboarding-safety" id="onboardingAiDisclosure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Al continuar autorizas el procesamiento de estas fotos por el proveedor de IA configurado. Conservamos los originales por separado y no publicamos ninguna propuesta sin tu aprobación.</span></div>`;
+      onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingGenerate">Crear 3 propuestas</button><button class="ghost" type="button" id="onboardingBackToCsv">Volver al catálogo</button>`;
+      document.getElementById("onboardingBrandImages").addEventListener("change", (event) => {
+        const validation = validateVisualFiles([...event.target.files]);
+        onboardingSourceFiles = validation.files;
+        document.getElementById("onboardingImageCount").textContent = validation.errors.length
+          ? validation.errors.join(" ")
+          : `${onboardingSourceFiles.length} ${onboardingSourceFiles.length === 1 ? "foto lista" : "fotos listas"}.`;
+        event.target.setAttribute("aria-invalid", String(validation.errors.length > 0));
+      });
+      document.getElementById("onboardingBackToCsv").addEventListener("click", () => setOnboardingStep(2));
+      document.getElementById("onboardingGenerate").addEventListener("click", () => {
+        if (!currentStoreId) { onboardingStatusEl.textContent = "Crea o selecciona una tienda primero."; return; }
+        const validation = validateVisualFiles(onboardingSourceFiles);
+        onboardingSourceFiles = validation.files;
+        if (validation.errors.length) {
+          onboardingStatusEl.setAttribute("role", "alert");
+          onboardingStatusEl.textContent = validation.errors.join(" ");
+          document.getElementById("onboardingBrandImages").setAttribute("aria-invalid", "true");
+          return;
+        }
+        if (!onboardingSourceFiles.length) { onboardingStatusEl.setAttribute("role", "alert"); onboardingStatusEl.textContent = "Agrega al menos una foto válida para que la IA pueda diseñar la tienda."; document.getElementById("onboardingBrandImages").setAttribute("aria-invalid", "true"); document.getElementById("onboardingBrandImages").focus(); return; }
+        onboardingStatusEl.setAttribute("role", "status");
+        document.getElementById("visualBusinessCategory").value = document.getElementById("onboardingCategory").value;
+        document.getElementById("visualPersonality").value = document.getElementById("onboardingPersonality").value;
+        visualSourceFiles.forEach((file) => file.previewUrl && URL.revokeObjectURL(file.previewUrl));
+        visualSourceFiles = [...onboardingSourceFiles];
+        renderVisualSources();
+        onboardingGoToView("appearance", "storeSettingsSection");
+        const assistantToggle = document.getElementById("visualAssistantToggle");
+        if (assistantToggle?.getAttribute("aria-expanded") !== "true") assistantToggle?.click();
+        visualGenerateEl.click();
+      });
+      return;
+    }
+
+    onboardingTitleEl.textContent = "Compara antes de publicar";
+    onboardingCopyEl.textContent = "Tus tres propuestas están listas. Usa “Vista previa” para probar cada dirección en la tienda real y “Usar propuesta” solamente cuando estés conforme.";
+    onboardingBodyEl.innerHTML = `<div class="onboarding-tour"><div class="onboarding-tour-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><div><strong>Vista previa no publica</strong><p>Puedes comparar las tres propuestas en escritorio y móvil sin afectar la tienda que ven tus clientes.</p></div></div><div class="onboarding-tour-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><div><strong>Tú das la aprobación final</strong><p>“Usar propuesta” aplica la elegida y guarda automáticamente la versión anterior.</p></div></div></div>`;
+    onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingCompare">Comparar propuestas</button><button class="ghost" type="button" id="onboardingRegenerate">Cambiar mis indicaciones</button>`;
+    document.getElementById("onboardingCompare").addEventListener("click", () => onboardingGoToView("appearance", "storeSettingsSection"));
+    document.getElementById("onboardingRegenerate").addEventListener("click", () => setOnboardingStep(3));
+  }
+
+  function showOnboarding(step = onboardingStep) {
+    onboardingStep = step;
+    renderOnboarding();
+    if (!onboardingDialogEl.open) onboardingDialogEl.showModal();
+    setTimeout(() => onboardingTitleEl.focus({ preventScroll: true }), 0);
+  }
+
+  function completeOnboarding() {
+    onboardingCompleted = true;
+    onboardingStep = 4;
+    try { localStorage.setItem(onboardingStorageKey(AI_ONBOARDING_STEP_KEY), "complete"); } catch {}
+    renderOnboarding();
+    showOnboarding(4);
+  }
+
+  function maybeShowFirstTimeOnboarding() {
+    const identity = onboardingStorageKey("identity");
+    if (firstTimeOnboardingIdentity === identity) return;
+    onboardingCsvFile = null;
+    onboardingSourceFiles = [];
+    firstTimeOnboardingIdentity = identity;
+    loadOnboardingState();
+    let seen = false;
+    try { seen = localStorage.getItem(onboardingStorageKey(AI_ONBOARDING_SEEN_KEY)) === "true"; } catch {}
+    if (!seen) {
+      try { localStorage.setItem(onboardingStorageKey(AI_ONBOARDING_SEEN_KEY), "true"); } catch {}
+      showOnboarding(1);
+    }
+  }
+
+  document.getElementById("aiSetupLaunch").addEventListener("click", () => { loadOnboardingState(); showOnboarding(); });
+  document.getElementById("onboardingClose").addEventListener("click", () => onboardingDialogEl.close());
+  renderOnboarding();
   let pendingLogoUrl = null;
   let pendingBannerUrl = null;
   let pendingBackgroundImageUrl = null;
@@ -1975,6 +2300,25 @@
       : "Agrega al menos una imagen para empezar. Al continuar, autorizas su procesamiento por el proveedor de IA configurado; pagosYa conserva tus originales.";
   }
 
+  function validateVisualFiles(files) {
+    const accepted = [];
+    const errors = [];
+    for (const file of files) {
+      if (accepted.length >= 8) {
+        errors.push("Puedes usar un máximo de 8 fotos.");
+        break;
+      }
+      if (!new Set(["image/png", "image/jpeg", "image/webp"]).has(file.type)) {
+        errors.push(`${file.name} no es JPG, PNG o WEBP.`);
+      } else if (file.size > MAX_IMAGE_BYTES) {
+        errors.push(`${file.name} supera el máximo de 8 MB.`);
+      } else {
+        accepted.push(file);
+      }
+    }
+    return { files: accepted, errors };
+  }
+
   function proposalImageUrl(proposal) {
     const config = proposal.config || {};
     return config.bannerUrl || config.heroSlides?.[0]?.imageUrl || proposal.sourceAssetUrls?.[0] || "";
@@ -2018,6 +2362,7 @@
             await api(`/stores/${currentStoreId}/visual-proposals/${proposal.id}/apply`, { method: "POST" });
             await refresh();
             infoEl.textContent = `“${proposal.title}” ya está aplicada. Guardamos la versión anterior para que puedas volver.`;
+            completeOnboarding();
           } catch (err) {
             errorEl.textContent = "No se pudo aplicar la propuesta: " + err.message;
           } finally {
@@ -2149,20 +2494,10 @@
   });
   visualSourceInputEl.addEventListener("change", () => {
     errorEl.textContent = "";
-    const incoming = [...visualSourceInputEl.files];
+    const validation = validateVisualFiles([...visualSourceFiles, ...visualSourceInputEl.files]);
     visualSourceInputEl.value = "";
-    for (const file of incoming) {
-      if (visualSourceFiles.length >= 8) break;
-      if (!new Set(["image/png", "image/jpeg", "image/webp"]).has(file.type)) {
-        errorEl.textContent = `${file.name} no es JPG, PNG o WEBP.`;
-        continue;
-      }
-      if (file.size > MAX_IMAGE_BYTES) {
-        errorEl.textContent = `${file.name} supera el máximo de 8 MB.`;
-        continue;
-      }
-      visualSourceFiles.push(file);
-    }
+    visualSourceFiles = validation.files;
+    if (validation.errors.length) errorEl.textContent = validation.errors.join(" ");
     renderVisualSources();
   });
   visualGenerateEl.addEventListener("click", async () => {
@@ -2185,11 +2520,20 @@
           personality: document.getElementById("visualPersonality").value || undefined,
         }),
       });
-      visualProposals = [...(result.proposals || []), ...visualProposals];
+      const generatedProposals = result.proposals || [];
+      visualProposals = [...generatedProposals, ...visualProposals];
       renderVisualStudio();
       visualProposalStatusEl.textContent = result.mode === "ai"
         ? "Las imágenes fueron compuestas con IA. Revisa cada vista antes de aplicar."
         : "Modo local activo: creamos tres direcciones con tus originales. Agrega OPENAI_API_KEY para generar nuevas composiciones fotográficas.";
+      if (generatedProposals.length >= 3) {
+        setOnboardingStep(4, { open: true });
+      } else {
+        visualProposalStatusEl.textContent = `Solo recibimos ${generatedProposals.length} de 3 propuestas. Intenta generarlas nuevamente antes de aprobar.`;
+        setOnboardingStep(3, { open: true });
+        onboardingStatusEl.setAttribute("role", "alert");
+        onboardingStatusEl.textContent = "No se pudieron completar las tres propuestas. Tus imágenes siguen guardadas para volver a intentar.";
+      }
     } catch (err) {
       setVisualStep(1);
       errorEl.textContent = "No se pudieron crear las propuestas: " + err.message;
@@ -2857,6 +3201,7 @@
       e.target.reset();
       selectStore(store.id);
       await refresh();
+      if (!onboardingCompleted && onboardingStep === 2) showOnboarding(2);
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     }
@@ -3727,6 +4072,7 @@
         resetInventoryImportState("Importación completada.");
         infoEl.textContent = `${result.products.length} ${result.products.length === 1 ? "producto importado" : "productos importados"}${result.categoriesCreated.length ? ` y ${result.categoriesCreated.length} categorías nuevas` : ""}.`;
         refreshStorePreview(true);
+        setOnboardingStep(3, { open: true });
       }
       refreshFinancesInBackground();
     } catch (err) {
@@ -3812,6 +4158,7 @@
       renderPaymentRows();
 
       renderPayoutRows(payouts);
+      maybeShowFirstTimeOnboarding();
     } catch (err) {
       if (refreshVersion !== dashboardRefreshVersion) return;
       errorEl.textContent = "Error: " + err.message;
@@ -3846,6 +4193,7 @@
       });
       sessionToken = result.token;
       sessionStorage.setItem("pagosya_merchant_session", sessionToken);
+      sessionStorage.setItem("pagosya_merchant_email", emailEl.value.trim());
       showLoggedIn();
       appEl.style.display = "block";
       infoEl.textContent = "Sesión iniciada. Cargando tu panel…";
