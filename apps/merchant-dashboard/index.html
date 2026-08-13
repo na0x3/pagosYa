@@ -365,11 +365,14 @@
   .visual-generating p { margin: 0; color: var(--pg-text-faint); font-size: .76rem; line-height: 1.5; }
   .visual-proposals { display: grid; gap: 10px; }
   .visual-proposal { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; gap: 13px; align-items: center; padding: 11px; border: 1px solid var(--pg-border); border-radius: 11px; background: var(--pg-surface); }
-  .visual-proposal img { width: 116px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--pg-bg); }
+  .visual-proposal-cover { display: grid; place-items: center; width: 116px; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px; background: var(--proposal-bg, var(--pg-bg)); color: var(--proposal-accent, var(--pg-text)); }
+  .visual-proposal-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .visual-proposal-cover span { padding: 10px; font-size: .68rem; font-weight: 700; line-height: 1.35; text-align: center; }
   .visual-proposal-copy { min-width: 0; }
   .visual-proposal-copy strong { display: block; margin-bottom: 4px; font-size: .84rem; }
   .visual-proposal-copy p { margin: 0; color: var(--pg-text-faint); font-size: .73rem; line-height: 1.45; }
-  .visual-proposal-meta { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--pg-text-muted); font-size: .68rem; }
+  .visual-proposal-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 8px; color: var(--pg-text-muted); font-size: .68rem; }
+  .visual-proposal-feature { padding: 3px 6px; border: 1px solid var(--pg-border); border-radius: 999px; color: var(--pg-text-muted); }
   .visual-swatch { width: 17px; height: 17px; border: 1px solid var(--pg-border-strong); border-radius: 5px; }
   .visual-proposal-actions { display: flex; flex-direction: column; gap: 6px; }
   .visual-proposal-actions button { white-space: nowrap; padding: 7px 10px; font-size: .73rem; }
@@ -647,12 +650,14 @@
      1 column on its own (auto-fit + minmax), this just removes the two rows
      that were fighting it. */
   @media (max-width: 900px) {
-    .dashboard-shell { grid-template-columns: 1fr; gap: 18px; }
-    .dashboard-sidebar { position: static; min-height: 0; padding: 10px; }
+    .dashboard-shell { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    .dashboard-sidebar, .dashboard-workspace { width: 100%; min-width: 0; }
+    .dashboard-sidebar { position: static; min-height: 0; padding: 10px; overflow: hidden; }
     .dashboard-sidebar-head, .dashboard-sidebar-foot { display: none; }
     .ai-setup-launch { width: auto; min-width: max-content; margin: 0 6px 0 0; }
     .ai-setup-launch small { display: none; }
     .dashboard-nav {
+      width: 100%; min-width: 0;
       display: flex;
       gap: 6px;
       padding: 0;
@@ -713,7 +718,7 @@
     .visual-input-grid { grid-template-columns: 1fr; }
     .visual-upload-zone { grid-column: 1; }
     .visual-proposal { grid-template-columns: 88px minmax(0, 1fr); }
-    .visual-proposal img { width: 88px; }
+    .visual-proposal-cover { width: 88px; }
     .visual-proposal-actions { grid-column: 1 / -1; flex-direction: row; }
     .onboarding-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
     .onboarding-frame { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
@@ -1089,8 +1094,8 @@
         <section class="visual-onboarding" id="visualOnboarding" aria-labelledby="visualOnboardingTitle">
           <div class="visual-onboarding-head">
             <div>
-              <h3 id="visualOnboardingTitle">Crea el look de tu tienda con tus propias fotos</h3>
-              <p>Sube tus fotos y elige entre tres propuestas editables.</p>
+              <h3 id="visualOnboardingTitle">Deja que la IA componga tu tienda completa</h3>
+              <p>Usamos el catálogo, las fotos y las redes que ya agregaste para crear tres sitios editables.</p>
               <span class="visual-safety-note">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
                 Nada cambia hasta que apruebes una propuesta.
@@ -1099,7 +1104,7 @@
             <button type="button" class="ghost inline-section-toggle" id="visualAssistantToggle">Mostrar IA</button>
           </div>
           <ol class="visual-progress" id="visualProgress" aria-label="Progreso del asistente visual">
-            <li class="is-active" data-step="1"><span>1</span> Tus imágenes</li>
+            <li class="is-active" data-step="1"><span>1</span> Tu dirección</li>
             <li data-step="2"><span>2</span> Preparando</li>
             <li data-step="3"><span>3</span> Elige y aprueba</li>
           </ol>
@@ -1120,22 +1125,21 @@
                   <option value="playful">Alegre y cercana</option>
                 </select>
               </div>
-              <div class="visual-upload-zone">
-                <label for="visualSourceInput">Fotos originales</label>
-                <p>Usa fotos claras del producto, espacio, equipo o proceso. JPG, PNG o WEBP; máximo 8 MB por imagen.</p>
-                <input id="visualSourceInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-                <div class="visual-source-previews" id="visualSourcePreviews"></div>
+              <div class="visual-upload-zone visual-existing-assets">
+                <strong>Contenido que la IA reutilizará</strong>
+                <p>Fotos de productos, banner, galería, historia y enlaces sociales ya guardados en esta tienda. No crearemos imágenes nuevas ni cambiaremos la tienda publicada durante la vista previa.</p>
+                <div class="visual-source-previews" id="visualSourcePreviews" aria-live="polite"></div>
               </div>
             </div>
             <div class="visual-actions">
-              <button type="button" class="primary" id="visualGenerate" disabled>Crear 3 propuestas</button>
-              <p class="faint" id="visualSourceStatus" role="status">Agrega al menos una imagen para empezar.</p>
+              <button type="button" class="primary" id="visualGenerate">Diseñar 3 sitios</button>
+              <p class="faint" id="visualSourceStatus" role="status">La IA también redactará textos de muestra. Revísalos antes de aprobar.</p>
             </div>
           </div>
           <div class="visual-step" id="visualStep2" hidden>
             <div class="visual-generating">
               <span class="visual-generating-mark" aria-hidden="true"></span>
-              <div><strong>Diseñando tres apariencias completas</strong><p>Estamos analizando tus fotos y definiendo paleta, tipografía, secciones, botones e imagen principal. Tus productos y originales no se modifican.</p></div>
+              <div><strong>Componiendo tres sitios completos</strong><p>Estamos organizando tus fotos existentes, portada, textos borrador, fondo, cinta, botones sociales, catálogo y secciones. Nada se publica todavía.</p></div>
             </div>
           </div>
           <div class="visual-step" id="visualStep3" hidden>
@@ -1899,7 +1903,6 @@
   const previewMobileEl = document.getElementById("previewMobile");
   const visualProgressEl = document.getElementById("visualProgress");
   const visualStepEls = [document.getElementById("visualStep1"), document.getElementById("visualStep2"), document.getElementById("visualStep3")];
-  const visualSourceInputEl = document.getElementById("visualSourceInput");
   const visualSourcePreviewsEl = document.getElementById("visualSourcePreviews");
   const visualSourceStatusEl = document.getElementById("visualSourceStatus");
   const visualGenerateEl = document.getElementById("visualGenerate");
@@ -1907,7 +1910,6 @@
   const visualProposalStatusEl = document.getElementById("visualProposalStatus");
   const visualHistoryEl = document.getElementById("visualHistory");
   const visualHistoryListEl = document.getElementById("visualHistoryList");
-  let visualSourceFiles = [];
   let visualProposals = [];
   let visualVersions = [];
   const AI_ONBOARDING_SEEN_KEY = "pagosya_ai_onboarding_seen_v1";
@@ -2061,40 +2063,20 @@
     }
 
     if (onboardingStep === 3) {
-      onboardingTitleEl.textContent = "Define la dirección de tu marca";
-      onboardingCopyEl.textContent = "La IA combinará tus fotos con una paleta, tipografía, portada, orden de secciones y estilo de botones. Generará tres opciones completas.";
+      onboardingTitleEl.textContent = "Deja que la IA componga tu sitio";
+      onboardingCopyEl.textContent = "La IA usará el catálogo, las fotos y las redes que ya están en tu tienda. Creará tres versiones completas para comparar antes de publicar.";
       onboardingBodyEl.innerHTML = `<div class="onboarding-form-grid">
         <div><label for="onboardingCategory">¿Qué vendes?</label><input id="onboardingCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil"></div>
         <div><label for="onboardingPersonality">Personalidad</label><select id="onboardingPersonality"><option value="">Déjame sorprender</option><option value="warm">Cálida y artesanal</option><option value="bold">Audaz y enérgica</option><option value="minimal">Limpia y minimal</option><option value="elegant">Elegante y serena</option><option value="playful">Alegre y cercana</option></select></div>
-        <div class="onboarding-file full"><label for="onboardingBrandImages">Fotos de referencia</label><input id="onboardingBrandImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingImageCount onboardingAiDisclosure"><span class="faint" id="onboardingImageCount">${onboardingSourceFiles.length ? `${onboardingSourceFiles.length} fotos de la importación ya están listas.` : "Agrega al menos una foto clara de tus productos, espacio o proceso."}</span></div>
-      </div><div class="onboarding-safety" id="onboardingAiDisclosure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Al continuar autorizas el procesamiento de estas fotos por el proveedor de IA configurado. Conservamos los originales por separado y no publicamos ninguna propuesta sin tu aprobación.</span></div>`;
-      onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingGenerate">Crear 3 propuestas</button><button class="ghost" type="button" id="onboardingBackToCsv">Volver al catálogo</button>`;
-      document.getElementById("onboardingBrandImages").addEventListener("change", (event) => {
-        const validation = validateVisualFiles([...event.target.files]);
-        onboardingSourceFiles = validation.files;
-        document.getElementById("onboardingImageCount").textContent = validation.errors.length
-          ? validation.errors.join(" ")
-          : `${onboardingSourceFiles.length} ${onboardingSourceFiles.length === 1 ? "foto lista" : "fotos listas"}.`;
-        event.target.setAttribute("aria-invalid", String(validation.errors.length > 0));
-      });
+        <div class="onboarding-file full"><strong>La propuesta incluirá</strong><span class="faint">Banners con tus fotos actuales, textos borrador, fondo, cinta en movimiento, botones sociales, estilo de compra y orden de secciones.</span></div>
+      </div><div class="onboarding-safety" id="onboardingAiDisclosure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Al continuar autorizas el procesamiento del contenido existente por el proveedor de IA configurado. No se crean imágenes nuevas y nada se publica sin tu aprobación.</span></div>`;
+      onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingGenerate">Diseñar 3 sitios</button><button class="ghost" type="button" id="onboardingBackToCsv">Volver al catálogo</button>`;
       document.getElementById("onboardingBackToCsv").addEventListener("click", () => setOnboardingStep(2));
       document.getElementById("onboardingGenerate").addEventListener("click", () => {
         if (!currentStoreId) { onboardingStatusEl.textContent = "Crea o selecciona una tienda primero."; return; }
-        const validation = validateVisualFiles(onboardingSourceFiles);
-        onboardingSourceFiles = validation.files;
-        if (validation.errors.length) {
-          onboardingStatusEl.setAttribute("role", "alert");
-          onboardingStatusEl.textContent = validation.errors.join(" ");
-          document.getElementById("onboardingBrandImages").setAttribute("aria-invalid", "true");
-          return;
-        }
-        if (!onboardingSourceFiles.length) { onboardingStatusEl.setAttribute("role", "alert"); onboardingStatusEl.textContent = "Agrega al menos una foto válida para que la IA pueda diseñar la tienda."; document.getElementById("onboardingBrandImages").setAttribute("aria-invalid", "true"); document.getElementById("onboardingBrandImages").focus(); return; }
         onboardingStatusEl.setAttribute("role", "status");
         document.getElementById("visualBusinessCategory").value = document.getElementById("onboardingCategory").value;
         document.getElementById("visualPersonality").value = document.getElementById("onboardingPersonality").value;
-        visualSourceFiles.forEach((file) => file.previewUrl && URL.revokeObjectURL(file.previewUrl));
-        visualSourceFiles = [...onboardingSourceFiles];
-        renderVisualSources();
         onboardingGoToView("appearance", "storeSettingsSection");
         const assistantToggle = document.getElementById("visualAssistantToggle");
         if (assistantToggle?.getAttribute("aria-expanded") !== "true") assistantToggle?.click();
@@ -2285,38 +2267,9 @@
   }
 
   function renderVisualSources() {
-    visualSourcePreviewsEl.innerHTML = visualSourceFiles.map((file, index) => {
-      if (!file.previewUrl) file.previewUrl = URL.createObjectURL(file);
-      return `<div class="visual-source-thumb"><img src="${esc(file.previewUrl)}" alt="${esc(file.name)}"><button type="button" data-index="${index}" aria-label="Quitar ${esc(file.name)}">×</button></div>`;
-    }).join("");
-    visualSourcePreviewsEl.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
-      const [removed] = visualSourceFiles.splice(Number(button.dataset.index), 1);
-      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
-      renderVisualSources();
-    }));
-    visualGenerateEl.disabled = visualSourceFiles.length === 0;
-    visualSourceStatusEl.textContent = visualSourceFiles.length
-      ? `${visualSourceFiles.length} ${visualSourceFiles.length === 1 ? "imagen lista" : "imágenes listas"}. Los originales quedarán guardados por separado.`
-      : "Agrega al menos una imagen para empezar. Al continuar, autorizas su procesamiento por el proveedor de IA configurado; pagosYa conserva tus originales.";
-  }
-
-  function validateVisualFiles(files) {
-    const accepted = [];
-    const errors = [];
-    for (const file of files) {
-      if (accepted.length >= 8) {
-        errors.push("Puedes usar un máximo de 8 fotos.");
-        break;
-      }
-      if (!new Set(["image/png", "image/jpeg", "image/webp"]).has(file.type)) {
-        errors.push(`${file.name} no es JPG, PNG o WEBP.`);
-      } else if (file.size > MAX_IMAGE_BYTES) {
-        errors.push(`${file.name} supera el máximo de 8 MB.`);
-      } else {
-        accepted.push(file);
-      }
-    }
-    return { files: accepted, errors };
+    const visualCount = [pendingBannerUrl, pendingBackgroundImageUrl, pendingAboutImageUrl, ...pendingHeroSlides.map((slide) => slide.imageUrl), ...pendingEditorialGallery.map((image) => image.imageUrl)].filter(Boolean).length;
+    visualSourcePreviewsEl.innerHTML = `<span class="badge">${visualCount ? `${visualCount} recursos visuales detectados` : "Usaremos las fotos del catálogo"}</span><span class="badge">${pendingStoreLinks.length ? `${pendingStoreLinks.length} enlaces listos` : "Redes opcionales"}</span>`;
+    visualGenerateEl.disabled = !currentStoreId;
   }
 
   function proposalImageUrl(proposal) {
@@ -2325,27 +2278,29 @@
   }
 
   function renderVisualStudio() {
-    const visible = visualProposals.filter((proposal) => proposal.status !== "DISMISSED");
+    const visible = visualProposals.filter((proposal) => proposal.status !== "DISMISSED").slice(0, 3);
     if (visible.length) {
       setVisualStep(3);
       visualProposalsEl.innerHTML = visible.map((proposal) => {
         const config = proposal.config || {};
         const imageUrl = proposalImageUrl(proposal);
         const applied = proposal.status === "APPLIED";
+        const featureLabels = [config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banner${config.heroSlides.length === 1 ? "" : "s"}` : "Portada tipográfica", config.editorialGallery?.length ? "Galería" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
         return `<article class="visual-proposal" data-id="${esc(proposal.id)}">
-          <img src="${esc(apiRoot() + imageUrl)}" alt="Vista de ${esc(proposal.title)}">
+          <div class="visual-proposal-cover" style="--proposal-bg:${esc(config.backgroundColor || "#f8fafc")};--proposal-accent:${esc(config.accentColor || "#4f46e5")}">${imageUrl ? `<img src="${esc(apiRoot() + imageUrl)}" alt="Portada de ${esc(proposal.title)}">` : `<span>${esc(config.tagline || proposal.title)}</span>`}</div>
           <div class="visual-proposal-copy">
             <strong>${esc(proposal.title)}${applied ? " · En uso" : ""}</strong>
             <p>${esc(proposal.rationale)}</p>
             <div class="visual-proposal-meta">
               <span class="visual-swatch" style="background:${esc(config.backgroundColor || "#f8fafc")}" title="Fondo"></span>
               <span class="visual-swatch" style="background:${esc(config.accentColor || "#4f46e5")}" title="Acento"></span>
-              <span>${esc(config.fontStyle || "mono")} · ${esc(config.boardTexture || "chalkboard")} · ${proposal.provider?.includes("+") ? "apariencia e imagen con IA" : proposal.provider?.startsWith("openai:") ? "apariencia asistida por IA" : "composición local"}</span>
+              <span>${esc(config.fontStyle || "mono")} · ${proposal.provider?.startsWith("openai:") ? "sitio compuesto con IA" : "composición local"}</span>
+              ${featureLabels.map((label) => `<span class="visual-proposal-feature">${esc(label)}</span>`).join("")}
             </div>
           </div>
           <div class="visual-proposal-actions">
-            <button type="button" class="ghost visual-preview-proposal">Vista previa</button>
-            <button type="button" class="primary visual-apply-proposal" ${applied ? "disabled" : ""}>${applied ? "Aplicada" : "Usar propuesta"}</button>
+            <button type="button" class="ghost visual-preview-proposal" aria-label="Vista previa de ${esc(proposal.title)}">Vista previa</button>
+            <button type="button" class="primary visual-apply-proposal" aria-label="${applied ? "Propuesta aplicada" : "Usar propuesta"}: ${esc(proposal.title)}" ${applied ? "disabled" : ""}>${applied ? "Aplicada" : "Usar propuesta"}</button>
           </div>
         </article>`;
       }).join("");
@@ -2492,30 +2447,16 @@
     visualProposalStatusEl.textContent = "";
     setVisualStep(1);
   });
-  visualSourceInputEl.addEventListener("change", () => {
-    errorEl.textContent = "";
-    const validation = validateVisualFiles([...visualSourceFiles, ...visualSourceInputEl.files]);
-    visualSourceInputEl.value = "";
-    visualSourceFiles = validation.files;
-    if (validation.errors.length) errorEl.textContent = validation.errors.join(" ");
-    renderVisualSources();
-  });
   visualGenerateEl.addEventListener("click", async () => {
-    if (!currentStoreId || visualSourceFiles.length === 0) return;
+    if (!currentStoreId) return;
     errorEl.textContent = "";
     setVisualStep(2);
     visualGenerateEl.disabled = true;
     try {
-      const assetUrls = [];
-      for (let index = 0; index < visualSourceFiles.length; index++) {
-        visualSourceStatusEl.textContent = `Guardando original ${index + 1} de ${visualSourceFiles.length}…`;
-        assetUrls.push(await uploadFile(visualSourceFiles[index]));
-      }
-      visualSourceStatusEl.textContent = "Creando propuestas…";
+      visualSourceStatusEl.textContent = "Leyendo la tienda y componiendo propuestas…";
       const result = await api(`/stores/${currentStoreId}/visual-proposals`, {
         method: "POST",
         body: JSON.stringify({
-          assetUrls,
           businessCategory: document.getElementById("visualBusinessCategory").value.trim() || undefined,
           personality: document.getElementById("visualPersonality").value || undefined,
         }),
@@ -2524,8 +2465,8 @@
       visualProposals = [...generatedProposals, ...visualProposals];
       renderVisualStudio();
       visualProposalStatusEl.textContent = result.mode === "ai"
-        ? "Las imágenes fueron compuestas con IA. Revisa cada vista antes de aplicar."
-        : "Modo local activo: creamos tres direcciones con tus originales. Agrega OPENAI_API_KEY para generar nuevas composiciones fotográficas.";
+        ? "La IA compuso tres sitios con tu contenido actual. Los textos son borradores: revisa la vista completa antes de aplicar."
+        : "Creamos tres sitios de respaldo con tu contenido actual. La tienda publicada no cambió.";
       if (generatedProposals.length >= 3) {
         setOnboardingStep(4, { open: true });
       } else {
@@ -2538,7 +2479,7 @@
       setVisualStep(1);
       errorEl.textContent = "No se pudieron crear las propuestas: " + err.message;
     } finally {
-      visualGenerateEl.disabled = visualSourceFiles.length === 0;
+      visualGenerateEl.disabled = !currentStoreId;
     }
   });
   renderVisualSources();
@@ -2560,9 +2501,9 @@
     storeLinksEditorEl.innerHTML = pendingStoreLinks
       .map(
         (link, i) => `<div class="store-link-editor-row" data-index="${i}">
-          <input class="link-label" placeholder="Texto (ej. Instagram)" maxlength="40" value="${esc(link.label)}">
-          <input class="link-url" type="url" placeholder="https://instagram.com/mitienda" maxlength="500" value="${esc(link.url)}">
-          <button type="button" class="ghost link-remove" title="Quitar enlace">×</button>
+          <input class="link-label" aria-label="Texto del enlace ${i + 1}" placeholder="Texto (ej. Instagram)" maxlength="40" value="${esc(link.label)}">
+          <input class="link-url" type="url" aria-label="URL del enlace ${i + 1}" placeholder="https://instagram.com/mitienda" maxlength="500" value="${esc(link.url)}">
+          <button type="button" class="ghost link-remove" aria-label="Quitar enlace ${i + 1}">×</button>
         </div>`,
       )
       .join("");
@@ -3351,12 +3292,14 @@
       syncStoreCustomizationControls();
       pendingStoreLinks = (store.links || []).map((l) => ({ label: l.label, url: l.url }));
       renderStoreLinksEditor();
+      renderVisualSources();
       renderCurrentStoreBanner();
       loadVisualStudioState(store.id);
     } else {
       backgroundQualityVersion += 1;
       setBackgroundImageQuality(0, 0);
       refreshStorePreview();
+      renderVisualSources();
       loadVisualStudioState(null);
     }
   }

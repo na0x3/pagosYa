@@ -1560,10 +1560,26 @@ body.store-page[data-button-motion="pulse"] .promotion-action:hover {
    canvas. pagosYa stays in the secure-payment note; the merchant's
    identity, imagery and catalog lead the page. ============================================================ */
 
-body.store-page[data-board-texture="chalkboard"]:not(.has-bg-image) { --pg-page-bg: #11100f; }
-body.store-page[data-board-texture="kraft"]:not(.has-bg-image) { --pg-page-bg: #211c17; }
-body.store-page[data-board-texture="painted"]:not(.has-bg-image) {
-  --pg-page-bg: color-mix(in srgb, var(--pg-accent) 12%, #111113);
+/* Texture is a material laid over the merchant's chosen background color;
+   it must never replace that color or change the preview's contrast model. */
+body.store-page:not(.has-bg-image)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .2;
+}
+body.store-page[data-board-texture="chalkboard"]:not(.has-bg-image)::before {
+  background-image: repeating-linear-gradient(102deg, transparent 0 18px, color-mix(in srgb, var(--pg-text) 7%, transparent) 19px 20px);
+}
+body.store-page[data-board-texture="kraft"]:not(.has-bg-image)::before {
+  background-image: radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--pg-text) 9%, transparent) 0 1px, transparent 1.5px), radial-gradient(circle at 72% 68%, color-mix(in srgb, var(--pg-text) 7%, transparent) 0 1px, transparent 1.5px);
+  background-size: 19px 23px, 27px 31px;
+}
+body.store-page[data-board-texture="painted"]:not(.has-bg-image)::before {
+  background-image: linear-gradient(96deg, transparent 0 46%, color-mix(in srgb, var(--pg-text) 8%, transparent) 50%, transparent 54%);
+  background-size: 72px 100%;
 }
 
 body.store-page #app {

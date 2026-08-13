@@ -1075,4 +1075,43 @@ describe("storefront (?link=...)", () => {
     expect(document.body.classList.contains("has-bg-image")).toBe(false);
     expect(document.documentElement.dataset.theme).toBeUndefined();
   });
+
+  it("keeps the merchant background color authoritative and derives a readable theme from it", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda crema",
+        backgroundColor: "#f4ead7",
+        boardTexture: "kraft",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=cream-background");
+
+    expect(document.documentElement.style.getPropertyValue("--pg-page-bg")).toBe("#f4ead7");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.body.dataset.boardTexture).toBe("kraft");
+  });
+
+  it("uses a pure foreground when neither theme foreground reaches AA on a mid-tone background", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda tono medio",
+        backgroundColor: "#777777",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=midtone-background");
+
+    const foreground = document.documentElement.style.getPropertyValue("--pg-text");
+    expect(["#000000", "#ffffff"]).toContain(foreground);
+    expect(contrastRatio(foreground, "#777777")).toBeGreaterThanOrEqual(4.5);
+    expect(document.documentElement.style.getPropertyValue("--pg-text-muted")).toBe(foreground);
+    expect(document.documentElement.style.getPropertyValue("--pg-text-faint")).toBe(foreground);
+  });
 });

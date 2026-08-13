@@ -174,16 +174,35 @@ function clampAccentLightness(hex: string): string {
   return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
 }
 
-function accentContrastColor(hex: string): "#ffffff" | "#000000" {
+function relativeLuminance(hex: string): number {
   const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!match) return "#ffffff";
+  if (!match) return 0;
   const channels = [0, 2, 4].map((offset) => parseInt(match[1].slice(offset, offset + 2), 16) / 255);
   const [r, g, b] = channels.map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function colorContrastRatio(first: string, second: string): number {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (Math.max(firstLuminance, secondLuminance) + 0.05) / (Math.min(firstLuminance, secondLuminance) + 0.05);
+}
+
+function accentContrastColor(hex: string): "#ffffff" | "#000000" {
+  const luminance = relativeLuminance(hex);
   // Pure black and white overlap at 4.5:1 around this boundary: white is
   // compliant through L=0.1833 and black from L=0.175. Choosing between them
   // at the midpoint therefore guarantees WCAG AA contrast for every color.
   return luminance >= 0.179 ? "#000000" : "#ffffff";
+}
+
+function backgroundTheme(backgroundColor: string | null, hasImage: boolean): { light: boolean; textOverride: "#000000" | "#ffffff" | null } {
+  if (hasImage) return { light: true, textOverride: null };
+  if (!backgroundColor || !/^#[0-9a-f]{6}$/i.test(backgroundColor)) return { light: false, textOverride: null };
+  if (colorContrastRatio("#171717", backgroundColor) >= 4.5) return { light: true, textOverride: null };
+  if (colorContrastRatio("#f5f5f5", backgroundColor) >= 4.5) return { light: false, textOverride: null };
+  const textOverride = accentContrastColor(backgroundColor);
+  return { light: textOverride === "#000000", textOverride };
 }
 
 function createStoreEntrance(): HTMLElement {
@@ -673,8 +692,14 @@ function applyStoreTheme(slug: string, store: Store): void {
   const backgroundImageUrl = assetUrl(store.backgroundImageUrl);
   document.documentElement.style.setProperty("--pg-page-bg-image", backgroundImageUrl ? `url("${backgroundImageUrl}")` : "none");
   document.body.classList.toggle("has-bg-image", !!backgroundImageUrl);
-  if (backgroundImageUrl) document.documentElement.dataset.theme = "light";
+  const pageTheme = backgroundTheme(store.backgroundColor, !!backgroundImageUrl);
+  const useLightTheme = pageTheme.light;
+  if (useLightTheme) document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
+  for (const property of ["--pg-text", "--pg-text-muted", "--pg-text-faint"]) {
+    if (pageTheme.textOverride) document.documentElement.style.setProperty(property, pageTheme.textOverride);
+    else document.documentElement.style.removeProperty(property);
+  }
 
   if (store.accentColor) {
     const effectiveAccent = clampAccentLightness(store.accentColor);
@@ -682,7 +707,7 @@ function applyStoreTheme(slug: string, store: Store): void {
     document.documentElement.style.setProperty("--pg-accent-2", effectiveAccent);
     document.documentElement.style.setProperty("--pg-accent-contrast", accentContrastColor(effectiveAccent));
   } else {
-    const palette = DEFAULT_ACCENT_PALETTES[backgroundImageUrl ? "light" : "dark"];
+    const palette = DEFAULT_ACCENT_PALETTES[useLightTheme ? "light" : "dark"];
     document.documentElement.style.setProperty("--pg-accent", palette.accent);
     document.documentElement.style.setProperty("--pg-accent-2", palette.accent2);
     document.documentElement.style.setProperty("--pg-accent-contrast", palette.contrast);
