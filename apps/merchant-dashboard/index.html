@@ -1718,6 +1718,7 @@
   checkoutOriginEl.addEventListener("change", () => {
     sessionStorage.setItem("pagosya_checkout_origin", checkoutOriginEl.value);
     renderCurrentStoreBanner();
+    if (lastStores) renderStoreRows(lastStores);
   });
 
   // Payment Links: cada foto se sube de inmediato a POST /uploads al elegirla;
