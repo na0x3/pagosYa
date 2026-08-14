@@ -10,7 +10,7 @@ describe("MockSinInvoicingAdapter", () => {
 
   it("issues a CUFD that expires ~24h from now", async () => {
     const before = Date.now();
-    const result = await adapter.requestCufd({ cuis: "CUIS-1" });
+    const result = await adapter.requestCufd({ nit: "123", cuis: "CUIS-1", sucursal: 0, puntoVenta: 0 });
     expect(result.cufd).toMatch(/^CUFD-CUIS-1-MOCK-/);
     expect(result.expiresAt.getTime() - before).toBeGreaterThan(23 * 60 * 60 * 1000);
   });

@@ -16,6 +16,15 @@ export interface EmailConfig {
   webOrigin: string;
 }
 
+export interface SiatConfig {
+  enabled: boolean;
+  baseUrl: string;
+  delegatedToken: string;
+  systemCode: string;
+  environmentCode: number;
+  modalityCode: number;
+}
+
 export interface AppConfig {
   port: number;
   databaseUrl: string;
@@ -40,6 +49,7 @@ export interface AppConfig {
     enabled: boolean;
   };
   email: EmailConfig;
+  siat: SiatConfig;
 }
 
 function apiRootFromCwd(): string {
@@ -100,6 +110,15 @@ export default (): { app: AppConfig } => ({
       // Where verification/reset links point — the marketing site (apps.checkout
       // is the payment iframe, not a page a human browses to). Not CHECKOUT_ORIGIN.
       webOrigin: process.env.PAGOSYA_WEB_ORIGIN ?? "http://localhost:3001",
+    },
+    siat: {
+      enabled: process.env.SIAT_ENABLED === "true",
+      baseUrl: process.env.SIAT_BASE_URL ?? "https://pilotosiatservicios.impuestos.gob.bo/v2",
+      delegatedToken: process.env.SIAT_DELEGATED_TOKEN ?? "",
+      systemCode: process.env.SIAT_SYSTEM_CODE ?? "",
+      environmentCode: parseInt(process.env.SIAT_ENVIRONMENT_CODE ?? "2", 10),
+      // pagosYa is authorized for Facturacion Computarizada en Linea.
+      modalityCode: parseInt(process.env.SIAT_MODALITY_CODE ?? "2", 10),
     },
   },
 });

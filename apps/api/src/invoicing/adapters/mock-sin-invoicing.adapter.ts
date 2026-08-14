@@ -23,6 +23,8 @@ const CUFD_TTL_MS = 24 * 60 * 60 * 1000;
  */
 @Injectable()
 export class MockSinInvoicingAdapter implements InvoicingProvider {
+  readonly invoiceEmissionReady = true;
+
   async ensureCuis(req: EnsureCuisRequest): Promise<EnsureCuisResult> {
     await simulateLatency();
     return { cuis: generateMockCode(`CUIS-${req.nit}-${req.sucursal}-${req.puntoVenta}`) };

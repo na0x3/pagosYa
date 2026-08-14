@@ -25,4 +25,16 @@ export class GenerateVisualProposalsDto {
   @IsOptional()
   @IsIn(["warm", "bold", "minimal", "elegant", "playful"])
   personality?: string;
+
+  @ApiPropertyOptional({ description: "Required conversion path for every generated proposal.", enum: ["payment", "whatsapp"] })
+  @IsOptional()
+  @IsIn(["payment", "whatsapp"])
+  checkoutMode?: string;
+
+  @ApiPropertyOptional({ description: "WhatsApp number used when checkoutMode is whatsapp.", example: "+59171234567" })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(40)
+  whatsappPhone?: string;
 }

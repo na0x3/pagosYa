@@ -115,6 +115,7 @@ function storeUpdateData(dto: UpdateStoreDto): Prisma.StoreUpdateInput {
     ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
     ...(dto.buttonMotion !== undefined && { buttonMotion: dto.buttonMotion }),
     ...(dto.cartButtonLabel !== undefined && { cartButtonLabel: dto.cartButtonLabel }),
+    ...(dto.checkoutMode !== undefined && { checkoutMode: dto.checkoutMode }),
   };
 }
 
@@ -170,6 +171,7 @@ export class StoresService {
             buttonVariant: dto.buttonVariant,
             buttonMotion: dto.buttonMotion,
             cartButtonLabel: dto.cartButtonLabel,
+            checkoutMode: dto.checkoutMode,
           },
         });
       } catch (err) {
@@ -335,6 +337,7 @@ export class StoresService {
       buttonVariant: store.buttonVariant,
       buttonMotion: store.buttonMotion,
       cartButtonLabel: store.cartButtonLabel,
+      checkoutMode: store.checkoutMode,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
       categories: categories.map((c) => ({ id: c.id, name: c.name })),
       items: items.map((item) => ({
@@ -343,6 +346,7 @@ export class StoresService {
         name: item.name,
         description: item.description,
         imageUrls: item.imageUrls,
+        imagePositions: item.imagePositions,
         tags: item.tags,
         // null = unlimited/not tracked; 0 means genuinely sold out, both are
         // meaningfully different from "in stock" and the storefront needs to
@@ -361,6 +365,9 @@ export class StoresService {
    * single PaymentIntent, i.e. one payment/one QR for the whole cart. */
   async createCartCheckout(slug: string, dto: CartCheckoutDto) {
     const store = await this.findActiveBySlugPublic(slug);
+    if (store.checkoutMode === "whatsapp") {
+      throw new BadRequestException("Esta tienda recibe pedidos directamente por WhatsApp");
+    }
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: store.merchantId } });
 
     const quantityByLinkId = new Map<string, number>();

@@ -17,6 +17,24 @@ export class InvoicingService {
     const sucursal = dto.sucursal ?? 0;
     const puntoVenta = dto.puntoVenta ?? 0;
 
+    // CUIS is issued once per taxpayer/system/branch/point and SIAT rejects a
+    // second request while it is active (970/980). Dashboard re-submission
+    // must therefore reuse the stored code when that scope did not change.
+    const existing = await this.prisma.merchantInvoicingProfile.findUnique({ where: { merchantId } });
+    if (
+      existing?.cuis &&
+      existing.nit === dto.nit &&
+      existing.sucursal === sucursal &&
+      existing.puntoVenta === puntoVenta
+    ) {
+      return existing.razonSocial === dto.razonSocial
+        ? existing
+        : this.prisma.merchantInvoicingProfile.update({
+            where: { id: existing.id },
+            data: { razonSocial: dto.razonSocial },
+          });
+    }
+
     const { cuis } = await this.provider.ensureCuis({
       nit: dto.nit,
       razonSocial: dto.razonSocial,
@@ -54,6 +72,10 @@ export class InvoicingService {
       customerDocument?: string | null;
     },
   ): Promise<void> {
+    // The real SIAT code client can be enabled for CUIS/CUFD pilot testing
+    // before the fiscal XML/CUF layer is complete. Never create doomed
+    // invoice jobs during that intermediate state.
+    if (!this.provider.invoiceEmissionReady) return;
     const profile = await tx.merchantInvoicingProfile.findUnique({ where: { merchantId } });
     if (!profile?.cuis) return;
 
@@ -77,13 +99,26 @@ export class InvoicingService {
   }
 
   /** Refreshes the profile's CUFD if missing/expired (SIN's real ones are valid ~24h). Used by InvoiceEmissionWorker. */
-  async ensureFreshCufd(profile: { id: string; cuis: string | null; cufd: string | null; cufdExpiresAt: Date | null }): Promise<string> {
+  async ensureFreshCufd(profile: {
+    id: string;
+    nit: string;
+    cuis: string | null;
+    sucursal: number;
+    puntoVenta: number;
+    cufd: string | null;
+    cufdExpiresAt: Date | null;
+  }): Promise<string> {
     if (!profile.cuis) throw new Error(`Invoicing profile ${profile.id} has no CUIS`);
     if (profile.cufd && profile.cufdExpiresAt && profile.cufdExpiresAt > new Date()) {
       return profile.cufd;
     }
 
-    const { cufd, expiresAt } = await this.provider.requestCufd({ cuis: profile.cuis });
+    const { cufd, expiresAt } = await this.provider.requestCufd({
+      nit: profile.nit,
+      cuis: profile.cuis,
+      sucursal: profile.sucursal,
+      puntoVenta: profile.puntoVenta,
+    });
     await this.prisma.merchantInvoicingProfile.update({
       where: { id: profile.id },
       data: { cufd, cufdExpiresAt: expiresAt },

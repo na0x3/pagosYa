@@ -25,7 +25,10 @@ export interface EnsureCuisResult {
 }
 
 export interface RequestCufdRequest {
+  nit: string;
   cuis: string;
+  sucursal: number;
+  puntoVenta: number;
 }
 
 export interface RequestCufdResult {
@@ -56,6 +59,8 @@ export interface EmitInvoiceResult {
 }
 
 export interface InvoicingProvider {
+  /** Whether this provider can submit legally valid invoice XML, not only obtain authorization codes. */
+  readonly invoiceEmissionReady: boolean;
   ensureCuis(req: EnsureCuisRequest): Promise<EnsureCuisResult>;
   requestCufd(req: RequestCufdRequest): Promise<RequestCufdResult>;
   emitInvoice(req: EmitInvoiceRequest): Promise<EmitInvoiceResult>;

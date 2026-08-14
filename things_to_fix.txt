@@ -1,7 +1,0 @@
-Things to start Fixing:
--   Pictures are not properly formatted.
--   Fix bugs, 
--   Instead of Ai generated pictures, i want whole entire generated sites.
--   Make a full walkthrough, tutorials, documents, pdfs, for general public on how to use
-services, how to log in
--   

@@ -18,6 +18,8 @@ import {
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 
+const PRODUCT_IMAGE_POSITION_PATTERN = /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/;
+
 export class ProductVariantDto {
   @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
   @IsOptional()
@@ -74,6 +76,18 @@ export class CreatePaymentLinkDto {
   @Matches(UPLOADED_FILE_URL_PATTERN, { each: true, message: "each imageUrls entry must be a path returned by POST /v1/uploads" })
   @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH, { each: true })
   imageUrls?: string[];
+
+  @ApiPropertyOptional({
+    description: "Crop focus for each product photo as an x/y percentage pair, aligned with imageUrls.",
+    type: [String],
+    example: ["50% 35%"],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsString({ each: true })
+  @Matches(PRODUCT_IMAGE_POSITION_PATTERN, { each: true, message: "each imagePositions entry must use the format x% y% from 0 to 100" })
+  imagePositions?: string[];
 
   @ApiPropertyOptional({ description: "Short labels shown as badges, e.g. \"Nuevo\", \"Agotado\".", type: [String], example: ["Nuevo"] })
   @IsOptional()
@@ -138,4 +152,32 @@ export class CreatePaymentLinkDto {
   @IsString()
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: "color must be a 6-digit hex color, e.g. #1d4ed8" })
   color?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Merchant/PagosYa product code (codigoProducto in SIN XML), distinct from codigoProductoSin.",
+    example: "NIKE-AM90",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9._-]+$/, { message: "codigoProducto may contain letters, numbers, dot, underscore, and hyphen" })
+  codigoProducto?: string;
+
+  @ApiPropertyOptional({ description: "Merchant NIT activity from sincronizarActividades.", example: "477210" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+$/, { message: "actividadEconomica must be a synchronized numeric activity code" })
+  actividadEconomica?: string;
+
+  @ApiPropertyOptional({ description: "SIN generic product/service classification for the selected activity." })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+$/, { message: "codigoProductoSin must be a synchronized numeric product code" })
+  codigoProductoSin?: string;
+
+  @ApiPropertyOptional({ description: "Unit classifier from sincronizarParametricaUnidadMedida.", example: 58 })
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  unidadMedida?: number;
 }

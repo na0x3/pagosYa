@@ -11,7 +11,7 @@ const VISUAL_FIELDS = [
   "accentColor", "fontStyle", "buttonStyle", "boardTexture", "announcement", "announcementMode",
   "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled", "promotionTitle",
   "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "editorialGallery",
-  "buttonVariant", "buttonMotion", "cartButtonLabel",
+  "buttonVariant", "buttonMotion", "cartButtonLabel", "checkoutMode", "contactPhone",
 ] as const;
 
 type VisualField = (typeof VISUAL_FIELDS)[number];
@@ -175,6 +175,23 @@ export class VisualStudioService {
 
   async generate(merchantId: string, storeId: string, dto: GenerateVisualProposalsDto) {
     const store = await this.ownedStore(merchantId, storeId);
+    const checkoutMode: "payment" | "whatsapp" = dto.checkoutMode === "whatsapp"
+      ? "whatsapp"
+      : dto.checkoutMode === "payment"
+        ? "payment"
+        : store.checkoutMode === "whatsapp"
+          ? "whatsapp"
+          : "payment";
+    const whatsappPhone = dto.whatsappPhone?.trim() || store.contactPhone?.trim() || "";
+    const whatsappDigits = whatsappPhone.replace(/\D/g, "");
+    if (checkoutMode === "whatsapp" && (whatsappDigits.length < 7 || whatsappDigits.length > 15)) {
+      throw new BadRequestException("Configura un número de WhatsApp válido, con 7 a 15 dígitos, antes de crear las propuestas");
+    }
+    const proposalInput: GenerateVisualProposalsDto = {
+      ...dto,
+      checkoutMode,
+      ...(checkoutMode === "whatsapp" && { whatsappPhone }),
+    };
     const [products, links] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId, status: "ACTIVE" },
@@ -211,16 +228,26 @@ export class VisualStudioService {
     if (orderedAssets.length === 0) {
       throw new BadRequestException("Agrega al menos una foto a la tienda o a un producto antes de crear el sitio con IA");
     }
-    let presets = this.presets(store, dto, orderedAssets, products, links);
+    let presets = this.presets(store, proposalInput, orderedAssets, products, links);
     let provider = "local-curated";
 
     if (this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey")) {
-      const aiPresets = await this.generateDirections(store, dto, orderedAssets, products, links);
+      const aiPresets = await this.generateDirections(store, proposalInput, orderedAssets, products, links);
       if (aiPresets) {
         presets = aiPresets;
         provider = `openai:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-luna"}`;
       }
     }
+
+    presets = presets.map((preset) => ({
+      ...preset,
+      config: {
+        ...preset.config,
+        checkoutMode,
+        ...(checkoutMode === "whatsapp" && { cartButtonLabel: "Pedir por WhatsApp" }),
+        ...(checkoutMode === "whatsapp" && { contactPhone: whatsappPhone }),
+      },
+    }));
 
     const proposals = await this.prisma.$transaction(
       presets.map((preset) => {
@@ -248,6 +275,10 @@ export class VisualStudioService {
       this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(proposal.config) }),
       this.prisma.storeVisualVersion.create({
         data: { storeId, label: `Antes de “${proposal.title}”`, source: `proposal:${proposal.id}`, snapshot: snapshot(store) },
+      }),
+      this.prisma.storeVisualProposal.updateMany({
+        where: { storeId, id: { not: proposal.id }, status: "APPLIED" },
+        data: { status: "READY", appliedAt: null },
       }),
       this.prisma.storeVisualProposal.update({ where: { id: proposal.id }, data: { status: "APPLIED", appliedAt: new Date() } }),
     ]);
@@ -332,6 +363,7 @@ export class VisualStudioService {
       const prompt = [
         "Actúa como director de arte y diseñador de ecommerce. Devuelve exactamente tres sitios completos y distintos, usando únicamente las imágenes ya existentes; no generes ni solicites imágenes nuevas.",
         `Tienda: ${store.name}. Categoría: ${category}. Personalidad: ${personality}.`,
+        `Conversión elegida por el comercio: ${dto.checkoutMode === "whatsapp" ? "pedido por WhatsApp, sin pago integrado" : "pago integrado con pagosYa"}. Respeta esta decisión en el tono de los llamados a la acción.`,
         `Catálogo actual:\n${catalog}`,
         `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,

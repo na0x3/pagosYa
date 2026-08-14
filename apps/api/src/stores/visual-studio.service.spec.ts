@@ -39,6 +39,7 @@ const store = {
   buttonVariant: "solid",
   buttonMotion: "lift",
   cartButtonLabel: "Ir a pagar",
+  checkoutMode: "payment",
   status: "ACTIVE",
   viewCount: 0,
   createdAt: new Date(),
@@ -62,6 +63,7 @@ describe("VisualStudioService", () => {
         create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: `proposal_${data.title}`, ...data, status: "READY", createdAt: new Date() })),
         findFirst: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn(),
       },
       storeVisualVersion: { create: jest.fn().mockResolvedValue({}), findFirst: jest.fn(), findMany: jest.fn() },
@@ -89,6 +91,49 @@ describe("VisualStudioService", () => {
     }
   });
 
+  it("keeps WhatsApp conversion and its phone in every generated proposal", async () => {
+    const { service, prisma } = setup();
+    await service.generate("merchant_1", "store_1", {
+      checkoutMode: "whatsapp",
+      whatsappPhone: "+591 71234567",
+    });
+
+    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+      expect(call[0].data.config).toEqual(expect.objectContaining({
+        checkoutMode: "whatsapp",
+        contactPhone: "+591 71234567",
+        cartButtonLabel: "Pedir por WhatsApp",
+      }));
+    }
+  });
+
+  it("rejects WhatsApp proposals that would leave checkout without a usable recipient", async () => {
+    const { service, prisma } = setup();
+
+    await expect(service.generate("merchant_1", "store_1", {
+      checkoutMode: "whatsapp",
+      whatsappPhone: "sin número",
+    })).rejects.toThrow("Configura un número de WhatsApp válido");
+
+    expect(prisma.paymentLink.findMany).not.toHaveBeenCalled();
+    expect(prisma.storeVisualProposal.create).not.toHaveBeenCalled();
+  });
+
+  it("preserves an existing WhatsApp conversion when older clients omit the mode", async () => {
+    const { service, prisma } = setup();
+    prisma.store.findFirst.mockResolvedValue({ ...store, checkoutMode: "whatsapp", contactPhone: "+591 71234567" });
+
+    await service.generate("merchant_1", "store_1", {});
+
+    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+      expect(call[0].data.config).toEqual(expect.objectContaining({
+        checkoutMode: "whatsapp",
+        contactPhone: "+591 71234567",
+        cartButtonLabel: "Pedir por WhatsApp",
+      }));
+    }
+  });
+
   it("explains how to continue when the store has no usable imagery", async () => {
     const { service, prisma } = setup();
     prisma.paymentLink.findMany.mockResolvedValue([{ name: "Servicio", description: null, imageUrls: [], tags: [] }]);
@@ -112,6 +157,10 @@ describe("VisualStudioService", () => {
     await service.apply("merchant_1", "store_1", "proposal_1");
 
     expect(prisma.storeVisualVersion.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ storeId: "store_1", source: "proposal:proposal_1" }) }));
+    expect(prisma.storeVisualProposal.updateMany).toHaveBeenCalledWith({
+      where: { storeId: "store_1", id: { not: "proposal_1" }, status: "APPLIED" },
+      data: { status: "READY", appliedAt: null },
+    });
     const updateData = prisma.store.update.mock.calls[0][0].data;
     expect(updateData).toEqual({ accentColor: "#b4532a", fontStyle: "friendly" });
     expect(updateData).not.toHaveProperty("name");

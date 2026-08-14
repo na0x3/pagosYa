@@ -227,6 +227,15 @@
   form.inline { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   form.inline > div { display: flex; flex-direction: column; }
   form.inline > div.full { flex-basis: 100%; }
+  .product-fiscal-mapping { flex-basis:100%; width:100%; margin-top:4px; border:1px solid var(--pg-border); border-radius:12px; background:var(--pg-bg); overflow:hidden; }
+  .product-fiscal-mapping > summary { cursor:var(--pg-hand-cursor); padding:13px 14px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .product-fiscal-mapping > summary::marker { color:var(--pg-accent); }
+  .product-fiscal-summary-status { color:var(--pg-text-faint); font-size:.72rem; font-weight:400; text-align:right; }
+  .product-fiscal-fields { padding:2px 14px 14px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .product-fiscal-fields > div { display:flex; flex-direction:column; min-width:0; }
+  .product-fiscal-fields input, .product-fiscal-fields select { width:100%; min-width:0; }
+  .product-fiscal-copy { grid-column:1/-1; margin:0; max-width:72ch; }
+  .product-fiscal-status { grid-column:1/-1; min-height:1.25em; margin:0; }
 
   textarea, select {
     padding: 9px 11px; border: 1.5px solid var(--pg-border); border-radius: 9px; font-size: 0.88rem;
@@ -254,14 +263,20 @@
   .link-thumb { width: 34px; height: 34px; border-radius: 7px; object-fit: cover; vertical-align: middle; margin-right: 8px; background: var(--pg-bg); }
   .image-preview { width: 64px; height: 64px; border-radius: 9px; object-fit: cover; display: none; border: 1.5px solid var(--pg-border); }
 
-  .image-gallery-preview { display: flex; flex-wrap: wrap; gap: 8px; }
-  .gallery-thumb { position: relative; width: 64px; height: 64px; }
+  .image-gallery-preview { flex-basis: 100%; width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .gallery-frame-editor { min-width: 0; padding: 9px; border: 1px solid var(--pg-border); border-radius: 11px; background: var(--pg-bg); }
+  .gallery-thumb { position: relative; width: 100%; aspect-ratio: 4 / 3; }
   .gallery-thumb img { width: 100%; height: 100%; border-radius: 9px; object-fit: cover; border: 1.5px solid var(--pg-border); display: block; }
-  .gallery-thumb button {
+  .gallery-thumb .gallery-image-remove {
     position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; padding: 0; border-radius: 999px;
     background: var(--pg-error); color: white; border: 2px solid var(--pg-surface); font-size: 0.7rem; line-height: 1;
     display: flex; align-items: center; justify-content: center;
   }
+  .gallery-focus-controls { display: grid; grid-template-columns: auto minmax(0, 1fr) 34px; align-items: center; gap: 5px 8px; margin-top: 9px; }
+  .gallery-focus-controls label { margin: 0; font-size: .68rem; }
+  .gallery-focus-controls input[type="range"] { width: 100%; min-width: 0; padding: 0; accent-color: var(--pg-accent); }
+  .gallery-focus-controls output { color: var(--pg-text-faint); font-size: .68rem; text-align: right; font-variant-numeric: tabular-nums; }
+  .gallery-frame-caption { margin: 0 0 7px; color: var(--pg-text-muted); font-size: .7rem; font-weight: 700; }
 
   .tag-badge {
     display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
@@ -374,9 +389,22 @@
   .visual-step[hidden] { display: none; }
   .visual-input-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(180px, .8fr); gap: 12px; }
   .visual-input-grid input, .visual-input-grid select { width: 100%; min-width: 0; }
+  .visual-conversion { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; }
+  .visual-conversion legend { margin-bottom: 8px; font-size: .78rem; font-weight: 700; }
+  .visual-conversion-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .visual-conversion-option { display: flex; align-items: flex-start; gap: 10px; min-height: 72px; padding: 11px 12px; border: 1.5px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); cursor: var(--pg-hand-cursor); transition: border-color .15s ease, background .15s ease; }
+  .visual-conversion-option:has(input:checked) { border-color: var(--pg-accent); background: var(--pg-accent-soft); }
+  .visual-conversion-option input { width: auto; margin-top: 2px; }
+  .visual-conversion-option span { display: grid; gap: 3px; }
+  .visual-conversion-option small { color: var(--pg-text-muted); line-height: 1.4; }
+  .visual-whatsapp-phone { grid-column: 1 / -1; }
+  .visual-ai-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .visual-ai-preview { width: 72px; height: 72px; overflow: hidden; border: 1px solid var(--pg-border); border-radius: 9px; background: var(--pg-bg); }
+  .visual-ai-preview img { width: 100%; height: 100%; object-fit: cover; }
   .visual-upload-zone { grid-column: 1 / -1; padding: 14px; border: 1px dashed var(--pg-border-strong); border-radius: 11px; background: var(--pg-surface); }
   .visual-upload-zone p { margin: 5px 0 10px; max-width: 65ch; color: var(--pg-text-faint); font-size: .75rem; line-height: 1.5; }
-  .visual-source-previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; margin-top: 10px; }
+  .visual-source-previews { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .visual-source-previews .badge { white-space: normal; }
   .visual-source-thumb { position: relative; min-width: 0; }
   .visual-source-thumb img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--pg-bg); }
   .visual-source-thumb button { position: absolute; top: 4px; right: 4px; width: 27px; height: 27px; padding: 0; border-radius: 50%; background: rgba(17,17,17,.82); border-color: rgba(255,255,255,.35); color: white; }
@@ -741,12 +769,19 @@
     .editorial-card-preview img { max-height: 240px; }
     .product-variant-row { grid-template-columns: minmax(0, 1fr) minmax(100px, 0.72fr) minmax(100px, 0.72fr); }
     .product-variant-remove { grid-column: 1 / -1; justify-self: start; }
+    .product-fiscal-fields { grid-template-columns:1fr; }
+    .product-fiscal-copy, .product-fiscal-status { grid-column:1; }
+    .product-fiscal-mapping > summary { align-items:flex-start; flex-direction:column; }
+    .product-fiscal-summary-status { text-align:left; }
     .inventory-import-head { flex-direction: column; }
     .inventory-import-head-actions { width: 100%; }
     .inventory-import-grid { grid-template-columns: 1fr; }
     .visual-onboarding-head { flex-direction: column; }
     .visual-input-grid { grid-template-columns: 1fr; }
     .visual-upload-zone { grid-column: 1; }
+    .visual-conversion-options { grid-template-columns: 1fr; }
+    .visual-progress li { justify-content: center; padding-inline: 4px; }
+    .visual-progress li b { display: none; }
     .visual-proposal { grid-template-columns: 88px minmax(0, 1fr); }
     .visual-proposal-cover { width: 88px; }
     .visual-proposal-actions { grid-column: 1 / -1; flex-direction: row; }
@@ -862,6 +897,8 @@
     .assistant-dock { width: 96px; height: 112px; }
     .assistant-object { width: 96px; height: 104px; }
     .assistant-panel { max-height: calc(100vh - 88px); }
+    body.is-editing-fiscal-product .assistant-dock,
+    body.is-editing-fiscal-product .assistant-panel { visibility: hidden; pointer-events: none; }
   }
 </style>
 </head>
@@ -1241,10 +1278,40 @@
             <label for="paymentLinkCategory">Categoría (opcional)</label>
             <select id="paymentLinkCategory" name="categoryId"><option value="">Sin categoría</option></select>
           </div>
+          <details class="product-fiscal-mapping" id="productFiscalMapping">
+            <summary>
+              <span>Clasificación SIN para facturación</span>
+              <span class="product-fiscal-summary-status" id="productFiscalSummaryStatus">Opcional hasta activar facturación</span>
+            </summary>
+            <div class="product-fiscal-fields">
+              <p class="muted product-fiscal-copy">PagosYa carga las opciones autorizadas para tu NIT. Tu código interno y la clasificación genérica del SIN se guardan por separado.</p>
+              <div>
+                <label for="productCodigoProducto">Código interno / SKU</label>
+                <input id="productCodigoProducto" name="codigoProducto" maxlength="64" placeholder="NIKE-AM90" autocomplete="off">
+              </div>
+              <div>
+                <label for="productActividadEconomica">Actividad económica</label>
+                <select id="productActividadEconomica" name="actividadEconomica" disabled><option value="">Carga tu perfil de facturación primero</option></select>
+              </div>
+              <div>
+                <label for="productSinSearch">Buscar clasificación SIN</label>
+                <input id="productSinSearch" type="search" placeholder="Ej. calzado" autocomplete="off" disabled>
+              </div>
+              <div>
+                <label for="productCodigoProductoSin">Clasificación SIN</label>
+                <select id="productCodigoProductoSin" name="codigoProductoSin" disabled><option value="">Selecciona una actividad</option></select>
+              </div>
+              <div>
+                <label for="productUnidadMedida">Unidad de medida</label>
+                <select id="productUnidadMedida" name="unidadMedida" disabled><option value="">Cargando unidades…</option></select>
+              </div>
+              <p class="faint product-fiscal-status" id="productFiscalStatus" aria-live="polite"></p>
+            </div>
+          </details>
           <div>
             <label for="paymentLinkImages">Galería del producto (hasta 6 fotos)</label>
             <input id="paymentLinkImages" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-            <span class="faint">La primera será la portada; las demás aparecerán en su página.</span>
+            <span class="faint">La primera será la portada. Después de subirlas, ajusta el enfoque para que ninguna foto quede demasiado arriba o abajo.</span>
           </div>
           <div class="image-gallery-preview" id="paymentLinkImagesPreview"></div>
           <button class="primary" type="submit" id="paymentLinkSubmit">Crear producto</button>
@@ -1276,9 +1343,9 @@
             <button type="button" class="ghost inline-section-toggle" id="visualAssistantToggle">Mostrar IA</button>
           </div>
           <ol class="visual-progress" id="visualProgress" aria-label="Progreso del asistente visual">
-            <li class="is-active" data-step="1"><span>1</span> Tu dirección</li>
-            <li data-step="2"><span>2</span> Preparando</li>
-            <li data-step="3"><span>3</span> Elige y aprueba</li>
+            <li class="is-active" data-step="1"><span>1</span><b>Tu dirección</b></li>
+            <li data-step="2"><span>2</span><b>Preparando</b></li>
+            <li data-step="3"><span>3</span><b>Elige y aprueba</b></li>
           </ol>
           <div class="visual-step" id="visualStep1">
             <div class="visual-input-grid">
@@ -1296,6 +1363,24 @@
                   <option value="elegant">Elegante y serena</option>
                   <option value="playful">Alegre y cercana</option>
                 </select>
+              </div>
+              <fieldset class="visual-conversion">
+                <legend>¿Cómo quieres recibir los pedidos?</legend>
+                <div class="visual-conversion-options">
+                  <label class="visual-conversion-option"><input type="radio" name="visualCheckoutMode" value="payment" checked><span><strong>Pago integrado</strong><small>El cliente arma su carrito y paga con pagosYa.</small></span></label>
+                  <label class="visual-conversion-option"><input type="radio" name="visualCheckoutMode" value="whatsapp"><span><strong>Pedido por WhatsApp</strong><small>El carrito se envía como mensaje; no se abre el pago.</small></span></label>
+                </div>
+              </fieldset>
+              <div class="visual-whatsapp-phone" id="visualWhatsappPhoneWrap" hidden>
+                <label for="visualWhatsappPhone">Número de WhatsApp</label>
+                <input id="visualWhatsappPhone" type="tel" maxlength="40" placeholder="+591 71234567" aria-describedby="visualWhatsappPhoneHelp">
+                <span class="faint" id="visualWhatsappPhoneHelp">Incluye el código de país. Este número recibirá el detalle del carrito.</span>
+              </div>
+              <div class="visual-upload-zone">
+                <label for="visualAiImages"><strong>Fotos para inspirar a la IA (opcional)</strong></label>
+                <p>Sube hasta 8 fotos de tu marca, espacio, productos o estilo. Se guardan en tu cuenta y la IA las reutiliza en las propuestas.</p>
+                <input id="visualAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                <div class="visual-ai-previews" id="visualAiPreviews" aria-live="polite"></div>
               </div>
               <div class="visual-upload-zone visual-existing-assets">
                 <strong>Contenido que la IA reutilizará</strong>
@@ -2040,6 +2125,7 @@
   const checkoutOriginEl = document.getElementById("checkoutOrigin");
   checkoutOriginEl.value = sessionStorage.getItem("pagosya_checkout_origin") || checkoutOriginEl.value;
   let lastPaymentLinks = [];
+  let currentInvoicingProfile = null;
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
@@ -2250,7 +2336,18 @@
   const paymentLinkBasePriceEl = document.getElementById("paymentLinkBasePrice");
   const paymentLinkBaseStockEl = document.getElementById("paymentLinkBaseStock");
   const paymentLinkAmountEl = document.querySelector('#paymentLinkForm [name="amount"]');
+  const productFiscalMappingEl = document.getElementById("productFiscalMapping");
+  const productFiscalSummaryStatusEl = document.getElementById("productFiscalSummaryStatus");
+  const productFiscalStatusEl = document.getElementById("productFiscalStatus");
+  const productCodigoProductoEl = document.getElementById("productCodigoProducto");
+  const productActividadEconomicaEl = document.getElementById("productActividadEconomica");
+  const productSinSearchEl = document.getElementById("productSinSearch");
+  const productCodigoProductoSinEl = document.getElementById("productCodigoProductoSin");
+  const productUnidadMedidaEl = document.getElementById("productUnidadMedida");
+  let siatCatalogBasePromise = null;
+  let siatProductSearchTimer = null;
   let pendingImageUrls = [];
+  let pendingImagePositions = [];
   let pendingProductVariants = [];
   let editingLinkId = null;
   const MAX_PRODUCT_VARIANTS = 8;
@@ -2265,6 +2362,104 @@
   let preparedInventoryStoreId = null;
   let inventoryImportInProgress = false;
   let inventoryImportVersion = 0;
+
+  function siatOption(value, label) {
+    return `<option value="${esc(value)}">${esc(label)}</option>`;
+  }
+
+  function configureProductFiscalAvailability() {
+    const ready = Boolean(currentInvoicingProfile?.cuis);
+    productFiscalSummaryStatusEl.textContent = ready ? "Opciones verificadas para tu NIT" : "Activa facturación para cargar opciones";
+    productCodigoProductoEl.disabled = !ready;
+    productActividadEconomicaEl.disabled = !ready;
+    productSinSearchEl.disabled = !ready;
+    productUnidadMedidaEl.disabled = !ready;
+    if (!ready) {
+      productFiscalStatusEl.textContent = "Primero guarda tu perfil de facturación; después PagosYa cargará las clasificaciones autorizadas por el SIN.";
+    }
+  }
+
+  async function loadSiatCatalogBase() {
+    if (!currentInvoicingProfile?.cuis) {
+      configureProductFiscalAvailability();
+      return;
+    }
+    if (siatCatalogBasePromise) return siatCatalogBasePromise;
+    productFiscalStatusEl.textContent = "Cargando actividades y unidades autorizadas…";
+    siatCatalogBasePromise = Promise.all([
+      api("/siat/catalogs/activities?limit=500"),
+      api("/siat/catalogs/units?limit=500"),
+    ]).then(([activities, units]) => {
+      productActividadEconomicaEl.innerHTML =
+        `<option value="">Selecciona una actividad</option>` +
+        activities.entries.map((entry) => siatOption(entry.codigoCaeb, `${entry.descripcion} · ${entry.codigoCaeb}`)).join("");
+      productUnidadMedidaEl.innerHTML =
+        `<option value="">Selecciona una unidad</option>` +
+        units.entries.map((entry) => siatOption(entry.codigoClasificador, entry.descripcion)).join("");
+      productActividadEconomicaEl.disabled = false;
+      productUnidadMedidaEl.disabled = false;
+      productSinSearchEl.disabled = false;
+      productFiscalStatusEl.textContent = `Catálogos SIN actualizados · ${activities.total} actividades · ${units.total} unidades`;
+    }).catch((error) => {
+      siatCatalogBasePromise = null;
+      productFiscalStatusEl.textContent = `No pudimos cargar los catálogos: ${error.message}. Cierra y vuelve a abrir esta sección para reintentar.`;
+      throw error;
+    });
+    return siatCatalogBasePromise;
+  }
+
+  async function loadSiatProducts(selectedCode = "") {
+    const activityCode = productActividadEconomicaEl.value;
+    if (!activityCode) {
+      productCodigoProductoSinEl.innerHTML = `<option value="">Selecciona una actividad</option>`;
+      productCodigoProductoSinEl.disabled = true;
+      return;
+    }
+    productCodigoProductoSinEl.disabled = true;
+    productCodigoProductoSinEl.innerHTML = `<option value="">Buscando clasificaciones…</option>`;
+    const params = new URLSearchParams({ activityCode, limit: "300" });
+    const query = productSinSearchEl.value.trim();
+    if (query) params.set("q", query);
+    try {
+      const result = await api(`/siat/catalogs/products?${params}`);
+      productCodigoProductoSinEl.innerHTML =
+        `<option value="">Selecciona una clasificación</option>` +
+        result.entries.map((entry) => siatOption(entry.codigoProducto, `${entry.descripcionProducto} · ${entry.codigoProducto}`)).join("");
+      productCodigoProductoSinEl.disabled = false;
+      if (selectedCode && result.entries.some((entry) => String(entry.codigoProducto) === String(selectedCode))) {
+        productCodigoProductoSinEl.value = String(selectedCode);
+      }
+      productFiscalStatusEl.textContent = result.total
+        ? `${result.total} clasificaciones encontradas para esta actividad.`
+        : "No hay coincidencias. Prueba otra búsqueda o actividad.";
+    } catch (error) {
+      productCodigoProductoSinEl.innerHTML = `<option value="">No se pudieron cargar las clasificaciones</option>`;
+      productFiscalStatusEl.textContent = `Error de sincronización: ${error.message}`;
+    }
+  }
+
+  productFiscalMappingEl.addEventListener("toggle", () => {
+    document.body.classList.toggle("is-editing-fiscal-product", productFiscalMappingEl.open);
+    if (productFiscalMappingEl.open) loadSiatCatalogBase().catch(() => undefined);
+  });
+  productActividadEconomicaEl.addEventListener("change", () => {
+    productSinSearchEl.value = "";
+    loadSiatProducts();
+  });
+  productSinSearchEl.addEventListener("input", () => {
+    clearTimeout(siatProductSearchTimer);
+    siatProductSearchTimer = setTimeout(() => loadSiatProducts(), 250);
+  });
+
+  async function populateProductFiscalMapping(link) {
+    productCodigoProductoEl.value = link.codigoProducto || "";
+    if (!link.actividadEconomica && !link.codigoProductoSin && !link.unidadMedida) return;
+    productFiscalMappingEl.open = true;
+    await loadSiatCatalogBase();
+    productActividadEconomicaEl.value = link.actividadEconomica || "";
+    productUnidadMedidaEl.value = link.unidadMedida ? String(link.unidadMedida) : "";
+    await loadSiatProducts(link.codigoProductoSin || "");
+  }
 
   function renderProductVariants() {
     const enabled = paymentLinkOptionsToggleEl.checked;
@@ -2320,19 +2515,47 @@
   });
 
   function renderImageGalleryPreview() {
+    while (pendingImagePositions.length < pendingImageUrls.length) pendingImagePositions.push("50% 50%");
+    pendingImagePositions = pendingImagePositions.slice(0, pendingImageUrls.length);
     paymentLinkImagesPreviewEl.innerHTML = pendingImageUrls
       .map(
-        (url, i) => `<div class="gallery-thumb">
-          <img src="${esc(apiRoot() + url)}" alt="">
-          <button type="button" data-index="${i}" title="Quitar">×</button>
-        </div>`,
+        (url, i) => {
+          const [focusX, focusY] = String(pendingImagePositions[i] || "50% 50%").split(" ").map((value) => Math.min(100, Math.max(0, Number.parseInt(value, 10) || 0)));
+          return `<div class="gallery-frame-editor" data-index="${i}">
+            <p class="gallery-frame-caption">${i === 0 ? "Portada" : `Foto ${i + 1}`} · ajusta el enfoque</p>
+            <div class="gallery-thumb">
+              <img src="${esc(apiRoot() + url)}" alt="Encuadre de ${i === 0 ? "la portada" : `la foto ${i + 1}`}" style="object-position:${focusX}% ${focusY}%">
+              <button class="gallery-image-remove" type="button" data-index="${i}" title="Quitar foto" aria-label="Quitar ${i === 0 ? "portada" : `foto ${i + 1}`}">×</button>
+            </div>
+            <div class="gallery-focus-controls">
+              <label for="imageFocusX${i}">Horizontal</label><input class="image-focus-x" id="imageFocusX${i}" type="range" min="0" max="100" value="${focusX}"><output>${focusX}%</output>
+              <label for="imageFocusY${i}">Vertical</label><input class="image-focus-y" id="imageFocusY${i}" type="range" min="0" max="100" value="${focusY}"><output>${focusY}%</output>
+            </div>
+          </div>`;
+        },
       )
       .join("");
-    paymentLinkImagesPreviewEl.querySelectorAll("button").forEach((btn) => {
+    paymentLinkImagesPreviewEl.querySelectorAll(".gallery-image-remove").forEach((btn) => {
       btn.addEventListener("click", () => {
-        pendingImageUrls.splice(Number(btn.dataset.index), 1);
+        const index = Number(btn.dataset.index);
+        pendingImageUrls.splice(index, 1);
+        pendingImagePositions.splice(index, 1);
         renderImageGalleryPreview();
       });
+    });
+    paymentLinkImagesPreviewEl.querySelectorAll(".gallery-frame-editor").forEach((editor) => {
+      const index = Number(editor.dataset.index);
+      const image = editor.querySelector("img");
+      const x = editor.querySelector(".image-focus-x");
+      const y = editor.querySelector(".image-focus-y");
+      const syncFocus = () => {
+        pendingImagePositions[index] = `${x.value}% ${y.value}%`;
+        image.style.objectPosition = pendingImagePositions[index];
+        x.nextElementSibling.value = `${x.value}%`;
+        y.nextElementSibling.value = `${y.value}%`;
+      };
+      x.addEventListener("input", syncFocus);
+      y.addEventListener("input", syncFocus);
     });
   }
 
@@ -2352,6 +2575,7 @@
       try {
         const url = await uploadFile(file);
         pendingImageUrls.push(url);
+        pendingImagePositions.push("50% 50%");
       } catch (err) {
         errorEl.textContent = "Error subiendo una foto: " + err.message;
         errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2424,6 +2648,10 @@
   const visualSourcePreviewsEl = document.getElementById("visualSourcePreviews");
   const visualSourceStatusEl = document.getElementById("visualSourceStatus");
   const visualGenerateEl = document.getElementById("visualGenerate");
+  const visualAiImagesEl = document.getElementById("visualAiImages");
+  const visualAiPreviewsEl = document.getElementById("visualAiPreviews");
+  const visualWhatsappPhoneWrapEl = document.getElementById("visualWhatsappPhoneWrap");
+  const visualWhatsappPhoneEl = document.getElementById("visualWhatsappPhone");
   const visualProposalsEl = document.getElementById("visualProposals");
   const visualProposalStatusEl = document.getElementById("visualProposalStatus");
   const visualHistoryEl = document.getElementById("visualHistory");
@@ -2431,6 +2659,8 @@
   let visualProposals = [];
   let visualVersions = [];
   let visualStudioStoreId = null;
+  let visualAiFiles = [];
+  let visualAiPreviewUrls = [];
   const AI_ONBOARDING_SEEN_KEY = "pagosya_ai_onboarding_seen_v1";
   const AI_ONBOARDING_STEP_KEY = "pagosya_ai_onboarding_step_v1";
   const onboardingDialogEl = document.getElementById("onboardingDialog");
@@ -2446,6 +2676,7 @@
   let onboardingCompleted = false;
   let onboardingCsvFile = null;
   let onboardingSourceFiles = [];
+  let onboardingAiFiles = [];
   let firstTimeOnboardingIdentity = "";
   let onboardingStateLoadedFromStorage = false;
 
@@ -2604,19 +2835,40 @@
 
     if (onboardingStep === 3) {
       onboardingTitleEl.textContent = "Deja que la IA componga tu sitio";
-      onboardingCopyEl.textContent = "La IA usará el catálogo, las fotos y las redes que ya están en tu tienda. Creará tres versiones completas para comparar antes de publicar.";
+      onboardingCopyEl.textContent = "Elige cómo recibirás pedidos y agrega las fotos que quieres que guíen las tres propuestas.";
       onboardingBodyEl.innerHTML = `<div class="onboarding-form-grid">
         <div><label for="onboardingCategory">¿Qué vendes?</label><input id="onboardingCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil"></div>
         <div><label for="onboardingPersonality">Personalidad</label><select id="onboardingPersonality"><option value="">Déjame sorprender</option><option value="warm">Cálida y artesanal</option><option value="bold">Audaz y enérgica</option><option value="minimal">Limpia y minimal</option><option value="elegant">Elegante y serena</option><option value="playful">Alegre y cercana</option></select></div>
-        <div class="onboarding-file full"><strong>La propuesta incluirá</strong><span class="faint">Banners con tus fotos actuales, textos borrador, fondo, cinta en movimiento, botones sociales, estilo de compra y orden de secciones.</span></div>
+        <fieldset class="visual-conversion full"><legend>¿Cómo terminarán el pedido tus clientes?</legend><div class="visual-conversion-options"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="payment" checked><span><strong>Pago integrado</strong><small>Carrito y pago con pagosYa.</small></span></label><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="whatsapp"><span><strong>WhatsApp</strong><small>El carrito llega como mensaje.</small></span></label></div></fieldset>
+        <div class="onboarding-file full" id="onboardingWhatsappWrap" hidden><label for="onboardingWhatsapp">Número de WhatsApp</label><input id="onboardingWhatsapp" type="tel" maxlength="40" placeholder="+591 71234567"><span class="faint">Incluye el código de país.</span></div>
+        <div class="onboarding-file full"><label for="onboardingAiImages">Fotos para la IA (opcional)</label><input id="onboardingAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple><span class="faint">Hasta 8 fotos de tu marca, local, productos o estilo.</span></div>
       </div><div class="onboarding-safety" id="onboardingAiDisclosure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Al continuar autorizas el procesamiento del contenido existente por el proveedor de IA configurado. No se crean imágenes nuevas y nada se publica sin tu aprobación.</span></div>`;
       onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingGenerate">Diseñar 3 sitios</button><button class="ghost" type="button" id="onboardingBackToCsv">Volver al catálogo</button>`;
       document.getElementById("onboardingBackToCsv").addEventListener("click", () => setOnboardingStep(2));
+      const syncOnboardingCheckout = () => {
+        const whatsapp = document.querySelector('input[name="onboardingCheckoutMode"]:checked').value === "whatsapp";
+        document.getElementById("onboardingWhatsappWrap").hidden = !whatsapp;
+      };
+      document.querySelectorAll('input[name="onboardingCheckoutMode"]').forEach((radio) => radio.addEventListener("change", syncOnboardingCheckout));
+      document.getElementById("onboardingAiImages").addEventListener("change", (event) => (onboardingAiFiles = [...event.target.files].slice(0, 8)));
       document.getElementById("onboardingGenerate").addEventListener("click", () => {
         if (!currentStoreId) { onboardingStatusEl.textContent = "Crea o selecciona una tienda primero."; return; }
+        const checkoutMode = document.querySelector('input[name="onboardingCheckoutMode"]:checked').value;
+        const whatsappPhone = document.getElementById("onboardingWhatsapp").value.trim();
+        if (checkoutMode === "whatsapp" && !hasUsableWhatsAppPhone(whatsappPhone)) {
+          onboardingStatusEl.setAttribute("role", "alert");
+          onboardingStatusEl.textContent = "Escribe un número de WhatsApp válido, con 7 a 15 dígitos.";
+          document.getElementById("onboardingWhatsapp").focus();
+          return;
+        }
         onboardingStatusEl.setAttribute("role", "status");
         document.getElementById("visualBusinessCategory").value = document.getElementById("onboardingCategory").value;
         document.getElementById("visualPersonality").value = document.getElementById("onboardingPersonality").value;
+        document.querySelector(`input[name="visualCheckoutMode"][value="${checkoutMode}"]`).checked = true;
+        visualWhatsappPhoneEl.value = whatsappPhone;
+        visualAiFiles = onboardingAiFiles;
+        renderVisualAiFiles();
+        syncVisualCheckoutMode();
         onboardingGoToView("appearance", "storeSettingsSection");
         const assistantToggle = document.getElementById("visualAssistantToggle");
         if (assistantToggle?.getAttribute("aria-expanded") !== "true") assistantToggle?.click();
@@ -2653,6 +2905,7 @@
     if (firstTimeOnboardingIdentity === identity) return;
     onboardingCsvFile = null;
     onboardingSourceFiles = [];
+    onboardingAiFiles = [];
     firstTimeOnboardingIdentity = identity;
     loadOnboardingState();
     let seen = false;
@@ -2797,15 +3050,19 @@
     );
   }
 
-  function postVisualPreview(config) {
-    if (!currentStoreId || !storePreviewFrameEl.contentWindow) return;
-    let targetOrigin = "*";
-    try { targetOrigin = new URL(storePreviewFrameEl.src).origin; } catch {}
-    storePreviewFrameEl.contentWindow.postMessage(
-      { type: "PAGOSYA_STORE_PREVIEW", patch: { ...currentStorePreviewPatch(), ...(config || {}) } },
-      targetOrigin,
-    );
-    storePreviewStageEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  function visualProposalPreviewUrl(proposal) {
+    const storeUrl = currentStoreUrl();
+    if (!storeUrl) return "";
+    try {
+      const url = new URL(storeUrl);
+      url.searchParams.set("preview", "1");
+      url.hash = new URLSearchParams({
+        proposal: JSON.stringify({ ...currentStorePreviewPatch(), ...(proposal.config || {}) }),
+      }).toString();
+      return url.toString();
+    } catch {
+      return "";
+    }
   }
 
   function setVisualStep(step) {
@@ -2819,6 +3076,43 @@
     visualGenerateEl.disabled = !currentStoreId;
   }
 
+  function selectedVisualCheckoutMode() {
+    return document.querySelector('input[name="visualCheckoutMode"]:checked')?.value || "payment";
+  }
+
+  function hasUsableWhatsAppPhone(value) {
+    const digitCount = String(value || "").replace(/\D/g, "").length;
+    return digitCount >= 7 && digitCount <= 15;
+  }
+
+  function syncVisualCheckoutMode() {
+    const whatsapp = selectedVisualCheckoutMode() === "whatsapp";
+    visualWhatsappPhoneWrapEl.hidden = !whatsapp;
+    visualWhatsappPhoneEl.required = whatsapp;
+  }
+
+  function renderVisualAiFiles() {
+    visualAiPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    visualAiPreviewUrls = visualAiFiles.map((file) => URL.createObjectURL(file));
+    visualAiPreviewsEl.innerHTML = visualAiFiles.map((file, index) => `<span class="visual-ai-preview"><img src="${esc(visualAiPreviewUrls[index])}" alt="${esc(file.name)}"></span>`).join("");
+  }
+
+  document.querySelectorAll('input[name="visualCheckoutMode"]').forEach((radio) => radio.addEventListener("change", syncVisualCheckoutMode));
+  visualAiImagesEl.addEventListener("change", () => {
+    const files = [...visualAiImagesEl.files].slice(0, 8);
+    const invalid = files.find((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > MAX_IMAGE_BYTES);
+    if (invalid) {
+      visualAiImagesEl.value = "";
+      visualAiFiles = [];
+      visualSourceStatusEl.textContent = `“${invalid.name}” debe ser PNG, JPG o WEBP y pesar máximo 8 MB.`;
+    } else {
+      visualAiFiles = files;
+      visualSourceStatusEl.textContent = files.length ? `${files.length} ${files.length === 1 ? "foto lista" : "fotos listas"} para la IA.` : "La IA también redactará textos de muestra. Revísalos antes de aprobar.";
+    }
+    renderVisualAiFiles();
+  });
+  syncVisualCheckoutMode();
+
   function proposalImageUrl(proposal) {
     const config = proposal.config || {};
     return config.bannerUrl || config.heroSlides?.[0]?.imageUrl || proposal.sourceAssetUrls?.[0] || "";
@@ -2829,11 +3123,14 @@
     const visible = visualProposals.filter((proposal) => proposal.status !== "DISMISSED").slice(0, 3);
     if (visible.length) {
       setVisualStep(3);
+      const appliedProposalId = visible
+        .filter((proposal) => proposal.status === "APPLIED")
+        .sort((first, second) => new Date(second.appliedAt || 0) - new Date(first.appliedAt || 0))[0]?.id;
       visualProposalsEl.innerHTML = visible.map((proposal) => {
         const config = proposal.config || {};
         const imageUrl = proposalImageUrl(proposal);
-        const applied = proposal.status === "APPLIED";
-        const featureLabels = [config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banner${config.heroSlides.length === 1 ? "" : "s"}` : "Portada tipográfica", config.editorialGallery?.length ? "Galería" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
+        const applied = proposal.id === appliedProposalId;
+        const featureLabels = [config.checkoutMode === "whatsapp" ? "Pedidos por WhatsApp" : "Pago integrado", config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banner${config.heroSlides.length === 1 ? "" : "s"}` : "Portada tipográfica", config.editorialGallery?.length ? "Galería" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
         return `<article class="visual-proposal" data-id="${esc(proposal.id)}">
           <div class="visual-proposal-cover" style="--proposal-bg:${esc(config.backgroundColor || "#f8fafc")};--proposal-accent:${esc(config.accentColor || "#4f46e5")}">${imageUrl ? `<img src="${esc(apiRoot() + imageUrl)}" alt="Portada de ${esc(proposal.title)}">` : `<span>${esc(config.tagline || proposal.title)}</span>`}</div>
           <div class="visual-proposal-copy">
@@ -2856,8 +3153,13 @@
         const proposal = visible.find((item) => item.id === row.dataset.id);
         row.querySelector(".visual-preview-proposal").addEventListener("click", () => {
           if (renderedStoreId !== currentStoreId) return;
-          postVisualPreview(proposal.config);
-          visualProposalStatusEl.textContent = `Vista previa: ${proposal.title}. La tienda publicada no cambió.`;
+          const previewUrl = visualProposalPreviewUrl(proposal);
+          if (!previewUrl) {
+            visualProposalStatusEl.textContent = "No pudimos abrir la vista previa. Revisa la URL de Checkout e intenta nuevamente.";
+            return;
+          }
+          window.open(previewUrl, "_blank", "noopener,noreferrer");
+          visualProposalStatusEl.textContent = `Abrimos “${proposal.title}” en otra pestaña. No aplicamos cambios a la tienda publicada.`;
         });
         row.querySelector(".visual-apply-proposal").addEventListener("click", async (event) => {
           if (storeSettingsDirty && !confirm("Tienes cambios sin guardar. ¿Aplicar esta propuesta y descartarlos?")) return;
@@ -3019,16 +3321,38 @@
   visualGenerateEl.addEventListener("click", async () => {
     if (!currentStoreId) return;
     const generationStoreId = currentStoreId;
+    const checkoutMode = selectedVisualCheckoutMode();
+    const whatsappPhone = visualWhatsappPhoneEl.value.trim();
+    if (checkoutMode === "whatsapp" && !hasUsableWhatsAppPhone(whatsappPhone)) {
+      visualSourceStatusEl.textContent = "Escribe un número de WhatsApp válido, con 7 a 15 dígitos.";
+      visualWhatsappPhoneEl.focus();
+      return;
+    }
     errorEl.textContent = "";
     setVisualStep(2);
     visualGenerateEl.disabled = true;
     try {
+      const assetUrls = [];
+      if (visualAiFiles.length) {
+        let uploadedCount = 0;
+        visualSourceStatusEl.textContent = `Subiendo fotos 0 de ${visualAiFiles.length}…`;
+        const uploaded = await runWithConcurrency(visualAiFiles, 3, async (file) => {
+          const url = await uploadFile(file);
+          uploadedCount++;
+          if (generationStoreId === currentStoreId) visualSourceStatusEl.textContent = `Subiendo fotos ${uploadedCount} de ${visualAiFiles.length}…`;
+          return url;
+        });
+        assetUrls.push(...uploaded);
+      }
       visualSourceStatusEl.textContent = "Leyendo la tienda y componiendo propuestas…";
       const result = await api(`/stores/${generationStoreId}/visual-proposals`, {
         method: "POST",
         body: JSON.stringify({
           businessCategory: document.getElementById("visualBusinessCategory").value.trim() || undefined,
           personality: document.getElementById("visualPersonality").value || undefined,
+          checkoutMode,
+          whatsappPhone: checkoutMode === "whatsapp" ? whatsappPhone : undefined,
+          assetUrls,
         }),
       });
       if (generationStoreId !== currentStoreId) return;
@@ -3739,6 +4063,7 @@
       resetInventoryImportState();
       onboardingCsvFile = null;
       onboardingSourceFiles = [];
+      onboardingAiFiles = [];
       loadOnboardingState();
       if (onboardingDialogEl.open) renderOnboarding();
       else renderOnboardingProgress();
@@ -3755,6 +4080,9 @@
       renderVisualStudio();
       document.getElementById("visualBusinessCategory").value = "";
       document.getElementById("visualPersonality").value = "";
+      visualAiFiles = [];
+      visualAiImagesEl.value = "";
+      renderVisualAiFiles();
       clearTimeout(previewPostTimer);
       storePreviewFrameEl.removeAttribute("src");
       setStorePreviewState(storeId ? "loading" : "empty");
@@ -3869,6 +4197,10 @@
       inspectStoredBackgroundImage(store.backgroundImageUrl ? apiRoot() + store.backgroundImageUrl : "");
       storeBackgroundColorEl.value = store.backgroundColor || "#f8fafc";
       storeContactPhoneInputEl.value = store.contactPhone || "";
+      const visualMode = store.checkoutMode === "whatsapp" ? "whatsapp" : "payment";
+      document.querySelector(`input[name="visualCheckoutMode"][value="${visualMode}"]`).checked = true;
+      visualWhatsappPhoneEl.value = store.contactPhone || "";
+      syncVisualCheckoutMode();
       storeContactEmailInputEl.value = store.contactEmail || "";
       storeAboutInputEl.value = store.aboutText || "";
       storeAboutTitleEl.value = store.aboutTitle || "";
@@ -3929,7 +4261,16 @@
     editingLinkId = null;
     document.getElementById("paymentLinkForm").reset();
     pendingImageUrls = [];
+    pendingImagePositions = [];
     pendingProductVariants = [];
+    productCodigoProductoEl.value = "";
+    productActividadEconomicaEl.value = "";
+    productSinSearchEl.value = "";
+    productCodigoProductoSinEl.innerHTML = `<option value="">Selecciona una actividad</option>`;
+    productCodigoProductoSinEl.disabled = true;
+    productUnidadMedidaEl.value = "";
+    productFiscalMappingEl.open = false;
+    configureProductFiscalAvailability();
     renderImageGalleryPreview();
     renderProductVariants();
     document.getElementById("paymentLinkSubmit").textContent = "Crear producto";
@@ -4191,7 +4532,7 @@
     document.getElementById("paymentLinkRows").innerHTML = links
       .map((link) => {
         const cover = link.imageUrls && link.imageUrls[0];
-        const thumb = cover ? `<img class="link-thumb" src="${esc(apiRoot() + cover)}" alt="">` : "";
+        const thumb = cover ? `<img class="link-thumb" src="${esc(apiRoot() + cover)}" alt="" style="object-position:${esc(link.imagePositions?.[0] || "50% 50%")}">` : "";
         const swatch = link.color
           ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(link.color)};border:1px solid rgba(0,0,0,.15);margin-right:6px" title="${esc(link.color)}"></span>`
           : "";
@@ -4206,6 +4547,7 @@
               .join(", ")}`,
           );
         }
+        if (link.codigoProductoSin) meta.push(`SIN: ${esc(link.codigoProducto)} · clasificado`);
         const metaLine = meta.length ? `<div class="faint" style="margin-top:2px">${meta.join(" · ")}</div>` : "";
         const tagBadges = (link.tags || []).map((t) => `<span class="tag-badge">${esc(t)}</span>`).join("");
         const prices = (link.variants || []).map((variant) => variant.amount);
@@ -4284,7 +4626,11 @@
         paymentLinkOptionsToggleEl.checked = pendingProductVariants.length > 0;
         renderProductVariants();
         paymentLinkCategoryEl.value = link.categoryId || "";
+        populateProductFiscalMapping(link).catch((error) => {
+          productFiscalStatusEl.textContent = `No pudimos preparar la clasificación guardada: ${error.message}`;
+        });
         pendingImageUrls = [...(link.imageUrls || [])];
+        pendingImagePositions = pendingImageUrls.map((_, index) => link.imagePositions?.[index] || "50% 50%");
         renderImageGalleryPreview();
         document.getElementById("paymentLinkSubmit").textContent = "Guardar cambios";
         document.getElementById("paymentLinkCancel").style.display = "inline-block";
@@ -4644,6 +4990,7 @@
     const rowsToImport = preparedInventoryRows;
     inventoryImportInProgress = true;
     inventoryCommitEl.disabled = true;
+    let importCommitted = false;
     const uniqueFiles = [...new Map(rowsToImport.flatMap((row) => row.imageFiles).map((file) => [file.name.toLocaleLowerCase("es"), file])).values()];
     const importStillVisible = () => importVersion === inventoryImportVersion && importStoreId === currentStoreId;
     try {
@@ -4664,19 +5011,35 @@
         method: "POST",
         body: JSON.stringify({ products }),
       });
+      importCommitted = true;
       if (importStillVisible()) {
-        renderCategoryRows([...lastCategories, ...result.categoriesCreated]);
-        renderPaymentLinkRows([...result.products, ...lastPaymentLinks]);
+        const importedProducts = Array.isArray(result?.products) ? result.products : [];
+        const categoriesCreated = Array.isArray(result?.categoriesCreated) ? result.categoriesCreated : [];
+        // Once the API confirms the transaction, the import succeeded. Mark it
+        // complete before refreshing local views so a rendering problem cannot
+        // be reported as a failed import (and tempt the merchant to retry it).
         resetInventoryImportState("Importación completada.");
-        infoEl.textContent = `${result.products.length} ${result.products.length === 1 ? "producto importado" : "productos importados"}${result.categoriesCreated.length ? ` y ${result.categoriesCreated.length} categorías nuevas` : ""}.`;
+        infoEl.textContent = `${importedProducts.length} ${importedProducts.length === 1 ? "producto importado" : "productos importados"}${categoriesCreated.length ? ` y ${categoriesCreated.length} categorías nuevas` : ""}.`;
+        try {
+          renderCategoryRows([...lastCategories, ...categoriesCreated]);
+          renderPaymentLinkRows([...importedProducts, ...lastPaymentLinks]);
+        } catch (renderError) {
+          console.error("La importación terminó, pero el catálogo no se pudo actualizar en pantalla.", renderError);
+          infoEl.textContent += " Actualiza la página para ver el catálogo completo.";
+        }
         refreshStorePreview(true);
         setOnboardingStep(3, { open: true });
       }
       refreshFinancesInBackground();
     } catch (err) {
       if (importStillVisible()) {
-        errorEl.textContent = "Error importando el inventario: " + err.message;
-        inventoryImportStatusEl.textContent = "La importación no se completó. Corrige el problema e intenta otra vez.";
+        if (importCommitted) {
+          inventoryImportStatusEl.textContent = "Importación completada.";
+          infoEl.textContent = "Los productos se importaron. Actualiza la página para ver el catálogo completo.";
+        } else {
+          errorEl.textContent = "Error importando el inventario: " + err.message;
+          inventoryImportStatusEl.textContent = "La importación no se completó. Corrige el problema e intenta otra vez.";
+        }
       }
     } finally {
       inventoryImportInProgress = false;
@@ -4747,6 +5110,11 @@
       invBadge.textContent = dashboardStatusLabels[invStatus] || invStatus;
       invBadge.className = "badge " + (invoicing.cuis ? "APPROVED" : "NOT_CONFIGURED");
       document.getElementById("invoicingSection").style.display = invoicing.cuis ? "none" : "block";
+      if (currentInvoicingProfile?.id !== invoicing.id || currentInvoicingProfile?.cuis !== invoicing.cuis) {
+        siatCatalogBasePromise = null;
+      }
+      currentInvoicingProfile = invoicing;
+      configureProductFiscalAvailability();
 
       renderTotalFinances(totalFinances);
       renderFinances(finances);
@@ -4931,6 +5299,7 @@
       // same as omitting it, since these columns default to null/empty anyway.
       description: data.description || null,
       imageUrls: pendingImageUrls,
+      imagePositions: pendingImagePositions,
       tags: (data.tags || "")
         .split(",")
         .map((t) => t.trim())
@@ -4941,6 +5310,21 @@
       color: data.color || null,
       amount: Math.round(amountBob * 100),
     };
+    const fiscalMapping = {
+      codigoProducto: productCodigoProductoEl.value.trim(),
+      actividadEconomica: productActividadEconomicaEl.value,
+      codigoProductoSin: productCodigoProductoSinEl.value,
+      unidadMedida: productUnidadMedidaEl.value ? Number(productUnidadMedidaEl.value) : null,
+    };
+    const fiscalValues = Object.values(fiscalMapping);
+    if (fiscalValues.some((value) => value !== "" && value !== null)) {
+      if (fiscalValues.some((value) => value === "" || value === null)) {
+        errorEl.textContent = "Error: completa código interno, actividad, clasificación SIN y unidad de medida juntos";
+        productFiscalMappingEl.open = true;
+        return;
+      }
+      Object.assign(payload, fiscalMapping);
+    }
     const editedLinkId = editingLinkId;
     const wasEditing = Boolean(editedLinkId);
     errorEl.textContent = "";

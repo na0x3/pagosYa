@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import * as path from "path";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
@@ -24,7 +25,14 @@ import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      envFilePath: [
+        path.join(path.basename(process.cwd()) === "api" ? process.cwd() : path.join(process.cwd(), "apps", "api"), ".env.local"),
+        path.join(path.basename(process.cwd()) === "api" ? process.cwd() : path.join(process.cwd(), "apps", "api"), ".env"),
+      ],
+    }),
     // A dashboard refresh intentionally fans out across finances, stores,
     // products, payments, compliance, and visual-studio state. Keep enough
     // headroom for normal navigation and store switching while auth-adjacent

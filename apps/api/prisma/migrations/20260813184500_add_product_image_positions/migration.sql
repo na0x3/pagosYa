@@ -1,0 +1,2 @@
+ALTER TABLE "PaymentLink"
+ADD COLUMN "imagePositions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

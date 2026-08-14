@@ -41,6 +41,7 @@ export interface StoreItem {
   name: string;
   description: string | null;
   imageUrls: string[];
+  imagePositions?: string[];
   tags: string[];
   // null = unlimited/not tracked, 0 = genuinely sold out.
   stock: number | null;
@@ -129,6 +130,7 @@ export interface Store {
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "none" | "lift" | "pulse";
   cartButtonLabel: string;
+  checkoutMode: "payment" | "whatsapp";
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];

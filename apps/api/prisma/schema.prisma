@@ -224,8 +224,27 @@ model MerchantInvoicingProfile {
   cuisIssuedAt  DateTime?
   cufd          String?
   cufdExpiresAt DateTime?
+  // General-purpose Factura Compra-Venta. Other sectors can be added later,
+  // but activity compatibility must always come from synchronization.
+  documentSectorCode Int @default(1)
+  siatCatalogs  SiatCatalogCache[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+// SIAT requires catalog synchronization at least daily. Cache each catalog
+// per taxpayer profile because activities and their product/sector relations
+// are scoped to the merchant NIT, even where the underlying catalog is broad.
+model SiatCatalogCache {
+  id                   String                     @id @default(cuid())
+  invoicingProfileId   String
+  invoicingProfile     MerchantInvoicingProfile @relation(fields: [invoicingProfileId], references: [id], onDelete: Cascade)
+  catalog              String
+  entries              Json
+  syncedAt             DateTime                   @default(now())
+
+  @@unique([invoicingProfileId, catalog])
+  @@index([syncedAt])
 }
 
 // One Factura Electrónica per succeeded PaymentIntent. Created PENDING in the
@@ -440,6 +459,9 @@ model Store {
   buttonVariant      String                @default("solid")
   buttonMotion       String                @default("lift")
   cartButtonLabel    String                @default("Ir a pagar")
+  // "payment" opens pagosYa checkout; "whatsapp" sends the composed cart
+  // to the store's contactPhone without creating a PaymentIntent.
+  checkoutMode       String                @default("payment")
   status             StoreStatus           @default(ACTIVE)
   // Incremented once per storefront page load (getStorePublic) — a simple
   // visit counter, not deduplicated per visitor. Good enough for "is anyone
@@ -575,6 +597,9 @@ model PaymentLink {
   // entry is the cover photo, rest render as a gallery. Replaces the old
   // single `imageUrl` column (see migration 20260807150000_store_catalog_v2).
   imageUrls   String[]          @default([])
+  // CSS object-position values ("x% y%") aligned by index with imageUrls.
+  // Missing entries fall back to centered, preserving every existing product.
+  imagePositions String[]       @default([])
   // Free-form small labels the merchant types, e.g. "Nuevo", "Agotado" —
   // rendered as pill badges on the storefront. Not a controlled vocabulary.
   tags        String[]          @default([])
@@ -591,12 +616,22 @@ model PaymentLink {
   variants    Json              @default("[]")
   amount      Int
   currency    String            @default("BOB")
+  // Merchant/PagosYa SKU. This is codigoProducto in the invoice XML and is
+  // deliberately separate from SIN's generic product classification.
+  codigoProducto      String?
+  // Taxpayer activity selected from sincronizarActividades.
+  actividadEconomica  String?
+  // SIN generic product/service code, synchronized for actividadEconomica.
+  codigoProductoSin   String?
+  // SIAT unit classifier from sincronizarParametricaUnidadMedida.
+  unidadMedida        Int?
   status      PaymentLinkStatus @default(ACTIVE)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
   @@index([storeId, createdAt])
   @@index([categoryId])
+  @@unique([storeId, codigoProducto])
 }
 
 // Persisted checkout totals keep storefront sorting and finance summaries

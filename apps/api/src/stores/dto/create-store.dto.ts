@@ -375,6 +375,11 @@ export class CreateStoreDto {
   @MaxLength(36)
   cartButtonLabel?: string;
 
+  @ApiPropertyOptional({ description: "How customers finish an order.", enum: ["payment", "whatsapp"] })
+  @IsOptional()
+  @IsIn(["payment", "whatsapp"])
+  checkoutMode?: string;
+
   @ApiPropertyOptional({
     description:
       "Support phone/WhatsApp number shown to customers on the receipt, e.g. for order questions or refund requests. Omit to leave unchanged, or send null to clear.",

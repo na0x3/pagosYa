@@ -259,10 +259,11 @@ function finishStoreEntrance(entrance: HTMLElement, store: Store) {
     brand.textContent = storeName;
   }
 
-  window.setTimeout(() => {
-    entrance.classList.add("is-leaving");
-    window.setTimeout(() => entrance.remove(), 360);
-  }, 1050);
+  // Schedule both phases while the owning window is alive. A nested access to
+  // `window` here used to throw if navigation/test teardown happened during
+  // the first delay, leaving an uncaught exception after the page was gone.
+  window.setTimeout(() => entrance.classList.add("is-leaving"), 1050);
+  window.setTimeout(() => entrance.remove(), 1410);
 }
 
 async function main() {
@@ -278,9 +279,11 @@ async function main() {
     const entrance = storePreviewMode ? null : createStoreEntrance();
     try {
       const store = await fetchStore(linkSlug, { preview: storePreviewMode });
-      loadCart(store);
-      renderStoreRoute(linkSlug, store);
-      if (entrance) finishStoreEntrance(entrance, store);
+      const proposalPatch = standaloneStorePreviewPatch();
+      const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;
+      loadCart(renderedStore);
+      renderStoreRoute(linkSlug, renderedStore);
+      if (entrance) finishStoreEntrance(entrance, renderedStore);
       observeResize(app);
     } catch (err) {
       entrance?.remove();
@@ -301,7 +304,7 @@ async function main() {
 }
 
 async function enterPaymentFlow(clientSecret: string) {
-  document.body.classList.remove("store-page");
+  document.body.classList.remove("store-page", "product-detail-page");
   let session: CheckoutSession;
   try {
     session = await fetchSession(clientSecret);
@@ -471,6 +474,58 @@ function productPageUrl(slug: string, productId: string): string {
   return `?${params.toString()}`;
 }
 
+function productImagePosition(item: StoreItem, index: number): string {
+  const position = item.imagePositions?.[index] || "50% 50%";
+  return /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/.test(position) ? position : "50% 50%";
+}
+
+function storeAnnouncementHtml(store: Store): string {
+  if (!store.announcement || !hasReadableContent(store.announcement)) return "";
+  const mode = store.announcementMode === "marquee" ? "marquee" : "static";
+  const duration = Math.min(40, Math.max(8, Number(store.announcementSpeed) || 18));
+  const size = ["small", "medium", "large"].includes(store.announcementSize) ? store.announcementSize : "medium";
+  const color = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#c58b3c";
+  const style = `--announcement-bg:${color};--announcement-ink:${accentContrastColor(color)};--marquee-duration:${duration}s`;
+  if (mode === "static") {
+    return `<div class="store-announcement announcement-size-${size}" style="${style}">${escapeHtml(store.announcement)}</div>`;
+  }
+  const sequence = store.announcement
+    .split(/\s*(?:[•·|]|\r?\n)\s*/u)
+    .map((phrase) => phrase.trim())
+    .filter(Boolean)
+    .map((phrase) => `<span class="store-announcement-phrase">${escapeHtml(phrase)}</span><span class="store-announcement-separator">•</span>`)
+    .join("");
+  return `<aside class="store-announcement marquee announcement-size-${size}" style="${style}" aria-label="Anuncio">
+    <span class="store-announcement-a11y">${escapeHtml(store.announcement)}</span>
+    <div class="store-announcement-track" aria-hidden="true">
+      <span class="store-announcement-sequence">${sequence}</span>
+      <span class="store-announcement-sequence" data-marquee-copy="duplicate">${sequence}</span>
+    </div>
+  </aside>`;
+}
+
+function bindStoreAnnouncementPlayback(): void {
+  activeAnnouncementCleanup?.();
+  activeAnnouncementCleanup = null;
+  const announcement = app.querySelector<HTMLElement>(".store-announcement.marquee");
+  if (!announcement) return;
+  let isInView = true;
+  const syncPlayback = () => announcement.classList.toggle("is-paused", document.hidden || !isInView);
+  const observer = typeof IntersectionObserver === "function"
+    ? new IntersectionObserver(([entry]) => {
+        isInView = entry?.isIntersecting ?? true;
+        syncPlayback();
+      })
+    : null;
+  observer?.observe(announcement);
+  document.addEventListener("visibilitychange", syncPlayback);
+  syncPlayback();
+  activeAnnouncementCleanup = () => {
+    observer?.disconnect();
+    document.removeEventListener("visibilitychange", syncPlayback);
+  };
+}
+
 function renderProductCard(slug: string, item: StoreItem, index: number): string {
   const variants = itemVariants(item);
   const selectedVariant = selectedVariantFor(item);
@@ -492,12 +547,12 @@ function renderProductCard(slug: string, item: StoreItem, index: number): string
     ? `
       <div class="store-item-gallery">
         <a class="store-item-image-link product-page-link" href="${escapeHtml(detailUrl)}" aria-label="Ver ${escapeHtml(item.name)}">
-          <img class="store-item-image" src="${escapeHtml(images[0])}" alt="${escapeHtml(item.name)}" />
+          <img class="store-item-image" src="${escapeHtml(images[0])}" alt="${escapeHtml(item.name)}" style="object-position:${productImagePosition(item, 0)}" />
         </a>
         ${
           images.length > 1
             ? `<div class="gallery-thumbs">
-                ${images.map((url, i) => `<button type="button" class="gallery-thumb-btn ${i === 0 ? "active" : ""}" data-src="${escapeHtml(url)}" aria-label="Foto ${i + 1}"></button>`).join("")}
+                ${images.map((url, i) => `<button type="button" class="gallery-thumb-btn ${i === 0 ? "active" : ""}" data-src="${escapeHtml(url)}" data-position="${productImagePosition(item, i)}" aria-label="Foto ${i + 1}"></button>`).join("")}
               </div>`
             : ""
         }
@@ -580,6 +635,7 @@ type StorePreviewPatch = Partial<
     | "buttonVariant"
     | "buttonMotion"
     | "cartButtonLabel"
+    | "checkoutMode"
     | "boardTexture"
     | "announcement"
     | "announcementMode"
@@ -639,6 +695,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (["solid", "outline", "soft"].includes(String(source.buttonVariant))) clean.buttonVariant = source.buttonVariant;
   if (["lift", "pulse", "none"].includes(String(source.buttonMotion))) clean.buttonMotion = source.buttonMotion;
   if (typeof source.cartButtonLabel === "string") clean.cartButtonLabel = source.cartButtonLabel.slice(0, 36);
+  if (["payment", "whatsapp"].includes(String(source.checkoutMode))) clean.checkoutMode = source.checkoutMode;
   if (["chalkboard", "kraft", "painted"].includes(String(source.boardTexture))) clean.boardTexture = source.boardTexture;
   if (["static", "marquee"].includes(String(source.announcementMode))) clean.announcementMode = source.announcementMode;
   if (Number.isInteger(source.announcementSpeed)) {
@@ -692,6 +749,17 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   return clean as StorePreviewPatch;
 }
 
+function standaloneStorePreviewPatch(): StorePreviewPatch | null {
+  if (!storePreviewMode || !window.location.hash) return null;
+  const serialized = new URLSearchParams(window.location.hash.slice(1)).get("proposal");
+  if (!serialized) return null;
+  try {
+    return sanitizeStorePreviewPatch(JSON.parse(serialized));
+  } catch {
+    return null;
+  }
+}
+
 function applyStoreTheme(slug: string, store: Store): void {
   currentStoreSlug = slug;
   if (storePreviewMode) activePreviewStore = { slug, store };
@@ -733,6 +801,7 @@ function applyStoreTheme(slug: string, store: Store): void {
 }
 
 let activeStoreRoute: { slug: string; store: Store } | null = null;
+const catalogScrollByStore = new Map<string, number>();
 
 function productIdFromLocation(): string | null {
   return new URLSearchParams(window.location.search).get("product");
@@ -745,9 +814,23 @@ function renderStoreRoute(slug: string, store: Store, options: { focusPromotion?
   else renderStore(slug, store, options);
 }
 
+function restoreCatalogScroll(scrollY: unknown): void {
+  const top = typeof scrollY === "number" && Number.isFinite(scrollY) ? Math.max(0, scrollY) : 0;
+  requestAnimationFrame(() => window.scrollTo(0, top));
+}
+
 function navigateWithinStore(slug: string, store: Store, productId?: string): void {
-  window.history.pushState({}, "", productId ? productPageUrl(slug, productId) : storeCatalogUrl(slug));
+  if (productId) {
+    const catalogScrollY = Math.max(0, window.scrollY);
+    catalogScrollByStore.set(slug, catalogScrollY);
+    const currentState = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+    window.history.replaceState({ ...currentState, pagosyaView: "catalog", catalogScrollY }, "", window.location.href);
+    window.history.pushState({ pagosyaView: "product", fromCatalog: true, catalogScrollY }, "", productPageUrl(slug, productId));
+  } else {
+    window.history.pushState({ pagosyaView: "catalog", catalogScrollY: 0 }, "", storeCatalogUrl(slug));
+  }
   renderStoreRoute(slug, store);
+  restoreCatalogScroll(0);
   app.focus({ preventScroll: true });
 }
 
@@ -764,6 +847,16 @@ function bindInternalStoreLinks(slug: string, store: Store): void {
     link.addEventListener("click", (event) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
+      if (window.history.state?.fromCatalog) {
+        const catalogScrollY = catalogScrollByStore.get(slug) ?? window.history.state.catalogScrollY;
+        window.history.back();
+        // Render immediately so the shopper never flashes at the top of the
+        // catalog while the browser dispatches popstate asynchronously.
+        renderStore(slug, store);
+        restoreCatalogScroll(catalogScrollY);
+        app.focus({ preventScroll: true });
+        return;
+      }
       navigateWithinStore(slug, store);
     });
   });
@@ -773,6 +866,28 @@ function bindCartCheckout(slug: string, store: Store): void {
   const payButton = app.querySelector<HTMLButtonElement>("#cart-pay");
   payButton?.addEventListener("click", async () => {
     if (cartCount() === 0) return;
+    if (store.checkoutMode === "whatsapp") {
+      const phone = (store.contactPhone || "").replace(/\D/g, "");
+      if (phone.length < 7 || phone.length > 15) {
+        const checkoutError = app.querySelector<HTMLElement>(".cart-checkout-error");
+        if (checkoutError) {
+          checkoutError.textContent = "Esta tienda todavía no configuró un número de WhatsApp válido.";
+          checkoutError.hidden = false;
+        }
+        return;
+      }
+      const lines = [...cart.entries()].flatMap(([key, quantity]) => {
+        const selected = parseCartItemKey(key);
+        const product = store.items.find((item) => item.id === selected.paymentLinkId);
+        if (!product) return [];
+        const variant = product.variants.find((candidate) => candidate.id === selected.variantId);
+        return [`• ${product.name}${variant ? ` (${variant.name})` : ""} x${quantity} — ${formatAmount((variant?.amount ?? product.amount) * quantity, product.currency)}`];
+      });
+      const currency = store.items[0]?.currency || "BOB";
+      const message = [`Hola, quiero hacer este pedido en ${store.storeName}:`, "", ...lines, "", `Total: ${formatAmount(cartTotal(store.items), currency)}`].join("\n");
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+      return;
+    }
     const checkoutError = app.querySelector<HTMLElement>(".cart-checkout-error");
     const buttonLabel = store.cartButtonLabel || "Ir a pagar";
     if (checkoutError) {
@@ -814,6 +929,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   activePromotionCleanup?.();
   activePromotionCleanup = null;
   document.body.classList.remove("promotion-open");
+  document.body.classList.add("product-detail-page");
   applyStoreTheme(slug, store);
 
   const item = store.items.find((candidate) => candidate.id === productId);
@@ -855,7 +971,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
 
   const galleryHtml = images.length
     ? `<div class="product-detail-main-image-wrap">
-        <img class="product-detail-main-image" src="${escapeHtml(images[selectedImageIndex])}" alt="${escapeHtml(item.name)}, foto ${selectedImageIndex + 1} de ${images.length}">
+        <img class="product-detail-main-image" src="${escapeHtml(images[selectedImageIndex])}" alt="${escapeHtml(item.name)}, foto ${selectedImageIndex + 1} de ${images.length}" style="object-position:${productImagePosition(item, selectedImageIndex)}">
        </div>
        ${
          images.length > 1
@@ -863,7 +979,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
               ${images
                 .map(
                   (url, index) =>
-                    `<button type="button" class="product-detail-thumbnail${index === selectedImageIndex ? " active" : ""}" data-image-index="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === selectedImageIndex}"><img src="${escapeHtml(url)}" alt=""></button>`,
+                    `<button type="button" class="product-detail-thumbnail${index === selectedImageIndex ? " active" : ""}" data-image-index="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === selectedImageIndex}"><img src="${escapeHtml(url)}" alt="" style="object-position:${productImagePosition(item, index)}"></button>`,
                 )
                 .join("")}
              </div>`
@@ -891,6 +1007,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
     : "";
 
   app.innerHTML = `
+    ${storeAnnouncementHtml(store)}
     <header class="product-page-header">
       <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>Volver a ${escapeHtml(store.storeName)}</span></a>
       <a class="product-store-brand store-catalog-link" href="${escapeHtml(catalogUrl)}" aria-label="Ir a ${escapeHtml(store.storeName)}">
@@ -904,7 +1021,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         ${category ? `<div class="product-detail-category">${escapeHtml(category.name)}</div>` : ""}
         ${item.tags.length ? `<div class="store-item-tags">${item.tags.map((tag) => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <h1>${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" aria-hidden="true"></span>` : ""}${escapeHtml(item.name)}</h1>
-        ${item.description ? `<p class="product-detail-description">${escapeHtml(item.description)}</p>` : ""}
+        ${item.description ? `<section class="product-detail-description-block" aria-labelledby="product-description-title"><h2 id="product-description-title">Descripción</h2><p class="product-detail-description">${escapeHtml(item.description)}</p></section>` : ""}
         ${variantsHtml}
         <div class="product-detail-purchase">
           <div>
@@ -930,8 +1047,9 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       <button type="button" class="primary" id="cart-pay">${escapeHtml(store.cartButtonLabel || "Ir a pagar")}</button>
       <span class="cart-checkout-error" role="alert" hidden></span>
     </div>
-    <div class="secure-note product-detail-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>`;
+    <div class="secure-note product-detail-secure-note">${store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_LOCK}<span>${store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Pago procesado de forma segura por pagosYa"}</span></div>`;
 
+  bindStoreAnnouncementPlayback();
   bindInternalStoreLinks(slug, store);
   app.querySelectorAll<HTMLButtonElement>(".product-detail-thumbnail").forEach((button) => {
     button.addEventListener("click", () => {
@@ -982,6 +1100,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
 function renderStore(slug: string, store: Store, options: { focusPromotion?: boolean } = {}) {
   activeHeroCleanup?.();
   activeHeroCleanup = null;
+  document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
   const currency = store.items[0]?.currency ?? "BOB";
   const backgroundImageUrl = assetUrl(store.backgroundImageUrl);
@@ -1030,34 +1149,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     .filter((image): image is typeof image & { resolvedImageUrl: string } => !!image.resolvedImageUrl)
     .slice(0, 8);
 
-  const announcementMode = store.announcementMode === "marquee" ? "marquee" : "static";
-  const announcementDuration = Math.min(40, Math.max(8, Number(store.announcementSpeed) || 18));
-  const announcementSize = ["small", "medium", "large"].includes(store.announcementSize) ? store.announcementSize : "medium";
-  const announcementColor = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#c58b3c";
-  const announcementInk = accentContrastColor(announcementColor);
-  const announcementStyle = `--announcement-bg:${announcementColor};--announcement-ink:${announcementInk};--marquee-duration:${announcementDuration}s`;
-  const announcementPhrases = (store.announcement ?? "")
-    .split(/\s*(?:[•·|]|\r?\n)\s*/u)
-    .map((phrase) => phrase.trim())
-    .filter(Boolean);
-  const announcementSequenceHtml = announcementPhrases
-    .map(
-      (phrase) =>
-        `<span class="store-announcement-phrase">${escapeHtml(phrase)}</span><span class="store-announcement-separator">•</span>`,
-    )
-    .join("");
-  const announcementHtml =
-    store.announcement && hasReadableContent(store.announcement)
-      ? announcementMode === "marquee"
-        ? `<aside class="store-announcement marquee announcement-size-${announcementSize}" style="${announcementStyle}" aria-label="Anuncio">
-            <span class="store-announcement-a11y">${escapeHtml(store.announcement)}</span>
-            <div class="store-announcement-track" aria-hidden="true">
-              <span class="store-announcement-sequence">${announcementSequenceHtml}</span>
-              <span class="store-announcement-sequence" data-marquee-copy="duplicate">${announcementSequenceHtml}</span>
-            </div>
-          </aside>`
-        : `<div class="store-announcement announcement-size-${announcementSize}" style="${announcementStyle}">${escapeHtml(store.announcement)}</div>`
-      : "";
+  const announcementHtml = storeAnnouncementHtml(store);
 
   const safePromotionUrl = store.promotionCtaUrl && /^https?:\/\//i.test(store.promotionCtaUrl) ? store.promotionCtaUrl : null;
   const promotionDismissKey = `pagosya_promotion_dismissed_${store.storeId}`;
@@ -1257,33 +1349,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </div>
     </header>
     ${orderedSectionsHtml}
-    <div class="secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
+    <div class="secure-note">${store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_LOCK}<span>${store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Pago procesado de forma segura por pagosYa"}</span></div>
     ${promotionHtml}
   `;
 
-  activeAnnouncementCleanup?.();
-  activeAnnouncementCleanup = null;
-  const movingAnnouncement = app.querySelector<HTMLElement>(".store-announcement.marquee");
-  if (movingAnnouncement) {
-    let isInView = true;
-    const syncAnnouncementPlayback = () => {
-      movingAnnouncement.classList.toggle("is-paused", document.hidden || !isInView);
-    };
-    const observer =
-      typeof IntersectionObserver === "function"
-        ? new IntersectionObserver(([entry]) => {
-            isInView = entry?.isIntersecting ?? true;
-            syncAnnouncementPlayback();
-          })
-        : null;
-    observer?.observe(movingAnnouncement);
-    document.addEventListener("visibilitychange", syncAnnouncementPlayback);
-    syncAnnouncementPlayback();
-    activeAnnouncementCleanup = () => {
-      observer?.disconnect();
-      document.removeEventListener("visibilitychange", syncAnnouncementPlayback);
-    };
-  }
+  bindStoreAnnouncementPlayback();
 
   activePromotionCleanup?.();
   activePromotionCleanup = null;
@@ -1530,6 +1600,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
       img.style.opacity = "0";
       setTimeout(() => {
         img.setAttribute("src", btn.dataset.src!);
+        img.style.objectPosition = btn.dataset.position || "50% 50%";
         img.style.opacity = "1";
       }, 130);
       card.querySelectorAll(".gallery-thumb-btn").forEach((b) => b.classList.remove("active"));
@@ -1540,6 +1611,10 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
   grid.querySelectorAll<HTMLElement>(".store-item").forEach((row) => {
     const id = row.dataset.id!;
     const item = store.items.find((i) => i.id === id)!;
+    row.addEventListener("click", (event) => {
+      if ((event.target as HTMLElement).closest("a, button, select, input, label")) return;
+      navigateWithinStore(slug, store, id);
+    });
     row.querySelector<HTMLSelectElement>(".variant-select")?.addEventListener("change", (event) => {
       selectedVariantByItem.set(id, (event.currentTarget as HTMLSelectElement).value);
       renderStoreGrid(slug, store, currency);
@@ -1872,8 +1947,11 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
   }
 }
 
-window.onpopstate = () => {
-  if (activeStoreRoute) renderStoreRoute(activeStoreRoute.slug, activeStoreRoute.store);
+if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+window.onpopstate = (event) => {
+  if (!activeStoreRoute) return;
+  renderStoreRoute(activeStoreRoute.slug, activeStoreRoute.store);
+  restoreCatalogScroll(productIdFromLocation() ? 0 : catalogScrollByStore.get(activeStoreRoute.slug) ?? event.state?.catalogScrollY);
 };
 
 main();

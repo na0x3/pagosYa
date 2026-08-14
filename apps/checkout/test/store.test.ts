@@ -46,6 +46,7 @@ const baseStoreFields = {
   buttonVariant: "solid",
   buttonMotion: "lift",
   cartButtonLabel: "Ir a pagar",
+  checkoutMode: "payment",
   boardTexture: "chalkboard",
   announcement: null,
   announcementMode: "static",
@@ -135,10 +136,12 @@ describe("storefront (?link=...)", () => {
   });
 
   it("opens a product's own shareable page from its catalog card and returns to the store", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
+        announcement: "ENVÍOS A TODO EL PAÍS",
         items: [baseItem],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
@@ -147,14 +150,16 @@ describe("storefront (?link=...)", () => {
     await loadCheckout("/?link=taller-norte");
     const productLink = document.querySelector<HTMLAnchorElement>(".store-item-name")!;
     expect(productLink.href).toContain("product=link_1");
-
-    productLink.click();
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 684 });
+    document.querySelector<HTMLElement>(".store-item-info")!.click();
     expect(new URLSearchParams(window.location.search).get("product")).toBe("link_1");
+    expect(document.querySelector(".store-announcement")?.textContent).toContain("ENVÍOS A TODO EL PAÍS");
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
     expect(document.querySelector(".product-detail-description")?.textContent).toBe("Incluye lavado y peinado");
 
     document.querySelector<HTMLAnchorElement>(".product-back-link")!.click();
-    expect(new URLSearchParams(window.location.search).get("product")).toBeNull();
+    await vi.waitFor(() => expect(new URLSearchParams(window.location.search).get("product")).toBeNull());
+    await vi.waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 684));
     expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
   });
 
@@ -162,6 +167,7 @@ describe("storefront (?link=...)", () => {
     const productWithGallery = {
       ...baseItem,
       imageUrls: ["/v1/uploads/frente.webp", "/v1/uploads/detalle.webp"],
+      imagePositions: ["50% 18%", "72% 84%"],
       variants: [
         { id: "small", name: "Pequeño", amount: 4000, stock: 2 },
         { id: "large", name: "Grande", amount: 6500, stock: 4 },
@@ -181,9 +187,11 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelectorAll(".product-detail-thumbnail")).toHaveLength(2);
     expect(document.querySelectorAll(".product-detail-option")).toHaveLength(2);
     expect(document.querySelector(".product-detail-price")?.textContent).toBe("40.00 BOB");
+    expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.style.objectPosition).toBe("50% 18%");
 
     document.querySelectorAll<HTMLButtonElement>(".product-detail-thumbnail")[1].click();
     expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.src).toContain("detalle.webp");
+    expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.style.objectPosition).toBe("72% 84%");
 
     document.querySelector<HTMLButtonElement>('[data-variant-id="large"]')!.click();
     expect(document.querySelector(".product-detail-price")?.textContent).toBe("65.00 BOB");
@@ -497,6 +505,33 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector("#cart-pay")?.textContent).toBe("Completar pedido");
   });
 
+  it("renders a standalone AI proposal preview from the URL without publishing it", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda publicada",
+        tagline: "Contenido publicado",
+        accentColor: "#818cf8",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+    const hash = new URLSearchParams({
+      proposal: JSON.stringify({
+        storeName: "Tienda publicada",
+        tagline: "Propuesta sin publicar",
+        accentColor: "#b4532a",
+        cartButtonLabel: "Probar esta dirección",
+      }),
+    });
+
+    await loadCheckout(`/?link=preview-store&preview=1#${hash}`);
+
+    expect(document.querySelector(".store-tagline")?.textContent).toBe("Propuesta sin publicar");
+    expect(document.querySelector("#cart-pay")?.textContent).toBe("Probar esta dirección");
+    expect(document.documentElement.style.getPropertyValue("--pg-accent")).toBe("#b4532a");
+  });
+
   it("moves into the payment form after checking out the cart", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
@@ -533,6 +568,59 @@ describe("storefront (?link=...)", () => {
     // Cart-checkout flow shows the store name as a big header, not the
     // avatar+name row used for direct client_secret links.
     expect(document.querySelector(".merchant-row")).toBeFalsy();
+  });
+
+  it("sends the composed cart to WhatsApp without creating a payment", async () => {
+    const checkoutCart = vi.fn();
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller WhatsApp",
+        checkoutMode: "whatsapp",
+        contactPhone: "+591 71234567",
+        cartButtonLabel: "Pedir por WhatsApp",
+        items: [baseItem],
+      } satisfies Store),
+      checkoutCart,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=taller-whatsapp");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+
+    expect(checkoutCart).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith(expect.stringMatching(/^https:\/\/wa\.me\/59171234567\?text=/), "_blank", "noopener,noreferrer");
+    const message = decodeURIComponent(String(open.mock.calls[0][0]).split("?text=")[1]);
+    expect(message).toContain("Corte de cabello x1");
+    expect(message).toContain("Total: 50.00 BOB");
+    expect(document.querySelector(".secure-note")?.textContent).toContain("WhatsApp");
+  });
+
+  it("does not open WhatsApp when the store has an invalid recipient number", async () => {
+    const checkoutCart = vi.fn();
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller sin teléfono",
+        checkoutMode: "whatsapp",
+        contactPhone: "+1",
+        cartButtonLabel: "Pedir por WhatsApp",
+        items: [baseItem],
+      } satisfies Store),
+      checkoutCart,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=taller-sin-telefono");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(checkoutCart).not.toHaveBeenCalled();
+    expect(document.querySelector(".cart-checkout-error")?.textContent).toContain("número de WhatsApp válido");
   });
 
   it("keeps the cart available and lets the customer retry when checkout fails", async () => {

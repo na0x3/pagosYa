@@ -6,16 +6,43 @@ import { UploadsService } from "../uploads/uploads.service";
 import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
 import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
 import { ImportInventoryDto } from "./dto/import-inventory.dto";
+import { SiatCatalogService } from "../invoicing/siat-catalog.service";
 
 const variantIdPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
+const DEFAULT_IMAGE_POSITION = "50% 50%";
+const IMAGE_POSITION_PATTERN = /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/;
 
 @Injectable()
 export class PaymentLinksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploads: UploadsService,
+    private readonly siatCatalogs: SiatCatalogService,
   ) {}
+
+  private async validateFiscalMapping(
+    merchantId: string,
+    mapping: {
+      codigoProducto?: string | null;
+      actividadEconomica?: string | null;
+      codigoProductoSin?: string | null;
+      unidadMedida?: number | null;
+    },
+  ): Promise<void> {
+    const values = [mapping.codigoProducto, mapping.actividadEconomica, mapping.codigoProductoSin, mapping.unidadMedida];
+    if (values.every((value) => value === undefined || value === null)) return;
+    if (values.some((value) => value === undefined || value === null || value === "")) {
+      throw new BadRequestException(
+        "codigoProducto, actividadEconomica, codigoProductoSin, and unidadMedida must be configured together",
+      );
+    }
+    await this.siatCatalogs.assertProductClassification(merchantId, {
+      actividadEconomica: mapping.actividadEconomica!,
+      codigoProductoSin: mapping.codigoProductoSin!,
+      unidadMedida: mapping.unidadMedida!,
+    });
+  }
 
   /** Every mutation here is scoped to a store the caller owns — never trust a bare storeId. */
   private async ownedStoreOrThrow(merchantId: string, storeId: string) {
@@ -52,6 +79,15 @@ export class PaymentLinksService {
   private totalVariantStock(variants: ProductVariant[]): number | null {
     if (variants.some((variant) => variant.stock === null || variant.stock === undefined)) return null;
     return variants.reduce((sum, variant) => sum + variant.stock!, 0);
+  }
+
+  /** Keep focus metadata aligned with its gallery even when an API client
+   * updates just one of the two arrays. */
+  private normalizeImagePositions(imageUrls: string[], positions?: string[]): string[] {
+    return imageUrls.map((_, index) => {
+      const position = positions?.[index];
+      return position && IMAGE_POSITION_PATTERN.test(position) ? position : DEFAULT_IMAGE_POSITION;
+    });
   }
 
   private normalizeVariants(
@@ -94,6 +130,7 @@ export class PaymentLinksService {
   async create(merchantId: string, storeId: string, dto: CreatePaymentLinkDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
     if (dto.categoryId) await this.ownedCategoryOrThrow(storeId, dto.categoryId);
+    await this.validateFiscalMapping(merchantId, dto);
     const variants = this.normalizeVariants(dto.variants);
     return this.prisma.paymentLink.create({
       data: {
@@ -102,6 +139,7 @@ export class PaymentLinksService {
         name: dto.name,
         description: dto.description,
         imageUrls: dto.imageUrls ?? [],
+        imagePositions: this.normalizeImagePositions(dto.imageUrls ?? [], dto.imagePositions),
         tags: dto.tags ?? [],
         stock: variants.length ? this.totalVariantStock(variants) : dto.stock,
         color: dto.color,
@@ -110,6 +148,10 @@ export class PaymentLinksService {
         // keep it aligned to the lowest customer-selectable price.
         amount: variants.length ? Math.min(...variants.map((variant) => variant.amount)) : dto.amount,
         currency: dto.currency ?? "BOB",
+        codigoProducto: dto.codigoProducto,
+        actividadEconomica: dto.actividadEconomica,
+        codigoProductoSin: dto.codigoProductoSin,
+        unidadMedida: dto.unidadMedida,
       },
     });
   }
@@ -144,6 +186,7 @@ export class PaymentLinksService {
 
       const products = [];
       for (const product of dto.products) {
+        await this.validateFiscalMapping(merchantId, product);
         const variants = this.normalizeVariants(product.variants);
         const category = product.categoryName?.trim()
           ? categoriesByName.get(categoryKey(product.categoryName))
@@ -156,12 +199,17 @@ export class PaymentLinksService {
               name: product.name.trim(),
               description: product.description,
               imageUrls: product.imageUrls ?? [],
+              imagePositions: this.normalizeImagePositions(product.imageUrls ?? [], product.imagePositions),
               tags: product.tags ?? [],
               stock: variants.length ? this.totalVariantStock(variants) : product.stock,
               color: product.color,
               variants: variants as unknown as Prisma.InputJsonValue,
               amount: variants.length ? Math.min(...variants.map((variant) => variant.amount)) : product.amount,
               currency: product.currency ?? "BOB",
+              codigoProducto: product.codigoProducto,
+              actividadEconomica: product.actividadEconomica,
+              codigoProductoSin: product.codigoProductoSin,
+              unidadMedida: product.unidadMedida,
             },
           }),
         );
@@ -196,7 +244,16 @@ export class PaymentLinksService {
     const link = await this.prisma.paymentLink.findFirst({ where: { id, storeId } });
     if (!link) throw new NotFoundException("Payment link not found");
     if (dto.categoryId) await this.ownedCategoryOrThrow(storeId, dto.categoryId);
+    await this.validateFiscalMapping(merchantId, {
+      codigoProducto: dto.codigoProducto ?? link.codigoProducto,
+      actividadEconomica: dto.actividadEconomica ?? link.actividadEconomica,
+      codigoProductoSin: dto.codigoProductoSin ?? link.codigoProductoSin,
+      unidadMedida: dto.unidadMedida ?? link.unidadMedida,
+    });
     const variants = dto.variants !== undefined ? this.normalizeVariants(dto.variants, this.readVariants(link.variants)) : undefined;
+    const imagePositions = dto.imageUrls !== undefined || dto.imagePositions !== undefined
+      ? this.normalizeImagePositions(dto.imageUrls ?? link.imageUrls, dto.imagePositions ?? link.imagePositions)
+      : undefined;
     if (variants?.some((variant) => variant.stock === undefined) && variants.some((variant) => variant.stock !== undefined)) {
       throw new BadRequestException("Asigna stock a todas las opciones para dejar de usar el stock compartido");
     }
@@ -208,6 +265,7 @@ export class PaymentLinksService {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.imageUrls !== undefined && { imageUrls: dto.imageUrls }),
+        ...(imagePositions !== undefined && { imagePositions }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
         ...(variants !== undefined && variants.length > 0 && variants.every((variant) => variant.stock !== undefined)
           ? { stock: this.totalVariantStock(variants) }
@@ -223,6 +281,10 @@ export class PaymentLinksService {
             ? { amount: dto.amount }
             : {}),
         ...(dto.currency !== undefined && { currency: dto.currency }),
+        ...(dto.codigoProducto !== undefined && { codigoProducto: dto.codigoProducto }),
+        ...(dto.actividadEconomica !== undefined && { actividadEconomica: dto.actividadEconomica }),
+        ...(dto.codigoProductoSin !== undefined && { codigoProductoSin: dto.codigoProductoSin }),
+        ...(dto.unidadMedida !== undefined && { unidadMedida: dto.unidadMedida }),
       },
     });
   }
