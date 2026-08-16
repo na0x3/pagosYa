@@ -12,3 +12,7 @@ apps/api/uploads/
 .DS_Store
 screenshots/
 graphify-out/
+tmp/
+**/test-results/
+SFVL-SOL-AUT-709354049-9526
+Screenshot 2026-08-15 at 3.24.06 PM.png
