@@ -21,7 +21,7 @@ test("server-renders the MATCHO showcase", async () => {
 
   const html = await response.text();
   assert.match(html, /<html lang="es">/);
-  assert.match(html, /<title>MATCHO — Matcha frío<\/title>/);
+  assert.match(html, /<title>MATCHO - Matcha frío<\/title>/);
   assert.match(html, /Tienda demostrativa/);
   assert.match(html, /MATCHA GREEN/);
   assert.match(html, /MATCHA STRAWBERRY/);
@@ -47,7 +47,10 @@ test("ships the storefront assets and removed starter preview", async () => {
   assert.match(page, /const products/);
   assert.match(page, /showDemoNotice/);
   assert.match(layout, /lang="es"/);
-  assert.match(css, /@keyframes ticker-move/);
+  assert.match(page, /className="flavor-rail"/);
+  assert.match(css, /\.flavor-rail/);
+  assert.match(css, /\.product-card:first-child/);
+  assert.doesNotMatch(css, /@keyframes ticker-move/);
   assert.match(css, /@keyframes entry-loader-progress/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(loader, /AnimatePresence/);

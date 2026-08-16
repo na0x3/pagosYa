@@ -7,13 +7,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("host") || "localhost:3001";
   const protocol = requestHeaders.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   const socialImage = `${protocol}://${host}/og.png`;
-  const title = "MATCHO — Matcha frío";
+  const title = "MATCHO - Matcha frío";
   const description = "Un ritual frío, verde y fuera de lo común.";
   return {
     title,
     description,
     icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
-    openGraph: { title, description, images: [{ url: socialImage, width: 1792, height: 933, alt: "MATCHO — matcha frío en tres sabores" }] },
+    openGraph: { title, description, images: [{ url: socialImage, width: 1792, height: 933, alt: "MATCHO, matcha frío en tres sabores" }] },
     twitter: { card: "summary_large_image", title, description, images: [socialImage] },
   };
 }

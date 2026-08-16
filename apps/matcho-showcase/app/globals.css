@@ -32,6 +32,8 @@ button, input, select { font: inherit; }
 button, a, select { cursor: pointer; }
 img { display: block; max-width: 100%; }
 a { color: inherit; }
+.skip-link { position: fixed; top: 10px; left: 10px; z-index: 120; padding: 9px 12px; border: 2px solid var(--forest-deep); border-radius: 8px; background: var(--white); color: var(--forest-deep); font-size: 12px; font-weight: 800; text-decoration: none; transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); outline: 3px solid var(--ochre); outline-offset: 2px; }
 
 .entry-loader {
   position: fixed;
@@ -83,36 +85,29 @@ a { color: inherit; }
   border: 0;
 }
 
-.ticker {
-  width: 100%;
-  overflow: hidden;
+.flavor-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-block: 3px solid var(--forest-deep);
   background: var(--ochre);
   color: var(--forest-deep);
-  white-space: nowrap;
 }
-.ticker-track {
-  display: flex;
-  width: max-content;
+.flavor-rail a {
+  display: grid;
   min-height: clamp(64px, 7vw, 90px);
-  align-items: center;
-  animation: ticker-move 19s linear infinite;
-  will-change: transform;
-}
-.ticker:hover .ticker-track { animation-play-state: paused; }
-.ticker-sequence { display: flex; flex: none; align-items: center; }
-.ticker-pair {
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 1.5vw, 22px);
-  padding-left: clamp(22px, 3vw, 46px);
+  place-items: center;
+  padding: 12px clamp(10px, 2vw, 24px);
+  border-right: 2px solid var(--forest-deep);
   font-family: "Proto Matcho", sans-serif;
-  font-size: clamp(23px, 3vw, 43px);
+  font-size: clamp(16px, 2vw, 29px);
   line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  transition: background .2s ease, color .2s ease;
 }
-.ticker-symbol { font-size: 0.62em; }
-.ticker-dot { padding-left: clamp(12px, 2vw, 30px); font-family: Georgia, serif; font-size: 1.35em; }
-@keyframes ticker-move { to { transform: translate3d(-50%, 0, 0); } }
+.flavor-rail a:last-child { border-right: 0; }
+.flavor-rail a:hover { background: var(--forest-deep); color: var(--white); }
+.flavor-rail a:focus-visible { position: relative; z-index: 1; outline: 3px solid var(--white); outline-offset: -6px; }
 
 .store-shell {
   width: min(1360px, calc(100% - 40px));
@@ -157,7 +152,6 @@ a { color: inherit; }
   width: min(540px, calc(100% - 52px));
   color: var(--white);
 }
-.hero-copy p { margin: 0 0 12px; font-size: 14px; font-weight: 700; letter-spacing: .02em; }
 .hero-copy h1 {
   max-width: 11ch;
   margin: 0 0 24px;
@@ -225,7 +219,7 @@ a { color: inherit; }
 }
 .category-tabs button.active { border-color: var(--forest); background: #edf1ea; color: var(--forest); }
 
-.product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 22px; }
+.product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 22px; }
 .product-card {
   display: flex;
   min-width: 0;
@@ -238,11 +232,13 @@ a { color: inherit; }
   transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease;
 }
 .product-card:hover { transform: translateY(-5px); box-shadow: 0 32px 72px -46px rgba(6, 19, 12, .9); }
+.product-card:first-child { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); }
+.product-card:first-child .product-image-wrap { height: 100%; min-height: 390px; aspect-ratio: auto; }
 .product-image-wrap { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: #d7d0c4; }
 .product-image-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform .55s cubic-bezier(.22,1,.36,1); }
 .product-card:hover .product-image-wrap img { transform: scale(1.035); }
-.product-tags { position: absolute; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
-.product-tags span { padding: 6px 9px; border-radius: 999px; background: rgba(247, 242, 233, .9); color: var(--forest); font-size: 10px; font-weight: 800; backdrop-filter: blur(8px); }
+.product-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.product-tags span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--forest); font-size: 10px; font-weight: 800; }
 .product-copy { display: flex; min-height: 270px; flex: 1; flex-direction: column; gap: 18px; padding: 20px; }
 .product-category { margin: 0 0 8px; color: #657167; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
 .product-copy h3 { margin: 0; font-family: "Proto Matcho", sans-serif; font-size: 22px; line-height: 1.05; }
@@ -312,13 +308,11 @@ footer a { font-weight: 800; }
 .modal-primary { border-color: var(--forest); background: var(--forest); color: var(--white); }
 
 .coverflow-story { margin-top: 92px; padding: clamp(36px, 6vw, 72px) 0; border-block: 1px solid var(--line); }
-.experience-heading { display: grid; grid-template-columns: .45fr 1fr; gap: 30px; align-items: end; margin-bottom: 26px; }
-.experience-heading p { margin: 0; color: var(--forest); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.experience-heading { margin-bottom: 26px; }
 .experience-heading h2 { max-width: 13ch; margin: 0; font-family: "Proto Matcho", sans-serif; font-size: clamp(36px, 5.5vw, 72px); line-height: .98; letter-spacing: -.035em; }
 .moving-gallery { position: relative; margin-top: 90px; overflow: hidden; border-radius: 26px; background: var(--forest-deep); }
 .moving-gallery-copy { position: absolute; inset: 50% auto auto 50%; z-index: 20; width: min(560px, calc(100% - 48px)); padding: 26px; border: 1px solid rgba(255,255,255,.34); border-radius: 18px; background: rgba(11,33,22,.76); color: var(--white); text-align: center; transform: translate(-50%,-50%); backdrop-filter: blur(16px); }
-.moving-gallery-copy span { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.moving-gallery-copy h2 { margin: 12px 0 0; font-family: "Proto Matcho", sans-serif; font-size: clamp(32px, 5vw, 64px); line-height: 1; }
+.moving-gallery-copy h2 { margin: 0; font-family: "Proto Matcho", sans-serif; font-size: clamp(32px, 5vw, 64px); line-height: 1; }
 .showcase-finances { margin-top: 90px; padding-top: 64px; border-top: 1px solid var(--line); }
 .showcase-finances > :last-child { margin-inline: calc(50% - 50vw); width: 100vw; }
 
@@ -330,10 +324,8 @@ footer a { font-weight: 800; }
 }
 
 @media (max-width: 620px) {
-  .ticker { border-block-width: 2px; }
-  .ticker-track { min-height: 58px; }
-  .ticker-pair { gap: 8px; padding-left: 16px; font-size: 21px; }
-  .ticker-dot { padding-left: 10px; }
+  .flavor-rail { border-block-width: 2px; }
+  .flavor-rail a { min-height: 58px; border-right-width: 1px; font-size: 13px; }
   .store-shell { width: min(100% - 28px, 1360px); padding-top: 18px; }
   .experience-heading { grid-template-columns: 1fr; gap: 10px; }
   .moving-gallery { border-radius: 18px; }
@@ -347,6 +339,8 @@ footer a { font-weight: 800; }
   .catalog-heading p { margin-top: 12px; text-align: left; }
   .store-toolbar { grid-template-columns: minmax(0, 1fr) minmax(130px, .8fr); }
   .product-grid { grid-template-columns: 1fr; gap: 16px; }
+  .product-card:first-child { grid-column: auto; display: flex; }
+  .product-card:first-child .product-image-wrap { min-height: 0; aspect-ratio: 16 / 10; }
   .product-image-wrap { aspect-ratio: 16 / 10; }
   .product-copy { min-height: 0; }
   .story { padding: 74px 0 54px; }
@@ -362,8 +356,5 @@ footer a { font-weight: 800; }
   .entry-loader { transition: none; }
   .entry-loader-track span { width: 100%; animation: none; transform: none; }
   html { scroll-behavior: auto; }
-  .ticker-track { width: 100%; animation: none; }
-  .ticker-sequence { width: 100%; flex-wrap: wrap; justify-content: center; padding-block: 12px; }
-  .ticker-sequence[aria-hidden="true"] { display: none; }
   .product-card, .product-image-wrap img, .hero-copy a, .cart-dock { transition: none; }
 }

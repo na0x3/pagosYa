@@ -23,7 +23,7 @@
   --pg-primary-hover: #fafafa;
   --pg-primary-text: #171717;
   --pg-accent: #818cf8;
-  --pg-accent-contrast: #000000;
+  --pg-accent-contrast: #09090b;
   --pg-accent-soft: #1e1b4b;
   --pg-success: #34d399;
   --pg-success-soft: #052e1f;
@@ -46,7 +46,7 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --pg-bg: #ffffff;
+  --pg-bg: #fbfbfa;
   --pg-page-bg: #f5f5f5;
   --pg-border: #e5e5e5;
   --pg-border-strong: #d4d4d4;
@@ -55,7 +55,7 @@
   --pg-text-faint: #666666;
   --pg-primary: #171717;
   --pg-primary-hover: #262626;
-  --pg-primary-text: #ffffff;
+  --pg-primary-text: #fbfbfa;
   --pg-accent: #4f46e5;
   --pg-accent-contrast: #ffffff;
   --pg-accent-soft: #eef2ff;
@@ -80,6 +80,23 @@
 * {
   box-sizing: border-box;
 }
+
+html { scroll-behavior: smooth; }
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 2147483646;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--pg-primary);
+  color: var(--pg-primary-text);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
 
 button,
 a,
@@ -111,7 +128,7 @@ body.store-page[data-font-style="friendly"] { --store-font-family: "Trebuchet MS
 .store-entry-loader {
   --store-entry-bg: #0a0a0a;
   --store-entry-accent: #ffbd59;
-  --store-entry-ink: #ffffff;
+  --store-entry-ink: #fbfbfa;
   position: fixed;
   inset: 0;
   z-index: 2147483000;
@@ -1725,10 +1742,10 @@ body.promotion-open { overflow: hidden; }
   font-weight: 680;
   text-align: left;
   cursor: var(--pg-hand-cursor);
-  transition: color .2s ease, padding-left .38s cubic-bezier(.22, 1, .36, 1);
+  transition: color .2s ease, transform .38s cubic-bezier(.22, 1, .36, 1);
 }
 .store-story-nav button span { font-size: 11px; font-variant-numeric: tabular-nums; }
-.store-story-nav button[aria-selected="true"] { padding-left: 12px; color: var(--pg-text); }
+.store-story-nav button[aria-selected="true"] { color: var(--pg-text); transform: translateX(8px); }
 .store-story-nav button:focus-visible { outline: 2px solid var(--pg-accent); outline-offset: 2px; }
 .store-story-stage { position: relative; min-height: clamp(430px, 55vw, 650px); }
 .store-story-panel {

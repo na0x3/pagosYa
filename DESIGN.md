@@ -133,7 +133,7 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 
 ## Layout
 
-No CSS grid framework or shared breakpoint system exists. Responsive coverage is hand-written per surface: `merchant-dashboard` uses 900px, 640px, and 480px breakpoints; the checkout storefront uses 720px; ops still has no media queries. Treat this as an explicit surface contract, not a shared breakpoint scale.
+No CSS grid framework or shared breakpoint system exists. Responsive coverage is hand-written per surface: `merchant-dashboard` uses 900px, 640px, and 480px breakpoints; the checkout storefront uses 720px; ops uses a compact 760px collapse for its navigation, connection controls, and wide data tables. Treat this as an explicit surface contract, not a shared breakpoint scale.
 
 Where structure does exist: `merchant-dashboard`/`ops` cap content at `max-width: 1040–1080px`, centered, with generous top padding (28px) under a `.topbar`. The hosted storefront is a spacious merchant lookbook capped at 1360px, while its payment-form card remains capped at 400px. The storefront catalog uses an auto-filling grid above 720px and becomes a deliberate single column at 720px and narrower. Its authored hero holds a cinematic 16:7 ratio on desktop and becomes a portrait 4:5 composition on mobile so imagery and overlaid copy remain useful rather than merely shrinking.
 
@@ -212,6 +212,7 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 ### MATCHO Hosted Showcase
 - `apps/matcho-showcase` is the expressive proof of the hosted-storefront system: retain its tactile coverflow, diagonal image marquee, locally sourced photo-derived video scroller, and bold bento dashboard as four distinct signature moments rather than flattening them into ordinary grids.
 - Use only repository-local MATCHO photos and derived video assets for its moving media. Preserve keyboard controls, readable labels, touch interaction, and reduced-motion fallbacks while keeping the merchant story ahead of the product and analytics demonstrations.
+- Keep the flavor rail static and directly navigable; it is orientation and wayfinding, not a decorative ticker. Let the featured product span the catalog width on larger screens, then collapse every product to the same readable single-column sequence on small screens.
 
 ### Announcements & Promotions (storefront)
 - **Announcement marquee:** Duplicate copy only to create the seamless visual loop. Under `prefers-reduced-motion: reduce`, stop the animation and hide the duplicate so one readable announcement remains.
@@ -242,7 +243,7 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 - Status columns render as Badges, never raw enum text alone.
 
 ### Navigation
-No persistent nav/sidebar exists on any surface today — each admin app is a single scrolling page (`.topbar` + stacked `section.block`s); checkout has no navigation, only a sticky search/filter toolbar at the top of the storefront and a sticky cart bar at the bottom. Documented as current structure, not prescribed as the target IA — see PRODUCT.md's known-gaps note.
+No persistent sidebar exists on any surface today. The merchant dashboard remains a single scrolling page (`.topbar` + stacked `section.block`s); ops adds a compact sticky anchor rail for reviews, incidents, and audit history; checkout has no global navigation, only a sticky search/filter toolbar at the top of the storefront and a sticky cart bar at the bottom. Documented as current structure, not prescribed as the target IA — see PRODUCT.md's known-gaps note.
 
 ## Do's and Don'ts
 

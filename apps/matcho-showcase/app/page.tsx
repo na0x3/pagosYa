@@ -53,7 +53,6 @@ const products: Product[] = [
   },
 ];
 
-const tickerPhrases = ["MATCHA GREEN", "MATCHA STRAWBERRY", "MATCHA BLACK"];
 const experienceSlides = [
   { src: "/matcho/matcha-green.jpg", alt: "MATCHO Green", title: "Green", subtitle: "El ritual original" },
   { src: "/matcho/matcha-strawberry.jpg", alt: "MATCHO Strawberry", title: "Strawberry", subtitle: "Fruta y matcha frío" },
@@ -61,20 +60,6 @@ const experienceSlides = [
   { src: "/matcho/gallery-1.jpg", alt: "Detalle de preparación MATCHO", title: "Preparado al momento", subtitle: "Cada vaso empieza aquí" },
   { src: "/matcho/gallery-2.png", alt: "Composición editorial MATCHO", title: "Universo MATCHO", subtitle: "Color, textura y pausa" },
 ];
-
-function TickerSequence({ duplicate = false }: { duplicate?: boolean }) {
-  return (
-    <span className="ticker-sequence" aria-hidden={duplicate || undefined}>
-      {tickerPhrases.map((phrase, index) => (
-        <span className="ticker-pair" key={phrase}>
-          <span className="ticker-symbol" aria-hidden="true">{index === 0 ? "◉" : index === 1 ? "✹" : "●"}</span>
-          <span>{phrase}</span>
-          <span className="ticker-dot" aria-hidden="true">•</span>
-        </span>
-      ))}
-    </span>
-  );
-}
 
 export default function Home() {
   const [entering, setEntering] = useState(true);
@@ -120,18 +105,17 @@ export default function Home() {
   };
 
   return (
-    <main>
+    <main id="main-content">
+      <a className="skip-link" href="#top">Saltar al contenido</a>
       <div className={`entry-loader ${entering ? "" : "is-leaving"}`} role="status" aria-label="Cargando MATCHO">
         <CardLoader />
       </div>
 
-      <aside className="ticker" aria-label="Productos MATCHO">
-        <span className="sr-only">MATCHA GREEN, MATCHA STRAWBERRY y MATCHA BLACK</span>
-        <div className="ticker-track" aria-hidden="true">
-          <TickerSequence />
-          <TickerSequence duplicate />
-        </div>
-      </aside>
+      <nav className="flavor-rail" aria-label="Sabores MATCHO">
+        <a href="#productos">MATCHA GREEN</a>
+        <a href="#productos">MATCHA STRAWBERRY</a>
+        <a href="#productos">MATCHA BLACK</a>
+      </nav>
 
       <div className="store-shell">
         <header className="store-header">
@@ -143,7 +127,6 @@ export default function Home() {
           <Image src="/matcho/hero.png" alt="Matcha frío servido con pistachos y hojas de té" fill priority sizes="(max-width: 760px) 100vw, 1200px" />
           <div className="hero-shade" aria-hidden="true" />
           <div className="hero-copy">
-            <p>Preparado al momento</p>
             <h1>Un ritual frío, verde y fuera de lo común.</h1>
             <a href="#productos">Ver sabores</a>
           </div>
@@ -185,21 +168,21 @@ export default function Home() {
                 <article className="product-card" key={product.id}>
                   <div className="product-image-wrap">
                     <Image src={product.image} alt={product.name} fill sizes="(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 380px" />
-                    <div className="product-tags">
-                      {product.tags.map((tag) => <span key={tag}>{tag}</span>)}
-                    </div>
                   </div>
                   <div className="product-copy">
                     <div>
                       <p className="product-category">{product.category}</p>
                       <h3>{product.name}</h3>
                       <p className="product-description">{product.description}</p>
+                      <div className="product-tags" aria-label="Características">
+                        {product.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                      </div>
                     </div>
                     {product.variants && (
                       <label className="variant-field">
                         <span>Elige un tamaño</span>
                         <select value={variant} onChange={(event) => setVariant(event.target.value)}>
-                          {product.variants.map((item) => <option key={item.id} value={item.id}>{item.name} — Bs {item.price}</option>)}
+                          {product.variants.map((item) => <option key={item.id} value={item.id}>{item.name} - Bs {item.price}</option>)}
                         </select>
                       </label>
                     )}
@@ -227,7 +210,6 @@ export default function Home() {
 
         <section className="coverflow-story" aria-labelledby="coverflow-title">
           <div className="experience-heading">
-            <p>Después de elegir</p>
             <h2 id="coverflow-title">La historia sigue más allá del catálogo.</h2>
           </div>
           <CoverflowCarousel slides={experienceSlides} showCaption showNavigation showPagination cardWidth="clamp(180px, 27vw, 330px)" />
@@ -245,14 +227,14 @@ export default function Home() {
         </section>
 
         <section className="moving-gallery" aria-label="Galería MATCHO en movimiento">
-          <div className="moving-gallery-copy"><span>Una carta corta, muchas formas de verla</span><h2>Sabores que se mueven contigo.</h2></div>
+          <div className="moving-gallery-copy"><h2>Sabores que se mueven contigo.</h2></div>
           <DiagonalMarqueeCarousel className="h-[720px]" cardClassName="h-[220px] w-[310px]" />
         </section>
 
         <InteractiveVideoPortfolioScroller />
 
         <section className="showcase-finances" aria-labelledby="showcase-finances-title">
-          <div className="experience-heading"><p>Detrás de la tienda</p><h2 id="showcase-finances-title">Una lectura clara del negocio.</h2></div>
+          <div className="experience-heading"><h2 id="showcase-finances-title">Una lectura clara del negocio.</h2></div>
           <BentoDashboard />
         </section>
 

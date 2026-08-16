@@ -99,7 +99,7 @@ export function CoverflowCarousel({ slides, rotate = 44, depth = 0.6, perspectiv
 
   return <div className={cn("w-full", className)} style={{ ["--cf-card" as string]: cardWidth }} role="region" aria-roledescription="carousel" aria-label={label}>
     <div className="relative">
-      <div ref={frameRef} tabIndex={0}
+      <div ref={frameRef} role="slider" tabIndex={0} aria-label={label} aria-valuemin={1} aria-valuemax={count} aria-valuenow={selected + 1} aria-valuetext={`${selected + 1} de ${count}`}
         onPointerDown={(event) => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); event.currentTarget.setPointerCapture(event.pointerId); targetRef.current = posRef.current; dragRef.current = { id: event.pointerId, x: event.clientX, pos: posRef.current, v: 0, t: performance.now() }; }}
         onPointerMove={(event) => { const drag = dragRef.current; if (!drag || drag.id !== event.pointerId) return; const pitch = widthRef.current * (1 + gap); if (!pitch) return; const now = performance.now(); const previous = posRef.current; posRef.current = clamp(drag.pos - (event.clientX - drag.x) / pitch); drag.v = ((posRef.current - previous) / Math.max(now - drag.t, 1)) * 1000; drag.t = now; const index = indexAt(posRef.current); if (index !== selected) setSelected(index); paint(); }}
         onPointerUp={(event) => { const drag = dragRef.current; if (!drag || drag.id !== event.pointerId) return; dragRef.current = null; settle(clamp(Math.round(posRef.current + Math.max(-2, Math.min(2, drag.v * 0.18))))); }}

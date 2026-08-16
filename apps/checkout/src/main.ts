@@ -710,7 +710,7 @@ function renderProductCard(slug: string, item: StoreItem, index: number, showLow
           ${variants
             .map(
               (variant) =>
-                `<option value="${escapeHtml(variant.id)}" ${variant.id === selectedVariant?.id ? "selected" : ""} ${optionStock(item, variant) === 0 ? "disabled" : ""}>${escapeHtml(variant.name)} — ${formatAmount(variant.amount, item.currency)}${stockStatus(remainingStock(item, variant), showLowStock) ? ` · ${stockStatus(remainingStock(item, variant), showLowStock)!.label}` : ""}</option>`,
+                `<option value="${escapeHtml(variant.id)}" ${variant.id === selectedVariant?.id ? "selected" : ""} ${optionStock(item, variant) === 0 ? "disabled" : ""}>${escapeHtml(variant.name)} - ${formatAmount(variant.amount, item.currency)}${stockStatus(remainingStock(item, variant), showLowStock) ? `, ${stockStatus(remainingStock(item, variant), showLowStock)!.label}` : ""}</option>`,
             )
             .join("")}
         </select>
@@ -1245,7 +1245,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
         return;
       }
       const messageLines = cartLineEntries(store).map(({ product, variant, extras, quantity, unitAmount }) =>
-        `• ${product.name}${variant ? ` (${variant.name})` : ""}${extras.length ? ` + ${extras.map((extra) => extra.name).join(", ")}` : ""} x${quantity} — ${formatAmount(unitAmount * quantity, product.currency)}`,
+        `• ${product.name}${variant ? ` (${variant.name})` : ""}${extras.length ? ` + ${extras.map((extra) => extra.name).join(", ")}` : ""} x${quantity} - ${formatAmount(unitAmount * quantity, product.currency)}`,
       );
       const message = [`Hola, quiero hacer este pedido en ${store.storeName}:`, "", ...messageLines, "", `Total: ${formatAmount(cartTotal(store.items), currency)}`].join("\n");
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
@@ -2260,7 +2260,7 @@ function updateCartBar(store: Store, currency: string): void {
   const summary = app.querySelector<HTMLElement>(".cart-summary");
   const payButton = app.querySelector<HTMLButtonElement>("#cart-pay");
   if (summary) {
-    summary.textContent = `${cartCount()} ${cartCount() === 1 ? "producto" : "productos"} — ${formatAmount(cartTotal(store.items), currency)}`;
+    summary.textContent = `${cartCount()} ${cartCount() === 1 ? "producto" : "productos"} - ${formatAmount(cartTotal(store.items), currency)}`;
   }
   if (payButton) {
     payButton.disabled = cartCount() === 0;
