@@ -41,6 +41,7 @@ const store = {
   heroSlides: [],
   contentOrder: ["hero", "products", "about", "gallery", "links"],
   layoutStyle: "cinematic",
+  experienceStyle: "coverflow",
   editorialGallery: [],
   buttonVariant: "solid",
   buttonMotion: "lift",
@@ -97,6 +98,7 @@ describe("VisualStudioService", () => {
       expect(call[0].data.config.heroSlides).toHaveLength(5);
     }
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.layoutStyle)).size).toBe(3);
+    expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.experienceStyle))).toEqual(new Set(["coverflow", "diagonal-marquee", "story-scroller"]));
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => JSON.stringify(call[0].data.config.contentOrder))).size).toBe(3);
   });
 
@@ -149,7 +151,7 @@ describe("VisualStudioService", () => {
     prisma.mediaAsset.findMany.mockResolvedValue([]);
 
     await expect(service.generate("merchant_1", "store_1", {})).rejects.toThrow(
-      "Agrega al menos una foto a la tienda o a un producto antes de crear el sitio con IA",
+      "Agrega al menos una foto o video a la tienda o a un producto antes de crear el sitio con IA",
     );
     expect(prisma.storeVisualProposal.create).not.toHaveBeenCalled();
   });
@@ -203,6 +205,7 @@ describe("VisualStudioService", () => {
       cartButtonLabel: "Completar pedido",
       contentOrder: ["hero", "about", "products", "gallery", "links"],
       layoutStyle: "cinematic",
+      experienceStyle: "coverflow",
       announcement: "MATCHO • Explora la selección actual",
       announcementMode: "marquee",
       announcementSpeed: 18,
@@ -218,8 +221,8 @@ describe("VisualStudioService", () => {
     });
     const directions = [
       direction("Bosque editorial"),
-      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", contentOrder: ["about", "hero", "products", "links", "gallery"] }),
-      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", contentOrder: ["hero", "about", "products", "links", "gallery"] }),
+      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", experienceStyle: "story-scroller", contentOrder: ["about", "hero", "products", "links", "gallery"] }),
+      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["hero", "about", "products", "links", "gallery"] }),
     ];
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ directions }) }] }] }) });
@@ -241,6 +244,7 @@ describe("VisualStudioService", () => {
         cartButtonLabel: "Completar pedido",
         contentOrder: ["hero", "about", "products", "gallery", "links"],
         layoutStyle: "cinematic",
+        experienceStyle: "coverflow",
         heroSlides: expect.arrayContaining([expect.objectContaining({ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí" })]),
       }));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).not.toHaveProperty("html");

@@ -13,6 +13,7 @@ const store = (id, name) => ({
   backgroundGradientAngle: 135,
   heroSlides: [],
   contentOrder: ["hero", "about", "gallery", "products", "links"],
+  experienceStyle: "coverflow",
   editorialGallery: [],
   links: [],
   checkoutMode: "payment",
@@ -171,6 +172,8 @@ test("buyer support controls remain usable on a phone viewport", async ({ page }
 test("appearance and links save once to the captured store", async ({ page }) => {
   const requests = await openDashboard(page);
   await page.locator("#storeNameInput").fill("Nombre guardado");
+  await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
+  await page.locator("#storeExperienceStyle").selectOption("story-scroller");
   await page.getByRole("button", { name: "Mostrar Estilo" }).click();
   await page.locator("#storeBackgroundColor").fill("#fef3c7");
   await page.getByRole("button", { name: "Mostrar Cómo termina el pedido" }).click({ force: true });
@@ -186,6 +189,7 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   expect(writes[0].body).toMatchObject({
     name: "Nombre guardado",
     backgroundColor: "#fef3c7",
+    experienceStyle: "story-scroller",
     cartRecommendationsEnabled: false,
     showLowStockToCustomers: true,
     links: [],
@@ -656,7 +660,7 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
           status: "READY",
           provider: "openai:test",
           sourceAssetUrls: ["/v1/uploads/ai-1.jpg"],
-          config: { checkoutMode: "whatsapp", cartButtonLabel: "Pedir por WhatsApp" },
+          config: { checkoutMode: "whatsapp", cartButtonLabel: "Pedir por WhatsApp", experienceStyle: ["coverflow", "diagonal-marquee", "story-scroller"][number - 1] },
         })),
       };
     }
@@ -688,6 +692,9 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
   await expect(generationLoader).toHaveAttribute("data-phase", "finishing");
   await expect(page.locator("#visualLoaderTitle")).toHaveText("Afinando los últimos detalles");
   await expect(page.locator("#visualProposals .visual-proposal")).toHaveCount(3);
+  await expect(page.locator("#visualProposals")).toContainText("Coverflow 3D");
+  await expect(page.locator("#visualProposals")).toContainText("Galería diagonal");
+  await expect(page.locator("#visualProposals")).toContainText("Relato interactivo");
   await expect(generationLoader).toBeHidden();
   await expect(page.locator("body")).not.toHaveClass(/is-generating-visual/);
 

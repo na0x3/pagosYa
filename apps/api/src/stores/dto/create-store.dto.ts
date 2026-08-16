@@ -361,6 +361,14 @@ export class CreateStoreDto {
   layoutStyle?: string;
 
   @ApiPropertyOptional({
+    description: "Interactive visual experience shown after the product catalog.",
+    enum: ["coverflow", "diagonal-marquee", "story-scroller"],
+  })
+  @IsOptional()
+  @IsIn(["coverflow", "diagonal-marquee", "story-scroller"])
+  experienceStyle?: string;
+
+  @ApiPropertyOptional({
     description: "Captioned editorial images shown outside the product catalog (maximum 8).",
     type: [StoreEditorialImageDto],
   })

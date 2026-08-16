@@ -139,6 +139,8 @@ Where structure does exist: `merchant-dashboard`/`ops` cap content at `max-width
 
 **The Brand-First Storefront Rule.** Production storefronts keep one fixed narrative order: merchant identity, hero, and about/story before products; editorial gallery and merchant links after products. Appearance proposals may vary the composition inside those sections, but neither the AI nor the merchant editor may reorder them, and pagosYa chrome never becomes the opening visual hierarchy.
 
+**The Post-Catalog Experience Rule.** Visual AI assigns one distinct, bounded presentation to the merchant's real editorial media in each proposal: keyboard-controlled `coverflow`, motion-safe `diagonal-marquee`, or tabbed `story-scroller`. The experience always follows products, never invents media, persists as the `experienceStyle` enum, and remains manually editable after a proposal is applied.
+
 The live finance workspace uses a bold bento composition whose unequal card spans create hierarchy around revenue, payment count, inventory value, store views, payment-method distribution, and top products. Every value and chart is bound to the current merchant/store finance response; showcase figures or fabricated demo metrics never enter the production dashboard. The grid collapses without changing metric priority, and the payment-method donut stacks above its full-width legend on the narrowest view.
 
 ## Elevation & Depth
@@ -197,6 +199,12 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 - Inactive slides carry `aria-hidden="true"` and every interactive descendant is removed from sequential keyboard navigation (`tabindex="-1"`); restore descendants to the tab order only on the active slide.
 - Carousel pagination dots may look visually smaller, but each button keeps a minimum 24px × 24px hit target. Use 16:7 imagery on desktop and recompose to 4:5 at 720px and narrower.
 
+### AI Post-Catalog Experiences (storefront)
+- **Coverflow:** use perspective and explicit previous/next plus arrow-key controls. Keep only the centered card exposed as current to assistive technology and announce the selected position.
+- **Diagonal marquee:** duplicate the merchant's existing editorial sequence only for the seamless visual loop. Pause on hover/focus; under reduced motion, remove the duplicate and expose the original sequence as a horizontal snap gallery.
+- **Story scroller:** use a roving-tab chapter list paired with one visible panel. Reuse merchant hero MP4/WEBM clips when available and fall back to editorial photography; arrow keys move between chapters, inactive panels stay `aria-hidden`, and the layout stacks below 720px. Autoplay remains muted and stops under reduced motion.
+- Keep all three variants flat at rest, inherit the selected storefront font and palette, and render only after the product catalog.
+
 ### Finance Donut (merchant dashboard)
 - Treat the donut as one high-signal tile inside the live finance bento: visualize successful-payment revenue by payment method, show the total in the center, and pair colored segments with a textual percentage-and-amount legend; the chart's accessible label must communicate the same real distribution and total.
 - Keep the chart and legend side by side when space allows and stack the donut above a full-width legend at the narrowest view. When revenue is zero, show the neutral ring and explicit empty-state copy instead of an unexplained blank chart.
@@ -245,6 +253,7 @@ No persistent nav/sidebar exists on any surface today — each admin app is a si
 - **Do** use real `<label for>` elements on every form field; placeholders are never a substitute for a label.
 - **Do** preserve the authored hero's visible pause/resume control, reduced-motion behavior, inactive-slide tab-order exclusion, and 24px minimum dot targets.
 - **Do** keep production storefronts ordered hero/about, then products, then gallery/links, and keep live finance bento tiles bound to real merchant data.
+- **Do** make every AI proposal expose its selected post-catalog experience by name and let the merchant change it without regenerating the site.
 - **Do** use the `cubic-bezier(0.22, 1, 0.36, 1)` ease for any new transform-based (lift/scale/entrance) transition, and plain `ease` at 0.15s for color/border state changes.
 
 ### Don't:

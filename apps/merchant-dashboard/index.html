@@ -1821,6 +1821,15 @@
                 <label>Jerarquía de secciones</label>
                 <div class="store-content-order" id="storeContentOrderList"></div>
               </div>
+              <div class="full">
+                <label for="storeExperienceStyle">Experiencia visual después del catálogo</label>
+                <select id="storeExperienceStyle">
+                  <option value="coverflow">Coverflow 3D · carrusel controlable</option>
+                  <option value="diagonal-marquee">Galería diagonal · imágenes en movimiento</option>
+                  <option value="story-scroller">Relato interactivo · capítulos de marca</option>
+                </select>
+                <span class="faint">La IA elige una distinta en cada propuesta; puedes cambiarla aquí después.</span>
+              </div>
               <div class="editorial-gallery-editor full">
                 <div class="editorial-gallery-head">
                   <div>
@@ -3610,6 +3619,7 @@
   const storeHeroSlidesInputEl = document.getElementById("storeHeroSlidesInput");
   const storeHeroSlidesListEl = document.getElementById("storeHeroSlidesList");
   const storeContentOrderListEl = document.getElementById("storeContentOrderList");
+  const storeExperienceStyleEl = document.getElementById("storeExperienceStyle");
   const storeEditorialGalleryInputEl = document.getElementById("storeEditorialGalleryInput");
   const storeEditorialGalleryListEl = document.getElementById("storeEditorialGalleryList");
   const storeEditorialPhotoOptionsEl = document.getElementById("storeEditorialPhotoOptions");
@@ -4143,6 +4153,7 @@
         ctaUrl: slide.ctaUrl.trim(),
       })),
       contentOrder: [...pendingContentOrder],
+      experienceStyle: storeExperienceStyleEl.value,
       editorialGallery: pendingEditorialGallery.map((image) => ({
         imageUrl: image.imageUrl,
         title: image.title.trim(),
@@ -4378,7 +4389,7 @@
 
   function proposalImageUrl(proposal) {
     const config = proposal.config || {};
-    return config.bannerUrl || config.heroSlides?.[0]?.imageUrl || proposal.sourceAssetUrls?.[0] || "";
+    return config.bannerUrl || config.editorialGallery?.[0]?.imageUrl || config.heroSlides?.find((slide) => !isVideoUploadUrl(slide.imageUrl))?.imageUrl || proposal.sourceAssetUrls?.find((url) => !isVideoUploadUrl(url)) || "";
   }
 
   function catalogImagePosition(imageUrl) {
@@ -4417,7 +4428,8 @@
         const conversionLabel = config.checkoutMode === "whatsapp" ? "Pedidos por WhatsApp" : config.checkoutMode === "external" ? "Interesados a enlace" : "Pago integrado";
         const layoutLabels = { cinematic: "Portada cinematográfica", editorial: "Relato editorial", collage: "Composición collage", "catalog-first": "Catálogo primero" };
         const proposalBackground = config.backgroundColor || "#f8fafc";
-        const featureLabels = [layoutLabels[config.layoutStyle] || "Composición clásica", "Fondo sólido", conversionLabel, config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banners` : "Portada tipográfica", config.editorialGallery?.length ? "Historias después del catálogo" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
+        const experienceLabels = { coverflow: "Coverflow 3D", "diagonal-marquee": "Galería diagonal", "story-scroller": "Relato interactivo" };
+        const featureLabels = [layoutLabels[config.layoutStyle] || "Composición clásica", experienceLabels[config.experienceStyle] || "Coverflow 3D", "Fondo sólido", conversionLabel, config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banners` : "Portada tipográfica", config.editorialGallery?.length ? "Historias después del catálogo" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
         return `<article class="visual-proposal" data-id="${esc(proposal.id)}">
           <div class="visual-proposal-cover" style="--proposal-bg:${esc(proposalBackground)};--proposal-accent:${esc(config.accentColor || "#4f46e5")}">${imageUrl ? `<img src="${esc(apiRoot() + imageUrl)}" alt="Portada de ${esc(proposal.title)}" style="object-position:${esc(catalogImagePosition(imageUrl))}">` : `<span>${esc(config.tagline || proposal.title)}</span>`}</div>
           <div class="visual-proposal-copy">
@@ -5141,6 +5153,7 @@
             ...(slide.ctaUrl.trim() && { ctaUrl: slide.ctaUrl.trim() }),
           })),
           contentOrder: [...pendingContentOrder],
+          experienceStyle: storeExperienceStyleEl.value,
           editorialGallery: pendingEditorialGallery.map((image) => ({
             imageUrl: image.imageUrl,
             ...(image.title.trim() && { title: image.title.trim() }),
@@ -5474,6 +5487,7 @@
       renderHeroSlidesEditor();
       pendingContentOrder = normalizeStoreContentOrder(store.contentOrder);
       pendingLayoutStyle = ["cinematic", "editorial", "collage", "catalog-first"].includes(store.layoutStyle) ? store.layoutStyle : "cinematic";
+      storeExperienceStyleEl.value = ["coverflow", "diagonal-marquee", "story-scroller"].includes(store.experienceStyle) ? store.experienceStyle : "coverflow";
       pendingEditorialGallery = (store.editorialGallery || []).slice(0, 8).map((image) => ({
         imageUrl: image.imageUrl,
         title: image.title || "",

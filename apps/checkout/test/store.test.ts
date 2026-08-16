@@ -285,6 +285,7 @@ describe("storefront (?link=...)", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda multimedia",
+        experienceStyle: "story-scroller",
         heroSlides: [
           { imageUrl: "/v1/uploads/portada.gif", title: "Movimiento" },
           { imageUrl: "/v1/uploads/coleccion.mp4", title: "Video de colección" },
@@ -301,6 +302,7 @@ describe("storefront (?link=...)", () => {
       expect(video?.src).toContain("coleccion.mp4");
       expect(video?.muted).toBe(true);
       expect(video?.loop).toBe(true);
+      expect(document.querySelector<HTMLVideoElement>(".store-story-panel video")?.src).toContain("coleccion.mp4");
 
       document.querySelector<HTMLButtonElement>(".store-carousel-arrow.next")!.click();
       expect(play).toHaveBeenCalled();
@@ -1314,6 +1316,42 @@ describe("storefront (?link=...)", () => {
     const editorialCard = document.querySelector<HTMLElement>(".store-editorial-item")!;
     expect(editorialCard.style.getPropertyValue("--store-editorial-card-bg")).toBe("#f4ead7");
     expect(editorialCard.style.getPropertyValue("--store-editorial-card-ink")).toBe("#000000");
+  });
+
+  it.each([
+    ["coverflow", ".store-coverflow"],
+    ["diagonal-marquee", ".store-diagonal-marquee"],
+    ["story-scroller", ".store-story-scroller"],
+  ] as const)("renders the AI-selected %s experience after the catalog", async (experienceStyle, selector) => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda inmersiva",
+        experienceStyle,
+        editorialGallery: [
+          { imageUrl: "/v1/uploads/uno.webp", title: "Primer capítulo", caption: "El inicio", body: "Una mirada que abre la historia visual de la marca." },
+          { imageUrl: "/v1/uploads/dos.webp", title: "Segundo capítulo", caption: "El detalle", body: "Otra perspectiva que completa el recorrido después del catálogo." },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout(`/?link=experience-${experienceStyle}`);
+
+    const experience = document.querySelector(selector)!;
+    const products = document.querySelector(".store-products")!;
+    expect(products.compareDocumentPosition(experience) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    if (experienceStyle === "coverflow") {
+      expect(document.querySelectorAll(".store-coverflow-card")).toHaveLength(2);
+      document.querySelector<HTMLButtonElement>('[data-coverflow-step="1"]')!.click();
+      expect(document.querySelector<HTMLElement>('[data-coverflow-index="1"]')?.getAttribute("aria-hidden")).toBe("false");
+    } else if (experienceStyle === "diagonal-marquee") {
+      expect(document.querySelectorAll(".store-diagonal-set")).toHaveLength(2);
+    } else {
+      document.querySelector<HTMLButtonElement>('[data-story-to="1"]')!.click();
+      expect(document.querySelector("#store-story-1")?.classList.contains("active")).toBe(true);
+    }
   });
 
   it("applies the merchant's selected font to the entire storefront", async () => {

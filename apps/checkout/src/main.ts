@@ -466,6 +466,7 @@ function saveLeadEmail(storeId: string, email: string): void {
 }
 let activeAnnouncementCleanup: (() => void) | null = null;
 let activeHeroCleanup: (() => void) | null = null;
+let activeStoreExperienceCleanup: (() => void) | null = null;
 
 // Search/category filter state for large catalogs — lives outside
 // renderStoreGrid() so typing/clicking doesn't need to touch (and thus
@@ -798,6 +799,7 @@ type StorePreviewPatch = Partial<
     | "heroSlides"
     | "contentOrder"
     | "layoutStyle"
+    | "experienceStyle"
     | "editorialGallery"
     | "links"
   >
@@ -886,6 +888,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     if (order.length === allowedSections.length && new Set(order).size === allowedSections.length) clean.contentOrder = order;
   }
   if (["cinematic", "editorial", "collage", "catalog-first"].includes(String(source.layoutStyle))) clean.layoutStyle = source.layoutStyle;
+  if (["coverflow", "diagonal-marquee", "story-scroller"].includes(String(source.experienceStyle))) clean.experienceStyle = source.experienceStyle;
   if (Array.isArray(source.editorialGallery)) {
     clean.editorialGallery = source.editorialGallery
       .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
@@ -1302,6 +1305,8 @@ function bindCartCheckout(slug: string, store: Store): void {
 function renderProductPage(slug: string, store: Store, productId: string): void {
   activeHeroCleanup?.();
   activeHeroCleanup = null;
+  activeStoreExperienceCleanup?.();
+  activeStoreExperienceCleanup = null;
   activeAnnouncementCleanup?.();
   activeAnnouncementCleanup = null;
   activePromotionCleanup?.();
@@ -1513,6 +1518,8 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
 function renderStore(slug: string, store: Store, options: { focusPromotion?: boolean } = {}) {
   activeHeroCleanup?.();
   activeHeroCleanup = null;
+  activeStoreExperienceCleanup?.();
+  activeStoreExperienceCleanup = null;
   document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
   const currency = store.items[0]?.currency ?? "BOB";
@@ -1710,28 +1717,76 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </section>`
     : "";
 
-  const editorialGalleryHtml = editorialImages.length
-    ? `<section class="store-editorial-gallery" aria-labelledby="store-gallery-title">
+  const experienceStyle = ["coverflow", "diagonal-marquee", "story-scroller"].includes(store.experienceStyle || "")
+    ? store.experienceStyle
+    : "coverflow";
+  const storyVideoEntries = heroSlides
+    .filter((slide) => isVideoMediaUrl(slide.resolvedMediaUrl))
+    .map((slide) => ({
+      mediaUrl: slide.resolvedMediaUrl,
+      sourceUrl: slide.imageUrl,
+      title: slide.title || "Una escena de la marca",
+      caption: "Historia en movimiento",
+      body: slide.body || "Un capítulo visual que continúa el recorrido después del catálogo.",
+      isVideo: true,
+    }));
+  const storyEntries = storyVideoEntries.length
+    ? storyVideoEntries
+    : editorialImages.map((image) => ({
+        mediaUrl: image.resolvedImageUrl,
+        sourceUrl: image.imageUrl,
+        title: image.title || "Una escena de la marca",
+        caption: image.caption || "Historia visual",
+        body: image.body || "Un capítulo visual que continúa el recorrido después del catálogo.",
+        isVideo: false,
+      }));
+  const editorialFigure = (image: (typeof editorialImages)[number], index: number, extraClass = "") => {
+    const boxColor = typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? image.boxColor : null;
+    const boxStyle = boxColor
+      ? `--store-editorial-card-bg:${boxColor};--store-editorial-card-ink:${accentContrastColor(boxColor)};`
+      : "";
+    return `<figure class="store-editorial-item ${extraClass}" style="${boxStyle}--experience-index:${index}">
+      <img src="${escapeHtml(image.resolvedImageUrl)}" alt="${escapeHtml(image.caption || `Imagen de la tienda ${index + 1}`)}" loading="lazy" style="object-position:${storeImagePosition(store, image.imageUrl)}">
+      ${(image.title || image.caption || image.body) ? `<figcaption>${image.title ? `<strong>${escapeHtml(image.title)}</strong>` : ""}${image.caption ? `<span>${escapeHtml(image.caption)}</span>` : ""}${image.body ? `<p>${escapeHtml(image.body)}</p>` : ""}</figcaption>` : ""}
+    </figure>`;
+  };
+  const galleryExperienceHtml = experienceStyle === "diagonal-marquee"
+    ? `<div class="store-diagonal-marquee" aria-label="Galería diagonal en movimiento">
+        <div class="store-diagonal-rail">
+          <div class="store-diagonal-set">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item")).join("")}</div>
+          <div class="store-diagonal-set" aria-hidden="true">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item")).join("")}</div>
+        </div>
+      </div>`
+    : experienceStyle === "story-scroller"
+      ? `<div class="store-story-scroller">
+          <div class="store-story-nav" role="tablist" aria-label="Capítulos de la marca">
+            ${storyEntries.map((entry, index) => `<button type="button" role="tab" data-story-to="${index}" aria-selected="${index === 0}" aria-controls="store-story-${index}"><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(entry.title || `Capítulo ${index + 1}`)}</button>`).join("")}
+          </div>
+          <div class="store-story-stage">
+            ${storyEntries.map((entry, index) => `<div id="store-story-${index}" class="store-story-panel${index === 0 ? " active" : ""}" role="tabpanel" aria-hidden="${index !== 0}">
+              <figure class="store-editorial-item store-story-item">
+                ${entry.isVideo
+                  ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(entry.title)}" muted loop playsinline preload="metadata" controls></video>`
+                  : `<img src="${escapeHtml(entry.mediaUrl)}" alt="${escapeHtml(entry.caption)}" loading="lazy" style="object-position:${storeImagePosition(store, entry.sourceUrl)}">`}
+                <figcaption><strong>${escapeHtml(entry.title)}</strong><span>${escapeHtml(entry.caption)}</span><p>${escapeHtml(entry.body)}</p></figcaption>
+              </figure>
+            </div>`).join("")}
+          </div>
+        </div>`
+      : `<div class="store-coverflow" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Carrusel visual de la marca">
+          <div class="store-coverflow-stage">
+            ${editorialImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}">${editorialFigure(image, index, "store-coverflow-item")}</div>`).join("")}
+          </div>
+          ${editorialImages.length > 1 ? `<div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${editorialImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div>` : ""}
+        </div>`;
+  const hasGalleryExperience = experienceStyle === "story-scroller" ? storyEntries.length > 0 : editorialImages.length > 0;
+  const editorialGalleryHtml = hasGalleryExperience
+    ? `<section class="store-editorial-gallery" data-experience-style="${experienceStyle}" aria-labelledby="store-gallery-title">
         <div class="store-section-heading">
           <h2 id="store-gallery-title">${escapeHtml(store.galleryTitle?.trim() || "La marca en imágenes")}</h2>
           <p>${escapeHtml(store.gallerySubtitle?.trim() || "Detalles, atmósferas y perspectivas que completan la historia.")}</p>
         </div>
-        <div class="store-editorial-grid">
-          ${editorialImages
-            .map(
-              (image, index) => {
-                const boxColor = typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? image.boxColor : null;
-                const boxStyle = boxColor
-                  ? ` style="--store-editorial-card-bg:${boxColor};--store-editorial-card-ink:${accentContrastColor(boxColor)}"`
-                  : "";
-                return `<figure class="store-editorial-item"${boxStyle}>
-                  <img src="${escapeHtml(image.resolvedImageUrl)}" alt="${escapeHtml(image.caption || `Imagen de la tienda ${index + 1}`)}" loading="lazy" style="object-position:${storeImagePosition(store, image.imageUrl)}">
-                  ${(image.title || image.caption || image.body) ? `<figcaption>${image.title ? `<strong>${escapeHtml(image.title)}</strong>` : ""}${image.caption ? `<span>${escapeHtml(image.caption)}</span>` : ""}${image.body ? `<p>${escapeHtml(image.body)}</p>` : ""}</figcaption>` : ""}
-                </figure>`;
-              },
-            )
-            .join("")}
-        </div>
+        ${galleryExperienceHtml}
       </section>`
     : "";
 
@@ -1943,6 +1998,84 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       stopAutoplay();
       document.removeEventListener("visibilitychange", syncCarouselVisibility);
       slides.forEach((slide) => slide.querySelector<HTMLVideoElement>("video")?.pause());
+    };
+  }
+
+  const coverflow = app.querySelector<HTMLElement>(".store-coverflow");
+  if (coverflow) {
+    const cards = Array.from(coverflow.querySelectorAll<HTMLElement>("[data-coverflow-index]"));
+    const status = coverflow.querySelector<HTMLElement>(".store-coverflow-status");
+    let selected = 0;
+    const showCard = (next: number) => {
+      selected = (next + cards.length) % cards.length;
+      cards.forEach((card, index) => {
+        let offset = index - selected;
+        if (offset > cards.length / 2) offset -= cards.length;
+        if (offset < -cards.length / 2) offset += cards.length;
+        card.style.setProperty("--coverflow-offset", String(offset));
+        card.style.setProperty("--coverflow-distance", String(Math.abs(offset)));
+        card.setAttribute("aria-hidden", String(index !== selected));
+      });
+      if (status) status.textContent = `${selected + 1} / ${cards.length}`;
+    };
+    coverflow.querySelectorAll<HTMLButtonElement>("[data-coverflow-step]").forEach((button) =>
+      button.addEventListener("click", () => showCard(selected + Number(button.dataset.coverflowStep))),
+    );
+    coverflow.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      showCard(selected + (event.key === "ArrowLeft" ? -1 : 1));
+    });
+    showCard(0);
+  }
+
+  const storyScroller = app.querySelector<HTMLElement>(".store-story-scroller");
+  if (storyScroller) {
+    const tabs = Array.from(storyScroller.querySelectorAll<HTMLButtonElement>("[data-story-to]"));
+    const panels = Array.from(storyScroller.querySelectorAll<HTMLElement>(".store-story-panel"));
+    const reduceStoryMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let storyVisible = false;
+    let selectedStory = 0;
+    const syncStoryVideo = () => panels.forEach((panel, index) => {
+      const video = panel.querySelector<HTMLVideoElement>("video");
+      if (!video) return;
+      if (index !== selectedStory || !storyVisible || reduceStoryMotion) video.pause();
+      else void video.play().catch(() => undefined);
+    });
+    const showStory = (next: number, focus = false) => {
+      const selected = (next + tabs.length) % tabs.length;
+      selectedStory = selected;
+      tabs.forEach((tab, index) => {
+        tab.setAttribute("aria-selected", String(index === selected));
+        tab.tabIndex = index === selected ? 0 : -1;
+      });
+      panels.forEach((panel, index) => {
+        const active = index === selected;
+        panel.classList.toggle("active", active);
+        panel.setAttribute("aria-hidden", String(!active));
+      });
+      syncStoryVideo();
+      if (focus) tabs[selected]?.focus({ preventScroll: true });
+    };
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => showStory(index));
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown" && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        showStory(index + (event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1), true);
+      });
+    });
+    const storyObserver = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(([entry]) => {
+          storyVisible = entry.isIntersecting && entry.intersectionRatio >= .35;
+          syncStoryVideo();
+        }, { threshold: [.35] })
+      : null;
+    storyObserver?.observe(storyScroller);
+    showStory(0);
+    activeStoreExperienceCleanup = () => {
+      storyObserver?.disconnect();
+      panels.forEach((panel) => panel.querySelector<HTMLVideoElement>("video")?.pause());
     };
   }
 

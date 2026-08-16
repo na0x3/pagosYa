@@ -138,6 +138,7 @@ export interface Store {
   // supplies the canonical order and an empty gallery when absent.
   contentOrder?: StoreContentSection[];
   layoutStyle?: "cinematic" | "editorial" | "collage" | "catalog-first";
+  experienceStyle?: "coverflow" | "diagonal-marquee" | "story-scroller";
   editorialGallery?: StoreEditorialImage[];
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "none" | "lift" | "pulse";

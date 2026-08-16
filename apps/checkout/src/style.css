@@ -1611,6 +1611,139 @@ body.promotion-open { overflow: hidden; }
   overflow-wrap: anywhere;
   opacity: .84;
 }
+.store-editorial-item figcaption strong,
+.store-editorial-item figcaption span {
+  display: block;
+}
+.store-editorial-item figcaption strong {
+  margin-bottom: 6px;
+  color: inherit;
+  font-size: 17px;
+  line-height: 1.2;
+}
+.store-editorial-item figcaption span { font-weight: 680; }
+.store-editorial-item figcaption p { margin: 8px 0 0; color: inherit; }
+
+/* AI-selectable post-catalog experiences. They all reuse merchant-owned
+   editorial images and copy; only their presentation and interaction change. */
+.store-coverflow {
+  outline: none;
+}
+.store-coverflow:focus-visible {
+  border-radius: 18px;
+  box-shadow: 0 0 0 3px var(--pg-focus-ring);
+}
+.store-coverflow-stage {
+  position: relative;
+  height: clamp(330px, 44vw, 520px);
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+.store-coverflow-card {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  width: clamp(230px, 34vw, 410px);
+  transform: translateX(calc(-50% + var(--coverflow-offset) * clamp(150px, 22vw, 300px))) translateZ(calc(var(--coverflow-distance) * -155px)) rotateY(calc(var(--coverflow-offset) * -34deg));
+  opacity: max(.12, calc(1 - var(--coverflow-distance) * .22));
+  z-index: calc(20 - var(--coverflow-distance));
+  transition: transform .62s cubic-bezier(.22, 1, .36, 1), opacity .38s ease;
+  will-change: transform;
+}
+.store-coverflow-item img { aspect-ratio: 1 / 1; }
+.store-experience-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.store-experience-controls button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1.5px solid var(--pg-border);
+  border-radius: 50%;
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  cursor: var(--pg-hand-cursor);
+}
+.store-experience-controls button:hover { border-color: var(--pg-accent); transform: translateY(-2px); }
+.store-experience-controls button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+.store-experience-controls svg { width: 18px; height: 18px; }
+.store-coverflow-status { min-width: 54px; color: var(--pg-text-muted); font-size: 13px; font-weight: 750; text-align: center; }
+
+.store-diagonal-marquee {
+  width: calc(100vw - 2px);
+  margin-left: calc(50% - 50vw + 1px);
+  overflow: hidden;
+  padding: 50px 0;
+}
+.store-diagonal-rail {
+  display: flex;
+  width: max-content;
+  transform: rotate(-3deg);
+  animation: store-diagonal-travel 48s linear infinite;
+  will-change: transform;
+}
+.store-diagonal-marquee:hover .store-diagonal-rail,
+.store-diagonal-marquee:focus-within .store-diagonal-rail { animation-play-state: paused; }
+.store-diagonal-set { display: flex; gap: 22px; padding-right: 22px; }
+.store-diagonal-item { width: clamp(250px, 30vw, 390px); flex: 0 0 auto; }
+.store-diagonal-item img { aspect-ratio: 4 / 3; }
+@keyframes store-diagonal-travel {
+  from { transform: rotate(-3deg) translateX(0); }
+  to { transform: rotate(-3deg) translateX(-50%); }
+}
+
+.store-story-scroller {
+  display: grid;
+  grid-template-columns: minmax(210px, .72fr) minmax(0, 2fr);
+  gap: clamp(22px, 4vw, 56px);
+  align-items: stretch;
+}
+.store-story-nav {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+.store-story-nav button {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 13px 4px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--pg-text) 14%, transparent);
+  background: transparent;
+  color: var(--pg-text-muted);
+  font: inherit;
+  font-weight: 680;
+  text-align: left;
+  cursor: var(--pg-hand-cursor);
+  transition: color .2s ease, padding-left .38s cubic-bezier(.22, 1, .36, 1);
+}
+.store-story-nav button span { font-size: 11px; font-variant-numeric: tabular-nums; }
+.store-story-nav button[aria-selected="true"] { padding-left: 12px; color: var(--pg-text); }
+.store-story-nav button:focus-visible { outline: 2px solid var(--pg-accent); outline-offset: 2px; }
+.store-story-stage { position: relative; min-height: clamp(430px, 55vw, 650px); }
+.store-story-panel {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+  clip-path: inset(8% 0 0 0);
+  transition: opacity .3s ease, transform .62s cubic-bezier(.22, 1, .36, 1), clip-path .62s cubic-bezier(.22, 1, .36, 1);
+}
+.store-story-panel.active { opacity: 1; pointer-events: auto; transform: translateY(0); clip-path: inset(0); }
+.store-story-item { height: 100%; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.store-story-item img,
+.store-story-item video { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; object-fit: cover; }
 .store-footer {
   max-width: 980px;
   margin: 48px auto 28px;
@@ -1748,6 +1881,21 @@ body.store-page[data-button-motion="pulse"] .promotion-action:hover {
   .promotion-dialog,
   body.store-page[data-button-motion="pulse"] .cart-bar .primary:hover,
   body.store-page[data-button-motion="pulse"] .promotion-action:hover { animation: none; }
+  .store-coverflow-card,
+  .store-story-panel { transition: none; }
+  .store-diagonal-rail { width: 100%; transform: none; animation: none; }
+  .store-diagonal-set { width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 18px 12px; }
+  .store-diagonal-set[aria-hidden="true"] { display: none; }
+  .store-diagonal-item { scroll-snap-align: center; }
+}
+
+@media (max-width: 720px) {
+  .store-coverflow-stage { height: 390px; }
+  .store-coverflow-card { width: min(76vw, 320px); transform: translateX(calc(-50% + var(--coverflow-offset) * 62vw)) translateZ(calc(var(--coverflow-distance) * -130px)) rotateY(calc(var(--coverflow-offset) * -28deg)); }
+  .store-story-scroller { grid-template-columns: 1fr; }
+  .store-story-nav { flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
+  .store-story-nav button { min-width: 180px; }
+  .store-story-stage { min-height: 520px; }
 }
 
 /* ============================================================
