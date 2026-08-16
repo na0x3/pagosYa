@@ -1836,6 +1836,13 @@
                 </select>
                 <span class="faint">La IA elige una distinta en cada propuesta; puedes cambiarla aquí después.</span>
               </div>
+              <div class="product-options-switch full">
+                <span class="checkbox-row">
+                  <input type="checkbox" id="storeMotionDuoEnabled">
+                  <label for="storeMotionDuoEnabled" style="margin:0;color:var(--pg-text)">Agregar Story Scroll + Zoom Parallax</label>
+                </span>
+                <span class="faint">Activa las dos animaciones juntas. Primero aparecerán en la vista previa de esta página; solo llegan a tu tienda cuando guardas los cambios.</span>
+              </div>
               <div class="editorial-gallery-editor full">
                 <div class="editorial-gallery-head">
                   <div>
@@ -3626,6 +3633,7 @@
   const storeHeroSlidesListEl = document.getElementById("storeHeroSlidesList");
   const storeContentOrderListEl = document.getElementById("storeContentOrderList");
   const storeExperienceStyleEl = document.getElementById("storeExperienceStyle");
+  const storeMotionDuoEnabledEl = document.getElementById("storeMotionDuoEnabled");
   const storeEditorialGalleryInputEl = document.getElementById("storeEditorialGalleryInput");
   const storeEditorialGalleryListEl = document.getElementById("storeEditorialGalleryList");
   const storeEditorialPhotoOptionsEl = document.getElementById("storeEditorialPhotoOptions");
@@ -4160,6 +4168,7 @@
       })),
       contentOrder: [...pendingContentOrder],
       experienceStyle: storeExperienceStyleEl.value,
+      motionDuoEnabled: storeMotionDuoEnabledEl.checked,
       editorialGallery: pendingEditorialGallery.map((image) => ({
         imageUrl: image.imageUrl,
         title: image.title.trim(),
@@ -4435,7 +4444,7 @@
         const layoutLabels = { cinematic: "Portada cinematográfica", editorial: "Relato editorial", collage: "Composición collage", "catalog-first": "Catálogo primero" };
         const proposalBackground = config.backgroundColor || "#f8fafc";
         const experienceLabels = { coverflow: "Coverflow 3D", "diagonal-marquee": "Galería diagonal", "story-scroller": "Relato interactivo" };
-        const featureLabels = [layoutLabels[config.layoutStyle] || "Composición clásica", experienceLabels[config.experienceStyle] || "Coverflow 3D", "Fondo sólido", conversionLabel, config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banners` : "Portada tipográfica", config.editorialGallery?.length ? "Historias después del catálogo" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
+        const featureLabels = [layoutLabels[config.layoutStyle] || "Composición clásica", experienceLabels[config.experienceStyle] || "Coverflow 3D", config.motionDuoEnabled ? "Story Scroll" : null, config.motionDuoEnabled ? "Zoom Parallax" : null, "Fondo sólido", conversionLabel, config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banners` : "Portada tipográfica", config.editorialGallery?.length ? "Historias después del catálogo" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
         return `<article class="visual-proposal" data-id="${esc(proposal.id)}">
           <div class="visual-proposal-cover" style="--proposal-bg:${esc(proposalBackground)};--proposal-accent:${esc(config.accentColor || "#4f46e5")}">${imageUrl ? `<img src="${esc(apiRoot() + imageUrl)}" alt="Portada de ${esc(proposal.title)}" style="object-position:${esc(catalogImagePosition(imageUrl))}">` : `<span>${esc(config.tagline || proposal.title)}</span>`}</div>
           <div class="visual-proposal-copy">
@@ -5160,6 +5169,7 @@
           })),
           contentOrder: [...pendingContentOrder],
           experienceStyle: storeExperienceStyleEl.value,
+          motionDuoEnabled: storeMotionDuoEnabledEl.checked,
           editorialGallery: pendingEditorialGallery.map((image) => ({
             imageUrl: image.imageUrl,
             ...(image.title.trim() && { title: image.title.trim() }),
@@ -5494,6 +5504,7 @@
       pendingContentOrder = normalizeStoreContentOrder(store.contentOrder);
       pendingLayoutStyle = ["cinematic", "editorial", "collage", "catalog-first"].includes(store.layoutStyle) ? store.layoutStyle : "cinematic";
       storeExperienceStyleEl.value = ["coverflow", "diagonal-marquee", "story-scroller"].includes(store.experienceStyle) ? store.experienceStyle : "coverflow";
+      storeMotionDuoEnabledEl.checked = store.motionDuoEnabled === true;
       pendingEditorialGallery = (store.editorialGallery || []).slice(0, 8).map((image) => ({
         imageUrl: image.imageUrl,
         title: image.title || "",

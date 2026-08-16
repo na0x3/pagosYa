@@ -1354,6 +1354,29 @@ describe("storefront (?link=...)", () => {
     }
   });
 
+  it("renders both opt-in story and zoom animations from merchant media", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con movimiento",
+        motionDuoEnabled: true,
+        editorialGallery: [
+          { imageUrl: "/v1/uploads/uno.webp", title: "Origen", caption: "Primer plano", body: "La primera parte del relato real de la tienda." },
+          { imageUrl: "/v1/uploads/dos.webp", title: "Proceso", caption: "Segundo plano", body: "La segunda parte amplía el contexto del comercio." },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=motion-duo");
+
+    expect(document.querySelector("[data-motion-flow]")).not.toBeNull();
+    expect(document.querySelectorAll(".store-flow-section")).toHaveLength(2);
+    expect(document.querySelector("[data-motion-zoom]")).not.toBeNull();
+    expect(document.querySelectorAll(".store-zoom-layer")).toHaveLength(2);
+  });
+
   it("applies the merchant's selected font to the entire storefront", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({

@@ -42,6 +42,7 @@ const store = {
   contentOrder: ["hero", "products", "about", "gallery", "links"],
   layoutStyle: "cinematic",
   experienceStyle: "coverflow",
+  motionDuoEnabled: false,
   editorialGallery: [],
   buttonVariant: "solid",
   buttonMotion: "lift",
@@ -96,6 +97,7 @@ describe("VisualStudioService", () => {
       expect(call[0].data.config).not.toHaveProperty("html");
       expect(call[0].data.config).not.toHaveProperty("css");
       expect(call[0].data.config.heroSlides).toHaveLength(5);
+      expect(call[0].data.config.motionDuoEnabled).toBe(true);
     }
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.layoutStyle)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.experienceStyle))).toEqual(new Set(["coverflow", "diagonal-marquee", "story-scroller"]));
@@ -245,6 +247,7 @@ describe("VisualStudioService", () => {
         contentOrder: ["hero", "about", "products", "gallery", "links"],
         layoutStyle: "cinematic",
         experienceStyle: "coverflow",
+        motionDuoEnabled: true,
         heroSlides: expect.arrayContaining([expect.objectContaining({ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí" })]),
       }));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).not.toHaveProperty("html");

@@ -10,7 +10,7 @@ const VISUAL_FIELDS = [
   "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle",
   "accentColor", "fontStyle", "buttonStyle", "boardTexture", "announcement", "announcementMode",
   "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled", "promotionImageUrl", "promotionTitle",
-  "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "layoutStyle", "experienceStyle", "editorialGallery",
+  "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "layoutStyle", "experienceStyle", "motionDuoEnabled", "editorialGallery",
   "buttonVariant", "buttonMotion", "cartButtonLabel", "checkoutMode", "leadCaptureUrl", "contactPhone",
 ] as const;
 
@@ -368,6 +368,7 @@ export class VisualStudioService {
         backgroundGradientAngle: 0,
         fontStyle: selectedFontStyle,
         contentOrder: contentOrders[index],
+        motionDuoEnabled: true,
       },
     }));
   }
@@ -400,10 +401,10 @@ export class VisualStudioService {
         `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         "Asigna a cada dirección un layoutStyle diferente. cinematic usa una portada inmersiva y relato gradual; editorial alterna imagen y texto con lectura pausada; collage superpone escalas y bloques visuales; catalog-first empieza por producto y usa la historia como prueba posterior.",
-        "Asigna también un experienceStyle distinto a cada dirección: coverflow crea un carrusel 3D controlable; diagonal-marquee crea filas fotográficas diagonales en movimiento; story-scroller crea una historia interactiva por capítulos y debe priorizar cualquier video disponible en heroSlides. Esta experiencia siempre aparece después del catálogo y usa solamente medios reales de la tienda.",
+        "Asigna también un experienceStyle distinto a cada dirección: coverflow crea un carrusel 3D controlable; diagonal-marquee crea filas fotográficas diagonales en movimiento; story-scroller crea una historia interactiva por capítulos y debe priorizar cualquier video disponible en heroSlides. Además, las tres direcciones incluyen motionDuoEnabled: Story Scroll encadena el relato editorial por pantallas y Zoom Parallax recompone las fotos con profundidad. Todo aparece después del catálogo y usa solamente medios reales de la tienda.",
         "Cada dirección debe tener un contentOrder diferente y válido, con las cinco secciones exactamente una vez. hero y about aparecen antes que products; gallery y links aparecen después de products para que la experiencia continúe después del catálogo.",
         "Crea entre cuatro y cinco slides por dirección. Cada slide cumple un rol distinto (promesa, producto, punto de vista, detalle, transición o acción), con título, texto sustancioso y botón breve. Cuando haya suficientes imágenes, no repitas assetIndex dentro del mismo slider.",
-        "La editorialGallery no es una tira de pies de foto: cada imagen debe tener título, caption breve y un body de 2–3 frases que aporte contexto realista sin inventar hechos.",
+        "La editorialGallery no es una tira de pies de foto: genera para cada imagen un título, un caption breve y un body diferente de 2–3 frases. Ese texto alimenta Story Scroll y Zoom Parallax; debe sentirse variado y específico al catálogo sin inventar hechos.",
         "Las tres direcciones también deben variar densidad, escala de imagen, anuncio estático o móvil y relación entre historia y catálogo.",
         `Usa fontStyle=${requestedFontStyle} en las tres direcciones. El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas.`,
         "heroSlides y editorialGallery deben referenciar solamente índices disponibles.",
@@ -465,6 +466,7 @@ export class VisualStudioService {
           contentOrder: direction.contentOrder,
           layoutStyle: direction.layoutStyle,
           experienceStyle: direction.experienceStyle,
+          motionDuoEnabled: true,
           announcement: direction.announcement,
           announcementMode: direction.announcementMode,
           announcementSpeed: direction.announcementSpeed,

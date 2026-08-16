@@ -369,6 +369,14 @@ export class CreateStoreDto {
   experienceStyle?: string;
 
   @ApiPropertyOptional({
+    description: "Add the paired Story Scroll and Zoom Parallax experiences after the catalog.",
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  motionDuoEnabled?: boolean;
+
+  @ApiPropertyOptional({
     description: "Captioned editorial images shown outside the product catalog (maximum 8).",
     type: [StoreEditorialImageDto],
   })

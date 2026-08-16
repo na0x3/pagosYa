@@ -14,6 +14,7 @@ const store = (id, name) => ({
   heroSlides: [],
   contentOrder: ["hero", "about", "gallery", "products", "links"],
   experienceStyle: "coverflow",
+  motionDuoEnabled: false,
   editorialGallery: [],
   links: [],
   checkoutMode: "payment",
@@ -174,6 +175,7 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   await page.locator("#storeNameInput").fill("Nombre guardado");
   await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
   await page.locator("#storeExperienceStyle").selectOption("story-scroller");
+  await page.locator("#storeMotionDuoEnabled").check();
   await page.getByRole("button", { name: "Mostrar Estilo" }).click();
   await page.locator("#storeBackgroundColor").fill("#fef3c7");
   await page.getByRole("button", { name: "Mostrar Cómo termina el pedido" }).click({ force: true });
@@ -190,6 +192,7 @@ test("appearance and links save once to the captured store", async ({ page }) =>
     name: "Nombre guardado",
     backgroundColor: "#fef3c7",
     experienceStyle: "story-scroller",
+    motionDuoEnabled: true,
     cartRecommendationsEnabled: false,
     showLowStockToCustomers: true,
     links: [],
@@ -709,7 +712,7 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
 
 test("AI proposals preview in a new tab without applying and only the latest applied proposal stays in use", async ({ page }) => {
   const proposals = [
-    { id: "proposal_1", title: "Primera", rationale: "Dirección uno", status: "APPLIED", appliedAt: "2026-08-13T10:00:00.000Z", config: { accentColor: "#123456", tagline: "Primera dirección" } },
+    { id: "proposal_1", title: "Primera", rationale: "Dirección uno", status: "APPLIED", appliedAt: "2026-08-13T10:00:00.000Z", config: { accentColor: "#123456", tagline: "Primera dirección", motionDuoEnabled: true } },
     { id: "proposal_2", title: "Segunda", rationale: "Dirección dos", status: "APPLIED", appliedAt: "2026-08-13T11:00:00.000Z", config: { accentColor: "#654321", tagline: "Segunda dirección" } },
     { id: "proposal_3", title: "Tercera", rationale: "Dirección tres", status: "READY", appliedAt: null, config: { accentColor: "#abcdef", tagline: "Tercera dirección" } },
   ];
@@ -738,6 +741,9 @@ test("AI proposals preview in a new tab without applying and only the latest app
   const previewPatch = JSON.parse(new URLSearchParams(previewUrl.hash.slice(1)).get("proposal"));
   expect(previewUrl.searchParams.get("preview")).toBe("1");
   expect(previewPatch).toMatchObject({ accentColor: "#123456", tagline: "Primera dirección" });
+  expect(previewPatch.motionDuoEnabled).toBe(true);
+  await expect(page.locator('.visual-proposal[data-id="proposal_1"]')).toContainText("Story Scroll");
+  await expect(page.locator('.visual-proposal[data-id="proposal_1"]')).toContainText("Zoom Parallax");
   expect(opened).toMatchObject({ target: "_blank", features: "noopener,noreferrer" });
   await expect(page.locator("#visualProposalStatus")).toContainText("No aplicamos cambios");
 });

@@ -7,6 +7,8 @@ import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
 import DiagonalMarqueeCarousel from "@/components/ui/great-ui-diagonal-marquee-carousel";
 import { Component as InteractiveVideoPortfolioScroller } from "@/components/ui/interactive-video-portfolio-scroller";
 import BentoDashboard from "@/components/ui/bento-dashboard";
+import FlowArt, { FlowSection } from "@/components/ui/story-scroll";
+import { ZoomParallax } from "@/components/ui/zoom-parallax";
 
 type Product = {
   id: string;
@@ -59,6 +61,16 @@ const experienceSlides = [
   { src: "/matcho/matcha-black.jpg", alt: "MATCHO Black", title: "Black", subtitle: "Una mezcla intensa" },
   { src: "/matcho/gallery-1.jpg", alt: "Detalle de preparación MATCHO", title: "Preparado al momento", subtitle: "Cada vaso empieza aquí" },
   { src: "/matcho/gallery-2.png", alt: "Composición editorial MATCHO", title: "Universo MATCHO", subtitle: "Color, textura y pausa" },
+];
+
+const parallaxImages = [
+  { src: "/matcho/hero.png", alt: "Matcha frío con pistacho" },
+  { src: "/matcho/matcha-green.jpg", alt: "MATCHO Green" },
+  { src: "/matcho/matcha-strawberry.jpg", alt: "MATCHO Strawberry" },
+  { src: "/matcho/matcha-black.jpg", alt: "MATCHO Black" },
+  { src: "/matcho/gallery-1.jpg", alt: "Preparación de una bebida MATCHO" },
+  { src: "/matcho/gallery-2.png", alt: "Composición editorial MATCHO" },
+  { src: "/matcho/background.png", alt: "Textura visual de la marca MATCHO" },
 ];
 
 export default function Home() {
@@ -225,6 +237,44 @@ export default function Home() {
             <Image src="/matcho/gallery-2.png" alt="Composición editorial de MATCHO" width={1536} height={1024} sizes="(max-width: 760px) 50vw, 590px" />
           </div>
         </section>
+
+        <section className="motion-duo-intro" aria-labelledby="motion-duo-title">
+          <span>Dos movimientos · una misma historia</span>
+          <h2 id="motion-duo-title">De la hoja al vaso, sin cortar el ritmo.</h2>
+          <p>La IA convierte las fotos y palabras reales de cada comercio en capítulos editables. Aquí el relato gira al avanzar y luego se abre en profundidad.</p>
+        </section>
+      </div>
+
+      <FlowArt className="matcho-flow" aria-label="El ritual MATCHO en tres capítulos">
+        <FlowSection aria-label="Origen" className="bg-[#ad8a49] text-[#0b2116]">
+          <p className="text-xs font-bold uppercase tracking-[0.2em]">01 — Origen</p>
+          <div className="matcho-flow-grid">
+            <div><h2>Verde<br />desde<br />el inicio.</h2><p>Matcha reconocible, una carta breve y una preparación que deja hablar al ingrediente.</p></div>
+            <img src="/matcho/matcha-green.jpg" alt="MATCHO Green servido frío" />
+          </div>
+        </FlowSection>
+        <FlowSection aria-label="Mezcla" className="bg-[#0b2116] text-[#fffdf6]">
+          <p className="text-xs font-bold uppercase tracking-[0.2em]">02 — Mezcla</p>
+          <div className="matcho-flow-grid">
+            <div><h2>Fruta,<br />hielo,<br />pausa.</h2><p>Fresa para lo brillante, black para lo intenso. Cada receta conserva una personalidad fácil de elegir.</p></div>
+            <img src="/matcho/matcha-strawberry.jpg" alt="MATCHO Strawberry" />
+          </div>
+        </FlowSection>
+        <FlowSection aria-label="Momento" className="bg-[#f3eee5] text-[#0b2116]">
+          <p className="text-xs font-bold uppercase tracking-[0.2em]">03 — Momento</p>
+          <div className="matcho-flow-grid">
+            <div><h2>Hecho<br />para<br />tu ritmo.</h2><p>Un ritual cotidiano, frío y directo. Sin ceremonia complicada; solo el momento de bajar un cambio.</p></div>
+            <img src="/matcho/gallery-1.jpg" alt="Detalle del ritual MATCHO" />
+          </div>
+        </FlowSection>
+      </FlowArt>
+
+      <section className="zoom-story" aria-labelledby="zoom-title">
+        <div className="zoom-story-copy"><span>Zoom Parallax</span><h2 id="zoom-title">Mira la marca de cerca.</h2><p>Siete imágenes reales se recomponen con el desplazamiento. Sin stock genérico y con una versión estática cuando el sistema pide menos movimiento.</p></div>
+        <ZoomParallax images={parallaxImages} />
+      </section>
+
+      <div className="store-shell store-shell-after-motion">
 
         <section className="moving-gallery" aria-label="Galería MATCHO en movimiento">
           <div className="moving-gallery-copy"><h2>Sabores que se mueven contigo.</h2></div>

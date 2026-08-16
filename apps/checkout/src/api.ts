@@ -139,6 +139,7 @@ export interface Store {
   contentOrder?: StoreContentSection[];
   layoutStyle?: "cinematic" | "editorial" | "collage" | "catalog-first";
   experienceStyle?: "coverflow" | "diagonal-marquee" | "story-scroller";
+  motionDuoEnabled?: boolean;
   editorialGallery?: StoreEditorialImage[];
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "none" | "lift" | "pulse";

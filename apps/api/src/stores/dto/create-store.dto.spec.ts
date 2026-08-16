@@ -97,4 +97,12 @@ describe("CreateStoreDto storefront layout", () => {
     await expect(validate(valid)).resolves.toHaveLength(0);
     expect(await validate(invalid)).not.toHaveLength(0);
   });
+
+  it("accepts only booleans for the opt-in motion duo", async () => {
+    const valid = plainToInstance(CreateStoreDto, { name: "Taller Norte", motionDuoEnabled: true });
+    const invalid = plainToInstance(CreateStoreDto, { name: "Taller Norte", motionDuoEnabled: "yes" });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(await validate(invalid)).not.toHaveLength(0);
+  });
 });

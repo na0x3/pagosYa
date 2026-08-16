@@ -889,6 +889,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   }
   if (["cinematic", "editorial", "collage", "catalog-first"].includes(String(source.layoutStyle))) clean.layoutStyle = source.layoutStyle;
   if (["coverflow", "diagonal-marquee", "story-scroller"].includes(String(source.experienceStyle))) clean.experienceStyle = source.experienceStyle;
+  if (typeof source.motionDuoEnabled === "boolean") clean.motionDuoEnabled = source.motionDuoEnabled;
   if (Array.isArray(source.editorialGallery)) {
     clean.editorialGallery = source.editorialGallery
       .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
@@ -1780,6 +1781,36 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           ${editorialImages.length > 1 ? `<div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${editorialImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div>` : ""}
         </div>`;
   const hasGalleryExperience = experienceStyle === "story-scroller" ? storyEntries.length > 0 : editorialImages.length > 0;
+  const motionStories = storyEntries.slice(0, 5);
+  const motionImages = editorialImages.slice(0, 7).map((image) => ({
+    mediaUrl: image.resolvedImageUrl,
+    sourceUrl: image.imageUrl,
+    caption: image.caption || image.title || "Escena de la marca",
+  }));
+  const motionDuoHtml = store.motionDuoEnabled === true && motionStories.length >= 2 && motionImages.length >= 2
+    ? `<div class="store-motion-duo" aria-label="Relato animado de la marca">
+        <div class="store-motion-intro">
+          <h3>${escapeHtml(store.galleryTitle?.trim() || `Descubre ${store.storeName}`)}</h3>
+          <p>${escapeHtml(store.gallerySubtitle?.trim() || "Desplázate para recorrer la historia y las imágenes de la marca.")}</p>
+        </div>
+        <div class="store-flow-art" data-motion-flow aria-label="Story Scroll">
+          ${motionStories.map((entry, index) => `<article class="store-flow-section" style="--flow-index:${index}">
+            <div class="store-flow-inner">
+              <div class="store-flow-copy"><span>${String(index + 1).padStart(2, "0")}</span><h3>${escapeHtml(entry.title)}</h3><p>${escapeHtml(entry.body)}</p></div>
+              <figure>${entry.isVideo
+                ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(entry.title)}" muted loop playsinline preload="metadata" controls></video>`
+                : `<img src="${escapeHtml(entry.mediaUrl)}" alt="${escapeHtml(entry.caption)}" loading="lazy" style="object-position:${storeImagePosition(store, entry.sourceUrl)}">`}</figure>
+            </div>
+          </article>`).join("")}
+        </div>
+        <div class="store-zoom-copy"><h3>La marca, de cerca</h3><p>Cada imagen conserva su proporción y se abre con el ritmo del desplazamiento.</p></div>
+        <div class="store-zoom-parallax" data-motion-zoom aria-label="Zoom Parallax">
+          <div class="store-zoom-sticky">
+            ${motionImages.map((image, index) => `<div class="store-zoom-layer store-zoom-layer-${index}" data-zoom-index="${index}"><figure><img src="${escapeHtml(image.mediaUrl)}" alt="${escapeHtml(image.caption)}" loading="lazy" style="object-position:${storeImagePosition(store, image.sourceUrl)}"></figure></div>`).join("")}
+          </div>
+        </div>
+      </div>`
+    : "";
   const editorialGalleryHtml = hasGalleryExperience
     ? `<section class="store-editorial-gallery" data-experience-style="${experienceStyle}" aria-labelledby="store-gallery-title">
         <div class="store-section-heading">
@@ -1787,6 +1818,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           <p>${escapeHtml(store.gallerySubtitle?.trim() || "Detalles, atmósferas y perspectivas que completan la historia.")}</p>
         </div>
         ${galleryExperienceHtml}
+        ${motionDuoHtml}
       </section>`
     : "";
 
@@ -2076,6 +2108,58 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     activeStoreExperienceCleanup = () => {
       storyObserver?.disconnect();
       panels.forEach((panel) => panel.querySelector<HTMLVideoElement>("video")?.pause());
+    };
+  }
+
+  const motionFlow = app.querySelector<HTMLElement>("[data-motion-flow]");
+  const motionZoom = app.querySelector<HTMLElement>("[data-motion-zoom]");
+  if (motionFlow && motionZoom) {
+    const flowInners = Array.from(motionFlow.querySelectorAll<HTMLElement>(".store-flow-inner"));
+    const zoomLayers = Array.from(motionZoom.querySelectorAll<HTMLElement>("[data-zoom-index]"));
+    const zoomScales = [4, 5, 6, 5, 6, 8, 9];
+    const motionQuery = typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)")
+      : null;
+    let frame = 0;
+    const clampProgress = (value: number) => Math.max(0, Math.min(1, value));
+    const paintMotionDuo = () => {
+      frame = 0;
+      if (motionQuery?.matches) {
+        flowInners.forEach((inner) => (inner.style.transform = "none"));
+        zoomLayers.forEach((layer) => (layer.style.transform = "none"));
+        return;
+      }
+      const viewportHeight = Math.max(window.innerHeight, 1);
+      flowInners.forEach((inner, index) => {
+        if (index === 0) return;
+        const section = inner.closest<HTMLElement>(".store-flow-section");
+        if (!section) return;
+        const progress = clampProgress((viewportHeight - section.getBoundingClientRect().top) / (viewportHeight * .75));
+        inner.style.transform = `rotate(${(1 - progress) * 30}deg)`;
+      });
+      const zoomRect = motionZoom.getBoundingClientRect();
+      const zoomDistance = Math.max(motionZoom.offsetHeight - viewportHeight, 1);
+      const zoomProgress = clampProgress(-zoomRect.top / zoomDistance);
+      zoomLayers.forEach((layer, index) => {
+        const scale = 1 + (zoomScales[index % zoomScales.length] - 1) * zoomProgress;
+        layer.style.transform = `scale(${scale})`;
+      });
+    };
+    const requestMotionPaint = () => {
+      if (!frame) frame = window.requestAnimationFrame(paintMotionDuo);
+    };
+    window.addEventListener("scroll", requestMotionPaint, { passive: true });
+    window.addEventListener("resize", requestMotionPaint);
+    motionQuery?.addEventListener("change", requestMotionPaint);
+    paintMotionDuo();
+    const priorCleanup = activeStoreExperienceCleanup;
+    activeStoreExperienceCleanup = () => {
+      priorCleanup?.();
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", requestMotionPaint);
+      window.removeEventListener("resize", requestMotionPaint);
+      motionQuery?.removeEventListener("change", requestMotionPaint);
+      motionFlow.querySelectorAll<HTMLVideoElement>("video").forEach((video) => video.pause());
     };
   }
 

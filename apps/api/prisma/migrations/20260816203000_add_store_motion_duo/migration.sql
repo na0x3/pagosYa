@@ -1,0 +1,2 @@
+ALTER TABLE "Store"
+ADD COLUMN "motionDuoEnabled" BOOLEAN NOT NULL DEFAULT false;

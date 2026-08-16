@@ -466,6 +466,9 @@ model Store {
   // Post-catalog visual experience selected by the merchant or visual AI:
   // coverflow | diagonal-marquee | story-scroller.
   experienceStyle    String                @default("coverflow")
+  // Opt-in paired editorial motion: a pinned story flow followed by an image
+  // zoom parallax. AI proposals enable it, but merchants preview before apply.
+  motionDuoEnabled   Boolean               @default(false)
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
   editorialGallery   Json                  @default("[]")
