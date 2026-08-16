@@ -98,7 +98,7 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 - **Focus Violet** (`#c084fc`): checkout-only, paired with Focus Indigo as a two-stop gradient for the storefront's "Ir a pagar" cart action.
 
 ### Neutral
-- **Void** (`#0a0a0a`): page background on both admin surfaces and the base checkout canvas. Hosted storefronts may shift that canvas through the merchant-selected board material: chalkboard (`#11100f`), kraft (`#211c17`), or a restrained accent-tinted painted ground.
+- **Void** (`#0a0a0a`): page background on both admin surfaces and the base checkout canvas. A hosted storefront may replace that base with a merchant-selected solid color or restrained two-stop gradient, optionally carrying the chalkboard, kraft, or painted texture as a quiet material layer.
 - **Panel** (`#171717`): card/panel background across the admin surfaces and checkout, including the floating payment card over a merchant's page.
 - **Border Quiet** (`#404040`) / **Border Firm** (`#525252`): default and hover/emphasis border weight, identical across all three surfaces.
 - **Text Primary** (`#f5f5f5`), **Text Muted** (`#a3a3a3`), **Text Faint** (dark `#8c8c8c`, light `#666666`): the three-step text hierarchy. The faint step is theme-specific so small metadata stays legible in both checkout themes; admin surfaces use the dark value.
@@ -109,7 +109,7 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 
 **The Merchant Accent Guardrail.** Honor the merchant's chosen hue, but never render the stored hex unchecked: storefront accents below the established lightness floor (HSL `0.35`) are lifted until they remain visible on the dark board, and accent-filled controls choose black or white text from relative luminance so the foreground maintains at least WCAG AA contrast. Derive soft backgrounds, focus rings, and glows from that effective accent rather than introducing additional merchant color fields. Outline and soft controls may retain the effective accent in their border or background, but their text stays on the theme-safe foreground (`text-primary`) — never put an arbitrary merchant accent directly on text.
 
-**The Merchant Ground Rule.** Keep panels anchored to the shared neutral system, but let the hosted storefront's page ground express the merchant's selected board material. Texture may warm or tint the canvas; it must not compete with product imagery, copy, or the merchant accent.
+**The Merchant Ground Rule.** Keep panels anchored to the shared neutral system, but let the hosted storefront's page ground express the merchant through one solid color or restrained two-stop gradient. Texture may sit quietly above that color-led canvas, but photography belongs in the hero, story, editorial gallery, and products rather than as a full-page background; none of these layers may compete with merchandise or copy.
 
 ## Typography
 
@@ -133,7 +133,9 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 
 No CSS grid framework or shared breakpoint system exists. Responsive coverage is hand-written per surface: `merchant-dashboard` uses 900px, 640px, and 480px breakpoints; the checkout storefront uses 720px; ops still has no media queries. Treat this as an explicit surface contract, not a shared breakpoint scale.
 
-Where structure does exist: `merchant-dashboard`/`ops` cap content at `max-width: 1040–1080px`, centered, with generous top padding (28px) under a `.topbar`. The hosted storefront is a wider merchant lookbook capped at 1120px, while its payment-form card remains capped at 400px. The storefront catalog uses an auto-filling grid above 720px and becomes a deliberate single column at 720px and narrower. Its authored hero holds a cinematic 16:7 ratio on desktop and becomes a portrait 4:5 composition on mobile so imagery and overlaid copy remain useful rather than merely shrinking.
+Where structure does exist: `merchant-dashboard`/`ops` cap content at `max-width: 1040–1080px`, centered, with generous top padding (28px) under a `.topbar`. The hosted storefront is a spacious merchant lookbook capped at 1360px, while its payment-form card remains capped at 400px. The storefront catalog uses an auto-filling grid above 720px and becomes a deliberate single column at 720px and narrower. Its authored hero holds a cinematic 16:7 ratio on desktop and becomes a portrait 4:5 composition on mobile so imagery and overlaid copy remain useful rather than merely shrinking.
+
+**The Brand-First Storefront Rule.** Default the public composition to merchant identity, hero, and brand story before the product catalog; editorial imagery and links may follow. The merchant may deliberately reorder authored sections in the appearance studio, but pagosYa chrome never becomes the opening visual hierarchy.
 
 The dashboard finance-detail area pairs a payment-method donut with top products in two columns on wide screens, stacks those blocks below 900px, reduces the donut from 156px to 128px below 640px, and places the donut above its full-width legend below 480px.
 
@@ -177,9 +179,15 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 - **Progressive disclosure (merchant dashboard):** Large stacked panels use a visible `Mostrar`/`Ocultar` button with `aria-expanded` and `aria-controls`, and remember each user's open/closed choice locally. Default **Tus Tiendas** and **Productos** open as the primary working set; default secondary panels closed to reduce scanning load.
 
 ### Store Appearance Studio (merchant dashboard)
-- Pair the appearance editor with a sticky, sandboxed live storefront preview on wide screens; stack the preview below the editor at 900px and narrower.
+- Pair the appearance editor with a sticky, sandboxed live storefront preview on wide screens; stack the preview below the editor at 1180px and narrower so the dashboard sidebar never squeezes either workspace.
 - Let merchants compare explicit **Escritorio** and **Móvil** preview widths before saving. The device buttons expose pressed state, and unsaved edits update the preview immediately while a separate status communicates whether changes are saved.
 - Offer the four named storefront font styles as a curated selector. Apply the unsaved choice to the whole preview immediately and persist only the enum value, never free-form CSS.
+- Group message controls by intent—announcement, promotion, support, store copy, and links—with visible subtitles and explanatory copy. Use 20–26px between groups and 12–18px within a group so proximity communicates structure.
+
+### Yapi Workspace Assistant (merchant dashboard)
+- Treat Yapi as a stationary shopkeeper's desk, anchored to a document position rather than following every scroll. Hiding, closing, or restoring it must preserve the merchant's scroll position.
+- Put actionable store signals first: warn when active products or options have 0–5 units and when the selected store has fewer than six unique images across its identity, authored sections, and products.
+- Keep **Avisos**, locally persisted **Notas**, and the guided **Agente** as separate tabs. The agent must state that it is automated, must not execute payments or change merchant data, and must preserve a clear human-support handoff.
 
 ### Authored Hero Carousel (storefront)
 - Merchants may author up to five ordered slides in the appearance studio. Every slide requires imagery and may add a title, short body, and CTA; when no slides exist, fall back to the legacy banner rather than synthesizing promotional content.
@@ -193,10 +201,21 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 
 ### Announcements & Promotions (storefront)
 - **Announcement marquee:** Duplicate copy only to create the seamless visual loop. Under `prefers-reduced-motion: reduce`, stop the animation and hide the duplicate so one readable announcement remains.
-- **Promotion dialog:** Use a true modal (`role="dialog"`, `aria-modal="true"`) with initial focus and a focus trap. Close it through the close button, CTA, backdrop, or Escape; dismissal must not depend on pointer input alone.
+- **Promotion dialog:** Use a true modal (`role="dialog"`, `aria-modal="true"`) with initial focus and a focus trap. Close it through the close button, CTA, backdrop, or Escape; dismissal must not depend on pointer input alone. Merchants may add one optional image, shown full-width above the copy without making the dialog depend on imagery.
+
+### Branded Entry Loader
+- On every full dashboard or storefront navigation, show the pagosYa mark and name over a dark full-viewport surface with a slim Signal Amber progress bar while session/store data settles.
+- Treat the bar as indeterminate unless real progress exists, provide a timeout escape so it cannot trap the user, and replace movement with a complete static bar under `prefers-reduced-motion: reduce`.
+
+### Card Stack Processing Loader
+- Use the cycling card stack for bounded, multi-step creative processing such as visual-proposal generation or as an expressive merchant-showcase entry; it does not replace the standard pagosYa navigation loader. Adapt its cards to the active surface palette and label the current operation; under reduced motion, present the stacked state without cycling, pulsing, or spinning.
 
 ### Product Options (storefront)
 - Mark unavailable options disabled and label them **Agotado**. Select the first purchasable option by default, and replace a remembered selection if it becomes unavailable; never make the customer discover availability only after pressing `+` or checkout.
+
+### Product Galleries
+- Allow up to ten ordered photos per product. The first remains the cover; merchants can move every photo earlier or later without re-uploading it, and image focus stays paired with the photo while reordering.
+- Multi-photo product cards and detail pages expose previous/next buttons in addition to dots or thumbnails. Keep arrows visible on touch devices and reveal them on hover or focus for pointer devices.
 
 ### Inputs / Fields
 - **Style:** `panel` background, 1.5px `border-quiet`, 9px radius, label always a real `<label for>` above the field (never a placeholder standing in for a label).

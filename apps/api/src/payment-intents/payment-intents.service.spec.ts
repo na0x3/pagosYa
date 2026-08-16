@@ -7,6 +7,40 @@ function makeService() {
 }
 
 describe("PaymentIntentsService cart option inventory", () => {
+  it("fails loudly instead of silently skipping a depleted base product", async () => {
+    const service = makeService();
+    const tx = {
+      paymentLink: { updateMany: jest.fn() },
+      $executeRaw: jest.fn().mockResolvedValue(0),
+    };
+
+    await expect((service as any).decrementStockForCart(tx, {
+      storeId: "store_1",
+      cart: [{ paymentLinkId: "burger_1", name: "Burger", quantity: 1 }],
+    })).rejects.toThrow("Uno de los productos ya no tiene suficiente stock");
+  });
+
+  it("decrements one shared extra pool across every product that uses it", async () => {
+    const service = makeService();
+    const tx = {
+      paymentLink: { updateMany: jest.fn() },
+      $executeRaw: jest.fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(3),
+    };
+
+    await (service as any).decrementStockForCart(tx, {
+      storeId: "store_1",
+      cart: [
+        { paymentLinkId: "burger_1", name: "Burger clásica", quantity: 1, extras: [{ id: "ext_1", name: "Cottage", amount: 500, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 8 }] },
+        { paymentLinkId: "burger_2", name: "Burger doble", quantity: 2, extras: [{ id: "ext_2", name: "Cottage", amount: 500, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 8 }] },
+      ],
+    });
+
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(3);
+  });
+
   it("atomically decrements each selected option", async () => {
     const service = makeService();
     const tx = {
@@ -72,6 +106,21 @@ describe("PaymentIntentsService cart option inventory", () => {
         cart: [{ paymentLinkId: "link_1", variantId: "var_small", variantName: "Pequeña", name: "Hamburguesa", quantity: 1 }],
       }),
     ).rejects.toThrow('Solo quedan 0 unidades de "Hamburguesa (Pequeña)"');
+  });
+
+  it("blocks confirmation when a shared extra pool no longer has enough units", async () => {
+    const service = makeService();
+    const tx = {
+      paymentLink: { findMany: jest.fn().mockResolvedValue([{
+        id: "burger_1", name: "Burger", status: PaymentLinkStatus.ACTIVE, stock: null, variants: [],
+        extras: [{ id: "ext_1", name: "Cottage", amount: 500, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 1 }],
+      }]) },
+    };
+
+    await expect((service as any).assertCartStillAvailable(tx, {
+      storeId: "store_1",
+      cart: [{ paymentLinkId: "burger_1", name: "Burger", quantity: 2, extras: [{ id: "ext_1", name: "Cottage", amount: 500, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 3 }] }],
+    })).rejects.toThrow('Ya no hay suficiente stock de "Queso cottage"');
   });
 
   it("aggregates option lines into one persisted product total", async () => {

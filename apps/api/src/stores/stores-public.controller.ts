@@ -3,6 +3,7 @@ import { Throttle } from "@nestjs/throttler";
 import { ApiTags } from "@nestjs/swagger";
 import { StoresService } from "./stores.service";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
+import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
 
 /** No auth by design — this is what a customer's browser hits after tapping a
  * shared store link/QR. Mirrors CheckoutSessionController's "unauthenticated but
@@ -22,5 +23,11 @@ export class StoresPublicController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   cartCheckout(@Param("slug") slug: string, @Body() dto: CartCheckoutDto) {
     return this.stores.createCartCheckout(slug, dto);
+  }
+
+  @Post(":slug/leads")
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  submitLead(@Param("slug") slug: string, @Body() dto: SubmitStoreLeadDto) {
+    return this.stores.submitLead(slug, dto);
   }
 }

@@ -15,4 +15,16 @@ export class FinancesController {
   summary(@CurrentMerchant() merchant: { id: string }, @Query("storeId") storeId?: string) {
     return this.finances.summary(merchant.id, storeId);
   }
+
+  @Get("orders")
+  @ApiBearerAuth()
+  @UseGuards(MerchantAuthGuard)
+  orders(
+    @CurrentMerchant() merchant: { id: string },
+    @Query("storeId") storeId?: string,
+    @Query("search") search?: string,
+    @Query("export") exportAll?: string,
+  ) {
+    return this.finances.orders(merchant.id, storeId, search, exportAll === "true");
+  }
 }

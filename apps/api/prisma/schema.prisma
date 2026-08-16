@@ -144,6 +144,7 @@ model Merchant {
   stores           Store[]
   mediaAssets      MediaAsset[]
   productStats     StoreProductStat[]
+  storeLeads       StoreLead[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -391,6 +392,12 @@ model Store {
   bannerUrl          String?
   // "#RRGGBB", validated at the DTO layer only.
   backgroundColor    String?
+  // Storefront ground can be a single color or a merchant-authored two-color
+  // gradient. The solid color remains the safe fallback for older clients.
+  backgroundMode          String @default("solid")
+  backgroundGradientStart String @default("#f8fafc")
+  backgroundGradientEnd   String @default("#e0e7ff")
+  backgroundGradientAngle Int    @default(135)
   // "/v1/uploads/<uuid>.<ext>" — full-page storefront background photo.
   // Independent of backgroundColor: when set, the image is what's shown
   // (backgroundColor still renders behind it while the image loads / behind
@@ -440,6 +447,8 @@ model Store {
   // Merchant-authored promotion dialog. The customer can dismiss it for the
   // current browser session; preview mode always renders it for editing.
   promotionEnabled   Boolean               @default(false)
+  // Optional visual shown at the top of the promotion dialog.
+  promotionImageUrl  String?
   promotionTitle     String?
   promotionBody      String?
   promotionCtaLabel  String?
@@ -451,6 +460,9 @@ model Store {
   // Every public content section appears exactly once. The dashboard edits
   // this array as an ordered list; empty sections simply do not render.
   contentOrder       Json                  @default("[\"hero\",\"about\",\"products\",\"gallery\",\"links\"]")
+  // Structural storefront composition selected by the merchant or visual AI:
+  // cinematic | editorial | collage | catalog-first.
+  layoutStyle        String                @default("cinematic")
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
   editorialGallery   Json                  @default("[]")
@@ -460,8 +472,20 @@ model Store {
   buttonMotion       String                @default("lift")
   cartButtonLabel    String                @default("Ir a pagar")
   // "payment" opens pagosYa checkout; "whatsapp" sends the composed cart
-  // to the store's contactPhone without creating a PaymentIntent.
+  // to contactPhone; "external" sends the interested customer to a merchant
+  // URL. The latter two never create a PaymentIntent and do not require NIT.
   checkoutMode       String                @default("payment")
+  leadCaptureUrl     String?
+  // Merchant-controlled cross-sell shelf inside the cart review. Recommendations
+  // are explicitly selected by the merchant and always exclude cart items.
+  cartRecommendationsEnabled Boolean       @default(true)
+  cartRecommendationProductIds Json        @default("[]")
+  // Inventory quantities stay private unless the merchant explicitly opts in.
+  // Sold-out state is still public so customers cannot add unavailable items.
+  showLowStockToCustomers Boolean          @default(false)
+  // Optional merchant-authored sales target shown and tracked by Yapi.
+  salesGoalLabel     String?
+  salesGoalAmount    Int?
   status             StoreStatus           @default(ACTIVE)
   // Incremented once per storefront page load (getStorePublic) — a simple
   // visit counter, not deduplicated per visitor. Good enough for "is anyone
@@ -475,8 +499,31 @@ model Store {
   mediaAssets        MediaAsset[]
   visualProposals    StoreVisualProposal[]
   visualVersions     StoreVisualVersion[]
+  leads              StoreLead[]
 
   @@index([merchantId, createdAt])
+}
+
+// Contact requests created by lead-capture stores and zero-total carts. Paid
+// orders continue to live in PaymentIntent; the merchant order feed combines
+// both sources without pretending a lead was a completed sale.
+model StoreLead {
+  id          String   @id @default(cuid())
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customerName  String
+  customerEmail String
+  customerPhone String
+  message       String?
+  items         Json
+  amount        Int
+  currency      String   @default("BOB")
+  createdAt     DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
 }
 
 enum MediaAssetKind {
@@ -614,6 +661,9 @@ model PaymentLink {
   // field preserves the earlier shared-product-stock behavior; null means the
   // option is unlimited, and an integer is decremented atomically in Postgres.
   variants    Json              @default("[]")
+  // Additive product modifiers [{ id, name, amount, required }]. Their amount
+  // is added server-side after validating the customer's selected ids.
+  extras      Json              @default("[]")
   amount      Int
   currency    String            @default("BOB")
   // Merchant/PagosYa SKU. This is codigoProducto in the invoice XML and is

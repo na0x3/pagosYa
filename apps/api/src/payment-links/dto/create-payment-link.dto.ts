@@ -3,6 +3,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsInt,
   IsOptional,
   IsPositive,
@@ -35,7 +36,7 @@ export class ProductVariantDto {
 
   @ApiProperty({ description: "Option price in minor units (centavos).", example: 6500 })
   @IsInt()
-  @IsPositive()
+  @Min(0)
   amount!: number;
 
   @ApiPropertyOptional({
@@ -49,6 +50,61 @@ export class ProductVariantDto {
   @Min(0)
   @Max(1_000_000)
   stock?: number | null;
+}
+
+export class ProductExtraDto {
+  @ApiPropertyOptional({ description: "Stable extra id returned by the API. Include it when editing." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  id?: string;
+
+  @ApiProperty({ example: "Queso extra" })
+  @IsString()
+  @IsSafeText()
+  @MaxLength(60)
+  name!: string;
+
+  @ApiProperty({ description: "Additional price in minor units (centavos).", example: 500 })
+  @IsInt()
+  @Min(0)
+  amount!: number;
+
+  @ApiPropertyOptional({ description: "Optional choice group, e.g. Guarniciones." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(60)
+  groupName?: string;
+
+  @ApiPropertyOptional({ description: "Selections from this group included at no charge before extra prices apply.", example: 2 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(12)
+  freeAllowance?: number;
+
+  @ApiPropertyOptional({ description: "Customer must select this extra before adding the product.", default: false })
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+
+  @ApiPropertyOptional({
+    description: "Shared inventory name. Extras with the same name in this store consume one common stock pool.",
+    example: "Queso cottage",
+  })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(60)
+  inventoryName?: string;
+
+  @ApiPropertyOptional({ description: "Remaining units in the shared inventory pool.", example: 24 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  stock?: number;
 }
 
 export class CreatePaymentLinkDto {
@@ -72,7 +128,7 @@ export class CreatePaymentLinkDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(6)
+  @ArrayMaxSize(10)
   @Matches(UPLOADED_FILE_URL_PATTERN, { each: true, message: "each imageUrls entry must be a path returned by POST /v1/uploads" })
   @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH, { each: true })
   imageUrls?: string[];
@@ -84,7 +140,7 @@ export class CreatePaymentLinkDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(6)
+  @ArrayMaxSize(10)
   @IsString({ each: true })
   @Matches(PRODUCT_IMAGE_POSITION_PATTERN, { each: true, message: "each imagePositions entry must use the format x% y% from 0 to 100" })
   imagePositions?: string[];
@@ -123,6 +179,17 @@ export class CreatePaymentLinkDto {
   variants?: ProductVariantDto[];
 
   @ApiPropertyOptional({
+    description: "Additive extras charged on top of the product or selected option price.",
+    type: [ProductExtraDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ValidateNested({ each: true })
+  @Type(() => ProductExtraDto)
+  extras?: ProductExtraDto[];
+
+  @ApiPropertyOptional({
     description: "Category (within the same store) this product belongs to. Omit to leave unchanged, or send null to clear.",
     nullable: true,
   })
@@ -133,7 +200,7 @@ export class CreatePaymentLinkDto {
 
   @ApiProperty({ description: "Amount in minor units (centavos). e.g. 1000 = 10.00 BOB", example: 5000 })
   @IsInt()
-  @IsPositive()
+  @Min(0)
   amount!: number;
 
   @ApiPropertyOptional({ example: "BOB", default: "BOB" })

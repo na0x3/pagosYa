@@ -39,6 +39,7 @@ export class ResendEmailProvider implements EmailProvider {
       // caller's retry path (email verification can just be re-triggered by
       // a fresh signup call) handle it, rather than throwing mid-request.
       this.logger.error(`Failed to send email to=${req.to} subject="${req.subject}": ${error.message}`);
+      if (req.failLoudly) throw new Error(`Email delivery failed: ${error.message}`);
     }
   }
 }

@@ -10,6 +10,10 @@ const store = {
   logoUrl: null,
   bannerUrl: null,
   backgroundColor: "#f8fafc",
+  backgroundMode: "solid",
+  backgroundGradientStart: "#f8fafc",
+  backgroundGradientEnd: "#e0e7ff",
+  backgroundGradientAngle: 135,
   backgroundImageUrl: null,
   contactPhone: null,
   contactEmail: null,
@@ -29,12 +33,14 @@ const store = {
   announcementMode: "static",
   announcementSpeed: 18,
   promotionEnabled: false,
+  promotionImageUrl: null,
   promotionTitle: null,
   promotionBody: null,
   promotionCtaLabel: null,
   promotionCtaUrl: null,
   heroSlides: [],
   contentOrder: ["hero", "products", "about", "gallery", "links"],
+  layoutStyle: "cinematic",
   editorialGallery: [],
   buttonVariant: "solid",
   buttonMotion: "lift",
@@ -88,7 +94,10 @@ describe("VisualStudioService", () => {
       expect(call[0].data.config.heroSlides[0]).toEqual(expect.objectContaining({ imageUrl: originalUrl }));
       expect(call[0].data.config).not.toHaveProperty("html");
       expect(call[0].data.config).not.toHaveProperty("css");
+      expect(call[0].data.config.heroSlides).toHaveLength(5);
     }
+    expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.layoutStyle)).size).toBe(3);
+    expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => JSON.stringify(call[0].data.config.contentOrder))).size).toBe(3);
   });
 
   it("keeps WhatsApp conversion and its phone in every generated proposal", async () => {
@@ -186,6 +195,10 @@ describe("VisualStudioService", () => {
       galleryTitle: "La marca en imágenes",
       gallerySubtitle: "Una mirada más cercana al universo de MATCHO.",
       backgroundColor: "#f7f5f0",
+      backgroundMode: "solid",
+      backgroundGradientStart: "#f7f5f0",
+      backgroundGradientEnd: "#b9d5cc",
+      backgroundGradientAngle: 120,
       accentColor: "#274c43",
       fontStyle: "editorial",
       buttonStyle: "square",
@@ -194,6 +207,7 @@ describe("VisualStudioService", () => {
       buttonMotion: "none",
       cartButtonLabel: "Completar pedido",
       contentOrder: ["hero", "about", "products", "gallery", "links"],
+      layoutStyle: "cinematic",
       announcement: "MATCHO • Explora la selección actual",
       announcementMode: "marquee",
       announcementSpeed: 18,
@@ -203,15 +217,14 @@ describe("VisualStudioService", () => {
       promotionTitle: "",
       promotionBody: "",
       promotionCtaLabel: "",
-      backgroundImageIndex: -1,
-      heroSlides: Array.from({ length: 3 }, (_, index) => ({ assetIndex: 0, title: index ? `Descubre MATCHO ${index}` : "Tu ritual empieza aquí", body: "Explora el catálogo actual de MATCHO.", ctaLabel: "Ver productos" })),
-      editorialGallery: [{ assetIndex: 0, caption: "Matcha ceremonial", boxColor: "#f4ead7" }],
+      heroSlides: Array.from({ length: 4 }, (_, index) => ({ assetIndex: 0, title: index ? `Descubre MATCHO ${index}` : "Tu ritual empieza aquí", body: "Explora el catálogo actual de MATCHO.", ctaLabel: "Ver productos" })),
+      editorialGallery: [{ assetIndex: 0, title: "Matcha ceremonial", caption: "Una mirada cercana", body: "Una imagen que presenta el producto con contexto y acompaña la historia visual de la marca.", boxColor: "#f4ead7" }],
       ...overrides,
     });
     const directions = [
       direction("Bosque editorial"),
-      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar" }),
-      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar" }),
+      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", contentOrder: ["hero", "gallery", "about", "products", "links"] }),
+      direction("Mercado gráfico", { backgroundColor: "#f6c84f", backgroundGradientStart: "#f6c84f", backgroundGradientEnd: "#f08a5d", backgroundGradientAngle: 160, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", contentOrder: ["hero", "about", "gallery", "products", "links"] }),
     ];
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ directions }) }] }] }) });
@@ -232,6 +245,7 @@ describe("VisualStudioService", () => {
         buttonMotion: "none",
         cartButtonLabel: "Completar pedido",
         contentOrder: ["hero", "about", "products", "gallery", "links"],
+        layoutStyle: "cinematic",
         heroSlides: expect.arrayContaining([expect.objectContaining({ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí" })]),
       }));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).not.toHaveProperty("html");

@@ -1,0 +1,2 @@
+ALTER TABLE "Store"
+ADD COLUMN "showLowStockToCustomers" BOOLEAN NOT NULL DEFAULT false;

@@ -22,7 +22,26 @@ function formatAmount(amount: number, currency: string): string {
 }
 
 type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
-type CartInventoryLine = { paymentLinkId: string; variantId?: string; quantity: number; name: string; variantName?: string; unitAmount: number };
+type CartInventoryLine = {
+  paymentLinkId: string;
+  variantId?: string;
+  quantity: number;
+  name: string;
+  variantName?: string;
+  extras?: ProductExtra[];
+  unitAmount: number;
+};
+type ProductExtra = {
+  id: string;
+  name: string;
+  amount: number;
+  required: boolean;
+  groupName?: string;
+  freeAllowance?: number;
+  inventoryKey?: string;
+  inventoryName?: string;
+  stock?: number;
+};
 
 function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
   if (!Array.isArray(value)) return [];
@@ -34,11 +53,24 @@ function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
       typeof (entry as Record<string, unknown>).id === "string" &&
       typeof (entry as Record<string, unknown>).name === "string" &&
       Number.isInteger((entry as Record<string, unknown>).amount) &&
-      ((entry as Record<string, unknown>).amount as number) > 0 &&
+      ((entry as Record<string, unknown>).amount as number) >= 0 &&
       (!("stock" in entry) ||
         (entry as Record<string, unknown>).stock === null ||
         (Number.isInteger((entry as Record<string, unknown>).stock) &&
           ((entry as Record<string, unknown>).stock as number) >= 0)),
+  );
+}
+
+function readProductExtras(value: Prisma.JsonValue): ProductExtra[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is ProductExtra =>
+    !!entry && typeof entry === "object" && !Array.isArray(entry) &&
+    typeof (entry as Record<string, unknown>).id === "string" &&
+    typeof (entry as Record<string, unknown>).name === "string" &&
+    Number.isInteger((entry as Record<string, unknown>).amount) &&
+    ((entry as Record<string, unknown>).amount as number) >= 0 &&
+    typeof (entry as Record<string, unknown>).required === "boolean" &&
+    (!("stock" in entry) || (Number.isInteger((entry as Record<string, unknown>).stock) && ((entry as Record<string, unknown>).stock as number) >= 0))
   );
 }
 
@@ -306,12 +338,12 @@ export class PaymentIntentsService {
   ): Promise<void> {
     if (!intent.customerEmail) return;
     try {
-      const cart = (intent.metadata as { cart?: { name: string; variantName?: string; quantity: number; unitAmount: number }[] } | null)?.cart;
+      const cart = (intent.metadata as { cart?: CartInventoryLine[] } | null)?.cart;
       const itemLines = cart
         ? cart
             .map(
               (line) =>
-                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`,
+                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`,
             )
             .join("\n") + "\n"
         : "";
@@ -343,6 +375,7 @@ export class PaymentIntentsService {
     const links = await tx.paymentLink.findMany({ where: { id: { in: cart.map((line) => line.paymentLinkId) } } });
     const requestedByLinkId = new Map<string, number>();
     const requestedByVariant = new Map<string, { quantity: number; variant: ProductVariant; productName: string }>();
+    const requestedByExtraPool = new Map<string, { quantity: number; stock: number; name: string }>();
     for (const line of cart) {
       const link = links.find((l) => l.id === line.paymentLinkId);
       if (!link || link.status !== PaymentLinkStatus.ACTIVE) {
@@ -364,6 +397,19 @@ export class PaymentIntentsService {
       if (variants.length === 0 && line.variantId) {
         throw new BadRequestException(`"${line.name}" ya no ofrece esa opción`);
       }
+      const currentExtras = readProductExtras(link.extras);
+      for (const snapshotExtra of line.extras ?? []) {
+        const currentExtra = currentExtras.find((extra) => extra.id === snapshotExtra.id);
+        if (!currentExtra) throw new BadRequestException(`"${snapshotExtra.name}" ya no está disponible`);
+        if (currentExtra.stock !== undefined && currentExtra.inventoryKey) {
+          const requested = requestedByExtraPool.get(currentExtra.inventoryKey);
+          requestedByExtraPool.set(currentExtra.inventoryKey, {
+            quantity: (requested?.quantity ?? 0) + line.quantity,
+            stock: Math.min(requested?.stock ?? currentExtra.stock, currentExtra.stock),
+            name: currentExtra.inventoryName || currentExtra.name,
+          });
+        }
+      }
       requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
     }
 
@@ -377,6 +423,9 @@ export class PaymentIntentsService {
       if (variant.stock !== undefined && variant.stock !== null && variant.stock < quantity) {
         throw new BadRequestException(`Solo quedan ${variant.stock} unidades de "${productName} (${variant.name})"`);
       }
+    }
+    for (const { quantity, stock, name } of requestedByExtraPool.values()) {
+      if (stock < quantity) throw new BadRequestException(`Ya no hay suficiente stock de "${name}"`);
     }
   }
 
@@ -394,6 +443,7 @@ export class PaymentIntentsService {
     if (!cart) return;
     const requestedByLinkId = new Map<string, number>();
     const requestedByVariant = new Map<string, { paymentLinkId: string; variantId: string; quantity: number; label: string }>();
+    const requestedByExtraPool = new Map<string, { quantity: number; name: string }>();
     for (const line of cart) {
       if (line.variantId) {
         const key = `${line.paymentLinkId}:${line.variantId}`;
@@ -407,12 +457,23 @@ export class PaymentIntentsService {
       } else {
         requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
       }
+      for (const extra of line.extras ?? []) {
+        if (!extra.inventoryKey || extra.stock === undefined) continue;
+        const requested = requestedByExtraPool.get(extra.inventoryKey);
+        requestedByExtraPool.set(extra.inventoryKey, {
+          quantity: (requested?.quantity ?? 0) + line.quantity,
+          name: extra.inventoryName || extra.name,
+        });
+      }
     }
     for (const [paymentLinkId, quantity] of requestedByLinkId) {
-      await tx.paymentLink.updateMany({
-        where: { id: paymentLinkId, stock: { gte: quantity } },
-        data: { stock: { decrement: quantity } },
-      });
+      const updated = await tx.$executeRaw`
+        UPDATE "PaymentLink"
+        SET "stock" = CASE WHEN "stock" IS NULL THEN NULL ELSE "stock" - ${quantity} END
+        WHERE "id" = ${paymentLinkId}
+          AND ("stock" IS NULL OR "stock" >= ${quantity})
+      `;
+      if (updated !== 1) throw new BadRequestException("Uno de los productos ya no tiene suficiente stock");
     }
     for (const { paymentLinkId, variantId, quantity, label } of requestedByVariant.values()) {
       // The option inventory lives in the validated JSON snapshot, so update
@@ -456,6 +517,41 @@ export class PaymentIntentsService {
           )
       `;
       if (updated !== 1) throw new BadRequestException(`Ya no hay suficiente stock de "${label}"`);
+    }
+    const storeId = (metadata as { storeId?: string } | null)?.storeId;
+    if (!storeId && requestedByExtraPool.size) throw new BadRequestException("El pedido no tiene una tienda válida");
+    for (const [inventoryKey, { quantity, name }] of requestedByExtraPool) {
+      const updated = await tx.$executeRaw`
+        UPDATE "PaymentLink"
+        SET "extras" = (
+          SELECT jsonb_agg(
+            CASE
+              WHEN extra_value ->> 'inventoryKey' = ${inventoryKey}
+                AND extra_value ? 'stock'
+                AND (extra_value ->> 'stock')::int >= ${quantity}
+              THEN jsonb_set(extra_value, '{stock}', to_jsonb((extra_value ->> 'stock')::int - ${quantity}), true)
+              ELSE extra_value
+            END
+            ORDER BY ordinal
+          )
+          FROM jsonb_array_elements("extras") WITH ORDINALITY AS extra_rows(extra_value, ordinal)
+        )
+        WHERE "storeId" = ${storeId}
+          AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements("extras") AS extra_rows(extra_value)
+            WHERE extra_value ->> 'inventoryKey' = ${inventoryKey}
+              AND (extra_value ->> 'stock')::int >= ${quantity}
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "PaymentLink" AS pool_link,
+              jsonb_array_elements(pool_link."extras") AS pool_rows(extra_value)
+            WHERE pool_link."storeId" = ${storeId}
+              AND pool_rows.extra_value ->> 'inventoryKey' = ${inventoryKey}
+              AND (pool_rows.extra_value ->> 'stock')::int < ${quantity}
+          )
+      `;
+      if (updated < 1) throw new BadRequestException(`Ya no hay suficiente stock de "${name}"`);
     }
   }
 

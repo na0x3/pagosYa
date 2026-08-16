@@ -11,6 +11,9 @@ const mascotAssets = new Map([
   ["/assets/yapi-walk-a.png", "yapi-walk-a.png"],
   ["/assets/yapi-walk-b.png", "yapi-walk-b.png"],
 ]);
+const sharedAssets = new Map([
+  ["/assets/logo.png", path.join(dirname, "..", "..", "assets", "brand", "logo.png")],
+]);
 
 const server = createServer(async (req, res) => {
   try {
@@ -28,6 +31,15 @@ const server = createServer(async (req, res) => {
     }
     if (mascotAssets.has(req.url)) {
       const image = await readFile(path.join(dirname, "assets", mascotAssets.get(req.url)));
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "cache-control": "public, max-age=86400",
+      });
+      res.end(image);
+      return;
+    }
+    if (sharedAssets.has(req.url)) {
+      const image = await readFile(sharedAssets.get(req.url));
       res.writeHead(200, {
         "content-type": "image/png",
         "cache-control": "public, max-age=86400",

@@ -51,4 +51,50 @@ describe("CreateStoreDto storefront layout", () => {
     await expect(validate(valid)).resolves.toHaveLength(0);
     expect(await validate(invalid)).not.toHaveLength(0);
   });
+
+  it("accepts only uploaded-file paths for promotion imagery", async () => {
+    const valid = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      promotionImageUrl: "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp",
+    });
+    const invalid = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      promotionImageUrl: "https://tracking.invalid/promo.webp",
+    });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(await validate(invalid)).not.toHaveLength(0);
+  });
+
+  it("accepts a safe external lead destination and rejects non-http protocols", async () => {
+    const valid = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      checkoutMode: "external",
+      leadCaptureUrl: "https://taller.example/contacto",
+    });
+    const invalid = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      checkoutMode: "external",
+      leadCaptureUrl: "javascript:alert(1)",
+    });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(await validate(invalid)).not.toHaveLength(0);
+  });
+
+  it("accepts only booleans for the cart recommendation preference", async () => {
+    const valid = plainToInstance(CreateStoreDto, { name: "Taller Norte", cartRecommendationsEnabled: false });
+    const invalid = plainToInstance(CreateStoreDto, { name: "Taller Norte", cartRecommendationsEnabled: "no" });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(await validate(invalid)).not.toHaveLength(0);
+  });
+
+  it("accepts only booleans for customer stock visibility", async () => {
+    const valid = plainToInstance(CreateStoreDto, { name: "Taller Norte", showLowStockToCustomers: true });
+    const invalid = plainToInstance(CreateStoreDto, { name: "Taller Norte", showLowStockToCustomers: "yes" });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(await validate(invalid)).not.toHaveLength(0);
+  });
 });

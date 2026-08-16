@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
 import { MerchantStatus, PaymentLinkStatus, Prisma, StoreStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -9,13 +9,31 @@ import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
+import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
+import { EMAIL_PROVIDER } from "../dashboard/tokens";
+import { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
 type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
+type ProductExtra = {
+  id: string;
+  name: string;
+  amount: number;
+  required: boolean;
+  groupName?: string;
+  freeAllowance?: number;
+  inventoryKey?: string;
+  inventoryName?: string;
+  stock?: number;
+};
 type StoreHeroSlide = { imageUrl: string; title?: string; body?: string; ctaLabel?: string; ctaUrl?: string };
 type StoreContentSection = (typeof STORE_CONTENT_SECTIONS)[number];
-type StoreEditorialImage = { imageUrl: string; caption?: string; boxColor?: string };
+type StoreEditorialImage = { imageUrl: string; title?: string; caption?: string; body?: string; boxColor?: string };
+
+function readStringArray(value: Prisma.JsonValue): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+}
 
 function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
   if (!Array.isArray(value)) return [];
@@ -27,12 +45,43 @@ function readProductVariants(value: Prisma.JsonValue): ProductVariant[] {
       typeof (entry as Record<string, unknown>).id === "string" &&
       typeof (entry as Record<string, unknown>).name === "string" &&
       Number.isInteger((entry as Record<string, unknown>).amount) &&
-      ((entry as Record<string, unknown>).amount as number) > 0 &&
+      ((entry as Record<string, unknown>).amount as number) >= 0 &&
       (!("stock" in entry) ||
         (entry as Record<string, unknown>).stock === null ||
         (Number.isInteger((entry as Record<string, unknown>).stock) &&
           ((entry as Record<string, unknown>).stock as number) >= 0)),
   );
+}
+
+function readProductExtras(value: Prisma.JsonValue): ProductExtra[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is ProductExtra =>
+      !!entry &&
+      typeof entry === "object" &&
+      !Array.isArray(entry) &&
+      typeof (entry as Record<string, unknown>).id === "string" &&
+      typeof (entry as Record<string, unknown>).name === "string" &&
+      Number.isInteger((entry as Record<string, unknown>).amount) &&
+      ((entry as Record<string, unknown>).amount as number) >= 0 &&
+      typeof (entry as Record<string, unknown>).required === "boolean" &&
+      (!("groupName" in entry) || typeof (entry as Record<string, unknown>).groupName === "string") &&
+      (!("freeAllowance" in entry) || (Number.isInteger((entry as Record<string, unknown>).freeAllowance) && ((entry as Record<string, unknown>).freeAllowance as number) >= 0)) &&
+      (!("inventoryKey" in entry) || typeof (entry as Record<string, unknown>).inventoryKey === "string") &&
+      (!("inventoryName" in entry) || typeof (entry as Record<string, unknown>).inventoryName === "string") &&
+      (!("stock" in entry) || (Number.isInteger((entry as Record<string, unknown>).stock) && ((entry as Record<string, unknown>).stock as number) >= 0)),
+  );
+}
+
+function selectedExtrasAmount(extras: ProductExtra[]): number {
+  const usedByGroup = new Map<string, number>();
+  return extras.reduce((sum, extra) => {
+    if (!extra.groupName) return sum + extra.amount;
+    const key = extra.groupName.normalize("NFKC").toLocaleLowerCase("es");
+    const used = usedByGroup.get(key) ?? 0;
+    usedByGroup.set(key, used + 1);
+    return sum + (used < (extra.freeAllowance ?? 0) ? 0 : extra.amount);
+  }, 0);
 }
 
 function readStoreHeroSlides(value: Prisma.JsonValue): StoreHeroSlide[] {
@@ -72,7 +121,9 @@ function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
     .slice(0, 8)
     .map((entry) => ({
       imageUrl: entry.imageUrl as string,
+      ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
       ...(typeof entry.caption === "string" && entry.caption ? { caption: entry.caption } : {}),
+      ...(typeof entry.body === "string" && entry.body ? { body: entry.body } : {}),
       ...(typeof entry.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.boxColor) ? { boxColor: entry.boxColor } : {}),
     }));
 }
@@ -84,6 +135,10 @@ function storeUpdateData(dto: UpdateStoreDto): Prisma.StoreUpdateInput {
     ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
     ...(dto.bannerUrl !== undefined && { bannerUrl: dto.bannerUrl }),
     ...(dto.backgroundColor !== undefined && { backgroundColor: dto.backgroundColor }),
+    ...(dto.backgroundMode !== undefined && { backgroundMode: dto.backgroundMode }),
+    ...(dto.backgroundGradientStart !== undefined && { backgroundGradientStart: dto.backgroundGradientStart }),
+    ...(dto.backgroundGradientEnd !== undefined && { backgroundGradientEnd: dto.backgroundGradientEnd }),
+    ...(dto.backgroundGradientAngle !== undefined && { backgroundGradientAngle: dto.backgroundGradientAngle }),
     ...(dto.backgroundImageUrl !== undefined && { backgroundImageUrl: dto.backgroundImageUrl }),
     ...(dto.contactPhone !== undefined && { contactPhone: dto.contactPhone }),
     ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail }),
@@ -105,17 +160,27 @@ function storeUpdateData(dto: UpdateStoreDto): Prisma.StoreUpdateInput {
     ...(dto.announcementSize !== undefined && { announcementSize: dto.announcementSize }),
     ...(dto.announcementColor !== undefined && { announcementColor: dto.announcementColor }),
     ...(dto.promotionEnabled !== undefined && { promotionEnabled: dto.promotionEnabled }),
+    ...(dto.promotionImageUrl !== undefined && { promotionImageUrl: dto.promotionImageUrl }),
     ...(dto.promotionTitle !== undefined && { promotionTitle: dto.promotionTitle }),
     ...(dto.promotionBody !== undefined && { promotionBody: dto.promotionBody }),
     ...(dto.promotionCtaLabel !== undefined && { promotionCtaLabel: dto.promotionCtaLabel }),
     ...(dto.promotionCtaUrl !== undefined && { promotionCtaUrl: dto.promotionCtaUrl }),
     ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
     ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
+    ...(dto.layoutStyle !== undefined && { layoutStyle: dto.layoutStyle }),
     ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
     ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
     ...(dto.buttonMotion !== undefined && { buttonMotion: dto.buttonMotion }),
     ...(dto.cartButtonLabel !== undefined && { cartButtonLabel: dto.cartButtonLabel }),
     ...(dto.checkoutMode !== undefined && { checkoutMode: dto.checkoutMode }),
+    ...(dto.leadCaptureUrl !== undefined && { leadCaptureUrl: dto.leadCaptureUrl }),
+    ...(dto.cartRecommendationsEnabled !== undefined && { cartRecommendationsEnabled: dto.cartRecommendationsEnabled }),
+    ...(dto.cartRecommendationProductIds !== undefined && {
+      cartRecommendationProductIds: dto.cartRecommendationProductIds as Prisma.InputJsonValue,
+    }),
+    ...(dto.showLowStockToCustomers !== undefined && { showLowStockToCustomers: dto.showLowStockToCustomers }),
+    ...(dto.salesGoalLabel !== undefined && { salesGoalLabel: dto.salesGoalLabel }),
+    ...(dto.salesGoalAmount !== undefined && { salesGoalAmount: dto.salesGoalAmount }),
   };
 }
 
@@ -125,6 +190,7 @@ export class StoresService {
     private readonly prisma: PrismaService,
     private readonly paymentIntents: PaymentIntentsService,
     private readonly uploads: UploadsService,
+    @Optional() @Inject(EMAIL_PROVIDER) private readonly emailProvider?: EmailProvider,
   ) {}
 
   /** A merchant can run several independent stores under one account — each gets its own slug/branding/catalog. */
@@ -140,6 +206,10 @@ export class StoresService {
             logoUrl: dto.logoUrl,
             bannerUrl: dto.bannerUrl,
             backgroundColor: dto.backgroundColor,
+            backgroundMode: dto.backgroundMode,
+            backgroundGradientStart: dto.backgroundGradientStart,
+            backgroundGradientEnd: dto.backgroundGradientEnd,
+            backgroundGradientAngle: dto.backgroundGradientAngle,
             backgroundImageUrl: dto.backgroundImageUrl,
             contactPhone: dto.contactPhone,
             contactEmail: dto.contactEmail,
@@ -161,17 +231,27 @@ export class StoresService {
             announcementSize: dto.announcementSize,
             announcementColor: dto.announcementColor,
             promotionEnabled: dto.promotionEnabled,
+            promotionImageUrl: dto.promotionImageUrl,
             promotionTitle: dto.promotionTitle,
             promotionBody: dto.promotionBody,
             promotionCtaLabel: dto.promotionCtaLabel,
             promotionCtaUrl: dto.promotionCtaUrl,
             ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
             ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
+            ...(dto.layoutStyle !== undefined && { layoutStyle: dto.layoutStyle }),
             ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
             buttonVariant: dto.buttonVariant,
             buttonMotion: dto.buttonMotion,
             cartButtonLabel: dto.cartButtonLabel,
             checkoutMode: dto.checkoutMode,
+            leadCaptureUrl: dto.leadCaptureUrl,
+            cartRecommendationsEnabled: dto.cartRecommendationsEnabled,
+            ...(dto.cartRecommendationProductIds !== undefined && {
+              cartRecommendationProductIds: dto.cartRecommendationProductIds as Prisma.InputJsonValue,
+            }),
+            showLowStockToCustomers: dto.showLowStockToCustomers,
+            salesGoalLabel: dto.salesGoalLabel,
+            salesGoalAmount: dto.salesGoalAmount,
           },
         });
       } catch (err) {
@@ -298,6 +378,13 @@ export class StoresService {
     ]);
 
     const soldByProduct = new Map(productStats.map((stat) => [stat.paymentLinkId, stat.quantity]));
+    const sharedExtraStock = new Map<string, number>();
+    for (const item of items) {
+      for (const extra of readProductExtras(item.extras)) {
+        if (!extra.inventoryKey || extra.stock === undefined) continue;
+        sharedExtraStock.set(extra.inventoryKey, Math.min(sharedExtraStock.get(extra.inventoryKey) ?? extra.stock, extra.stock));
+      }
+    }
 
     return {
       storeId: store.id,
@@ -306,6 +393,10 @@ export class StoresService {
       logoUrl: store.logoUrl,
       bannerUrl: store.bannerUrl,
       backgroundColor: store.backgroundColor,
+      backgroundMode: store.backgroundMode,
+      backgroundGradientStart: store.backgroundGradientStart,
+      backgroundGradientEnd: store.backgroundGradientEnd,
+      backgroundGradientAngle: store.backgroundGradientAngle,
       backgroundImageUrl: store.backgroundImageUrl,
       contactPhone: store.contactPhone,
       contactEmail: store.contactEmail,
@@ -327,17 +418,23 @@ export class StoresService {
       announcementSize: store.announcementSize,
       announcementColor: store.announcementColor,
       promotionEnabled: store.promotionEnabled,
+      promotionImageUrl: store.promotionImageUrl,
       promotionTitle: store.promotionTitle,
       promotionBody: store.promotionBody,
       promotionCtaLabel: store.promotionCtaLabel,
       promotionCtaUrl: store.promotionCtaUrl,
       heroSlides: readStoreHeroSlides(store.heroSlides),
       contentOrder: readStoreContentOrder(store.contentOrder),
+      layoutStyle: store.layoutStyle,
       editorialGallery: readStoreEditorialGallery(store.editorialGallery),
       buttonVariant: store.buttonVariant,
       buttonMotion: store.buttonMotion,
       cartButtonLabel: store.cartButtonLabel,
       checkoutMode: store.checkoutMode,
+      leadCaptureUrl: store.leadCaptureUrl,
+      cartRecommendationsEnabled: store.cartRecommendationsEnabled,
+      cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
+      showLowStockToCustomers: store.showLowStockToCustomers,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
       categories: categories.map((c) => ({ id: c.id, name: c.name })),
       items: items.map((item) => ({
@@ -351,9 +448,25 @@ export class StoresService {
         // null = unlimited/not tracked; 0 means genuinely sold out, both are
         // meaningfully different from "in stock" and the storefront needs to
         // tell them apart.
-        stock: item.stock,
+        // `stock` controls what storefront copy may disclose. `purchaseLimit`
+        // is enforcement-only: checkout uses it to disable further additions
+        // even when the merchant keeps exact inventory quantities hidden.
+        stock: store.showLowStockToCustomers ? item.stock : item.stock === 0 ? 0 : null,
+        purchaseLimit: item.stock,
         color: item.color,
-        variants: readProductVariants(item.variants),
+        variants: readProductVariants(item.variants).map((variant) => ({
+          ...variant,
+          ...(store.showLowStockToCustomers ? {} : { stock: variant.stock === 0 ? 0 : null }),
+          ...(variant.stock !== undefined ? { purchaseLimit: variant.stock } : {}),
+        })),
+        extras: readProductExtras(item.extras).map((extra) => ({
+          id: extra.id,
+          name: extra.name,
+          amount: extra.amount,
+          required: extra.required,
+          ...(extra.groupName ? { groupName: extra.groupName, freeAllowance: extra.freeAllowance ?? 0 } : {}),
+          available: extra.stock === undefined || (extra.inventoryKey ? sharedExtraStock.get(extra.inventoryKey) !== 0 : extra.stock !== 0),
+        })),
         amount: item.amount,
         currency: item.currency,
         soldCount: soldByProduct.get(item.id) ?? 0,
@@ -365,8 +478,8 @@ export class StoresService {
    * single PaymentIntent, i.e. one payment/one QR for the whole cart. */
   async createCartCheckout(slug: string, dto: CartCheckoutDto) {
     const store = await this.findActiveBySlugPublic(slug);
-    if (store.checkoutMode === "whatsapp") {
-      throw new BadRequestException("Esta tienda recibe pedidos directamente por WhatsApp");
+    if (store.checkoutMode === "whatsapp" || store.checkoutMode === "external") {
+      throw new BadRequestException("Esta tienda no tiene habilitados los pagos integrados");
     }
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: store.merchantId } });
 
@@ -406,6 +519,8 @@ export class StoresService {
         variantId?: string;
         name: string;
         variantName?: string;
+        extraIds?: string[];
+        extras?: ProductExtra[];
         quantity: number;
         unitAmount: number;
         optionStock?: number | null;
@@ -414,6 +529,7 @@ export class StoresService {
     for (const item of dto.items) {
       const link = linksById.get(item.paymentLinkId)!;
       const variants = readProductVariants(link.variants);
+      const extras = readProductExtras(link.extras);
       let variant: ProductVariant | undefined;
       if (variants.length > 0) {
         if (!item.variantId) throw new BadRequestException(`Elige una opción para "${link.name}"`);
@@ -423,7 +539,19 @@ export class StoresService {
         throw new BadRequestException(`"${link.name}" no tiene opciones`);
       }
 
-      const lineKey = `${link.id}:${variant?.id ?? "base"}`;
+      const selectedExtraIds = [...(item.extraIds ?? [])].sort();
+      const selectedExtras = extras.filter((extra) => selectedExtraIds.includes(extra.id));
+      if (selectedExtras.length !== selectedExtraIds.length) {
+        throw new BadRequestException(`Un extra de "${link.name}" ya no está disponible`);
+      }
+      const missingRequired = extras.filter((extra) => extra.required && !selectedExtraIds.includes(extra.id));
+      if (missingRequired.length) {
+        throw new BadRequestException(`Elige ${missingRequired.map((extra) => `"${extra.name}"`).join(", ")} para "${link.name}"`);
+      }
+      const exhaustedExtra = selectedExtras.find((extra) => extra.stock === 0);
+      if (exhaustedExtra) throw new BadRequestException(`"${exhaustedExtra.name}" está agotado`);
+
+      const lineKey = `${link.id}:${variant?.id ?? "base"}:${selectedExtraIds.join("+")}`;
       const existing = selectedLines.get(lineKey);
       if (existing) existing.quantity += item.quantity;
       else {
@@ -431,9 +559,10 @@ export class StoresService {
           paymentLinkId: link.id,
           ...(variant && { variantId: variant.id, variantName: variant.name }),
           ...(variant && variant.stock !== undefined && { optionStock: variant.stock }),
+          ...(selectedExtraIds.length && { extraIds: selectedExtraIds, extras: selectedExtras }),
           name: link.name,
           quantity: item.quantity,
-          unitAmount: variant?.amount ?? link.amount,
+          unitAmount: (variant?.amount ?? link.amount) + selectedExtrasAmount(selectedExtras),
         });
       }
     }
@@ -444,11 +573,27 @@ export class StoresService {
       }
     }
 
+    const requestedByExtraPool = new Map<string, { quantity: number; stock: number; name: string }>();
+    for (const line of selectedLines.values()) {
+      for (const extra of line.extras ?? []) {
+        if (!extra.inventoryKey || extra.stock === undefined) continue;
+        const requested = requestedByExtraPool.get(extra.inventoryKey);
+        requestedByExtraPool.set(extra.inventoryKey, {
+          quantity: (requested?.quantity ?? 0) + line.quantity,
+          stock: Math.min(requested?.stock ?? extra.stock, extra.stock),
+          name: extra.inventoryName || extra.name,
+        });
+      }
+    }
+    for (const { quantity, stock, name } of requestedByExtraPool.values()) {
+      if (quantity > stock) throw new BadRequestException(`Ya no hay suficiente stock de "${name}"`);
+    }
+
     const cartLines = [...selectedLines.values()].map(({ optionStock: _optionStock, ...line }) => line);
     const amount = cartLines.reduce((sum, line) => sum + line.unitAmount * line.quantity, 0);
 
     let description = cartLines
-      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""} x${line.quantity}`)
+      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}`)
       .join(", ");
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       description = description.slice(0, MAX_DESCRIPTION_LENGTH - 1) + "…";
@@ -469,5 +614,145 @@ export class StoresService {
       contactPhone: store.contactPhone,
       contactEmail: store.contactEmail,
     };
+  }
+
+  /** Public lead capture for stores that finish outside the pagosYa payment flow.
+   * The browser only submits product ids; names and prices are resolved again
+   * from this store so the notification cannot be used to spoof its catalog. */
+  async submitLead(slug: string, dto: SubmitStoreLeadDto) {
+    const store = await this.findActiveBySlugPublic(slug);
+    if (!this.emailProvider) throw new BadRequestException("El correo de interesados todavía no está disponible");
+
+    const digitCount = dto.phone.replace(/\D/g, "").length;
+    if (digitCount < 7 || digitCount > 15) throw new BadRequestException("Escribe un número de WhatsApp válido");
+
+    const requestedIds = [...new Set(dto.items.map((item) => item.paymentLinkId))];
+    const [merchant, links] = await Promise.all([
+      this.prisma.merchant.findUniqueOrThrow({ where: { id: store.merchantId } }),
+      this.prisma.paymentLink.findMany({
+        where: { id: { in: requestedIds }, storeId: store.id, status: PaymentLinkStatus.ACTIVE },
+      }),
+    ]);
+    if (links.length !== requestedIds.length) {
+      throw new BadRequestException("Uno o más productos seleccionados ya no están disponibles");
+    }
+
+    const byId = new Map(links.map((link) => [link.id, link]));
+    const requestedByProduct = new Map<string, number>();
+    const requestedByOption = new Map<string, { quantity: number; stock: number; name: string }>();
+    const requestedByExtraPool = new Map<string, { quantity: number; stock: number; name: string }>();
+    const lines = dto.items.map((item) => {
+      const link = byId.get(item.paymentLinkId)!;
+      const variants = readProductVariants(link.variants);
+      const availableExtras = readProductExtras(link.extras);
+      let variant: ProductVariant | undefined;
+      if (variants.length) {
+        if (!item.variantId) throw new BadRequestException(`Elige una opción para "${link.name}"`);
+        variant = variants.find((candidate) => candidate.id === item.variantId);
+        if (!variant) throw new BadRequestException(`Una opción de "${link.name}" ya no está disponible`);
+      } else if (item.variantId) {
+        throw new BadRequestException(`"${link.name}" no tiene opciones`);
+      }
+
+      const selectedExtraIds = [...(item.extraIds ?? [])].sort();
+      const extras = availableExtras.filter((extra) => selectedExtraIds.includes(extra.id));
+      if (extras.length !== selectedExtraIds.length) {
+        throw new BadRequestException(`Un extra de "${link.name}" ya no está disponible`);
+      }
+      const missingRequired = availableExtras.filter((extra) => extra.required && !selectedExtraIds.includes(extra.id));
+      if (missingRequired.length) {
+        throw new BadRequestException(`Elige ${missingRequired.map((extra) => `"${extra.name}"`).join(", ")} para "${link.name}"`);
+      }
+
+      requestedByProduct.set(link.id, (requestedByProduct.get(link.id) ?? 0) + item.quantity);
+      if (variant && typeof variant.stock === "number") {
+        const key = `${link.id}:${variant.id}`;
+        const current = requestedByOption.get(key);
+        requestedByOption.set(key, {
+          quantity: (current?.quantity ?? 0) + item.quantity,
+          stock: variant.stock,
+          name: `${link.name} (${variant.name})`,
+        });
+      }
+      for (const extra of extras) {
+        if (extra.stock === 0) throw new BadRequestException(`"${extra.name}" está agotado`);
+        if (!extra.inventoryKey || extra.stock === undefined) continue;
+        const current = requestedByExtraPool.get(extra.inventoryKey);
+        requestedByExtraPool.set(extra.inventoryKey, {
+          quantity: (current?.quantity ?? 0) + item.quantity,
+          stock: Math.min(current?.stock ?? extra.stock, extra.stock),
+          name: extra.inventoryName || extra.name,
+        });
+      }
+
+      const unitAmount = (variant?.amount ?? link.amount) + selectedExtrasAmount(extras);
+      const details = [variant?.name, ...extras.map((extra) => extra.name)].filter(Boolean).join(" · ");
+      return {
+        paymentLinkId: link.id,
+        name: link.name,
+        ...(variant && { variantId: variant.id, variantName: variant.name }),
+        ...(selectedExtraIds.length && { extraIds: selectedExtraIds, extras: extras.map((extra) => ({ id: extra.id, name: extra.name, amount: extra.amount })) }),
+        quantity: item.quantity,
+        unitAmount,
+        label: `${link.name}${details ? ` (${details})` : ""} × ${item.quantity}`,
+        amount: unitAmount * item.quantity,
+        currency: link.currency,
+      };
+    });
+    for (const link of links) {
+      const requested = requestedByProduct.get(link.id) ?? 0;
+      if (link.stock !== null && requested > link.stock) {
+        throw new BadRequestException(`Solo quedan ${link.stock} unidades de "${link.name}"`);
+      }
+    }
+    for (const item of [...requestedByOption.values(), ...requestedByExtraPool.values()]) {
+      if (item.quantity > item.stock) throw new BadRequestException(`Solo quedan ${item.stock} unidades de "${item.name}"`);
+    }
+    const grandTotal = lines.reduce((sum, line) => sum + line.amount, 0);
+    if (store.checkoutMode !== "external" && (store.checkoutMode !== "payment" || grandTotal > 0)) {
+      throw new BadRequestException("Esta tienda solo recibe formularios para pedidos con total cero");
+    }
+    const currencies = [...new Set(lines.map((line) => line.currency))];
+    const totals = currencies.map((currency) => {
+      const amount = lines.filter((line) => line.currency === currency).reduce((sum, line) => sum + line.amount, 0);
+      return `${(amount / 100).toFixed(2)} ${currency}`;
+    });
+    const recipient = store.contactEmail || merchant.email;
+    const body = [
+      `Nuevo interesado desde ${store.name}`,
+      "",
+      `Nombre: ${dto.name.trim()}`,
+      `Correo: ${dto.email.trim().toLowerCase()}`,
+      `WhatsApp: ${dto.phone.trim()}`,
+      ...(dto.message?.trim() ? [`Mensaje: ${dto.message.trim()}`] : []),
+      "",
+      "Productos seleccionados:",
+      ...lines.map((line) => `- ${line.label}`),
+      `Total de referencia: ${totals.join(" + ")}`,
+      "",
+      "Este mensaje fue enviado por pagosYa. Responde al correo o WhatsApp indicado por el cliente.",
+    ].join("\n");
+
+    await this.emailProvider.send({
+      to: recipient,
+      subject: `Nuevo interesado en ${store.name}: ${dto.name.trim()}`,
+      body,
+      failLoudly: true,
+    });
+    const lead = await this.prisma.storeLead.create({
+      data: {
+        merchantId: store.merchantId,
+        storeId: store.id,
+        customerName: dto.name.trim(),
+        customerEmail: dto.email.trim().toLowerCase(),
+        customerPhone: dto.phone.trim(),
+        message: dto.message?.trim() || null,
+        items: lines as Prisma.InputJsonValue,
+        amount: grandTotal,
+        currency: currencies[0] || "BOB",
+      },
+      select: { id: true },
+    });
+    return { submitted: true, leadId: lead.id };
   }
 }

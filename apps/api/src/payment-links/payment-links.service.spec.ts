@@ -10,6 +10,7 @@ function makeService() {
       create: jest.fn().mockImplementation(({ data }) => ({ id: `cat_${data.name.toLowerCase()}`, ...data })),
     },
     paymentLink: {
+      findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue({
         id: "link_1",
         storeId: "store_1",
@@ -24,6 +25,7 @@ function makeService() {
       update: jest.fn().mockImplementation(({ data }) => ({ id: "link_1", ...data })),
       create: jest.fn().mockImplementation(({ data }) => ({ id: `link_${data.name.toLowerCase()}`, ...data })),
     },
+    $executeRaw: jest.fn().mockResolvedValue(1),
   };
   Object.assign(prisma, {
     $transaction: jest.fn().mockImplementation((callback) => callback(prisma)),
@@ -34,6 +36,97 @@ function makeService() {
 }
 
 describe("PaymentLinksService legacy option stock", () => {
+  it("normalizes additive extras and preserves their required flag", async () => {
+    const { service, prisma } = makeService();
+
+    await service.create("merchant_1", "store_1", {
+      name: "Pizza",
+      amount: 8000,
+      extras: [
+        { name: "Queso", amount: 500, required: true },
+        { name: "Caja regalo", amount: 300 },
+      ],
+    });
+
+    expect(prisma.paymentLink.create.mock.calls[0][0].data.extras).toEqual([
+      expect.objectContaining({ id: expect.any(String), name: "Queso", amount: 500, required: true }),
+      expect.objectContaining({ id: expect.any(String), name: "Caja regalo", amount: 300, required: false }),
+    ]);
+  });
+
+  it("accepts zero prices and persists a consistent free-extra allowance", async () => {
+    const { service, prisma } = makeService();
+
+    await service.create("merchant_1", "store_1", {
+      name: "Menú infantil",
+      amount: 0,
+      variants: [
+        { name: "Promoción", amount: 0 },
+        { name: "Regular", amount: 2500 },
+      ],
+      extras: [
+        { name: "Papas", amount: 700, groupName: "Guarniciones", freeAllowance: 2 },
+        { name: "Ensalada", amount: 600, groupName: "Guarniciones", freeAllowance: 2 },
+      ],
+    });
+
+    expect(prisma.paymentLink.create.mock.calls[0][0].data).toEqual(expect.objectContaining({
+      amount: 0,
+      variants: expect.arrayContaining([expect.objectContaining({ name: "Promoción", amount: 0 })]),
+      extras: expect.arrayContaining([expect.objectContaining({ name: "Papas", groupName: "Guarniciones", freeAllowance: 2 })]),
+    }));
+  });
+
+  it("rejects different allowances inside the same extra group", async () => {
+    const { service } = makeService();
+    await expect(service.create("merchant_1", "store_1", {
+      name: "Almuerzo",
+      amount: 3000,
+      extras: [
+        { name: "Papas", amount: 700, groupName: "Guarniciones", freeAllowance: 2 },
+        { name: "Arroz", amount: 500, groupName: "Guarniciones", freeAllowance: 1 },
+      ],
+    })).rejects.toThrow("misma cantidad gratis");
+  });
+
+  it("replenishes the same shared extra inventory across other products", async () => {
+    const { service, prisma } = makeService();
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "burger_2",
+      storeId: "store_1",
+      extras: [{
+        id: "ext_existing", name: "Añadir cottage", amount: 600, required: false,
+        inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 2,
+      }],
+    }]);
+
+    await service.create("merchant_1", "store_1", {
+      name: "Burger clásica",
+      amount: 5000,
+      extras: [{ name: "Queso cottage", amount: 500, inventoryName: "Queso cottage", stock: 24 }],
+    });
+
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$executeRaw.mock.calls[0].slice(1)).toEqual([
+      "queso cottage",
+      "Queso cottage",
+      24,
+      "store_1",
+      "queso cottage",
+    ]);
+  });
+
+  it("rejects shared stock without a store-wide inventory name", async () => {
+    const { service, prisma } = makeService();
+
+    await expect(service.create("merchant_1", "store_1", {
+      name: "Burger clásica",
+      amount: 5000,
+      extras: [{ name: "Queso cottage", amount: 500, stock: 24 }],
+    })).rejects.toThrow("necesita un nombre de inventario");
+    expect(prisma.paymentLink.create).not.toHaveBeenCalled();
+  });
+
   it("preserves shared stock markers when an old product is edited", async () => {
     const { service, prisma } = makeService();
 

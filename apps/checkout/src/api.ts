@@ -45,8 +45,12 @@ export interface StoreItem {
   tags: string[];
   // null = unlimited/not tracked, 0 = genuinely sold out.
   stock: number | null;
+  // Cart enforcement ceiling. This remains available when exact inventory is
+  // hidden from storefront copy, so the shopper still cannot exceed stock.
+  purchaseLimit?: number | null;
   color: string | null;
-  variants: Array<{ id: string; name: string; amount: number; stock?: number | null }>;
+  variants: Array<{ id: string; name: string; amount: number; stock?: number | null; purchaseLimit?: number | null }>;
+  extras: Array<{ id: string; name: string; amount: number; required: boolean; available: boolean; groupName?: string; freeAllowance?: number }>;
   amount: number;
   currency: string;
   // Units sold via store-checkout carts — powers the "Más vendidos" sort.
@@ -79,7 +83,9 @@ export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "l
 
 export interface StoreEditorialImage {
   imageUrl: string;
+  title?: string;
   caption?: string;
+  body?: string;
   boxColor?: string;
 }
 
@@ -90,6 +96,10 @@ export interface Store {
   logoUrl: string | null;
   bannerUrl: string | null;
   backgroundColor: string | null;
+  backgroundMode: "solid" | "gradient";
+  backgroundGradientStart: string;
+  backgroundGradientEnd: string;
+  backgroundGradientAngle: number;
   backgroundImageUrl: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
@@ -118,6 +128,7 @@ export interface Store {
   announcementSize: "small" | "medium" | "large";
   announcementColor: string;
   promotionEnabled: boolean;
+  promotionImageUrl: string | null;
   promotionTitle: string | null;
   promotionBody: string | null;
   promotionCtaLabel: string | null;
@@ -126,11 +137,17 @@ export interface Store {
   // Optional while older previews/cached responses roll forward; checkout
   // supplies the canonical order and an empty gallery when absent.
   contentOrder?: StoreContentSection[];
+  layoutStyle?: "cinematic" | "editorial" | "collage" | "catalog-first";
   editorialGallery?: StoreEditorialImage[];
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "none" | "lift" | "pulse";
   cartButtonLabel: string;
-  checkoutMode: "payment" | "whatsapp";
+  checkoutMode: "payment" | "whatsapp" | "external";
+  // Used only by external lead mode; no PaymentIntent is created.
+  leadCaptureUrl: string | null;
+  cartRecommendationsEnabled: boolean;
+  cartRecommendationProductIds: string[];
+  showLowStockToCustomers: boolean;
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];
@@ -159,7 +176,7 @@ export interface CartCheckoutResult {
  * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
 export async function checkoutCart(
   slug: string,
-  items: { paymentLinkId: string; variantId?: string; quantity: number }[],
+  items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[],
 ): Promise<CartCheckoutResult> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/cart-checkout`, {
     method: "POST",
@@ -167,6 +184,26 @@ export async function checkoutCart(
     body: JSON.stringify({ items }),
   });
   return parseOrThrow<CartCheckoutResult>(response);
+}
+
+export interface StoreLeadContact {
+  name: string;
+  email: string;
+  phone: string;
+  message?: string;
+}
+
+export async function submitStoreLead(
+  slug: string,
+  contact: StoreLeadContact,
+  items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[],
+): Promise<{ submitted: true }> {
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/leads`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...contact, items }),
+  });
+  return parseOrThrow<{ submitted: true }>(response);
 }
 
 export interface CustomerContact {

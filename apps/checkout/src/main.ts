@@ -7,6 +7,7 @@ import {
   fetchSession,
   fetchStore,
   simulateRailCallback,
+  submitStoreLead,
   CheckoutSession,
   CustomerContact,
   Store,
@@ -79,6 +80,8 @@ const ICON_ARROW_LEFT =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
 const ICON_ARROW_RIGHT =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+const ICON_EXTERNAL =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>';
 
 const app = document.getElementById("app")!;
 let selectedType: PaymentMethodType = PaymentMethodType.CARD;
@@ -196,13 +199,54 @@ function accentContrastColor(hex: string): "#ffffff" | "#000000" {
   return luminance >= 0.179 ? "#000000" : "#ffffff";
 }
 
-function backgroundTheme(backgroundColor: string | null, hasImage: boolean): { light: boolean; textOverride: "#000000" | "#ffffff" | null } {
-  if (hasImage) return { light: true, textOverride: null };
+function backgroundTheme(backgroundColor: string | null): { light: boolean; textOverride: "#000000" | "#ffffff" | null } {
   if (!backgroundColor || !/^#[0-9a-f]{6}$/i.test(backgroundColor)) return { light: false, textOverride: null };
   if (colorContrastRatio("#171717", backgroundColor) >= 4.5) return { light: true, textOverride: null };
   if (colorContrastRatio("#f5f5f5", backgroundColor) >= 4.5) return { light: false, textOverride: null };
   const textOverride = accentContrastColor(backgroundColor);
   return { light: textOverride === "#000000", textOverride };
+}
+
+function safeGradientTheme(start: string, end: string, angle: number): {
+  background: string;
+  light: boolean;
+  textOverride: "#000000" | "#ffffff" | null;
+} {
+  const colors = [start, end];
+  const readableWith = (text: "#000000" | "#ffffff", candidates: string[]) =>
+    candidates.every((color) => colorContrastRatio(text, color) >= 4.5);
+  if (readableWith("#000000", colors)) {
+    return { background: `linear-gradient(${angle}deg, ${start}, ${end})`, light: true, textOverride: "#000000" };
+  }
+  if (readableWith("#ffffff", colors)) {
+    return { background: `linear-gradient(${angle}deg, ${start}, ${end})`, light: false, textOverride: "#ffffff" };
+  }
+
+  // Opposite-lightness endpoints cannot share readable global text. Preserve
+  // the merchant's two hues beneath the least intrusive light/dark wash that
+  // makes both ends meet WCAG AA for the selected text color.
+  for (let step = 1; step <= 20; step += 1) {
+    const alpha = step / 20;
+    for (const option of [
+      { text: "#000000" as const, rgb: "255,255,255", light: true },
+      { text: "#ffffff" as const, rgb: "0,0,0", light: false },
+    ]) {
+      const overlay = option.text === "#000000" ? "#ffffff" : "#000000";
+      const mixed = colors.map((color) => {
+        const base = color.slice(1).match(/.{2}/g)!.map((channel) => parseInt(channel, 16));
+        const target = overlay === "#ffffff" ? 255 : 0;
+        return `#${base.map((channel) => Math.round(channel * (1 - alpha) + target * alpha).toString(16).padStart(2, "0")).join("")}`;
+      });
+      if (readableWith(option.text, mixed)) {
+        return {
+          background: `linear-gradient(rgba(${option.rgb},${alpha}), rgba(${option.rgb},${alpha})), linear-gradient(${angle}deg, ${start}, ${end})`,
+          light: option.light,
+          textOverride: option.text,
+        };
+      }
+    }
+  }
+  return { background: start, ...backgroundTheme(start) };
 }
 
 function createStoreEntrance(): HTMLElement {
@@ -217,7 +261,14 @@ function createStoreEntrance(): HTMLElement {
 
   const brand = document.createElement("div");
   brand.className = "store-entry-loader-brand";
-  brand.textContent = "Cargando tienda";
+  const mark = document.createElement("img");
+  mark.className = "store-entry-loader-logo";
+  mark.src = "/logo-mark.png";
+  mark.alt = "";
+  const wordmark = document.createElement("span");
+  wordmark.className = "store-entry-loader-wordmark";
+  wordmark.textContent = "pagosYa";
+  brand.append(mark, wordmark);
 
   const track = document.createElement("div");
   track.className = "store-entry-loader-track";
@@ -232,32 +283,7 @@ function createStoreEntrance(): HTMLElement {
 
 function finishStoreEntrance(entrance: HTMLElement, store: Store) {
   const storeName = store.storeName.trim() || "Tienda";
-  const brand = entrance.querySelector<HTMLElement>(".store-entry-loader-brand")!;
-  const logoUrl = assetUrl(store.logoUrl);
-  const accent = store.accentColor ? clampAccentLightness(store.accentColor) : DEFAULT_ACCENT_PALETTES.dark.accent;
-  const background = store.backgroundColor || "#11100f";
-
-  entrance.style.setProperty("--store-entry-bg", background);
-  entrance.style.setProperty("--store-entry-accent", accent);
-  entrance.style.setProperty("--store-entry-ink", accentContrastColor(background));
-  entrance.setAttribute("aria-label", `Cargando ${storeName}`);
-  brand.replaceChildren();
-
-  if (logoUrl) {
-    const logo = document.createElement("img");
-    logo.className = "store-entry-loader-logo";
-    logo.src = logoUrl;
-    logo.alt = "";
-    logo.addEventListener("error", () => {
-      brand.textContent = storeName;
-    }, { once: true });
-    const accessibleName = document.createElement("span");
-    accessibleName.className = "sr-only";
-    accessibleName.textContent = storeName;
-    brand.append(logo, accessibleName);
-  } else {
-    brand.textContent = storeName;
-  }
+  entrance.setAttribute("aria-label", `Cargando ${storeName} con pagosYa`);
 
   // Schedule both phases while the owning window is alive. A nested access to
   // `window` here used to throw if navigation/test teardown happened during
@@ -323,20 +349,30 @@ async function enterPaymentFlow(clientSecret: string) {
 // as separate cart lines without duplicating the product in the catalog.
 const cart = new Map<string, number>();
 const selectedVariantByItem = new Map<string, string>();
+const selectedExtraIdsByItem = new Map<string, Set<string>>();
 const selectedProductImageByItem = new Map<string, number>();
 const CART_VARIANT_SEPARATOR = "::";
+const CART_EXTRAS_SEPARATOR = "~~";
 
 function itemVariants(item: StoreItem): StoreItem["variants"] {
   return item.variants ?? [];
 }
 
-function cartItemKey(paymentLinkId: string, variantId?: string): string {
-  return variantId ? `${paymentLinkId}${CART_VARIANT_SEPARATOR}${variantId}` : paymentLinkId;
+function itemExtras(item: StoreItem): StoreItem["extras"] {
+  return item.extras ?? [];
 }
 
-function parseCartItemKey(key: string): { paymentLinkId: string; variantId?: string } {
-  const [paymentLinkId, variantId] = key.split(CART_VARIANT_SEPARATOR, 2);
-  return { paymentLinkId, ...(variantId ? { variantId } : {}) };
+function cartItemKey(paymentLinkId: string, variantId?: string, extraIds: string[] = []): string {
+  const base = variantId ? `${paymentLinkId}${CART_VARIANT_SEPARATOR}${variantId}` : paymentLinkId;
+  const normalizedExtras = [...new Set(extraIds)].sort();
+  return normalizedExtras.length ? `${base}${CART_EXTRAS_SEPARATOR}${normalizedExtras.join(",")}` : base;
+}
+
+function parseCartItemKey(key: string): { paymentLinkId: string; variantId?: string; extraIds: string[] } {
+  const [base, encodedExtras = ""] = key.split(CART_EXTRAS_SEPARATOR, 2);
+  const [paymentLinkId, variantId] = base.split(CART_VARIANT_SEPARATOR, 2);
+  const extraIds = encodedExtras.split(",").filter(Boolean);
+  return { paymentLinkId, ...(variantId ? { variantId } : {}), extraIds };
 }
 
 function selectedVariantFor(item: StoreItem): StoreItem["variants"][number] | undefined {
@@ -344,10 +380,56 @@ function selectedVariantFor(item: StoreItem): StoreItem["variants"][number] | un
   if (variants.length === 0) return undefined;
   const selectedId = selectedVariantByItem.get(item.id);
   const remembered = variants.find((variant) => variant.id === selectedId);
-  const firstPurchasable = variants.find((variant) => optionStock(item, variant) !== 0);
-  const selected = remembered && optionStock(item, remembered) !== 0 ? remembered : firstPurchasable ?? variants[0];
-  selectedVariantByItem.set(item.id, selected.id);
-  return selected;
+  if (remembered && optionStock(item, remembered) !== 0) return remembered;
+  selectedVariantByItem.delete(item.id);
+  return undefined;
+}
+
+function selectedExtrasFor(item: StoreItem): StoreItem["extras"] {
+  const selected = selectedExtraIdsByItem.get(item.id) ?? new Set<string>();
+  return itemExtras(item).filter((extra) => selected.has(extra.id));
+}
+
+function selectedExtrasAmount(extras: StoreItem["extras"]): number {
+  const selectedByGroup = new Map<string, number>();
+  return extras.reduce((total, extra) => {
+    const group = extra.groupName?.trim().toLocaleLowerCase("es");
+    if (!group) return total + extra.amount;
+    const selectionNumber = (selectedByGroup.get(group) ?? 0) + 1;
+    selectedByGroup.set(group, selectionNumber);
+    return total + (selectionNumber <= (extra.freeAllowance ?? 0) ? 0 : extra.amount);
+  }, 0);
+}
+
+function extraDisplayAmount(item: StoreItem, extra: StoreItem["extras"][number], selectedExtras: StoreItem["extras"]): number {
+  const group = extra.groupName?.trim().toLocaleLowerCase("es");
+  if (!group) return extra.amount;
+  const selectedIds = new Set(selectedExtras.map((selected) => selected.id));
+  selectedIds.add(extra.id);
+  const groupSelections = itemExtras(item).filter((candidate) =>
+    selectedIds.has(candidate.id) && candidate.groupName?.trim().toLocaleLowerCase("es") === group,
+  );
+  const selectionNumber = groupSelections.findIndex((candidate) => candidate.id === extra.id) + 1;
+  return selectionNumber > 0 && selectionNumber <= (extra.freeAllowance ?? 0) ? 0 : extra.amount;
+}
+
+function extrasCourtesyCopy(item: StoreItem): string {
+  const groups = new Map<string, { name: string; allowance: number }>();
+  itemExtras(item).forEach((extra) => {
+    const name = extra.groupName?.trim();
+    if (name && (extra.freeAllowance ?? 0) > 0) groups.set(name.toLocaleLowerCase("es"), { name, allowance: extra.freeAllowance ?? 0 });
+  });
+  return [...groups.values()].map((group) => `${group.name}: ${group.allowance} ${group.allowance === 1 ? "incluida" : "incluidas"}`).join(" · ");
+}
+
+function productConfigurationComplete(item: StoreItem): boolean {
+  if (itemVariants(item).length > 0 && !selectedVariantFor(item)) return false;
+  const selectedIds = selectedExtraIdsByItem.get(item.id) ?? new Set<string>();
+  return itemExtras(item).every((extra) => !extra.required || (extra.available && selectedIds.has(extra.id)));
+}
+
+function selectedUnitAmount(item: StoreItem, variant = selectedVariantFor(item), extras = selectedExtrasFor(item)): number {
+  return (variant?.amount ?? item.amount) + selectedExtrasAmount(extras);
 }
 
 function productCartQuantity(paymentLinkId: string): number {
@@ -358,9 +440,44 @@ function productCartQuantity(paymentLinkId: string): number {
   return quantity;
 }
 
+function optionCartQuantity(paymentLinkId: string, variantId: string | undefined): number {
+  let quantity = 0;
+  for (const [key, lineQuantity] of cart) {
+    const selected = parseCartItemKey(key);
+    if (selected.paymentLinkId === paymentLinkId && selected.variantId === variantId) quantity += lineQuantity;
+  }
+  return quantity;
+}
+
+function productStockLimit(item: StoreItem): number | null {
+  return item.purchaseLimit === undefined ? item.stock : item.purchaseLimit;
+}
+
 function optionStock(item: StoreItem, variant: StoreItem["variants"][number] | undefined): number | null {
-  if (variant && variant.stock !== undefined) return variant.stock;
-  return item.stock;
+  if (variant?.purchaseLimit !== undefined) return variant.purchaseLimit;
+  if (variant?.stock !== undefined) return variant.stock;
+  return productStockLimit(item);
+}
+
+function remainingStock(item: StoreItem, variant: StoreItem["variants"][number] | undefined): number | null {
+  const remaining: number[] = [];
+  const productLimit = productStockLimit(item);
+  if (productLimit !== null) remaining.push(Math.max(0, productLimit - productCartQuantity(item.id)));
+  const variantStock = optionStock(item, variant);
+  if (variantStock !== null) {
+    const lineQuantity = optionCartQuantity(item.id, variant?.id);
+    remaining.push(Math.max(0, variantStock - lineQuantity));
+  }
+  return remaining.length ? Math.min(...remaining) : null;
+}
+
+function stockStatus(remaining: number | null, showLowStock: boolean): { label: string; exhausted: boolean } | null {
+  if (remaining === 0) return { label: "¡Stock agotado!", exhausted: true };
+  if (!showLowStock) return null;
+  if (remaining !== null && remaining < 5) {
+    return { label: `¡Solo ${remaining === 1 ? "queda" : "quedan"} ${remaining}!`, exhausted: false };
+  }
+  return null;
 }
 
 // renderStore() re-runs on every qty +/- click (full re-render, not a patch)
@@ -368,6 +485,27 @@ function optionStock(item: StoreItem, variant: StoreItem["variants"][number] | u
 // real first paint, not replay/flash on every cart interaction.
 let hasStoreAnimatedIn = false;
 let activePromotionCleanup: (() => void) | null = null;
+document.addEventListener("visibilitychange", () => document.body.classList.toggle("motion-paused", document.hidden));
+
+function leadEmailStorageKey(storeId: string): string {
+  return `pagosya_lead_email_${storeId}`;
+}
+
+function loadLeadEmail(storeId: string): string {
+  try {
+    return sessionStorage.getItem(leadEmailStorageKey(storeId)) || "";
+  } catch {
+    return "";
+  }
+}
+
+function saveLeadEmail(storeId: string, email: string): void {
+  try {
+    sessionStorage.setItem(leadEmailStorageKey(storeId), email);
+  } catch {
+    // The form still prefills for the current render when storage is blocked.
+  }
+}
 let activeAnnouncementCleanup: (() => void) | null = null;
 let activeHeroCleanup: (() => void) | null = null;
 
@@ -403,6 +541,7 @@ function cartStorageKey(storeId: string): string {
 function loadCart(store: Store): void {
   cart.clear();
   selectedVariantByItem.clear();
+  selectedExtraIdsByItem.clear();
   try {
     const raw = localStorage.getItem(cartStorageKey(store.storeId));
     if (!raw) return;
@@ -412,26 +551,32 @@ function loadCart(store: Store): void {
     for (const [key, qty] of Object.entries(saved)) {
       // Drop entries for items archived/deleted since the cart was saved, and any
       // corrupt values — a stale or tampered cart must never crash the storefront.
-      const { paymentLinkId, variantId } = parseCartItemKey(key);
+      const { paymentLinkId, variantId, extraIds } = parseCartItemKey(key);
       const item = store.items.find((candidate) => candidate.id === paymentLinkId);
       if (!item || !Number.isInteger(qty) || qty <= 0) continue;
       const variants = itemVariants(item);
       if (variants.length > 0 && (!variantId || !variants.some((variant) => variant.id === variantId))) continue;
       if (variants.length === 0 && variantId) continue;
+      const extras = itemExtras(item);
+      if (extraIds.some((id) => !extras.some((extra) => extra.id === id))) continue;
+      if (extras.some((extra) => extra.required && !extraIds.includes(extra.id))) continue;
 
       const variant = variants.find((candidate) => candidate.id === variantId);
       const optionKey = cartItemKey(item.id, variantId);
+      const cartKey = cartItemKey(item.id, variantId, extraIds);
       const alreadyLoaded = loadedByProduct.get(item.id) ?? 0;
       const alreadyLoadedForOption = loadedByOption.get(optionKey) ?? 0;
-      const productAvailable = item.stock === null ? qty : Math.max(0, item.stock - alreadyLoaded);
+      const productLimit = productStockLimit(item);
+      const productAvailable = productLimit === null ? qty : Math.max(0, productLimit - alreadyLoaded);
       const availableForOption = optionStock(item, variant);
       const optionAvailable = availableForOption === null ? qty : Math.max(0, availableForOption - alreadyLoadedForOption);
       const clamped = Math.min(qty, productAvailable, optionAvailable);
       if (clamped > 0) {
-        cart.set(optionKey, clamped);
+        cart.set(cartKey, clamped);
         loadedByProduct.set(item.id, alreadyLoaded + clamped);
         loadedByOption.set(optionKey, alreadyLoadedForOption + clamped);
         if (variantId && !selectedVariantByItem.has(item.id)) selectedVariantByItem.set(item.id, variantId);
+        if (!selectedExtraIdsByItem.has(item.id)) selectedExtraIdsByItem.set(item.id, new Set(extraIds));
       }
     }
   } catch {
@@ -448,11 +593,12 @@ function saveCart(store: Store): void {
 function cartTotal(items: StoreItem[]): number {
   let total = 0;
   for (const [key, quantity] of cart) {
-    const { paymentLinkId, variantId } = parseCartItemKey(key);
+    const { paymentLinkId, variantId, extraIds } = parseCartItemKey(key);
     const item = items.find((candidate) => candidate.id === paymentLinkId);
     if (!item) continue;
     const variant = itemVariants(item).find((candidate) => candidate.id === variantId);
-    total += (variant?.amount ?? item.amount) * quantity;
+    const extras = itemExtras(item).filter((extra) => extraIds.includes(extra.id));
+    total += selectedUnitAmount(item, variant, extras) * quantity;
   }
   return total;
 }
@@ -477,6 +623,27 @@ function productPageUrl(slug: string, productId: string): string {
 function productImagePosition(item: StoreItem, index: number): string {
   const position = item.imagePositions?.[index] || "50% 50%";
   return /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/.test(position) ? position : "50% 50%";
+}
+
+function storeImagePosition(store: Store, imageUrl: string | null | undefined): string {
+  if (!imageUrl) return "50% 50%";
+  const imageKey = normalizedAssetKey(imageUrl);
+  for (const item of store.items) {
+    const imageIndex = item.imageUrls.findIndex((itemImageUrl) => normalizedAssetKey(itemImageUrl) === imageKey);
+    if (imageIndex >= 0) return productImagePosition(item, imageIndex);
+  }
+  return "50% 50%";
+}
+
+function normalizedAssetKey(imageUrl: string): string {
+  const value = String(imageUrl || "").trim();
+  if (!value) return "";
+  try {
+    const parsed = new URL(value, window.location.origin);
+    return decodeURIComponent(parsed.pathname).replace(/^\/v1(?=\/uploads\/)/, "");
+  } catch {
+    return value.split(/[?#]/, 1)[0].replace(/^\/v1(?=\/uploads\/)/, "");
+  }
 }
 
 function storeAnnouncementHtml(store: Store): string {
@@ -526,17 +693,21 @@ function bindStoreAnnouncementPlayback(): void {
   };
 }
 
-function renderProductCard(slug: string, item: StoreItem, index: number): string {
+function renderProductCard(slug: string, item: StoreItem, index: number, showLowStock: boolean): string {
   const variants = itemVariants(item);
   const selectedVariant = selectedVariantFor(item);
-  const key = cartItemKey(item.id, selectedVariant?.id);
+  const selectedExtras = selectedExtrasFor(item);
+  const key = cartItemKey(item.id, selectedVariant?.id, selectedExtras.map((extra) => extra.id));
   const qty = cart.get(key) ?? 0;
   const images = item.imageUrls.map(assetUrl).filter((u): u is string => !!u);
   const selectedStock = optionStock(item, selectedVariant);
-  const soldOut = item.stock === 0 || selectedStock === 0;
-  const atProductLimit = item.stock !== null && productCartQuantity(item.id) >= item.stock;
-  const atOptionLimit = selectedStock !== null && qty >= selectedStock;
-  const atStockLimit = atProductLimit || atOptionLimit;
+  const unavailableRequiredExtra = itemExtras(item).find((extra) => extra.required && !extra.available);
+  const productLimit = productStockLimit(item);
+  const soldOut = productLimit === 0 || selectedStock === 0 || Boolean(unavailableRequiredExtra);
+  const atProductLimit = productLimit !== null && productCartQuantity(item.id) >= productLimit;
+  const atOptionLimit = selectedStock !== null && optionCartQuantity(item.id, selectedVariant?.id) >= selectedStock;
+  const configurationComplete = productConfigurationComplete(item);
+  const atStockLimit = atProductLimit || atOptionLimit || !configurationComplete;
   // Staggered on first paint only (see hasStoreAnimatedIn) — capped so a
   // long catalog doesn't leave the last cards waiting a visible beat to
   // appear.
@@ -551,7 +722,9 @@ function renderProductCard(slug: string, item: StoreItem, index: number): string
         </a>
         ${
           images.length > 1
-            ? `<div class="gallery-thumbs">
+            ? `<button type="button" class="product-gallery-arrow previous" data-gallery-step="-1" aria-label="Ver foto anterior">${ICON_ARROW_LEFT}</button>
+               <button type="button" class="product-gallery-arrow next" data-gallery-step="1" aria-label="Ver foto siguiente">${ICON_ARROW_RIGHT}</button>
+               <div class="gallery-thumbs">
                 ${images.map((url, i) => `<button type="button" class="gallery-thumb-btn ${i === 0 ? "active" : ""}" data-src="${escapeHtml(url)}" data-position="${productImagePosition(item, i)}" aria-label="Foto ${i + 1}"></button>`).join("")}
               </div>`
             : ""
@@ -563,24 +736,31 @@ function renderProductCard(slug: string, item: StoreItem, index: number): string
     ? `<div class="store-item-tags">${item.tags.map((t) => `<span class="tag-badge">${escapeHtml(t)}</span>`).join("")}</div>`
     : "";
 
-  const stockNote = soldOut
-    ? `<div class="stock-note out">Agotado</div>`
-    : selectedStock !== null
-      ? `<div class="stock-note">Quedan ${selectedStock}</div>`
-      : "";
+  const visibleStock = stockStatus(remainingStock(item, selectedVariant), showLowStock);
+  const stockNote = unavailableRequiredExtra
+    ? `<div class="stock-note out">${escapeHtml(unavailableRequiredExtra.name)} agotado</div>`
+    : visibleStock
+    ? `<div class="stock-note${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</div>`
+    : "";
 
   const variantsHtml = variants.length
     ? `<div class="store-item-option">
-        <label for="variant-${escapeHtml(item.id)}">Elige una opción</label>
+        <label for="variant-${escapeHtml(item.id)}">Selecciona una versión</label>
         <select id="variant-${escapeHtml(item.id)}" class="variant-select" aria-label="Opción para ${escapeHtml(item.name)}">
+          <option value="" ${selectedVariant ? "" : "selected"}>Elige tamaño, sabor o presentación</option>
           ${variants
             .map(
               (variant) =>
-                `<option value="${escapeHtml(variant.id)}" ${variant.id === selectedVariant?.id ? "selected" : ""} ${optionStock(item, variant) === 0 ? "disabled" : ""}>${escapeHtml(variant.name)} — ${formatAmount(variant.amount, item.currency)}${optionStock(item, variant) === 0 ? " · Agotado" : typeof optionStock(item, variant) === "number" ? ` · ${optionStock(item, variant)} disp.` : ""}</option>`,
+                `<option value="${escapeHtml(variant.id)}" ${variant.id === selectedVariant?.id ? "selected" : ""} ${optionStock(item, variant) === 0 ? "disabled" : ""}>${escapeHtml(variant.name)} — ${formatAmount(variant.amount, item.currency)}${stockStatus(remainingStock(item, variant), showLowStock) ? ` · ${stockStatus(remainingStock(item, variant), showLowStock)!.label}` : ""}</option>`,
             )
             .join("")}
         </select>
       </div>`
+    : "";
+
+  const courtesyCopy = extrasCourtesyCopy(item);
+  const extrasHtml = itemExtras(item).length
+    ? `<fieldset class="store-item-extras"><legend>Personaliza${courtesyCopy ? ` · ${escapeHtml(courtesyCopy)}` : ""}</legend>${itemExtras(item).map((extra) => { const displayAmount = extraDisplayAmount(item, extra, selectedExtras); return `<label><input type="checkbox" class="extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some((selected) => selected.id === extra.id) ? "checked" : ""} ${extra.available ? "" : "disabled"}><span>${escapeHtml(extra.name)}${extra.required ? ` <small>Requerido</small>` : ""}${extra.available ? "" : ` <small>Agotado</small>`}</span><strong>${displayAmount === 0 ? "Incluido" : `+${formatAmount(displayAmount, item.currency)}`}</strong></label>`; }).join("")}</fieldset>`
     : "";
 
   return `
@@ -591,7 +771,9 @@ function renderProductCard(slug: string, item: StoreItem, index: number): string
         <a class="store-item-name product-page-link" href="${escapeHtml(detailUrl)}">${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" title="${escapeHtml(item.color)}"></span>` : ""}${escapeHtml(item.name)}</a>
         ${item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
         ${variantsHtml}
-        <div class="store-item-price">${formatAmount(selectedVariant?.amount ?? item.amount, item.currency)}${stockNote}</div>
+        ${extrasHtml}
+        ${!configurationComplete ? `<div class="product-configuration-note">Completa las opciones requeridas para agregar.</div>` : ""}
+        <div class="store-item-price">${formatAmount(selectedUnitAmount(item, selectedVariant, selectedExtras), item.currency)}${stockNote}</div>
       </div>
       ${
         soldOut
@@ -618,6 +800,10 @@ type StorePreviewPatch = Partial<
     | "logoUrl"
     | "bannerUrl"
     | "backgroundColor"
+    | "backgroundMode"
+    | "backgroundGradientStart"
+    | "backgroundGradientEnd"
+    | "backgroundGradientAngle"
     | "backgroundImageUrl"
     | "contactPhone"
     | "contactEmail"
@@ -636,6 +822,9 @@ type StorePreviewPatch = Partial<
     | "buttonMotion"
     | "cartButtonLabel"
     | "checkoutMode"
+    | "leadCaptureUrl"
+    | "cartRecommendationsEnabled"
+    | "cartRecommendationProductIds"
     | "boardTexture"
     | "announcement"
     | "announcementMode"
@@ -643,12 +832,14 @@ type StorePreviewPatch = Partial<
     | "announcementSize"
     | "announcementColor"
     | "promotionEnabled"
+    | "promotionImageUrl"
     | "promotionTitle"
     | "promotionBody"
     | "promotionCtaLabel"
     | "promotionCtaUrl"
     | "heroSlides"
     | "contentOrder"
+    | "layoutStyle"
     | "editorialGallery"
     | "links"
   >
@@ -679,10 +870,12 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     "gallerySubtitle",
     "accentColor",
     "announcement",
+    "promotionImageUrl",
     "promotionTitle",
     "promotionBody",
     "promotionCtaLabel",
     "promotionCtaUrl",
+    "leadCaptureUrl",
   ];
 
   if (typeof source.storeName === "string") clean.storeName = source.storeName.slice(0, 160);
@@ -691,11 +884,21 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     if (field === null || typeof field === "string") clean[key] = typeof field === "string" ? field.slice(0, 4000) : null;
   }
   if (["rounded", "pill", "square"].includes(String(source.buttonStyle))) clean.buttonStyle = source.buttonStyle;
+  if (["solid", "gradient"].includes(String(source.backgroundMode))) clean.backgroundMode = source.backgroundMode;
+  if (typeof source.backgroundGradientStart === "string" && /^#[0-9a-f]{6}$/i.test(source.backgroundGradientStart)) clean.backgroundGradientStart = source.backgroundGradientStart.toLowerCase();
+  if (typeof source.backgroundGradientEnd === "string" && /^#[0-9a-f]{6}$/i.test(source.backgroundGradientEnd)) clean.backgroundGradientEnd = source.backgroundGradientEnd.toLowerCase();
+  if (Number.isInteger(source.backgroundGradientAngle)) clean.backgroundGradientAngle = Math.min(360, Math.max(0, source.backgroundGradientAngle as number));
   if (["mono", "modern", "editorial", "friendly"].includes(String(source.fontStyle))) clean.fontStyle = source.fontStyle;
   if (["solid", "outline", "soft"].includes(String(source.buttonVariant))) clean.buttonVariant = source.buttonVariant;
   if (["lift", "pulse", "none"].includes(String(source.buttonMotion))) clean.buttonMotion = source.buttonMotion;
   if (typeof source.cartButtonLabel === "string") clean.cartButtonLabel = source.cartButtonLabel.slice(0, 36);
-  if (["payment", "whatsapp"].includes(String(source.checkoutMode))) clean.checkoutMode = source.checkoutMode;
+  if (["payment", "whatsapp", "external"].includes(String(source.checkoutMode))) clean.checkoutMode = source.checkoutMode;
+  if (typeof source.cartRecommendationsEnabled === "boolean") clean.cartRecommendationsEnabled = source.cartRecommendationsEnabled;
+  if (Array.isArray(source.cartRecommendationProductIds)) {
+    clean.cartRecommendationProductIds = source.cartRecommendationProductIds
+      .filter((id): id is string => typeof id === "string")
+      .slice(0, 12);
+  }
   if (["chalkboard", "kraft", "painted"].includes(String(source.boardTexture))) clean.boardTexture = source.boardTexture;
   if (["static", "marquee"].includes(String(source.announcementMode))) clean.announcementMode = source.announcementMode;
   if (Number.isInteger(source.announcementSpeed)) {
@@ -724,12 +927,15 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     const order = source.contentOrder.filter((section): section is string => typeof section === "string" && allowedSections.includes(section));
     if (order.length === allowedSections.length && new Set(order).size === allowedSections.length) clean.contentOrder = order;
   }
+  if (["cinematic", "editorial", "collage", "catalog-first"].includes(String(source.layoutStyle))) clean.layoutStyle = source.layoutStyle;
   if (Array.isArray(source.editorialGallery)) {
     clean.editorialGallery = source.editorialGallery
       .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
       .map((image) => ({
         imageUrl: typeof image.imageUrl === "string" && /^\/v1\/uploads\//.test(image.imageUrl) ? image.imageUrl : "",
+        title: typeof image.title === "string" ? image.title.slice(0, 100) : "",
         caption: typeof image.caption === "string" ? image.caption.slice(0, 180) : "",
+        body: typeof image.body === "string" ? image.body.slice(0, 360) : "",
         ...(typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? { boxColor: image.boxColor } : {}),
       }))
       .filter((image) => image.imageUrl)
@@ -768,11 +974,19 @@ function applyStoreTheme(slug: string, store: Store): void {
   // Storefront branding is per-store, not per-page. Set it for both the
   // catalog and product routes so a shared product link still feels wholly
   // owned by the merchant and never inherits another store's appearance.
-  document.documentElement.style.setProperty("--pg-page-bg", store.backgroundColor || "");
-  const backgroundImageUrl = assetUrl(store.backgroundImageUrl);
-  document.documentElement.style.setProperty("--pg-page-bg-image", backgroundImageUrl ? `url("${backgroundImageUrl}")` : "none");
-  document.body.classList.toggle("has-bg-image", !!backgroundImageUrl);
-  const pageTheme = backgroundTheme(store.backgroundColor, !!backgroundImageUrl);
+  const solidBackground = store.backgroundColor || "#0a0a0a";
+  const gradientStart = /^#[0-9a-f]{6}$/i.test(store.backgroundGradientStart || "") ? store.backgroundGradientStart : solidBackground;
+  const gradientEnd = /^#[0-9a-f]{6}$/i.test(store.backgroundGradientEnd || "") ? store.backgroundGradientEnd : solidBackground;
+  const gradientAngle = Number.isInteger(store.backgroundGradientAngle) ? Math.min(360, Math.max(0, store.backgroundGradientAngle)) : 135;
+  const usesGradient = store.backgroundMode === "gradient";
+  document.documentElement.style.setProperty("--pg-page-bg", solidBackground);
+  const pageTheme = usesGradient
+    ? safeGradientTheme(gradientStart, gradientEnd, gradientAngle)
+    : { background: solidBackground, ...backgroundTheme(solidBackground) };
+  document.documentElement.style.setProperty("--pg-page-background", pageTheme.background);
+  // The store canvas is always color-led. Legacy backgroundImageUrl values are
+  // intentionally ignored; photography belongs to heroes and story sections.
+  document.body.classList.remove("has-bg-image");
   const useLightTheme = pageTheme.light;
   if (useLightTheme) document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
@@ -798,6 +1012,7 @@ function applyStoreTheme(slug: string, store: Store): void {
   document.body.dataset.buttonVariant = store.buttonVariant || "solid";
   document.body.dataset.buttonMotion = store.buttonMotion || "lift";
   document.body.dataset.boardTexture = store.boardTexture || "chalkboard";
+  document.body.dataset.layoutStyle = store.layoutStyle || "cinematic";
 }
 
 let activeStoreRoute: { slug: string; store: Store } | null = null;
@@ -862,63 +1077,274 @@ function bindInternalStoreLinks(slug: string, store: Store): void {
   });
 }
 
-function bindCartCheckout(slug: string, store: Store): void {
-  const payButton = app.querySelector<HTMLButtonElement>("#cart-pay");
-  payButton?.addEventListener("click", async () => {
-    if (cartCount() === 0) return;
+function cartActionLabel(store: Store, freeOrder = false): string {
+  if (freeOrder) return "Confirmar pedido gratis";
+  if (store.cartButtonLabel && store.cartButtonLabel !== "Ir a pagar") return store.cartButtonLabel;
+  if (store.checkoutMode === "whatsapp") return "Enviar pedido por WhatsApp";
+  if (store.checkoutMode === "external") return "Enviar mis datos";
+  return "Continuar al pago";
+}
+
+function cartModeNote(store: Store, freeOrder = false): string {
+  if (freeOrder) return "Este pedido no tiene costo. Deja tus datos para que la tienda reciba la selección y pueda confirmártela.";
+  if (store.checkoutMode === "whatsapp") return "Revisa el detalle. Al continuar, abriremos WhatsApp con el pedido listo para enviar.";
+  if (store.checkoutMode === "external") return "Revisa tu selección y deja tus datos para que la tienda pueda contactarte. pagosYa no procesará un cobro.";
+  return "Revisa productos, opciones y cantidades antes de abrir el pago seguro.";
+}
+
+function cartLineEntries(store: Store) {
+  return [...cart.entries()].flatMap(([key, quantity]) => {
+    const selected = parseCartItemKey(key);
+    const product = store.items.find((item) => item.id === selected.paymentLinkId);
+    if (!product) return [];
+    const variant = product.variants.find((candidate) => candidate.id === selected.variantId);
+    const extras = itemExtras(product).filter((extra) => selected.extraIds.includes(extra.id));
+    return [{ key, product, variant, extras, quantity, unitAmount: selectedUnitAmount(product, variant, extras) }];
+  });
+}
+
+function cartRecommendationEntries(store: Store) {
+  if (store.cartRecommendationsEnabled === false) return [];
+  const selectedProductIds = new Set(store.cartRecommendationProductIds || []);
+  if (selectedProductIds.size === 0) return [];
+  const cartProductIds = new Set([...cart.keys()].map((key) => parseCartItemKey(key).paymentLinkId));
+  return [...store.items]
+    .filter((product) => {
+      if (!selectedProductIds.has(product.id) || cartProductIds.has(product.id) || productStockLimit(product) === 0 || !assetUrl(product.imageUrls[0] || null)) return false;
+      const variants = itemVariants(product);
+      return variants.length === 0 || variants.some((variant) => optionStock(product, variant) !== 0);
+    })
+    .sort((a, b) => (store.cartRecommendationProductIds || []).indexOf(a.id) - (store.cartRecommendationProductIds || []).indexOf(b.id))
+    .slice(0, 12)
+    .map((product) => {
+      const variant = itemVariants(product).find((candidate) => optionStock(product, candidate) !== 0);
+      return {
+        product,
+        variant,
+        unitAmount: variant?.amount ?? product.amount,
+        image: assetUrl(product.imageUrls[0] || null)!,
+        imagePosition: productImagePosition(product, 0),
+      };
+    });
+}
+
+function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: Store): void {
+  const currency = store.items[0]?.currency || "BOB";
+  const lines = cartLineEntries(store);
+  const freeOrder = store.checkoutMode === "payment" && lines.length > 0 && lines.every((line) => line.unitAmount * line.quantity === 0);
+  const contactCheckout = store.checkoutMode === "external" || freeOrder;
+  const recommendations = cartRecommendationEntries(store);
+  dialog.innerHTML = `
+    <div class="cart-review-shell">
+      <header class="cart-review-head">
+        <div><h2 id="cart-review-title">Mi carrito</h2><p>${escapeHtml(cartModeNote(store, freeOrder))}</p></div>
+        <button type="button" class="cart-review-close" aria-label="Cerrar carrito">${ICON_X}</button>
+      </header>
+      <div class="cart-review-scroll">
+        <div class="cart-review-lines">
+          ${lines.map(({ key, product, variant, extras, quantity, unitAmount }) => {
+            const image = assetUrl(product.imageUrls[0] || null);
+            const available = optionStock(product, variant);
+            const productLimit = productStockLimit(product);
+            const atProductLimit = productLimit !== null && productCartQuantity(product.id) >= productLimit;
+            const atOptionLimit = available !== null && optionCartQuantity(product.id, variant?.id) >= available;
+            const visibleStock = stockStatus(remainingStock(product, variant), store.showLowStockToCustomers === true);
+            return `<article class="cart-review-line" data-cart-key="${escapeHtml(key)}">
+              ${image ? `<img src="${escapeHtml(image)}" alt="">` : `<span class="cart-review-placeholder" aria-hidden="true">${escapeHtml(initials(product.name))}</span>`}
+              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${extras.map((extra) => escapeHtml(extra.name)).join(" · ")}</span>` : ""}<small>${formatAmount(unitAmount, product.currency)} c/u</small>${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
+              <div class="cart-review-quantity" aria-label="Cantidad de ${escapeHtml(product.name)}">
+                <button type="button" data-cart-change="-1" aria-label="Quitar una unidad">−</button><span>${quantity}</span><button type="button" data-cart-change="1" aria-label="Agregar una unidad" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
+              </div>
+              <strong class="cart-review-line-total">${formatAmount(unitAmount * quantity, product.currency)}</strong>
+              <button type="button" class="cart-review-remove" aria-label="Quitar ${escapeHtml(product.name)} del carrito">Quitar</button>
+            </article>`;
+          }).join("")}
+        </div>
+        ${recommendations.length ? `<section class="cart-recommendations" aria-labelledby="cart-recommendations-title">
+          <div class="cart-recommendations-head"><h3 id="cart-recommendations-title">Súmale algo más</h3><span>Seleccionado para tu pedido</span></div>
+          <div class="cart-recommendations-rail">
+            ${recommendations.map(({ product, image, imagePosition }) => {
+              const needsConfiguration = itemVariants(product).length > 0 || itemExtras(product).length > 0;
+              return `<button class="cart-recommendation" type="button" data-recommend-product="${escapeHtml(product.id)}" data-needs-configuration="${needsConfiguration}" aria-label="${needsConfiguration ? "Elegir opciones para" : "Agregar"} ${escapeHtml(product.name)}">
+              <img src="${escapeHtml(image)}" alt="" style="object-position:${imagePosition}">
+            </button>`;
+            }).join("")}
+          </div>
+        </section>` : ""}
+        ${contactCheckout ? `<form class="lead-capture-form" id="store-lead-form">
+          <div class="lead-capture-heading"><h3>¿Cómo te contactamos?</h3><p>La tienda recibirá tus datos y el detalle de los productos que elegiste. ${freeOrder ? "El total es Bs 0 y no se abrirá una pantalla de pago." : "No se realizará ningún cobro."}</p></div>
+          <div class="lead-capture-grid">
+            <div class="field"><label for="lead-name">Nombre completo</label><input id="lead-name" name="name" autocomplete="name" maxlength="120" required></div>
+            <div class="field"><label for="lead-email">Correo electrónico (Gmail u otro)</label><input id="lead-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="tu@gmail.com" value="${escapeHtml(loadLeadEmail(store.storeId))}" required></div>
+            <div class="field"><label for="lead-phone">WhatsApp</label><input id="lead-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="+591 71234567" required></div>
+            <div class="field lead-capture-message"><label for="lead-message">Mensaje (opcional)</label><textarea id="lead-message" name="message" maxlength="600" rows="3" placeholder="Consulta, ciudad o mejor horario para contactarte"></textarea></div>
+          </div>
+        </form>` : ""}
+      </div>
+      <footer class="cart-review-footer">
+        <div class="cart-review-total"><span>${cartCount()} ${cartCount() === 1 ? "producto" : "productos"}</span><strong>${formatAmount(cartTotal(store.items), currency)}</strong></div>
+        <p>${freeOrder ? `${ICON_EXTERNAL}<span>Pedido gratis: pagosYa enviará la selección a la tienda</span>` : store.checkoutMode === "payment" ? `${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span>` : store.checkoutMode === "whatsapp" ? `${ICON_WHATSAPP}<span>No se realizará ningún cobro en pagosYa</span>` : `${ICON_EXTERNAL}<span>pagosYa enviará tus datos de contacto a la tienda</span>`}</p>
+        <button type="${contactCheckout ? "submit" : "button"}" ${contactCheckout ? 'form="store-lead-form"' : ""} class="primary" id="cart-confirm">${escapeHtml(cartActionLabel(store, freeOrder))}</button>
+        <span class="cart-checkout-error" role="alert" hidden></span>
+      </footer>
+    </div>`;
+
+  dialog.querySelector<HTMLButtonElement>(".cart-review-close")?.addEventListener("click", () => dialog.close());
+  dialog.querySelectorAll<HTMLElement>(".cart-review-line").forEach((row) => {
+    const key = row.dataset.cartKey!;
+    const rerender = () => {
+      saveCart(store);
+      if (cartCount() === 0) {
+        dialog.close();
+        renderStoreRoute(slug, store, { focusPromotion: false });
+      } else renderCartReviewDialog(dialog, slug, store);
+    };
+    row.querySelector<HTMLButtonElement>(".cart-review-remove")?.addEventListener("click", () => { cart.delete(key); rerender(); });
+    row.querySelectorAll<HTMLButtonElement>("[data-cart-change]").forEach((button) => button.addEventListener("click", () => {
+      const change = Number(button.dataset.cartChange);
+      if (change > 0) {
+        const { paymentLinkId, variantId } = parseCartItemKey(key);
+        const product = store.items.find((item) => item.id === paymentLinkId);
+        const variant = product && itemVariants(product).find((candidate) => candidate.id === variantId);
+        if (!product || remainingStock(product, variant) === 0) return;
+      }
+      const next = (cart.get(key) ?? 0) + change;
+      if (next <= 0) cart.delete(key);
+      else cart.set(key, next);
+      rerender();
+    }));
+  });
+
+  dialog.querySelectorAll<HTMLButtonElement>("[data-recommend-product]").forEach((button) => button.addEventListener("click", () => {
+    const product = store.items.find((item) => item.id === button.dataset.recommendProduct);
+    if (!product) return;
+    if (button.dataset.needsConfiguration === "true") {
+      dialog.close();
+      navigateWithinStore(slug, store, product.id);
+      return;
+    }
+    if (remainingStock(product, undefined) === 0) return;
+    const key = cartItemKey(product.id);
+    cart.set(key, (cart.get(key) ?? 0) + 1);
+    saveCart(store);
+    renderCartReviewDialog(dialog, slug, store);
+  }));
+
+  if (contactCheckout) {
+    dialog.querySelector<HTMLFormElement>("#store-lead-form")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget as HTMLFormElement;
+      const confirmButton = dialog.querySelector<HTMLButtonElement>("#cart-confirm")!;
+      const checkoutError = dialog.querySelector<HTMLElement>(".cart-checkout-error")!;
+      const formData = new FormData(form);
+      const email = String(formData.get("email") || "").trim().toLowerCase();
+      const phone = String(formData.get("phone") || "").trim();
+      if (phone.replace(/\D/g, "").length < 7) {
+        checkoutError.textContent = "Escribe un número de WhatsApp válido, con al menos 7 dígitos.";
+        checkoutError.hidden = false;
+        form.querySelector<HTMLInputElement>("#lead-phone")?.focus();
+        return;
+      }
+      checkoutError.hidden = true;
+      confirmButton.disabled = true;
+      confirmButton.setAttribute("aria-busy", "true");
+      confirmButton.textContent = "Enviando tus datos…";
+      try {
+        const items = [...cart.entries()].map(([key, quantity]) => {
+          const selected = parseCartItemKey(key);
+          return { paymentLinkId: selected.paymentLinkId, ...(selected.variantId ? { variantId: selected.variantId } : {}), ...(selected.extraIds.length ? { extraIds: selected.extraIds } : {}), quantity };
+        });
+        await submitStoreLead(slug, {
+          name: String(formData.get("name") || "").trim(),
+          email,
+          phone,
+          ...(String(formData.get("message") || "").trim() ? { message: String(formData.get("message")).trim() } : {}),
+        }, items);
+        saveLeadEmail(store.storeId, email);
+        cart.clear();
+        saveCart(store);
+        dialog.innerHTML = `<div class="lead-capture-success"><div class="status success">${ICON_CHECK}<span>Datos enviados</span></div><h2>La tienda ya recibió tu solicitud</h2><p>Se enviaron tus datos de contacto y los productos seleccionados. Pronto podrán responderte por correo o WhatsApp.</p><button type="button" class="primary" id="lead-success-close">Cerrar</button></div>`;
+        dialog.querySelector<HTMLButtonElement>("#lead-success-close")?.addEventListener("click", () => dialog.close());
+        dialog.querySelector<HTMLButtonElement>("#lead-success-close")?.focus();
+      } catch (err) {
+        confirmButton.disabled = false;
+        confirmButton.removeAttribute("aria-busy");
+        confirmButton.textContent = cartActionLabel(store, freeOrder);
+        checkoutError.textContent = `No pudimos enviar tus datos: ${(err as Error).message}. Intenta nuevamente.`;
+        checkoutError.hidden = false;
+      }
+    });
+    return;
+  }
+
+  dialog.querySelector<HTMLButtonElement>("#cart-confirm")?.addEventListener("click", async () => {
+    const confirmButton = dialog.querySelector<HTMLButtonElement>("#cart-confirm")!;
+    const checkoutError = dialog.querySelector<HTMLElement>(".cart-checkout-error")!;
+    checkoutError.hidden = true;
+    checkoutError.textContent = "";
     if (store.checkoutMode === "whatsapp") {
       const phone = (store.contactPhone || "").replace(/\D/g, "");
       if (phone.length < 7 || phone.length > 15) {
-        const checkoutError = app.querySelector<HTMLElement>(".cart-checkout-error");
-        if (checkoutError) {
-          checkoutError.textContent = "Esta tienda todavía no configuró un número de WhatsApp válido.";
-          checkoutError.hidden = false;
-        }
+        checkoutError.textContent = "Esta tienda todavía no configuró un número de WhatsApp válido.";
+        checkoutError.hidden = false;
         return;
       }
-      const lines = [...cart.entries()].flatMap(([key, quantity]) => {
-        const selected = parseCartItemKey(key);
-        const product = store.items.find((item) => item.id === selected.paymentLinkId);
-        if (!product) return [];
-        const variant = product.variants.find((candidate) => candidate.id === selected.variantId);
-        return [`• ${product.name}${variant ? ` (${variant.name})` : ""} x${quantity} — ${formatAmount((variant?.amount ?? product.amount) * quantity, product.currency)}`];
-      });
-      const currency = store.items[0]?.currency || "BOB";
-      const message = [`Hola, quiero hacer este pedido en ${store.storeName}:`, "", ...lines, "", `Total: ${formatAmount(cartTotal(store.items), currency)}`].join("\n");
+      const messageLines = cartLineEntries(store).map(({ product, variant, extras, quantity, unitAmount }) =>
+        `• ${product.name}${variant ? ` (${variant.name})` : ""}${extras.length ? ` + ${extras.map((extra) => extra.name).join(", ")}` : ""} x${quantity} — ${formatAmount(unitAmount * quantity, product.currency)}`,
+      );
+      const message = [`Hola, quiero hacer este pedido en ${store.storeName}:`, "", ...messageLines, "", `Total: ${formatAmount(cartTotal(store.items), currency)}`].join("\n");
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
       return;
     }
-    const checkoutError = app.querySelector<HTMLElement>(".cart-checkout-error");
-    const buttonLabel = store.cartButtonLabel || "Ir a pagar";
-    if (checkoutError) {
-      checkoutError.hidden = true;
-      checkoutError.textContent = "";
-    }
-    payButton.disabled = true;
-    payButton.setAttribute("aria-busy", "true");
-    payButton.textContent = "Abriendo pago…";
+    confirmButton.disabled = true;
+    confirmButton.setAttribute("aria-busy", "true");
+    confirmButton.textContent = "Abriendo pago…";
     try {
-      const items = [...cart.entries()].map(([key, quantity]) => ({ ...parseCartItemKey(key), quantity }));
+      const items = [...cart.entries()].map(([key, quantity]) => {
+        const selected = parseCartItemKey(key);
+        return { paymentLinkId: selected.paymentLinkId, ...(selected.variantId ? { variantId: selected.variantId } : {}), ...(selected.extraIds.length ? { extraIds: selected.extraIds } : {}), quantity };
+      });
       const result = await checkoutCart(slug, items);
-      linkHeader = {
-        storeName: result.storeName,
-        description: result.cartDescription,
-        contactPhone: result.contactPhone,
-        contactEmail: result.contactEmail,
-      };
+      linkHeader = { storeName: result.storeName, description: result.cartDescription, contactPhone: result.contactPhone, contactEmail: result.contactEmail };
       cart.clear();
       saveCart(store);
+      dialog.close();
       await enterPaymentFlow(result.clientSecret);
     } catch (err) {
-      payButton.disabled = false;
-      payButton.removeAttribute("aria-busy");
-      payButton.textContent = buttonLabel;
-      if (checkoutError) {
-        checkoutError.textContent = `No se pudo abrir el pago: ${(err as Error).message}. Intenta nuevamente.`;
-        checkoutError.hidden = false;
-      }
+      confirmButton.disabled = false;
+      confirmButton.removeAttribute("aria-busy");
+      confirmButton.textContent = cartActionLabel(store);
+      checkoutError.textContent = `No se pudo abrir el pago: ${(err as Error).message}. Intenta nuevamente.`;
+      checkoutError.hidden = false;
     }
   });
+}
+
+function openCartReview(slug: string, store: Store): void {
+  if (cartCount() === 0) return;
+  document.querySelector(".cart-review-dialog")?.remove();
+  const dialog = document.createElement("dialog");
+  dialog.className = "cart-review-dialog";
+  dialog.setAttribute("aria-labelledby", "cart-review-title");
+  document.body.append(dialog);
+  if (typeof dialog.close !== "function") {
+    dialog.close = () => {
+      dialog.removeAttribute("open");
+      dialog.dispatchEvent(new Event("close"));
+    };
+  }
+  renderCartReviewDialog(dialog, slug, store);
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+    updateCartBar(store, store.items[0]?.currency || "BOB");
+  }, { once: true });
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+  dialog.querySelector<HTMLButtonElement>(".cart-review-close")?.focus();
+}
+
+function bindCartCheckout(slug: string, store: Store): void {
+  app.querySelector<HTMLButtonElement>("#cart-pay")?.addEventListener("click", () => openCartReview(slug, store));
 }
 
 function renderProductPage(slug: string, store: Store, productId: string): void {
@@ -952,26 +1378,27 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
 
   const variants = itemVariants(item);
   const selectedVariant = selectedVariantFor(item);
+  const selectedExtras = selectedExtrasFor(item);
   const selectedStock = optionStock(item, selectedVariant);
-  const key = cartItemKey(item.id, selectedVariant?.id);
+  const key = cartItemKey(item.id, selectedVariant?.id, selectedExtras.map((extra) => extra.id));
   const qty = cart.get(key) ?? 0;
-  const soldOut = item.stock === 0 || selectedStock === 0;
-  const atProductLimit = item.stock !== null && productCartQuantity(item.id) >= item.stock;
-  const atOptionLimit = selectedStock !== null && qty >= selectedStock;
+  const unavailableRequiredExtra = itemExtras(item).find((extra) => extra.required && !extra.available);
+  const productLimit = productStockLimit(item);
+  const soldOut = productLimit === 0 || selectedStock === 0 || Boolean(unavailableRequiredExtra);
+  const atProductLimit = productLimit !== null && productCartQuantity(item.id) >= productLimit;
+  const atOptionLimit = selectedStock !== null && optionCartQuantity(item.id, selectedVariant?.id) >= selectedStock;
+  const configurationComplete = productConfigurationComplete(item);
   const images = item.imageUrls.map(assetUrl).filter((url): url is string => !!url);
   const rememberedImageIndex = selectedProductImageByItem.get(item.id) ?? 0;
   const selectedImageIndex = Math.min(Math.max(rememberedImageIndex, 0), Math.max(images.length - 1, 0));
   selectedProductImageByItem.set(item.id, selectedImageIndex);
   const category = store.categories.find((candidate) => candidate.id === item.categoryId);
-  const stockLabel = soldOut
-    ? "Agotado"
-    : selectedStock !== null
-      ? `${selectedStock} disponibles`
-      : "Disponible";
+  const visibleStock = stockStatus(remainingStock(item, selectedVariant), store.showLowStockToCustomers === true);
 
   const galleryHtml = images.length
     ? `<div class="product-detail-main-image-wrap">
         <img class="product-detail-main-image" src="${escapeHtml(images[selectedImageIndex])}" alt="${escapeHtml(item.name)}, foto ${selectedImageIndex + 1} de ${images.length}" style="object-position:${productImagePosition(item, selectedImageIndex)}">
+        ${images.length > 1 ? `<button type="button" class="product-detail-image-arrow previous" data-image-step="-1" aria-label="Ver foto anterior">${ICON_ARROW_LEFT}</button><button type="button" class="product-detail-image-arrow next" data-image-step="1" aria-label="Ver foto siguiente">${ICON_ARROW_RIGHT}</button>` : ""}
        </div>
        ${
          images.length > 1
@@ -989,19 +1416,31 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
 
   const variantsHtml = variants.length
     ? `<fieldset class="product-detail-variants">
-        <legend>Elige un tipo</legend>
+        <legend>Selecciona una versión</legend>
         <div class="product-detail-option-list">
           ${variants
             .map((variant) => {
               const variantStock = optionStock(item, variant);
               const unavailable = variantStock === 0;
+              const visibleVariantStock = stockStatus(remainingStock(item, variant), store.showLowStockToCustomers === true);
               return `<button type="button" class="product-detail-option${variant.id === selectedVariant?.id ? " active" : ""}" data-variant-id="${escapeHtml(variant.id)}" aria-pressed="${variant.id === selectedVariant?.id}" ${unavailable ? "disabled" : ""}>
                 <span>${escapeHtml(variant.name)}</span>
                 <strong>${formatAmount(variant.amount, item.currency)}</strong>
-                ${unavailable ? `<small>Agotado</small>` : typeof variantStock === "number" ? `<small>${variantStock} disp.</small>` : ""}
+                ${visibleVariantStock ? `<small>${visibleVariantStock.label}</small>` : ""}
               </button>`;
             })
             .join("")}
+        </div>
+       </fieldset>`
+    : "";
+
+  const courtesyCopy = extrasCourtesyCopy(item);
+  const extrasHtml = itemExtras(item).length
+    ? `<fieldset class="product-detail-extras">
+        <legend>Personaliza tu producto</legend>
+        <p>${courtesyCopy ? `${escapeHtml(courtesyCopy)}. Las selecciones adicionales se cobran al precio mostrado.` : "Marca solo lo que quieras agregar. Los elementos obligatorios están identificados."}</p>
+        <div class="product-detail-extra-list">
+          ${itemExtras(item).map((extra) => { const displayAmount = extraDisplayAmount(item, extra, selectedExtras); return `<label><input type="checkbox" class="product-detail-extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some((selected) => selected.id === extra.id) ? "checked" : ""} ${extra.available ? "" : "disabled"}><span><strong>${escapeHtml(extra.name)}</strong>${extra.required ? `<small>Requerido</small>` : ""}${extra.available ? "" : `<small>Agotado</small>`}</span><b>${displayAmount === 0 ? "Incluido" : `+${formatAmount(displayAmount, item.currency)}`}</b></label>`; }).join("")}
         </div>
        </fieldset>`
     : "";
@@ -1023,16 +1462,18 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         <h1>${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" aria-hidden="true"></span>` : ""}${escapeHtml(item.name)}</h1>
         ${item.description ? `<section class="product-detail-description-block" aria-labelledby="product-description-title"><h2 id="product-description-title">Descripción</h2><p class="product-detail-description">${escapeHtml(item.description)}</p></section>` : ""}
         ${variantsHtml}
+        ${extrasHtml}
+        ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
         <div class="product-detail-purchase">
           <div>
-            <div class="product-detail-price">${formatAmount(selectedVariant?.amount ?? item.amount, item.currency)}</div>
-            <div class="product-detail-stock${soldOut ? " out" : ""}">${stockLabel}</div>
+            <div class="product-detail-price">${formatAmount(selectedUnitAmount(item, selectedVariant, selectedExtras), item.currency)}</div>
+            ${unavailableRequiredExtra ? `<div class="product-detail-stock out">${escapeHtml(unavailableRequiredExtra.name)} agotado</div>` : visibleStock ? `<div class="product-detail-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</div>` : ""}
           </div>
           ${
-            soldOut
-              ? `<button type="button" class="primary product-add" disabled>Agotado</button>`
+            soldOut || (qty === 0 && (atProductLimit || atOptionLimit))
+              ? `<button type="button" class="primary product-add" disabled>Stock agotado</button>`
               : qty === 0
-                ? `<button type="button" class="primary product-add">Agregar al carrito</button>`
+                ? `<button type="button" class="primary product-add" ${configurationComplete ? "" : "disabled"}>${configurationComplete ? "Agregar al carrito" : "Completa las opciones"}</button>`
                 : `<div class="qty-stepper product-detail-stepper" aria-label="Cantidad de ${escapeHtml(item.name)}">
                     <button type="button" class="qty-minus" aria-label="Quitar una unidad de ${escapeHtml(item.name)}">−</button>
                     <span class="qty-value" aria-live="polite">${qty}</span>
@@ -1044,10 +1485,10 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
     </main>
     <div class="cart-bar product-detail-cart-bar">
       <span class="cart-summary" aria-live="polite"></span>
-      <button type="button" class="primary" id="cart-pay">${escapeHtml(store.cartButtonLabel || "Ir a pagar")}</button>
+      <button type="button" class="primary" id="cart-pay">Ver carrito</button>
       <span class="cart-checkout-error" role="alert" hidden></span>
     </div>
-    <div class="secure-note product-detail-secure-note">${store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_LOCK}<span>${store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Pago procesado de forma segura por pagosYa"}</span></div>`;
+    <div class="secure-note product-detail-secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tus datos y selección se enviarán a la tienda"}</span></div>`;
 
   bindStoreAnnouncementPlayback();
   bindInternalStoreLinks(slug, store);
@@ -1058,6 +1499,14 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       app.querySelector<HTMLButtonElement>(`.product-detail-thumbnail[data-image-index="${button.dataset.imageIndex}"]`)?.focus();
     });
   });
+  app.querySelectorAll<HTMLButtonElement>(".product-detail-image-arrow").forEach((button) => {
+    button.addEventListener("click", () => {
+      const step = Number(button.dataset.imageStep) || 0;
+      selectedProductImageByItem.set(item.id, (selectedImageIndex + step + images.length) % images.length);
+      renderProductPage(slug, store, item.id);
+      app.querySelector<HTMLButtonElement>(`.product-detail-image-arrow.${step < 0 ? "previous" : "next"}`)?.focus();
+    });
+  });
   app.querySelectorAll<HTMLButtonElement>(".product-detail-option").forEach((button) => {
     button.addEventListener("click", () => {
       selectedVariantByItem.set(item.id, button.dataset.variantId!);
@@ -1065,13 +1514,25 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       app.querySelector<HTMLButtonElement>(`.product-detail-option[data-variant-id="${button.dataset.variantId}"]`)?.focus();
     });
   });
+  app.querySelectorAll<HTMLInputElement>(".product-detail-extra-toggle").forEach((input) => {
+    input.addEventListener("change", () => {
+      const selected = new Set(selectedExtraIdsByItem.get(item.id) ?? []);
+      if (input.checked) selected.add(input.dataset.extraId!);
+      else selected.delete(input.dataset.extraId!);
+      selectedExtraIdsByItem.set(item.id, selected);
+      renderProductPage(slug, store, item.id);
+      app.querySelector<HTMLInputElement>(`.product-detail-extra-toggle[data-extra-id="${input.dataset.extraId}"]`)?.focus();
+    });
+  });
 
   const addOne = () => {
-    if (item.stock !== null && productCartQuantity(item.id) >= item.stock) return;
+    if (!productConfigurationComplete(item)) return;
     const variant = selectedVariantFor(item);
-    const cartKey = cartItemKey(item.id, variant?.id);
+    if (remainingStock(item, variant) === 0) return;
+    const extras = selectedExtrasFor(item);
+    const cartKey = cartItemKey(item.id, variant?.id, extras.map((extra) => extra.id));
     const available = optionStock(item, variant);
-    if (available !== null && (cart.get(cartKey) ?? 0) >= available) return;
+    if (available !== null && optionCartQuantity(item.id, variant?.id) >= available) return;
     cart.set(cartKey, (cart.get(cartKey) ?? 0) + 1);
     saveCart(store);
     renderProductPage(slug, store, item.id);
@@ -1080,7 +1541,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   app.querySelector<HTMLButtonElement>(".product-add")?.addEventListener("click", addOne);
   app.querySelector<HTMLButtonElement>(".qty-plus")?.addEventListener("click", addOne);
   app.querySelector<HTMLButtonElement>(".qty-minus")?.addEventListener("click", () => {
-    const cartKey = cartItemKey(item.id, selectedVariantFor(item)?.id);
+    const cartKey = cartItemKey(item.id, selectedVariantFor(item)?.id, selectedExtrasFor(item).map((extra) => extra.id));
     const next = (cart.get(cartKey) ?? 0) - 1;
     if (next <= 0) cart.delete(cartKey);
     else cart.set(cartKey, next);
@@ -1103,9 +1564,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
   const currency = store.items[0]?.currency ?? "BOB";
-  const backgroundImageUrl = assetUrl(store.backgroundImageUrl);
   const logoUrl = assetUrl(store.logoUrl);
   const bannerUrl = assetUrl(store.bannerUrl);
+  const savedLeadEmail = loadLeadEmail(store.storeId);
   const heroSlides = (store.heroSlides ?? [])
     .map((slide) => ({ ...slide, resolvedMediaUrl: assetUrl(slide.imageUrl) }))
     .filter((slide): slide is typeof slide & { resolvedMediaUrl: string } => !!slide.resolvedMediaUrl)
@@ -1152,6 +1613,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const announcementHtml = storeAnnouncementHtml(store);
 
   const safePromotionUrl = store.promotionCtaUrl && /^https?:\/\//i.test(store.promotionCtaUrl) ? store.promotionCtaUrl : null;
+  const promotionImageUrl = assetUrl(store.promotionImageUrl);
   const promotionDismissKey = `pagosya_promotion_dismissed_${store.storeId}`;
   let promotionWasDismissed = false;
   try {
@@ -1161,12 +1623,13 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   }
   const showPromotion =
     !!store.promotionEnabled &&
-    (!!store.promotionTitle || !!store.promotionBody) &&
+    (!!store.promotionTitle || !!store.promotionBody || !!promotionImageUrl) &&
     (storePreviewMode || !promotionWasDismissed);
   const promotionHtml = showPromotion
     ? `<div class="promotion-backdrop" data-promotion-backdrop>
         <section class="promotion-dialog" role="dialog" aria-modal="true" aria-labelledby="promotion-title">
           <button type="button" class="promotion-close" aria-label="Cerrar promoción">×</button>
+          ${promotionImageUrl ? `<img class="promotion-image" src="${escapeHtml(promotionImageUrl)}" alt="" style="object-position:${storeImagePosition(store, store.promotionImageUrl)}">` : ""}
           ${store.promotionTitle ? `<h2 id="promotion-title">${escapeHtml(store.promotionTitle)}</h2>` : `<h2 id="promotion-title">Promoción</h2>`}
           ${store.promotionBody ? `<p>${escapeHtml(store.promotionBody)}</p>` : ""}
           ${
@@ -1191,7 +1654,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
                 ${
                   isVideoMediaUrl(slide.resolvedMediaUrl)
                     ? `<video src="${escapeHtml(slide.resolvedMediaUrl)}" aria-label="${escapeHtml(slide.title || `Destacado ${index + 1}`)}" muted loop playsinline preload="metadata"></video>`
-                    : `<img src="${escapeHtml(slide.resolvedMediaUrl)}" alt="${escapeHtml(slide.title || `Destacado ${index + 1}`)}">`
+                    : `<img src="${escapeHtml(slide.resolvedMediaUrl)}" alt="${escapeHtml(slide.title || `Destacado ${index + 1}`)}" style="object-position:${storeImagePosition(store, slide.imageUrl)}">`
                 }
                 ${
                   hasCopy
@@ -1224,7 +1687,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         }
       </section>`
     : bannerUrl
-      ? `<div class="store-hero has-banner"><img class="store-banner" src="${escapeHtml(bannerUrl)}" alt="" /></div>`
+      ? `<div class="store-hero has-banner"><img class="store-banner" src="${escapeHtml(bannerUrl)}" alt="" style="object-position:${storeImagePosition(store, store.bannerUrl)}" /></div>`
       : "";
 
   const toolbarHtml = showToolbar
@@ -1276,7 +1739,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     <div id="store-grid"></div>
     <div class="cart-bar">
       <span class="cart-summary" aria-live="polite"></span>
-      <button type="button" class="primary" id="cart-pay">${escapeHtml(store.cartButtonLabel || "Ir a pagar")}</button>
+      <button type="button" class="primary" id="cart-pay">Ver carrito</button>
       <span class="cart-checkout-error" role="alert" hidden></span>
     </div>
   </section>`;
@@ -1284,12 +1747,12 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const aboutTitle = store.aboutTitle?.trim() || "Conoce la marca";
   const aboutSubtitle = store.aboutSubtitle?.trim() || store.tagline?.trim() || "Una mirada a la intención detrás de cada elección.";
   const aboutHtml = aboutParagraphs.length || aboutImageUrl || store.aboutTitle || store.aboutSubtitle
-    ? `<section class="store-about${aboutImageUrl ? " has-image" : ""}" aria-labelledby="store-about-title"${aboutImageUrl ? ` style="--store-about-image:url(&quot;${escapeHtml(aboutImageUrl)}&quot;)"` : ""}>
+    ? `<section class="store-about${aboutImageUrl ? " has-image" : ""}${hasStoreAnimatedIn ? "" : " story-intro"}" aria-labelledby="store-about-title"${aboutImageUrl ? ` style="--store-about-image:url(&quot;${escapeHtml(aboutImageUrl)}&quot;);--store-about-position:${storeImagePosition(store, store.aboutImageUrl)}"` : ""}>
         <div class="store-about-heading">
-          <h2 id="store-about-title">${escapeHtml(aboutTitle)}</h2>
+          <h2 id="store-about-title"><span class="store-about-title-text">${escapeHtml(aboutTitle)}</span></h2>
           <p class="store-about-subtitle">${escapeHtml(aboutSubtitle)}</p>
         </div>
-        <div class="store-about-body">${aboutParagraphs.length ? aboutParagraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("") : `<p>Pronto conocerás más sobre ${escapeHtml(store.storeName)}.</p>`}</div>
+        <div class="store-about-body">${aboutParagraphs.length ? aboutParagraphs.map((paragraph, index) => `<p style="--story-delay:${340 + Math.min(index, 3) * 70}ms">${escapeHtml(paragraph)}</p>`).join("") : `<p style="--story-delay:340ms">Pronto conocerás más sobre ${escapeHtml(store.storeName)}.</p>`}</div>
       </section>`
     : "";
 
@@ -1308,8 +1771,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
                   ? ` style="--store-editorial-card-bg:${boxColor};--store-editorial-card-ink:${accentContrastColor(boxColor)}"`
                   : "";
                 return `<figure class="store-editorial-item"${boxStyle}>
-                  <img src="${escapeHtml(image.resolvedImageUrl)}" alt="${escapeHtml(image.caption || `Imagen de la tienda ${index + 1}`)}" loading="lazy">
-                  ${image.caption ? `<figcaption>${escapeHtml(image.caption)}</figcaption>` : ""}
+                  <img src="${escapeHtml(image.resolvedImageUrl)}" alt="${escapeHtml(image.caption || `Imagen de la tienda ${index + 1}`)}" loading="lazy" style="object-position:${storeImagePosition(store, image.imageUrl)}">
+                  ${(image.title || image.caption || image.body) ? `<figcaption>${image.title ? `<strong>${escapeHtml(image.title)}</strong>` : ""}${image.caption ? `<span>${escapeHtml(image.caption)}</span>` : ""}${image.body ? `<p>${escapeHtml(image.body)}</p>` : ""}</figcaption>` : ""}
                 </figure>`;
               },
             )
@@ -1338,6 +1801,23 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     links: linksHtml,
   };
   const orderedSectionsHtml = contentOrder.map((section) => sectionHtml[section]).join("");
+  const earlyLeadCaptureHtml = store.checkoutMode === "external"
+    ? `<section class="early-lead-capture" aria-labelledby="early-lead-title">
+        <div>
+          <span class="early-lead-kicker">Antes de elegir</span>
+          <h2 id="early-lead-title">Déjanos tu correo para ayudarte con tu pedido</h2>
+          <p>La tienda lo usará únicamente para responder sobre esta selección. No se realizará ningún cobro.</p>
+        </div>
+        <form id="early-lead-form" class="early-lead-form">
+          <label for="early-lead-email">Correo electrónico (Gmail u otro)</label>
+          <div class="early-lead-controls">
+            <input id="early-lead-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="tu@gmail.com" value="${escapeHtml(savedLeadEmail)}" required>
+            <button type="submit">${savedLeadEmail ? "Actualizar" : "Continuar"}</button>
+          </div>
+          <span class="early-lead-status" role="status">${savedLeadEmail ? `Correo guardado: ${escapeHtml(savedLeadEmail)}` : "Podrás completar tu nombre y WhatsApp al enviar el carrito."}</span>
+        </form>
+      </section>`
+    : "";
 
   app.innerHTML = `
     ${announcementHtml}
@@ -1348,10 +1828,28 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         ${store.tagline ? `<div class="store-tagline">${escapeHtml(store.tagline)}</div>` : ""}
       </div>
     </header>
+    ${earlyLeadCaptureHtml}
     ${orderedSectionsHtml}
-    <div class="secure-note">${store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_LOCK}<span>${store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Pago procesado de forma segura por pagosYa"}</span></div>
+    <div class="secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tus datos y selección se enviarán a la tienda"}</span></div>
     ${promotionHtml}
   `;
+
+  app.querySelector<HTMLFormElement>("#early-lead-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const input = form.querySelector<HTMLInputElement>("#early-lead-email")!;
+    const status = form.querySelector<HTMLElement>(".early-lead-status")!;
+    const button = form.querySelector<HTMLButtonElement>("button")!;
+    const email = input.value.trim().toLowerCase();
+    if (!input.checkValidity()) {
+      input.reportValidity();
+      return;
+    }
+    input.value = email;
+    saveLeadEmail(store.storeId, email);
+    status.textContent = `Correo guardado: ${email}`;
+    button.textContent = "Actualizar";
+  });
 
   bindStoreAnnouncementPlayback();
 
@@ -1480,6 +1978,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     carousel.addEventListener("pointerleave", startAutoplay);
     carousel.addEventListener("focusin", stopAutoplay);
     carousel.addEventListener("focusout", startAutoplay);
+    const syncCarouselVisibility = () => document.hidden ? stopAutoplay() : startAutoplay();
+    document.addEventListener("visibilitychange", syncCarouselVisibility);
     carousel.querySelectorAll<HTMLButtonElement>(".hero-catalog-cta").forEach((button) =>
       button.addEventListener("click", () => app.querySelector("#store-grid")?.scrollIntoView({ behavior: "smooth", block: "start" })),
     );
@@ -1487,6 +1987,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     startAutoplay();
     activeHeroCleanup = () => {
       stopAutoplay();
+      document.removeEventListener("visibilitychange", syncCarouselVisibility);
       slides.forEach((slide) => slide.querySelector<HTMLVideoElement>("video")?.pause());
     };
   }
@@ -1585,7 +2086,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
       .map(
         (section) => `
           ${section.name ? `<div class="category-section-title">${escapeHtml(section.name)}</div>` : ""}
-          <div class="store-items">${section.items.map((item) => renderProductCard(slug, item, cardIndex++)).join("")}</div>`,
+          <div class="store-items">${section.items.map((item) => renderProductCard(slug, item, cardIndex++, store.showLowStockToCustomers === true)).join("")}</div>`,
       )
       .join("");
   }
@@ -1608,6 +2109,17 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
     });
   });
 
+  grid.querySelectorAll<HTMLButtonElement>(".product-gallery-arrow").forEach((button) => {
+    button.addEventListener("click", () => {
+      const card = button.closest<HTMLElement>(".store-item")!;
+      const dots = Array.from(card.querySelectorAll<HTMLElement>(".gallery-thumb-btn"));
+      const activeIndex = Math.max(0, dots.findIndex((dot) => dot.classList.contains("active")));
+      const nextIndex = (activeIndex + Number(button.dataset.galleryStep) + dots.length) % dots.length;
+      dots[nextIndex]?.click();
+      button.focus();
+    });
+  });
+
   grid.querySelectorAll<HTMLElement>(".store-item").forEach((row) => {
     const id = row.dataset.id!;
     const item = store.items.find((i) => i.id === id)!;
@@ -1616,22 +2128,33 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
       navigateWithinStore(slug, store, id);
     });
     row.querySelector<HTMLSelectElement>(".variant-select")?.addEventListener("change", (event) => {
-      selectedVariantByItem.set(id, (event.currentTarget as HTMLSelectElement).value);
+      const value = (event.currentTarget as HTMLSelectElement).value;
+      if (value) selectedVariantByItem.set(id, value);
+      else selectedVariantByItem.delete(id);
       renderStoreGrid(slug, store, currency);
     });
+    row.querySelectorAll<HTMLInputElement>(".extra-toggle").forEach((input) => input.addEventListener("change", () => {
+      const selected = new Set(selectedExtraIdsByItem.get(id) ?? []);
+      if (input.checked) selected.add(input.dataset.extraId!);
+      else selected.delete(input.dataset.extraId!);
+      selectedExtraIdsByItem.set(id, selected);
+      renderStoreGrid(slug, store, currency);
+    }));
     row.querySelector(".qty-plus")?.addEventListener("click", () => {
-      if (item.stock !== null && productCartQuantity(id) >= item.stock) return;
+      if (!productConfigurationComplete(item)) return;
       const selectedVariant = selectedVariantFor(item);
-      const key = cartItemKey(id, selectedVariant?.id);
+      if (remainingStock(item, selectedVariant) === 0) return;
+      const extras = selectedExtrasFor(item);
+      const key = cartItemKey(id, selectedVariant?.id, extras.map((extra) => extra.id));
       const available = optionStock(item, selectedVariant);
-      if (available !== null && (cart.get(key) ?? 0) >= available) return;
+      if (available !== null && optionCartQuantity(id, selectedVariant?.id) >= available) return;
       cart.set(key, (cart.get(key) ?? 0) + 1);
       saveCart(store);
       renderStoreGrid(slug, store, currency);
       updateCartBar(store, currency);
     });
     row.querySelector(".qty-minus")?.addEventListener("click", () => {
-      const key = cartItemKey(id, selectedVariantFor(item)?.id);
+      const key = cartItemKey(id, selectedVariantFor(item)?.id, selectedExtrasFor(item).map((extra) => extra.id));
       const next = (cart.get(key) ?? 0) - 1;
       if (next <= 0) cart.delete(key);
       else cart.set(key, next);
@@ -1652,7 +2175,12 @@ function updateCartBar(store: Store, currency: string): void {
   if (summary) {
     summary.textContent = `${cartCount()} ${cartCount() === 1 ? "producto" : "productos"} — ${formatAmount(cartTotal(store.items), currency)}`;
   }
-  if (payButton) payButton.disabled = cartCount() === 0;
+  if (payButton) {
+    payButton.disabled = cartCount() === 0;
+    payButton.textContent = store.cartButtonLabel && store.cartButtonLabel !== "Ir a pagar"
+      ? store.cartButtonLabel
+      : `Ver carrito · ${cartCount()}`;
+  }
   const cartBar = app.querySelector<HTMLElement>(".cart-bar");
   if (cartBar) cartBar.hidden = cartCount() === 0;
 }

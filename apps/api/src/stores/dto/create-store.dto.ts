@@ -67,12 +67,26 @@ export class StoreEditorialImageDto {
   @Matches(UPLOADED_FILE_URL_PATTERN, { message: "editorial imageUrl must be a path returned by POST /v1/uploads" })
   imageUrl!: string;
 
+  @ApiPropertyOptional({ example: "Una pausa hecha con intención" })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  title?: string;
+
   @ApiPropertyOptional({ example: "Cada pieza se termina a mano en nuestro taller." })
   @IsOptional()
   @IsString()
   @IsSafeText()
   @MaxLength(180)
   caption?: string;
+
+  @ApiPropertyOptional({ example: "El detalle de esta imagen puede contar una parte más amplia de la historia de la marca." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(360)
+  body?: string;
 
   @ApiPropertyOptional({ example: "#f4ead7", description: "Background color of the image-and-caption card." })
   @IsOptional()
@@ -127,6 +141,30 @@ export class CreateStoreDto {
   @IsString()
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: "backgroundColor must be a 6-digit hex color, e.g. #f8fafc" })
   backgroundColor?: string;
+
+  @ApiPropertyOptional({ description: "Storefront background treatment.", enum: ["solid", "gradient"] })
+  @IsOptional()
+  @IsIn(["solid", "gradient"])
+  backgroundMode?: string;
+
+  @ApiPropertyOptional({ description: "First color of the storefront gradient.", example: "#f8fafc" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "backgroundGradientStart must be a 6-digit hex color" })
+  backgroundGradientStart?: string;
+
+  @ApiPropertyOptional({ description: "Second color of the storefront gradient.", example: "#e0e7ff" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "backgroundGradientEnd must be a 6-digit hex color" })
+  backgroundGradientEnd?: string;
+
+  @ApiPropertyOptional({ description: "Gradient direction in degrees.", minimum: 0, maximum: 360, example: 135 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(360)
+  backgroundGradientAngle?: number;
 
   @ApiPropertyOptional({
     description:
@@ -290,6 +328,17 @@ export class CreateStoreDto {
   @IsBoolean()
   promotionEnabled?: boolean;
 
+  @ApiPropertyOptional({
+    description: "Path returned by POST /v1/uploads for the promotion dialog image. Omit to leave unchanged, or send null to clear.",
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  @Matches(UPLOADED_FILE_URL_PATTERN, { message: "promotionImageUrl must be a path returned by POST /v1/uploads" })
+  promotionImageUrl?: string | null;
+
   @ApiPropertyOptional({ nullable: true, example: "20% en tu primera compra" })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -348,6 +397,14 @@ export class CreateStoreDto {
   contentOrder?: (typeof STORE_CONTENT_SECTIONS)[number][];
 
   @ApiPropertyOptional({
+    description: "Structural storefront composition.",
+    enum: ["cinematic", "editorial", "collage", "catalog-first"],
+  })
+  @IsOptional()
+  @IsIn(["cinematic", "editorial", "collage", "catalog-first"])
+  layoutStyle?: string;
+
+  @ApiPropertyOptional({
     description: "Captioned editorial images shown outside the product catalog (maximum 8).",
     type: [StoreEditorialImageDto],
   })
@@ -375,10 +432,62 @@ export class CreateStoreDto {
   @MaxLength(36)
   cartButtonLabel?: string;
 
-  @ApiPropertyOptional({ description: "How customers finish an order.", enum: ["payment", "whatsapp"] })
+  @ApiPropertyOptional({ description: "How customers finish an order.", enum: ["payment", "whatsapp", "external"] })
   @IsOptional()
-  @IsIn(["payment", "whatsapp"])
+  @IsIn(["payment", "whatsapp", "external"])
   checkoutMode?: string;
+
+  @ApiPropertyOptional({ description: "Optional legacy http(s) destination for external lead stores.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(500)
+  @Matches(/^https?:\/\/[^\s]+$/i, { message: "leadCaptureUrl must be an http(s) URL" })
+  leadCaptureUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Show an optional shelf of other in-stock products inside the cart review.",
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  cartRecommendationsEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: "Payment Link ids the merchant chose for the cart recommendation shelf.",
+    type: [String],
+    default: [],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ArrayUnique()
+  @IsString({ each: true })
+  cartRecommendationProductIds?: string[];
+
+  @ApiPropertyOptional({
+    description: "Show low-stock quantities to storefront customers. Sold-out state remains visible.",
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showLowStockToCustomers?: boolean;
+
+  @ApiPropertyOptional({ description: "Short merchant-authored label for Yapi's sales goal.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(80)
+  salesGoalLabel?: string | null;
+
+  @ApiPropertyOptional({ description: "Sales target in minor units (centavos), tracked by Yapi.", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(1)
+  @Max(1_000_000_000)
+  salesGoalAmount?: number | null;
 
   @ApiPropertyOptional({
     description:

@@ -26,6 +26,7 @@ const baseItem = {
   stock: null,
   color: null,
   variants: [],
+  extras: [],
   amount: 5000,
   currency: "BOB",
   soldCount: 0,
@@ -37,6 +38,10 @@ const baseStoreFields = {
   logoUrl: null,
   bannerUrl: null,
   backgroundColor: null,
+  backgroundMode: "solid",
+  backgroundGradientStart: "#f8fafc",
+  backgroundGradientEnd: "#e0e7ff",
+  backgroundGradientAngle: 135,
   backgroundImageUrl: null,
   aboutText: null,
   aboutImageUrl: null,
@@ -47,6 +52,10 @@ const baseStoreFields = {
   buttonMotion: "lift",
   cartButtonLabel: "Ir a pagar",
   checkoutMode: "payment",
+  leadCaptureUrl: null,
+  cartRecommendationsEnabled: true,
+  cartRecommendationProductIds: [],
+  showLowStockToCustomers: false,
   boardTexture: "chalkboard",
   announcement: null,
   announcementMode: "static",
@@ -54,6 +63,7 @@ const baseStoreFields = {
   announcementSize: "medium",
   announcementColor: "#c58b3c",
   promotionEnabled: false,
+  promotionImageUrl: null,
   promotionTitle: null,
   promotionBody: null,
   promotionCtaLabel: null,
@@ -103,10 +113,72 @@ describe("storefront (?link=...)", () => {
     expect(status!.classList.contains("failed")).toBe(false);
     expect(document.querySelector(".store-title")?.textContent).toBe("Tienda Vacía");
     const entrance = document.querySelector<HTMLElement>(".store-entry-loader")!;
-    expect(entrance.getAttribute("aria-label")).toBe("Cargando Tienda Vacía");
-    expect(document.querySelector(".store-entry-loader-brand")?.textContent).toBe("Tienda Vacía");
-    expect(entrance.style.getPropertyValue("--store-entry-bg")).toBe("#f5f1e8");
-    expect(entrance.style.getPropertyValue("--store-entry-accent")).toBe("#7c3aed");
+    expect(entrance.getAttribute("aria-label")).toBe("Cargando Tienda Vacía con pagosYa");
+    expect(document.querySelector(".store-entry-loader-brand")?.textContent).toBe("pagosYa");
+    expect(document.querySelector<HTMLImageElement>(".store-entry-loader-logo")?.src).toContain("/logo-mark.png");
+  });
+
+  it("renders a merchant-selected two-color gradient as the storefront canvas", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda Gradiente",
+        backgroundColor: "#f8fafc",
+        backgroundMode: "gradient",
+        backgroundGradientStart: "#fef3c7",
+        backgroundGradientEnd: "#fbcfe8",
+        backgroundGradientAngle: 120,
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=gradient1");
+
+    expect(document.documentElement.style.getPropertyValue("--pg-page-background")).toBe(
+      "linear-gradient(120deg, #fef3c7, #fbcfe8)",
+    );
+  });
+
+  it("adds the smallest contrast wash when gradient endpoints need opposite text colors", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda Contraste",
+        backgroundMode: "gradient",
+        backgroundGradientStart: "#000000",
+        backgroundGradientEnd: "#ffffff",
+        backgroundGradientAngle: 90,
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=contrast1");
+
+    const background = document.documentElement.style.getPropertyValue("--pg-page-background");
+    expect(background).toContain("linear-gradient(rgba(");
+    expect(background).toContain("linear-gradient(90deg, #000000, #ffffff)");
+    expect(["#000000", "#ffffff"]).toContain(document.documentElement.style.getPropertyValue("--pg-text"));
+  });
+
+  it("keeps an exact AA foreground on midtone gradients", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda Tono Medio",
+        backgroundMode: "gradient",
+        backgroundGradientStart: "#777777",
+        backgroundGradientEnd: "#777777",
+        backgroundGradientAngle: 45,
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=midtone1");
+
+    expect(document.documentElement.style.getPropertyValue("--pg-text")).toBe("#000000");
   });
 
   it("renders store items with name, price, and a working quantity stepper", async () => {
@@ -186,8 +258,12 @@ describe("storefront (?link=...)", () => {
 
     expect(document.querySelectorAll(".product-detail-thumbnail")).toHaveLength(2);
     expect(document.querySelectorAll(".product-detail-option")).toHaveLength(2);
-    expect(document.querySelector(".product-detail-price")?.textContent).toBe("40.00 BOB");
+    expect(document.querySelector(".product-detail-price")?.textContent).toBe("50.00 BOB");
+    expect(document.querySelector<HTMLButtonElement>(".product-add")!.disabled).toBe(true);
     expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.style.objectPosition).toBe("50% 18%");
+
+    document.querySelector<HTMLButtonElement>(".product-detail-image-arrow.next")!.click();
+    expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.src).toContain("detalle.webp");
 
     document.querySelectorAll<HTMLButtonElement>(".product-detail-thumbnail")[1].click();
     expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.src).toContain("detalle.webp");
@@ -206,21 +282,32 @@ describe("storefront (?link=...)", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
+        layoutStyle: "editorial",
+        backgroundImageUrl: "http://localhost:3000/uploads/uno.webp",
         heroSlides: [
-          { imageUrl: "/v1/uploads/uno.webp", title: "Nueva colección", body: "Hecha en Bolivia", ctaLabel: "Explorar" },
+          { imageUrl: "http://localhost:3000/uploads/uno.webp", title: "Nueva colección", body: "Hecha en Bolivia", ctaLabel: "Explorar" },
           { imageUrl: "/v1/uploads/dos.webp", title: "Piezas de temporada", ctaLabel: "Ver temporada" },
+          { imageUrl: "/v1/uploads/tres.webp", title: "La mirada del taller", body: "Una tercera perspectiva para recorrer la marca." },
+          { imageUrl: "/v1/uploads/cuatro.webp", title: "Elige tu pieza", body: "El recorrido termina cerca del catálogo." },
         ],
-        items: [baseItem],
+        editorialGallery: [{ imageUrl: "http://localhost:3000/uploads/uno.webp", title: "Materia y detalle", caption: "Una mirada cercana", body: "La imagen comparte espacio con un relato más amplio sobre la selección." }],
+        items: [{ ...baseItem, imageUrls: ["/v1/uploads/uno.webp"], imagePositions: ["17% 81%"] }],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
     }));
 
     await loadCheckout("/?link=taller-norte");
     await vi.waitFor(() => {
-      expect(document.querySelectorAll(".store-slide")).toHaveLength(2);
+      expect(document.querySelectorAll(".store-slide")).toHaveLength(4);
     });
+    expect(document.body.dataset.layoutStyle).toBe("editorial");
+    expect(document.querySelectorAll(".store-carousel-dots button")).toHaveLength(4);
+    expect(document.querySelector(".store-editorial-item figcaption strong")?.textContent).toBe("Materia y detalle");
+    expect(document.querySelector(".store-editorial-item figcaption p")?.textContent).toContain("relato más amplio");
     const slides = document.querySelectorAll<HTMLElement>(".store-slide");
     expect(slides[0].classList.contains("active")).toBe(true);
+    expect(slides[0].querySelector<HTMLImageElement>("img")?.style.objectPosition).toBe("17% 81%");
+    expect(document.querySelector<HTMLImageElement>(".store-editorial-item img")?.style.objectPosition).toBe("17% 81%");
     expect(document.querySelector(".store-slide-cta")?.textContent).toBe("Explorar");
     expect(slides[1].querySelector<HTMLButtonElement>(".store-slide-cta")?.tabIndex).toBe(-1);
     expect(document.querySelector<HTMLButtonElement>(".store-carousel-toggle")?.textContent).toBe("Pausar");
@@ -304,7 +391,11 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=burger-options");
 
-    expect(document.querySelector<HTMLSelectElement>(".variant-select")?.value).toBe("var_small");
+    expect(document.querySelector<HTMLSelectElement>(".variant-select")?.value).toBe("");
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
+    const firstVariantSelect = document.querySelector<HTMLSelectElement>(".variant-select")!;
+    firstVariantSelect.value = "var_small";
+    firstVariantSelect.dispatchEvent(new Event("change"));
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
 
     const variantSelect = document.querySelector<HTMLSelectElement>(".variant-select")!;
@@ -314,11 +405,111 @@ describe("storefront (?link=...)", () => {
 
     expect(document.querySelector(".cart-summary")?.textContent).toContain("130.00 BOB");
     document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    expect(document.querySelector("#cart-review-title")?.textContent).toBe("Mi carrito");
+    expect(document.querySelectorAll(".cart-review-line")).toHaveLength(2);
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
     await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalled());
     expect(checkoutCart).toHaveBeenCalledWith("burger-options", [
       { paymentLinkId: "link_1", variantId: "var_small", quantity: 1 },
       { paymentLinkId: "link_1", variantId: "var_large", quantity: 1 },
     ]);
+  });
+
+  it("blocks adding until required choices are selected and prices chosen extras", async () => {
+    const checkoutCart = vi.fn().mockResolvedValue({
+      clientSecret: "pi_extras_secret_x",
+      storeName: "Pizzería",
+      cartDescription: "Pizza (Grande) + Queso + Caja regalo x1",
+      contactPhone: null,
+      contactEmail: null,
+    });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Pizzería",
+        items: [{
+          ...baseItem,
+          name: "Pizza",
+          variants: [{ id: "large", name: "Grande", amount: 8000 }],
+          extras: [
+            { id: "cheese", name: "Queso", amount: 500, required: true, available: true },
+            { id: "gift", name: "Caja regalo", amount: 300, required: false, available: true },
+          ],
+        }],
+      } satisfies Store),
+      checkoutCart,
+      fetchSession: vi.fn().mockResolvedValue({ id: "pi_extras", amount: 8800, currency: "BOB", status: "REQUIRES_PAYMENT_METHOD", description: null, merchantName: "Pizzería" }),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=pizzeria");
+
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
+    const variantSelect = document.querySelector<HTMLSelectElement>(".variant-select")!;
+    variantSelect.value = "large";
+    variantSelect.dispatchEvent(new Event("change"));
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
+
+    document.querySelector<HTMLInputElement>('[data-extra-id="cheese"]')!.click();
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(false);
+    document.querySelector<HTMLInputElement>('[data-extra-id="gift"]')!.click();
+    expect(document.querySelector(".store-item-price")?.textContent).toContain("88.00 BOB");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    expect(document.querySelector(".cart-line-extras")?.textContent).toContain("Queso · Caja regalo");
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
+    await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalled());
+    expect(checkoutCart).toHaveBeenCalledWith("pizzeria", [{ paymentLinkId: "link_1", variantId: "large", extraIds: ["cheese", "gift"], quantity: 1 }]);
+  });
+
+  it("includes two sides for free and charges only the third grouped choice", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "El Almuerzo",
+        items: [{
+          ...baseItem,
+          name: "Menú del día",
+          amount: 3000,
+          extras: [
+            { id: "rice", name: "Arroz", amount: 500, required: false, available: true, groupName: "Guarniciones", freeAllowance: 2 },
+            { id: "salad", name: "Ensalada", amount: 600, required: false, available: true, groupName: "Guarniciones", freeAllowance: 2 },
+            { id: "fries", name: "Papas", amount: 700, required: false, available: true, groupName: "Guarniciones", freeAllowance: 2 },
+          ],
+        }],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=almuerzo");
+    expect(document.querySelector(".store-item-extras")?.textContent).toContain("Guarniciones: 2 incluidas");
+
+    document.querySelector<HTMLInputElement>('[data-extra-id="rice"]')!.click();
+    document.querySelector<HTMLInputElement>('[data-extra-id="salad"]')!.click();
+    expect(document.querySelector(".store-item-price")?.textContent).toContain("30.00 BOB");
+    expect(document.querySelector<HTMLInputElement>('[data-extra-id="fries"]')!.parentElement?.textContent).toContain("+7.00 BOB");
+
+    document.querySelector<HTMLInputElement>('[data-extra-id="fries"]')!.click();
+    expect(document.querySelector(".store-item-price")?.textContent).toContain("37.00 BOB");
+  });
+
+  it("marks a product unavailable when a required shared extra is exhausted", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Pizzería",
+        items: [{
+          ...baseItem,
+          name: "Pizza cottage",
+          extras: [{ id: "cottage", name: "Queso cottage", amount: 500, required: true, available: false }],
+        }],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=pizzeria-sin-cottage");
+    expect(document.querySelector(".stock-note.out")?.textContent).toBe("Queso cottage agotado");
+    expect(document.querySelector(".qty-stepper")).toBeFalsy();
   });
 
   it("shares a product's stock limit across all of its options", async () => {
@@ -342,6 +533,9 @@ describe("storefront (?link=...)", () => {
     }));
 
     await loadCheckout("/?link=burger-stock");
+    const firstVariantSelect = document.querySelector<HTMLSelectElement>(".variant-select")!;
+    firstVariantSelect.value = "var_small";
+    firstVariantSelect.dispatchEvent(new Event("change"));
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
 
     const variantSelect = document.querySelector<HTMLSelectElement>(".variant-select")!;
@@ -357,6 +551,7 @@ describe("storefront (?link=...)", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Hamburguesas",
+        showLowStockToCustomers: true,
         items: [
           {
             ...baseItem,
@@ -373,6 +568,9 @@ describe("storefront (?link=...)", () => {
     }));
 
     await loadCheckout("/?link=burger-option-stock");
+    const firstVariantSelect = document.querySelector<HTMLSelectElement>(".variant-select")!;
+    firstVariantSelect.value = "var_small";
+    firstVariantSelect.dispatchEvent(new Event("change"));
     expect(document.querySelector(".stock-note")?.textContent).toContain("1");
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
     expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
@@ -387,7 +585,7 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".cart-summary")?.textContent).toContain("130.00 BOB");
   });
 
-  it("selects the first purchasable option and disables exhausted choices", async () => {
+  it("requires an explicit purchasable option and disables exhausted choices", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -410,10 +608,11 @@ describe("storefront (?link=...)", () => {
     await loadCheckout("/?link=available-option");
 
     const options = document.querySelectorAll<HTMLOptionElement>(".variant-select option");
-    expect(options[0].disabled).toBe(true);
-    expect(options[0].textContent).toContain("Agotado");
-    expect(document.querySelector<HTMLSelectElement>(".variant-select")!.value).toBe("var_large");
-    expect(document.querySelector(".stock-note")?.textContent).toContain("2");
+    expect(options[0].value).toBe("");
+    expect(options[1].disabled).toBe(true);
+    expect(options[1].textContent).toContain("agotado");
+    expect(document.querySelector<HTMLSelectElement>(".variant-select")!.value).toBe("");
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
     expect(document.querySelector(".store-item")?.classList.contains("sold-out")).toBe(false);
   });
 
@@ -428,6 +627,7 @@ describe("storefront (?link=...)", () => {
         announcementSize: "large",
         announcementColor: "#f5d90a",
         promotionEnabled: true,
+        promotionImageUrl: "/v1/uploads/promo.webp",
         promotionTitle: "20% de descuento",
         promotionBody: "Solo por este fin de semana.",
         promotionCtaLabel: "Entendido",
@@ -450,6 +650,7 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelectorAll(".store-announcement-phrase")).toHaveLength(4);
     expect(document.querySelector(".store-announcement-a11y")?.textContent).toBe("Envío gratis hoy • Compra local");
     expect(document.querySelector(".promotion-dialog")?.textContent).toContain("20% de descuento");
+    expect(document.querySelector<HTMLImageElement>(".promotion-image")?.src).toContain("promo.webp");
     expect(document.body.dataset.buttonStyle).toBe("pill");
     expect(document.body.dataset.buttonVariant).toBe("outline");
     expect(document.body.dataset.buttonMotion).toBe("pulse");
@@ -560,6 +761,8 @@ describe("storefront (?link=...)", () => {
     await vi.waitFor(() => expect(document.querySelector(".qty-value")?.textContent).toBe("1"));
 
     document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    expect(document.querySelector(".cart-review-total")?.textContent).toContain("50.00 BOB");
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
 
     await vi.waitFor(() => {
       expect(document.querySelector(".amount")?.textContent).toBe("50.00 BOB");
@@ -589,6 +792,7 @@ describe("storefront (?link=...)", () => {
     await loadCheckout("/?link=taller-whatsapp");
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
     document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
 
     expect(checkoutCart).not.toHaveBeenCalled();
     expect(open).toHaveBeenCalledWith(expect.stringMatching(/^https:\/\/wa\.me\/59171234567\?text=/), "_blank", "noopener,noreferrer");
@@ -596,6 +800,77 @@ describe("storefront (?link=...)", () => {
     expect(message).toContain("Corte de cabello x1");
     expect(message).toContain("Total: 50.00 BOB");
     expect(document.querySelector(".secure-note")?.textContent).toContain("WhatsApp");
+  });
+
+  it("collects an interested customer's contact details and sends them without charging", async () => {
+    const checkoutCart = vi.fn();
+    const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Estudio de interiores",
+        checkoutMode: "external",
+        cartButtonLabel: "Solicitar asesoría",
+        items: [baseItem],
+      } satisfies Store),
+      checkoutCart,
+      submitStoreLead,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=estudio-leads");
+    expect(document.querySelector("#early-lead-title")?.textContent).toContain("Déjanos tu correo");
+    const earlyForm = document.querySelector<HTMLFormElement>("#early-lead-form")!;
+    earlyForm.querySelector<HTMLInputElement>("#early-lead-email")!.value = "maria@gmail.com";
+    earlyForm.requestSubmit();
+    expect(earlyForm.querySelector(".early-lead-status")?.textContent).toContain("maria@gmail.com");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+
+    expect(document.querySelector(".cart-review-head")?.textContent).toContain("pagosYa no procesará un cobro");
+    const form = document.querySelector<HTMLFormElement>("#store-lead-form")!;
+    form.querySelector<HTMLInputElement>("#lead-name")!.value = "María Pérez";
+    expect(form.querySelector<HTMLInputElement>("#lead-email")!.value).toBe("maria@gmail.com");
+    form.querySelector<HTMLInputElement>("#lead-phone")!.value = "+591 71234567";
+    form.requestSubmit();
+
+    expect(checkoutCart).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(submitStoreLead).toHaveBeenCalledWith(
+      "estudio-leads",
+      expect.objectContaining({ name: "María Pérez", email: "maria@gmail.com", phone: "+591 71234567" }),
+      [{ paymentLinkId: "link_1", quantity: 1 }],
+    ));
+    expect(document.querySelector(".lead-capture-success")?.textContent).toContain("La tienda ya recibió tu solicitud");
+  });
+
+  it("confirms a zero-priced order by contact form instead of opening payment", async () => {
+    const checkoutCart = vi.fn();
+    const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda de muestras",
+        checkoutMode: "payment",
+        items: [{ ...baseItem, name: "Muestra gratis", amount: 0 }],
+      } satisfies Store),
+      checkoutCart,
+      submitStoreLead,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=muestras");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    expect(document.querySelector("#cart-confirm")?.textContent).toContain("Confirmar pedido gratis");
+    expect(document.querySelector(".cart-review-head")?.textContent).toContain("no tiene costo");
+    const form = document.querySelector<HTMLFormElement>("#store-lead-form")!;
+    form.querySelector<HTMLInputElement>("#lead-name")!.value = "María Pérez";
+    form.querySelector<HTMLInputElement>("#lead-email")!.value = "maria@gmail.com";
+    form.querySelector<HTMLInputElement>("#lead-phone")!.value = "+591 71234567";
+    form.requestSubmit();
+
+    await vi.waitFor(() => expect(submitStoreLead).toHaveBeenCalled());
+    expect(checkoutCart).not.toHaveBeenCalled();
   });
 
   it("does not open WhatsApp when the store has an invalid recipient number", async () => {
@@ -617,10 +892,11 @@ describe("storefront (?link=...)", () => {
     await loadCheckout("/?link=taller-sin-telefono");
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
     document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
 
     expect(open).not.toHaveBeenCalled();
     expect(checkoutCart).not.toHaveBeenCalled();
-    expect(document.querySelector(".cart-checkout-error")?.textContent).toContain("número de WhatsApp válido");
+    expect(document.querySelector(".cart-review-dialog .cart-checkout-error")?.textContent).toContain("número de WhatsApp válido");
   });
 
   it("keeps the cart available and lets the customer retry when checkout fails", async () => {
@@ -654,13 +930,15 @@ describe("storefront (?link=...)", () => {
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
     const payButton = document.querySelector<HTMLButtonElement>("#cart-pay")!;
     payButton.click();
+    const confirmButton = document.querySelector<HTMLButtonElement>("#cart-confirm")!;
+    confirmButton.click();
 
-    await vi.waitFor(() => expect(document.querySelector(".cart-checkout-error")?.textContent).toContain("Intenta nuevamente"));
+    await vi.waitFor(() => expect(document.querySelector(".cart-review-dialog .cart-checkout-error")?.textContent).toContain("Intenta nuevamente"));
     expect(document.querySelector(".store-products")).toBeTruthy();
-    expect(payButton.disabled).toBe(false);
-    expect(payButton.textContent).toBe("Ir a pagar");
+    expect(confirmButton.disabled).toBe(false);
+    expect(confirmButton.textContent).toBe("Continuar al pago");
 
-    payButton.click();
+    confirmButton.click();
     await vi.waitFor(() => expect(document.querySelector(".amount")?.textContent).toBe("50.00 BOB"));
     expect(checkoutCart).toHaveBeenCalledTimes(2);
   });
@@ -707,6 +985,7 @@ describe("storefront (?link=...)", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con stock",
+        showLowStockToCustomers: true,
         items: [{ ...baseItem, tags: ["Nuevo", "Popular"], stock: 1 }],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
@@ -715,7 +994,7 @@ describe("storefront (?link=...)", () => {
     await loadCheckout("/?link=stocked");
 
     expect(document.querySelectorAll(".tag-badge")).toHaveLength(2);
-    expect(document.querySelector(".stock-note")?.textContent).toBe("Quedan 1");
+    expect(document.querySelector(".stock-note")?.textContent).toBe("¡Solo queda 1!");
 
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
     await vi.waitFor(() => expect(document.querySelector(".qty-value")?.textContent).toBe("1"));
@@ -723,6 +1002,106 @@ describe("storefront (?link=...)", () => {
     // Stock is exhausted at qty 1 — the + button must now be disabled rather
     // than letting the cart silently exceed what's actually available.
     expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
+  });
+
+  it("hides healthy stock, reveals it below five, and announces exhaustion at the cart limit", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con inventario",
+        showLowStockToCustomers: true,
+        items: [{ ...baseItem, stock: 6 }],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=private-stock");
+    expect(document.querySelector(".stock-note")).toBeFalsy();
+
+    for (let quantity = 1; quantity <= 2; quantity += 1) {
+      document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+      await vi.waitFor(() => expect(document.querySelector(".qty-value")?.textContent).toBe(String(quantity)));
+    }
+    expect(document.querySelector(".stock-note")?.textContent).toBe("¡Solo quedan 4!");
+
+    for (let quantity = 3; quantity <= 6; quantity += 1) {
+      document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+      await vi.waitFor(() => expect(document.querySelector(".qty-value")?.textContent).toBe(String(quantity)));
+    }
+    expect(document.querySelector(".stock-note.out")?.textContent).toBe("¡Stock agotado!");
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
+  });
+
+  it("keeps inventory quantities private unless the store opts in", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con inventario privado",
+        showLowStockToCustomers: false,
+        items: [{ ...baseItem, stock: null, purchaseLimit: 2 }],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=hidden-stock");
+    expect(document.querySelector(".stock-note")).toBeFalsy();
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    expect(document.querySelector(".stock-note")).toBeFalsy();
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    expect(document.querySelector(".stock-note.out")?.textContent).toBe("¡Stock agotado!");
+    expect(document.querySelector<HTMLButtonElement>(".qty-plus")!.disabled).toBe(true);
+
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    expect(document.querySelector(".qty-value")?.textContent).toBe("2");
+  });
+
+  it("offers pictured recommendations in the cart and adds one without leaving the review", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Cafetería",
+        cartRecommendationProductIds: ["link_2"],
+        items: [
+          { ...baseItem, imageUrls: ["/v1/uploads/cafe.png"] },
+          { ...baseItem, id: "link_2", name: "Cheesecake", amount: 4400, imageUrls: ["/v1/uploads/cheesecake.png"], imagePositions: ["72% 18%"], soldCount: 8 },
+        ],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=cart-recommendations");
+    document.querySelector<HTMLButtonElement>('.store-item[data-id="link_1"] .qty-plus')!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+
+    expect(document.querySelector("#cart-recommendations-title")?.textContent).toBe("Súmale algo más");
+    expect(document.querySelector<HTMLImageElement>(".cart-recommendation img")?.src).toContain("cheesecake.png");
+    expect(document.querySelector<HTMLImageElement>(".cart-recommendation img")?.style.objectPosition).toBe("72% 18%");
+    expect(document.querySelector(".cart-recommendation")?.textContent?.trim()).toBe("");
+    expect(document.querySelector(".cart-recommendation")?.getAttribute("aria-label")).toBe("Agregar Cheesecake");
+
+    document.querySelector<HTMLButtonElement>('[data-recommend-product="link_2"]')!.click();
+    expect(document.querySelectorAll(".cart-review-line")).toHaveLength(2);
+    expect(document.querySelector(".cart-recommendations")).toBeFalsy();
+  });
+
+  it("does not render cart recommendations when the merchant disables them", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        cartRecommendationsEnabled: false,
+        storeName: "Catálogo directo",
+        items: [
+          { ...baseItem, imageUrls: ["/v1/uploads/uno.png"] },
+          { ...baseItem, id: "link_2", name: "Otro producto", imageUrls: ["/v1/uploads/dos.png"] },
+        ],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=no-recommendations");
+    document.querySelector<HTMLButtonElement>('.store-item[data-id="link_1"] .qty-plus')!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    expect(document.querySelector(".cart-recommendations")).toBeFalsy();
   });
 
   it("marks a sold-out product (stock 0) as unavailable, with no quantity stepper at all", async () => {
@@ -737,7 +1116,7 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=soldout");
 
-    expect(document.querySelector(".stock-note.out")?.textContent).toBe("Agotado");
+    expect(document.querySelector(".stock-note.out")?.textContent).toBe("¡Stock agotado!");
     expect(document.querySelector(".store-item")?.classList.contains("sold-out")).toBe(true);
     expect(document.querySelector(".qty-stepper")).toBeFalsy();
   });
@@ -766,13 +1145,17 @@ describe("storefront (?link=...)", () => {
     expect(thumbs[1].classList.contains("active")).toBe(true);
     expect(thumbs[0].classList.contains("active")).toBe(false);
     await vi.waitFor(() => expect(mainImg.src).toContain("b.png"));
+
+    document.querySelector<HTMLButtonElement>(".product-gallery-arrow.previous")!.click();
+    await vi.waitFor(() => expect(mainImg.src).toContain("a.png"));
   });
 
-  it("applies a background image and the has-bg-image class when the store has one set", async () => {
+  it("ignores legacy background images and keeps the canvas brand-color only", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con fondo",
+        backgroundColor: "#f4ead7",
         backgroundImageUrl: "/v1/uploads/backdrop.jpg",
         items: [baseItem],
       } satisfies Store),
@@ -781,10 +1164,10 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=backdrop");
 
-    expect(document.body.classList.contains("has-bg-image")).toBe(true);
-    expect(document.documentElement.style.getPropertyValue("--pg-page-bg-image")).toBe('url("/v1/uploads/backdrop.jpg")');
-    // A photo background forces the light text palette the same way a solid
-    // backgroundColor does, since content sits on the (light) glass card.
+    expect(document.body.classList.contains("has-bg-image")).toBe(false);
+    expect(document.documentElement.style.getPropertyValue("--pg-page-bg")).toBe("#f4ead7");
+    expect(document.documentElement.style.getPropertyValue("--pg-page-bg-image")).toBe("");
+    // Theme contrast follows the brand canvas color, never a photograph.
     expect(document.documentElement.dataset.theme).toBe("light");
 
     const palette = getComputedStyle(document.documentElement);
@@ -917,7 +1300,10 @@ describe("storefront (?link=...)", () => {
       document.querySelector(".store-about")!.compareDocumentPosition(document.querySelector("#store-grid")!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(document.querySelector(".store-about")?.classList.contains("has-image")).toBe(false);
+    expect(document.querySelector(".store-about")?.classList.contains("story-intro")).toBe(true);
     expect(document.querySelector(".store-about-heading h2")?.textContent?.trim()).toBe("Conoce la marca");
+    expect(document.querySelector(".store-about-title-text")?.textContent?.trim()).toBe("Conoce la marca");
+    expect(document.querySelector(".store-about-body p")?.getAttribute("style")).toContain("--story-delay:340ms");
     expect(document.querySelector(".store-about-icon")).toBeFalsy();
   });
 
@@ -1149,7 +1535,7 @@ describe("storefront (?link=...)", () => {
     expect(names()).toEqual(["Popular", "Caro", "Barato"]);
   });
 
-  it("does not set has-bg-image or force a theme when the store has no background image", async () => {
+  it("keeps the default color canvas when a store has no custom background color", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,

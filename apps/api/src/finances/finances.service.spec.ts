@@ -2,13 +2,45 @@ import { FinancesService } from "./finances.service";
 
 function makeFakePrisma() {
   return {
-    paymentIntent: { aggregate: jest.fn(), groupBy: jest.fn() },
+    paymentIntent: { aggregate: jest.fn(), groupBy: jest.fn(), findMany: jest.fn() },
+    storeLead: { findMany: jest.fn() },
     paymentLink: { findMany: jest.fn() },
-    store: { aggregate: jest.fn(), findFirst: jest.fn() },
+    store: { aggregate: jest.fn(), findFirst: jest.fn(), findMany: jest.fn() },
     storeProductStat: { findMany: jest.fn().mockResolvedValue([]) },
     $queryRaw: jest.fn().mockResolvedValue([{ amount: 0n, count: 0n }]),
   };
 }
+
+describe("FinancesService.orders", () => {
+  it("combines paid orders and lead requests with buyer contact details", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue({ id: "store_1", name: "Tienda Centro" });
+    prisma.paymentIntent.findMany.mockResolvedValue([{
+      id: "pi_1", amount: 2500, currency: "BOB", status: "SUCCEEDED", paymentMethodType: "QR",
+      customerName: "Ana", customerEmail: "ana@gmail.com", customerPhone: "70000001",
+      description: "Café x1", metadata: { storeId: "store_1", cart: [{ name: "Café", quantity: 1 }] },
+      createdAt: new Date("2026-08-15T10:00:00Z"),
+    }]);
+    prisma.storeLead.findMany.mockResolvedValue([{
+      id: "lead_1", storeId: "store_1", amount: 3000, currency: "BOB",
+      customerName: "María", customerEmail: "maria@gmail.com", customerPhone: "70000002",
+      message: "Entrega hoy", items: [{ name: "Torta", quantity: 1 }],
+      createdAt: new Date("2026-08-15T11:00:00Z"),
+    }]);
+
+    const result = await new FinancesService(prisma as any).orders("m_1", "store_1", "maría");
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      id: "lead_1", kind: "LEAD", status: "LEAD_RECEIVED", storeName: "Tienda Centro",
+      customerName: "María", customerEmail: "maria@gmail.com", customerPhone: "70000002",
+    });
+    expect(result[1]).toMatchObject({ id: "pi_1", kind: "PAYMENT", status: "SUCCEEDED", customerName: "Ana" });
+    expect(prisma.storeLead.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ merchantId: "m_1", storeId: "store_1", OR: expect.any(Array) }),
+    }));
+  });
+});
 
 describe("FinancesService.summary", () => {
   it("sums revenue, inventory value, and store views, and ranks products by quantity sold", async () => {

@@ -4,6 +4,11 @@ import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../u
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 
 export class GenerateVisualProposalsDto {
+  @ApiPropertyOptional({ description: "Background treatment every generated direction must use.", enum: ["solid", "gradient"] })
+  @IsOptional()
+  @IsIn(["solid", "gradient"])
+  backgroundMode?: string;
+
   @ApiPropertyOptional({ description: "Optional extra merchant-owned image URLs. The generator automatically reuses images already present in the store and catalog.", type: [String] })
   @IsOptional()
   @IsArray()
@@ -26,9 +31,9 @@ export class GenerateVisualProposalsDto {
   @IsIn(["warm", "bold", "minimal", "elegant", "playful"])
   personality?: string;
 
-  @ApiPropertyOptional({ description: "Required conversion path for every generated proposal.", enum: ["payment", "whatsapp"] })
+  @ApiPropertyOptional({ description: "Required conversion path for every generated proposal.", enum: ["payment", "whatsapp", "external"] })
   @IsOptional()
-  @IsIn(["payment", "whatsapp"])
+  @IsIn(["payment", "whatsapp", "external"])
   checkoutMode?: string;
 
   @ApiPropertyOptional({ description: "WhatsApp number used when checkoutMode is whatsapp.", example: "+59171234567" })
@@ -37,4 +42,11 @@ export class GenerateVisualProposalsDto {
   @IsSafeText()
   @MaxLength(40)
   whatsappPhone?: string;
+
+  @ApiPropertyOptional({ description: "Required http(s) destination when checkoutMode is external." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Matches(/^https?:\/\/[^\s]+$/i, { message: "leadCaptureUrl must be an http(s) URL" })
+  leadCaptureUrl?: string;
 }

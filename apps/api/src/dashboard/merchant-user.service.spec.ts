@@ -7,6 +7,7 @@ function makeFakePrisma() {
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
     emailVerificationToken: {
       create: jest.fn(),
@@ -109,6 +110,56 @@ describe("MerchantUserService.signup", () => {
     });
     expect(prisma.emailVerificationToken.deleteMany).toHaveBeenCalledWith({ where: { merchantUserId: "user_1" } });
     expect(email.send).toHaveBeenCalled();
+  });
+});
+
+describe("MerchantUserService.signupPasswordless", () => {
+  it("creates a dashboard user and sends a one-time password setup link", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantUser.findUnique.mockResolvedValue(null);
+    prisma.merchantUser.create.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
+    const email = makeFakeEmailProvider();
+
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const result = await service.signupPasswordless("m_1", "owner@tienda.bo");
+
+    expect(prisma.merchantUser.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        merchantId: "m_1",
+        email: "owner@tienda.bo",
+        hashedPassword: expect.any(String),
+      }),
+    });
+    expect(prisma.passwordResetToken.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ merchantUserId: "user_1" }),
+    });
+    expect(email.send).toHaveBeenCalledWith({
+      to: "owner@tienda.bo",
+      subject: "Elige tu contraseña de pagosYa",
+      body: expect.stringContaining("http://localhost:3001/reset-password?token="),
+      failLoudly: true,
+    });
+    expect(result).toEqual({
+      message: "If that email can be used, check your inbox for a link to set your password.",
+    });
+  });
+
+  it("propagates an email rejection so callers cannot report a false success", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantUser.findUnique.mockResolvedValue(null);
+    prisma.merchantUser.create.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
+    const email = makeFakeEmailProvider();
+    email.send.mockRejectedValue(new Error("Resend rejected the message"));
+
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+
+    await expect(service.signupPasswordless("m_1", "owner@tienda.bo")).rejects.toThrow(
+      "Resend rejected the message",
+    );
+    expect(prisma.passwordResetToken.deleteMany).toHaveBeenLastCalledWith({
+      where: { merchantUserId: "user_1" },
+    });
+    expect(prisma.merchantUser.delete).toHaveBeenCalledWith({ where: { id: "user_1" } });
   });
 });
 

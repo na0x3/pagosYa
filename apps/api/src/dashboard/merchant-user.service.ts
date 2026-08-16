@@ -56,7 +56,18 @@ export class MerchantUserService {
   async signupPasswordless(merchantId: string, email: string): Promise<{ message: string }> {
     const placeholderPassword = generateSecretPart() + generateSecretPart();
     const user = await this.upsertUnverifiedUser(merchantId, email, placeholderPassword);
-    if (user) await this.issuePasswordReset(user.id, email);
+    if (user) {
+      try {
+        await this.issuePasswordReset(user.id, email);
+      } catch (error) {
+        // Resend rejection must not strand a fresh, unusable account that
+        // blocks the owner from retrying signup until the 24-hour stale
+        // window. Remove only this still-unverified provisioning attempt.
+        await this.prisma.passwordResetToken.deleteMany({ where: { merchantUserId: user.id } });
+        await this.prisma.merchantUser.delete({ where: { id: user.id } });
+        throw error;
+      }
+    }
 
     return { message: "If that email can be used, check your inbox for a link to set your password." };
   }
@@ -173,7 +184,10 @@ export class MerchantUserService {
     await this.emailProvider.send({
       to: email,
       subject: "Elige tu contraseña de pagosYa",
-      body: `Elige tu contraseña para activar tu cuenta de pagosYa:\n${webOrigin}/reset-password?token=${token}\n\nEste link expira en 1 hora. Si no fuiste tú, ignora este correo.`,
+      body: `¡Bienvenido a pagosYa!\n\nTu usuario es: ${email}\n\nElige tu contraseña y activa tu acceso al dashboard desde este link seguro:\n${webOrigin}/reset-password?token=${token}\n\nEste link es de un solo uso y expira en 1 hora. Si no creaste esta cuenta, ignora este correo.`,
+      // This email is the only credential-delivery step in self-serve signup.
+      // Do not let the website claim success if Resend rejected it.
+      failLoudly: true,
     });
   }
 }

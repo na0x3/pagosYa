@@ -9,6 +9,8 @@ export interface SendEmailRequest {
   to: string;
   subject: string;
   body: string;
+  /** Interactive flows (such as lead capture) must not report success when delivery was rejected. */
+  failLoudly?: boolean;
 }
 
 export interface EmailProvider {

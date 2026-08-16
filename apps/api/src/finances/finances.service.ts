@@ -12,7 +12,7 @@ function readInventoryVariants(value: unknown): InventoryVariant[] {
       typeof entry === "object" &&
       !Array.isArray(entry) &&
       Number.isInteger((entry as Record<string, unknown>).amount) &&
-      ((entry as Record<string, unknown>).amount as number) > 0 &&
+      ((entry as Record<string, unknown>).amount as number) >= 0 &&
       (!("stock" in entry) ||
         (entry as Record<string, unknown>).stock === null ||
         (Number.isInteger((entry as Record<string, unknown>).stock) &&
@@ -23,6 +23,87 @@ function readInventoryVariants(value: unknown): InventoryVariant[] {
 @Injectable()
 export class FinancesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async orders(merchantId: string, storeId?: string, search?: string, includeAll = false) {
+    const selectedStore = storeId
+      ? await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, name: true } })
+      : null;
+    if (storeId && !selectedStore) throw new NotFoundException("Store not found");
+
+    const term = search?.trim().slice(0, 120);
+    const contactSearch = term
+      ? {
+          OR: [
+            { id: { contains: term, mode: Prisma.QueryMode.insensitive } },
+            { customerName: { contains: term, mode: Prisma.QueryMode.insensitive } },
+            { customerEmail: { contains: term, mode: Prisma.QueryMode.insensitive } },
+            { customerPhone: { contains: term, mode: Prisma.QueryMode.insensitive } },
+          ],
+        }
+      : {};
+    const [payments, leads, stores] = await Promise.all([
+      this.prisma.paymentIntent.findMany({
+        where: {
+          merchantId,
+          ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
+          ...contactSearch,
+        },
+        orderBy: { createdAt: "desc" },
+        ...(includeAll ? {} : { take: 100 }),
+      }),
+      this.prisma.storeLead.findMany({
+        where: { merchantId, ...(storeId ? { storeId } : {}), ...contactSearch },
+        orderBy: { createdAt: "desc" },
+        ...(includeAll ? {} : { take: 100 }),
+      }),
+      selectedStore
+        ? Promise.resolve([selectedStore])
+        : this.prisma.store.findMany({ where: { merchantId }, select: { id: true, name: true } }),
+    ]);
+    const storeNames = new Map(stores.map((store) => [store.id, store.name]));
+    const paymentRows = payments.map((payment) => {
+      const metadata = payment.metadata && typeof payment.metadata === "object" && !Array.isArray(payment.metadata)
+        ? payment.metadata as Prisma.JsonObject
+        : {};
+      const paymentStoreId = typeof metadata.storeId === "string" ? metadata.storeId : null;
+      return {
+        id: payment.id,
+        kind: "PAYMENT" as const,
+        storeId: paymentStoreId,
+        storeName: paymentStoreId ? storeNames.get(paymentStoreId) ?? null : null,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        paymentMethodType: payment.paymentMethodType,
+        customerName: payment.customerName,
+        customerEmail: payment.customerEmail,
+        customerPhone: payment.customerPhone,
+        description: payment.description,
+        items: Array.isArray(metadata.cart) ? metadata.cart : [],
+        createdAt: payment.createdAt,
+      };
+    });
+    const leadRows = leads.map((lead) => ({
+      id: lead.id,
+      kind: "LEAD" as const,
+      storeId: lead.storeId,
+      storeName: storeNames.get(lead.storeId) ?? null,
+      amount: lead.amount,
+      currency: lead.currency,
+      status: "LEAD_RECEIVED",
+      paymentMethodType: null,
+      customerName: lead.customerName,
+      customerEmail: lead.customerEmail,
+      customerPhone: lead.customerPhone,
+      description: lead.message,
+      items: lead.items,
+      createdAt: lead.createdAt,
+    }));
+
+    const rows = [...paymentRows, ...leadRows]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return includeAll ? rows : rows.slice(0, 100);
+  }
 
   async summary(merchantId: string, storeId?: string) {
     const selectedStore = storeId

@@ -7,6 +7,7 @@ function makeFakePrisma() {
     store: { findUnique: jest.fn(), findFirst: jest.fn(), delete: jest.fn(), update: jest.fn() },
     merchant: { findUniqueOrThrow: jest.fn() },
     paymentLink: { findMany: jest.fn() },
+    storeLead: { create: jest.fn().mockResolvedValue({ id: "lead_1" }) },
     category: { findMany: jest.fn().mockResolvedValue([]) },
     storeLink: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -34,7 +35,107 @@ function makeFakeUploads() {
 const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE };
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
 
+describe("StoresService.submitLead", () => {
+  it("emails the merchant's configured contact with customer and cart details", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      name: "Estudio Norte",
+      checkoutMode: "external",
+      contactEmail: "ventas@estudionorte.bo",
+    });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "cuenta@estudionorte.bo" });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1",
+      name: "Asesoría de interiores",
+      amount: 15000,
+      currency: "BOB",
+      variants: [],
+      extras: [],
+    }]);
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", {
+      name: "María Pérez",
+      email: "maria@gmail.com",
+      phone: "+591 71234567",
+      message: "¿Atienden en Cochabamba?",
+      items: [{ paymentLinkId: "link_1", quantity: 1 }],
+    })).resolves.toEqual({ submitted: true, leadId: "lead_1" });
+
+    expect(email.send).toHaveBeenCalledWith({
+      to: "ventas@estudionorte.bo",
+      subject: "Nuevo interesado en Estudio Norte: María Pérez",
+      body: expect.stringContaining("Correo: maria@gmail.com"),
+      failLoudly: true,
+    });
+    expect(email.send.mock.calls[0][0].body).toContain("Asesoría de interiores × 1");
+    expect(email.send.mock.calls[0][0].body).toContain("Total de referencia: 150.00 BOB");
+    expect(prisma.storeLead.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        storeId: "store_1",
+        customerName: "María Pérez",
+        customerEmail: "maria@gmail.com",
+        customerPhone: "+591 71234567",
+        amount: 15000,
+      }),
+    }));
+  });
+
+  it("rejects contact-form submissions for a paid cart in a payment store", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, name: "Tienda", checkoutMode: "payment", contactEmail: null });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "merchant@example.com" });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1", name: "Producto", amount: 100, currency: "BOB", variants: [], extras: [],
+    }]);
+    const email = { send: jest.fn() };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", {
+      name: "María Pérez",
+      email: "maria@gmail.com",
+      phone: "+591 71234567",
+      items: [{ paymentLinkId: "link_1", quantity: 1 }],
+    })).rejects.toThrow("solo recibe formularios para pedidos con total cero");
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("emails a zero-total order from a payment store without opening a payment intent", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, name: "Tienda", checkoutMode: "payment", contactEmail: null });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "merchant@example.com" });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "free_1", name: "Muestra gratis", amount: 0, currency: "BOB", variants: [], extras: [],
+    }]);
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", {
+      name: "María Pérez", email: "maria@gmail.com", phone: "+591 71234567",
+      items: [{ paymentLinkId: "free_1", quantity: 1 }],
+    })).resolves.toEqual({ submitted: true, leadId: "lead_1" });
+
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ to: "merchant@example.com" }));
+    expect(paymentIntents.create).not.toHaveBeenCalled();
+  });
+});
+
 describe("StoresService.createCartCheckout — stock enforcement", () => {
+  it("rejects PaymentIntent creation for a lead-only external store", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, checkoutMode: "external", leadCaptureUrl: "https://example.com/contacto" });
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 1 }] })).rejects.toThrow(
+      "Esta tienda no tiene habilitados los pagos integrados",
+    );
+    expect(paymentIntents.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a cart that asks for more than the tracked stock", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
@@ -177,6 +278,98 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     );
   });
 
+  it("requires mandatory extras and rejects stale extra ids", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1", name: "Pizza", amount: 8000, currency: "BOB", stock: null,
+      extras: [{ id: "cheese", name: "Queso", amount: 500, required: true }],
+    }]);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 1 }] }))
+      .rejects.toThrow('Elige "Queso" para "Pizza"');
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", extraIds: ["removed"], quantity: 1 }] }))
+      .rejects.toThrow('Un extra de "Pizza" ya no está disponible');
+  });
+
+  it("adds selected extra costs on the server and snapshots them in payment metadata", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1", name: "Pizza", amount: 8000, currency: "BOB", stock: null,
+      extras: [
+        { id: "cheese", name: "Queso", amount: 500, required: true },
+        { id: "gift", name: "Caja regalo", amount: 300, required: false },
+      ],
+    }]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", extraIds: ["gift", "cheese"], quantity: 2 }] });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 17600,
+      description: "Pizza + Queso + Caja regalo x2",
+      metadata: { storeId: "store_1", cart: [{
+        paymentLinkId: "link_1", extraIds: ["cheese", "gift"],
+        extras: [
+          { id: "cheese", name: "Queso", amount: 500, required: true },
+          { id: "gift", name: "Caja regalo", amount: 300, required: false },
+        ],
+        name: "Pizza", quantity: 2, unitAmount: 8800,
+      }] },
+    }));
+  });
+
+  it("includes two grouped sides and charges the third selection", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "lunch_1", name: "Almuerzo", amount: 3000, currency: "BOB", stock: null,
+      extras: [
+        { id: "rice", name: "Arroz", amount: 500, required: false, groupName: "Guarniciones", freeAllowance: 2 },
+        { id: "salad", name: "Ensalada", amount: 600, required: false, groupName: "Guarniciones", freeAllowance: 2 },
+        { id: "fries", name: "Papas", amount: 700, required: false, groupName: "Guarniciones", freeAllowance: 2 },
+      ],
+    }]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await service.createCartCheckout("abc123", {
+      items: [{ paymentLinkId: "lunch_1", extraIds: ["rice", "salad", "fries"], quantity: 2 }],
+    });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({ amount: 7400 }));
+  });
+
+  it("rejects a cart whose combined products exceed one shared extra pool", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      {
+        id: "burger_1", name: "Burger clásica", amount: 5000, currency: "BOB", stock: null,
+        extras: [{ id: "cottage_1", name: "Cottage", amount: 500, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 1 }],
+      },
+      {
+        id: "burger_2", name: "Burger doble", amount: 7000, currency: "BOB", stock: null,
+        extras: [{ id: "cottage_2", name: "Cottage", amount: 600, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 1 }],
+      },
+    ]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [
+      { paymentLinkId: "burger_1", extraIds: ["cottage_1"], quantity: 1 },
+      { paymentLinkId: "burger_2", extraIds: ["cottage_2"], quantity: 1 },
+    ] })).rejects.toThrow('Ya no hay suficiente stock de "Queso cottage"');
+    expect(paymentIntents.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a cart above the selected option's own stock", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
@@ -205,6 +398,32 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
 });
 
 describe("StoresService.getStorePublic — sold counts", () => {
+  it("keeps inventory out of storefront copy while returning cart enforcement limits", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, showLowStockToCustomers: false });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1", name: "Burger", imageUrls: [], imagePositions: [], tags: [], stock: 3, color: null,
+      amount: 5000, currency: "BOB", categoryId: null, description: null,
+      variants: [{ id: "large", name: "Grande", amount: 6000, stock: 2 }],
+      extras: [
+        { id: "cottage", name: "Cottage", amount: 500, required: false, inventoryKey: "queso cottage", inventoryName: "Queso cottage", stock: 0 },
+        { id: "bacon", name: "Tocino", amount: 700, required: false, inventoryKey: "tocino", inventoryName: "Tocino", stock: 8 },
+      ],
+    }]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.items[0].stock).toBeNull();
+    expect(result.items[0].purchaseLimit).toBe(3);
+    expect(result.items[0].variants[0].stock).toBeNull();
+    expect(result.items[0].variants[0].purchaseLimit).toBe(2);
+    expect(result.items[0].extras).toEqual([
+      { id: "cottage", name: "Cottage", amount: 500, required: false, available: false },
+      { id: "bacon", name: "Tocino", amount: 700, required: false, available: true },
+    ]);
+  });
+
   it("does not inflate store views when the merchant loads an editor preview", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
