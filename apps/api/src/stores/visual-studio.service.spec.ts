@@ -195,14 +195,9 @@ describe("VisualStudioService", () => {
       galleryTitle: "La marca en imágenes",
       gallerySubtitle: "Una mirada más cercana al universo de MATCHO.",
       backgroundColor: "#f7f5f0",
-      backgroundMode: "solid",
-      backgroundGradientStart: "#f7f5f0",
-      backgroundGradientEnd: "#b9d5cc",
-      backgroundGradientAngle: 120,
       accentColor: "#274c43",
       fontStyle: "editorial",
       buttonStyle: "square",
-      boardTexture: "painted",
       buttonVariant: "outline",
       buttonMotion: "none",
       cartButtonLabel: "Completar pedido",
@@ -223,14 +218,14 @@ describe("VisualStudioService", () => {
     });
     const directions = [
       direction("Bosque editorial"),
-      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", contentOrder: ["hero", "gallery", "about", "products", "links"] }),
-      direction("Mercado gráfico", { backgroundColor: "#f6c84f", backgroundGradientStart: "#f6c84f", backgroundGradientEnd: "#f08a5d", backgroundGradientAngle: 160, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", contentOrder: ["hero", "about", "gallery", "products", "links"] }),
+      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", contentOrder: ["about", "hero", "products", "links", "gallery"] }),
+      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", contentOrder: ["hero", "about", "products", "links", "gallery"] }),
     ];
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ directions }) }] }] }) });
 
     try {
-      const result = await service.generate("merchant_1", "store_1", { assetUrls: ["/v1/uploads/11111111-1111-4111-8111-111111111111.jpg"], businessCategory: "matcha" });
+      const result = await service.generate("merchant_1", "store_1", { assetUrls: ["/v1/uploads/11111111-1111-4111-8111-111111111111.jpg"], businessCategory: "matcha", fontStyle: "friendly" });
       expect(result.mode).toBe("ai");
       expect(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.title)).toEqual(directions.map((direction) => direction.title));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).toEqual(expect.objectContaining({
@@ -238,7 +233,7 @@ describe("VisualStudioService", () => {
         announcementMode: "marquee",
         backgroundColor: "#f7f5f0",
         accentColor: "#274c43",
-        fontStyle: "editorial",
+        fontStyle: "friendly",
         buttonStyle: "square",
         boardTexture: "painted",
         buttonVariant: "outline",

@@ -142,42 +142,6 @@ export class CreateStoreDto {
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: "backgroundColor must be a 6-digit hex color, e.g. #f8fafc" })
   backgroundColor?: string;
 
-  @ApiPropertyOptional({ description: "Storefront background treatment.", enum: ["solid", "gradient"] })
-  @IsOptional()
-  @IsIn(["solid", "gradient"])
-  backgroundMode?: string;
-
-  @ApiPropertyOptional({ description: "First color of the storefront gradient.", example: "#f8fafc" })
-  @IsOptional()
-  @IsString()
-  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "backgroundGradientStart must be a 6-digit hex color" })
-  backgroundGradientStart?: string;
-
-  @ApiPropertyOptional({ description: "Second color of the storefront gradient.", example: "#e0e7ff" })
-  @IsOptional()
-  @IsString()
-  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "backgroundGradientEnd must be a 6-digit hex color" })
-  backgroundGradientEnd?: string;
-
-  @ApiPropertyOptional({ description: "Gradient direction in degrees.", minimum: 0, maximum: 360, example: 135 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(360)
-  backgroundGradientAngle?: number;
-
-  @ApiPropertyOptional({
-    description:
-      "Path returned by POST /v1/uploads for a full-page storefront background photo. Independent of backgroundColor. Omit to leave unchanged, or send null to clear.",
-    nullable: true,
-  })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsString()
-  @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
-  @Matches(UPLOADED_FILE_URL_PATTERN, { message: "backgroundImageUrl must be a path returned by POST /v1/uploads" })
-  backgroundImageUrl?: string | null;
-
   @ApiPropertyOptional({
     description:
       "Long-form brand story shown as its own storefront section. Blank lines separate paragraphs — unlike the one-line tagline. Omit to leave unchanged, or send null to clear.",
@@ -280,14 +244,6 @@ export class CreateStoreDto {
   @IsOptional()
   @IsIn(["rounded", "pill", "square"])
   buttonStyle?: string;
-
-  @ApiPropertyOptional({
-    description: "Storefront ground material for the hand-lettered price-board visual world.",
-    enum: ["chalkboard", "kraft", "painted"],
-  })
-  @IsOptional()
-  @IsIn(["chalkboard", "kraft", "painted"])
-  boardTexture?: string;
 
   @ApiPropertyOptional({
     description: "Short promo/notice line shown in a bar at the very top of the storefront. Omit to leave unchanged, or send null to clear.",

@@ -3,6 +3,10 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CardLoader from "@/components/ui/card-stack-loader";
+import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
+import DiagonalMarqueeCarousel from "@/components/ui/great-ui-diagonal-marquee-carousel";
+import { Component as InteractiveVideoPortfolioScroller } from "@/components/ui/interactive-video-portfolio-scroller";
+import BentoDashboard from "@/components/ui/bento-dashboard";
 
 type Product = {
   id: string;
@@ -50,6 +54,13 @@ const products: Product[] = [
 ];
 
 const tickerPhrases = ["MATCHA GREEN", "MATCHA STRAWBERRY", "MATCHA BLACK"];
+const experienceSlides = [
+  { src: "/matcho/matcha-green.jpg", alt: "MATCHO Green", title: "Green", subtitle: "El ritual original" },
+  { src: "/matcho/matcha-strawberry.jpg", alt: "MATCHO Strawberry", title: "Strawberry", subtitle: "Fruta y matcha frío" },
+  { src: "/matcho/matcha-black.jpg", alt: "MATCHO Black", title: "Black", subtitle: "Una mezcla intensa" },
+  { src: "/matcho/gallery-1.jpg", alt: "Detalle de preparación MATCHO", title: "Preparado al momento", subtitle: "Cada vaso empieza aquí" },
+  { src: "/matcho/gallery-2.png", alt: "Composición editorial MATCHO", title: "Universo MATCHO", subtitle: "Color, textura y pausa" },
+];
 
 function TickerSequence({ duplicate = false }: { duplicate?: boolean }) {
   return (
@@ -214,6 +225,14 @@ export default function Home() {
           )}
         </section>
 
+        <section className="coverflow-story" aria-labelledby="coverflow-title">
+          <div className="experience-heading">
+            <p>Después de elegir</p>
+            <h2 id="coverflow-title">La historia sigue más allá del catálogo.</h2>
+          </div>
+          <CoverflowCarousel slides={experienceSlides} showCaption showNavigation showPagination cardWidth="clamp(180px, 27vw, 330px)" />
+        </section>
+
         <section className="story" aria-labelledby="story-title">
           <div className="story-copy">
             <h2 id="story-title">Matcha sin ceremonia complicada.</h2>
@@ -223,6 +242,18 @@ export default function Home() {
             <Image src="/matcho/gallery-1.jpg" alt="Detalle de una bebida MATCHO" width={735} height={985} sizes="(max-width: 760px) 50vw, 590px" />
             <Image src="/matcho/gallery-2.png" alt="Composición editorial de MATCHO" width={1536} height={1024} sizes="(max-width: 760px) 50vw, 590px" />
           </div>
+        </section>
+
+        <section className="moving-gallery" aria-label="Galería MATCHO en movimiento">
+          <div className="moving-gallery-copy"><span>Una carta corta, muchas formas de verla</span><h2>Sabores que se mueven contigo.</h2></div>
+          <DiagonalMarqueeCarousel className="h-[720px]" cardClassName="h-[220px] w-[310px]" />
+        </section>
+
+        <InteractiveVideoPortfolioScroller />
+
+        <section className="showcase-finances" aria-labelledby="showcase-finances-title">
+          <div className="experience-heading"><p>Detrás de la tienda</p><h2 id="showcase-finances-title">Una lectura clara del negocio.</h2></div>
+          <BentoDashboard />
         </section>
 
         <footer>

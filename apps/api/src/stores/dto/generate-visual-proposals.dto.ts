@@ -4,10 +4,10 @@ import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../u
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 
 export class GenerateVisualProposalsDto {
-  @ApiPropertyOptional({ description: "Background treatment every generated direction must use.", enum: ["solid", "gradient"] })
+  @ApiPropertyOptional({ description: "Storefront font family every generated direction must use.", enum: ["mono", "modern", "editorial", "friendly"] })
   @IsOptional()
-  @IsIn(["solid", "gradient"])
-  backgroundMode?: string;
+  @IsIn(["mono", "modern", "editorial", "friendly"])
+  fontStyle?: string;
 
   @ApiPropertyOptional({ description: "Optional extra merchant-owned image URLs. The generator automatically reuses images already present in the store and catalog.", type: [String] })
   @IsOptional()

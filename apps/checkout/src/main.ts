@@ -207,48 +207,6 @@ function backgroundTheme(backgroundColor: string | null): { light: boolean; text
   return { light: textOverride === "#000000", textOverride };
 }
 
-function safeGradientTheme(start: string, end: string, angle: number): {
-  background: string;
-  light: boolean;
-  textOverride: "#000000" | "#ffffff" | null;
-} {
-  const colors = [start, end];
-  const readableWith = (text: "#000000" | "#ffffff", candidates: string[]) =>
-    candidates.every((color) => colorContrastRatio(text, color) >= 4.5);
-  if (readableWith("#000000", colors)) {
-    return { background: `linear-gradient(${angle}deg, ${start}, ${end})`, light: true, textOverride: "#000000" };
-  }
-  if (readableWith("#ffffff", colors)) {
-    return { background: `linear-gradient(${angle}deg, ${start}, ${end})`, light: false, textOverride: "#ffffff" };
-  }
-
-  // Opposite-lightness endpoints cannot share readable global text. Preserve
-  // the merchant's two hues beneath the least intrusive light/dark wash that
-  // makes both ends meet WCAG AA for the selected text color.
-  for (let step = 1; step <= 20; step += 1) {
-    const alpha = step / 20;
-    for (const option of [
-      { text: "#000000" as const, rgb: "255,255,255", light: true },
-      { text: "#ffffff" as const, rgb: "0,0,0", light: false },
-    ]) {
-      const overlay = option.text === "#000000" ? "#ffffff" : "#000000";
-      const mixed = colors.map((color) => {
-        const base = color.slice(1).match(/.{2}/g)!.map((channel) => parseInt(channel, 16));
-        const target = overlay === "#ffffff" ? 255 : 0;
-        return `#${base.map((channel) => Math.round(channel * (1 - alpha) + target * alpha).toString(16).padStart(2, "0")).join("")}`;
-      });
-      if (readableWith(option.text, mixed)) {
-        return {
-          background: `linear-gradient(rgba(${option.rgb},${alpha}), rgba(${option.rgb},${alpha})), linear-gradient(${angle}deg, ${start}, ${end})`,
-          light: option.light,
-          textOverride: option.text,
-        };
-      }
-    }
-  }
-  return { background: start, ...backgroundTheme(start) };
-}
-
 function createStoreEntrance(): HTMLElement {
   const entrance = document.createElement("div");
   entrance.className = "store-entry-loader";
@@ -975,14 +933,8 @@ function applyStoreTheme(slug: string, store: Store): void {
   // catalog and product routes so a shared product link still feels wholly
   // owned by the merchant and never inherits another store's appearance.
   const solidBackground = store.backgroundColor || "#0a0a0a";
-  const gradientStart = /^#[0-9a-f]{6}$/i.test(store.backgroundGradientStart || "") ? store.backgroundGradientStart : solidBackground;
-  const gradientEnd = /^#[0-9a-f]{6}$/i.test(store.backgroundGradientEnd || "") ? store.backgroundGradientEnd : solidBackground;
-  const gradientAngle = Number.isInteger(store.backgroundGradientAngle) ? Math.min(360, Math.max(0, store.backgroundGradientAngle)) : 135;
-  const usesGradient = store.backgroundMode === "gradient";
   document.documentElement.style.setProperty("--pg-page-bg", solidBackground);
-  const pageTheme = usesGradient
-    ? safeGradientTheme(gradientStart, gradientEnd, gradientAngle)
-    : { background: solidBackground, ...backgroundTheme(solidBackground) };
+  const pageTheme = { background: solidBackground, ...backgroundTheme(solidBackground) };
   document.documentElement.style.setProperty("--pg-page-background", pageTheme.background);
   // The store canvas is always color-led. Legacy backgroundImageUrl values are
   // intentionally ignored; photography belongs to heroes and story sections.
@@ -1601,9 +1553,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const validContentOrder = requestedContentOrder.filter(
     (section, index) => defaultContentOrder.includes(section) && requestedContentOrder.indexOf(section) === index,
   );
+  const completeOrder = [...validContentOrder, ...defaultContentOrder.filter((section) => !validContentOrder.includes(section))];
   const contentOrder = [
-    ...validContentOrder,
-    ...defaultContentOrder.filter((section) => !validContentOrder.includes(section)),
+    ...completeOrder.filter((section) => section === "hero" || section === "about"),
+    "products" as const,
+    ...completeOrder.filter((section) => section === "gallery" || section === "links"),
   ];
   const editorialImages = (store.editorialGallery ?? [])
     .map((image) => ({ ...image, resolvedImageUrl: assetUrl(image.imageUrl) }))

@@ -80,7 +80,7 @@ The system is explicitly **context-aware about whose brand is on screen** — se
 
 **Key Characteristics:**
 - Monospace-only typography on pagosYa-owned surfaces; merchant storefronts may choose one curated store-wide family
-- Dark-first; checkout is the only surface with a light variant, and only for contrast over a merchant's own photo background
+- Dark-first; checkout is the only surface with a light variant, used when a merchant's selected solid ground needs the lighter contrast system
 - Amber is pagosYa's brand signal, reserved for pagosYa's own tools — not used as checkout's default primary action color
 - Hosted storefronts behave like authored merchant lookbooks, not a generic marketplace shell; merchant imagery and merchandising lead the composition
 - Soft, continuous rounding (8–20px) plus true pills (999px) for chips/badges/status pills; no sharp corners except the opt-in "square" merchant theme variant
@@ -98,7 +98,7 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 - **Focus Violet** (`#c084fc`): checkout-only, paired with Focus Indigo as a two-stop gradient for the storefront's "Ir a pagar" cart action.
 
 ### Neutral
-- **Void** (`#0a0a0a`): page background on both admin surfaces and the base checkout canvas. A hosted storefront may replace that base with a merchant-selected solid color or restrained two-stop gradient, optionally carrying the chalkboard, kraft, or painted texture as a quiet material layer.
+- **Void** (`#0a0a0a`): page background on both admin surfaces and the base checkout canvas. A hosted storefront may replace that base only with a merchant-selected solid color.
 - **Panel** (`#171717`): card/panel background across the admin surfaces and checkout, including the floating payment card over a merchant's page.
 - **Border Quiet** (`#404040`) / **Border Firm** (`#525252`): default and hover/emphasis border weight, identical across all three surfaces.
 - **Text Primary** (`#f5f5f5`), **Text Muted** (`#a3a3a3`), **Text Faint** (dark `#8c8c8c`, light `#666666`): the three-step text hierarchy. The faint step is theme-specific so small metadata stays legible in both checkout themes; admin surfaces use the dark value.
@@ -109,7 +109,7 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 
 **The Merchant Accent Guardrail.** Honor the merchant's chosen hue, but never render the stored hex unchecked: storefront accents below the established lightness floor (HSL `0.35`) are lifted until they remain visible on the dark board, and accent-filled controls choose black or white text from relative luminance so the foreground maintains at least WCAG AA contrast. Derive soft backgrounds, focus rings, and glows from that effective accent rather than introducing additional merchant color fields. Outline and soft controls may retain the effective accent in their border or background, but their text stays on the theme-safe foreground (`text-primary`) — never put an arbitrary merchant accent directly on text.
 
-**The Merchant Ground Rule.** Keep panels anchored to the shared neutral system, but let the hosted storefront's page ground express the merchant through one solid color or restrained two-stop gradient. Texture may sit quietly above that color-led canvas, but photography belongs in the hero, story, editorial gallery, and products rather than as a full-page background; none of these layers may compete with merchandise or copy.
+**The Merchant Ground Rule.** Keep panels anchored to the shared neutral system, and let the hosted storefront's page ground express the merchant through one flat solid color. Never add gradients, stripes, textures, or full-page photography to merchant backgrounds; photography belongs only in authored hero, story, gallery, and product media.
 
 ## Typography
 
@@ -129,15 +129,17 @@ Two-color-family system: one cool accent (indigo) for interactive/focus state, o
 ### Named Rules
 **The One Store, One Face Rule.** Never mix type families within a surface. pagosYa-owned UI stays on 0xProto Mono. A hosted storefront may use the merchant's single curated selection, applied consistently to the entire store.
 
+**The Font-Is-Fixed Rule.** The AI appearance chooser renders each option in the exact family stack it will publish. Once the merchant chooses a font, that choice is fixed across all generated proposals, their previews, and the resulting storefront; the AI may vary composition, color, and copy, but never the selected family.
+
 ## Layout
 
 No CSS grid framework or shared breakpoint system exists. Responsive coverage is hand-written per surface: `merchant-dashboard` uses 900px, 640px, and 480px breakpoints; the checkout storefront uses 720px; ops still has no media queries. Treat this as an explicit surface contract, not a shared breakpoint scale.
 
 Where structure does exist: `merchant-dashboard`/`ops` cap content at `max-width: 1040–1080px`, centered, with generous top padding (28px) under a `.topbar`. The hosted storefront is a spacious merchant lookbook capped at 1360px, while its payment-form card remains capped at 400px. The storefront catalog uses an auto-filling grid above 720px and becomes a deliberate single column at 720px and narrower. Its authored hero holds a cinematic 16:7 ratio on desktop and becomes a portrait 4:5 composition on mobile so imagery and overlaid copy remain useful rather than merely shrinking.
 
-**The Brand-First Storefront Rule.** Default the public composition to merchant identity, hero, and brand story before the product catalog; editorial imagery and links may follow. The merchant may deliberately reorder authored sections in the appearance studio, but pagosYa chrome never becomes the opening visual hierarchy.
+**The Brand-First Storefront Rule.** Production storefronts keep one fixed narrative order: merchant identity, hero, and about/story before products; editorial gallery and merchant links after products. Appearance proposals may vary the composition inside those sections, but neither the AI nor the merchant editor may reorder them, and pagosYa chrome never becomes the opening visual hierarchy.
 
-The dashboard finance-detail area pairs a payment-method donut with top products in two columns on wide screens, stacks those blocks below 900px, reduces the donut from 156px to 128px below 640px, and places the donut above its full-width legend below 480px.
+The live finance workspace uses a bold bento composition whose unequal card spans create hierarchy around revenue, payment count, inventory value, store views, payment-method distribution, and top products. Every value and chart is bound to the current merchant/store finance response; showcase figures or fabricated demo metrics never enter the production dashboard. The grid collapses without changing metric priority, and the payment-method donut stacks above its full-width legend on the narrowest view.
 
 ## Elevation & Depth
 
@@ -181,7 +183,7 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 ### Store Appearance Studio (merchant dashboard)
 - Pair the appearance editor with a sticky, sandboxed live storefront preview on wide screens; stack the preview below the editor at 1180px and narrower so the dashboard sidebar never squeezes either workspace.
 - Let merchants compare explicit **Escritorio** and **Móvil** preview widths before saving. The device buttons expose pressed state, and unsaved edits update the preview immediately while a separate status communicates whether changes are saved.
-- Offer the four named storefront font styles as a curated selector. Apply the unsaved choice to the whole preview immediately and persist only the enum value, never free-form CSS.
+- Offer the four named storefront font styles as a curated selector, with every option rendered in its exact publication family. Apply the unsaved choice to the whole preview immediately, lock it across every AI proposal, and persist only the enum value, never free-form CSS.
 - Group message controls by intent—announcement, promotion, support, store copy, and links—with visible subtitles and explanatory copy. Use 20–26px between groups and 12–18px within a group so proximity communicates structure.
 
 ### Yapi Workspace Assistant (merchant dashboard)
@@ -196,8 +198,12 @@ Borders are thin (1–1.5px) and low-contrast (`border-quiet`/`border-firm`), ne
 - Carousel pagination dots may look visually smaller, but each button keeps a minimum 24px × 24px hit target. Use 16:7 imagery on desktop and recompose to 4:5 at 720px and narrower.
 
 ### Finance Donut (merchant dashboard)
-- Visualize successful-payment revenue by payment method, show the total in the donut center, and pair colored segments with a textual percentage-and-amount legend; the chart's accessible label must communicate the same distribution and total.
-- Keep the chart and legend side by side when space allows, shrink the donut at 640px, and stack it above a full-width legend at 480px. When revenue is zero, show the neutral ring and explicit empty-state copy instead of an unexplained blank chart.
+- Treat the donut as one high-signal tile inside the live finance bento: visualize successful-payment revenue by payment method, show the total in the center, and pair colored segments with a textual percentage-and-amount legend; the chart's accessible label must communicate the same real distribution and total.
+- Keep the chart and legend side by side when space allows and stack the donut above a full-width legend at the narrowest view. When revenue is zero, show the neutral ring and explicit empty-state copy instead of an unexplained blank chart.
+
+### MATCHO Hosted Showcase
+- `apps/matcho-showcase` is the expressive proof of the hosted-storefront system: retain its tactile coverflow, diagonal image marquee, locally sourced photo-derived video scroller, and bold bento dashboard as four distinct signature moments rather than flattening them into ordinary grids.
+- Use only repository-local MATCHO photos and derived video assets for its moving media. Preserve keyboard controls, readable labels, touch interaction, and reduced-motion fallbacks while keeping the merchant story ahead of the product and analytics demonstrations.
 
 ### Announcements & Promotions (storefront)
 - **Announcement marquee:** Duplicate copy only to create the seamless visual loop. Under `prefers-reduced-motion: reduce`, stop the animation and hide the duplicate so one readable announcement remains.
@@ -238,11 +244,14 @@ No persistent nav/sidebar exists on any surface today — each admin app is a si
 - **Do** give every status a Badge (pill + dot + semantic color), never raw enum text or color-only signaling.
 - **Do** use real `<label for>` elements on every form field; placeholders are never a substitute for a label.
 - **Do** preserve the authored hero's visible pause/resume control, reduced-motion behavior, inactive-slide tab-order exclusion, and 24px minimum dot targets.
+- **Do** keep production storefronts ordered hero/about, then products, then gallery/links, and keep live finance bento tiles bound to real merchant data.
 - **Do** use the `cubic-bezier(0.22, 1, 0.36, 1)` ease for any new transform-based (lift/scale/entrance) transition, and plain `ease` at 0.15s for color/border state changes.
 
 ### Don't:
 - **Don't** add a resting (non-hover) shadow to a checkout storefront component — checkout is flat until it moves.
 - **Don't** mix font families within one storefront or accept arbitrary font URLs, uploads, or CSS values; use the curated font-style enum.
+- **Don't** let AI proposals override the merchant's chosen font or show a font sample that differs from the exact family that will be published.
+- **Don't** use gradients, stripes, textures, or photography as merchant page or section backgrounds; merchant grounds are flat solid colors.
 - **Don't** invent a new accent color; the system has exactly two (Focus Indigo, Signal Amber) plus the three status colors and checkout's Focus Violet gradient partner.
 - **Don't** ship a new interactive control without a visible 3px focus ring — default to Focus Indigo, or derive it from the guarded effective accent on a merchant-themed storefront. Never remove the native outline without replacing it.
 - **Don't** treat the current single-page, no-navigation admin layout as a new-work exemplar to copy forward without checking PRODUCT.md's known-gaps note — it's documented as a limitation, not a pattern.

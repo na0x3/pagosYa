@@ -228,6 +228,28 @@
   .finance-legend-swatch { width: 9px; height: 9px; border-radius: 3px; background: var(--legend-color); }
   .finance-legend-row strong { font-variant-numeric: tabular-nums; }
   .finance-legend-empty { color: var(--pg-text-muted); font-size: .8rem; line-height: 1.5; }
+  .finance-bento { padding: clamp(18px, 3vw, 30px); border: 3px solid #050505; border-radius: 0; background: #e4e4e7; color: #09090b; box-shadow: 10px 10px 0 #050505; }
+  .finance-bento > .section-head h2 { color: #09090b; font-size: clamp(2rem, 4vw, 3.7rem); font-weight: 950; letter-spacing: -.055em; text-transform: uppercase; }
+  .finance-bento :is(.muted,.faint) { color: #52525b; }
+  .finance-bento .finance-scope-chip { color: #18181b; }
+  .finance-bento .finance-total-window, .finance-bento .card, .finance-bento .finance-donut-figure, .finance-bento .finance-detail-grid > div { border: 3px solid #050505; border-radius: 0; background: #fff; box-shadow: 7px 7px 0 #050505; }
+  .finance-bento .finance-total-window { background: #facc15; }
+  .finance-bento .cards { gap: 18px; margin-top: 22px; }
+  .finance-bento .card { min-height: 155px; }
+  .finance-bento .card:nth-child(1) { background: #fca5a5; }
+  .finance-bento .card:nth-child(2) { background: #93c5fd; }
+  .finance-bento .card:nth-child(3) { background: #86efac; }
+  .finance-bento .card :is(.value,.card-head span) { color: #09090b; }
+  .finance-bento .finance-detail-grid { align-items: stretch; gap: 24px; }
+  .finance-bento .finance-detail-grid > div { padding: 18px; }
+  .finance-bento .finance-donut { border: 3px solid #050505; box-shadow: 5px 5px 0 #050505; }
+  .finance-bento .finance-donut::after { background: #fff; box-shadow: 0 0 0 3px #050505; }
+  .finance-bento .finance-legend-row { padding: 7px; border: 2px solid transparent; }
+  .finance-bento .finance-legend-row:hover { border-color: #050505; }
+  .finance-product-bars { display: flex; min-height: 180px; align-items: end; gap: 10px; margin: 14px 0 20px; }
+  .finance-product-bar { display: flex; min-width: 0; flex: 1; align-items: end; justify-content: center; height: var(--bar-height); min-height: 34px; padding: 8px 5px; border: 3px solid #050505; background: var(--bar-color); color: #09090b; font-size: .68rem; font-weight: 900; text-align: center; transition: transform .18s ease; }
+  .finance-product-bar:hover { transform: translateY(-6px); }
+  .finance-product-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   h2 { font-size: 1.04rem; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.005em; }
   .section-head { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; padding-right: 92px; }
@@ -465,7 +487,17 @@
   .visual-conversion { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; }
   .visual-conversion legend { margin-bottom: 8px; font-size: .78rem; font-weight: 700; }
   .visual-conversion-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
-  .visual-background-choice .visual-conversion-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .font-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .font-choice { display: flex; align-items: flex-start; gap: 10px; min-height: 88px; padding: 12px; border: 1.5px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); cursor: var(--pg-hand-cursor); }
+  .font-choice:has(input:checked) { border-color: var(--pg-accent); background: var(--pg-accent-soft); box-shadow: 0 0 0 2px var(--pg-focus-ring); }
+  .font-choice input { width: auto; margin-top: 4px; }
+  .font-choice span { display: grid; gap: 5px; }
+  .font-choice strong { font-size: 1rem; }
+  .font-choice small { color: var(--pg-text-muted); font-size: .78rem; line-height: 1.35; }
+  .font-preview-mono { font-family: "0xProto Mono", "SFMono-Regular", Consolas, monospace; }
+  .font-preview-modern { font-family: "Avenir Next", Avenir, system-ui, sans-serif; }
+  .font-preview-editorial { font-family: Georgia, "Times New Roman", serif; }
+  .font-preview-friendly { font-family: "Trebuchet MS", "Avenir Next", sans-serif; }
   .visual-conversion-choice { display: grid; gap: 8px; min-width: 0; }
   .visual-conversion-option { display: flex; align-items: flex-start; gap: 10px; min-height: 72px; padding: 11px 12px; border: 1.5px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); cursor: var(--pg-hand-cursor); transition: border-color .15s ease, background .15s ease; }
   .visual-conversion-option:has(input:checked) { border-color: var(--pg-accent); background: var(--pg-accent-soft); }
@@ -568,11 +600,6 @@
   .visual-onboarding.is-collapsed .visual-onboarding-head, .inventory-importer.is-collapsed .inventory-import-head { align-items: center; }
 
   .store-studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr); gap: 22px; align-items: start; }
-  .gradient-background-editor { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(140px, .8fr); gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-bg); }
-  .gradient-background-editor[hidden] { display: none; }
-  .gradient-background-editor > div { display: grid; gap: 7px; min-width: 0; }
-  .gradient-background-editor input[type="range"] { width: 100%; }
-  .gradient-background-sample { min-height: 68px; border: 1px solid var(--pg-border-strong); border-radius: 9px; box-shadow: 0 10px 24px -18px rgba(0,0,0,.8); }
   .store-editor { display: grid; gap: 12px; min-width: 0; }
   .store-editor input:not([type="checkbox"]):not([type="color"]),
   .store-editor textarea,
@@ -978,7 +1005,7 @@
     .visual-input-grid { grid-template-columns: 1fr; }
     .visual-upload-zone { grid-column: 1; }
     .visual-conversion-options { grid-template-columns: 1fr; }
-    .gradient-background-editor { grid-template-columns: 1fr 1fr; }
+    .font-choice-grid { grid-template-columns: 1fr; }
     .visual-progress li { justify-content: center; padding-inline: 4px; }
     .visual-progress li b { display: none; }
     .visual-proposal { grid-template-columns: 88px minmax(0, 1fr); }
@@ -1334,7 +1361,7 @@
     </div>
 
     <section class="block" id="financesSection" data-dashboard-page="overview">
-      <div class="panel">
+      <div class="panel finance-bento">
         <div class="section-head">
           <div>
             <h2 id="financeScopeHeading">Finanzas</h2>
@@ -1413,6 +1440,7 @@
               <h2 style="font-size:0.88rem">Productos más vendidos</h2>
             </div>
             <div id="topProductsEmpty" class="muted" style="display:none">Todavía no hay ventas para mostrar un ranking.</div>
+            <div class="finance-product-bars" id="financeProductBars" aria-label="Comparación de ingresos por producto"></div>
             <table id="topProductsTable" style="display:none">
               <thead><tr><th>#</th><th>Producto</th><th>Unidades vendidas</th><th>Recaudado</th></tr></thead>
               <tbody id="topProductsRows"></tbody>
@@ -1650,11 +1678,13 @@
                   <option value="playful">Alegre y cercana</option>
                 </select>
               </div>
-              <fieldset class="visual-conversion visual-background-choice">
-                <legend>¿Qué tipo de fondo debe diseñar la IA?</legend>
-                <div class="visual-conversion-options">
-                  <label class="visual-conversion-option"><input type="radio" name="visualBackgroundMode" value="solid" checked><span><strong>Color sólido</strong><small>Una base limpia y uniforme.</small></span></label>
-                  <label class="visual-conversion-option"><input type="radio" name="visualBackgroundMode" value="gradient"><span><strong>Degradado</strong><small>Dos tonos combinados por la IA.</small></span></label>
+              <fieldset class="visual-conversion visual-font-choice">
+                <legend>Elige la tipografía de tu sitio</legend>
+                <div class="font-choice-grid">
+                  <label class="font-choice font-preview-mono"><input type="radio" name="visualFontStyle" value="mono" checked><span><strong>Precisa</strong><small>Tu marca, clara y directa.</small></span></label>
+                  <label class="font-choice font-preview-modern"><input type="radio" name="visualFontStyle" value="modern"><span><strong>Moderna</strong><small>Tu marca, limpia y versátil.</small></span></label>
+                  <label class="font-choice font-preview-editorial"><input type="radio" name="visualFontStyle" value="editorial"><span><strong>Editorial</strong><small>Tu marca, elegante y artesanal.</small></span></label>
+                  <label class="font-choice font-preview-friendly"><input type="radio" name="visualFontStyle" value="friendly"><span><strong>Cercana</strong><small>Tu marca, suave y amigable.</small></span></label>
                 </div>
               </fieldset>
               <fieldset class="visual-conversion">
@@ -1861,15 +1891,7 @@
             <div class="store-editor-section">
               <div class="editor-section-head">
                 <h3>Estilo</h3>
-                <p>Color, tipografía, fondo y botones.</p>
-              </div>
-              <div>
-                <label for="storeBoardTexture">Material de fondo</label>
-                <select id="storeBoardTexture">
-                  <option value="chalkboard">Pizarra: oscuro y clásico</option>
-                  <option value="kraft">Kraft: cálido y artesanal</option>
-                  <option value="painted">Pintado: usa tu color de marca</option>
-                </select>
+                <p>Color plano, tipografía y botones.</p>
               </div>
               <div>
                 <label for="storeFontStyle">Tipografía de la tienda</label>
@@ -1913,21 +1935,8 @@
                   <span class="faint">Usar color propio</span>
                 </span>
               </div>
-              <div>
-                <label for="storeBackgroundMode">Tipo de fondo</label>
-                <select id="storeBackgroundMode">
-                  <option value="solid">Color sólido</option>
-                  <option value="gradient">Degradado de dos colores</option>
-                </select>
-              </div>
-              <div id="storeSolidBackgroundWrap"><label for="storeBackgroundColor">Color de fondo</label><input id="storeBackgroundColor" name="backgroundColor" type="color" value="#f8fafc"></div>
-              <div class="full gradient-background-editor" id="storeGradientBackgroundWrap" hidden>
-                <div><label for="storeBackgroundGradientStart">Color inicial</label><input id="storeBackgroundGradientStart" type="color" value="#f8fafc"></div>
-                <div><label for="storeBackgroundGradientEnd">Color final</label><input id="storeBackgroundGradientEnd" type="color" value="#e0e7ff"></div>
-                <div><label for="storeBackgroundGradientAngle">Dirección</label><input id="storeBackgroundGradientAngle" type="range" min="0" max="360" step="1" value="135"><span class="faint" id="storeBackgroundGradientAngleValue">135°</span></div>
-                <div class="gradient-background-sample" id="storeBackgroundGradientSample" aria-label="Vista previa del degradado"></div>
-              </div>
-              <p class="faint full" style="margin:0">El color o degradado forma el lienzo de la tienda. Las fotografías siempre conservan el protagonismo en el slider, los productos y la historia de marca.</p>
+              <div><label for="storeBackgroundColor">Color de fondo</label><input id="storeBackgroundColor" name="backgroundColor" type="color" value="#f8fafc"></div>
+              <p class="faint full" style="margin:0">El color plano forma el lienzo de la tienda, sin franjas ni texturas. Las fotografías conservan el protagonismo en el slider, los productos y las secciones que siguen al catálogo.</p>
             </div>
 
             <div class="store-editor-section store-message-editor">
@@ -3607,14 +3616,6 @@
   const storeEditorialPhotoCountEl = document.getElementById("storeEditorialPhotoCount");
   const storeTaglineInputEl = document.getElementById("storeTaglineInput");
   const storeBackgroundColorEl = document.getElementById("storeBackgroundColor");
-  const storeBackgroundModeEl = document.getElementById("storeBackgroundMode");
-  const storeSolidBackgroundWrapEl = document.getElementById("storeSolidBackgroundWrap");
-  const storeGradientBackgroundWrapEl = document.getElementById("storeGradientBackgroundWrap");
-  const storeBackgroundGradientStartEl = document.getElementById("storeBackgroundGradientStart");
-  const storeBackgroundGradientEndEl = document.getElementById("storeBackgroundGradientEnd");
-  const storeBackgroundGradientAngleEl = document.getElementById("storeBackgroundGradientAngle");
-  const storeBackgroundGradientAngleValueEl = document.getElementById("storeBackgroundGradientAngleValue");
-  const storeBackgroundGradientSampleEl = document.getElementById("storeBackgroundGradientSample");
   const storeContactPhoneInputEl = document.getElementById("storeContactPhoneInput");
   const storeContactEmailInputEl = document.getElementById("storeContactEmailInput");
   const storeAboutInputEl = document.getElementById("storeAboutInput");
@@ -3653,7 +3654,6 @@
   const storeRecommendationOptionsEl = document.getElementById("storeRecommendationOptions");
   const storeRecommendationCountEl = document.getElementById("storeRecommendationCount");
   const storeShowLowStockEl = document.getElementById("storeShowLowStock");
-  const storeBoardTextureEl = document.getElementById("storeBoardTexture");
   const storeLinksEditorEl = document.getElementById("storeLinksEditor");
   const storeSettingsFormEl = document.getElementById("storeSettingsForm");
   const storeSaveButtonEl = document.getElementById("storeSaveButton");
@@ -4090,20 +4090,6 @@
     storeAccentColorEl.disabled = !storeAccentToggleEl.checked;
   });
 
-  function syncStoreBackgroundControls() {
-    const gradient = storeBackgroundModeEl.value === "gradient";
-    storeSolidBackgroundWrapEl.hidden = gradient;
-    storeGradientBackgroundWrapEl.hidden = !gradient;
-    const angle = Number(storeBackgroundGradientAngleEl.value) || 0;
-    storeBackgroundGradientAngleValueEl.textContent = `${angle}°`;
-    storeBackgroundGradientSampleEl.style.background = `linear-gradient(${angle}deg, ${storeBackgroundGradientStartEl.value}, ${storeBackgroundGradientEndEl.value})`;
-  }
-  [storeBackgroundModeEl, storeBackgroundGradientStartEl, storeBackgroundGradientEndEl, storeBackgroundGradientAngleEl].forEach((field) => {
-    field.addEventListener("input", syncStoreBackgroundControls);
-    field.addEventListener("change", syncStoreBackgroundControls);
-  });
-  syncStoreBackgroundControls();
-
   function syncStoreCustomizationControls() {
     storeAnnouncementSpeedEl.disabled = storeAnnouncementModeEl.value !== "marquee";
     storePromotionEditorEl.classList.toggle("is-disabled", !storePromotionEnabledEl.checked);
@@ -4128,11 +4114,6 @@
       logoUrl: pendingLogoUrl,
       bannerUrl: pendingBannerUrl,
       backgroundColor: storeBackgroundColorEl.value,
-      backgroundMode: storeBackgroundModeEl.value,
-      backgroundGradientStart: storeBackgroundGradientStartEl.value,
-      backgroundGradientEnd: storeBackgroundGradientEndEl.value,
-      backgroundGradientAngle: Number.isFinite(Number(storeBackgroundGradientAngleEl.value)) ? Number(storeBackgroundGradientAngleEl.value) : 135,
-      backgroundImageUrl: null,
       contactPhone: storeContactPhoneInputEl.value || null,
       contactEmail: storeContactEmailInputEl.value || null,
       aboutText: storeAboutInputEl.value || null,
@@ -4181,7 +4162,6 @@
       cartRecommendationsEnabled: storeCartRecommendationsEl.checked,
       cartRecommendationProductIds: [...pendingCartRecommendationProductIds],
       showLowStockToCustomers: storeShowLowStockEl.checked,
-      boardTexture: storeBoardTextureEl.value,
       links: pendingStoreLinks
         .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
         .filter((link) => link.label && link.url),
@@ -4436,10 +4416,8 @@
         const applied = proposal.id === appliedProposalId;
         const conversionLabel = config.checkoutMode === "whatsapp" ? "Pedidos por WhatsApp" : config.checkoutMode === "external" ? "Interesados a enlace" : "Pago integrado";
         const layoutLabels = { cinematic: "Portada cinematográfica", editorial: "Relato editorial", collage: "Composición collage", "catalog-first": "Catálogo primero" };
-        const proposalBackground = config.backgroundMode === "gradient"
-          ? `linear-gradient(${Number(config.backgroundGradientAngle) || 135}deg, ${config.backgroundGradientStart || config.backgroundColor || "#f8fafc"}, ${config.backgroundGradientEnd || config.accentColor || "#e0e7ff"})`
-          : (config.backgroundColor || "#f8fafc");
-        const featureLabels = [layoutLabels[config.layoutStyle] || "Composición clásica", config.backgroundMode === "gradient" ? "Fondo degradado" : "Fondo sólido", conversionLabel, config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banners` : "Portada tipográfica", config.editorialGallery?.length ? "Historias con imagen" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
+        const proposalBackground = config.backgroundColor || "#f8fafc";
+        const featureLabels = [layoutLabels[config.layoutStyle] || "Composición clásica", "Fondo sólido", conversionLabel, config.announcementMode === "marquee" ? "Cinta animada" : "Anuncio", config.heroSlides?.length ? `${config.heroSlides.length} banners` : "Portada tipográfica", config.editorialGallery?.length ? "Historias después del catálogo" : "Catálogo", pendingStoreLinks.length ? "Botones sociales" : null].filter(Boolean);
         return `<article class="visual-proposal" data-id="${esc(proposal.id)}">
           <div class="visual-proposal-cover" style="--proposal-bg:${esc(proposalBackground)};--proposal-accent:${esc(config.accentColor || "#4f46e5")}">${imageUrl ? `<img src="${esc(apiRoot() + imageUrl)}" alt="Portada de ${esc(proposal.title)}" style="object-position:${esc(catalogImagePosition(imageUrl))}">` : `<span>${esc(config.tagline || proposal.title)}</span>`}</div>
           <div class="visual-proposal-copy">
@@ -4662,7 +4640,7 @@
         body: JSON.stringify({
           businessCategory: document.getElementById("visualBusinessCategory").value.trim() || undefined,
           personality: document.getElementById("visualPersonality").value || undefined,
-          backgroundMode: document.querySelector('input[name="visualBackgroundMode"]:checked')?.value || "solid",
+          fontStyle: document.querySelector('input[name="visualFontStyle"]:checked')?.value || "mono",
           checkoutMode,
           whatsappPhone: checkoutMode === "whatsapp" ? whatsappPhone : undefined,
           leadCaptureUrl: undefined,
@@ -4739,7 +4717,12 @@
     const unique = Array.isArray(order)
       ? order.filter((section, index) => DEFAULT_STORE_CONTENT_ORDER.includes(section) && order.indexOf(section) === index)
       : [];
-    return [...unique, ...DEFAULT_STORE_CONTENT_ORDER.filter((section) => !unique.includes(section))];
+    const complete = [...unique, ...DEFAULT_STORE_CONTENT_ORDER.filter((section) => !unique.includes(section))];
+    return [
+      ...complete.filter((section) => section === "hero" || section === "about"),
+      "products",
+      ...complete.filter((section) => section === "gallery" || section === "links"),
+    ];
   }
 
   function renderStoreContentOrderEditor() {
@@ -4747,12 +4730,14 @@
     storeContentOrderListEl.innerHTML = pendingContentOrder
       .map((section, index) => {
         const [label, description] = STORE_CONTENT_SECTION_COPY[section];
+        const cannotMoveUp = index === 0 || section === "products" || (index > 0 && pendingContentOrder[index - 1] === "products");
+        const cannotMoveDown = index === pendingContentOrder.length - 1 || section === "products" || pendingContentOrder[index + 1] === "products";
         return `<div class="store-content-order-row" data-index="${index}">
           <span class="store-content-order-index">${index + 1}</span>
           <span class="store-content-order-copy"><strong>${esc(label)}</strong><span>${esc(description)}</span></span>
           <span class="store-content-order-actions">
-            <button type="button" class="ghost move-content-up" ${index === 0 ? "disabled" : ""} aria-label="Subir ${esc(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></button>
-            <button type="button" class="ghost move-content-down" ${index === pendingContentOrder.length - 1 ? "disabled" : ""} aria-label="Bajar ${esc(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+            <button type="button" class="ghost move-content-up" ${cannotMoveUp ? "disabled" : ""} aria-label="Subir ${esc(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></button>
+            <button type="button" class="ghost move-content-down" ${cannotMoveDown ? "disabled" : ""} aria-label="Bajar ${esc(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
           </span>
         </div>`;
       })
@@ -5127,11 +5112,6 @@
           logoUrl: pendingLogoUrl,
           bannerUrl: pendingBannerUrl,
           backgroundColor: storeBackgroundColorEl.value,
-          backgroundMode: storeBackgroundModeEl.value,
-          backgroundGradientStart: storeBackgroundGradientStartEl.value,
-          backgroundGradientEnd: storeBackgroundGradientEndEl.value,
-          backgroundGradientAngle: Number.isFinite(Number(storeBackgroundGradientAngleEl.value)) ? Number(storeBackgroundGradientAngleEl.value) : 135,
-          backgroundImageUrl: null,
           contactPhone: storeContactPhoneInputEl.value || null,
           contactEmail: storeContactEmailInputEl.value || null,
           aboutText: storeAboutInputEl.value || null,
@@ -5180,7 +5160,6 @@
           cartRecommendationsEnabled: storeCartRecommendationsEl.checked,
           cartRecommendationProductIds: [...pendingCartRecommendationProductIds],
           showLowStockToCustomers: storeShowLowStockEl.checked,
-          boardTexture: storeBoardTextureEl.value,
           links,
         }),
       });
@@ -5507,11 +5486,6 @@
       renderStoreContentOrderEditor();
       renderEditorialGalleryEditor();
       storeBackgroundColorEl.value = store.backgroundColor || "#f8fafc";
-      storeBackgroundModeEl.value = store.backgroundMode === "gradient" ? "gradient" : "solid";
-      storeBackgroundGradientStartEl.value = /^#[0-9a-f]{6}$/i.test(store.backgroundGradientStart || "") ? store.backgroundGradientStart : (store.backgroundColor || "#f8fafc");
-      storeBackgroundGradientEndEl.value = /^#[0-9a-f]{6}$/i.test(store.backgroundGradientEnd || "") ? store.backgroundGradientEnd : "#e0e7ff";
-      storeBackgroundGradientAngleEl.value = String(Number.isInteger(store.backgroundGradientAngle) ? store.backgroundGradientAngle : 135);
-      syncStoreBackgroundControls();
       storeContactPhoneInputEl.value = store.contactPhone || "";
       const visualMode = ["payment", "whatsapp", "external"].includes(store.checkoutMode) ? store.checkoutMode : "payment";
       document.querySelector(`input[name="visualCheckoutMode"][value="${visualMode}"]`).checked = true;
@@ -5556,11 +5530,12 @@
       storeAccentColorEl.disabled = !store.accentColor;
       if (store.accentColor) storeAccentColorEl.value = store.accentColor;
       storeFontStyleEl.value = store.fontStyle || "mono";
+      const visualFont = document.querySelector(`input[name="visualFontStyle"][value="${store.fontStyle || "mono"}"]`);
+      if (visualFont) visualFont.checked = true;
       storeButtonStyleEl.value = store.buttonStyle || "rounded";
       storeButtonVariantEl.value = store.buttonVariant || "solid";
       storeButtonMotionEl.value = store.buttonMotion || "lift";
       storeCartButtonLabelEl.value = store.cartButtonLabel || "Ir a pagar";
-      storeBoardTextureEl.value = store.boardTexture || "chalkboard";
       syncStoreCustomizationControls();
       renderEditorialGalleryEditor();
       pendingStoreLinks = (store.links || []).map((l) => ({ label: l.label, url: l.url }));
@@ -5752,13 +5727,21 @@
     renderFinanceDonut(finances.revenueByPaymentMethod || []);
     const topProductsEmptyEl = document.getElementById("topProductsEmpty");
     const topProductsTableEl = document.getElementById("topProductsTable");
+    const productBarsEl = document.getElementById("financeProductBars");
     if (finances.topProducts.length === 0) {
       topProductsTableEl.style.display = "none";
       topProductsEmptyEl.style.display = "block";
+      productBarsEl.innerHTML = "";
       return;
     }
     topProductsEmptyEl.style.display = "none";
     topProductsTableEl.style.display = "table";
+    const maximumProductRevenue = Math.max(...finances.topProducts.map((product) => Number(product.revenue) || 0), 1);
+    const productBarColors = ["#f87171", "#60a5fa", "#4ade80", "#fbbf24", "#a78bfa"];
+    productBarsEl.innerHTML = finances.topProducts.slice(0, 5).map((product, index) => {
+      const percent = Math.max(18, Math.round(((Number(product.revenue) || 0) / maximumProductRevenue) * 100));
+      return `<div class="finance-product-bar" style="--bar-height:${percent}%;--bar-color:${productBarColors[index % productBarColors.length]}" title="${esc(product.name)}: ${esc(money(product.revenue))}"><span>${esc(product.name)}</span></div>`;
+    }).join("");
     document.getElementById("topProductsRows").innerHTML = finances.topProducts
       .map(
         (product, index) => `<tr>

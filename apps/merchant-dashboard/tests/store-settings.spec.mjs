@@ -172,11 +172,8 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   const requests = await openDashboard(page);
   await page.locator("#storeNameInput").fill("Nombre guardado");
   await page.getByRole("button", { name: "Mostrar Estilo" }).click();
-  await page.locator("#storeBackgroundMode").selectOption("gradient");
-  await page.locator("#storeBackgroundGradientStart").fill("#fef3c7");
-  await page.locator("#storeBackgroundGradientEnd").fill("#fbcfe8");
-  await page.locator("#storeBackgroundGradientAngle").fill("0");
-  await page.getByRole("button", { name: "Mostrar Cómo termina el pedido" }).click();
+  await page.locator("#storeBackgroundColor").fill("#fef3c7");
+  await page.getByRole("button", { name: "Mostrar Cómo termina el pedido" }).click({ force: true });
   await expect(page.locator("#storeCartRecommendations")).toBeChecked();
   await page.locator("#storeCartRecommendations").uncheck();
   await page.locator("#storeShowLowStock").check();
@@ -188,14 +185,13 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   expect(writes[0].path).toBe("/stores/store_1/settings");
   expect(writes[0].body).toMatchObject({
     name: "Nombre guardado",
-    backgroundMode: "gradient",
-    backgroundGradientStart: "#fef3c7",
-    backgroundGradientEnd: "#fbcfe8",
-    backgroundGradientAngle: 0,
+    backgroundColor: "#fef3c7",
     cartRecommendationsEnabled: false,
     showLowStockToCustomers: true,
     links: [],
   });
+  expect(writes[0].body).not.toHaveProperty("backgroundMode");
+  expect(writes[0].body).not.toHaveProperty("backgroundGradientStart");
   expect(requests.some((request) => request.path.endsWith("/links"))).toBe(false);
 });
 
@@ -669,7 +665,9 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
 
   const assistantToggle = page.locator("#visualAssistantToggle");
   if (await assistantToggle.getAttribute("aria-expanded") !== "true") await assistantToggle.click();
-  await page.locator('input[name="visualBackgroundMode"][value="gradient"]').check();
+  await expect(page.locator(".font-choice")).toHaveCount(4);
+  await expect(page.locator(".font-preview-editorial small")).toHaveCSS("font-family", /Georgia/);
+  await page.locator('input[name="visualFontStyle"][value="editorial"]').check();
   await page.locator('input[name="visualCheckoutMode"][value="whatsapp"]').check();
   await expect(page.locator("#visualWhatsappPhoneWrap")).toBeVisible();
   await page.locator("#visualWhatsappPhone").fill("+591 71234567");
@@ -695,7 +693,7 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
 
   const generation = requests.find((request) => request.path === "/stores/store_1/visual-proposals");
   expect(generation?.body).toMatchObject({
-    backgroundMode: "gradient",
+    fontStyle: "editorial",
     checkoutMode: "whatsapp",
     whatsappPhone: "+591 71234567",
     assetUrls: ["/v1/uploads/ai-1.jpg"],

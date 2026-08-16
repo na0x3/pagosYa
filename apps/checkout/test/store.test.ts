@@ -118,11 +118,11 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector<HTMLImageElement>(".store-entry-loader-logo")?.src).toContain("/logo-mark.png");
   });
 
-  it("renders a merchant-selected two-color gradient as the storefront canvas", async () => {
+  it("renders a flat solid canvas even for legacy stores that saved a gradient", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
-        storeName: "Tienda Gradiente",
+        storeName: "Tienda Fondo Plano",
         backgroundColor: "#f8fafc",
         backgroundMode: "gradient",
         backgroundGradientStart: "#fef3c7",
@@ -135,50 +135,7 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=gradient1");
 
-    expect(document.documentElement.style.getPropertyValue("--pg-page-background")).toBe(
-      "linear-gradient(120deg, #fef3c7, #fbcfe8)",
-    );
-  });
-
-  it("adds the smallest contrast wash when gradient endpoints need opposite text colors", async () => {
-    vi.doMock("../src/api", () => ({
-      fetchStore: vi.fn().mockResolvedValue({
-        ...baseStoreFields,
-        storeName: "Tienda Contraste",
-        backgroundMode: "gradient",
-        backgroundGradientStart: "#000000",
-        backgroundGradientEnd: "#ffffff",
-        backgroundGradientAngle: 90,
-        items: [baseItem],
-      } satisfies Store),
-      assetUrl: (path: string | null) => path,
-    }));
-
-    await loadCheckout("/?link=contrast1");
-
-    const background = document.documentElement.style.getPropertyValue("--pg-page-background");
-    expect(background).toContain("linear-gradient(rgba(");
-    expect(background).toContain("linear-gradient(90deg, #000000, #ffffff)");
-    expect(["#000000", "#ffffff"]).toContain(document.documentElement.style.getPropertyValue("--pg-text"));
-  });
-
-  it("keeps an exact AA foreground on midtone gradients", async () => {
-    vi.doMock("../src/api", () => ({
-      fetchStore: vi.fn().mockResolvedValue({
-        ...baseStoreFields,
-        storeName: "Tienda Tono Medio",
-        backgroundMode: "gradient",
-        backgroundGradientStart: "#777777",
-        backgroundGradientEnd: "#777777",
-        backgroundGradientAngle: 45,
-        items: [baseItem],
-      } satisfies Store),
-      assetUrl: (path: string | null) => path,
-    }));
-
-    await loadCheckout("/?link=midtone1");
-
-    expect(document.documentElement.style.getPropertyValue("--pg-text")).toBe("#000000");
+    expect(document.documentElement.style.getPropertyValue("--pg-page-background")).toBe("#f8fafc");
   });
 
   it("renders store items with name, price, and a working quantity stepper", async () => {
@@ -1326,7 +1283,7 @@ describe("storefront (?link=...)", () => {
     expect(story?.style.getPropertyValue("--store-about-image")).toContain("/v1/uploads/historia.webp");
   });
 
-  it("honors the merchant section order and renders editorial captions as text", async () => {
+  it("keeps brand content before the catalog and editorial content after it", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -1350,8 +1307,8 @@ describe("storefront (?link=...)", () => {
     const gallery = document.querySelector(".store-editorial-gallery")!;
     const products = document.querySelector(".store-products")!;
     const story = document.querySelector(".store-about")!;
-    expect(gallery.compareDocumentPosition(products) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(products.compareDocumentPosition(story) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(story.compareDocumentPosition(products) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(products.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.querySelector("#injected-caption")).toBeNull();
     expect(document.querySelector(".store-editorial-item figcaption")?.textContent).toContain("<img");
     const editorialCard = document.querySelector<HTMLElement>(".store-editorial-item")!;

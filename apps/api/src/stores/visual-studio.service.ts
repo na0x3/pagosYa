@@ -37,14 +37,9 @@ type AiDirection = {
   galleryTitle: string;
   gallerySubtitle: string;
   backgroundColor: string;
-  backgroundMode: "solid" | "gradient";
-  backgroundGradientStart: string;
-  backgroundGradientEnd: string;
-  backgroundGradientAngle: number;
   accentColor: string;
   fontStyle: "mono" | "modern" | "editorial" | "friendly";
   buttonStyle: "rounded" | "pill" | "square";
-  boardTexture: "chalkboard" | "kraft" | "painted";
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "lift" | "pulse" | "none";
   cartButtonLabel: "Ir a pagar" | "Completar pedido" | "Quiero comprar" | "Agregar y pagar";
@@ -77,8 +72,8 @@ const AI_DIRECTIONS_SCHEMA = {
         type: "object",
         additionalProperties: false,
         required: [
-          "title", "rationale", "tagline", "aboutText", "aboutTitle", "aboutSubtitle", "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle", "backgroundColor", "backgroundMode", "backgroundGradientStart", "backgroundGradientEnd", "backgroundGradientAngle", "accentColor", "fontStyle", "buttonStyle",
-          "boardTexture", "buttonVariant", "buttonMotion", "cartButtonLabel", "contentOrder", "layoutStyle", "announcement",
+          "title", "rationale", "tagline", "aboutText", "aboutTitle", "aboutSubtitle", "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle", "backgroundColor", "accentColor", "fontStyle", "buttonStyle",
+          "buttonVariant", "buttonMotion", "cartButtonLabel", "contentOrder", "layoutStyle", "announcement",
           "announcementMode", "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled",
           "promotionTitle", "promotionBody", "promotionCtaLabel", "heroSlides", "editorialGallery",
         ],
@@ -94,14 +89,9 @@ const AI_DIRECTIONS_SCHEMA = {
           galleryTitle: { type: "string", minLength: 3, maxLength: 100 },
           gallerySubtitle: { type: "string", minLength: 3, maxLength: 220 },
           backgroundColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          backgroundMode: { type: "string", enum: ["solid", "gradient"] },
-          backgroundGradientStart: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          backgroundGradientEnd: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          backgroundGradientAngle: { type: "integer", minimum: 0, maximum: 360 },
           accentColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
           fontStyle: { type: "string", enum: ["mono", "modern", "editorial", "friendly"] },
           buttonStyle: { type: "string", enum: ["rounded", "pill", "square"] },
-          boardTexture: { type: "string", enum: ["chalkboard", "kraft", "painted"] },
           buttonVariant: { type: "string", enum: ["solid", "outline", "soft"] },
           buttonMotion: { type: "string", enum: ["lift", "pulse", "none"] },
           cartButtonLabel: { type: "string", enum: ["Ir a pagar", "Completar pedido", "Quiero comprar", "Agregar y pagar"] },
@@ -343,7 +333,7 @@ export class VisualStudioService {
       body: products[index]?.description || `Esta imagen amplía la historia de ${store.name} y da contexto a la selección antes de llegar al catálogo.`,
     }));
     const socialNote = links.length ? "Los enlaces sociales existentes aparecen como botones al final." : "Puedes agregar redes sociales y aparecerán como botones al final.";
-    const backgroundMode = dto.backgroundMode === "gradient" ? "gradient" : "solid";
+    const selectedFontStyle = ["mono", "modern", "editorial", "friendly"].includes(dto.fontStyle || "") ? dto.fontStyle : store.fontStyle;
     const proposals: ProposalPreset[] = [
       {
         title: "Taller cálido",
@@ -361,24 +351,20 @@ export class VisualStudioService {
         config: { tagline: `${subject} con energía propia.`, aboutTitle: `${store.name}, de cerca`, aboutSubtitle: "Personalidad, intención y una forma propia de presentar cada elección.", aboutText: `Texto de muestra para presentar la personalidad de ${store.name}. Revísalo antes de aplicar y agrega únicamente información real sobre tu marca.`, catalogTitle: "Entra a la tienda", catalogSubtitle: `Mira, elige y explora todo lo que ${store.name} tiene para mostrar.`, galleryTitle: "Más para descubrir", gallerySubtitle: "La energía de la marca continúa en cada imagen.", backgroundColor: "#f6c84f", backgroundImageUrl: null, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", boardTexture: "painted", announcement: `Novedades en ${store.name} • Mira • Elige • Compra`, announcementMode: "marquee", announcementSpeed: 14, announcementSize: "large", announcementColor: "#7f1d1d", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", contentOrder: ["products", "hero", "gallery", "about", "links"], heroSlides: hero(2, `Encuentra tu próximo favorito`, `Explora ${subject} y elige directamente desde el catálogo.`), editorialGallery: gallery },
       },
     ];
-    const gradientPalettes = [
-      { start: "#f4ead7", end: "#d8a25e", angle: 145 },
-      { start: "#f7f5f0", end: "#b9d5cc", angle: 120 },
-      { start: "#f6c84f", end: "#f08a5d", angle: 160 },
-    ];
     const contentOrders = [
       ["hero", "about", "products", "gallery", "links"],
-      ["hero", "gallery", "about", "products", "links"],
-      ["hero", "about", "gallery", "products", "links"],
+      ["about", "hero", "products", "links", "gallery"],
+      ["hero", "about", "products", "links", "gallery"],
     ];
     return proposals.map((proposal, index) => ({
       ...proposal,
       config: {
         ...proposal.config,
-        backgroundMode,
-        backgroundGradientStart: gradientPalettes[index].start,
-        backgroundGradientEnd: gradientPalettes[index].end,
-        backgroundGradientAngle: gradientPalettes[index].angle,
+        backgroundMode: "solid",
+        backgroundGradientStart: proposal.config.backgroundColor,
+        backgroundGradientEnd: proposal.config.backgroundColor,
+        backgroundGradientAngle: 0,
+        fontStyle: selectedFontStyle,
         contentOrder: contentOrders[index],
       },
     }));
@@ -402,7 +388,7 @@ export class VisualStudioService {
       const socialLinks = links.map((link) => `${link.label}: ${link.url}`).join("\n") || "Sin enlaces sociales configurados";
       const assetLegend = assets.map((asset, index) => `${index}: ${asset.url}`).join("\n") || "Sin imágenes disponibles";
       const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
-      const requestedBackgroundMode = dto.backgroundMode === "gradient" ? "gradient" : "solid";
+      const requestedFontStyle = ["mono", "modern", "editorial", "friendly"].includes(dto.fontStyle || "") ? dto.fontStyle : store.fontStyle;
       const prompt = [
         "Actúa como director de arte y arquitecto de ecommerce. Devuelve exactamente tres sitios completos cuya estructura, ritmo y jerarquía sean inequívocamente distintos; no aceptes la misma plantilla con otra paleta. Usa únicamente las imágenes ya existentes y no generes ni solicites imágenes nuevas.",
         `Clave creativa de esta generación: ${creativeRun}. Úsala para evitar repetir decisiones de generaciones anteriores sin mencionarla en el resultado.`,
@@ -412,11 +398,11 @@ export class VisualStudioService {
         `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         "Asigna a cada dirección un layoutStyle diferente. cinematic usa una portada inmersiva y relato gradual; editorial alterna imagen y texto con lectura pausada; collage superpone escalas y bloques visuales; catalog-first empieza por producto y usa la historia como prueba posterior.",
-        "Cada dirección debe tener un contentOrder diferente y válido, con las cinco secciones exactamente una vez. Mantén una lectura clara: hero debe aparecer antes que products y about también debe aparecer antes que products, para presentar primero la identidad de la marca y después abrir la tienda. Varía gallery y links para crear ritmos distintos.",
+        "Cada dirección debe tener un contentOrder diferente y válido, con las cinco secciones exactamente una vez. hero y about aparecen antes que products; gallery y links aparecen después de products para que la experiencia continúe después del catálogo.",
         "Crea entre cuatro y cinco slides por dirección. Cada slide cumple un rol distinto (promesa, producto, punto de vista, detalle, transición o acción), con título, texto sustancioso y botón breve. Cuando haya suficientes imágenes, no repitas assetIndex dentro del mismo slider.",
         "La editorialGallery no es una tira de pies de foto: cada imagen debe tener título, caption breve y un body de 2–3 frases que aporte contexto realista sin inventar hechos.",
         "Las tres direcciones también deben variar densidad, escala de imagen, anuncio estático o móvil y relación entre historia y catálogo.",
-        `El comercio eligió un fondo ${requestedBackgroundMode === "gradient" ? "degradado" : "de color sólido"}. Usa backgroundMode=${requestedBackgroundMode} en las tres direcciones. Define siempre backgroundGradientStart, backgroundGradientEnd y backgroundGradientAngle; si el modo es sólido, conserva backgroundColor como el fondo visible. Nunca uses una foto como fondo. La paleta debe ser coherente, legible y con contraste suficiente.`,
+        `Usa fontStyle=${requestedFontStyle} en las tres direcciones. El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas.`,
         "heroSlides y editorialGallery deben referenciar solamente índices disponibles.",
         "Escribe textos borrador atractivos en español, sin inventar descuentos, envíos, certificaciones, origen, materiales ni promesas verificables. No devuelvas HTML, CSS ni texto fuera del esquema.",
       ].join("\n");
@@ -461,15 +447,15 @@ export class VisualStudioService {
           galleryTitle: direction.galleryTitle,
           gallerySubtitle: direction.gallerySubtitle,
           backgroundColor: direction.backgroundColor.toLowerCase(),
-          backgroundMode: requestedBackgroundMode,
-          backgroundGradientStart: direction.backgroundGradientStart.toLowerCase(),
-          backgroundGradientEnd: direction.backgroundGradientEnd.toLowerCase(),
-          backgroundGradientAngle: direction.backgroundGradientAngle,
+          backgroundMode: "solid",
+          backgroundGradientStart: direction.backgroundColor.toLowerCase(),
+          backgroundGradientEnd: direction.backgroundColor.toLowerCase(),
+          backgroundGradientAngle: 0,
           backgroundImageUrl: null,
           accentColor: direction.accentColor.toLowerCase(),
-          fontStyle: direction.fontStyle,
+          fontStyle: requestedFontStyle,
           buttonStyle: direction.buttonStyle,
-          boardTexture: direction.boardTexture,
+          boardTexture: "painted",
           buttonVariant: direction.buttonVariant,
           buttonMotion: direction.buttonMotion,
           cartButtonLabel: direction.cartButtonLabel,
@@ -523,19 +509,17 @@ export class VisualStudioService {
       && typeof direction.galleryTitle === "string" && direction.galleryTitle.length >= 3 && direction.galleryTitle.length <= 100
       && typeof direction.gallerySubtitle === "string" && direction.gallerySubtitle.length >= 3 && direction.gallerySubtitle.length <= 220
       && validColor(direction.backgroundColor)
-      && enumValue(direction.backgroundMode, ["solid", "gradient"])
-      && validColor(direction.backgroundGradientStart) && validColor(direction.backgroundGradientEnd)
-      && validInteger(direction.backgroundGradientAngle, 0, 360)
       && validColor(direction.accentColor)
       && enumValue(direction.fontStyle, ["mono", "modern", "editorial", "friendly"])
       && enumValue(direction.buttonStyle, ["rounded", "pill", "square"])
-      && enumValue(direction.boardTexture, ["chalkboard", "kraft", "painted"])
       && enumValue(direction.buttonVariant, ["solid", "outline", "soft"])
       && enumValue(direction.buttonMotion, ["lift", "pulse", "none"])
       && enumValue(direction.cartButtonLabel, ["Ir a pagar", "Completar pedido", "Quiero comprar", "Agregar y pagar"])
       && validOrder(direction.contentOrder)
       && (direction.contentOrder as string[]).indexOf("hero") < (direction.contentOrder as string[]).indexOf("products")
       && (direction.contentOrder as string[]).indexOf("about") < (direction.contentOrder as string[]).indexOf("products")
+      && (direction.contentOrder as string[]).indexOf("gallery") > (direction.contentOrder as string[]).indexOf("products")
+      && (direction.contentOrder as string[]).indexOf("links") > (direction.contentOrder as string[]).indexOf("products")
       && enumValue(direction.layoutStyle, ["cinematic", "editorial", "collage", "catalog-first"])
       && typeof direction.announcement === "string" && direction.announcement.length >= 5 && direction.announcement.length <= 180
       && enumValue(direction.announcementMode, ["static", "marquee"])
