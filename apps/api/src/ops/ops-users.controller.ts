@@ -20,7 +20,7 @@ export class OpsUsersController {
   @ApiBearerAuth()
   @UseGuards(InternalOpsGuard)
   create(@Body() dto: CreateOpsUserDto) {
-    return this.opsUsers.create(dto.name, dto.email);
+    return this.opsUsers.create(dto.name, dto.email, dto.role);
   }
 
   @Post(":id/revoke")
@@ -33,7 +33,7 @@ export class OpsUsersController {
   @Get("me")
   @ApiBearerAuth()
   @UseGuards(OpsAuthGuard)
-  me(@CurrentOpsUser() opsUser: { id: string; name: string; email: string }) {
+  me(@CurrentOpsUser() opsUser: { id: string; name: string; email: string; role: string }) {
     return opsUser;
   }
 }

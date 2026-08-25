@@ -2,7 +2,7 @@ import { FinancesService } from "./finances.service";
 
 function makeFakePrisma() {
   return {
-    paymentIntent: { aggregate: jest.fn(), groupBy: jest.fn(), findMany: jest.fn() },
+    paymentIntent: { aggregate: jest.fn(), groupBy: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     storeLead: { findMany: jest.fn() },
     paymentLink: { findMany: jest.fn() },
     store: { aggregate: jest.fn(), findFirst: jest.fn(), findMany: jest.fn() },
@@ -101,6 +101,19 @@ describe("FinancesService.summary", () => {
       totalStoreViews: 0,
       revenueByPaymentMethod: [],
       topProducts: [],
+      monthlyProjection: {
+        monthToDateRevenue: 0,
+        projectedRevenue: 0,
+        elapsedDays: expect.any(Number),
+        daysInMonth: expect.any(Number),
+        asOf: expect.any(String),
+      },
+      salesByWeekday: expect.arrayContaining([
+        expect.objectContaining({ name: "Lunes", amount: 0, paymentCount: 0 }),
+        expect.objectContaining({ name: "Domingo", amount: 0, paymentCount: 0 }),
+      ]),
+      bestSalesDay: null,
+      salesDayWindowDays: 90,
       scope: { type: "MERCHANT" },
       currency: "BOB",
     });
@@ -169,5 +182,25 @@ describe("FinancesService.summary", () => {
     const result = await new FinancesService(prisma as any).summary("m_1");
 
     expect(result.inventoryValue).toBe(45000); // 7×35 + 3×55 + 2×20 BOB
+  });
+
+  it("projects the current month and identifies the weekday with the most successful sales", async () => {
+    const prisma = makeFakePrisma();
+    prisma.paymentIntent.aggregate.mockResolvedValue({ _sum: { amount: 21000 }, _count: { _all: 3 } });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+    prisma.store.aggregate.mockResolvedValue({ _sum: { viewCount: 0 } });
+    prisma.paymentIntent.groupBy.mockResolvedValue([]);
+    const weekday = new Date(Date.now() - 4 * 60 * 60 * 1000).getUTCDay();
+    const expectedDay = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][weekday];
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ amount: 0n, count: 0n }])
+      .mockResolvedValueOnce([{ weekday, amount: 12000n, count: 2n, monthAmount: 12000n }]);
+
+    const result = await new FinancesService(prisma as any).summary("m_1");
+
+    expect(result.monthlyProjection.monthToDateRevenue).toBe(12000);
+    expect(result.monthlyProjection.projectedRevenue).toBeGreaterThanOrEqual(12000);
+    expect(result.bestSalesDay).toMatchObject({ name: expectedDay, paymentCount: 2, amount: 12000, averageTicket: 6000 });
+    expect(result.salesByWeekday).toHaveLength(7);
   });
 });

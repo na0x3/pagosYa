@@ -33,7 +33,7 @@ async function api(path, { method = "GET", body, secretKey, isForm = false } = {
 }
 
 // --- Minimal solid-color PNG encoder (no image deps) so product/logo photos are
-// real uploaded files, not placeholder URLs the imageUrl validator would reject. ---
+// real uploaded files, not placeholder URLs the imageUrls validator would reject. ---
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -145,7 +145,7 @@ async function createStore(secretKey, { name, brandColor, backgroundColor, produ
     const link = await api(`/stores/${store.id}/payment_links`, {
       method: "POST",
       secretKey,
-      body: { name: p.name, description: p.description, amount: p.amount, color: p.color, imageUrl },
+      body: { name: p.name, description: p.description, amount: p.amount, color: p.color, imageUrls: [imageUrl] },
     });
     links.push(link);
     console.log(`  - ${p.name.padEnd(28)} ${(p.amount / 100).toFixed(2)} BOB  ${p.color}`);

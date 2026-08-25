@@ -30,7 +30,10 @@ function isCheckoutEnvelope(data: unknown): data is CheckoutEventEnvelope {
  * merchant's page. See apps/checkout for the iframe implementation and
  * packages/shared-types/src/checkout-events.ts for the postMessage contract.
  */
-function PagosYa(_publishableKey: string, options: PagosYaOptions = {}) {
+function PagosYa(publishableKey: string, options: PagosYaOptions = {}) {
+  if (!/^pk_(test|live)_[0-9A-Za-z_]+$/.test(publishableKey)) {
+    throw new Error("pagosYa: a valid pk_test_... or pk_live_... publishable key is required");
+  }
   const checkoutOrigin = options.checkoutOrigin ?? DEFAULT_CHECKOUT_ORIGIN;
 
   function mount(selector: string | HTMLElement, mountOptions: MountOptions): CheckoutInstance {
@@ -38,7 +41,13 @@ function PagosYa(_publishableKey: string, options: PagosYaOptions = {}) {
     if (!target) throw new Error(`pagosYa: mount target "${selector}" not found`);
 
     const iframe = document.createElement("iframe");
-    iframe.src = `${checkoutOrigin}/?client_secret=${encodeURIComponent(mountOptions.clientSecret)}`;
+    const checkoutUrl = new URL(checkoutOrigin);
+    checkoutUrl.hash = new URLSearchParams({
+      client_secret: mountOptions.clientSecret,
+      publishable_key: publishableKey,
+      parent_origin: window.location.origin,
+    }).toString();
+    iframe.src = checkoutUrl.toString();
     iframe.style.border = "none";
     iframe.style.width = "100%";
     iframe.style.minHeight = "320px";
@@ -49,6 +58,7 @@ function PagosYa(_publishableKey: string, options: PagosYaOptions = {}) {
       // Anti-spoofing: only trust messages actually delivered from the
       // checkout origin, never derived from envelope contents.
       if (event.origin !== checkoutOrigin) return;
+      if (event.source !== iframe.contentWindow) return;
       if (!isCheckoutEnvelope(event.data)) return;
 
       const { type, payload } = event.data;

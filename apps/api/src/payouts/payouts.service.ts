@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { KycStatus, LedgerAccount, LedgerDirection, MerchantStatus, PayoutStatus, SettlementMode } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { createPayoutsPdf } from "../reports/finance-pdfs";
 
 @Injectable()
 export class PayoutsService {
@@ -60,7 +61,26 @@ export class PayoutsService {
     }
   }
 
-  async listForMerchant(merchantId: string) {
-    return this.prisma.payout.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" }, take: 50 });
+  async listForMerchant(merchantId: string, options: { exportPdf?: boolean } = {}) {
+    return this.prisma.payout.findMany({
+      where: { merchantId },
+      orderBy: { createdAt: "desc" },
+      ...(options.exportPdf ? {} : { take: 50 }),
+    });
+  }
+
+  async exportPayoutsPdf(merchantId: string) {
+    const payouts = await this.listForMerchant(merchantId, { exportPdf: true });
+    return createPayoutsPdf(
+      payouts.map((payout) => ({
+        id: payout.id,
+        amount: payout.amount,
+        currency: payout.currency,
+        bankAccount: payout.bankAccount,
+        status: payout.status,
+        paidOutAt: payout.paidOutAt,
+        createdAt: payout.createdAt,
+      })),
+    );
   }
 }

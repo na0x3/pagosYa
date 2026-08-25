@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma, PaymentMethodType } from "@prisma/client";
+import { createHash } from "node:crypto";
 
 @Injectable()
 export class PaymentMethodsService {
@@ -9,13 +10,16 @@ export class PaymentMethodsService {
     merchantId: string,
     input: { type: PaymentMethodType; token: string; metadata?: Record<string, unknown> },
   ) {
+    // Provider tokens are bearer-like credentials. Persist a one-way stable
+    // fingerprint for deduplication, never the replayable token itself.
+    const tokenFingerprint = `sha256:${createHash("sha256").update(input.token).digest("hex")}`;
     return tx.paymentMethod.upsert({
-      where: { merchantId_token: { merchantId, token: input.token } },
+      where: { merchantId_token: { merchantId, token: tokenFingerprint } },
       update: {},
       create: {
         merchantId,
         type: input.type,
-        token: input.token,
+        token: tokenFingerprint,
         last4: input.token.slice(-4),
         metadata: input.metadata as Prisma.InputJsonValue | undefined,
       },

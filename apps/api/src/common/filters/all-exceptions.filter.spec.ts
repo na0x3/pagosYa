@@ -54,4 +54,19 @@ describe("AllExceptionsFilter", () => {
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
   });
+
+  it("never writes URL query credentials or bearer-shaped secrets to logs", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const secret = "pi_abc_secret_SuperSecretValue";
+    const { host } = makeHost({ method: "GET", url: `/v1/checkout/session?client_secret=${secret}` });
+
+    filter.catch(new Error(`upstream failed for ${secret}`), host);
+
+    const logged = errorSpy.mock.calls.flat().join(" ");
+    expect(logged).not.toContain(secret);
+    expect(logged).not.toContain("client_secret=");
+    expect(logged).toContain("/v1/checkout/session");
+    errorSpy.mockRestore();
+  });
 });

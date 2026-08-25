@@ -1,6 +1,24 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 @font-face {
   font-family: "Proto Matcho";
   src: url("/fonts/0xProtoNerdFontMono-Bold.ttf") format("truetype");
@@ -18,6 +36,21 @@
   --ochre: #ad8a49;
   --white: #fffdf6;
   --line: rgba(24, 53, 36, 0.24);
+  --background: #fffdf6;
+  --foreground: #0b2116;
+  --card: #fffdf6;
+  --card-foreground: #0b2116;
+  --popover: #fffdf6;
+  --popover-foreground: #0b2116;
+  --primary: #183524;
+  --primary-foreground: #fffdf6;
+  --muted: #e5dfd4;
+  --muted-foreground: #5f675f;
+  --accent: #e5dfd4;
+  --accent-foreground: #0b2116;
+  --border: rgba(24, 53, 36, 0.24);
+  --input: rgba(24, 53, 36, 0.24);
+  --ring: #ad8a49;
 }
 
 * { box-sizing: border-box; }
@@ -34,6 +67,11 @@ button, input, select { font: inherit; }
 button, a, select { cursor: pointer; }
 img { display: block; max-width: 100%; }
 a { color: inherit; }
+.calendar-demo-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(240px, 420px) minmax(0, auto); align-items: center; justify-content: center; gap: clamp(36px, 7vw, 100px); padding: 48px 24px; background: var(--cream); }
+.calendar-demo-copy p { margin: 0 0 14px; color: var(--forest); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.calendar-demo-copy h1 { max-width: 10ch; margin: 0 0 18px; font-family: "Proto Matcho", sans-serif; font-size: clamp(42px, 6vw, 72px); line-height: .96; letter-spacing: -.035em; }
+.calendar-demo-copy span { display: block; max-width: 38ch; color: #526057; line-height: 1.55; }
+@media (max-width: 900px) { .calendar-demo-shell { grid-template-columns: 1fr; align-items: start; } .calendar-demo-copy h1 { max-width: 12ch; } }
 .skip-link { position: fixed; top: 10px; left: 10px; z-index: 120; padding: 9px 12px; border: 2px solid var(--forest-deep); border-radius: 8px; background: var(--white); color: var(--forest-deep); font-size: 12px; font-weight: 800; text-decoration: none; transform: translateY(-160%); }
 .skip-link:focus { transform: translateY(0); outline: 3px solid var(--ochre); outline-offset: 2px; }
 
@@ -311,6 +349,18 @@ footer a { font-weight: 800; }
 
 .coverflow-story { margin-top: 92px; padding: clamp(36px, 6vw, 72px) 0; border-block: 1px solid var(--line); }
 .experience-heading { margin-bottom: 26px; }
+.animation-builder { width: min(1180px, calc(100% - 40px)); margin: clamp(72px, 10vw, 132px) auto 34px; }
+.animation-builder-copy { max-width: 720px; }
+.animation-builder-copy h2 { max-width: 12ch; margin: 0 0 14px; font-family: "Proto Matcho", sans-serif; font-size: clamp(40px, 7vw, 82px); line-height: .92; letter-spacing: -.04em; }
+.animation-builder-copy p { max-width: 60ch; margin: 0; color: #526057; line-height: 1.6; }
+.animation-option-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+.animation-option-list button { min-height: 42px; padding: 9px 14px; border: 1px solid var(--forest); border-radius: 999px; background: transparent; color: var(--forest-deep); font-weight: 750; transition: background-color .18s ease, color .18s ease, transform .18s cubic-bezier(.23,1,.32,1); }
+.animation-option-list button[aria-pressed="true"] { background: var(--forest-deep); color: var(--white); }
+@media (hover: hover) and (pointer: fine) { .animation-option-list button:hover { transform: translateY(-2px); } }
+.animation-option-list button:focus-visible { outline: 3px solid var(--ochre); outline-offset: 2px; }
+.animation-stage { width: min(1180px, calc(100% - 40px)); margin: 0 auto clamp(74px, 10vw, 130px); }
+.animation-stage.full-bleed { width: 100%; }
+@media (prefers-reduced-motion: reduce) { .animation-option-list button { transition: none; } }
 .experience-heading h2 { max-width: 13ch; margin: 0; font-family: "Proto Matcho", sans-serif; font-size: clamp(36px, 5.5vw, 72px); line-height: .98; letter-spacing: -.035em; }
 .moving-gallery { position: relative; margin-top: 90px; overflow: hidden; border-radius: 26px; background: var(--forest-deep); }
 .moving-gallery-copy { position: absolute; inset: 50% auto auto 50%; z-index: 20; width: min(560px, calc(100% - 48px)); padding: 26px; border: 1px solid rgba(255,255,255,.34); border-radius: 18px; background: rgba(11,33,22,.76); color: var(--white); text-align: center; transform: translate(-50%,-50%); backdrop-filter: blur(16px); }

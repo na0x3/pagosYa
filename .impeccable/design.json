@@ -1,14 +1,23 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-09T16:19:11Z",
+  "generatedAt": "2026-08-18T04:50:00Z",
   "title": "Design System: pagosYa",
   "extensions": {
     "colorMeta": {
       "void": { "role": "neutral", "displayName": "Void", "canonical": "#0a0a0a", "tonalRamp": ["#0a0a0a", "#171717", "#262626", "#404040", "#525252", "#737373", "#a3a3a3", "#f5f5f5"] },
       "panel": { "role": "neutral", "displayName": "Panel", "canonical": "#171717", "tonalRamp": ["#0a0a0a", "#171717", "#262626", "#404040", "#525252", "#737373", "#a3a3a3", "#f5f5f5"] },
+      "ops-warm-paper": { "role": "neutral", "displayName": "Ops Warm Paper", "canonical": "#eee7dc", "tonalRamp": ["#2b2722", "#49423a", "#6b6257", "#8d8275", "#b1a697", "#d0c5b7", "#eee7dc", "#fffaf2"] },
+      "ops-surface": { "role": "neutral", "displayName": "Ops Pale Surface", "canonical": "#fffaf2", "tonalRamp": ["#2d2924", "#4c463e", "#71685c", "#968b7d", "#bdb2a3", "#ded5c8", "#eee7dc", "#fffaf2"] },
+      "merchant-graphite": { "role": "neutral", "displayName": "Admin Graphite", "canonical": "#050505", "tonalRamp": ["#050505", "#171717", "#2b2b2b", "#454545", "#666666", "#8c8c8c", "#b8b8b8", "#f5f5f5"] },
+      "text-faint": { "role": "neutral", "displayName": "Faint Text", "canonical": "#8c8c8c", "tonalRamp": ["#171717", "#262626", "#404040", "#525252", "#737373", "#8c8c8c", "#a3a3a3", "#d4d4d4"] },
       "focus-indigo": { "role": "primary", "displayName": "Focus Indigo", "canonical": "#818cf8", "tonalRamp": ["#1e1b4b", "#312e81", "#4338ca", "#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe", "#e0e7ff"] },
       "focus-violet": { "role": "primary", "displayName": "Focus Violet", "canonical": "#c084fc", "tonalRamp": ["#3b0764", "#581c87", "#7e22ce", "#a855f7", "#c084fc", "#d8b4fe", "#e9d5ff", "#f3e8ff"] },
       "signal-amber": { "role": "secondary", "displayName": "Signal Amber", "canonical": "#ffbd59", "tonalRamp": ["#241804", "#4a2e05", "#7a4b08", "#c47f14", "#ffab2e", "#ffbd59", "#ffd08a", "#ffe6bd"] },
+      "workspace-bento-violet": { "role": "tertiary", "displayName": "Workflow Violet", "canonical": "#a78bfa", "tonalRamp": ["#2e1065", "#4c1d95", "#6d28d9", "#8b5cf6", "#a78bfa", "#c4b5fd", "#ddd6fe", "#ede9fe"] },
+      "workspace-bento-yellow": { "role": "tertiary", "displayName": "Workflow Yellow", "canonical": "#fbbf24", "tonalRamp": ["#422006", "#713f12", "#a16207", "#ca8a04", "#eab308", "#fbbf24", "#fde047", "#fef3c7"] },
+      "workspace-bento-red": { "role": "tertiary", "displayName": "Workflow Red", "canonical": "#f87171", "tonalRamp": ["#450a0a", "#7f1d1d", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fee2e2"] },
+      "workspace-bento-blue": { "role": "tertiary", "displayName": "Workflow Blue", "canonical": "#60a5fa", "tonalRamp": ["#172554", "#1e3a8a", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#dbeafe"] },
+      "workspace-bento-green": { "role": "tertiary", "displayName": "Workflow Green", "canonical": "#4ade80", "tonalRamp": ["#052e16", "#14532d", "#166534", "#15803d", "#22c55e", "#4ade80", "#86efac", "#dcfce7"] },
       "success": { "role": "status", "displayName": "Success", "canonical": "#34d399", "tonalRamp": ["#052e1f", "#064e3b", "#065f46", "#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"] },
       "warning": { "role": "status", "displayName": "Warning", "canonical": "#fbbf24", "tonalRamp": ["#2c1a04", "#451a03", "#78350f", "#b45309", "#d97706", "#fbbf24", "#fcd34d", "#fde68a"] },
       "error": { "role": "status", "displayName": "Error", "canonical": "#f87171", "tonalRamp": ["#2c0b0b", "#450a0a", "#7f1d1d", "#b91c1c", "#dc2626", "#f87171", "#fca5a5", "#fecaca"] }
@@ -20,7 +29,8 @@
       "label": { "displayName": "Label", "purpose": "Field labels, table headers, and badge text — usually uppercase." }
     },
     "shadows": [
-      { "name": "admin-ambient", "value": "0 1px 2px rgba(0,0,0,0.3), 0 1px 8px -2px rgba(0,0,0,0.4)", "purpose": "Constant resting elevation on every merchant-dashboard/ops panel and card." },
+      { "name": "admin-hard-block", "value": "8px 8px 0 #050505", "purpose": "Primary merchant-dashboard and Ops panels on wide screens; always paired with a 3px Graphite keyline." },
+      { "name": "admin-hard-block-mobile", "value": "5px 5px 0 #050505", "purpose": "Compact hard shadow for primary admin panels on mobile." },
       { "name": "checkout-hover-lift", "value": "0 16px 32px -12px rgba(0,0,0,0.18), 0 4px 10px -4px rgba(0,0,0,0.1)", "purpose": "Checkout store-item card hover only — flat at rest." },
       { "name": "checkout-card-float", "value": "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)", "purpose": "The payment-form card floating over a merchant's host page." },
       { "name": "checkout-accent-glow", "value": "0 8px 20px -6px color-mix(in srgb, var(--pg-accent) 60%, transparent)", "purpose": "Colored glow under the storefront's gradient primary CTA." }
@@ -32,6 +42,7 @@
     "breakpoints": [
       { "name": "dashboard-wide-stack", "value": "900px" },
       { "name": "checkout-mobile", "value": "720px" },
+      { "name": "ops-support-desk-stack", "value": "680px" },
       { "name": "dashboard-narrow", "value": "640px" },
       { "name": "dashboard-finance-stack", "value": "480px" }
     ]
@@ -43,7 +54,7 @@
       "refersTo": "button-primary-admin",
       "description": "pagosYa's own brand color, used only in merchant-dashboard and ops.",
       "html": "<button class=\"ds-btn-primary-admin\">Guardar</button>",
-      "css": ".ds-btn-primary-admin { background: #ffbd59; color: #241804; border: 1.5px solid #ffbd59; border-radius: 9px; padding: 9px 14px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-primary-admin:hover { background: #ffab2e; border-color: #ffab2e; } .ds-btn-primary-admin:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(129,140,248,0.3); }"
+      "css": ".ds-btn-primary-admin { background: #ffbd59; color: #241804; border: 2px solid #050505; border-radius: 2px; padding: 9px 14px; box-shadow: 3px 3px 0 #050505; font-family: \"0xProto Mono\", ui-monospace, monospace; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; } .ds-btn-primary-admin:hover { background: #ffab2e; transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #050505; } .ds-btn-primary-admin:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #050505; } .ds-btn-primary-admin:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(129,140,248,.35), 3px 3px 0 #050505; }"
     },
     {
       "name": "Primary Button (Checkout Payment Form)",
@@ -62,60 +73,84 @@
       "css": ".ds-btn-primary-gradient { background: linear-gradient(120deg, #818cf8, #c084fc); color: #fff; border: none; border-radius: 10px; padding: 13px 20px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 8px 20px -6px rgba(129,140,248,0.5); transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease, filter 0.2s ease; } .ds-btn-primary-gradient:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -6px rgba(129,140,248,0.55); filter: brightness(1.06); }"
     },
     {
-      "name": "Status Badge",
+      "name": "Admin Status Badge",
       "kind": "chip",
       "refersTo": "badge",
-      "description": "Pill with a leading colored dot; color set by semantic status keyword, never by position or guesswork.",
+      "description": "Near-square keylined badge for merchant-dashboard and Ops; color is set by semantic status keyword, never by workflow block or position.",
       "html": "<span class=\"ds-badge ds-badge-success\">SUCCEEDED</span>",
-      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; } .ds-badge::before { content: \"\"; width: 6px; height: 6px; border-radius: 999px; background: currentColor; } .ds-badge-success { background: #052e1f; color: #34d399; } .ds-badge-warning { background: #2c1a04; color: #fbbf24; } .ds-badge-error { background: #2c0b0b; color: #f87171; }"
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border: 2px solid currentColor; border-radius: 2px; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; } .ds-badge::before { content: \"\"; width: 6px; height: 6px; border-radius: 50%; background: currentColor; } .ds-badge-success { background: #052e1f; color: #34d399; } .ds-badge-warning { background: #2c1a04; color: #fbbf24; } .ds-badge-error { background: #2c0b0b; color: #f87171; }"
     },
     {
-      "name": "Panel / Card",
+      "name": "Admin Business-Bento Panel",
       "kind": "card",
       "refersTo": "card",
-      "description": "The base container for both admin surfaces and checkout's storefront items.",
+      "description": "The structural panel shared by merchant-dashboard and Ops: paper surface, Graphite keyline, near-square corners, and a hard block shadow.",
       "html": "<div class=\"ds-card\"><div class=\"ds-card-label\">SALDO POR PAGAR</div><div class=\"ds-card-value\">0.00 BOB</div></div>",
-      "css": ".ds-card { background: #171717; border: 1px solid #404040; border-radius: 14px; padding: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 8px -2px rgba(0,0,0,0.4); font-family: \"0xProto Mono\", ui-monospace, monospace; } .ds-card-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: #a3a3a3; margin-bottom: 8px; } .ds-card-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; color: #f5f5f5; font-variant-numeric: tabular-nums; }"
+      "css": ".ds-card { background: #fffaf2; color: #050505; border: 3px solid #050505; border-radius: 2px; padding: 18px; box-shadow: 8px 8px 0 #050505; font-family: \"0xProto Mono\", ui-monospace, monospace; } .ds-card-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: #666; margin-bottom: 8px; } .ds-card-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; color: #050505; font-variant-numeric: tabular-nums; } @media (max-width: 680px) { .ds-card { box-shadow: 5px 5px 0 #050505; } }"
     },
     {
-      "name": "Text Input",
+      "name": "Ops Text Input",
       "kind": "input",
       "refersTo": "field-input",
-      "description": "Labeled field with a real <label>, never a placeholder-only field.",
+      "description": "Near-square paper field with a real label and indigo focus treatment.",
       "html": "<div class=\"ds-field\"><label for=\"ds-demo-input\">Correo electrónico</label><input id=\"ds-demo-input\" type=\"email\" placeholder=\"tu@correo.com\"></div>",
-      "css": ".ds-field label { display: block; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 0.76rem; font-weight: 600; color: #a3a3a3; margin-bottom: 6px; } .ds-field input { width: 100%; padding: 11px 12px; border-radius: 9px; border: 1.5px solid #404040; background: #171717; color: #f5f5f5; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 14px; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-field input:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.3); }"
+      "css": ".ds-field label { display: block; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #050505; margin-bottom: 6px; } .ds-field input { width: 100%; padding: 11px 12px; border-radius: 2px; border: 1.5px solid #050505; background: #fffaf2; color: #050505; font-family: \"0xProto Mono\", ui-monospace, monospace; font-size: 14px; transition: border-color .15s ease, box-shadow .15s ease; } .ds-field input:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,.35); }"
+    },
+    {
+      "name": "Account Support Case Desk",
+      "kind": "custom",
+      "description": "Ops-only split desk: a reasoned case gates the masked merchant dossier and every safe action leaves an audit record.",
+      "html": "<section class=\"ds-support-desk\"><aside class=\"ds-support-rail\"><span>CASO ABIERTO</span><strong>Acceso a la cuenta</strong><small>Caso cs_01 · prioridad normal</small></aside><div class=\"ds-support-dossier\"><span>COMERCIO</span><strong>Tienda Ejemplo</strong><small>NIT ••••67 · Cuenta •••1234</small><button type=\"button\">Enviar recuperación</button></div></section>",
+      "css": ".ds-support-desk { display: grid; grid-template-columns: minmax(250px,320px) minmax(0,1fr); gap: 18px; padding: 18px; border: 3px solid #050505; border-radius: 2px; background: #fffaf2; color: #050505; font-family: \"0xProto Mono\", ui-monospace, monospace; box-shadow: 8px 8px 0 #050505; } .ds-support-rail { display: grid; gap: 6px; padding-right: 18px; border-right: 3px solid #050505; background: #a78bfa; } .ds-support-dossier { display: grid; gap: 7px; align-content: start; } .ds-support-desk span, .ds-support-desk small { color: #666; font-size: .6875rem; text-transform: uppercase; } .ds-support-desk button { justify-self: start; margin-top: 8px; padding: 9px 14px; border: 2px solid #050505; border-radius: 2px; background: #ffbd59; color: #241804; box-shadow: 3px 3px 0 #050505; font: 700 .8rem \"0xProto Mono\", ui-monospace, monospace; } .ds-support-desk button:hover { background: #ffab2e; } .ds-support-desk button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(129,140,248,.35), 3px 3px 0 #050505; } @media (max-width: 680px) { .ds-support-desk { grid-template-columns: 1fr; box-shadow: 5px 5px 0 #050505; } .ds-support-rail { padding: 0 0 18px; border-right: 0; border-bottom: 3px solid #050505; } }"
+    },
+    {
+      "name": "Yapi Support Progress",
+      "kind": "custom",
+      "description": "Merchant-facing support handoff inside Yapi: the footer CTA opens an in-panel form and requests visibly progress through Pendiente, Enviado, Revisado, and Resuelto; data refreshes every 30 seconds only while the authenticated page is visible.",
+      "html": "<article class=\"ds-yapi-support\"><div class=\"ds-yapi-support-head\"><strong>Pagos o cobros</strong><span>REVISADO</span></div><p>No pude confirmar el pago del pedido.</p><div class=\"ds-yapi-steps\"><b>Pendiente</b><b>Enviado</b><b class=\"is-current\">Revisado</b><b>Resuelto</b></div></article>",
+      "css": ".ds-yapi-support { padding: 12px; border: 2px solid #050505; border-radius: 2px; background: #fffaf2; color: #050505; font-family: \"0xProto Mono\", ui-monospace, monospace; } .ds-yapi-support-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; } .ds-yapi-support-head span { padding: 3px 7px; border: 1.5px solid #050505; background: #60a5fa; font-size: .6rem; font-weight: 900; } .ds-yapi-support p { margin: 7px 0 0; color: #666; font-size: .68rem; } .ds-yapi-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; margin-top: 10px; } .ds-yapi-steps b { padding: 5px 3px; border: 1px solid #050505; background: #a78bfa; font-size: .54rem; text-align: center; text-transform: uppercase; } .ds-yapi-steps b.is-current { background: #fbbf24; }"
     }
   ],
   "narrative": {
     "northStar": "The Terminal Ledger",
-    "overview": "pagosYa reads like a precise financial tool that happens to render in a developer's terminal, not a fintech marketing site that happens to show numbers. pagosYa-owned surfaces stay in 0xProto Mono. Hosted storefronts belong to the merchant and may choose one curated store-wide type family while pagosYa's own dashboard and payment assurance remain consistent. Dark is the resting state everywhere. Color is spent sparingly: a single indigo (#818cf8) carries focus rings and links, a single amber (#ffbd59) is pagosYa's own brand signal, and status colors (success/warning/error) are the only other saturation allowed in. Numbers get tabular alignment and their own oversized weight; everything else stays quiet so the numbers can be trusted. The system is explicitly context-aware about whose brand is on screen — see the Whose-Page-Is-It Rule under Colors. This is not incidental restraint; it's load-bearing, since pagosYa's checkout is frequently embedded inside a merchant's own page. The hosted storefront extends this incumbent world into a professional, merchant-first lookbook: merchant identity, authored imagery, and catalog content lead, while pagosYa recedes to the secure-payment assurance.",
+    "overview": "pagosYa reads like a precise financial tool rendered with the confidence of a physical operating ledger. pagosYa-owned surfaces stay in 0xProto Mono. Merchant dashboard and Ops share a business-bento admin material family: paper and Graphite grounds, pale surfaces, 3px structural keylines, near-square geometry, 8px hard shadows, uppercase hierarchy, and purposeful workflow color. Ops applies that family to its anchor-led review console and split support desk without adopting merchant page switching or finance composition. Checkout remains restrained and merchant-deferential, while hosted storefronts let merchant identity and authored imagery lead.",
     "keyCharacteristics": [
       "Monospace-only typography on pagosYa-owned surfaces; merchant storefronts may choose one curated store-wide family",
-      "Dark-first; checkout is the only surface with a light variant, and only for contrast over a merchant's own photo background",
+      "Business-bento admin family: paper or Graphite grounds, pale surfaces, 3px keylines, 1-2px corners, and 8px hard shadows",
       "Amber is pagosYa's brand signal, reserved for pagosYa's own tools — not used as checkout's default primary action color",
       "Hosted storefronts behave like authored merchant lookbooks, not a generic marketplace shell; merchant imagery and merchandising lead the composition",
-      "Soft, continuous rounding (8-20px) plus true pills (999px) for chips/badges/status pills; no sharp corners except the opt-in \"square\" merchant theme variant",
+      "Ops uses Warm Paper (#eee7dc), Pale Surface (#fffaf2), Graphite (#050505), and violet/yellow/red/blue workflow blocks while preserving anchor navigation and the split case desk",
       "Motion is fast and utilitarian (0.15s ease) for color/border state changes; a single signature overshoot-free ease (cubic-bezier(0.22, 1, 0.36, 1)) marks the larger, more expressive transitions"
     ],
     "rules": [
       { "name": "The Whose-Page-Is-It Rule", "body": "The primary action's color is not fixed — it depends on whose page is showing. pagosYa's own tools (merchant-dashboard, ops) put pagosYa's amber on the primary button. Checkout's payment form is usually embedded inside a merchant's page, so its primary button stays neutral rather than competing with the host page. Checkout's own hosted storefront defaults to the Focus Indigo -> Focus Violet gradient as pagosYa's fallback identity, but yields to a merchant's own accentColor the moment one is set.", "section": "colors" },
       { "name": "The Merchant Ground Rule", "body": "Keep panels anchored to the shared neutral system, but let the hosted storefront's page ground express the merchant's selected board material. Texture may warm or tint the canvas; it must not compete with product imagery, copy, or the merchant accent.", "section": "colors" },
       { "name": "The One Store, One Face Rule", "body": "Never mix type families within a surface. pagosYa-owned UI stays on 0xProto Mono. A hosted storefront may use the merchant's single curated selection, applied consistently to the entire store.", "section": "typography" },
-      { "name": "The Flat-Until-It-Moves Rule", "body": "Checkout storefront surfaces stay flat at rest; a shadow only appears on hover, focus, or as the floating-card treatment for an embedded payment form. Don't add resting shadows to new checkout components.", "section": "elevation" }
+      { "name": "The Flat-Until-It-Moves Rule", "body": "Checkout storefront surfaces stay flat at rest; a shadow only appears on hover, focus, or as the floating-card treatment for an embedded payment form. Don't add resting shadows to new checkout components.", "section": "elevation" },
+      { "name": "The Bento-Is-an-Admin-Workspace Rule", "body": "Hard Graphite structure and purposeful bento color belong to merchant dashboard and Ops, expressed through each surface's own information architecture. Checkout continues to defer to merchant branding and never adopts this admin material family.", "section": "colors" },
+      { "name": "The Hard Ledger Rule", "body": "Major merchant-dashboard and Ops blocks use a zero-blur 8px offset shadow and a 3px Graphite keyline, tightening to a 5px shadow on mobile. Never soften either admin surface into ambient cards, and never export the block shadow to checkout.", "section": "elevation" },
+      { "name": "The Case-Before-Dossier Rule", "body": "Merchant identification is not authorization to inspect the account. A created or selected support case is the gate to masked dossier access, safe actions, notes, and resolution history.", "section": "components" },
+      { "name": "The Reason-Before-Action Rule", "body": "Every support action that changes account access requires a human-readable reason and a durable audit record; closing sessions additionally requires explicit confirmation.", "section": "components" },
+      { "name": "The Visible Handoff Rule", "body": "Human support begins inside Yapi, stays traceable after submission, and keeps its real progress visible until resolution; never replace this path with a dead-end email link or an unlabelled color change.", "section": "components" }
     ],
     "dos": [
       "Do set every pagosYa-owned UI element in 0xProto Mono and apply a merchant's selected family consistently across their entire hosted storefront.",
       "Do reserve Signal Amber for pagosYa's own tools (merchant-dashboard, ops); keep checkout's default primary action neutral or Focus Indigo, per the Whose-Page-Is-It Rule.",
-      "Do give every status a Badge (pill + dot + semantic color), never raw enum text or color-only signaling.",
+      "Do give every status a Badge (dot + semantic color), using square keylined badges in merchant dashboard and Ops and pills in checkout; never expose raw enum text or color-only signaling.",
       "Do use real <label for> elements on every form field; placeholders are never a substitute for a label.",
       "Do preserve the authored hero's visible pause/resume control, reduced-motion behavior, inactive-slide tab-order exclusion, and 24px minimum dot targets.",
-      "Do use the cubic-bezier(0.22, 1, 0.36, 1) ease for any new transform-based transition, and plain ease at 0.15s for color/border state changes."
+      "Do use the cubic-bezier(0.22, 1, 0.36, 1) ease for any new transform-based transition, and plain ease at 0.15s for color/border state changes.",
+      "Do gate Account Support dossiers behind a reasoned case, mask sensitive facts at both API and rendering boundaries, and record every access action with its reviewer-supplied reason.",
+      "Do keep Yapi support requests in-panel, label all four progress states, and poll for updates every 30 seconds only while the authenticated page is visible.",
+      "Do preserve Ops' Warm Paper, Pale Surface, Graphite keylines, near-square geometry, and 8px hard shadow as one coordinated visual contract; reduce the shadow to 5px on mobile."
     ],
     "donts": [
       "Don't add a resting (non-hover) shadow to a checkout storefront component — checkout is flat until it moves.",
       "Don't invent a new accent color; the system has exactly two (Focus Indigo, Signal Amber) plus the three status colors and checkout's Focus Violet gradient partner.",
       "Don't ship a new interactive control without a 3px Focus Indigo focus ring.",
-      "Don't treat the current single-page, no-navigation admin layout as a new-work exemplar to copy forward without checking PRODUCT.md's known-gaps note."
+      "Don't infer merchant page switching or finance layout from Ops' shared business-bento material family; preserve Ops anchor navigation and split case-desk information architecture.",
+      "Don't treat workspace bento colors as global action semantics or bring them into checkout; in Ops, violet/yellow/red/blue identify workflow blocks while semantic states retain their named status colors.",
+      "Don't add merchant impersonation, hidden login, unmasked secrets, or an unaudited shortcut to Account Support; recovery and session controls are the bounded safe actions."
     ]
   }
 }

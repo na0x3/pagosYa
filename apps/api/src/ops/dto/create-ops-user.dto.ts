@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { OpsRole } from "@prisma/client";
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
 
 export class CreateOpsUserDto {
   @ApiProperty({ example: "Ana Gutierrez" })
@@ -10,4 +11,9 @@ export class CreateOpsUserDto {
   @ApiProperty({ example: "ana@pagosya.bo" })
   @IsEmail()
   email!: string;
+
+  @ApiProperty({ enum: OpsRole, default: OpsRole.SUPPORT_AGENT, required: false })
+  @IsOptional()
+  @IsEnum(OpsRole)
+  role?: OpsRole;
 }

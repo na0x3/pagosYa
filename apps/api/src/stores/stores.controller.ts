@@ -9,6 +9,10 @@ import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
 import { VisualStudioService } from "./visual-studio.service";
 import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
+import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
+import { Throttle } from "@nestjs/throttler";
+import { CustomDomainsService } from "./custom-domains.service";
+import { CreateCustomDomainDto } from "./dto/create-custom-domain.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -20,7 +24,11 @@ import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
 @ApiBearerAuth()
 @UseGuards(MerchantAuthGuard)
 export class StoresController {
-  constructor(private readonly stores: StoresService, private readonly visualStudio: VisualStudioService) {}
+  constructor(
+    private readonly stores: StoresService,
+    private readonly visualStudio: VisualStudioService,
+    private readonly customDomains: CustomDomainsService,
+  ) {}
 
   @Post()
   create(@CurrentMerchant() merchant: { id: string }, @Body() dto: CreateStoreDto) {
@@ -30,6 +38,50 @@ export class StoresController {
   @Get()
   list(@CurrentMerchant() merchant: { id: string }) {
     return this.stores.listForMerchant(merchant.id);
+  }
+
+  @Get(":id/domains")
+  listDomains(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string) {
+    return this.customDomains.list(merchant.id, id);
+  }
+
+  @Post(":id/domains")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  connectDomain(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Body() dto: CreateCustomDomainDto,
+  ) {
+    return this.customDomains.create(merchant.id, id, dto.hostname);
+  }
+
+  @Post(":id/domains/:domainId/verify")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  verifyDomain(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Param("domainId") domainId: string,
+  ) {
+    return this.customDomains.verify(merchant.id, id, domainId);
+  }
+
+  @Delete(":id/domains/:domainId")
+  removeDomain(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Param("domainId") domainId: string,
+  ) {
+    return this.customDomains.remove(merchant.id, id, domainId);
+  }
+
+  @Post(":id/quick-qr-payments")
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  createQuickQrPayment(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Body() dto: CreateQuickQrPaymentDto,
+  ) {
+    return this.stores.createQuickQrPayment(merchant.id, id, dto);
   }
 
   @Patch(":id")

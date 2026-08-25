@@ -1,9 +1,19 @@
 {
   "name": "@pagosya/shared-types",
   "version": "0.1.0",
-  "private": true,
+  "description": "Shared public TypeScript types for pagosYa integrations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch"

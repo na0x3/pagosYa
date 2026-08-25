@@ -13,6 +13,7 @@ describe("PaymentIntent state machine", () => {
     [Status.REQUIRES_ACTION, PaymentIntentEvent.RAIL_CALLBACK_FAILED, Status.FAILED],
     [Status.REQUIRES_PAYMENT_METHOD, PaymentIntentEvent.CANCEL, Status.CANCELED],
     [Status.REQUIRES_CONFIRMATION, PaymentIntentEvent.CANCEL, Status.CANCELED],
+    [Status.REQUIRES_ACTION, PaymentIntentEvent.CANCEL, Status.CANCELED],
   ];
 
   it.each(legal)("allows %s + %s -> %s", (from, event, to) => {
@@ -24,7 +25,6 @@ describe("PaymentIntent state machine", () => {
     [Status.SUCCEEDED, PaymentIntentEvent.CONFIRM],
     [Status.CANCELED, PaymentIntentEvent.CONFIRM],
     [Status.PROCESSING, PaymentIntentEvent.CANCEL],
-    [Status.REQUIRES_ACTION, PaymentIntentEvent.CANCEL],
     [Status.REQUIRES_PAYMENT_METHOD, PaymentIntentEvent.AUTHORIZE_SUCCEEDED],
     [Status.SUCCEEDED, PaymentIntentEvent.RAIL_CALLBACK_SUCCEEDED],
   ];

@@ -21,6 +21,9 @@ function mockSession(overrides: Partial<CheckoutSession> = {}) {
       status: "REQUIRES_PAYMENT_METHOD",
       description: "Corte de cabello",
       merchantName: "pagosYa Demo Store",
+      metadata: null,
+      recipient: null,
+      trackingToken: null,
       ...overrides,
     } satisfies CheckoutSession),
     assetUrl: (p: string | null) => p,
@@ -39,6 +42,7 @@ describe("payment form (?client_secret=...)", () => {
     const row = document.querySelector(".merchant-row");
     expect(row).toBeTruthy();
     expect(document.querySelector(".merchant-name")?.textContent).toBe("pagosYa Demo Store");
+    expect(document.querySelector(".payment-box-field")).toBeNull();
     // "pagosYa Demo Store" -> first letter of first two words -> "PD"
     expect(document.querySelector(".merchant-avatar")?.textContent).toBe("PD");
   });
@@ -79,5 +83,41 @@ describe("payment form (?client_secret=...)", () => {
 
     expect(document.querySelector(".amount")?.textContent).toBe("123.45 BOB");
     expect(document.querySelector(".description")?.textContent).toBe("Manicure");
+    expect(document.querySelector("#customerName")).toBeNull();
+    expect(document.querySelector("#customerEmail")).toBeNull();
+    expect(document.querySelector("#customerPhone")).toBeNull();
+    expect(document.querySelector("#deliveryRequested")).toBeNull();
+    expect(document.querySelector(".direct-charge-context")?.textContent).toContain("Solo elige cómo pagar");
+  });
+
+  it("shows a known subscription recipient as read-only", async () => {
+    mockSession({
+      metadata: { subscription: { subscriptionId: "sub_1" } },
+      recipient: { name: "María López", document: null, email: "maria@gmail.com", phone: "+59170000000" },
+    });
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+
+    expect(document.querySelector(".direct-charge-context")?.textContent).toContain("María López");
+    expect(document.querySelector("#customerEmail")).toBeNull();
+  });
+
+  it("asks for delivery details only when selected and captures location after an explicit tap", async () => {
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: vi.fn((success) => success({
+          coords: { latitude: -17.3935, longitude: -66.157, accuracy: 18.4 },
+        })),
+      },
+    });
+    mockSession({ metadata: { cart: [{ paymentLinkId: "item_1", name: "Café", quantity: 1, unitAmount: 5000 }] } });
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+
+    expect(document.querySelector(".delivery-request-fields")?.hasAttribute("hidden")).toBe(true);
+    document.querySelector<HTMLInputElement>("#deliveryRequested")!.click();
+    await vi.waitFor(() => expect(document.querySelector("#deliveryAddress")).toBeTruthy());
+    document.querySelector<HTMLButtonElement>("#captureLocation")!.click();
+    await vi.waitFor(() => expect(document.querySelector("#locationStatus")?.textContent).toContain("18 m"));
+    expect(navigator.geolocation.getCurrentPosition).toHaveBeenCalledOnce();
   });
 });

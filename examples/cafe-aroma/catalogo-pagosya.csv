@@ -1,0 +1,10 @@
+sku;nombre;precio;categoria;stock;descripcion
+CAF-001;Café americano;15,00;Cafés;24;Grano boliviano de altura
+CAF-002;Café con leche;18,00;Cafés;18;Espresso doble con leche vaporizada
+CAF-003;Cappuccino;22,00;Cafés;15;Espresso con leche y espuma
+TE-001;Té de coca;12,00;Infusiones;20;Infusión tradicional boliviana
+FRI-001;Limonada;14,00;Bebidas frías;12;Limonada preparada al momento
+PAN-001;Croissant;10,00;Panadería;10;Croissant de mantequilla
+PAN-002;Cuñapé;8,00;Panadería;16;Cuñapé recién horneado
+COM-001;Combo desayuno;25,00;Combos;8;Café americano y croissant
+

@@ -93,10 +93,15 @@ export class SiatSoapClient {
       signal: AbortSignal.timeout(20_000),
     });
     const body = await response.text();
-    if (!response.ok) throw new SiatSoapError(`SIAT ${service}.${operation} failed with HTTP ${response.status}`);
-
     const fault = readSiatTag(body, "faultstring");
-    if (fault) throw new SiatSoapError(`SIAT SOAP fault: ${fault}`);
+    if (fault) throw new SiatSoapError(`SIAT SOAP fault (${service}.${operation}): ${fault}`, readSiatMessages(body));
+
+    if (!response.ok) {
+      const messages = readSiatMessages(body);
+      const detail = messages.map((item) => [item.codigo, item.descripcion].filter(Boolean).join(": ")).join("; ");
+      throw new SiatSoapError(`SIAT ${service}.${operation} failed with HTTP ${response.status}` + (detail ? `: ${detail}` : ""), messages);
+    }
+
     return body;
   }
 }

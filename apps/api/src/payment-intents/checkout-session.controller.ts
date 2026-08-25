@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PaymentIntent } from "@prisma/client";
 import { ClientSecretGuard } from "../auth/guards/client-secret.guard";
+import { PublishableApiKeyGuard } from "../auth/guards/publishable-api-key.guard";
 import { PaymentIntentsService } from "./payment-intents.service";
+import { CheckoutSessionDto, WidgetSessionDto } from "./dto/checkout-session.dto";
 
 /**
  * Unauthenticated-but-secret-bearing: the checkout iframe has no API key,
@@ -14,9 +16,25 @@ import { PaymentIntentsService } from "./payment-intents.service";
 export class CheckoutSessionController {
   constructor(private readonly paymentIntents: PaymentIntentsService) {}
 
-  @Get("session")
-  async getSession(@Query("client_secret") clientSecret: string) {
-    const intent = await this.paymentIntents.findByClientSecret(clientSecret);
+  @Post("session")
+  @HttpCode(200)
+  async getSession(@Body() dto: CheckoutSessionDto) {
+    const intent = await this.paymentIntents.findByClientSecret(dto.clientSecret);
+    return this.sessionResponse(intent);
+  }
+
+  /** Embedded widgets additionally prove their browser-safe key belongs to the same merchant and mode. */
+  @Post("widget_session")
+  @HttpCode(200)
+  @UseGuards(PublishableApiKeyGuard)
+  getWidgetSession(
+    @Body() _dto: WidgetSessionDto,
+    @Req() req: { paymentIntent: PaymentIntent & { merchant: { name: string } } },
+  ) {
+    return this.sessionResponse(req.paymentIntent);
+  }
+
+  private async sessionResponse(intent: PaymentIntent & { merchant: { name: string } }) {
     return {
       id: intent.id,
       amount: intent.amount,
@@ -25,6 +43,8 @@ export class CheckoutSessionController {
       description: intent.description,
       merchantName: intent.merchant.name,
       metadata: intent.metadata,
+      recipient: await this.paymentIntents.checkoutRecipient(intent),
+      trackingToken: await this.paymentIntents.trackingTokenForPaymentIntent(intent.id),
     };
   }
 

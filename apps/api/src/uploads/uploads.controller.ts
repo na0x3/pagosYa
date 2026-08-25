@@ -70,6 +70,9 @@ export class UploadsController {
 
     res.set({
       "Content-Type": this.uploads.contentTypeFor(filename),
+      "X-Content-Type-Options": "nosniff",
+      "Cross-Origin-Resource-Policy": "cross-origin",
+      "Content-Disposition": `inline; filename="${filename}"`,
       // Filenames are random UUIDs and never reused/overwritten, so a long-lived
       // immutable cache is always safe.
       "Cache-Control": "public, max-age=31536000, immutable",

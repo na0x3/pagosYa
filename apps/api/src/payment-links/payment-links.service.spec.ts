@@ -23,8 +23,11 @@ function makeService() {
         ],
       }),
       update: jest.fn().mockImplementation(({ data }) => ({ id: "link_1", ...data })),
+      updateMany: jest.fn().mockResolvedValue({ count: 2 }),
       create: jest.fn().mockImplementation(({ data }) => ({ id: `link_${data.name.toLowerCase()}`, ...data })),
     },
+    integrationConnection: { findFirst: jest.fn() },
+    integrationProductMapping: { create: jest.fn().mockImplementation(({ data }) => ({ id: `mapping_${data.externalSku}`, ...data })) },
     $executeRaw: jest.fn().mockResolvedValue(1),
   };
   Object.assign(prisma, {
@@ -32,10 +35,83 @@ function makeService() {
   });
   const uploads = { deleteFiles: jest.fn() };
   const siatCatalogs = { assertProductClassification: jest.fn() };
-  return { service: new PaymentLinksService(prisma as any, uploads as any, siatCatalogs as any), prisma, siatCatalogs };
+  const config = { get: jest.fn() };
+  return { service: new PaymentLinksService(prisma as any, uploads as any, siatCatalogs as any, config as any), prisma, siatCatalogs, config };
 }
 
 describe("PaymentLinksService legacy option stock", () => {
+  it("stores a complete timed discount campaign", async () => {
+    const { service, prisma } = makeService();
+
+    await service.create("merchant_1", "store_1", {
+      name: "Café de temporada",
+      amount: 10000,
+      discountPercent: 25,
+      discountStartsAt: "2099-08-21T14:00:00.000Z",
+      discountEndsAt: "2099-08-28T14:00:00.000Z",
+    });
+
+    expect(prisma.paymentLink.create.mock.calls[0][0].data).toEqual(expect.objectContaining({
+      discountPercent: 25,
+      discountStartsAt: new Date("2099-08-21T14:00:00.000Z"),
+      discountEndsAt: new Date("2099-08-28T14:00:00.000Z"),
+    }));
+  });
+
+  it("rejects an incomplete or backwards discount window", async () => {
+    const { service } = makeService();
+    await expect(service.create("merchant_1", "store_1", {
+      name: "Café",
+      amount: 10000,
+      discountPercent: 20,
+      discountStartsAt: "2099-08-28T14:00:00.000Z",
+      discountEndsAt: "2099-08-21T14:00:00.000Z",
+    })).rejects.toThrow("terminar después");
+  });
+
+  it("rejects a new discount that begins in the past", async () => {
+    const { service } = makeService();
+    await expect(service.create("merchant_1", "store_1", {
+      name: "Café",
+      amount: 10000,
+      discountPercent: 20,
+      discountStartsAt: "2020-01-01T12:00:00.000Z",
+      discountEndsAt: "2020-01-02T12:00:00.000Z",
+    })).rejects.toThrow("pasado");
+  });
+
+  it("schedules one campaign for several active products", async () => {
+    const { service, prisma } = makeService();
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { id: "link_1", discountPercent: 30 },
+      { id: "link_2", discountPercent: 30 },
+    ]);
+
+    const products = await service.scheduleDiscounts("merchant_1", "store_1", {
+      productIds: ["link_1", "link_2"],
+      discountPercent: 30,
+      discountStartsAt: "2099-09-01T12:00:00.000Z",
+      discountEndsAt: "2099-09-08T12:00:00.000Z",
+    });
+
+    expect(prisma.paymentLink.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: { in: ["link_1", "link_2"] }, storeId: "store_1", status: "ACTIVE" },
+      data: expect.objectContaining({ discountPercent: 30 }),
+    }));
+    expect(products).toHaveLength(2);
+  });
+
+  it("removes every discount in the merchant store", async () => {
+    const { service, prisma } = makeService();
+    prisma.paymentLink.updateMany.mockResolvedValue({ count: 4 });
+
+    await expect(service.clearDiscounts("merchant_1", "store_1")).resolves.toEqual({ count: 4 });
+    expect(prisma.paymentLink.updateMany).toHaveBeenCalledWith({
+      where: { storeId: "store_1", discountPercent: { not: null } },
+      data: { discountPercent: null, discountStartsAt: null, discountEndsAt: null },
+    });
+  });
+
   it("normalizes additive extras and preserves their required flag", async () => {
     const { service, prisma } = makeService();
 
@@ -210,13 +286,26 @@ describe("PaymentLinksService SIAT classification", () => {
     }));
   });
 
-  it("rejects incomplete fiscal mappings before persistence", async () => {
+  it("accepts a standalone SKU without requiring SIN classification", async () => {
+    const { service, prisma, siatCatalogs } = makeService();
+
+    await expect(service.create("merchant_1", "store_1", {
+      name: "Café americano",
+      amount: 1000,
+      codigoProducto: "CAF-001",
+    })).resolves.toMatchObject({ codigoProducto: "CAF-001" });
+    expect(prisma.paymentLink.create).toHaveBeenCalled();
+    expect(siatCatalogs.assertProductClassification).not.toHaveBeenCalled();
+  });
+
+  it("rejects an incomplete SIN classification even when the product has a SKU", async () => {
     const { service, prisma } = makeService();
 
     await expect(service.create("merchant_1", "store_1", {
       name: "Incomplete",
       amount: 1000,
       codigoProducto: "SKU-1",
+      actividadEconomica: "477210",
     })).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.paymentLink.create).not.toHaveBeenCalled();
   });
@@ -261,6 +350,92 @@ describe("PaymentLinksService inventory import", () => {
     ]);
     expect(result.products).toHaveLength(2);
     expect(result.categoriesCreated).toHaveLength(1);
+  });
+
+  it("stores imported SKUs and maps them to the selected stock connection atomically", async () => {
+    const { service, prisma } = makeService();
+    prisma.integrationConnection.findFirst.mockResolvedValue({ id: "integration_1", name: "Caja Café" });
+
+    const result = await service.importInventory("merchant_1", "store_1", {
+      integrationConnectionId: "integration_1",
+      products: [
+        { name: "Café americano", codigoProducto: "CAF-001", amount: 1500, stock: 24 },
+        { name: "Servicio de cata", amount: 5000, stock: null },
+      ],
+    });
+
+    expect(prisma.paymentLink.create.mock.calls[0][0].data.codigoProducto).toBe("CAF-001");
+    expect(prisma.integrationProductMapping.create).toHaveBeenCalledWith({
+      data: {
+        connectionId: "integration_1",
+        paymentLinkId: "link_café americano",
+        externalSku: "CAF-001",
+        externalName: "Café americano",
+      },
+    });
+    expect(result).toMatchObject({ mappingsCreated: 1, connection: { id: "integration_1", name: "Caja Café" } });
+  });
+
+  it("rejects repeated SKUs before opening the import transaction", async () => {
+    const { service, prisma } = makeService();
+
+    await expect(service.importInventory("merchant_1", "store_1", {
+      products: [
+        { name: "Café 1", codigoProducto: "CAF-001", amount: 1500 },
+        { name: "Café 2", codigoProducto: "CAF-001", amount: 1800 },
+      ],
+    })).rejects.toThrow("está repetido");
+    expect((prisma as any).$transaction).not.toHaveBeenCalled();
+  });
+
+  it("normalizes an arbitrary CSV through OpenAI structured output without creating products", async () => {
+    const { service, prisma, config } = makeService();
+    config.get.mockImplementation((key: string) => ({
+      "app.openAi.apiKey": "server-key",
+      "app.openAi.inventoryModel": "gpt-5.6-luna",
+    } as Record<string, string>)[key]);
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({
+        output: [{ content: [{ type: "output_text", text: JSON.stringify({
+          warnings: [],
+          products: [{
+            sourceRow: 2,
+            name: "Silpancho",
+            codigoProducto: "COM-001",
+            amount: 4550,
+            currency: "BOB",
+            categoryName: "Comida",
+            stock: 5,
+            description: null,
+            tags: [],
+            imageNames: [],
+            variants: [],
+            color: null,
+            errors: [],
+          }],
+        }) }] }],
+      }),
+    }) as unknown as typeof fetch;
+
+    try {
+      const result = await service.normalizeInventoryCsv("merchant_1", "store_1", "item,cost\nSilpancho,45.50");
+      expect(result.products).toEqual([expect.objectContaining({ name: "Silpancho", codigoProducto: "COM-001", amount: 4550 })]);
+      expect(prisma.paymentLink.create).not.toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer server-key" }),
+      }));
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it("explains when the server-side OpenAI key is not configured", async () => {
+    const { service } = makeService();
+    await expect(service.normalizeInventoryCsv("merchant_1", "store_1", "name,price\nTea,5"))
+      .rejects.toThrow("OPENAI_API_KEY");
   });
 });
 

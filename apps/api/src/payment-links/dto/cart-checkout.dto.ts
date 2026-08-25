@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsInt, IsOptional, IsPositive, IsString, Max, ValidateNested } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
 
 class CartItemDto {
   @ApiProperty()
@@ -35,4 +35,22 @@ export class CartCheckoutDto {
   @ValidateNested({ each: true })
   @Type(() => CartItemDto)
   items!: CartItemDto[];
+
+  @ApiProperty({ required: false, example: "VERANO20" })
+  @IsOptional()
+  @Transform(({ value }) => String(value ?? "").trim().toUpperCase())
+  @Matches(/^[A-Z0-9][A-Z0-9_-]{2,31}$/)
+  promoCode?: string;
+
+  @ApiProperty({ required: false, description: "Selected store branch when this storefront has multiple fulfillment locations." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(48)
+  locationId?: string;
+
+  @ApiProperty({ required: false, enum: ["pickup", "delivery"] })
+  @IsOptional()
+  @IsIn(["pickup", "delivery"])
+  fulfillmentMethod?: "pickup" | "delivery";
+
 }

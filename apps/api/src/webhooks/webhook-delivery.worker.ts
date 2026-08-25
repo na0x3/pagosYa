@@ -2,7 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 import { WebhookEventStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { signWebhookPayload } from "./webhook-signing.util";
+import { signWebhookBody } from "./webhook-signing.util";
+import { WebhookHttpClient } from "./webhook-http.client";
 
 const MAX_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 5_000;
@@ -12,7 +13,10 @@ const BACKOFF_BASE_MS = 5_000;
 export class WebhookDeliveryWorker {
   private readonly logger = new Logger(WebhookDeliveryWorker.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly http: WebhookHttpClient,
+  ) {}
 
   @Interval(3_000)
   async deliverDueEvents(): Promise<void> {
@@ -21,6 +25,7 @@ export class WebhookDeliveryWorker {
         status: { in: [WebhookEventStatus.PENDING, WebhookEventStatus.FAILED] },
         attempts: { lt: MAX_ATTEMPTS },
         OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }],
+        webhookEndpoint: { status: "ACTIVE" },
       },
       include: { webhookEndpoint: true },
       take: 25,
@@ -44,17 +49,22 @@ export class WebhookDeliveryWorker {
     id: string;
     eventType: string;
     payload: unknown;
+    createdAt: Date;
     attempts: number;
     webhookEndpoint: { url: string; secret: string };
   }): Promise<void> {
-    const signature = signWebhookPayload(event.webhookEndpoint.secret, event.payload);
+    const body = JSON.stringify({
+      id: event.id,
+      type: event.eventType,
+      createdAt: event.createdAt.toISOString(),
+      data: event.payload,
+    });
+    const signature = signWebhookBody(event.webhookEndpoint.secret, body);
 
     try {
-      const response = await fetch(event.webhookEndpoint.url, {
-        method: "POST",
-        headers: { "content-type": "application/json", "pagosya-signature": signature },
-        body: JSON.stringify({ type: event.eventType, data: event.payload }),
-        signal: AbortSignal.timeout(10_000),
+      const response = await this.http.post(event.webhookEndpoint.url, body, {
+        "content-type": "application/json",
+        "pagosya-signature": signature,
       });
 
       if (response.ok) {

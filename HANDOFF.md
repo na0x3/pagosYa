@@ -86,7 +86,7 @@ not accidental gaps.
   keys are never gated.
 - **Checkout branding belongs to the merchant, not pagosYa.** Each
   store shows its own logo/banner/background (color or photo);
-  pagosYa's own brand (amber `#ffbd59`, meerkat mark) is only used in
+  pagosYa's own brand (colorful parrot mark) is only used in
   the merchant dashboard and ops console chrome, never injected into a
   storefront.
 - **Stores/products persist in Postgres.** Merchant dashboard's login

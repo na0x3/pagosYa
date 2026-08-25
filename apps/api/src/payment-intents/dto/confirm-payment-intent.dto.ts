@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEmail, IsEnum, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsBoolean, IsEmail, IsEnum, IsNumber, IsObject, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
 import { PaymentMethodType } from "@prisma/client";
 
 export class PaymentMethodInputDto {
@@ -13,6 +13,7 @@ export class PaymentMethodInputDto {
     example: "tok_visa_success",
   })
   @IsString()
+  @MaxLength(512)
   token!: string;
 
   @ApiPropertyOptional({ type: "object", additionalProperties: true })
@@ -32,6 +33,7 @@ export class ConfirmPaymentIntentDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(160)
   customerName?: string;
 
   @ApiPropertyOptional({
@@ -39,6 +41,7 @@ export class ConfirmPaymentIntentDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(64)
   customerDocument?: string;
 
   @ApiPropertyOptional({
@@ -53,5 +56,41 @@ export class ConfirmPaymentIntentDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(40)
   customerPhone?: string;
+
+  @ApiPropertyOptional({ description: "Whether the buyer asked the merchant to arrange delivery." })
+  @IsOptional()
+  @IsBoolean()
+  deliveryRequested?: boolean;
+
+  @ApiPropertyOptional({ description: "Buyer-entered delivery address or reference." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  deliveryAddress?: string;
+
+  @ApiPropertyOptional({ description: "Latitude captured with the buyer's explicit browser permission." })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 8 })
+  @Min(-90)
+  @Max(90)
+  customerLatitude?: number;
+
+  @ApiPropertyOptional({ description: "Longitude captured with the buyer's explicit browser permission." })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 8 })
+  @Min(-180)
+  @Max(180)
+  customerLongitude?: number;
+
+  @ApiPropertyOptional({ description: "Browser-reported location accuracy in metres." })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100000)
+  customerLocationAccuracy?: number;
 }

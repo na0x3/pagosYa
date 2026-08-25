@@ -1,0 +1,3 @@
+ALTER TABLE "ApiKey"
+ADD COLUMN "label" TEXT,
+ADD COLUMN "lastFour" TEXT;

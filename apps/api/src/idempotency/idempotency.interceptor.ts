@@ -1,5 +1,6 @@
 import {
   CallHandler,
+  BadRequestException,
   ConflictException,
   ExecutionContext,
   Injectable,
@@ -12,6 +13,17 @@ import { PrismaService } from "../prisma/prisma.service";
 
 function hashRequest(method: string, path: string, body: unknown): string {
   return createHash("sha256").update(`${method}:${path}:${JSON.stringify(body ?? {})}`).digest("hex");
+}
+
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function pathWithoutQuery(request: { originalUrl?: string; url?: string }): string {
+  const raw = request.originalUrl ?? request.url ?? "/";
+  try {
+    return new URL(raw, "http://localhost").pathname;
+  } catch {
+    return raw.split("?", 1)[0];
+  }
 }
 
 /**
@@ -27,14 +39,17 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
     const rawKey = request.headers["idempotency-key"];
-    const key = Array.isArray(rawKey) ? rawKey[0] : rawKey;
+    const key = Array.isArray(rawKey) ? (rawKey.length === 1 ? rawKey[0] : undefined) : rawKey;
 
-    if (!key || !request.merchant) {
+    if (!MUTATING_METHODS.has(request.method) || !rawKey || !request.merchant) {
       return next.handle();
+    }
+    if (!key || !/^[A-Za-z0-9._:-]{8,128}$/.test(key)) {
+      throw new BadRequestException("Idempotency-Key must be 8-128 safe ASCII characters");
     }
 
     const merchantId: string = request.merchant.id;
-    const requestHash = hashRequest(request.method, request.originalUrl ?? request.url, request.body);
+    const requestHash = hashRequest(request.method, pathWithoutQuery(request), request.body);
 
     const existing = await this.prisma.idempotencyKey.findUnique({
       where: { merchantId_key: { merchantId, key } },

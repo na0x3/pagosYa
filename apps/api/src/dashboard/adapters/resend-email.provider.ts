@@ -33,6 +33,7 @@ export class ResendEmailProvider implements EmailProvider {
       to: req.to,
       subject: req.subject,
       text: req.body,
+      ...(req.replyTo ? { replyTo: req.replyTo } : {}),
     });
     if (error) {
       // Matches the rest of the app's outbox/worker pattern: log and let the

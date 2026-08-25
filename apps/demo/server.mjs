@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PagosYa } from "@pagosya/sdk-node";
+import { applySecurityHeaders, hardenHttpServer } from "../../scripts/http-security.mjs";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -89,6 +90,7 @@ function renderPage(clientSecret, checkoutOrigin) {
 }
 
 const server = createServer(async (req, res) => {
+  applySecurityHeaders(res);
   try {
     if (req.url === "/pagosya.js") {
       const js = await readFile(path.join(dirname, "..", "..", "packages", "widget-js", "dist", "pagosya.js"));
@@ -108,7 +110,7 @@ const server = createServer(async (req, res) => {
       // Stand-in for the merchant's own backend: create the PaymentIntent
       // server-side with the secret key, hand the browser only client_secret.
       const intent = await client.paymentIntents.create({ amount: 5000, description: "pagosYa demo order" });
-      res.writeHead(200, { "content-type": "text/html" });
+      res.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
       res.end(renderPage(intent.clientSecret, CHECKOUT_ORIGIN));
       return;
     }
@@ -116,9 +118,11 @@ const server = createServer(async (req, res) => {
     res.writeHead(404);
     res.end("not found");
   } catch (err) {
-    res.writeHead(500);
-    res.end(String(err));
+    console.error("Demo request failed", err);
+    res.writeHead(500, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
+    res.end("internal server error");
   }
 });
+hardenHttpServer(server);
 
 server.listen(PORT, () => console.log(`pagosYa merchant demo on http://localhost:${PORT}`));

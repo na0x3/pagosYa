@@ -26,12 +26,22 @@ export interface SiatConfig {
 }
 
 export interface AppConfig {
+  environment: string;
   port: number;
   databaseUrl: string;
   internalRailCallbackSecret: string;
   internalOpsSecret: string;
   checkoutOrigin: string;
+  consumerDashboardOrigin: string;
+  merchantDashboardOrigin: string;
+  orderTrackingSecret: string;
+  operationsEncryptionKey: string;
   corsOrigins: string[];
+  exposeDocs: boolean;
+  trustProxy: false | number | string;
+  customDomains: {
+    target: string;
+  };
   banecoQr: BanecoQrConfig;
   uploadsDir: string;
   objectStorage: {
@@ -45,11 +55,59 @@ export interface AppConfig {
   openAi: {
     apiKey: string;
     designModel: string;
+    inventoryModel: string;
     imageModel: string;
     enabled: boolean;
   };
+  google: {
+    clientId: string;
+    clientSecret: string;
+    calendarRedirectUri: string;
+  };
   email: EmailConfig;
   siat: SiatConfig;
+}
+
+function parseTrustProxy(value: string | undefined): false | number | string {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === "false" || normalized === "0") return false;
+  if (/^[1-9]\d?$/.test(normalized)) return Number(normalized);
+  if (["loopback", "linklocal", "uniquelocal"].includes(normalized)) return normalized;
+  throw new Error("TRUST_PROXY must be false, a hop count from 1-99, loopback, linklocal, or uniquelocal");
+}
+
+export function assertProductionSecurityConfig(app: AppConfig): void {
+  if (app.environment !== "production") return;
+  const failures: string[] = [];
+  const requireSecret = (name: string, value: string) => {
+    if (value.length < 32 || /change-me|example|dev-/i.test(value)) failures.push(`${name} must be a non-demo secret of at least 32 characters`);
+  };
+  const requireHttps = (name: string, value: string) => {
+    try {
+      if (new URL(value).protocol !== "https:") failures.push(`${name} must use HTTPS in production`);
+    } catch {
+      failures.push(`${name} must be a valid HTTPS origin`);
+    }
+  };
+
+  if (!app.databaseUrl) failures.push("DATABASE_URL is required");
+  requireSecret("INTERNAL_RAIL_CALLBACK_SECRET", app.internalRailCallbackSecret);
+  requireSecret("INTERNAL_OPS_SECRET", app.internalOpsSecret);
+  requireSecret("ORDER_TRACKING_SECRET", app.orderTrackingSecret);
+  requireSecret("OPERATIONS_ENCRYPTION_KEY", app.operationsEncryptionKey);
+  requireHttps("CHECKOUT_ORIGIN", app.checkoutOrigin);
+  requireHttps("CONSUMER_DASHBOARD_ORIGIN", app.consumerDashboardOrigin);
+  requireHttps("MERCHANT_DASHBOARD_ORIGIN", app.merchantDashboardOrigin);
+  requireHttps("PAGOSYA_WEB_ORIGIN", app.email.webOrigin);
+  app.corsOrigins.forEach((origin) => requireHttps("CORS origin", origin));
+
+  if (app.banecoQr.enabled) {
+    if (!app.banecoQr.username || !app.banecoQr.password || !app.banecoQr.aesKey || !app.banecoQr.creditAccount) {
+      failures.push("all Baneco credentials are required when BANECO_QR_ENABLED=true");
+    }
+    requireSecret("BANECO_WEBHOOK_SECRET", app.banecoQr.webhookSecret);
+  }
+  if (failures.length) throw new Error(`Refusing insecure production startup:\n- ${failures.join("\n- ")}`);
 }
 
 function apiRootFromCwd(): string {
@@ -58,20 +116,58 @@ function apiRootFromCwd(): string {
   return path.basename(process.cwd()) === "api" ? process.cwd() : path.join(process.cwd(), "apps", "api");
 }
 
-export default (): { app: AppConfig } => ({
-  app: {
+function parseSiatEnvCode(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? `${fallback}`, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function withLocalhostAliases(origins: string[]): string[] {
+  const expanded = new Set<string>();
+  origins.forEach((origin) => {
+    expanded.add(origin);
+    try {
+      const url = new URL(origin);
+      if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1") return;
+      url.hostname = url.hostname === "localhost" ? "127.0.0.1" : "localhost";
+      expanded.add(url.origin);
+    } catch {
+      // Invalid configured origins are retained so startup behavior remains
+      // backwards compatible; Nest simply will not match them to a request.
+    }
+  });
+  return [...expanded];
+}
+
+export default (): { app: AppConfig } => {
+  const environment = process.env.NODE_ENV ?? "development";
+  const app: AppConfig = {
+    environment,
     port: parseInt(process.env.PORT ?? "3000", 10),
     databaseUrl: process.env.DATABASE_URL ?? "",
     internalRailCallbackSecret: process.env.INTERNAL_RAIL_CALLBACK_SECRET ?? "",
     internalOpsSecret: process.env.INTERNAL_OPS_SECRET ?? "",
     checkoutOrigin: process.env.CHECKOUT_ORIGIN ?? "http://localhost:5174",
+    consumerDashboardOrigin: process.env.CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324",
+    merchantDashboardOrigin: process.env.MERCHANT_DASHBOARD_ORIGIN ?? "http://localhost:4322",
+    orderTrackingSecret: process.env.ORDER_TRACKING_SECRET ?? "development-only-order-tracking-secret-change-me",
+    operationsEncryptionKey: process.env.OPERATIONS_ENCRYPTION_KEY ?? "development-only-operations-key",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,
     // they call the API server-to-server.
-    corsOrigins: [
+    corsOrigins: withLocalhostAliases([
       process.env.CHECKOUT_ORIGIN ?? "http://localhost:5174",
+      process.env.CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324",
+      process.env.MERCHANT_DASHBOARD_ORIGIN ?? "http://localhost:4322",
       ...(process.env.ADDITIONAL_CORS_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? []),
-    ],
+    ]),
+    exposeDocs: process.env.EXPOSE_API_DOCS ? process.env.EXPOSE_API_DOCS === "true" : environment !== "production",
+    trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+    customDomains: {
+      // All verified merchant hostnames route to the same storefront app. The
+      // deployment edge must accept this target and provision TLS for the
+      // merchant hostname (for example through Cloudflare for SaaS).
+      target: process.env.CUSTOM_DOMAIN_CNAME_TARGET ?? "stores.pagosya.bo",
+    },
     // Flipping BANECO_QR_ENABLED is the only thing that swaps the QR rail
     // between MockQrRailAdapter and BanecoQrAdapter (see RailsModule) — the
     // intent this integration is a first bank and will likely be replaced.
@@ -98,8 +194,14 @@ export default (): { app: AppConfig } => ({
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",
       designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-luna",
+      inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-luna",
       imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2",
       enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
+    },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      calendarRedirectUri: process.env.GOOGLE_CALENDAR_REDIRECT_URI ?? "http://localhost:3000/v1/calendar/google/callback",
     },
     // RESEND_API_KEY is the same switch pattern as BANECO_QR_ENABLED: set it
     // to swap DashboardModule's EmailProvider from MockEmailProvider (logs to
@@ -116,9 +218,11 @@ export default (): { app: AppConfig } => ({
       baseUrl: process.env.SIAT_BASE_URL ?? "https://pilotosiatservicios.impuestos.gob.bo/v2",
       delegatedToken: process.env.SIAT_DELEGATED_TOKEN ?? "",
       systemCode: process.env.SIAT_SYSTEM_CODE ?? "",
-      environmentCode: parseInt(process.env.SIAT_ENVIRONMENT_CODE ?? "2", 10),
+      environmentCode: parseSiatEnvCode(process.env.SIAT_ENVIRONMENT_CODE, 2),
       // pagosYa is authorized for Facturacion Computarizada en Linea.
-      modalityCode: parseInt(process.env.SIAT_MODALITY_CODE ?? "2", 10),
+      modalityCode: parseSiatEnvCode(process.env.SIAT_MODALITY_CODE, 2),
     },
-  },
-});
+  };
+  assertProductionSecurityConfig(app);
+  return { app };
+};

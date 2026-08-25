@@ -15,9 +15,34 @@ export interface WebhookEndpoint {
   id: string;
   merchantId: string;
   url: string;
-  secret: string;
   enabledEvents: string[];
   status: string;
+  createdAt: string;
+}
+
+export interface CreatedWebhookEndpoint extends WebhookEndpoint {
+  /** Returned only when the endpoint is created. Store it securely. */
+  secret: string;
+}
+
+export interface ApiKeySummary {
+  id: string;
+  mode: "TEST" | "LIVE";
+  type: "SECRET" | "PUBLISHABLE";
+  label: string | null;
+  maskedKey: string;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+export interface IssuedApiKey {
+  id: string;
+  /** Returned only once; pagosYa stores only a one-way hash. */
+  fullKey: string;
+  keyPrefix: string;
+  mode: "TEST" | "LIVE";
+  type: "SECRET" | "PUBLISHABLE";
+  label: string | null;
   createdAt: string;
 }
 
@@ -68,16 +93,27 @@ export class PagosYa {
   };
 
   refunds = {
-    create: (input: CreateRefundInput, opts: { idempotencyKey?: string } = {}) =>
+    create: (input: CreateRefundInput, opts: { idempotencyKey: string }) =>
       this.http.request<Transaction>("POST", "refunds", { body: input, idempotencyKey: opts.idempotencyKey }),
   };
 
   webhookEndpoints = {
     create: (url: string, enabledEvents?: string[]) =>
-      this.http.request<WebhookEndpoint>("POST", "webhook_endpoints", { body: { url, enabledEvents } }),
+      this.http.request<CreatedWebhookEndpoint>("POST", "webhook_endpoints", { body: { url, enabledEvents } }),
 
     list: () => this.http.request<WebhookEndpoint[]>("GET", "webhook_endpoints"),
 
     remove: (id: string) => this.http.request<void>("DELETE", `webhook_endpoints/${id}`),
+  };
+
+  apiKeys = {
+    list: () => this.http.request<ApiKeySummary[]>("GET", "api_keys"),
+
+    create: (input: { type: "SECRET" | "PUBLISHABLE"; mode: "TEST" | "LIVE"; label?: string }) =>
+      this.http.request<IssuedApiKey>("POST", "api_keys", { body: input }),
+
+    rotate: (id: string) => this.http.request<IssuedApiKey>("POST", `api_keys/${id}/rotate`),
+
+    revoke: (id: string) => this.http.request<void>("DELETE", `api_keys/${id}`),
   };
 }

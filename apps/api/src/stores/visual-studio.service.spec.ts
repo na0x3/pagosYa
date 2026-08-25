@@ -43,6 +43,7 @@ const store = {
   layoutStyle: "cinematic",
   experienceStyle: "coverflow",
   motionDuoEnabled: false,
+  motionExperience: "coverflow-carousel",
   editorialGallery: [],
   buttonVariant: "solid",
   buttonMotion: "lift",
@@ -85,7 +86,12 @@ describe("VisualStudioService", () => {
   it("creates three bounded local proposals while retaining original asset URLs", async () => {
     const { service, prisma } = setup();
     const originalUrl = "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg";
-    const result = await service.generate("merchant_1", "store_1", { assetUrls: [originalUrl], businessCategory: "matcha" });
+    const result = await service.generate("merchant_1", "store_1", {
+      assetUrls: [originalUrl],
+      businessCategory: "matcha",
+      announcementMarqueeEnabled: false,
+      motionExperiences: ["hero-gallery-scroll", "stagger-testimonials"],
+    });
 
     expect(result.mode).toBe("local");
     expect(result.originalsPreserved).toBe(true);
@@ -98,6 +104,10 @@ describe("VisualStudioService", () => {
       expect(call[0].data.config).not.toHaveProperty("css");
       expect(call[0].data.config.heroSlides).toHaveLength(5);
       expect(call[0].data.config.motionDuoEnabled).toBe(true);
+      expect(call[0].data.config.motionExperience).toBe("hero-gallery-scroll");
+      expect(call[0].data.config.motionExperiences).toEqual(["hero-gallery-scroll", "stagger-testimonials"]);
+      expect(call[0].data.config.announcementMode).toBe("static");
+      expect(["#f6c84f", "#7f1d1d"]).not.toContain(call[0].data.config.backgroundColor);
     }
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.layoutStyle)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.experienceStyle))).toEqual(new Set(["coverflow", "diagonal-marquee", "story-scroller"]));
@@ -198,14 +208,14 @@ describe("VisualStudioService", () => {
       catalogSubtitle: "Explora la selección actual de MATCHO.",
       galleryTitle: "La marca en imágenes",
       gallerySubtitle: "Una mirada más cercana al universo de MATCHO.",
-      backgroundColor: "#f7f5f0",
+      backgroundColor: "#edf3f8",
       accentColor: "#274c43",
       fontStyle: "editorial",
       buttonStyle: "square",
       buttonVariant: "outline",
       buttonMotion: "none",
       cartButtonLabel: "Completar pedido",
-      contentOrder: ["hero", "about", "products", "gallery", "links"],
+      contentOrder: ["hero", "about", "products", "gallery", "motion", "links"],
       layoutStyle: "cinematic",
       experienceStyle: "coverflow",
       announcement: "MATCHO • Explora la selección actual",
@@ -223,20 +233,20 @@ describe("VisualStudioService", () => {
     });
     const directions = [
       direction("Bosque editorial"),
-      direction("Taller natural", { backgroundColor: "#f4ead7", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", experienceStyle: "story-scroller", contentOrder: ["about", "hero", "products", "links", "gallery"] }),
-      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["hero", "about", "products", "links", "gallery"] }),
+      direction("Taller natural", { backgroundColor: "#b91c1c", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", experienceStyle: "story-scroller", contentOrder: ["motion", "about", "hero", "products", "links", "gallery"] }),
+      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["products", "hero", "motion", "about", "links", "gallery"] }),
     ];
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ directions }) }] }] }) });
 
     try {
-      const result = await service.generate("merchant_1", "store_1", { assetUrls: ["/v1/uploads/11111111-1111-4111-8111-111111111111.jpg"], businessCategory: "matcha", fontStyle: "friendly" });
+      const result = await service.generate("merchant_1", "store_1", { assetUrls: ["/v1/uploads/11111111-1111-4111-8111-111111111111.jpg"], businessCategory: "matcha", fontStyle: "friendly", announcementMarqueeEnabled: false, motionExperience: "story-scroll" });
       expect(result.mode).toBe("ai");
       expect(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.title)).toEqual(directions.map((direction) => direction.title));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).toEqual(expect.objectContaining({
         tagline: "Matcha preparado para tu ritual diario",
-        announcementMode: "marquee",
-        backgroundColor: "#f7f5f0",
+        announcementMode: "static",
+        backgroundColor: "#edf3f8",
         accentColor: "#274c43",
         fontStyle: "friendly",
         buttonStyle: "square",
@@ -244,13 +254,17 @@ describe("VisualStudioService", () => {
         buttonVariant: "outline",
         buttonMotion: "none",
         cartButtonLabel: "Completar pedido",
-        contentOrder: ["hero", "about", "products", "gallery", "links"],
+        contentOrder: ["hero", "about", "products", "gallery", "animation-ai-1-1-story-scroll", "links"],
         layoutStyle: "cinematic",
         experienceStyle: "coverflow",
         motionDuoEnabled: true,
+        motionExperience: "story-scroll",
+        animations: expect.arrayContaining([expect.objectContaining({ id: "ai-1-1-story-scroll", name: "Story Scroll", type: "story-scroll" })]),
         heroSlides: expect.arrayContaining([expect.objectContaining({ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí" })]),
       }));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).not.toHaveProperty("html");
+      expect(prisma.storeVisualProposal.create.mock.calls[1][0].data.config.backgroundColor).toBe("#e8f2ef");
+      expect(prisma.storeVisualProposal.create.mock.calls[2][0].data.config.backgroundColor).toBe("#eeebf5");
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.provider).toBe("openai:gpt-5.6-luna");
     } finally {
       global.fetch = originalFetch;

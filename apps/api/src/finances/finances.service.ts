@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PaymentIntentStatus, PaymentLinkStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { createFinancesPdf, createOrdersPdf } from "../reports/finance-pdfs";
 
 type InventoryVariant = { amount: number; stock?: number | null };
+const BOLIVIA_UTC_OFFSET_MS = 4 * 60 * 60 * 1000;
+const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const;
+const PENDING_STATUSES = ["REQUIRES_PAYMENT_METHOD", "REQUIRES_CONFIRMATION", "PROCESSING"] as const;
+const ENDED_STATUSES = ["CANCELED", "FAILED"] as const;
 
 function readInventoryVariants(value: unknown): InventoryVariant[] {
   if (!Array.isArray(value)) return [];
@@ -20,11 +25,54 @@ function readInventoryVariants(value: unknown): InventoryVariant[] {
   );
 }
 
+function boliviaShifted(date: Date): Date {
+  // Bolivia is UTC-4 year-round. Shift first, then use UTC accessors so the
+  // grouping remains stable regardless of the API server's own timezone.
+  return new Date(date.getTime() - BOLIVIA_UTC_OFFSET_MS);
+}
+
+function normalizeOrderStatusFilter(value?: string): string {
+  return (value || "all").toLowerCase();
+}
+
+function isStatusVisible(status: string, statusFilter: string): boolean {
+  if (statusFilter === "all") return true;
+  if (statusFilter === "active") return status !== "REQUIRES_PAYMENT_METHOD";
+  if (statusFilter === "pending") return PENDING_STATUSES.includes(status as (typeof PENDING_STATUSES)[number]);
+  if (statusFilter === "ended") return ENDED_STATUSES.includes(status as (typeof ENDED_STATUSES)[number]);
+  return status === statusFilter;
+}
+
+function itemsLabel(value: unknown): string {
+  if (!Array.isArray(value) || value.length === 0) return "";
+  return value.map((entry) => {
+    if (!entry || typeof entry !== "object") return "Producto";
+    const item = entry as Record<string, unknown>;
+    const name = typeof item.name === "string" && item.name.trim() ? item.name : typeof item.label === "string" && item.label.trim() ? item.label : "Producto";
+    const variantName = typeof item.variantName === "string" && item.variantName.trim() ? ` (${item.variantName})` : "";
+    const rawQuantity = Number(item.quantity);
+    const quantity = Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1;
+    return `${name}${variantName} × ${quantity}`;
+  }).join(" · ");
+}
+
+function boliviaMonthWindow(now: Date) {
+  const shifted = boliviaShifted(now);
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth();
+  const day = shifted.getUTCDate();
+  const start = new Date(Date.UTC(year, month, 1) + BOLIVIA_UTC_OFFSET_MS);
+  const end = new Date(Date.UTC(year, month + 1, 1) + BOLIVIA_UTC_OFFSET_MS);
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const elapsedFraction = Math.max(1, day - 1 + (shifted.getUTCHours() + shifted.getUTCMinutes() / 60) / 24);
+  return { start, end, day, daysInMonth, elapsedFraction };
+}
+
 @Injectable()
 export class FinancesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async orders(merchantId: string, storeId?: string, search?: string, includeAll = false) {
+  async orders(merchantId: string, storeId?: string, search?: string, includeAll = false, status?: string) {
     const selectedStore = storeId
       ? await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, name: true } })
       : null;
@@ -41,6 +89,7 @@ export class FinancesService {
           ],
         }
       : {};
+    const statusFilter = normalizeOrderStatusFilter(status);
     const [payments, leads, stores] = await Promise.all([
       this.prisma.paymentIntent.findMany({
         where: {
@@ -48,6 +97,7 @@ export class FinancesService {
           ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
           ...contactSearch,
         },
+        include: { storeOrder: { select: { id: true, status: true } } },
         orderBy: { createdAt: "desc" },
         ...(includeAll ? {} : { take: 100 }),
       }),
@@ -66,6 +116,9 @@ export class FinancesService {
         ? payment.metadata as Prisma.JsonObject
         : {};
       const paymentStoreId = typeof metadata.storeId === "string" ? metadata.storeId : null;
+      const delivery = metadata.delivery && typeof metadata.delivery === "object" && !Array.isArray(metadata.delivery)
+        ? metadata.delivery as Prisma.JsonObject
+        : null;
       return {
         id: payment.id,
         kind: "PAYMENT" as const,
@@ -78,8 +131,15 @@ export class FinancesService {
         customerName: payment.customerName,
         customerEmail: payment.customerEmail,
         customerPhone: payment.customerPhone,
+        deliveryRequested: delivery?.requested === true,
+        deliveryAddress: typeof delivery?.address === "string" ? delivery.address : null,
+        customerLatitude: typeof delivery?.latitude === "number" ? delivery.latitude : null,
+        customerLongitude: typeof delivery?.longitude === "number" ? delivery.longitude : null,
+        customerLocationAccuracy: typeof delivery?.accuracyMeters === "number" ? delivery.accuracyMeters : null,
         description: payment.description,
         items: Array.isArray(metadata.cart) ? metadata.cart : [],
+        orderId: payment.storeOrder?.id ?? null,
+        fulfillmentStatus: payment.storeOrder?.status ?? null,
         createdAt: payment.createdAt,
       };
     });
@@ -95,14 +155,62 @@ export class FinancesService {
       customerName: lead.customerName,
       customerEmail: lead.customerEmail,
       customerPhone: lead.customerPhone,
+      deliveryRequested: false,
+      deliveryAddress: null,
+      customerLatitude: null,
+      customerLongitude: null,
+      customerLocationAccuracy: null,
       description: lead.message,
       items: lead.items,
+      orderId: null,
+      fulfillmentStatus: null,
       createdAt: lead.createdAt,
     }));
 
     const rows = [...paymentRows, ...leadRows]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return includeAll ? rows : rows.slice(0, 100);
+    const filtered = rows.filter((row) => isStatusVisible(row.status, statusFilter));
+    return includeAll ? filtered : filtered.slice(0, 100);
+  }
+
+  async exportOrdersPdf(merchantId: string, storeId?: string, search?: string, status?: string) {
+    const rows = await this.orders(merchantId, storeId, search, true, status);
+    return createOrdersPdf(rows.map((order) => ({
+      kind: order.kind,
+      id: order.id,
+      storeName: order.storeName,
+      createdAt: order.createdAt,
+      status: order.status,
+      paymentMethodType: order.paymentMethodType || null,
+      customerName: order.customerName || null,
+      customerEmail: order.customerEmail || null,
+      customerPhone: order.customerPhone || null,
+      description: order.description || null,
+      itemsLabel: itemsLabel((order as { items: unknown }).items),
+      amount: order.amount,
+      currency: order.currency,
+    })));
+  }
+
+  async exportFinancesPdf(merchantId: string, storeId?: string) {
+    const finances = await this.summary(merchantId, storeId);
+    return createFinancesPdf({
+      scope: finances.scope.type === "STORE"
+        ? { type: "STORE" as const, storeName: finances.scope.storeName ?? null }
+        : { type: "MERCHANT" as const },
+      currency: finances.currency || "BOB",
+      totalRevenue: finances.totalRevenue,
+      paymentCount: finances.paymentCount,
+      unattributedRevenue: finances.unattributedRevenue,
+      unattributedPaymentCount: finances.unattributedPaymentCount,
+      inventoryValue: finances.inventoryValue,
+      totalStoreViews: finances.totalStoreViews,
+      revenueByPaymentMethod: finances.revenueByPaymentMethod,
+      topProducts: finances.topProducts,
+      monthlyProjection: finances.monthlyProjection,
+      bestSalesDay: finances.bestSalesDay,
+      salesByWeekday: finances.salesByWeekday,
+    });
   }
 
   async summary(merchantId: string, storeId?: string) {
@@ -116,7 +224,13 @@ export class FinancesService {
       status: PaymentIntentStatus.SUCCEEDED,
       ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
     };
-    const [revenue, inventoryLinks, storeViews, methodTotals, productStats, unattributedRows] = await Promise.all([
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const month = boliviaMonthWindow(now);
+    const storeActivityScope = storeId
+      ? Prisma.sql`AND pi.metadata ->> 'storeId' = ${storeId}`
+      : Prisma.empty;
+    const [revenue, inventoryLinks, storeViews, methodTotals, productStats, unattributedRows, recentActivityRows] = await Promise.all([
       this.prisma.paymentIntent.aggregate({
         where: succeededWhere,
         _sum: { amount: true },
@@ -154,6 +268,23 @@ export class FinancesService {
               AND status = 'SUCCEEDED'
               AND NULLIF(metadata ->> 'storeId', '') IS NULL
           `),
+      this.prisma.$queryRaw<{ weekday: number; amount: bigint; count: bigint; monthAmount: bigint }[]>(Prisma.sql`
+        SELECT
+          EXTRACT(DOW FROM (t."createdAt" - INTERVAL '4 hours'))::int AS weekday,
+          COALESCE(SUM(t.amount), 0)::bigint AS amount,
+          COUNT(*)::bigint AS count,
+          COALESCE(SUM(t.amount) FILTER (
+            WHERE t."createdAt" >= ${month.start} AND t."createdAt" < ${month.end}
+          ), 0)::bigint AS "monthAmount"
+        FROM "Transaction" t
+        INNER JOIN "PaymentIntent" pi ON pi.id = t."paymentIntentId"
+        WHERE t.status = 'SUCCEEDED'
+          AND t."createdAt" >= ${ninetyDaysAgo}
+          AND pi."merchantId" = ${merchantId}
+          AND pi.status = 'SUCCEEDED'
+          ${storeActivityScope}
+        GROUP BY weekday
+      `),
     ]);
 
     const inventoryValue = inventoryLinks.reduce((sum, link) => {
@@ -182,6 +313,29 @@ export class FinancesService {
       }))
       .sort((a, b) => b.amount - a.amount);
     const unattributed = unattributedRows[0];
+    const monthToDateRevenue = recentActivityRows.reduce((sum, row) => sum + Number(row.monthAmount ?? 0), 0);
+    const projectedRevenue = monthToDateRevenue > 0
+      ? Math.round((monthToDateRevenue / month.elapsedFraction) * month.daysInMonth)
+      : 0;
+    const weekdayTotals = WEEKDAY_NAMES.map((name, weekday) => ({ weekday, name, amount: 0, paymentCount: 0 }));
+    recentActivityRows.forEach((row) => {
+      if (!Number.isInteger(row.weekday) || row.weekday < 0 || row.weekday > 6) return;
+      weekdayTotals[row.weekday].amount = Number(row.amount);
+      weekdayTotals[row.weekday].paymentCount = Number(row.count);
+    });
+    const totalRecentPayments = weekdayTotals.reduce((sum, row) => sum + row.paymentCount, 0);
+    const busiestWeekdays = [1, 2, 3, 4, 5, 6, 0].map((weekday) => {
+      const row = weekdayTotals[weekday];
+      return {
+        ...row,
+        sharePercent: totalRecentPayments ? Math.round((row.paymentCount / totalRecentPayments) * 100) : 0,
+        averageTicket: row.paymentCount ? Math.round(row.amount / row.paymentCount) : 0,
+      };
+    });
+    const bestSalesDay = busiestWeekdays.reduce<(typeof busiestWeekdays)[number] | null>((best, row) => {
+      if (!best || row.paymentCount > best.paymentCount || (row.paymentCount === best.paymentCount && row.amount > best.amount)) return row;
+      return best;
+    }, null);
 
     return {
       totalRevenue: revenue._sum.amount ?? 0,
@@ -192,6 +346,16 @@ export class FinancesService {
       totalStoreViews: storeViews._sum.viewCount ?? 0,
       revenueByPaymentMethod,
       topProducts,
+      monthlyProjection: {
+        monthToDateRevenue,
+        projectedRevenue,
+        elapsedDays: month.day,
+        daysInMonth: month.daysInMonth,
+        asOf: now.toISOString(),
+      },
+      salesByWeekday: busiestWeekdays,
+      bestSalesDay: bestSalesDay && bestSalesDay.paymentCount > 0 ? bestSalesDay : null,
+      salesDayWindowDays: 90,
       scope: storeId ? { type: "STORE", storeId, storeName: selectedStore?.name } : { type: "MERCHANT" },
       currency: "BOB",
     };

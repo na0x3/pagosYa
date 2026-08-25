@@ -29,6 +29,9 @@ const baseItem = {
   extras: [],
   amount: 5000,
   currency: "BOB",
+  discountPercent: null,
+  discountStartsAt: null,
+  discountEndsAt: null,
   soldCount: 0,
 };
 
@@ -68,6 +71,9 @@ const baseStoreFields = {
   promotionBody: null,
   promotionCtaLabel: null,
   promotionCtaUrl: null,
+  locationMapUrl: null,
+  locationDescription: null,
+  locationHighlight: null,
   heroSlides: [],
   links: [],
   categories: [],
@@ -86,14 +92,38 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-describe("storefront (?link=...)", () => {
+describe("storefront routes", () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     vi.restoreAllMocks();
   });
 
+  it("keeps merchant preview and owner-device loads out of storefront views", async () => {
+    const fetchStore = vi.fn().mockResolvedValue({
+      ...baseStoreFields,
+      storeName: "Tienda propia",
+      items: [baseItem],
+    } satisfies Store);
+    vi.doMock("../src/api", () => ({
+      fetchStore,
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=tienda-propia&owner=1");
+    expect(fetchStore).toHaveBeenLastCalledWith("tienda-propia", { preview: true });
+    expect(document.querySelector(".store-directory-back")).toBeNull();
+
+    await loadCheckout("/?link=tienda-propia");
+    expect(fetchStore).toHaveBeenLastCalledWith("tienda-propia", { preview: true });
+
+    await loadCheckout("/?link=cliente-externo");
+    expect(fetchStore).toHaveBeenLastCalledWith("cliente-externo", { preview: false });
+    expect(document.querySelector<HTMLAnchorElement>(".store-directory-back")?.getAttribute("href")).toBe("/stores/");
+  });
+
   it("shows a neutral empty-state, not the red failure style, for a store with no items", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -116,6 +146,44 @@ describe("storefront (?link=...)", () => {
     expect(entrance.getAttribute("aria-label")).toBe("Cargando Tienda Vacía con pagosYa");
     expect(document.querySelector(".store-entry-loader-brand")?.textContent).toBe("pagosYa");
     expect(document.querySelector<HTMLImageElement>(".store-entry-loader-logo")?.src).toContain("/logo-mark.png");
+    await vi.waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+  });
+
+  it("lets a customer choose a calendar-backed appointment slot before paying", async () => {
+    const fetchAppointmentAvailability = vi.fn().mockResolvedValue({
+      date: "2099-09-01",
+      connectedToGoogleCalendar: true,
+      offering: { id: "cut_1", name: "Corte clásico", durationMinutes: 45, bufferMinutes: 15, price: 5000, currency: "BOB", color: null },
+      slots: [{ startsAt: "2099-09-01T14:00:00.000Z", endsAt: "2099-09-01T15:00:00.000Z", label: "10:00" }],
+    });
+    const createAppointmentPayment = vi.fn().mockResolvedValue({ appointmentId: "appointment_1", clientSecret: null, checkoutUrl: null, holdExpiresAt: null, status: "CONFIRMED" });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Barbería Norte",
+        items: [],
+        appointmentOfferings: [{ id: "cut_1", name: "Corte clásico", durationMinutes: 45, bufferMinutes: 15, price: 5000, currency: "BOB", color: null }],
+      } satisfies Store),
+      fetchAppointmentAvailability,
+      createAppointmentPayment,
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=barberia-norte");
+    await vi.waitFor(() => expect(document.querySelectorAll("[data-appointment-slot]")).toHaveLength(1));
+    expect(document.querySelector("#store-appointment-calendar-status")?.textContent).toContain("Google Calendar");
+    document.querySelector<HTMLButtonElement>("[data-appointment-slot]")!.click();
+    const form = document.querySelector<HTMLFormElement>("#store-appointment-form")!;
+    (form.elements.namedItem("customerName") as HTMLInputElement).value = "Juan Pérez";
+    (form.elements.namedItem("customerEmail") as HTMLInputElement).value = "juan@example.com";
+    form.requestSubmit();
+
+    await vi.waitFor(() => expect(createAppointmentPayment).toHaveBeenCalledWith("barberia-norte", expect.objectContaining({
+      offeringId: "cut_1",
+      customerName: "Juan Pérez",
+      customerEmail: "juan@example.com",
+      startsAt: "2099-09-01T14:00:00.000Z",
+    })));
   });
 
   it("renders a flat solid canvas even for legacy stores that saved a gradient", async () => {
@@ -150,6 +218,9 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=a11x43lp");
 
+    const directoryLink = document.querySelector<HTMLAnchorElement>(".store-directory-back");
+    expect(directoryLink?.getAttribute("href")).toBe("/stores/");
+    expect(directoryLink?.textContent).toContain("Volver a Mi Tienda");
     expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
     expect(document.querySelector(".store-item-price")?.textContent).toBe("50.00 BOB");
 
@@ -164,6 +235,33 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".cart-summary")?.textContent).toContain("50.00 BOB");
   });
 
+  it("highlights an active timed discount and uses the lower price in the cart", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Café Norte",
+        items: [{
+          ...baseItem,
+          name: "Café Geisha",
+          discountPercent: 25,
+          discountStartsAt: "2000-01-01T00:00:00.000Z",
+          discountEndsAt: "2100-01-01T00:00:00.000Z",
+        }],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=cafe-norte");
+
+    expect(document.querySelector(".product-sale-badge")?.textContent).toContain("25% OFF");
+    expect(document.querySelector(".product-sale-badge")?.getAttribute("aria-label")).toBe("25% de descuento activo");
+    expect(document.querySelector(".store-item-price del")?.textContent).toBe("50.00 BOB");
+    expect(document.querySelector(".store-item-price")?.textContent).toContain("37.50 BOB");
+    expect(document.querySelector(".store-item-price")?.textContent).toContain("50.00 BOB");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    expect(document.querySelector(".cart-summary")?.textContent).toContain("37.50 BOB");
+  });
+
   it("opens a product's own shareable page from its catalog card and returns to the store", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     vi.doMock("../src/api", () => ({
@@ -176,20 +274,47 @@ describe("storefront (?link=...)", () => {
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=taller-norte");
+    await loadCheckout("/s/taller-norte");
     const productLink = document.querySelector<HTMLAnchorElement>(".store-item-name")!;
-    expect(productLink.href).toContain("product=link_1");
+    expect(productLink.pathname).toBe("/s/taller-norte/p/link_1");
     Object.defineProperty(window, "scrollY", { configurable: true, value: 684 });
-    document.querySelector<HTMLElement>(".store-item-info")!.click();
-    expect(new URLSearchParams(window.location.search).get("product")).toBe("link_1");
-    expect(document.querySelector(".store-announcement")?.textContent).toContain("ENVÍOS A TODO EL PAÍS");
+    productLink.focus();
+    expect(document.activeElement).toBe(productLink);
+    productLink.click();
+    expect(window.location.pathname).toBe("/s/taller-norte/p/link_1");
+    expect(document.querySelector(".store-announcement")).toBeNull();
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
     expect(document.querySelector(".product-detail-description")?.textContent).toBe("Incluye lavado y peinado");
 
     document.querySelector<HTMLAnchorElement>(".product-back-link")!.click();
-    await vi.waitFor(() => expect(new URLSearchParams(window.location.search).get("product")).toBeNull());
+    await vi.waitFor(() => expect(window.location.pathname).toBe("/s/taller-norte"));
     await vi.waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 684));
     expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
+    expect(document.querySelector(".store-announcement")).toBeNull();
+  });
+
+  it("resolves a verified custom hostname at the root and keeps product URLs on that domain", async () => {
+    const resolveStoreDomain = vi.fn().mockResolvedValue({ hostname: "mitienda.bo", slug: "taller-norte" });
+    const fetchStore = vi.fn().mockResolvedValue({
+      ...baseStoreFields,
+      storeName: "Taller Norte",
+      items: [baseItem],
+    } satisfies Store);
+    vi.doMock("../src/api", () => ({
+      resolveStoreDomain,
+      fetchStore,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/");
+
+    expect(resolveStoreDomain).toHaveBeenCalledWith(window.location.hostname);
+    expect(fetchStore).toHaveBeenCalledWith("taller-norte", { preview: false });
+    const productLink = document.querySelector<HTMLAnchorElement>(".store-item-name")!;
+    expect(productLink.pathname).toBe("/p/link_1");
+    productLink.click();
+    expect(window.location.pathname).toBe("/p/link_1");
+    expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
   });
 
   it("renders multiple photos and selectable product types on a direct product URL", async () => {
@@ -211,7 +336,7 @@ describe("storefront (?link=...)", () => {
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=taller-norte&product=link_1");
+    await loadCheckout("/s/taller-norte/p/link_1");
 
     expect(document.querySelectorAll(".product-detail-thumbnail")).toHaveLength(2);
     expect(document.querySelectorAll(".product-detail-option")).toHaveLength(2);
@@ -263,7 +388,11 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".store-editorial-item figcaption p")?.textContent).toContain("relato más amplio");
     const slides = document.querySelectorAll<HTMLElement>(".store-slide");
     expect(slides[0].classList.contains("active")).toBe(true);
-    expect(slides[0].querySelector<HTMLImageElement>("img")?.style.objectPosition).toBe("17% 81%");
+    const firstHeroImage = slides[0].querySelector<HTMLImageElement>(".store-fidelity-media-source");
+    expect(firstHeroImage?.style.objectPosition).toBe("17% 81%");
+    expect(firstHeroImage?.getAttribute("fetchpriority")).toBe("high");
+    expect(slides[0].querySelector<HTMLImageElement>(".store-fidelity-media-backdrop")?.getAttribute("aria-hidden")).toBe("true");
+    expect(slides[1].querySelector<HTMLImageElement>(".store-fidelity-media-source")?.getAttribute("loading")).toBe("lazy");
     expect(document.querySelector<HTMLImageElement>(".store-editorial-item img")?.style.objectPosition).toBe("17% 81%");
     expect(document.querySelector(".store-slide-cta")?.textContent).toBe("Explorar");
     expect(slides[1].querySelector<HTMLButtonElement>(".store-slide-cta")?.tabIndex).toBe(-1);
@@ -372,6 +501,39 @@ describe("storefront (?link=...)", () => {
       { paymentLinkId: "link_1", variantId: "var_small", quantity: 1 },
       { paymentLinkId: "link_1", variantId: "var_large", quantity: 1 },
     ]);
+  });
+
+  it("quotes a promo code, shows the reduced total, and submits the code with checkout", async () => {
+    const checkoutCart = vi.fn().mockResolvedValue({
+      clientSecret: "pi_promo_secret_x",
+      storeName: "Café Norte",
+      cartDescription: "Café x1",
+      contactPhone: null,
+      contactEmail: null,
+    });
+    const quotePromoCode = vi.fn().mockResolvedValue({ code: "VERANO20", discountType: "PERCENT", discountValue: 20 });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({ ...baseStoreFields, storeName: "Café Norte", items: [baseItem] } satisfies Store),
+      quotePromoCode,
+      checkoutCart,
+      fetchSession: vi.fn().mockResolvedValue({
+        id: "pi_promo", amount: 4000, currency: "BOB", status: "REQUIRES_PAYMENT_METHOD", description: null, merchantName: "Café Norte",
+      }),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=cafe-norte");
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    const input = document.querySelector<HTMLInputElement>("#promo-code-input")!;
+    input.value = "verano20";
+    document.querySelector<HTMLFormElement>("#promo-code-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => expect(document.querySelector(".cart-review-discount")?.textContent).toContain("10.00 BOB"));
+    expect(document.querySelector(".cart-review-total")?.textContent).toContain("40.00 BOB");
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
+    await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalled());
+    expect(checkoutCart).toHaveBeenCalledWith("cafe-norte", [{ paymentLinkId: "link_1", quantity: 1 }], "VERANO20");
   });
 
   it("blocks adding until required choices are selected and prices chosen extras", async () => {
@@ -604,7 +766,9 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".store-announcement.marquee")).toBeTruthy();
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("12s");
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("--announcement-bg:#f5d90a");
-    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-large")).toBe(true);
+    // Legacy/proposal values cannot enlarge the top band: storefront
+    // announcements are intentionally compact everywhere.
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-small")).toBe(true);
     expect(document.querySelectorAll(".store-announcement-sequence")).toHaveLength(2);
     expect(document.querySelectorAll(".store-announcement-phrase")).toHaveLength(4);
     expect(document.querySelector(".store-announcement-a11y")?.textContent).toBe("Envío gratis hoy • Compra local");
@@ -615,9 +779,14 @@ describe("storefront (?link=...)", () => {
     expect(document.body.dataset.buttonMotion).toBe("pulse");
     expect(document.querySelector("#cart-pay")?.textContent).toBe("Completar pedido");
 
+    const promotionBackdrop = document.querySelector<HTMLElement>("[data-promotion-backdrop]")!;
     document.querySelector<HTMLButtonElement>(".promotion-close")!.click();
+    expect(promotionBackdrop.classList.contains("is-closing")).toBe(true);
+    promotionBackdrop.dispatchEvent(new Event("animationend"));
     expect(document.querySelector(".promotion-dialog")).toBeNull();
-    expect(sessionStorage.getItem("pagosya_promotion_dismissed_store_1")).toBe("1");
+    expect(Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).some((key) => key?.startsWith("pagosya_store_promotion_seen_store_1_"))).toBe(true);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    expect(document.querySelector(".promotion-dialog")).toBeNull();
   });
 
   it("applies promotional settings sent by the merchant live preview", async () => {
@@ -663,6 +832,203 @@ describe("storefront (?link=...)", () => {
     expect(document.body.dataset.buttonVariant).toBe("soft");
     expect(document.body.dataset.buttonMotion).toBe("pulse");
     expect(document.querySelector("#cart-pay")?.textContent).toBe("Completar pedido");
+  });
+
+  it("enlarges a preview logo when the store name is blank and reveals the edited section", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Nombre publicado",
+        logoUrl: "/published-logo.webp",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+    const previewScrollTo = vi.fn();
+    Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
+
+    await loadCheckout("/?link=preview-store&preview=1");
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "brand",
+          patch: { storeName: "", logoUrl: "/draft-logo.webp" },
+        },
+      }),
+    );
+
+    const header = document.querySelector(".merchant-header");
+    expect(header?.classList.contains("has-prominent-logo")).toBe(true);
+    expect(header?.classList.contains("is-logo-only")).toBe(true);
+    expect(document.querySelector(".store-title")).toBeNull();
+    expect(document.querySelector(".merchant-header-logo")?.getAttribute("alt")).toBe("Logo de la tienda");
+    expect(document.querySelector(".store-catalog-heading p")?.textContent).toBe("Explora nuestra selección.");
+    await vi.waitFor(() => expect(previewScrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" })));
+  });
+
+  it("opens and updates the cart when the merchant edits a cart control", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Vista previa",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+    const previewScrollTo = vi.fn();
+    Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
+
+    await loadCheckout("/?link=preview-store&preview=1");
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "products",
+          previewAction: "cart",
+          patch: { cartButtonLabel: "Finalizar pedido" },
+        },
+      }),
+    );
+
+    const dialog = document.querySelector<HTMLDialogElement>(".cart-review-dialog");
+    expect(dialog?.open).toBe(true);
+    expect(dialog?.classList.contains("is-preview-open")).toBe(true);
+    expect(dialog?.querySelector("#cart-confirm")?.textContent).toBe("Finalizar pedido");
+    expect(document.activeElement).not.toBe(dialog?.querySelector(".cart-review-close"));
+
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "products",
+          previewAction: "cart",
+          patch: { cartButtonLabel: "Comprar ahora", checkoutMode: "whatsapp" },
+        },
+      }),
+    );
+    expect(document.querySelectorAll(".cart-review-dialog")).toHaveLength(1);
+    expect(dialog?.querySelector("#cart-confirm")?.textContent).toBe("Comprar ahora");
+    expect(dialog?.querySelector(".cart-review-head")?.textContent).toContain("WhatsApp");
+
+    previewScrollTo.mockClear();
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "brand",
+          previewAction: "scroll",
+          patch: { tagline: "Nueva presentación" },
+        },
+      }),
+    );
+    expect(document.querySelector(".cart-review-dialog")).toBeNull();
+    await vi.waitFor(() => expect(previewScrollTo).toHaveBeenCalled());
+  });
+
+  it("opens the exact product detail and previews its draft description", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Vista previa",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+    const previewScrollTo = vi.fn();
+    Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
+
+    await loadCheckout("/?link=preview-store&preview=1");
+    previewScrollTo.mockClear();
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "products",
+          previewAction: "product",
+          patch: {},
+          previewProduct: {
+            ...baseItem,
+            name: "Corte editorial",
+            description: "La descripción que el comercio está escribiendo.",
+            amount: 7250,
+          },
+        },
+      }),
+    );
+
+    expect(document.body.classList.contains("product-detail-page")).toBe(true);
+    expect(document.querySelector(".product-detail-content h1")?.textContent).toBe("Corte editorial");
+    expect(document.querySelector(".product-detail-description")?.textContent).toBe("La descripción que el comercio está escribiendo.");
+    expect(document.querySelector(".product-detail-price")?.textContent).toContain("72.50");
+    await vi.waitFor(() => expect(previewScrollTo).toHaveBeenCalledWith({ top: 0, behavior: "auto" }));
+  });
+
+  it("targets the matching animated story when an editorial field is touched", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Vista previa",
+        experienceStyle: "story-scroller",
+        motionDuoEnabled: true,
+        motionExperience: "story-scroll",
+        heroSlides: [
+          { imageUrl: "/hero-1.webp", title: "Primera portada" },
+          { imageUrl: "/hero-2.webp", title: "Segunda portada" },
+        ],
+        editorialGallery: [
+          { imageUrl: "/story-1.webp", title: "Primera", body: "Uno" },
+          { imageUrl: "/story-2.webp", title: "Segunda", body: "Dos" },
+          { imageUrl: "/story-3.webp", title: "Tercera", body: "Tres" },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+    const previewScrollTo = vi.fn();
+    Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
+    Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, value: 3200 });
+
+    await loadCheckout("/?link=preview-store&preview=1");
+    previewScrollTo.mockClear();
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "hero",
+          previewAction: "hero-item",
+          previewTargetIndex: 1,
+          patch: {},
+        },
+      }),
+    );
+    await vi.waitFor(() => expect(document.querySelectorAll(".store-carousel-dots [data-slide-to]")[1]?.getAttribute("aria-current")).toBe("true"));
+
+    previewScrollTo.mockClear();
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: window,
+        data: {
+          type: "PAGOSYA_STORE_PREVIEW",
+          previewSection: "gallery",
+          previewAction: "editorial-item",
+          previewTargetIndex: 1,
+          previewTargetKind: "text",
+          patch: {},
+        },
+      }),
+    );
+    const target = document.querySelectorAll<HTMLElement>(".store-flow-section")[1];
+    vi.spyOn(target, "getBoundingClientRect").mockReturnValue({ x: 0, y: 900, top: 900, right: 500, bottom: 1200, left: 0, width: 500, height: 300, toJSON: () => ({}) });
+
+    await vi.waitFor(() => expect(previewScrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: expect.any(Number) })));
+    expect(previewScrollTo.mock.calls.at(-1)?.[0].top).toBeGreaterThan(0);
   });
 
   it("renders a standalone AI proposal preview from the URL without publishing it", async () => {
@@ -761,7 +1127,7 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".secure-note")?.textContent).toContain("WhatsApp");
   });
 
-  it("collects an interested customer's contact details and sends them without charging", async () => {
+  it("asks for an interested customer's email only at checkout and sends it without charging", async () => {
     const checkoutCart = vi.fn();
     const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
     vi.doMock("../src/api", () => ({
@@ -778,28 +1144,151 @@ describe("storefront (?link=...)", () => {
     }));
 
     await loadCheckout("/?link=estudio-leads");
-    expect(document.querySelector("#early-lead-title")?.textContent).toContain("Déjanos tu correo");
-    const earlyForm = document.querySelector<HTMLFormElement>("#early-lead-form")!;
-    earlyForm.querySelector<HTMLInputElement>("#early-lead-email")!.value = "maria@gmail.com";
-    earlyForm.requestSubmit();
-    expect(earlyForm.querySelector(".early-lead-status")?.textContent).toContain("maria@gmail.com");
+    expect(document.querySelector("#early-lead-form")).toBeFalsy();
+    expect(document.querySelector("#lead-email")).toBeFalsy();
     document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
     document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
 
     expect(document.querySelector(".cart-review-head")?.textContent).toContain("pagosYa no procesará un cobro");
     const form = document.querySelector<HTMLFormElement>("#store-lead-form")!;
-    form.querySelector<HTMLInputElement>("#lead-name")!.value = "María Pérez";
-    expect(form.querySelector<HTMLInputElement>("#lead-email")!.value).toBe("maria@gmail.com");
-    form.querySelector<HTMLInputElement>("#lead-phone")!.value = "+591 71234567";
+    expect(form.querySelector("#lead-name")).toBeFalsy();
+    expect(form.querySelector("#lead-phone")).toBeFalsy();
+    expect(form.querySelector("#lead-message")).toBeFalsy();
+    form.querySelector<HTMLInputElement>("#lead-email")!.value = "maria@gmail.com";
     form.requestSubmit();
 
     expect(checkoutCart).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(submitStoreLead).toHaveBeenCalledWith(
       "estudio-leads",
-      expect.objectContaining({ name: "María Pérez", email: "maria@gmail.com", phone: "+591 71234567" }),
+      { email: "maria@gmail.com" },
       [{ paymentLinkId: "link_1", quantity: 1 }],
     ));
     expect(document.querySelector(".lead-capture-success")?.textContent).toContain("La tienda ya recibió tu solicitud");
+  });
+
+  it("renders an optional contact section and sends its message independently of checkout mode", async () => {
+    const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller abierto",
+        checkoutMode: "whatsapp",
+        contactFormEnabled: true,
+        contentOrder: ["hero", "products", "about", "gallery", "contact", "links"],
+        items: [baseItem],
+      } satisfies Store),
+      submitStoreLead,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=taller-contacto");
+    const form = document.querySelector<HTMLFormElement>("#store-contact-form")!;
+    expect(form).toBeTruthy();
+    form.querySelector<HTMLInputElement>("#store-contact-name")!.value = "Ana";
+    form.querySelector<HTMLInputElement>("#store-contact-email")!.value = "ana@gmail.com";
+    form.querySelector<HTMLTextAreaElement>("#store-contact-message")!.value = "¿Abren los sábados?";
+    form.requestSubmit();
+
+    await vi.waitFor(() => expect(submitStoreLead).toHaveBeenCalledWith(
+      "taller-contacto",
+      { name: "Ana", email: "ana@gmail.com", message: "¿Abren los sábados?" },
+      [],
+    ));
+    expect(form.querySelector(".store-contact-status")?.textContent).toContain("Pregunta enviada");
+  });
+
+  it("renders a safe location map, highlighted reference, and description near the bottom", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Norte",
+        locationMapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-68.2%2C-16.6%2C-68.1%2C-16.4",
+        locationHighlight: "A media cuadra de la plaza",
+        locationDescription: "Atendemos de lunes a sábado. <img src=x onerror=alert(1)>",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=taller-norte");
+
+    const location = document.querySelector<HTMLElement>(".store-location-section")!;
+    const iframe = location.querySelector<HTMLIFrameElement>("iframe")!;
+    expect(location.querySelector("h2")?.textContent).toBe("Visítanos");
+    expect(location.querySelector("mark")?.textContent).toBe("A media cuadra de la plaza");
+    expect(location.querySelector(".store-location-description")?.textContent).toContain("<img src=x onerror=alert(1)>");
+    expect(location.querySelector("img")).toBeNull();
+    expect(iframe.getAttribute("src")).toContain("openstreetmap.org/export/embed.html");
+    expect(iframe.getAttribute("sandbox")).toContain("allow-scripts");
+    expect(location.compareDocumentPosition(document.querySelector(".secure-note")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("does not embed an untrusted location URL", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Seguro",
+        locationMapUrl: "https://maps.google.evil.com/maps/embed?pb=tracking",
+        locationDescription: "Encuéntranos junto al mercado.",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=taller-seguro");
+
+    expect(document.querySelector(".store-location-section")).toBeTruthy();
+    expect(document.querySelector(".store-location-map")).toBeNull();
+    expect(document.querySelector(".store-location-link")).toBeNull();
+  });
+
+  it("reveals multiple locations and checks branch stock before checkout", async () => {
+    const checkoutCart = vi.fn().mockResolvedValue({
+      clientSecret: "pi_multi_secret_x",
+      trackingToken: "track_multi",
+      storeName: "Cocina Norte",
+      cartDescription: "Corte x1",
+      contactPhone: null,
+      contactEmail: null,
+      fulfillmentLocationName: "Sucursal Centro",
+      fulfillmentMethod: "delivery",
+    });
+    const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/La_Paz", weekday: "short" }).format(new Date());
+    const dayIndex = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[weekday as "Sun"] ?? 0;
+    const openingHours = Array.from({ length: 7 }, (_, day) => ({ day, open: "09:00", close: "18:00", closed: day !== (dayIndex + 1) % 7 }));
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Cocina Norte",
+        locations: [
+          { id: "centro", name: "Sucursal Centro", address: "Av. Arce 123", pickupEnabled: true, deliveryEnabled: true, openingHours, inventory: [{ paymentLinkId: "link_1", stock: 4 }] },
+          { id: "sur", name: "Sucursal Sur", address: "Calle 8", pickupEnabled: true, deliveryEnabled: true, openingHours, inventory: [{ paymentLinkId: "link_1", stock: 0 }] },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      checkoutCart,
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=cocina-norte");
+    const locationsToggle = document.querySelector<HTMLButtonElement>(".store-locations-toggle")!;
+    expect(locationsToggle.textContent).toContain("Ver ubicaciones");
+    locationsToggle.click();
+    expect(document.querySelector("#store-locations-list")?.hasAttribute("hidden")).toBe(false);
+
+    document.querySelector<HTMLButtonElement>(".qty-plus")!.click();
+    document.querySelector<HTMLButtonElement>("#cart-pay")!.click();
+    expect(document.querySelector(".cart-fulfillment")?.textContent).toContain("Solo mostramos ubicaciones con stock");
+    expect(document.querySelector<HTMLInputElement>('input[name="fulfillmentLocation"][value="sur"]')?.disabled).toBe(true);
+    document.querySelector<HTMLInputElement>('input[name="fulfillmentMethod"][value="delivery"]')!.click();
+    document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
+
+    await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalledWith(
+      "cocina-norte",
+      [{ paymentLinkId: "link_1", quantity: 1 }],
+      undefined,
+      { locationId: "centro", fulfillmentMethod: "delivery" },
+    ));
   });
 
   it("confirms a zero-priced order by contact form instead of opening payment", async () => {
@@ -902,15 +1391,15 @@ describe("storefront (?link=...)", () => {
     expect(checkoutCart).toHaveBeenCalledTimes(2);
   });
 
-  it("groups products under category section headers, with uncategorized ones under 'Otros'", async () => {
+  it("shows image-led section choices before disclosing categorized products", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con categorías",
         categories: [{ id: "cat_1", name: "Servicios" }],
         items: [
-          { ...baseItem, id: "link_1", name: "Corte de cabello", categoryId: "cat_1" },
-          { ...baseItem, id: "link_2", name: "Manicure sin categoría", categoryId: null },
+          { ...baseItem, id: "link_1", name: "Corte de cabello", categoryId: "cat_1", imageUrls: ["/servicios.webp"] },
+          { ...baseItem, id: "link_2", name: "Manicure sin categoría", categoryId: null, imageUrls: ["/otros.webp"] },
         ],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
@@ -918,10 +1407,17 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=multi-cat");
 
-    const titles = [...document.querySelectorAll(".category-section-title")].map((el) => el.textContent);
-    expect(titles).toEqual(["Servicios", "Otros"]);
+    const sections = [...document.querySelectorAll<HTMLButtonElement>(".catalog-section-card")];
+    expect(sections.map((section) => section.querySelector("strong")?.textContent)).toEqual(["Servicios", "Otros"]);
+    expect(sections.map((section) => section.querySelector("img")?.getAttribute("src"))).toEqual(["/servicios.webp", "/otros.webp"]);
+    expect(document.querySelector(".store-toolbar")).toBeFalsy();
+    expect(document.querySelectorAll(".store-item")).toHaveLength(0);
+
+    sections[0].click();
+
+    expect(document.querySelector(".store-toolbar")).toBeTruthy();
     expect(document.body.textContent).toContain("Corte de cabello");
-    expect(document.body.textContent).toContain("Manicure sin categoría");
+    expect(document.body.textContent).not.toContain("Manicure sin categoría");
   });
 
   it("renders no section headers at all when the store has no categories", async () => {
@@ -1167,6 +1663,8 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=big-catalog");
 
+    document.querySelector<HTMLButtonElement>('[data-catalog-section="cat_1"]')!.click();
+    expect(document.querySelector(".catalog-section-banner.is-placeholder")).toBeTruthy();
     const search = document.querySelector<HTMLInputElement>(".store-search")!;
     search.focus();
     search.value = "manicure";
@@ -1192,6 +1690,7 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=big-catalog-2");
 
+    document.querySelector<HTMLButtonElement>('[data-catalog-section="cat_1"]')!.click();
     const search = document.querySelector<HTMLInputElement>(".store-search")!;
     search.value = "algo que no existe";
     search.dispatchEvent(new Event("input"));
@@ -1199,7 +1698,7 @@ describe("storefront (?link=...)", () => {
     expect(document.querySelector(".status.empty")?.textContent).toContain("No encontramos productos");
   });
 
-  it("filters to one category's products when its chip is clicked", async () => {
+  it("opens one section's products and browsing tools when its picture is touched", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -1209,8 +1708,8 @@ describe("storefront (?link=...)", () => {
           { id: "cat_2", name: "Manicure" },
         ],
         items: [
-          { ...baseItem, id: "link_1", name: "Corte clásico", categoryId: "cat_1" },
-          { ...baseItem, id: "link_2", name: "Manicure básico", categoryId: "cat_2" },
+          { ...baseItem, id: "link_1", name: "Corte clásico", categoryId: "cat_1", imageUrls: ["/cortes.webp"] },
+          { ...baseItem, id: "link_2", name: "Manicure básico", categoryId: "cat_2", imageUrls: ["/manicure.webp"] },
         ],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
@@ -1218,13 +1717,21 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=chips");
 
-    const chips = [...document.querySelectorAll<HTMLButtonElement>(".category-chip-filter")];
-    const manicureChip = chips.find((c) => c.textContent === "Manicure")!;
-    manicureChip.click();
+    expect(document.querySelectorAll(".catalog-section-card")).toHaveLength(2);
+    expect(document.querySelector(".store-search")).toBeFalsy();
+    document.querySelector<HTMLButtonElement>('[data-catalog-section="cat_2"]')!.click();
 
-    expect(manicureChip.classList.contains("active")).toBe(true);
+    expect(document.querySelector(".store-search")).toBeTruthy();
+    expect(document.querySelector(".store-sort")).toBeTruthy();
+    expect(document.querySelector(".catalog-section-banner h3")?.textContent).toBe("Manicure");
+    expect(document.querySelector<HTMLImageElement>(".catalog-section-banner > img")?.getAttribute("src")).toBe("/manicure.webp");
+    expect(document.querySelector(".store-catalog-browser")?.firstElementChild?.classList.contains("catalog-section-banner")).toBe(true);
     const names = [...document.querySelectorAll(".store-item-name")].map((el) => el.textContent);
     expect(names).toEqual(["Manicure básico"]);
+
+    document.querySelector<HTMLButtonElement>(".catalog-section-back")!.click();
+    expect(document.querySelectorAll(".catalog-section-card")).toHaveLength(2);
+    expect(document.querySelector(".store-search")).toBeFalsy();
   });
 
   it("shows the announcement bar, brand links, and brand story when the store sets them", async () => {
@@ -1285,17 +1792,24 @@ describe("storefront (?link=...)", () => {
     expect(story?.style.getPropertyValue("--store-about-image")).toContain("/v1/uploads/historia.webp");
   });
 
-  it("keeps brand content before the catalog and editorial content after it", async () => {
+  it("respects the merchant's free section order, including animation", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller seguro",
         aboutText: "Nuestra historia va después de las fotos.",
-        contentOrder: ["gallery", "hero", "links", "products", "about"],
+        contentOrder: ["motion", "gallery", "hero", "links", "products", "about"],
+        motionDuoEnabled: true,
+        motionExperience: "coverflow-carousel",
         editorialGallery: [
           {
             imageUrl: "/v1/uploads/taller.webp",
             caption: '<img id="injected-caption" src=x onerror="alert(1)"> Hecho a mano',
+            boxColor: "#f4ead7",
+          },
+          {
+            imageUrl: "/v1/uploads/detalle.webp",
+            caption: "Detalle del proceso",
             boxColor: "#f4ead7",
           },
         ],
@@ -1309,11 +1823,13 @@ describe("storefront (?link=...)", () => {
     const gallery = document.querySelector(".store-editorial-gallery")!;
     const products = document.querySelector(".store-products")!;
     const story = document.querySelector(".store-about")!;
-    expect(story.compareDocumentPosition(products) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(products.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const motion = document.querySelector(".store-motion-section")!;
+    expect(motion.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(gallery.compareDocumentPosition(products) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(products.compareDocumentPosition(story) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.querySelector("#injected-caption")).toBeNull();
     expect(document.querySelector(".store-editorial-item figcaption")?.textContent).toContain("<img");
-    const editorialCard = document.querySelector<HTMLElement>(".store-editorial-item")!;
+    const editorialCard = document.querySelector<HTMLElement>(".store-editorial-gallery .store-editorial-item")!;
     expect(editorialCard.style.getPropertyValue("--store-editorial-card-bg")).toBe("#f4ead7");
     expect(editorialCard.style.getPropertyValue("--store-editorial-card-ink")).toBe("#000000");
   });
@@ -1354,7 +1870,7 @@ describe("storefront (?link=...)", () => {
     }
   });
 
-  it("renders both opt-in story and zoom animations from merchant media", async () => {
+  it("renders the default opt-in coverflow animation as its own ordered section", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -1363,6 +1879,7 @@ describe("storefront (?link=...)", () => {
         editorialGallery: [
           { imageUrl: "/v1/uploads/uno.webp", title: "Origen", caption: "Primer plano", body: "La primera parte del relato real de la tienda." },
           { imageUrl: "/v1/uploads/dos.webp", title: "Proceso", caption: "Segundo plano", body: "La segunda parte amplía el contexto del comercio." },
+          { imageUrl: "/v1/uploads/tres.webp", title: "Detalle", caption: "Tercer plano", body: "La tercera parte completa la historia visual del comercio." },
         ],
         items: [baseItem],
       } satisfies Store),
@@ -1371,10 +1888,120 @@ describe("storefront (?link=...)", () => {
 
     await loadCheckout("/?link=motion-duo");
 
-    expect(document.querySelector("[data-motion-flow]")).not.toBeNull();
-    expect(document.querySelectorAll(".store-flow-section")).toHaveLength(2);
-    expect(document.querySelector("[data-motion-zoom]")).not.toBeNull();
-    expect(document.querySelectorAll(".store-zoom-layer")).toHaveLength(2);
+    expect(document.querySelector(".store-motion-section[data-motion-experience='coverflow-carousel']")).not.toBeNull();
+    expect(document.querySelectorAll(".store-motion-coverflow [data-coverflow-index]")).toHaveLength(3);
+  });
+
+  it.each([
+    ["story-scroll", "[data-motion-flow]"],
+    ["coverflow-carousel", ".store-motion-coverflow"],
+    ["hero-carousel", "[data-motion-hero]"],
+    ["image-stream", "[data-image-stream]"],
+    ["scroll-expansion", "[data-scroll-expansion]"],
+    ["hero-gallery-scroll", "[data-gallery-scroll]"],
+    ["stagger-testimonials", "[data-testimonials]"],
+    ["zoom-parallax", "[data-motion-zoom]"],
+  ] as const)("renders only the selected %s motion experience", async (motionExperience, selector) => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con movimiento elegido",
+        motionDuoEnabled: true,
+        motionExperience,
+        editorialGallery: [
+          { imageUrl: "/v1/uploads/uno.webp", title: "Origen", caption: "Primer plano", body: "La primera parte del relato real de la tienda." },
+          { imageUrl: "/v1/uploads/dos.webp", title: "Proceso", caption: "Segundo plano", body: "La segunda parte amplía el contexto del comercio." },
+          { imageUrl: "/v1/uploads/tres.webp", title: "Detalle", caption: "Tercer plano", body: "La tercera parte completa la historia visual del comercio." },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout(`/?link=motion-${motionExperience}`);
+
+    expect(document.querySelector(selector)).not.toBeNull();
+    expect(document.querySelector(".store-motion-section")?.getAttribute("data-motion-experience")).toBe(motionExperience);
+  });
+
+  it("renders every selected animation in the merchant's saved order", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con varias animaciones",
+        motionDuoEnabled: true,
+        motionExperience: "coverflow-carousel",
+        motionExperiences: ["hero-carousel", "coverflow-carousel", "stagger-testimonials"],
+        contentOrder: ["motion-stagger-testimonials", "hero", "about", "products", "motion-hero-carousel", "gallery", "links", "motion-coverflow-carousel"],
+        editorialGallery: [
+          { imageUrl: "/v1/uploads/uno.webp", title: "Origen", caption: "Ana", body: "Una experiencia excelente." },
+          { imageUrl: "/v1/uploads/dos.webp", title: "Proceso", caption: "María", body: "Volvería a comprar." },
+          { imageUrl: "/v1/uploads/tres.webp", title: "Detalle", caption: "Luis", body: "Todo fue muy claro." },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=multiple-motion");
+
+    const sections = [...document.querySelectorAll<HTMLElement>(".store-motion-section[data-motion-experience]")];
+    expect(sections.map((section) => section.dataset.motionExperience)).toEqual([
+      "stagger-testimonials",
+      "hero-carousel",
+      "coverflow-carousel",
+    ]);
+    expect(sections).toHaveLength(3);
+    expect(document.querySelector("[data-motion-hero]")).not.toBeNull();
+    expect(document.querySelector(".store-motion-coverflow")).not.toBeNull();
+    expect(document.querySelector("[data-testimonials]")).not.toBeNull();
+  });
+
+  it("keeps named animation instances independent and renders their own media and copy", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda por capítulos",
+        contentOrder: ["animation-finale", "hero", "products", "animation-opening", "links"],
+        animations: [
+          {
+            id: "opening",
+            name: "Organizador · apertura",
+            type: "coverflow-carousel",
+            title: "Nueva temporada",
+            subtitle: "Piezas para empezar el recorrido.",
+            media: [
+              { imageUrl: "/v1/uploads/open-1.webp", title: "Primera pieza", caption: "Apertura" },
+              { imageUrl: "/v1/uploads/open-2.webp", title: "Segunda pieza", caption: "Detalle" },
+            ],
+          },
+          {
+            id: "finale",
+            name: "Organizador · cierre",
+            type: "coverflow-carousel",
+            title: "Últimos detalles",
+            subtitle: "Una selección distinta para cerrar la tienda.",
+            media: [
+              { imageUrl: "/v1/uploads/end-1.webp", title: "Textura final", caption: "Cierre" },
+              { imageUrl: "/v1/uploads/end-2.webp", title: "Empaque", caption: "Entrega" },
+            ],
+          },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=independent-animations");
+
+    const sections = [...document.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]")];
+    expect(sections.map((section) => section.dataset.animationId)).toEqual(["finale", "opening"]);
+    expect(sections[0].querySelector(".store-motion-intro h2")?.textContent).toBe("Últimos detalles");
+    expect(sections[1].querySelector(".store-motion-intro h2")?.textContent).toBe("Nueva temporada");
+    expect(sections[0].querySelector<HTMLImageElement>("img")?.src).toContain("end-1.webp");
+    expect(sections[1].querySelector<HTMLImageElement>("img")?.src).toContain("open-1.webp");
+    expect(sections[0].textContent).not.toContain("Organizador · cierre");
+    expect(sections[1].textContent).not.toContain("Organizador · apertura");
   });
 
   it("applies the merchant's selected font to the entire storefront", async () => {
@@ -1586,9 +2213,31 @@ describe("storefront (?link=...)", () => {
     expect(document.documentElement.style.getPropertyValue("--pg-page-bg")).toBe("#f4ead7");
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(document.body.dataset.boardTexture).toBe("kraft");
+    expect(document.documentElement.style.getPropertyValue("--pg-text")).toBe("#000000");
+    expect(document.documentElement.style.getPropertyValue("--pg-text-muted")).toBe("#000000");
+    expect(document.documentElement.style.getPropertyValue("--pg-text-faint")).toBe("#000000");
   });
 
-  it("uses a pure foreground when neither theme foreground reaches AA on a mid-tone background", async () => {
+  it("uses pure white text for every text role on a dark merchant background", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda oscura",
+        backgroundColor: "#302b2b",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=dark-background");
+
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue("--pg-text")).toBe("#ffffff");
+    expect(document.documentElement.style.getPropertyValue("--pg-text-muted")).toBe("#ffffff");
+    expect(document.documentElement.style.getPropertyValue("--pg-text-faint")).toBe("#ffffff");
+  });
+
+  it("chooses the higher-contrast pure foreground on a mid-tone background", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,

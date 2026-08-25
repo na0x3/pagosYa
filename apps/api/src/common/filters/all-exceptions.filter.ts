@@ -1,6 +1,24 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import type { Request, Response } from "express";
 
+function redactSecrets(value: string): string {
+  return value
+    .replace(/\b(?:sk|pk)_(?:test|live)_[0-9A-Za-z_]+\b/g, "[REDACTED_API_KEY]")
+    .replace(/\b(?:dash|consumer|ops|whsec)_[0-9A-Za-z_-]+\b/g, "[REDACTED_TOKEN]")
+    .replace(/\bpi_[0-9a-z]+_secret_[0-9A-Za-z]+\b/g, "[REDACTED_CLIENT_SECRET]")
+    .replace(/([?&](?:client_secret|publishable_key|token)=)[^&#\s]*/gi, "$1[REDACTED]")
+    .replace(/(authorization:\s*bearer\s+)[^\s]+/gi, "$1[REDACTED]");
+}
+
+function requestPath(request: Request): string {
+  if (request.path) return request.path;
+  try {
+    return new URL(request.url, "http://localhost").pathname;
+  } catch {
+    return request.url.split("?", 1)[0];
+  }
+}
+
 /**
  * Global safety net: every response still goes out in NestJS's normal
  * HttpException shape, but anything that ISN'T a well-formed HttpException
@@ -26,9 +44,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       : { statusCode: status, message: "Internal server error" };
 
     if (!isHttpException || status >= 500) {
-      const message = exception instanceof Error ? exception.message : String(exception);
-      const stack = exception instanceof Error ? exception.stack : undefined;
-      this.logger.error(`${request.method} ${request.url} -> ${status}: ${message}`, stack);
+      const message = redactSecrets(exception instanceof Error ? exception.message : String(exception));
+      const stack = exception instanceof Error && exception.stack ? redactSecrets(exception.stack) : undefined;
+      this.logger.error(`${request.method} ${requestPath(request)} -> ${status}: ${message}`, stack);
     }
 
     const body = typeof payload === "string" ? { statusCode: status, message: payload } : payload;

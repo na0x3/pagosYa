@@ -1,0 +1,3 @@
+ALTER TABLE "MerchantUser"
+ADD COLUMN "dailyLoginStars" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "lastDailyStarAt" TIMESTAMP(3);

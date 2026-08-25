@@ -17,6 +17,7 @@ export class MerchantSessionGuard implements CanActivate {
     if (!session) throw new UnauthorizedException("Invalid or expired session");
 
     request.merchant = { id: session.merchantId };
+    request.merchantUser = { id: session.merchantUserId, email: session.email };
     request.sessionToken = presented;
     return true;
   }

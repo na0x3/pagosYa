@@ -10,7 +10,7 @@ const VISUAL_FIELDS = [
   "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle",
   "accentColor", "fontStyle", "buttonStyle", "boardTexture", "announcement", "announcementMode",
   "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled", "promotionImageUrl", "promotionTitle",
-  "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "layoutStyle", "experienceStyle", "motionDuoEnabled", "editorialGallery",
+  "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "layoutStyle", "experienceStyle", "motionDuoEnabled", "motionExperience", "motionExperiences", "animations", "editorialGallery",
   "buttonVariant", "buttonMotion", "cartButtonLabel", "checkoutMode", "leadCaptureUrl", "contactPhone",
 ] as const;
 
@@ -43,7 +43,7 @@ type AiDirection = {
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "lift" | "pulse" | "none";
   cartButtonLabel: "Ir a pagar" | "Completar pedido" | "Quiero comprar" | "Agregar y pagar";
-  contentOrder: Array<"hero" | "products" | "about" | "gallery" | "links">;
+  contentOrder: Array<"hero" | "products" | "about" | "gallery" | "motion" | "links">;
   layoutStyle: "cinematic" | "editorial" | "collage" | "catalog-first";
   experienceStyle: "coverflow" | "diagonal-marquee" | "story-scroller";
   announcement: string;
@@ -59,7 +59,52 @@ type AiDirection = {
   editorialGallery: Array<{ assetIndex: number; title: string; caption: string; body: string; boxColor: string }>;
 };
 
-const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "links"] as const;
+const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "motion", "links"] as const;
+const MOTION_EXPERIENCES = ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"] as const;
+const SAFE_GENERATED_BACKGROUNDS = ["#eef1f5", "#e8f2ef", "#eeebf5"] as const;
+
+function expandMotionSections(value: unknown, animationIds: string[]): string[] {
+  const baseSections = ["hero", "products", "about", "gallery", "links"];
+  const selected = animationIds.map((id) => `animation-${id}`);
+  const result: string[] = [];
+  const append = (section: string) => { if (!result.includes(section)) result.push(section); };
+  if (Array.isArray(value)) {
+    value.forEach((section) => {
+      if (section === "motion") selected.forEach(append);
+      else if (typeof section === "string" && baseSections.includes(section)) append(section);
+    });
+  }
+  baseSections.forEach(append);
+  const missing = selected.filter((section) => !result.includes(section));
+  const linksIndex = result.indexOf("links");
+  result.splice(linksIndex < 0 ? result.length : linksIndex, 0, ...missing);
+  return result;
+}
+
+function safeGeneratedBackground(candidate: unknown, index: number): string {
+  if (typeof candidate !== "string" || !/^#[0-9a-f]{6}$/i.test(candidate)) {
+    return SAFE_GENERATED_BACKGROUNDS[index % SAFE_GENERATED_BACKGROUNDS.length];
+  }
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(candidate.slice(offset, offset + 2), 16) / 255);
+  const [red, green, blue] = channels;
+  const maximum = Math.max(red, green, blue);
+  const minimum = Math.min(red, green, blue);
+  const delta = maximum - minimum;
+  let hue = 0;
+  if (delta > 0) {
+    if (maximum === red) hue = 60 * (((green - blue) / delta) % 6);
+    else if (maximum === green) hue = 60 * ((blue - red) / delta + 2);
+    else hue = 60 * ((red - green) / delta + 4);
+  }
+  if (hue < 0) hue += 360;
+  const lightness = (maximum + minimum) / 2;
+  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+  const isRed = saturation >= 0.12 && (hue <= 22 || hue >= 338);
+  const isYellow = saturation >= 0.12 && hue >= 38 && hue <= 72;
+  return isRed || isYellow
+    ? SAFE_GENERATED_BACKGROUNDS[index % SAFE_GENERATED_BACKGROUNDS.length]
+    : candidate.toLowerCase();
+}
 const AI_DIRECTIONS_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -98,8 +143,8 @@ const AI_DIRECTIONS_SCHEMA = {
           cartButtonLabel: { type: "string", enum: ["Ir a pagar", "Completar pedido", "Quiero comprar", "Agregar y pagar"] },
           contentOrder: {
             type: "array",
-            minItems: 5,
-            maxItems: 5,
+            minItems: 6,
+            maxItems: 6,
             items: { type: "string", enum: CONTENT_SECTIONS },
           },
           layoutStyle: { type: "string", enum: ["cinematic", "editorial", "collage", "catalog-first"] },
@@ -244,16 +289,57 @@ export class VisualStudioService {
       }
     }
 
-    presets = presets.map((preset) => ({
-      ...preset,
-      config: {
-        ...preset.config,
+    const motionExperiences = [...new Set(
+      (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience])
+        .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
+    )];
+    if (!motionExperiences.length) motionExperiences.push("coverflow-carousel");
+    presets = presets.map((preset, index) => {
+      const backgroundColor = safeGeneratedBackground(preset.config.backgroundColor, index);
+      const animationMedia = Array.isArray(preset.config.editorialGallery) ? preset.config.editorialGallery : [];
+      const animationNames: Record<string, string> = {
+        "story-scroll": "Story Scroll",
+        "coverflow-carousel": "Coverflow",
+        "hero-carousel": "Hero editorial",
+        "image-stream": "Image Stream",
+        "scroll-expansion": "Scroll Expansion",
+        "hero-gallery-scroll": "Hero Gallery",
+        "stagger-testimonials": "Reseñas",
+        "zoom-parallax": "Zoom Parallax",
+      };
+      const animations = motionExperiences.map((type, animationIndex) => ({
+        id: `ai-${index + 1}-${animationIndex + 1}-${type}`,
+        name: animationNames[type] ?? `Animación ${animationIndex + 1}`,
+        type,
+        title: animationNames[type] ?? `Animación ${animationIndex + 1}`,
+        subtitle: typeof preset.config.gallerySubtitle === "string" ? preset.config.gallerySubtitle : "Una experiencia visual creada con las imágenes reales de la marca.",
+        media: animationMedia,
+      }));
+      return {
+        ...preset,
+        config: {
+          ...preset.config,
+          backgroundColor,
+          backgroundMode: "solid",
+          backgroundGradientStart: backgroundColor,
+          backgroundGradientEnd: backgroundColor,
+          backgroundGradientAngle: 0,
+          backgroundImageUrl: null,
+          announcementMode: dto.announcementMarqueeEnabled === undefined
+            ? preset.config.announcementMode
+            : dto.announcementMarqueeEnabled ? "marquee" : "static",
+          motionDuoEnabled: true,
+          motionExperience: motionExperiences[0],
+          motionExperiences,
+          animations,
+          contentOrder: expandMotionSections(preset.config.contentOrder, animations.map((animation) => animation.id)),
         checkoutMode,
         ...(checkoutMode === "whatsapp" && { cartButtonLabel: "Pedir por WhatsApp" }),
         ...(checkoutMode === "whatsapp" && { contactPhone: whatsappPhone }),
         ...(checkoutMode === "external" && { cartButtonLabel: "Continuar al enlace", leadCaptureUrl }),
-      },
-    }));
+        },
+      };
+    });
 
     const proposals = await this.prisma.$transaction(
       presets.map((preset) => {
@@ -340,23 +426,23 @@ export class VisualStudioService {
       {
         title: "Taller cálido",
         rationale: `Una tienda cercana que convierte tus fotos y catálogo actuales en una historia visual completa. ${socialNote}`,
-        config: { tagline: `${subject}, presentados con calidez y detalle.`, aboutTitle: `La historia de ${store.name}`, aboutSubtitle: "Una marca se conoce mejor cuando entendemos lo que inspira cada elección.", aboutText: `Esta es una propuesta de texto para presentar ${store.name}. Revisa y adapta la historia antes de publicar para que refleje fielmente tu negocio.`, catalogTitle: "Descubre la tienda", catalogSubtitle: `Explora la selección actual de ${store.name} y encuentra lo que mejor encaja contigo.`, galleryTitle: "La marca en imágenes", gallerySubtitle: "Una mirada más cercana a su universo visual.", backgroundColor: "#f4ead7", backgroundImageUrl: null, accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", announcement: `Descubre la selección de ${store.name} • Compra fácil y segura`, announcementMode: "marquee", announcementSpeed: 20, announcementSize: "medium", announcementColor: "#d8a25e", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "cinematic", experienceStyle: "story-scroller", contentOrder: ["hero", "about", "products", "gallery", "links"], heroSlides: hero(0, `Hecho para disfrutar ${subject}`, "Explora una selección preparada para mostrar cada producto con claridad."), editorialGallery: gallery },
+        config: { tagline: `${subject}, presentados con calidez y detalle.`, aboutTitle: `La historia de ${store.name}`, aboutSubtitle: "Una marca se conoce mejor cuando entendemos lo que inspira cada elección.", aboutText: `Esta es una propuesta de texto para presentar ${store.name}. Revisa y adapta la historia antes de publicar para que refleje fielmente tu negocio.`, catalogTitle: "Descubre la tienda", catalogSubtitle: `Explora la selección actual de ${store.name} y encuentra lo que mejor encaja contigo.`, galleryTitle: "La marca en imágenes", gallerySubtitle: "Una mirada más cercana a su universo visual.", backgroundColor: "#f4ead7", backgroundImageUrl: null, accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", announcement: `Descubre la selección de ${store.name} • Compra fácil y segura`, announcementMode: "marquee", announcementSpeed: 20, announcementSize: "medium", announcementColor: "#d8a25e", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "cinematic", experienceStyle: "story-scroller", contentOrder: ["hero", "about", "products", "gallery", "motion", "links"], heroSlides: hero(0, `Hecho para disfrutar ${subject}`, "Explora una selección preparada para mostrar cada producto con claridad."), editorialGallery: gallery },
       },
       {
         title: "Editorial sereno",
         rationale: `Una composición con aire, lectura pausada y protagonismo absoluto del catálogo existente. ${socialNote}`,
-        config: { tagline: `Una mirada serena a ${subject}.`, aboutTitle: `Detrás de ${store.name}`, aboutSubtitle: "Una introducción pausada a la intención que guía la marca.", aboutText: `Borrador editorial para contar el origen y la intención de ${store.name}. Sustituye este texto con detalles reales de tu proceso, materiales y comunidad antes de publicarlo.`, catalogTitle: "La selección", catalogSubtitle: "Una colección clara, pensada para explorar sin prisa.", galleryTitle: "Notas visuales", gallerySubtitle: "Detalles, atmósferas y perspectivas de la marca.", backgroundColor: "#f7f5f0", backgroundImageUrl: null, accentColor: "#274c43", fontStyle: "editorial", buttonStyle: "square", boardTexture: "painted", announcement: `${store.name} • Colección actual • Explora el catálogo`, announcementMode: "static", announcementSpeed: 24, announcementSize: "small", announcementColor: "#274c43", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "outline", buttonMotion: "none", cartButtonLabel: "Completar pedido", layoutStyle: "editorial", experienceStyle: "coverflow", contentOrder: ["hero", "gallery", "about", "products", "links"], heroSlides: hero(1, `La selección de ${store.name}`, "Tus imágenes actuales, ordenadas como una portada editorial."), editorialGallery: gallery.slice().reverse() },
+        config: { tagline: `Una mirada serena a ${subject}.`, aboutTitle: `Detrás de ${store.name}`, aboutSubtitle: "Una introducción pausada a la intención que guía la marca.", aboutText: `Borrador editorial para contar el origen y la intención de ${store.name}. Sustituye este texto con detalles reales de tu proceso, materiales y comunidad antes de publicarlo.`, catalogTitle: "La selección", catalogSubtitle: "Una colección clara, pensada para explorar sin prisa.", galleryTitle: "Notas visuales", gallerySubtitle: "Detalles, atmósferas y perspectivas de la marca.", backgroundColor: "#f7f5f0", backgroundImageUrl: null, accentColor: "#274c43", fontStyle: "editorial", buttonStyle: "square", boardTexture: "painted", announcement: `${store.name} • Colección actual • Explora el catálogo`, announcementMode: "static", announcementSpeed: 24, announcementSize: "small", announcementColor: "#274c43", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "outline", buttonMotion: "none", cartButtonLabel: "Completar pedido", layoutStyle: "editorial", experienceStyle: "coverflow", contentOrder: ["motion", "hero", "gallery", "about", "products", "links"], heroSlides: hero(1, `La selección de ${store.name}`, "Tus imágenes actuales, ordenadas como una portada editorial."), editorialGallery: gallery.slice().reverse() },
       },
       {
         title: "Mercado vibrante",
         rationale: `Una dirección rápida y expresiva, con cinta en movimiento, llamados claros y tus productos al frente. ${socialNote}`,
-        config: { tagline: `${subject} con energía propia.`, aboutTitle: `${store.name}, de cerca`, aboutSubtitle: "Personalidad, intención y una forma propia de presentar cada elección.", aboutText: `Texto de muestra para presentar la personalidad de ${store.name}. Revísalo antes de aplicar y agrega únicamente información real sobre tu marca.`, catalogTitle: "Entra a la tienda", catalogSubtitle: `Mira, elige y explora todo lo que ${store.name} tiene para mostrar.`, galleryTitle: "Más para descubrir", gallerySubtitle: "La energía de la marca continúa en cada imagen.", backgroundColor: "#f6c84f", backgroundImageUrl: null, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", boardTexture: "painted", announcement: `Novedades en ${store.name} • Mira • Elige • Compra`, announcementMode: "marquee", announcementSpeed: 14, announcementSize: "large", announcementColor: "#7f1d1d", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["products", "hero", "gallery", "about", "links"], heroSlides: hero(2, `Encuentra tu próximo favorito`, `Explora ${subject} y elige directamente desde el catálogo.`), editorialGallery: gallery },
+        config: { tagline: `${subject} con energía propia.`, aboutTitle: `${store.name}, de cerca`, aboutSubtitle: "Personalidad, intención y una forma propia de presentar cada elección.", aboutText: `Texto de muestra para presentar la personalidad de ${store.name}. Revísalo antes de aplicar y agrega únicamente información real sobre tu marca.`, catalogTitle: "Entra a la tienda", catalogSubtitle: `Mira, elige y explora todo lo que ${store.name} tiene para mostrar.`, galleryTitle: "Más para descubrir", gallerySubtitle: "La energía de la marca continúa en cada imagen.", backgroundColor: "#e8f2ef", backgroundImageUrl: null, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", boardTexture: "painted", announcement: `Novedades en ${store.name} • Mira • Elige • Compra`, announcementMode: "marquee", announcementSpeed: 14, announcementSize: "large", announcementColor: "#7f1d1d", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["products", "hero", "motion", "gallery", "about", "links"], heroSlides: hero(2, `Encuentra tu próximo favorito`, `Explora ${subject} y elige directamente desde el catálogo.`), editorialGallery: gallery },
       },
     ];
     const contentOrders = [
-      ["hero", "about", "products", "gallery", "links"],
-      ["about", "hero", "products", "links", "gallery"],
-      ["hero", "about", "products", "links", "gallery"],
+      ["hero", "about", "products", "gallery", "motion", "links"],
+      ["motion", "about", "hero", "products", "links", "gallery"],
+      ["products", "hero", "motion", "about", "links", "gallery"],
     ];
     return proposals.map((proposal, index) => ({
       ...proposal,
@@ -401,12 +487,12 @@ export class VisualStudioService {
         `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         "Asigna a cada dirección un layoutStyle diferente. cinematic usa una portada inmersiva y relato gradual; editorial alterna imagen y texto con lectura pausada; collage superpone escalas y bloques visuales; catalog-first empieza por producto y usa la historia como prueba posterior.",
-        "Asigna también un experienceStyle distinto a cada dirección: coverflow crea un carrusel 3D controlable; diagonal-marquee crea filas fotográficas diagonales en movimiento; story-scroller crea una historia interactiva por capítulos y debe priorizar cualquier video disponible en heroSlides. Además, las tres direcciones incluyen motionDuoEnabled: Story Scroll encadena el relato editorial por pantallas y Zoom Parallax recompone las fotos con profundidad. Todo aparece después del catálogo y usa solamente medios reales de la tienda.",
-        "Cada dirección debe tener un contentOrder diferente y válido, con las cinco secciones exactamente una vez. hero y about aparecen antes que products; gallery y links aparecen después de products para que la experiencia continúe después del catálogo.",
+        `Asigna también un experienceStyle distinto a cada dirección: coverflow crea un carrusel 3D controlable; diagonal-marquee crea filas fotográficas diagonales en movimiento; story-scroller crea una historia interactiva por capítulos y debe priorizar cualquier video disponible en heroSlides. Incluye estas animaciones como secciones independientes: ${(dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience || "coverflow-carousel"]).join(", ")}. Usa solamente medios reales de la tienda.`,
+        "Cada dirección debe tener un contentOrder diferente y válido, con hero, products, about, gallery, motion y links exactamente una vez. En esta respuesta, motion representa el punto donde se insertarán las secciones de animación independientes; después el comercio podrá mover cada una por separado.",
         "Crea entre cuatro y cinco slides por dirección. Cada slide cumple un rol distinto (promesa, producto, punto de vista, detalle, transición o acción), con título, texto sustancioso y botón breve. Cuando haya suficientes imágenes, no repitas assetIndex dentro del mismo slider.",
-        "La editorialGallery no es una tira de pies de foto: genera para cada imagen un título, un caption breve y un body diferente de 2–3 frases. Ese texto alimenta Story Scroll y Zoom Parallax; debe sentirse variado y específico al catálogo sin inventar hechos.",
-        "Las tres direcciones también deben variar densidad, escala de imagen, anuncio estático o móvil y relación entre historia y catálogo.",
-        `Usa fontStyle=${requestedFontStyle} en las tres direcciones. El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas.`,
+        "La editorialGallery no es una tira de pies de foto: genera para cada imagen un título, un caption breve y un body diferente de 2–3 frases. Ese contenido alimenta la animación seleccionada y, para stagger-testimonials, body funciona como reseña y caption como autor. Debe sentirse variado y específico al catálogo sin inventar hechos.",
+        `Las tres direcciones también deben variar densidad, escala de imagen y relación entre historia y catálogo. El anuncio superior debe ser ${dto.announcementMarqueeEnabled === false ? "estático" : dto.announcementMarqueeEnabled === true ? "una marquesina en movimiento" : "estático o móvil según la dirección"}.`,
+        `Usa fontStyle=${requestedFontStyle} en las tres direcciones. El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas. Nunca uses rojo ni amarillo como color de fondo; resérvalos, si hacen falta, para acentos pequeños.`,
         "heroSlides y editorialGallery deben referenciar solamente índices disponibles.",
         "Escribe textos borrador atractivos en español, sin inventar descuentos, envíos, certificaciones, origen, materiales ni promesas verificables. No devuelvas HTML, CSS ni texto fuera del esquema.",
       ].join("\n");
@@ -524,10 +610,6 @@ export class VisualStudioService {
       && enumValue(direction.buttonMotion, ["lift", "pulse", "none"])
       && enumValue(direction.cartButtonLabel, ["Ir a pagar", "Completar pedido", "Quiero comprar", "Agregar y pagar"])
       && validOrder(direction.contentOrder)
-      && (direction.contentOrder as string[]).indexOf("hero") < (direction.contentOrder as string[]).indexOf("products")
-      && (direction.contentOrder as string[]).indexOf("about") < (direction.contentOrder as string[]).indexOf("products")
-      && (direction.contentOrder as string[]).indexOf("gallery") > (direction.contentOrder as string[]).indexOf("products")
-      && (direction.contentOrder as string[]).indexOf("links") > (direction.contentOrder as string[]).indexOf("products")
       && enumValue(direction.layoutStyle, ["cinematic", "editorial", "collage", "catalog-first"])
       && enumValue(direction.experienceStyle, ["coverflow", "diagonal-marquee", "story-scroller"])
       && typeof direction.announcement === "string" && direction.announcement.length >= 5 && direction.announcement.length <= 180

@@ -26,6 +26,7 @@ const TRANSITIONS: Record<string, Status> = {
 
   [`${Status.REQUIRES_PAYMENT_METHOD}:${PaymentIntentEvent.CANCEL}`]: Status.CANCELED,
   [`${Status.REQUIRES_CONFIRMATION}:${PaymentIntentEvent.CANCEL}`]: Status.CANCELED,
+  [`${Status.REQUIRES_ACTION}:${PaymentIntentEvent.CANCEL}`]: Status.CANCELED,
 };
 
 export class IllegalStateTransitionError extends Error {

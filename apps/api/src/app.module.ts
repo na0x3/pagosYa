@@ -22,6 +22,10 @@ import { StoresModule } from "./stores/stores.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { FinancesModule } from "./finances/finances.module";
 import { UploadsModule } from "./uploads/uploads.module";
+import { DebtCollectionsModule } from "./debt-collections/debt-collections.module";
+import { ConsumerModule } from "./consumer/consumer.module";
+// Store-level CRM, inventory, appointments, delivery, POS, and integrations.
+import { OperationsModule } from "./operations/operations.module";
 
 @Module({
   imports: [
@@ -56,6 +60,9 @@ import { UploadsModule } from "./uploads/uploads.module";
     CategoriesModule,
     FinancesModule,
     UploadsModule,
+    DebtCollectionsModule,
+    ConsumerModule,
+    OperationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

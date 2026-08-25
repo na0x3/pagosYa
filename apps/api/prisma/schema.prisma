@@ -76,6 +76,22 @@ enum WebhookEventStatus {
   FAILED
 }
 
+enum ConsumerAffiliationStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum OrderFulfillmentStatus {
+  AWAITING_PAYMENT
+  PAID
+  PREPARING
+  READY_FOR_PICKUP
+  SHIPPED
+  DELIVERED
+  CANCELED
+  REFUNDED
+}
+
 enum KycStatus {
   PENDING_REVIEW
   APPROVED
@@ -94,17 +110,48 @@ enum PayoutStatus {
   FAILED
 }
 
+enum OpsRole {
+  SUPPORT_AGENT
+  SUPPORT_ADMIN
+}
+
+enum SupportCaseCategory {
+  ACCOUNT_ACCESS
+  PAYMENTS
+  KYC
+  PAYOUTS
+  STORES
+  OTHER
+}
+
+enum SupportCasePriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportCaseStatus {
+  PENDING
+  SENT
+  REVIEWED
+  RESOLVED
+}
+
 // A named pagosYa staff member allowed to review KYC — replaces a single
 // shared INTERNAL_OPS_SECRET so every review decision is attributable to a
 // specific, revocable person instead of "whoever had the secret."
 model OpsUser {
-  id          String                  @id @default(cuid())
-  name        String
-  email       String                  @unique
-  hashedToken String
-  revokedAt   DateTime?
-  createdAt   DateTime                @default(now())
-  kycReviews  MerchantKycSubmission[]
+  id                   String                  @id @default(cuid())
+  name                 String
+  email                String                  @unique
+  hashedToken          String
+  role                 OpsRole                 @default(SUPPORT_AGENT)
+  revokedAt            DateTime?
+  createdAt            DateTime                @default(now())
+  kycReviews           MerchantKycSubmission[]
+  createdSupportCases  SupportCase[]           @relation("SupportCaseCreator")
+  assignedSupportCases SupportCase[]           @relation("SupportCaseAssignee")
+  supportNotes         SupportCaseNote[]
 }
 
 // Generic append-only trail for sensitive ops actions (KYC review today;
@@ -123,6 +170,46 @@ model AuditLogEntry {
 
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+// A durable support envelope. Sensitive account reads and actions are tied to
+// one case so the audit trail records not only who accessed an account, but why.
+model SupportCase {
+  id                      String              @id @default(cuid())
+  merchantId              String
+  merchant                Merchant            @relation(fields: [merchantId], references: [id])
+  createdByOpsUserId      String?
+  createdByOpsUser        OpsUser?            @relation("SupportCaseCreator", fields: [createdByOpsUserId], references: [id])
+  createdByMerchantUserId String?
+  createdByMerchantUser   MerchantUser?       @relation("SupportCaseMerchantCreator", fields: [createdByMerchantUserId], references: [id])
+  assignedToOpsUserId     String?
+  assignedToOpsUser       OpsUser?            @relation("SupportCaseAssignee", fields: [assignedToOpsUserId], references: [id])
+  category                SupportCaseCategory
+  priority                SupportCasePriority @default(NORMAL)
+  status                  SupportCaseStatus   @default(PENDING)
+  summary                 String
+  resolution              String?
+  notes                   SupportCaseNote[]
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  closedAt                DateTime?
+
+  @@index([merchantId, createdAt])
+  @@index([status, updatedAt])
+  @@index([assignedToOpsUserId, status])
+  @@index([createdByMerchantUserId, createdAt])
+}
+
+model SupportCaseNote {
+  id        String      @id @default(cuid())
+  caseId    String
+  case      SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  opsUserId String
+  opsUser   OpsUser     @relation(fields: [opsUserId], references: [id])
+  body      String
+  createdAt DateTime    @default(now())
+
+  @@index([caseId, createdAt])
 }
 
 model Merchant {
@@ -145,6 +232,7 @@ model Merchant {
   mediaAssets      MediaAsset[]
   productStats     StoreProductStat[]
   storeLeads       StoreLead[]
+  supportCases     SupportCase[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -156,6 +244,16 @@ model MerchantUser {
   merchant            Merchant                 @relation(fields: [merchantId], references: [id])
   email               String                   @unique
   hashedPassword      String
+  // Daily-login stars are user-scoped so signing into more than one store does
+  // not multiply the same day's reward.
+  dailyLoginStars     Int                      @default(0)
+  lastDailyStarAt     DateTime?
+  // Stable Google OpenID Connect subject. Email is display/contact data and
+  // can change; provider identity must always be keyed by `sub`.
+  googleSubject       String?                  @unique
+  // Account deletion is intentionally a deactivation. Financial, tax,
+  // fulfillment, support, and audit evidence stays attached to stable IDs.
+  deletedAt           DateTime?
   // Null until the confirmation link is used. An unverified row doesn't
   // permanently claim its email — see MerchantUserService.signup for why.
   emailVerifiedAt     DateTime?
@@ -163,6 +261,22 @@ model MerchantUser {
   sessions            MerchantSession[]
   verificationTokens  EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  supportCases        SupportCase[]            @relation("SupportCaseMerchantCreator")
+  progressCelebrations MerchantProgressCelebration[]
+}
+
+// Durable acknowledgement for a newly unlocked companion. This is scoped to
+// a store because storefront sales and visits determine that store's XP.
+model MerchantProgressCelebration {
+  merchantUserId      String
+  merchantUser        MerchantUser @relation(fields: [merchantUserId], references: [id], onDelete: Cascade)
+  storeId             String
+  store               Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lastCelebratedLevel Int           @default(-1)
+  updatedAt           DateTime      @updatedAt
+
+  @@id([merchantUserId, storeId])
+  @@index([storeId])
 }
 
 // Single-use, short-lived proof that whoever called signup actually
@@ -202,6 +316,9 @@ model MerchantSession {
   merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
   merchantId     String
   hashedToken    String
+  profileName    String       @default("Propietario")
+  profileAvatarId Int         @default(1)
+  isPrimary      Boolean      @default(false)
   expiresAt      DateTime
   revokedAt      DateTime?
   createdAt      DateTime     @default(now())
@@ -209,40 +326,97 @@ model MerchantSession {
   @@index([expiresAt])
 }
 
+// Buyer identity is deliberately separate from MerchantUser: a person may
+// shop at and hold obligations with many unrelated pagosYa merchants.
+model ConsumerUser {
+  id                 String                           @id @default(cuid())
+  name               String
+  email              String                           @unique
+  carnet             String                           @unique
+  hashedPassword     String
+  googleSubject      String?                          @unique
+  deletedAt          DateTime?
+  emailVerifiedAt    DateTime?
+  createdAt          DateTime                         @default(now())
+  updatedAt          DateTime                         @updatedAt
+  sessions           ConsumerSession[]
+  verificationTokens ConsumerVerificationToken[]
+  affiliations       ConsumerInstitutionAffiliation[]
+  paymentIntents     PaymentIntent[]
+  orders             StoreOrder[]
+}
+
+model ConsumerSession {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  hashedToken    String       @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([consumerUserId, expiresAt])
+}
+
+model ConsumerVerificationToken {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  hashedToken    String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
+}
+
+model ConsumerInstitutionAffiliation {
+  id             String                    @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser              @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  storeId        String
+  store          Store                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  status         ConsumerAffiliationStatus @default(ACTIVE)
+  acceptedAt     DateTime                  @default(now())
+  revokedAt      DateTime?
+
+  @@unique([consumerUserId, storeId])
+  @@index([storeId, status])
+}
+
 // NIT/branch/point-of-sale registration a merchant needs on file before
 // pagosYa can emit a Factura Electrónica on their behalf. `cuis` is issued
 // once per (nit, sucursal, puntoVenta); `cufd`/`cufdExpiresAt` cache SIN's
 // daily invoicing code (valid ~24h — see InvoicingService/InvoiceEmissionWorker).
 model MerchantInvoicingProfile {
-  id            String    @id @default(cuid())
-  merchantId    String    @unique
-  merchant      Merchant  @relation(fields: [merchantId], references: [id])
-  nit           String
-  razonSocial   String
-  sucursal      Int       @default(0)
-  puntoVenta    Int       @default(0)
-  cuis          String?
-  cuisIssuedAt  DateTime?
-  cufd          String?
-  cufdExpiresAt DateTime?
+  id                 String             @id @default(cuid())
+  merchantId         String             @unique
+  merchant           Merchant           @relation(fields: [merchantId], references: [id])
+  nit                String
+  razonSocial        String
+  sucursal           Int                @default(0)
+  puntoVenta         Int                @default(0)
+  cuis               String?
+  cuisIssuedAt       DateTime?
+  cufd               String?
+  cufdExpiresAt      DateTime?
   // General-purpose Factura Compra-Venta. Other sectors can be added later,
   // but activity compatibility must always come from synchronization.
-  documentSectorCode Int @default(1)
-  siatCatalogs  SiatCatalogCache[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  documentSectorCode Int                @default(1)
+  siatCatalogs       SiatCatalogCache[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 }
 
 // SIAT requires catalog synchronization at least daily. Cache each catalog
 // per taxpayer profile because activities and their product/sector relations
 // are scoped to the merchant NIT, even where the underlying catalog is broad.
 model SiatCatalogCache {
-  id                   String                     @id @default(cuid())
-  invoicingProfileId   String
-  invoicingProfile     MerchantInvoicingProfile @relation(fields: [invoicingProfileId], references: [id], onDelete: Cascade)
-  catalog              String
-  entries              Json
-  syncedAt             DateTime                   @default(now())
+  id                 String                   @id @default(cuid())
+  invoicingProfileId String
+  invoicingProfile   MerchantInvoicingProfile @relation(fields: [invoicingProfileId], references: [id], onDelete: Cascade)
+  catalog            String
+  entries            Json
+  syncedAt           DateTime                 @default(now())
 
   @@unique([invoicingProfileId, catalog])
   @@index([syncedAt])
@@ -328,6 +502,10 @@ model ApiKey {
   mode         ApiKeyMode
   type         ApiKeyType
   keyPrefix    String
+  // Human-readable metadata only. The complete credential is returned once
+  // at creation and is never stored in recoverable form.
+  label        String?
+  lastFour     String?
   hashedSecret String
   revokedAt    DateTime?
   createdAt    DateTime   @default(now())
@@ -339,6 +517,8 @@ model PaymentIntent {
   id                   String              @id @default(cuid())
   merchantId           String
   merchant             Merchant            @relation(fields: [merchantId], references: [id])
+  consumerUserId       String?
+  consumerUser         ConsumerUser?       @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
   amount               Int
   currency             String              @default("BOB")
   status               PaymentIntentStatus @default(REQUIRES_PAYMENT_METHOD)
@@ -362,8 +542,11 @@ model PaymentIntent {
   updatedAt            DateTime            @updatedAt
   transactions         Transaction[]
   invoice              Invoice?
+  debtRecords          DebtRecord[]
+  storeOrder           StoreOrder?
 
   @@index([merchantId, createdAt])
+  @@index([consumerUserId, createdAt])
 }
 
 enum PaymentLinkStatus {
@@ -371,154 +554,298 @@ enum PaymentLinkStatus {
   ARCHIVED
 }
 
+enum DebtCollectionLinkStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DebtRecordStatus {
+  PENDING
+  PAID
+}
+
+enum CustomDomainStatus {
+  PENDING
+  VERIFIED
+  ACTIVE
+}
+
 // No-code entry point: a merchant with no developer creates one of these from
 // the dashboard and gets a shareable storefront URL/QR. A merchant can run
 // several independent Stores (e.g. two different shops under one account) —
 // each has its own slug/branding/product catalog. The public checkout page
-// (apps/checkout, ?link=<slug>) turns a visit into a PaymentIntent via
+// (apps/checkout, /s/<slug>; legacy ?link=<slug>) turns a visit into a PaymentIntent via
 // StoresService — same PaymentIntent/rail/ledger machinery as the full API
 // path, just without requiring a merchant backend to call anything.
 model Store {
-  id                 String                @id @default(cuid())
-  merchantId         String
-  merchant           Merchant              @relation(fields: [merchantId], references: [id])
-  slug               String                @unique
-  name               String
+  id                           String                           @id @default(cuid())
+  merchantId                   String
+  merchant                     Merchant                         @relation(fields: [merchantId], references: [id])
+  slug                         String                           @unique
+  debtPortalSlug               String?                          @unique
+  name                         String
   // Short about/tagline text shown under the store name on the storefront.
-  tagline            String?
+  tagline                      String?
   // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
-  logoUrl            String?
+  logoUrl                      String?
   // Wide header image, separate from logoUrl (which stays small/square).
-  bannerUrl          String?
+  bannerUrl                    String?
   // "#RRGGBB", validated at the DTO layer only.
-  backgroundColor    String?
+  backgroundColor              String?
   // Storefront ground can be a single color or a merchant-authored two-color
   // gradient. The solid color remains the safe fallback for older clients.
-  backgroundMode          String @default("solid")
-  backgroundGradientStart String @default("#f8fafc")
-  backgroundGradientEnd   String @default("#e0e7ff")
-  backgroundGradientAngle Int    @default(135)
+  backgroundMode               String                           @default("solid")
+  backgroundGradientStart      String                           @default("#f8fafc")
+  backgroundGradientEnd        String                           @default("#e0e7ff")
+  backgroundGradientAngle      Int                              @default(135)
   // "/v1/uploads/<uuid>.<ext>" — full-page storefront background photo.
   // Independent of backgroundColor: when set, the image is what's shown
   // (backgroundColor still renders behind it while the image loads / behind
   // any transparent areas), when unset backgroundColor (or the default) is
   // used as before.
-  backgroundImageUrl String?
+  backgroundImageUrl           String?
   // Support channel shown to customers on the receipt/success screen — e.g.
   // for a refund request or an order question. Both optional and independent
   // (a merchant may only want to expose one).
-  contactPhone       String?
-  contactEmail       String?
+  contactPhone                 String?
+  contactEmail                 String?
+  // Optional public contact form. The delivery address stays private and is
+  // never returned by the public storefront endpoint.
+  contactFormEnabled           Boolean                          @default(true)
+  contactFormEmail             String?
+  // Optional public location block fixed near the bottom of the storefront.
+  // Only allow-listed map embed URLs reach this field (validated by the DTO);
+  // merchant copy remains plain text and is escaped by the storefront.
+  locationMapUrl               String?
+  locationDescription          String?
+  locationHighlight            String?
+  // Ordered branches. Public copy and fulfillment capabilities live here;
+  // product quantities remain on PaymentLink.locationStocks so payment
+  // confirmation can decrement one branch atomically.
+  locations                    Json                             @default("[]")
   // Long-form brand story ("Nuestra historia") rendered as its own storefront
   // section — multi-paragraph (blank-line separated), unlike the one-line tagline.
-  aboutText          String?
-  aboutTitle         String?
-  aboutSubtitle      String?
+  aboutText                    String?
+  aboutTitle                   String?
+  aboutSubtitle                String?
   // Optional background photo for the "Nuestra historia" section. The section
   // remains plain and transparent when this is null.
-  aboutImageUrl      String?
-  catalogTitle       String?
-  catalogSubtitle    String?
-  galleryTitle       String?
-  gallerySubtitle    String?
+  aboutImageUrl                String?
+  catalogTitle                 String?
+  catalogSubtitle              String?
+  galleryTitle                 String?
+  gallerySubtitle              String?
   // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
   // title gradient). Null = pagosYa's default palette accent, per theme.
-  accentColor        String?
+  accentColor                  String?
   // Curated storefront typography: "mono" (default) | "modern" |
   // "editorial" | "friendly". The dashboard itself always keeps pagosYa's
   // 0xProto Mono identity; this choice belongs only to the merchant storefront.
-  fontStyle          String                @default("mono")
+  fontStyle                    String                           @default("mono")
   // Corner treatment for the storefront's interactive elements:
   // "rounded" (default) | "pill" | "square". Validated at the DTO layer.
-  buttonStyle        String                @default("rounded")
+  buttonStyle                  String                           @default("rounded")
   // Storefront ground material for the "El Tablero" (hand-lettered price
   // board) visual world: "chalkboard" (default) | "kraft" | "painted".
   // Validated at the DTO layer.
-  boardTexture       String                @default("chalkboard")
+  boardTexture                 String                           @default("chalkboard")
   // Short promo/notice line shown in a bar at the very top of the storefront.
-  announcement       String?
+  announcement                 String?
   // "static" (default) | "marquee". Speed is one full marquee pass in seconds.
-  announcementMode   String                @default("static")
-  announcementSpeed  Int                   @default(18)
+  announcementMode             String                           @default("static")
+  announcementSpeed            Int                              @default(18)
   // Merchant-controlled announcement presentation. Color is the strip
   // background; storefront code derives a contrasting ink color automatically.
-  announcementSize   String                @default("medium")
-  announcementColor  String                @default("#c58b3c")
+  announcementSize             String                           @default("medium")
+  announcementColor            String                           @default("#c58b3c")
   // Merchant-authored promotion dialog. The customer can dismiss it for the
   // current browser session; preview mode always renders it for editing.
-  promotionEnabled   Boolean               @default(false)
+  promotionEnabled             Boolean                          @default(false)
   // Optional visual shown at the top of the promotion dialog.
-  promotionImageUrl  String?
-  promotionTitle     String?
-  promotionBody      String?
-  promotionCtaLabel  String?
-  promotionCtaUrl    String?
+  promotionImageUrl            String?
+  promotionTitle               String?
+  promotionBody                String?
+  promotionCtaLabel            String?
+  promotionCtaUrl              String?
   // Ordered, merchant-authored storefront hero slides. JSON keeps this
   // lightweight customization atomic with the rest of the appearance editor;
   // every entry is validated by CreateStoreDto before it reaches Prisma.
-  heroSlides         Json                  @default("[]")
+  heroSlides                   Json                             @default("[]")
   // Every public content section appears exactly once. The dashboard edits
   // this array as an ordered list; empty sections simply do not render.
-  contentOrder       Json                  @default("[\"hero\",\"about\",\"products\",\"gallery\",\"links\"]")
+  contentOrder                 Json                             @default("[\"hero\",\"about\",\"products\",\"gallery\",\"motion\",\"contact\",\"links\"]")
   // Structural storefront composition selected by the merchant or visual AI:
   // cinematic | editorial | collage | catalog-first.
-  layoutStyle        String                @default("cinematic")
+  layoutStyle                  String                           @default("cinematic")
   // Post-catalog visual experience selected by the merchant or visual AI:
   // coverflow | diagonal-marquee | story-scroller.
-  experienceStyle    String                @default("coverflow")
-  // Opt-in paired editorial motion: a pinned story flow followed by an image
-  // zoom parallax. AI proposals enable it, but merchants preview before apply.
-  motionDuoEnabled   Boolean               @default(false)
+  experienceStyle              String                           @default("coverflow")
+  // Opt-in merchant-authored animation section. AI proposals enable it, but
+  // merchants preview the selected template before applying it.
+  motionDuoEnabled             Boolean                          @default(false)
+  // The selected animation template. Values are validated by CreateStoreDto.
+  motionExperience             String                           @default("coverflow-carousel")
+  // Ordered animation templates rendered inside the movable motion section.
+  // motionExperience remains as a compatibility fallback for older clients.
+  motionExperiences            Json                             @default("[\"coverflow-carousel\"]")
+  // Named animation instances. Each owns its template, copy, and media and is
+  // positioned independently through contentOrder as "animation-<id>".
+  animations                   Json                             @default("[]")
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
-  editorialGallery   Json                  @default("[]")
+  editorialGallery             Json                             @default("[]")
   // Button customization layers: corner shape lives in buttonStyle; these
   // control fill treatment, motion, and the customer-facing cart CTA copy.
-  buttonVariant      String                @default("solid")
-  buttonMotion       String                @default("lift")
-  cartButtonLabel    String                @default("Ir a pagar")
+  buttonVariant                String                           @default("solid")
+  buttonMotion                 String                           @default("lift")
+  cartButtonLabel              String                           @default("Ir a pagar")
   // "payment" opens pagosYa checkout; "whatsapp" sends the composed cart
   // to contactPhone; "external" sends the interested customer to a merchant
   // URL. The latter two never create a PaymentIntent and do not require NIT.
-  checkoutMode       String                @default("payment")
-  leadCaptureUrl     String?
+  checkoutMode                 String                           @default("payment")
+  leadCaptureUrl               String?
   // Merchant-controlled cross-sell shelf inside the cart review. Recommendations
   // are explicitly selected by the merchant and always exclude cart items.
-  cartRecommendationsEnabled Boolean       @default(true)
-  cartRecommendationProductIds Json        @default("[]")
+  cartRecommendationsEnabled   Boolean                          @default(true)
+  cartRecommendationProductIds Json                             @default("[]")
   // Inventory quantities stay private unless the merchant explicitly opts in.
   // Sold-out state is still public so customers cannot add unavailable items.
-  showLowStockToCustomers Boolean          @default(false)
+  showLowStockToCustomers      Boolean                          @default(false)
   // Optional merchant-authored sales target shown and tracked by Yapi.
-  salesGoalLabel     String?
-  salesGoalAmount    Int?
-  status             StoreStatus           @default(ACTIVE)
+  salesGoalLabel               String?
+  salesGoalAmount              Int?
+  status                       StoreStatus                      @default(ACTIVE)
   // Incremented once per storefront page load (getStorePublic) — a simple
   // visit counter, not deduplicated per visitor. Good enough for "is anyone
   // looking at this store" without building real analytics infra.
-  viewCount          Int                   @default(0)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-  paymentLinks       PaymentLink[]
-  categories         Category[]
-  links              StoreLink[]
-  mediaAssets        MediaAsset[]
-  visualProposals    StoreVisualProposal[]
-  visualVersions     StoreVisualVersion[]
-  leads              StoreLead[]
-
+  viewCount                    Int                              @default(0)
+  createdAt                    DateTime                         @default(now())
+  updatedAt                    DateTime                         @updatedAt
+  paymentLinks                 PaymentLink[]
+  categories                   Category[]
+  links                        StoreLink[]
+  mediaAssets                  MediaAsset[]
+  visualProposals              StoreVisualProposal[]
+  visualVersions               StoreVisualVersion[]
+  customDomains                CustomDomain[]
+  leads                        StoreLead[]
+  debtCollectionLinks          DebtCollectionLink[]
+  consumerAffiliations         ConsumerInstitutionAffiliation[]
+  promoCodes                   PromoCode[]
+  progressCelebrations         MerchantProgressCelebration[]
   @@index([merchantId, createdAt])
+}
+
+// A merchant-owned hostname that points at the existing hosted storefront.
+// Ownership is proven with a unique DNS TXT value before public hostname
+// resolution is enabled. TLS and edge routing stay deployment concerns; this
+// row is the application-level hostname -> Store mapping.
+model CustomDomain {
+  id                String             @id @default(cuid())
+  storeId           String
+  store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  hostname          String             @unique
+  status            CustomDomainStatus @default(PENDING)
+  verificationToken String             @unique
+  verifiedAt        DateTime?
+  lastCheckedAt     DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([storeId, createdAt])
+}
+
+// Payment status and fulfillment status are separate. Item snapshots survive
+// later catalog edits and remain truthful in the buyer's history.
+model StoreOrder {
+  id              String                  @id @default(cuid())
+  paymentIntentId String                  @unique
+  paymentIntent   PaymentIntent           @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+  consumerUserId  String?
+  consumerUser    ConsumerUser?           @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  merchantId      String
+  storeId         String
+  storeName       String
+  fulfillmentLocationId      String?
+  fulfillmentLocationName    String?
+  fulfillmentMethod          String?
+  fulfillmentReadyAt         DateTime?
+  items           Json
+  amount          Int
+  currency        String                  @default("BOB")
+  status          OrderFulfillmentStatus  @default(AWAITING_PAYMENT)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  statusEvents    StoreOrderStatusEvent[]
+
+  @@index([consumerUserId, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model StoreOrderStatusEvent {
+  id        String                 @id @default(cuid())
+  orderId   String
+  order     StoreOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderFulfillmentStatus
+  createdAt DateTime               @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// A company shares one collection URL; customers identify their own open
+// balance with a carnet/CI and pay the server-owned amount through the same
+// PaymentIntent rails used by storefront orders.
+model DebtCollectionLink {
+  id                String                   @id @default(cuid())
+  storeId           String
+  store             Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug              String                   @unique
+  name              String
+  notificationEmail String?
+  currency          String                   @default("BOB")
+  status            DebtCollectionLinkStatus @default(ACTIVE)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  debts             DebtRecord[]
+
+  @@index([storeId, createdAt])
+}
+
+model DebtRecord {
+  id                   String             @id @default(cuid())
+  debtCollectionLinkId String
+  debtCollectionLink   DebtCollectionLink @relation(fields: [debtCollectionLinkId], references: [id], onDelete: Cascade)
+  customerDocument     String
+  normalizedDocument   String
+  customerName         String
+  customerEmail        String?
+  customerPhone        String?
+  description          String?
+  reference            String?
+  amount               Int
+  currency             String             @default("BOB")
+  status               DebtRecordStatus   @default(PENDING)
+  paymentIntentId      String?
+  paymentIntent        PaymentIntent?     @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+  paidAt               DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([debtCollectionLinkId, normalizedDocument])
+  @@index([debtCollectionLinkId, status])
+  @@index([paymentIntentId])
 }
 
 // Contact requests created by lead-capture stores and zero-total carts. Paid
 // orders continue to live in PaymentIntent; the merchant order feed combines
 // both sources without pretending a lead was a completed sale.
 model StoreLead {
-  id          String   @id @default(cuid())
-  merchantId  String
-  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  storeId     String
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   customerName  String
   customerEmail String
   customerPhone String
@@ -621,6 +948,28 @@ enum StoreStatus {
   ARCHIVED
 }
 
+enum PromoDiscountType {
+  PERCENT
+  FIXED
+}
+
+// Shareable, store-scoped codes. FIXED values use minor currency units,
+// matching every other amount in the payment domain.
+model PromoCode {
+  id            String            @id @default(cuid())
+  storeId       String
+  store         Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  code          String
+  discountType  PromoDiscountType
+  discountValue Int
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([storeId, code])
+  @@index([storeId, isActive, createdAt])
+}
+
 // Groups a Store's products into sections on the storefront (e.g. "Bebidas",
 // "Postres") — optional per product; uncategorized products still render,
 // just outside any section.
@@ -639,55 +988,63 @@ model Category {
 
 // A product within a Store's catalog.
 model PaymentLink {
-  id          String            @id @default(cuid())
-  storeId     String
-  store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  categoryId  String?
-  category    Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  name        String
-  description String?
+  id                 String            @id @default(cuid())
+  storeId            String
+  store              Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId         String?
+  category           Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name               String
+  description        String?
   // "/v1/uploads/<uuid>.<ext>" paths returned by POST /v1/uploads — first
   // entry is the cover photo, rest render as a gallery. Replaces the old
   // single `imageUrl` column (see migration 20260807150000_store_catalog_v2).
-  imageUrls   String[]          @default([])
+  imageUrls          String[]          @default([])
   // CSS object-position values ("x% y%") aligned by index with imageUrls.
   // Missing entries fall back to centered, preserving every existing product.
-  imagePositions String[]       @default([])
+  imagePositions     String[]          @default([])
   // Free-form small labels the merchant types, e.g. "Nuevo", "Agotado" —
   // rendered as pill badges on the storefront. Not a controlled vocabulary.
-  tags        String[]          @default([])
+  tags               String[]          @default([])
   // Remaining units, null = not tracked (unlimited, today's behavior for
   // every existing product). When set, the storefront caps cart quantity to
   // it and cart-checkout/payment success enforce it server-side.
-  stock       Int?
+  stock              Int?
+  // { [storeLocationId]: number | null }; null means unlimited at that
+  // branch. When branches are configured, stock is the derived aggregate.
+  locationStocks     Json              @default("{}")
   // "#RRGGBB" product color swatch (e.g. a T-shirt color), validated at the DTO layer only.
-  color       String?
+  color              String?
   // Optional purchasable choices such as Pequeña/Grande. Stored as a small
   // validated JSON snapshot [{ id, name, amount, stock }]. A missing stock
   // field preserves the earlier shared-product-stock behavior; null means the
   // option is unlimited, and an integer is decremented atomically in Postgres.
-  variants    Json              @default("[]")
+  variants           Json              @default("[]")
   // Additive product modifiers [{ id, name, amount, required }]. Their amount
   // is added server-side after validating the customer's selected ids.
-  extras      Json              @default("[]")
-  amount      Int
-  currency    String            @default("BOB")
+  extras             Json              @default("[]")
+  amount             Int
+  currency           String            @default("BOB")
+  // Optional percentage campaign. Pricing only applies it while the server
+  // clock is inside this closed-open window [startsAt, endsAt).
+  discountPercent    Int?
+  discountStartsAt   DateTime?
+  discountEndsAt     DateTime?
   // Merchant/PagosYa SKU. This is codigoProducto in the invoice XML and is
   // deliberately separate from SIN's generic product classification.
-  codigoProducto      String?
+  codigoProducto     String?
   // Taxpayer activity selected from sincronizarActividades.
-  actividadEconomica  String?
+  actividadEconomica String?
   // SIN generic product/service code, synchronized for actividadEconomica.
-  codigoProductoSin   String?
+  codigoProductoSin  String?
   // SIAT unit classifier from sincronizarParametricaUnidadMedida.
-  unidadMedida        Int?
-  status      PaymentLinkStatus @default(ACTIVE)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  unidadMedida       Int?
+  status             PaymentLinkStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
+  @@unique([storeId, codigoProducto])
   @@index([storeId, createdAt])
   @@index([categoryId])
-  @@unique([storeId, codigoProducto])
 }
 
 // Persisted checkout totals keep storefront sorting and finance summaries
@@ -795,4 +1152,505 @@ model IdempotencyKey {
   completedAt    DateTime?
 
   @@unique([merchantId, key])
+}
+
+// Merchant operations hub ----------------------------------------------------
+// These records deliberately retain merchantId/storeId snapshots instead of
+// Prisma relations. The operational tools must remain queryable even when a
+// storefront is archived, while the migration still installs database-level
+// foreign keys where erasing the parent is safe.
+
+model BusinessCustomer {
+  id               String   @id @default(cuid())
+  merchantId       String
+  storeId          String
+  name             String
+  email            String?
+  phone            String?
+  document         String?
+  tags             String[] @default([])
+  marketingConsent Boolean  @default(false)
+  loyaltyPoints    Int      @default(0)
+  lifetimeValue    Int      @default(0)
+  orderCount       Int      @default(0)
+  lastOrderAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([storeId, email])
+  @@index([merchantId, updatedAt])
+  @@index([storeId, loyaltyPoints])
+}
+
+model CustomerLoyaltyEntry {
+  id         String   @id @default(cuid())
+  merchantId String
+  storeId    String
+  customerId String
+  points     Int
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model MerchantAutomation {
+  id          String   @id @default(cuid())
+  merchantId  String
+  storeId     String
+  name        String
+  kind        String
+  channel     String   @default("EMAIL")
+  delayHours  Int      @default(24)
+  subject     String?
+  message     String
+  isActive    Boolean  @default(true)
+  lastRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([storeId, isActive, kind])
+}
+
+model AutomationDelivery {
+  id              String   @id @default(cuid())
+  automationId    String
+  merchantId      String
+  storeId         String
+  recipient       String
+  sourceType      String
+  sourceId        String
+  status          String   @default("DELIVERED")
+  failureReason   String?
+  deliveredAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  @@unique([automationId, sourceType, sourceId])
+  @@index([storeId, createdAt])
+}
+
+model DeliveryZone {
+  id                String   @id @default(cuid())
+  merchantId        String
+  storeId           String
+  name              String
+  fee               Int
+  minimumOrder      Int      @default(0)
+  radiusKm          Float?
+  estimatedMinutes  Int?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, isActive])
+}
+
+model Courier {
+  id         String   @id @default(cuid())
+  merchantId String
+  storeId    String
+  name       String
+  phone      String?
+  vehicle    String?
+  status     String   @default("AVAILABLE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([storeId, status])
+}
+
+model DeliveryAssignment {
+  id          String    @id @default(cuid())
+  merchantId  String
+  storeId     String
+  orderId     String    @unique
+  courierId   String?
+  zoneId      String?
+  status      String    @default("UNASSIGNED")
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  fee         Int       @default(0)
+  notes       String?
+  estimatedAt DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([storeId, status, createdAt])
+  @@index([courierId, status])
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  merchantId   String
+  storeId      String
+  name         String
+  contactName  String?
+  email        String?
+  phone        String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, updatedAt])
+}
+
+model PurchaseOrder {
+  id             String    @id @default(cuid())
+  merchantId     String
+  storeId        String
+  supplierId     String
+  status         String    @default("DRAFT")
+  currency       String    @default("BOB")
+  expectedAt     DateTime?
+  receivedAt     DateTime?
+  totalAmount    Int       @default(0)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([storeId, status, createdAt])
+  @@index([supplierId, createdAt])
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  paymentLinkId   String?
+  sku             String?
+  name            String
+  quantity        Int
+  unitCost        Int
+  receivedQuantity Int     @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([purchaseOrderId])
+  @@index([paymentLinkId])
+}
+
+model InventoryMovement {
+  id            String   @id @default(cuid())
+  merchantId    String
+  storeId       String
+  paymentLinkId String
+  quantityDelta Int
+  stockAfter    Int?
+  reason        String
+  sourceType    String
+  sourceId      String?
+  createdAt     DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([paymentLinkId, createdAt])
+}
+
+model ReconciliationImport {
+  id             String   @id @default(cuid())
+  merchantId     String
+  storeId        String
+  source         String
+  currency       String   @default("BOB")
+  totalAmount    Int
+  matchedAmount  Int      @default(0)
+  unmatchedAmount Int     @default(0)
+  status         String   @default("PROCESSING")
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+
+  @@index([storeId, createdAt])
+}
+
+model ReconciliationEntry {
+  id             String   @id @default(cuid())
+  importId       String
+  externalId     String
+  occurredAt     DateTime
+  amount         Int
+  description    String?
+  railReference  String?
+  transactionId  String?
+  status         String   @default("UNMATCHED")
+  createdAt      DateTime @default(now())
+
+  @@unique([importId, externalId])
+  @@index([importId, status])
+  @@index([railReference])
+}
+
+model CustomerFavorite {
+  id             String   @id @default(cuid())
+  consumerUserId String
+  storeId        String
+  paymentLinkId  String
+  createdAt      DateTime @default(now())
+
+  @@unique([consumerUserId, paymentLinkId])
+  @@index([consumerUserId, createdAt])
+}
+
+model CustomerReturnRequest {
+  id             String   @id @default(cuid())
+  merchantId     String
+  storeId        String
+  orderId        String
+  consumerUserId String?
+  reason         String
+  details        String?
+  status         String   @default("REQUESTED")
+  resolution     String?
+  dueAt          DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([storeId, status, createdAt])
+  @@index([storeId, status, dueAt])
+  @@index([consumerUserId, createdAt])
+}
+
+model PosSession {
+  id             String    @id @default(cuid())
+  merchantId     String
+  storeId        String
+  cashierName    String
+  openingFloat   Int       @default(0)
+  closingAmount  Int?
+  status         String    @default("OPEN")
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+
+  @@index([storeId, status, openedAt])
+}
+
+model PosSale {
+  id            String   @id @default(cuid())
+  merchantId    String
+  storeId       String
+  sessionId     String
+  paymentMethod String
+  amount        Int
+  currency      String   @default("BOB")
+  items         Json
+  customerName  String?
+  customerEmail String?
+  createdAt     DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model IntegrationConnection {
+  id          String    @id @default(cuid())
+  merchantId  String
+  storeId     String
+  kind        String
+  name        String
+  secretHash  String
+  status      String    @default("ACTIVE")
+  lastSyncAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, status, kind])
+}
+
+model IntegrationProductMapping {
+  id             String   @id @default(cuid())
+  connectionId   String
+  paymentLinkId  String
+  externalSku    String
+  externalName   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([connectionId, externalSku])
+  @@unique([connectionId, paymentLinkId])
+  @@index([paymentLinkId])
+}
+
+model IntegrationSubscriptionPlanMapping {
+  id                 String   @id @default(cuid())
+  connectionId       String
+  subscriptionPlanId String
+  externalPlanCode   String
+  externalName       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([connectionId, externalPlanCode])
+  @@unique([connectionId, subscriptionPlanId])
+  @@index([subscriptionPlanId])
+}
+
+model IntegrationCustomerMapping {
+  id                 String   @id @default(cuid())
+  connectionId       String
+  businessCustomerId String
+  externalCustomerId String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([connectionId, externalCustomerId])
+  @@index([businessCustomerId])
+}
+
+model IntegrationSubscriptionMapping {
+  id                     String   @id @default(cuid())
+  connectionId           String
+  customerSubscriptionId String   @unique
+  externalSubscriptionId String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([connectionId, externalSubscriptionId])
+  @@index([connectionId])
+}
+
+model IntegrationSyncRun {
+  id           String    @id @default(cuid())
+  connectionId String
+  direction    String
+  status       String    @default("RUNNING")
+  itemCount    Int       @default(0)
+  errorMessage String?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([connectionId, startedAt])
+}
+
+model AppointmentServiceOffering {
+  id              String   @id @default(cuid())
+  merchantId      String
+  storeId         String
+  name            String
+  durationMinutes Int
+  bufferMinutes   Int      @default(0)
+  price           Int      @default(0)
+  currency        String   @default("BOB")
+  color           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, isActive])
+}
+
+model Appointment {
+  id                     String    @id @default(cuid())
+  merchantId             String
+  storeId                String
+  serviceOfferingId      String
+  customerName           String
+  customerEmail          String?
+  customerPhone          String?
+  startsAt               DateTime
+  endsAt                 DateTime
+  status                 String    @default("CONFIRMED")
+  holdExpiresAt          DateTime?
+  notes                  String?
+  depositPaymentIntentId String?
+  googleEventId          String?   @unique
+  calendarSyncError      String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([storeId, startsAt])
+  @@index([storeId, status, holdExpiresAt])
+  @@index([serviceOfferingId, startsAt])
+}
+
+model CalendarConnection {
+  id                     String   @id @default(cuid())
+  merchantId             String
+  storeId                String   @unique
+  provider               String   @default("GOOGLE")
+  accountEmail           String?
+  calendarId             String
+  refreshTokenCiphertext String
+  syncToken              String?
+  status                 String   @default("ACTIVE")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([merchantId, status])
+}
+
+model CalendarOauthState {
+  id         String   @id @default(cuid())
+  stateHash  String   @unique
+  merchantId String
+  storeId    String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model SubscriptionPlan {
+  id               String   @id @default(cuid())
+  merchantId       String
+  storeId          String
+  name             String
+  amount           Int
+  currency         String   @default("BOB")
+  interval         String   @default("MONTHLY")
+  intervalCount    Int      @default(1)
+  reminderHoursBefore Int   @default(24)
+  collectionMode   String   @default("MANUAL_LINK")
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, isActive])
+}
+
+model CustomerSubscription {
+  id             String    @id @default(cuid())
+  merchantId     String
+  storeId        String
+  planId         String
+  customerId     String?
+  customerName   String
+  customerEmail  String?
+  customerPhone  String?
+  amountOverride Int?
+  nextAmountOverride Int?
+  activeKey      String?   @unique
+  status         String    @default("ACTIVE")
+  startedAt      DateTime  @default(now())
+  nextBillingAt  DateTime
+  canceledAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([storeId, status, nextBillingAt])
+  @@index([planId, status])
+}
+
+model SubscriptionInvoice {
+  id             String    @id @default(cuid())
+  subscriptionId String
+  merchantId     String
+  storeId        String
+  periodStart    DateTime
+  amount         Int
+  currency       String    @default("BOB")
+  status         String    @default("DUE")
+  paymentIntentId String?
+  dueAt          DateTime
+  paidAt         DateTime?
+  initialNoticeAt DateTime?
+  lastReminderAt DateTime?
+  reminderCount  Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  @@unique([subscriptionId, periodStart])
+  @@index([storeId, status, dueAt])
 }

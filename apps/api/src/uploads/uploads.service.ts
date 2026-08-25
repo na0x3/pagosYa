@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
@@ -27,6 +27,21 @@ export function maxUploadBytesForMime(mime: string): number {
   if (mime === "image/gif") return MAX_GIF_UPLOAD_BYTES;
   if (mime.startsWith("video/")) return MAX_VIDEO_UPLOAD_BYTES;
   return MAX_IMAGE_UPLOAD_BYTES;
+}
+
+export function detectedMediaMime(buffer: Buffer): string | null {
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image/jpeg";
+  const firstSix = buffer.subarray(0, 6).toString("ascii");
+  if (firstSix === "GIF87a" || firstSix === "GIF89a") return "image/gif";
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") {
+    return "image/webp";
+  }
+  if (buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp") return "video/mp4";
+  if (buffer.length >= 4 && buffer.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]))) return "video/webm";
+  return null;
 }
 
 export interface StoredUpload {
@@ -86,7 +101,10 @@ export class UploadsService implements OnModuleInit {
 
   async saveBuffer(buffer: Buffer, mimeType: string): Promise<StoredUpload> {
     const ext = ALLOWED_MIME_TO_EXT[mimeType];
-    if (!ext) throw new Error(`Unsupported upload mime type: ${mimeType}`);
+    if (!ext) throw new BadRequestException("Unsupported upload media type");
+    if (detectedMediaMime(buffer) !== mimeType) {
+      throw new BadRequestException("File contents do not match the declared media type");
+    }
     const filename = `${randomUUID()}.${ext}`;
     if (this.s3) {
       await this.s3.send(new PutObjectCommand({ Bucket: this.bucket, Key: filename, Body: buffer, ContentType: mimeType }));

@@ -10,7 +10,7 @@ web
 
 Three distinct primary users, each with their own surface:
 
-- **Customers** (Bolivian shoppers) — pay a merchant through the `apps/checkout` iframe/widget, embedded on a merchant's own site or opened directly via a shared payment link. Transient, one-time visitors; no account with pagosYa.
+- **Customers** (Bolivian shoppers and payers) — may pay once as guests through `apps/checkout`, or optionally create a separate account in `apps/consumer-dashboard` to see purchases, fulfillment, receipts, and accepted relationships with any participating business or institution. An account is never required to complete checkout.
 - **Merchants** (small/independent Bolivian businesses) — manage their store(s), products, payment links, branding, finances, payouts, and SIN invoicing profile through `apps/merchant-dashboard`. Recurring, task-driven users who log in repeatedly.
 - **Internal ops reviewers** (pagosYa's own compliance staff) — review and approve/reject merchant KYC submissions, and monitor delivery failures (failed payouts/invoices/webhooks) and the audit log, through `apps/ops`. Internal-only, authenticated by named per-reviewer token.
 
@@ -25,6 +25,8 @@ Local-first payment infrastructure for Bolivia. The mechanism a global processor
 ## Operating Context
 
 - A merchant creates a store and payment links (or a single Payment Intent) from `apps/merchant-dashboard`; customers pay through `apps/checkout`, which can be embedded via `packages/widget-js` on the merchant's own site or opened as a standalone hosted page.
+- `apps/consumer-dashboard` opens on the public marketplace of registered Stores, with the consumer's account summary above it when signed in. Its detailed account is a generic personal ledger, not a school-specific portal. A Store may represent a shop, school, clinic, club, landlord, lender, association, or another organization. Affiliation requires a verified email-and-carnet match plus explicit user acceptance.
+- Payment and fulfillment are separate state machines: a successful PaymentIntent moves its StoreOrder to `PAID`; the merchant later moves fulfillment through preparation, pickup/shipping, and delivery. The consumer surface must never label a merely paid item as delivered.
 - Every successful payment state transition writes ledger entries (double-entry) and a webhook event in the same transaction (outbox pattern) — this reliability mechanism is a durable architectural commitment, not an implementation detail to casually change.
 - `PaymentIntent` moves through a state machine: `requires_payment_method → requires_confirmation → processing → succeeded/failed/requires_action`.
 - Two settlement modes exist per merchant: `AGGREGATOR` and `FACILITATOR` (see HANDOFF.md for the distinction) — this affects payout/ledger behavior and must not be assumed identical across merchants.
@@ -35,7 +37,7 @@ Local-first payment infrastructure for Bolivia. The mechanism a global processor
 ## Capabilities and Constraints
 
 - `apps/checkout` is a Vite/TypeScript app (has a build step, its own token-based light/dark theming system for merchant branding).
-- `apps/merchant-dashboard` and `apps/ops` are **deliberately** dependency-free, no-build, vanilla HTML/JS/CSS served by a minimal hand-rolled Node static server — this is an existing, intentional constraint (per the project's own README), not a gap to "modernize" into a framework/bundler without being asked.
+- `apps/merchant-dashboard`, `apps/consumer-dashboard`, and `apps/ops` are **deliberately** dependency-free, no-build, vanilla HTML/JS/CSS served by minimal hand-rolled Node static servers — this is an existing, intentional constraint, not a gap to "modernize" into a framework/bundler without being asked.
 - Both admin surfaces currently render as a single long scrolling page with no section navigation and no table pagination — a known, confirmed limitation, not yet decided whether/how to restructure.
 - `apps/checkout` and `apps/ops` (as of this writing) have no responsive breakpoints (`@media` queries) at all. `apps/merchant-dashboard` has one minimal breakpoint (`@media (max-width: 640px)`, added to fix a confirmed mobile overflow bug) but is not otherwise designed responsively — treat all three as needing a real responsive pass, not just checkout/ops.
 - Rate limiting is global (20 req/min/IP) with stricter limits (5-10 req/min) on auth-sensitive endpoints.
@@ -45,7 +47,7 @@ Local-first payment infrastructure for Bolivia. The mechanism a global processor
 ## Brand Commitments
 
 - Name: **pagosYa**.
-- Logo: a meerkat mark (amber/orange line art) plus "PAGOSYA" wordmark — real assets at `assets/brand/logo.png` and `apps/checkout/public/logo-mark.png`.
+- Logo: a colorful parrot mark in yellow, red, blue, black, and white — real assets at `assets/brand/logo.png` and `apps/checkout/public/logo-mark.png`.
 - Typeface: "0xProto Mono" (monospace) used consistently across all three surfaces — an established brand commitment, not a placeholder default.
 - Dark theme by default across all three surfaces (checkout supports a light variant for merchant-embedded contexts; the two admin tools are dark-only today).
 - Voice: Spanish-language product copy throughout (all three surfaces).

@@ -7,7 +7,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: pagosya
     ports:
-      - "54329:5432"
+      # Development database only: never expose the default local credentials
+      # on LAN/public interfaces.
+      - "127.0.0.1:54329:5432"
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - pagosya_pgdata:/var/lib/postgresql/data
 

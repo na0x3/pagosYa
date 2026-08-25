@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
@@ -11,6 +11,10 @@ import { DashboardSignupPasswordlessDto } from "./dto/dashboard-signup-passwordl
 import { DashboardLoginDto } from "./dto/dashboard-login.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { GoogleLoginDto } from "../auth/dto/google-login.dto";
+import { DeleteAccountDto } from "../auth/dto/delete-account.dto";
+import { UpdateMerchantSessionDto } from "./dto/update-merchant-session.dto";
+import { AcknowledgeProgressCelebrationDto, ClaimProgressCelebrationsDto } from "./dto/claim-progress-celebrations.dto";
 
 @ApiTags("dashboard")
 @Controller("v1/dashboard")
@@ -45,6 +49,12 @@ export class DashboardController {
     return this.sessions.login(dto.email, dto.password);
   }
 
+  @Post("google")
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  googleLogin(@Body() dto: GoogleLoginDto) {
+    return this.sessions.loginWithGoogle(dto.credential);
+  }
+
   /** GET, not POST: this is meant to be clicked directly out of an email client. Throttled against token-guessing. */
   @Get("verify_email")
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -59,6 +69,77 @@ export class DashboardController {
   async logout(@Req() req: { sessionToken: string }) {
     await this.sessions.revoke(req.sessionToken);
     return { success: true };
+  }
+
+  @Get("sessions")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  activeSessions(@Req() req: { merchantUser: { id: string }; sessionToken: string }) {
+    return this.sessions.listActiveSessions(req.merchantUser.id, req.sessionToken);
+  }
+
+  @Delete("sessions/:sessionId")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  revokeSession(
+    @Req() req: { merchantUser: { id: string }; sessionToken: string },
+    @Param("sessionId") sessionId: string,
+  ) {
+    return this.sessions.revokeSessionById(req.merchantUser.id, sessionId, req.sessionToken);
+  }
+
+  @Patch("sessions/:sessionId")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  updateSession(
+    @Req() req: { merchantUser: { id: string }; sessionToken: string },
+    @Param("sessionId") sessionId: string,
+    @Body() dto: UpdateMerchantSessionDto,
+  ) {
+    return this.sessions.updateSessionIdentity(
+      req.merchantUser.id,
+      sessionId,
+      req.sessionToken,
+      dto.profileName,
+      dto.profileAvatarId,
+    );
+  }
+
+  @Post("daily-login-reward")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  dailyLoginReward(@Req() req: { merchantUser: { id: string } }) {
+    return this.sessions.claimDailyLoginStar(req.merchantUser.id);
+  }
+
+  @Post("progress-celebrations")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  progressCelebrations(
+    @Req() req: { merchant: { id: string }; merchantUser: { id: string } },
+    @Body() dto: ClaimProgressCelebrationsDto,
+  ) {
+    return this.sessions.pendingProgressCelebrations(req.merchant.id, req.merchantUser.id, dto.storeId);
+  }
+
+  @Post("progress-celebrations/acknowledge")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  acknowledgeProgressCelebration(
+    @Req() req: { merchant: { id: string }; merchantUser: { id: string } },
+    @Body() dto: AcknowledgeProgressCelebrationDto,
+  ) {
+    return this.sessions.acknowledgeProgressCelebration(req.merchant.id, req.merchantUser.id, dto.storeId, dto.level);
+  }
+
+  @Delete("account")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  async deleteAccount(
+    @Req() req: { merchant: { id: string }; merchantUser: { id: string } },
+    @Body() _dto: DeleteAccountDto,
+  ) {
+    return this.sessions.deactivateAccount(req.merchant.id, req.merchantUser.id);
   }
 
   /** Also protects against using this as an email-bombing tool against a victim address. */

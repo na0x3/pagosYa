@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Explora tiendas y catálogos publicados por comercios afiliados a pagosYa." />
+    <title>Tiendas afiliadas · pagosYa</title>
+    <link rel="icon" type="image/png" href="/logo-mark.png" />
+    <link rel="stylesheet" href="/src/stores.css" />
+    <script type="module">
+      const marketplaceOrigin = import.meta.env.VITE_CONSUMER_APP_ORIGIN ?? "http://localhost:4324";
+      const destination = new URL(marketplaceOrigin);
+      destination.search = window.location.search;
+      window.location.replace(destination);
+    </script>
+  </head>
+  <body>
+    <!--
+      THESIS: PagosYa's affiliated businesses form one living storefront wall,
+      refusing the anonymous marketplace grid where every merchant looks alike.
+      OWN-WORLD: Near-black terminal ground, white keylines, mono type, amber
+      PagosYa signals, and merchant imagery held in varied shop-window bands.
+      STORY: A shopper understands this is the public PagosYa directory,
+      searches real published catalogs, and enters one merchant's own store.
+      FIRST VIEWPORT: Brand rail, oversized directory statement, live store
+      count, and a full-width search dock opening directly into merchant windows.
+      FORM: Affiliated storefront wall, grounded candidate 6; seed dda9aa32.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+    -->
+    <a class="skip-link" href="#resultsTitle">Saltar a las tiendas</a>
+    <header class="directory-nav">
+      <a class="directory-brand" href="/stores/" aria-label="Directorio pagosYa">
+        <img src="/logo-mark.png" alt="" />
+        <strong>PAGOSYA</strong>
+      </a>
+      <span>Directorio de comercios</span>
+    </header>
+    <main>
+      <section class="directory-hero" aria-labelledby="directoryTitle">
+        <div>
+          <h1 id="directoryTitle">Negocios que ya venden con pagosYa</h1>
+          <p>Explora catálogos publicados por comercios afiliados y entra directamente a comprar, pedir o contactar.</p>
+        </div>
+        <div class="directory-count" aria-live="polite">
+          <strong id="storeCount">—</strong>
+          <span>tiendas publicadas</span>
+        </div>
+      </section>
+
+      <form class="directory-search" id="directorySearch" role="search">
+        <label for="storeSearch">Buscar por tienda, producto o categoría</label>
+        <div>
+          <input id="storeSearch" name="search" type="search" maxlength="80" autocomplete="off" placeholder="Ej. ropa, café, hogar…" />
+          <button type="submit">Buscar tiendas</button>
+        </div>
+      </form>
+
+      <section class="directory-results" aria-labelledby="resultsTitle">
+        <div class="directory-results-head">
+          <h2 id="resultsTitle" tabindex="-1">Todas las tiendas</h2>
+          <p id="resultsSummary" aria-live="polite">Cargando comercios publicados…</p>
+        </div>
+        <div class="directory-grid" id="directoryGrid" aria-busy="true"></div>
+        <div class="directory-empty" id="directoryEmpty" hidden>
+          <strong>No encontramos tiendas con esa búsqueda.</strong>
+          <p>Prueba con el nombre de un producto, una categoría o una palabra más corta.</p>
+          <button type="button" id="clearSearch">Ver todas las tiendas</button>
+        </div>
+        <div class="directory-error" id="directoryError" role="alert" hidden>
+          <strong>No pudimos cargar el directorio.</strong>
+          <p>Revisa tu conexión e intenta nuevamente.</p>
+          <button type="button" id="retryDirectory">Reintentar</button>
+        </div>
+        <button class="directory-more" type="button" id="loadMoreStores" hidden>Cargar más tiendas</button>
+      </section>
+    </main>
+    <footer>
+      <strong>pagosYa</strong>
+      <span>Comercio local, pagos digitales y catálogos en un solo lugar.</span>
+    </footer>
+    <script type="module" src="/src/stores.ts"></script>
+  </body>
+</html>

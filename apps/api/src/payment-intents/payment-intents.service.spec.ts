@@ -7,6 +7,34 @@ function makeService() {
 }
 
 describe("PaymentIntentsService cart option inventory", () => {
+  it("locks the payment row before canceling and releasing a branch reservation", async () => {
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{
+        status: "REQUIRES_ACTION",
+        metadata: {
+          locationStockReserved: true,
+          fulfillment: { locationId: "centro" },
+          cart: [{ paymentLinkId: "burger_1", name: "Burger", quantity: 1 }],
+        },
+      }]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      paymentIntent: { update: jest.fn().mockResolvedValue({ id: "pi_1", status: "CANCELED" }) },
+      storeOrder: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      appointment: { updateMany: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((callback) => callback(tx)) };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    await service.cancelById("pi_1");
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(tx.paymentIntent.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "pi_1" },
+      data: expect.objectContaining({ status: "CANCELED", metadata: expect.objectContaining({ locationStockReserved: false }) }),
+    }));
+  });
+
   it("fails loudly instead of silently skipping a depleted base product", async () => {
     const service = makeService();
     const tx = {
@@ -59,6 +87,44 @@ describe("PaymentIntentsService cart option inventory", () => {
     expect(tx.paymentLink.updateMany).not.toHaveBeenCalled();
   });
 
+  it("decrements the selected branch before the global product stock", async () => {
+    const service = makeService();
+    const tx = { $executeRaw: jest.fn().mockResolvedValue(1), paymentLink: { updateMany: jest.fn() } };
+
+    await (service as any).decrementStockForCart(tx, {
+      storeId: "store_1",
+      fulfillment: { locationId: "centro", locationName: "Sucursal Centro", method: "delivery" },
+      cart: [{ paymentLinkId: "burger_1", name: "Burger", quantity: 2 }],
+    });
+
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it("reserves branch stock atomically before authorization and does not decrement it twice", async () => {
+    const service = makeService();
+    const tx = { $executeRaw: jest.fn().mockResolvedValue(1), paymentLink: { updateMany: jest.fn() } };
+    const metadata = {
+      storeId: "store_1",
+      fulfillment: { locationId: "centro", locationName: "Sucursal Centro", method: "delivery" },
+      cart: [{ paymentLinkId: "burger_1", name: "Burger", quantity: 2 }],
+    };
+
+    await expect((service as any).reserveLocationStockForCart(tx, metadata)).resolves.toBe(true);
+    await (service as any).decrementStockForCart(tx, { ...metadata, locationStockReserved: true });
+
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects authorization when the atomic branch reservation loses a stock race", async () => {
+    const service = makeService();
+    const tx = { $executeRaw: jest.fn().mockResolvedValue(0) };
+
+    await expect((service as any).reserveLocationStockForCart(tx, {
+      fulfillment: { locationId: "centro" },
+      cart: [{ paymentLinkId: "burger_1", name: "Burger", quantity: 1 }],
+    })).rejects.toThrow("La ubicación elegida ya no tiene suficiente stock");
+  });
+
   it("blocks confirmation when a selected option was removed after cart creation", async () => {
     const service = makeService();
     const tx = {
@@ -106,6 +172,21 @@ describe("PaymentIntentsService cart option inventory", () => {
         cart: [{ paymentLinkId: "link_1", variantId: "var_small", variantName: "Pequeña", name: "Hamburguesa", quantity: 1 }],
       }),
     ).rejects.toThrow('Solo quedan 0 unidades de "Hamburguesa (Pequeña)"');
+  });
+
+  it("blocks confirmation when the selected branch no longer has enough stock", async () => {
+    const service = makeService();
+    const tx = {
+      paymentLink: { findMany: jest.fn().mockResolvedValue([{
+        id: "link_1", name: "Hamburguesa", status: PaymentLinkStatus.ACTIVE, stock: 4,
+        locationStocks: { centro: 0, sur: 4 }, variants: [], extras: [],
+      }]) },
+    };
+
+    await expect((service as any).assertCartStillAvailable(tx, {
+      fulfillment: { locationId: "centro", locationName: "Sucursal Centro", method: "pickup" },
+      cart: [{ paymentLinkId: "link_1", name: "Hamburguesa", quantity: 1 }],
+    })).rejects.toThrow('Sucursal Centro ya no tiene suficiente stock de "Hamburguesa"');
   });
 
   it("blocks confirmation when a shared extra pool no longer has enough units", async () => {
@@ -157,6 +238,55 @@ describe("PaymentIntentsService merchant transaction list", () => {
       },
       orderBy: { createdAt: "desc" },
       take: 50,
+    });
+  });
+});
+
+describe("PaymentIntentsService directed charge recipients", () => {
+  it("persists a merchant-supplied recipient when creating a direct charge", async () => {
+    const prisma = { paymentIntent: { create: jest.fn().mockImplementation(({ data }) => data) } };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    await service.createInTransaction(prisma as any, "merchant_1", false, {
+      amount: 3500,
+      description: "Cuota semanal",
+      customerName: " María López ",
+      customerEmail: " MARIA@GMAIL.COM ",
+      customerPhone: " +59170000000 ",
+    });
+
+    expect(prisma.paymentIntent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        customerName: "María López",
+        customerEmail: "maria@gmail.com",
+        customerPhone: "+59170000000",
+      }),
+    });
+  });
+
+  it("resolves the recipient for an already-issued subscription checkout", async () => {
+    const prisma = {
+      customerSubscription: {
+        findUnique: jest.fn().mockResolvedValue({
+          customerName: "María López",
+          customerEmail: "maria@gmail.com",
+          customerPhone: "+59170000000",
+        }),
+      },
+    };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    await expect(service.checkoutRecipient({
+      customerName: null,
+      customerDocument: null,
+      customerEmail: null,
+      customerPhone: null,
+      metadata: { subscription: { subscriptionId: "subscription_1" } },
+    })).resolves.toEqual({
+      name: "María López",
+      document: null,
+      email: "maria@gmail.com",
+      phone: "+59170000000",
     });
   });
 });

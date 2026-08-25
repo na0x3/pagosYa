@@ -1,5 +1,6 @@
 import { WebhookEventStatus } from "@prisma/client";
 import { WebhookDeliveryWorker } from "./webhook-delivery.worker";
+import { createHmac } from "node:crypto";
 
 function makeFakePrisma() {
   return {
@@ -17,15 +18,15 @@ const baseEvent = {
   payload: { id: "pi_1" },
   status: WebhookEventStatus.PENDING,
   attempts: 0,
+  createdAt: new Date("2026-08-18T12:00:00.000Z"),
   webhookEndpoint: { url: "https://merchant.example/webhook", secret: "whsec_test" },
 };
 
 describe("WebhookDeliveryWorker.deliverDueEvents", () => {
-  let fetchMock: jest.Mock;
+  let httpMock: { post: jest.Mock };
 
   beforeEach(() => {
-    fetchMock = jest.fn();
-    global.fetch = fetchMock as unknown as typeof fetch;
+    httpMock = { post: jest.fn() };
   });
 
   it("skips an event when the optimistic claim loses the race", async () => {
@@ -33,10 +34,10 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
     prisma.webhookEvent.findMany.mockResolvedValue([baseEvent]);
     prisma.webhookEvent.updateMany.mockResolvedValue({ count: 0 });
 
-    const worker = new WebhookDeliveryWorker(prisma as any);
+    const worker = new WebhookDeliveryWorker(prisma as any, httpMock as any);
     await worker.deliverDueEvents();
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(httpMock.post).not.toHaveBeenCalled();
     expect(prisma.webhookEvent.update).not.toHaveBeenCalled();
   });
 
@@ -44,10 +45,23 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
     const prisma = makeFakePrisma();
     prisma.webhookEvent.findMany.mockResolvedValue([baseEvent]);
     prisma.webhookEvent.updateMany.mockResolvedValue({ count: 1 });
-    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    httpMock.post.mockResolvedValue({ ok: true, status: 200 });
 
-    const worker = new WebhookDeliveryWorker(prisma as any);
+    const worker = new WebhookDeliveryWorker(prisma as any, httpMock as any);
     await worker.deliverDueEvents();
+
+    const [, body, headers] = httpMock.post.mock.calls[0];
+    const signature = headers["pagosya-signature"] as string;
+    const timestamp = signature.match(/t=(\d+)/)?.[1];
+    expect(JSON.parse(body)).toEqual({
+      id: "evt_1",
+      type: "payment_intent.succeeded",
+      createdAt: "2026-08-18T12:00:00.000Z",
+      data: { id: "pi_1" },
+    });
+    expect(signature).toBe(
+      `t=${timestamp},v1=${createHmac("sha256", "whsec_test").update(`${timestamp}.${body}`).digest("hex")}`,
+    );
 
     expect(prisma.webhookEvent.update).toHaveBeenCalledWith({
       where: { id: "evt_1" },
@@ -60,10 +74,10 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
     // pre-claim attempts=2 -> post-claim=3 -> backoff = 5000 * 2^(3-1) = 20000ms
     prisma.webhookEvent.findMany.mockResolvedValue([{ ...baseEvent, attempts: 2 }]);
     prisma.webhookEvent.updateMany.mockResolvedValue({ count: 1 });
-    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+    httpMock.post.mockResolvedValue({ ok: false, status: 500 });
 
     const before = Date.now();
-    const worker = new WebhookDeliveryWorker(prisma as any);
+    const worker = new WebhookDeliveryWorker(prisma as any, httpMock as any);
     await worker.deliverDueEvents();
 
     const call = prisma.webhookEvent.update.mock.calls[0][0];
@@ -78,9 +92,9 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
     const prisma = makeFakePrisma();
     prisma.webhookEvent.findMany.mockResolvedValue([baseEvent]);
     prisma.webhookEvent.updateMany.mockResolvedValue({ count: 1 });
-    fetchMock.mockRejectedValue(new Error("network down"));
+    httpMock.post.mockRejectedValue(new Error("network down"));
 
-    const worker = new WebhookDeliveryWorker(prisma as any);
+    const worker = new WebhookDeliveryWorker(prisma as any, httpMock as any);
     await expect(worker.deliverDueEvents()).resolves.toBeUndefined();
 
     expect(prisma.webhookEvent.update).toHaveBeenCalledWith({
@@ -94,9 +108,9 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
     // pre-claim attempts=7 -> post-claim=8 (MAX_ATTEMPTS) -> nextRetryAt must be null
     prisma.webhookEvent.findMany.mockResolvedValue([{ ...baseEvent, attempts: 7 }]);
     prisma.webhookEvent.updateMany.mockResolvedValue({ count: 1 });
-    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+    httpMock.post.mockResolvedValue({ ok: false, status: 500 });
 
-    const worker = new WebhookDeliveryWorker(prisma as any);
+    const worker = new WebhookDeliveryWorker(prisma as any, httpMock as any);
     await worker.deliverDueEvents();
 
     expect(prisma.webhookEvent.update).toHaveBeenCalledWith({

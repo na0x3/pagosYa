@@ -15,13 +15,109 @@ import {
   Max,
   MaxLength,
   Min,
+  registerDecorator,
   ValidateIf,
   ValidateNested,
+  type ValidationArguments,
+  type ValidationOptions,
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 
-export const STORE_CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "links"] as const;
+function isSupportedMapEmbedUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return false;
+    const hostname = url.hostname.toLowerCase();
+    const googleHost = /^(?:[a-z0-9-]+\.)?google\.(?:com|[a-z]{2,3})(?:\.[a-z]{2})?$/.test(hostname);
+    const googleEmbed = googleHost && url.pathname.startsWith("/maps/embed");
+    const openStreetMapEmbed = (hostname === "openstreetmap.org" || hostname === "www.openstreetmap.org")
+      && url.pathname === "/export/embed.html";
+    return googleEmbed || openStreetMapEmbed;
+  } catch {
+    return false;
+  }
+}
+
+function IsSupportedMapEmbedUrl(validationOptions?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    registerDecorator({
+      name: "isSupportedMapEmbedUrl",
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown) {
+          return typeof value === "string" && isSupportedMapEmbedUrl(value);
+        },
+        defaultMessage(args: ValidationArguments) {
+          return `${args.property} must be a secure Google Maps or OpenStreetMap embed URL`;
+        },
+      },
+    });
+  };
+}
+
+export const STORE_MOTION_EXPERIENCES = [
+  "story-scroll",
+  "coverflow-carousel",
+  "hero-carousel",
+  "image-stream",
+  "scroll-expansion",
+  "hero-gallery-scroll",
+  "stagger-testimonials",
+  "zoom-parallax",
+] as const;
+export const STORE_ANIMATION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,47}$/;
+export const STORE_ANIMATION_SECTION_PATTERN = /^animation-[a-z0-9][a-z0-9_-]{0,47}$/;
+export const STORE_BASE_CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "contact", "links"] as const;
+const STORE_LEGACY_REQUIRED_CONTENT_SECTIONS = STORE_BASE_CONTENT_SECTIONS.filter((section) => section !== "contact");
+export const STORE_MOTION_CONTENT_SECTIONS = [
+  "motion-story-scroll",
+  "motion-coverflow-carousel",
+  "motion-hero-carousel",
+  "motion-image-stream",
+  "motion-scroll-expansion",
+  "motion-hero-gallery-scroll",
+  "motion-stagger-testimonials",
+  "motion-zoom-parallax",
+] as const;
+// `motion` remains accepted so stores saved by the previous editor can be
+// expanded in place. New editors persist one section key per animation.
+export const STORE_CONTENT_SECTIONS = [
+  ...STORE_BASE_CONTENT_SECTIONS,
+  "motion",
+  ...STORE_MOTION_CONTENT_SECTIONS,
+] as const;
+
+function IsStoreContentOrder(validationOptions?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    registerDecorator({
+      name: "isStoreContentOrder",
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown) {
+          if (!Array.isArray(value)) return false;
+          const unique = new Set(value);
+          if (
+            unique.size !== value.length ||
+            value.some(
+              (section) =>
+                typeof section !== "string" ||
+                (!(STORE_CONTENT_SECTIONS as readonly string[]).includes(section) && !STORE_ANIMATION_SECTION_PATTERN.test(section)),
+            )
+          ) return false;
+          return STORE_LEGACY_REQUIRED_CONTENT_SECTIONS.every((section) => unique.has(section));
+        },
+        defaultMessage(args: ValidationArguments) {
+          return `${args.property} must contain every required storefront section exactly once; contact and animation sections are optional and unique`;
+        },
+      },
+    });
+  };
+}
 
 export class StoreHeroSlideDto {
   @ApiProperty({ description: "Image, GIF, MP4, or WEBM path returned by POST /v1/uploads." })
@@ -93,6 +189,153 @@ export class StoreEditorialImageDto {
   @IsString()
   @Matches(/^#[0-9a-f]{6}$/i, { message: "editorial boxColor must be a 6-digit hex color" })
   boxColor?: string;
+}
+
+export class StoreAnimationDto {
+  @ApiProperty({ example: "coleccion-invierno", description: "Stable identifier used by the storefront section organizer." })
+  @IsString()
+  @Matches(STORE_ANIMATION_ID_PATTERN, { message: "animation id must use lowercase letters, numbers, hyphens, or underscores" })
+  id!: string;
+
+  @ApiProperty({ example: "Colección de invierno", description: "Merchant-facing name shown in the section organizer." })
+  @IsString()
+  @IsSafeText()
+  @MaxLength(60)
+  name!: string;
+
+  @ApiProperty({ enum: STORE_MOTION_EXPERIENCES })
+  @IsString()
+  @IsIn(STORE_MOTION_EXPERIENCES)
+  type!: string;
+
+  @ApiPropertyOptional({ example: "Una colección en movimiento" })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  title?: string;
+
+  @ApiPropertyOptional({ example: "Detalles, texturas y escenas de la nueva temporada." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(220)
+  subtitle?: string;
+
+  @ApiProperty({ description: "Ordered pictures and copy owned by this animation.", type: [StoreEditorialImageDto] })
+  @IsArray()
+  @ArrayMaxSize(8)
+  @ValidateNested({ each: true })
+  @Type(() => StoreEditorialImageDto)
+  media!: StoreEditorialImageDto[];
+}
+
+export class StoreLocationInventoryDto {
+  @ApiProperty({ description: "Product id owned by this store." })
+  @IsString()
+  @MaxLength(80)
+  paymentLinkId!: string;
+
+  @ApiPropertyOptional({ nullable: true, description: "Units available at this branch; null means unlimited." })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(0)
+  @Max(999999)
+  stock?: number | null;
+}
+
+export class StoreLocationHoursDto {
+  @ApiProperty({ minimum: 0, maximum: 6, description: "0 is Sunday, 6 is Saturday." })
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  day!: number;
+
+  @ApiProperty({ example: "09:00" })
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  open!: string;
+
+  @ApiProperty({ example: "18:00" })
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  close!: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  closed!: boolean;
+}
+
+export class StoreLocationDto {
+  @ApiProperty({ example: "sucursal-centro" })
+  @IsString()
+  @Matches(/^[a-z0-9][a-z0-9_-]{0,47}$/)
+  id!: string;
+
+  @ApiProperty({ example: "Sucursal Centro" })
+  @IsString()
+  @IsSafeText()
+  @MaxLength(80)
+  name!: string;
+
+  @ApiPropertyOptional({ nullable: true, example: "Av. Arce 1234, Sopocachi" })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(240)
+  address?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(2400)
+  @IsSupportedMapEmbedUrl()
+  mapEmbedUrl?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(600)
+  description?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(140)
+  highlight?: string | null;
+
+  @ApiProperty()
+  @IsBoolean()
+  pickupEnabled!: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  deliveryEnabled!: boolean;
+
+  @ApiPropertyOptional({ type: [StoreLocationHoursDto], description: "Weekly opening schedule in Bolivia time." })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(7)
+  @ArrayUnique((entry: StoreLocationHoursDto) => entry.day)
+  @ValidateNested({ each: true })
+  @Type(() => StoreLocationHoursDto)
+  openingHours?: StoreLocationHoursDto[];
+
+  @ApiPropertyOptional({ type: [StoreLocationInventoryDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ArrayUnique((entry: StoreLocationInventoryDto) => entry.paymentLinkId)
+  @ValidateNested({ each: true })
+  @Type(() => StoreLocationInventoryDto)
+  inventory?: StoreLocationInventoryDto[];
 }
 
 export class CreateStoreDto {
@@ -246,6 +489,14 @@ export class CreateStoreDto {
   buttonStyle?: string;
 
   @ApiPropertyOptional({
+    description: "Material treatment used by the storefront product board.",
+    enum: ["chalkboard", "kraft", "painted"],
+  })
+  @IsOptional()
+  @IsIn(["chalkboard", "kraft", "painted"])
+  boardTexture?: string;
+
+  @ApiPropertyOptional({
     description: "Short promo/notice line shown in a bar at the very top of the storefront. Omit to leave unchanged, or send null to clear.",
     example: "Envío gratis en compras desde Bs 200",
     nullable: true,
@@ -340,17 +591,15 @@ export class CreateStoreDto {
   heroSlides?: StoreHeroSlideDto[];
 
   @ApiPropertyOptional({
-    description: "Every storefront content section exactly once, in public display order.",
-    enum: STORE_CONTENT_SECTIONS,
+    description: "Every base storefront section once plus any independently positioned animation sections.",
     isArray: true,
   })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(STORE_CONTENT_SECTIONS.length)
-  @ArrayMaxSize(STORE_CONTENT_SECTIONS.length)
+  @ArrayMinSize(STORE_LEGACY_REQUIRED_CONTENT_SECTIONS.length)
   @ArrayUnique()
-  @IsIn(STORE_CONTENT_SECTIONS, { each: true })
-  contentOrder?: (typeof STORE_CONTENT_SECTIONS)[number][];
+  @IsStoreContentOrder()
+  contentOrder?: string[];
 
   @ApiPropertyOptional({
     description: "Structural storefront composition.",
@@ -369,12 +618,46 @@ export class CreateStoreDto {
   experienceStyle?: string;
 
   @ApiPropertyOptional({
-    description: "Add the paired Story Scroll and Zoom Parallax experiences after the catalog.",
+    description: "Add a merchant-authored animation section to the storefront.",
     default: false,
   })
   @IsOptional()
   @IsBoolean()
   motionDuoEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: "Choose the presentation used by the standalone animation section.",
+    enum: STORE_MOTION_EXPERIENCES,
+    default: "coverflow-carousel",
+  })
+  @IsOptional()
+  @IsIn(STORE_MOTION_EXPERIENCES)
+  motionExperience?: string;
+
+  @ApiPropertyOptional({
+    description: "Animation templates, each rendered as its own reorderable storefront section.",
+    enum: STORE_MOTION_EXPERIENCES,
+    isArray: true,
+    default: ["coverflow-carousel"],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(STORE_MOTION_EXPERIENCES.length)
+  @ArrayUnique()
+  @IsIn(STORE_MOTION_EXPERIENCES, { each: true })
+  motionExperiences?: string[];
+
+  @ApiPropertyOptional({
+    description: "Named, independently editable and reorderable storefront animations.",
+    type: [StoreAnimationDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique((animation: StoreAnimationDto) => animation.id)
+  @ValidateNested({ each: true })
+  @Type(() => StoreAnimationDto)
+  animations?: StoreAnimationDto[];
 
   @ApiPropertyOptional({
     description: "Captioned editorial images shown outside the product catalog (maximum 8).",
@@ -474,6 +757,50 @@ export class CreateStoreDto {
   contactPhone?: string | null;
 
   @ApiPropertyOptional({
+    description: "Secure Google Maps or OpenStreetMap embed URL for the public location section. Omit to leave unchanged, or send null to clear.",
+    example: "https://www.google.com/maps/embed?pb=...",
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(2400)
+  @IsSupportedMapEmbedUrl()
+  locationMapUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Plain-text description shown beside the embedded location. Omit to leave unchanged, or send null to clear.",
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(600)
+  locationDescription?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Short merchant-authored phrase displayed with the store accent inside the public location section.",
+    example: "A media cuadra de la plaza principal",
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(140)
+  locationHighlight?: string | null;
+
+  @ApiPropertyOptional({ type: [StoreLocationDto], description: "Ordered public branches with fulfillment capabilities and product allocation." })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique((entry: StoreLocationDto) => entry.id)
+  @ValidateNested({ each: true })
+  @Type(() => StoreLocationDto)
+  locations?: StoreLocationDto[];
+
+  @ApiPropertyOptional({
     description: "Support email shown to customers on the receipt. Omit to leave unchanged, or send null to clear.",
     nullable: true,
   })
@@ -481,4 +808,21 @@ export class CreateStoreDto {
   @ValidateIf((_, value) => value !== null)
   @IsEmail()
   contactEmail?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Show the customer-interest form near the end of the storefront.",
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  contactFormEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: "Private Gmail or email address that receives storefront contact messages. Omit to use the merchant account email.",
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEmail()
+  contactFormEmail?: string | null;
 }

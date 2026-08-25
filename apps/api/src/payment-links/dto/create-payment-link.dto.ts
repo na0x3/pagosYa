@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsPositive,
   IsString,
@@ -208,6 +209,26 @@ export class CreatePaymentLinkDto {
   @IsString()
   @Length(3, 3)
   currency?: string;
+
+  @ApiPropertyOptional({ description: "Percentage deducted while the scheduled campaign is active.", example: 20, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  discountPercent?: number | null;
+
+  @ApiPropertyOptional({ description: "ISO-8601 campaign start time.", example: "2026-08-21T14:00:00.000Z", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsISO8601({ strict: true })
+  discountStartsAt?: string | null;
+
+  @ApiPropertyOptional({ description: "ISO-8601 campaign end time.", example: "2026-08-28T14:00:00.000Z", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsISO8601({ strict: true })
+  discountEndsAt?: string | null;
 
   @ApiPropertyOptional({
     description: "6-digit hex color swatch for this product, e.g. a T-shirt color. Omit to leave unchanged, or send null to clear.",

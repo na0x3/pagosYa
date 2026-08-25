@@ -1,14 +1,28 @@
 {
   "name": "@pagosya/widget-js",
   "version": "0.1.0",
-  "private": true,
-  "main": "dist/pagosya.js",
+  "description": "Browser checkout widget for pagosYa",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./browser": "./dist/pagosya.js"
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup && node scripts/rename-output.mjs",
     "dev": "tsup --watch --minify=false"
   },
   "dependencies": {
-    "@pagosya/shared-types": "workspace:*"
+    "@pagosya/shared-types": "workspace:^"
   },
   "devDependencies": {
     "tsup": "^8.3.0",

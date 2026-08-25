@@ -9,6 +9,8 @@ export interface SendEmailRequest {
   to: string;
   subject: string;
   body: string;
+  /** Address that should receive a human reply to the delivered message. */
+  replyTo?: string;
   /** Interactive flows (such as lead capture) must not report success when delivery was rejected. */
   failLoudly?: boolean;
 }

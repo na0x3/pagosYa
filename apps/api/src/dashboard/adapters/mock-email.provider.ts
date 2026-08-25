@@ -11,6 +11,6 @@ export class MockEmailProvider implements EmailProvider {
   private readonly logger = new Logger(MockEmailProvider.name);
 
   async send(req: SendEmailRequest): Promise<void> {
-    this.logger.log(`[mock email] to=${req.to} subject="${req.subject}"\n${req.body}`);
+    this.logger.log(`[mock email] to=${req.to}${req.replyTo ? ` replyTo=${req.replyTo}` : ""} subject="${req.subject}"\n${req.body}`);
   }
 }

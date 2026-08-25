@@ -1,4 +1,5 @@
 import { OpsUserService } from "./ops-user.service";
+import { OpsRole } from "@prisma/client";
 
 function makeFakePrisma() {
   return {
@@ -16,23 +17,23 @@ describe("OpsUserService", () => {
     const service = new OpsUserService(prisma as any);
 
     prisma.opsUser.create.mockImplementation(({ data }: any) =>
-      Promise.resolve({ id: "ops_1", name: data.name, email: data.email, hashedToken: data.hashedToken, revokedAt: null }),
+      Promise.resolve({ id: "ops_1", name: data.name, email: data.email, hashedToken: data.hashedToken, role: data.role, revokedAt: null }),
     );
 
     const { user, fullToken } = await service.create("Ana Gutierrez", "ana@pagosya.bo");
     expect(fullToken).toMatch(/^ops_/);
-    expect(user).toEqual({ id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo" });
+    expect(user).toEqual({ id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo", role: OpsRole.SUPPORT_AGENT });
 
     // verify() scans active users and argon2-verifies the presented token
     // against each stored hash — hand it back the hash create() actually
     // produced, from the mocked call's arguments.
     const createdData = prisma.opsUser.create.mock.calls[0][0].data;
     prisma.opsUser.findMany.mockResolvedValue([
-      { id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo", hashedToken: createdData.hashedToken, revokedAt: null },
+      { id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo", hashedToken: createdData.hashedToken, role: OpsRole.SUPPORT_AGENT, revokedAt: null },
     ]);
 
     const verified = await service.verify(fullToken);
-    expect(verified).toEqual({ id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo" });
+    expect(verified).toEqual({ id: "ops_1", name: "Ana Gutierrez", email: "ana@pagosya.bo", role: OpsRole.SUPPORT_AGENT });
   });
 
   it("rejects a token that doesn't match any active user's hash", async () => {

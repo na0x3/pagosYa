@@ -43,3 +43,7 @@ const memoryStorage = new MemoryStorage();
 Object.defineProperty(globalThis, "localStorage", { writable: true, value: memoryStorage });
 Object.defineProperty(window, "localStorage", { writable: true, value: memoryStorage });
 
+// jsdom reports every call as a not-implemented console error. Storefront
+// routes deliberately control scroll restoration, so provide the browser API
+// surface and let individual tests spy on it when the exact destination matters.
+Object.defineProperty(window, "scrollTo", { writable: true, value: () => {} });

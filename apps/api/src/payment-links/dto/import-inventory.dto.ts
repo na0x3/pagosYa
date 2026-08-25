@@ -15,6 +15,14 @@ export class InventoryImportProductDto extends OmitType(CreatePaymentLinkDto, ["
 }
 
 export class ImportInventoryDto {
+  @ApiPropertyOptional({
+    description: "Active stock connection that should receive automatic mappings for imported products with a SKU.",
+    example: "cm123integration",
+  })
+  @IsOptional()
+  @IsString()
+  integrationConnectionId?: string;
+
   @ApiProperty({ type: [InventoryImportProductDto], description: "Validated products to create in one transaction." })
   @IsArray()
   @ArrayMinSize(1)

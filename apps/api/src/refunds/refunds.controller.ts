@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Headers, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -13,7 +13,11 @@ export class RefundsController {
   constructor(private readonly refunds: RefundsService) {}
 
   @Post()
-  create(@CurrentMerchant() merchant: { id: string }, @Body() dto: CreateRefundDto) {
-    return this.refunds.create(merchant.id, dto);
+  create(
+    @CurrentMerchant() merchant: { id: string },
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() dto: CreateRefundDto,
+  ) {
+    return this.refunds.create(merchant.id, dto, idempotencyKey);
   }
 }

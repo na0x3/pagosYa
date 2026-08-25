@@ -7,11 +7,15 @@ import { OpsUsersController } from "./ops-users.controller";
 import { AuditLogController } from "./audit-log.controller";
 import { DeliveryFailuresController } from "./delivery-failures.controller";
 import { AuthModule } from "../auth/auth.module";
+import { DashboardModule } from "../dashboard/dashboard.module";
+import { SupportController } from "./support.controller";
+import { SupportService } from "./support.service";
+import { MerchantSupportController } from "./merchant-support.controller";
 
 @Module({
-  imports: [AuthModule],
-  controllers: [OpsUsersController, AuditLogController, DeliveryFailuresController],
-  providers: [OpsUserService, AuditLogService, DeliveryFailuresService, OpsAuthGuard],
-  exports: [OpsUserService, AuditLogService, DeliveryFailuresService, OpsAuthGuard],
+  imports: [AuthModule, DashboardModule],
+  controllers: [OpsUsersController, AuditLogController, DeliveryFailuresController, SupportController, MerchantSupportController],
+  providers: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, OpsAuthGuard],
+  exports: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, OpsAuthGuard],
 })
 export class OpsModule {}

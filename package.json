@@ -7,9 +7,16 @@
   },
   "packageManager": "pnpm@11.20.0",
   "scripts": {
+    "dev": "node scripts/dev.mjs",
     "dev:db": "node scripts/dev-db.mjs start",
     "dev:db:stop": "node scripts/dev-db.mjs stop",
+    "dev:dashboard": "pnpm --filter @pagosya/merchant-dashboard run dev",
+    "dev:consumer": "pnpm --filter @pagosya/consumer-dashboard run dev",
     "demo:store": "node scripts/demo-store.mjs",
+    "demo:inventory-db": "node examples/cafe-aroma/setup.mjs",
+    "demo:inventory-stock": "node examples/cafe-aroma/update-stock.mjs",
+    "demo:inventory-sync": "node examples/cafe-aroma/sync-stock.mjs",
+    "demo:subscriptions-sync": "node examples/cafe-aroma/sync-subscriptions.mjs",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test"
   },

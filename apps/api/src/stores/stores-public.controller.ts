@@ -4,6 +4,9 @@ import { ApiTags } from "@nestjs/swagger";
 import { StoresService } from "./stores.service";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
+import { CustomDomainsService } from "./custom-domains.service";
+import { PromoCodesService } from "../promo-codes/promo-codes.service";
+import { QuotePromoCodeDto } from "../promo-codes/dto/quote-promo-code.dto";
 
 /** No auth by design — this is what a customer's browser hits after tapping a
  * shared store link/QR. Mirrors CheckoutSessionController's "unauthenticated but
@@ -12,7 +15,27 @@ import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
 @ApiTags("stores")
 @Controller("v1/stores/public")
 export class StoresPublicController {
-  constructor(private readonly stores: StoresService) {}
+  constructor(
+    private readonly stores: StoresService,
+    private readonly customDomains: CustomDomainsService,
+    private readonly promoCodes: PromoCodesService,
+  ) {}
+
+  @Get()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  listPublishedStores(
+    @Query("search") search?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    return this.stores.listPublishedStores(search, page, pageSize);
+  }
+
+  @Get("domain")
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  resolveDomain(@Query("hostname") hostname: string) {
+    return this.customDomains.resolve(hostname);
+  }
 
   @Get(":slug/store")
   getStore(@Param("slug") slug: string, @Query("preview") preview?: string) {
@@ -23,6 +46,14 @@ export class StoresPublicController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   cartCheckout(@Param("slug") slug: string, @Body() dto: CartCheckoutDto) {
     return this.stores.createCartCheckout(slug, dto);
+  }
+
+  @Post(":slug/promo-code/quote")
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async quotePromoCode(@Param("slug") slug: string, @Body() dto: QuotePromoCodeDto) {
+    const store = await this.stores.findActiveBySlugPublic(slug);
+    const promo = await this.promoCodes.resolveActiveForStore(store.id, dto.code);
+    return { code: promo.code, discountType: promo.discountType, discountValue: promo.discountValue };
   }
 
   @Post(":slug/leads")

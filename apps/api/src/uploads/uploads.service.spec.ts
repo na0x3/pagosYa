@@ -3,6 +3,7 @@ import {
   MAX_IMAGE_UPLOAD_BYTES,
   MAX_VIDEO_UPLOAD_BYTES,
   maxUploadBytesForMime,
+  detectedMediaMime,
   UPLOAD_FILENAME_PATTERN,
   UploadsService,
 } from "./uploads.service";
@@ -28,5 +29,17 @@ describe("UploadsService media support", () => {
     expect(maxUploadBytesForMime("image/jpeg")).toBe(MAX_IMAGE_UPLOAD_BYTES);
     expect(maxUploadBytesForMime("image/gif")).toBe(MAX_GIF_UPLOAD_BYTES);
     expect(maxUploadBytesForMime("video/mp4")).toBe(MAX_VIDEO_UPLOAD_BYTES);
+  });
+
+  it("detects supported formats by magic bytes instead of trusting the multipart MIME claim", () => {
+    expect(detectedMediaMime(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe("image/png");
+    expect(detectedMediaMime(Buffer.from("<script>alert(1)</script>"))).toBeNull();
+    expect(detectedMediaMime(Buffer.concat([Buffer.from("0000ftyp", "ascii"), Buffer.alloc(4)]))).toBe("video/mp4");
+  });
+
+  it("rejects spoofed uploads whose bytes do not match the declared MIME type", async () => {
+    await expect(service.saveBuffer(Buffer.from("<html>not an image</html>"), "image/png")).rejects.toThrow(
+      "File contents do not match",
+    );
   });
 });

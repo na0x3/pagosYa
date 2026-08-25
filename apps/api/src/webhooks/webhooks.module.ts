@@ -5,11 +5,12 @@ import { WebhookEndpointsService } from "./webhook-endpoints.service";
 import { WebhookEndpointsController } from "./webhook-endpoints.controller";
 import { WebhookDeliveryWorker } from "./webhook-delivery.worker";
 import { AuthModule } from "../auth/auth.module";
+import { WebhookHttpClient } from "./webhook-http.client";
 
 @Module({
   imports: [ScheduleModule.forRoot(), AuthModule],
   controllers: [WebhookEndpointsController],
-  providers: [WebhookDispatcherService, WebhookEndpointsService, WebhookDeliveryWorker],
+  providers: [WebhookDispatcherService, WebhookEndpointsService, WebhookDeliveryWorker, WebhookHttpClient],
   exports: [WebhookDispatcherService],
 })
 export class WebhooksModule {}

@@ -1,13 +1,14 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { MerchantStatus, StoreStatus } from "@prisma/client";
+import { MerchantStatus, PromoDiscountType, StoreStatus } from "@prisma/client";
 import { StoresService } from "./stores.service";
 
 function makeFakePrisma() {
   const prisma = {
-    store: { findUnique: jest.fn(), findFirst: jest.fn(), delete: jest.fn(), update: jest.fn() },
+    store: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), delete: jest.fn(), update: jest.fn() },
     merchant: { findUniqueOrThrow: jest.fn() },
-    paymentLink: { findMany: jest.fn() },
+    paymentLink: { findMany: jest.fn(), groupBy: jest.fn().mockResolvedValue([]), update: jest.fn() },
     storeLead: { create: jest.fn().mockResolvedValue({ id: "lead_1" }) },
+    storeOrder: { create: jest.fn().mockResolvedValue({ id: "order_1" }) },
     category: { findMany: jest.fn().mockResolvedValue([]) },
     storeLink: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -15,6 +16,7 @@ function makeFakePrisma() {
       createMany: jest.fn(),
     },
     storeProductStat: { findMany: jest.fn().mockResolvedValue([]) },
+    appointmentServiceOffering: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   // Batch transactions resolve their prepared operations; interactive ones
@@ -25,7 +27,8 @@ function makeFakePrisma() {
 }
 
 function makeFakePaymentIntents() {
-  return { create: jest.fn().mockResolvedValue({ id: "pi_1", clientSecret: "pi_1_secret_x" }) };
+  const create = jest.fn().mockResolvedValue({ id: "pi_1", clientSecret: "pi_1_secret_x" });
+  return { create, createInTransaction: jest.fn((_tx, ...args) => create(...args)) };
 }
 
 function makeFakeUploads() {
@@ -34,6 +37,101 @@ function makeFakeUploads() {
 
 const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE };
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
+
+describe("StoresService.createQuickQrPayment", () => {
+  it("creates and starts a store-scoped QR payment from a dashboard session", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue({ ...store, name: "Burgeria", merchant });
+    const paymentIntents = {
+      create: jest.fn().mockResolvedValue({ id: "pi_quick", clientSecret: "pi_quick_secret_x" }),
+      confirm: jest.fn().mockResolvedValue({
+        paymentIntent: {
+          id: "pi_quick",
+          clientSecret: "pi_quick_secret_x",
+          status: "REQUIRES_ACTION",
+          amount: 4550,
+          currency: "BOB",
+        },
+        railResult: {
+          status: "requires_action",
+          actionRequired: { type: "qr_display", data: { qrPayload: "000201pagosya" } },
+        },
+      }),
+    };
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    const result = await service.createQuickQrPayment("m_1", "store_1", { amount: 4550, description: "Mesa 4" });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 4550,
+      currency: "BOB",
+      description: "Mesa 4",
+      metadata: { storeId: "store_1", quickPayment: { source: "dashboard", storeName: "Burgeria" } },
+    }));
+    expect(paymentIntents.confirm).toHaveBeenCalledWith("pi_quick", {
+      paymentMethod: { type: "QR", token: "tok_qr_demo" },
+    });
+    expect(result.qrImageDataUrl).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("blocks cashier QR creation for an inactive merchant", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue({
+      ...store,
+      name: "Burgeria",
+      merchant: { status: MerchantStatus.PENDING },
+    });
+    const paymentIntents = { create: jest.fn(), confirm: jest.fn() };
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createQuickQrPayment("m_1", "store_1", { amount: 4550 })).rejects.toBeInstanceOf(BadRequestException);
+    expect(paymentIntents.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("StoresService.listPublishedStores", () => {
+  it("returns only directory-safe store summaries with pagination", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.count.mockResolvedValue(1);
+    prisma.store.findMany.mockResolvedValue([{
+      id: "store_1",
+      slug: "abc123",
+      name: "Estudio Norte",
+      tagline: "Diseño hecho en Bolivia",
+      logoUrl: "/v1/uploads/logo.webp",
+      bannerUrl: null,
+      accentColor: "#c58b3c",
+      backgroundColor: "#111111",
+      checkoutMode: "payment",
+      createdAt: new Date("2026-08-01T12:00:00Z"),
+      categories: [{ name: "Hogar" }],
+      paymentLinks: [{ name: "Lámpara", amount: 12500, currency: "BOB", imageUrls: ["/v1/uploads/lamp.webp"] }],
+      _count: { paymentLinks: 4 },
+    }]);
+    prisma.paymentLink.groupBy.mockResolvedValue([{ storeId: "store_1", _min: { amount: 9900 } }]);
+
+    const result = await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any)
+      .listPublishedStores("lámpara", "1", "24");
+
+    expect(result.stores[0]).toMatchObject({
+      name: "Estudio Norte",
+      slug: "abc123",
+      coverUrl: "/v1/uploads/lamp.webp",
+      productCount: 4,
+      minimumAmount: 9900,
+      categories: ["Hogar"],
+    });
+    expect(result.pagination).toEqual({ page: 1, pageSize: 24, total: 1, totalPages: 1, hasMore: false });
+    expect(prisma.store.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: "ACTIVE",
+        merchant: { status: "ACTIVE" },
+        paymentLinks: { some: { status: "ACTIVE" } },
+        OR: expect.any(Array),
+      }),
+    }));
+  });
+});
 
 describe("StoresService.submitLead", () => {
   it("emails the merchant's configured contact with customer and cart details", async () => {
@@ -68,6 +166,7 @@ describe("StoresService.submitLead", () => {
       to: "ventas@estudionorte.bo",
       subject: "Nuevo interesado en Estudio Norte: María Pérez",
       body: expect.stringContaining("Correo: maria@gmail.com"),
+      replyTo: "maria@gmail.com",
       failLoudly: true,
     });
     expect(email.send.mock.calls[0][0].body).toContain("Asesoría de interiores × 1");
@@ -121,6 +220,60 @@ describe("StoresService.submitLead", () => {
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ to: "merchant@example.com" }));
     expect(paymentIntents.create).not.toHaveBeenCalled();
   });
+
+  it("accepts an email-only checkout lead for an external store", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, name: "Estudio Norte", checkoutMode: "external", contactEmail: null });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "owner@gmail.com" });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1", name: "Asesoría", amount: 15000, currency: "BOB", variants: [], extras: [],
+    }]);
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", {
+      email: "maria@gmail.com",
+      items: [{ paymentLinkId: "link_1", quantity: 1 }],
+    })).resolves.toEqual({ submitted: true, leadId: "lead_1" });
+
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: "owner@gmail.com",
+      subject: "Nuevo interesado en Estudio Norte: maria@gmail.com",
+    }));
+    expect(prisma.storeLead.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ customerName: "Cliente interesado", customerPhone: "" }),
+    }));
+  });
+
+  it("routes an enabled storefront contact form to its private owner email", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      name: "Estudio Norte",
+      checkoutMode: "whatsapp",
+      contactFormEnabled: true,
+      contactFormEmail: "owner@gmail.com",
+      contactEmail: "public@estudionorte.bo",
+    });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "account@estudionorte.bo" });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", {
+      name: "Ana",
+      email: "ana@gmail.com",
+      message: "¿Abren los sábados?",
+      items: [],
+    })).resolves.toEqual({ submitted: true, leadId: "lead_1" });
+
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: "owner@gmail.com",
+      subject: "Nuevo mensaje para Estudio Norte: Ana",
+      body: expect.stringContaining("¿Abren los sábados?"),
+      replyTo: "ana@gmail.com",
+    }));
+  });
 });
 
 describe("StoresService.createCartCheckout — stock enforcement", () => {
@@ -149,6 +302,53 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 3 }] })).rejects.toThrow(
       BadRequestException,
     );
+  });
+
+  it("requires one branch that can fulfill the whole cart and snapshots its fulfillment", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-08-24T16:00:00.000Z"));
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      name: "Cocina Norte",
+      checkoutMode: "payment",
+      locations: [
+        { id: "centro", name: "Sucursal Centro", pickupEnabled: true, deliveryEnabled: true, openingHours: [{ day: 1, open: "09:00", close: "11:00", closed: false }, { day: 2, open: "09:00", close: "18:00", closed: false }] },
+        { id: "sur", name: "Sucursal Sur", pickupEnabled: true, deliveryEnabled: false, openingHours: [] },
+      ],
+    });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { id: "link_1", name: "Almuerzo", amount: 5000, currency: "BOB", stock: 3, locationStocks: { centro: 3, sur: 0 }, variants: [], extras: [] },
+    ]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", {
+      items: [{ paymentLinkId: "link_1", quantity: 1 }],
+      locationId: "sur",
+      fulfillmentMethod: "pickup",
+    })).rejects.toThrow("Sucursal Sur no tiene suficiente stock");
+
+    await service.createCartCheckout("abc123", {
+      items: [{ paymentLinkId: "link_1", quantity: 1 }],
+      locationId: "centro",
+      fulfillmentMethod: "delivery",
+    });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      metadata: expect.objectContaining({
+        fulfillment: expect.objectContaining({ locationId: "centro", locationName: "Sucursal Centro", method: "delivery", readyAt: "2026-08-25T13:00:00.000Z" }),
+      }),
+    }));
+    expect(prisma.storeOrder.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        fulfillmentLocationId: "centro",
+        fulfillmentLocationName: "Sucursal Centro",
+        fulfillmentMethod: "delivery",
+        fulfillmentReadyAt: new Date("2026-08-25T13:00:00.000Z"),
+      }),
+    }));
+    jest.useRealTimers();
   });
 
   it("allows a cart that exactly matches the remaining stock", async () => {
@@ -223,6 +423,57 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
         },
       }),
     );
+  });
+
+  it("charges the active scheduled discount using the server clock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_sale",
+      name: "Café Geisha",
+      amount: 10000,
+      currency: "BOB",
+      stock: null,
+      variants: [],
+      extras: [],
+      discountPercent: 25,
+      discountStartsAt: new Date("2000-01-01T00:00:00.000Z"),
+      discountEndsAt: new Date("2100-01-01T00:00:00.000Z"),
+    }]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_sale", quantity: 2 }] });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 15000,
+      metadata: { storeId: "store_1", cart: [{ paymentLinkId: "link_sale", name: "Café Geisha", quantity: 2, unitAmount: 7500 }] },
+    }));
+  });
+
+  it("applies an active promo code to the server-owned cart total", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "link_1", name: "Mochila", amount: 10000, currency: "BOB", stock: null,
+      variants: [], extras: [], discountPercent: null, discountStartsAt: null, discountEndsAt: null,
+    }]);
+    const paymentIntents = makeFakePaymentIntents();
+    const promoCodes = {
+      resolveActiveForStore: jest.fn().mockResolvedValue({ code: "VIAJE20", discountType: PromoDiscountType.PERCENT, discountValue: 20 }),
+      discountAmount: jest.fn().mockReturnValue(4000),
+    };
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any, undefined, promoCodes as any);
+
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 2 }], promoCode: "VIAJE20" });
+
+    expect(promoCodes.resolveActiveForStore).toHaveBeenCalledWith("store_1", "VIAJE20");
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 16000,
+      metadata: expect.objectContaining({ promoCode: "VIAJE20", promoDiscountAmount: 4000, subtotal: 20000 }),
+    }));
   });
 
   it("rejects mixed options when their combined quantity exceeds shared stock", async () => {
@@ -398,6 +649,93 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
 });
 
 describe("StoresService.getStorePublic — sold counts", () => {
+  it("returns the merchant-authored public location block", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      locationMapUrl: "https://www.google.com/maps/embed?pb=trusted-map",
+      locationDescription: "Atendemos de lunes a sábado.",
+      locationHighlight: "A media cuadra de la plaza",
+    });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result).toMatchObject({
+      locationMapUrl: "https://www.google.com/maps/embed?pb=trusted-map",
+      locationDescription: "Atendemos de lunes a sábado.",
+      locationHighlight: "A media cuadra de la plaza",
+    });
+  });
+
+  it("expands a legacy animation slot into independently ordered animation sections", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      contentOrder: ["hero", "motion", "about", "products", "gallery", "links"],
+      motionDuoEnabled: true,
+      motionExperience: "hero-carousel",
+      motionExperiences: ["hero-carousel", "zoom-parallax"],
+    });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.contentOrder).toEqual([
+      "hero",
+      "animation-legacy-1-hero-carousel",
+      "animation-legacy-2-zoom-parallax",
+      "about",
+      "products",
+      "gallery",
+      "contact",
+      "links",
+    ]);
+  });
+
+  it("returns saved animation instances with their independent media and order", async () => {
+    const prisma = makeFakePrisma();
+    const animations = [
+      {
+        id: "apertura",
+        name: "Portada de agosto",
+        type: "hero-carousel",
+        title: "Nueva colección",
+        subtitle: "Piezas seleccionadas",
+        media: [{ imageUrl: "/v1/uploads/open.webp", title: "Lana" }],
+      },
+      {
+        id: "cierre",
+        name: "Reseñas del final",
+        type: "stagger-testimonials",
+        media: [{ imageUrl: "/v1/uploads/review.webp", caption: "Ana", body: "Me encantó." }],
+      },
+    ];
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      animations,
+      contentOrder: ["animation-cierre", "hero", "products", "animation-apertura", "links"],
+    });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.animations).toEqual(animations);
+    expect(result.contentOrder).toEqual([
+      "animation-cierre",
+      "hero",
+      "products",
+      "animation-apertura",
+      "about",
+      "gallery",
+      "contact",
+      "links",
+    ]);
+  });
+
   it("keeps inventory out of storefront copy while returning cart enforcement limits", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue({ ...store, showLowStockToCustomers: false });
@@ -433,6 +771,20 @@ describe("StoresService.getStorePublic — sold counts", () => {
     await service.getStorePublic("abc123", { trackView: false });
 
     expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+
+  it("counts an ordinary external storefront load", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await service.getStorePublic("abc123");
+
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "store_1" },
+      data: { viewCount: { increment: 1 } },
+    });
   });
 
   it("returns validated editorial card colors and drops unsafe legacy values", async () => {
@@ -520,6 +872,53 @@ describe("StoresService.update — accentColor clearing", () => {
   });
 });
 
+describe("StoresService.update — board texture", () => {
+  it("persists an explicitly selected storefront board texture", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue({ ...store, boardTexture: "kraft" });
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await service.update("m_1", "store_1", { boardTexture: "kraft" } as any);
+
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "store_1" },
+      data: { boardTexture: "kraft" },
+    });
+  });
+});
+
+describe("StoresService.update — locations", () => {
+  it("rejects branches that cannot fulfill an order", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(service.update("m_1", "store_1", {
+      locations: [{ id: "cerrada", name: "Sucursal", pickupEnabled: false, deliveryEnabled: false, openingHours: [] }],
+    } as any)).rejects.toThrow("debe permitir retiro, entrega o ambas opciones");
+    expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+
+  it("synchronizes branch stock when locations arrive through the generic update route", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([{ id: "link_1", stock: 8 }]);
+    prisma.paymentLink.update.mockResolvedValue({});
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await service.update("m_1", "store_1", {
+      locations: [{ id: "centro", name: "Centro", pickupEnabled: true, deliveryEnabled: false, openingHours: [], inventory: [{ paymentLinkId: "link_1", stock: 8 }] }],
+    } as any);
+
+    expect(prisma.paymentLink.update).toHaveBeenCalledWith({
+      where: { id: "link_1" },
+      data: { locationStocks: { centro: 8 }, stock: 8 },
+    });
+  });
+});
+
 describe("StoresService.setLinks", () => {
   it("replaces the store's whole link list, preserving array order as sortOrder", async () => {
     const prisma = makeFakePrisma();
@@ -570,6 +969,47 @@ describe("StoresService.saveSettings", () => {
     expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { name: "Renamed" } });
     expect(prisma.storeLink.createMany).toHaveBeenCalledWith({
       data: [{ storeId: "store_1", label: "Instagram", url: "https://instagram.com/x", sortOrder: 0 }],
+    });
+  });
+
+  it("persists branch allocations and derives the product's total stock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue({ ...store, locations: [] });
+    prisma.paymentLink.findMany.mockResolvedValue([{ id: "link_1", stock: 20 }]);
+    prisma.paymentLink.update.mockResolvedValue({});
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await service.saveSettings("m_1", "store_1", {
+      links: [],
+      locations: [
+        { id: "centro", name: "Centro", pickupEnabled: true, deliveryEnabled: true, openingHours: [], inventory: [{ paymentLinkId: "link_1", stock: 6 }] },
+        { id: "sur", name: "Sur", pickupEnabled: true, deliveryEnabled: false, openingHours: [], inventory: [{ paymentLinkId: "link_1", stock: 4 }] },
+      ],
+    } as any);
+
+    expect(prisma.paymentLink.update).toHaveBeenCalledWith({
+      where: { id: "link_1" },
+      data: { locationStocks: { centro: 6, sur: 4 }, stock: 10 },
+    });
+  });
+
+  it("preserves an explicit unlimited branch allocation", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue({ ...store, locations: [] });
+    prisma.paymentLink.findMany.mockResolvedValue([{ id: "link_1", stock: 20 }]);
+    prisma.paymentLink.update.mockResolvedValue({});
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await service.saveSettings("m_1", "store_1", {
+      links: [],
+      locations: [{ id: "centro", name: "Centro", pickupEnabled: true, deliveryEnabled: true, openingHours: [], inventory: [{ paymentLinkId: "link_1", stock: null }] }],
+    } as any);
+
+    expect(prisma.paymentLink.update).toHaveBeenCalledWith({
+      where: { id: "link_1" },
+      data: { locationStocks: { centro: null }, stock: null },
     });
   });
 });

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, IsObject, IsOptional, IsPositive, IsString, Length } from "class-validator";
+import { IsEmail, IsInt, IsObject, IsOptional, IsPositive, IsString, Length, MaxLength } from "class-validator";
 
 export class CreatePaymentIntentDto {
   @ApiProperty({ description: "Amount in minor units (centavos). e.g. 1000 = 10.00 BOB", example: 1000 })
@@ -17,6 +17,29 @@ export class CreatePaymentIntentDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ description: "Known recipient name for a directed charge." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  customerName?: string;
+
+  @ApiPropertyOptional({ description: "Known recipient NIT/CI for a directed charge." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  customerDocument?: string;
+
+  @ApiPropertyOptional({ description: "Known recipient email for a directed charge." })
+  @IsOptional()
+  @IsEmail()
+  customerEmail?: string;
+
+  @ApiPropertyOptional({ description: "Known recipient phone for a directed charge." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  customerPhone?: string;
 
   @ApiPropertyOptional({ type: "object", additionalProperties: true })
   @IsOptional()

@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   server: { port: 5174 },
@@ -18,6 +19,12 @@ export default defineConfig({
   // files under node_modules/** by default, so it must be told to also treat
   // the (real, symlinked-to) shared-types path as CommonJS.
   build: {
+    rollupOptions: {
+      input: {
+        checkout: fileURLToPath(new URL("./index.html", import.meta.url)),
+        stores: fileURLToPath(new URL("./stores/index.html", import.meta.url)),
+      },
+    },
     commonjsOptions: {
       include: [/shared-types/, /node_modules/],
     },

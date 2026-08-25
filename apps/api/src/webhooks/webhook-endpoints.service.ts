@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateWebhookEndpointDto } from "./dto/create-webhook-endpoint.dto";
+import { validateWebhookUrl } from "./webhook-http.client";
 
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 32);
 
@@ -10,10 +11,11 @@ export class WebhookEndpointsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(merchantId: string, dto: CreateWebhookEndpointDto) {
+    const url = await validateWebhookUrl(dto.url);
     return this.prisma.webhookEndpoint.create({
       data: {
         merchantId,
-        url: dto.url,
+        url,
         enabledEvents: dto.enabledEvents ?? [],
         secret: `whsec_${secretPart()}`,
       },
@@ -21,7 +23,17 @@ export class WebhookEndpointsService {
   }
 
   async list(merchantId: string) {
-    return this.prisma.webhookEndpoint.findMany({ where: { merchantId, status: "ACTIVE" } });
+    return this.prisma.webhookEndpoint.findMany({
+      where: { merchantId, status: "ACTIVE" },
+      select: {
+        id: true,
+        merchantId: true,
+        url: true,
+        enabledEvents: true,
+        status: true,
+        createdAt: true,
+      },
+    });
   }
 
   /**

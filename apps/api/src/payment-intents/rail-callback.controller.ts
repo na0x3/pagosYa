@@ -19,12 +19,12 @@ export class RailCallbackController {
   constructor(private readonly paymentIntents: PaymentIntentsService) {}
 
   @Post(":railId/callback")
-  callback(@Param("railId") _railId: string, @Body() dto: RailCallbackDto) {
+  callback(@Param("railId") railId: string, @Body() dto: RailCallbackDto) {
     return this.paymentIntents.applyCallbackResult(dto.paymentIntentId, {
       status: dto.status,
       railReference: dto.railReference,
       failureReason: dto.failureReason,
       raw: dto.raw ?? {},
-    });
+    }, { railId });
   }
 }

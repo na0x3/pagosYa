@@ -21,6 +21,10 @@ export interface CreatePaymentIntentInput {
   amount: number;
   currency?: string;
   description?: string;
+  customerName?: string;
+  customerDocument?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   metadata?: Record<string, unknown>;
 }
 

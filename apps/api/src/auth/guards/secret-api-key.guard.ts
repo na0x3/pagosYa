@@ -23,6 +23,7 @@ export class SecretApiKeyGuard implements CanActivate {
     if (!apiKey) throw new UnauthorizedException("Invalid API key");
 
     request.merchant = apiKey.merchant;
+    request.apiKey = apiKey;
     request.apiKeyMode = apiKey.mode;
     return true;
   }
