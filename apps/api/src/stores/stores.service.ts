@@ -55,6 +55,7 @@ type StoreAnimation = {
   type: string;
   title?: string;
   subtitle?: string;
+  productId?: string;
   media: StoreEditorialImage[];
 };
 type StoreLocation = {
@@ -318,6 +319,14 @@ const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "hero-gallery-scroll": "Hero Gallery",
   "stagger-testimonials": "Reseñas",
   "zoom-parallax": "Zoom Parallax",
+  "video-pill": "Video que se abre",
+  "portfolio-scroller": "Menú de momentos",
+  "circle-reveal": "Revelado circular",
+  "clarity-marquee": "Preguntas en movimiento",
+  "full-screen-chapters": "Capítulos a pantalla completa",
+  "magnetic-target": "Llamado magnético",
+  "frame-sequence": "Secuencia por fotogramas",
+  "3d-gallery": "Galería tridimensional",
 };
 
 function readStoreAnimations(
@@ -346,6 +355,7 @@ function readStoreAnimations(
           type: entry.type as string,
           ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
           ...(typeof entry.subtitle === "string" && entry.subtitle ? { subtitle: entry.subtitle } : {}),
+          ...(typeof entry.productId === "string" && entry.productId ? { productId: entry.productId.slice(0, 80) } : {}),
           media: readStoreEditorialGallery(entry.media),
         }))
     : [];

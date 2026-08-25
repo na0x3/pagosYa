@@ -206,7 +206,7 @@ describe("CreateStoreDto storefront layout", () => {
   it("accepts multiple unique animation templates and rejects duplicates", async () => {
     const valid = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
-      motionExperiences: ["coverflow-carousel", "hero-carousel", "stagger-testimonials", "zoom-parallax"],
+      motionExperiences: ["coverflow-carousel", "hero-carousel", "stagger-testimonials", "zoom-parallax", "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee", "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery"],
     });
     const duplicated = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
@@ -222,7 +222,7 @@ describe("CreateStoreDto storefront layout", () => {
     const valid = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
       animations: [
-        { id: "invierno", name: "Colección invierno", type: "hero-carousel", title: "Abrigos", media: [{ imageUrl, title: "Lana" }] },
+        { id: "invierno", name: "Colección invierno", type: "hero-carousel", title: "Abrigos", productId: "product_1", media: [{ imageUrl, title: "Lana" }] },
         { id: "clientes", name: "Reseñas favoritas", type: "stagger-testimonials", media: [{ imageUrl, caption: "Ana", body: "Me encantó." }] },
       ],
       contentOrder: ["animation-invierno", "hero", "products", "about", "gallery", "animation-clientes", "links"],
@@ -237,6 +237,15 @@ describe("CreateStoreDto storefront layout", () => {
 
     await expect(validate(valid)).resolves.toHaveLength(0);
     expect(await validate(duplicateId)).not.toHaveLength(0);
+  });
+
+  it("rejects an animation product reference longer than the product id limit", async () => {
+    const dto = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      animations: [{ id: "destacada", name: "Destacada", type: "video-pill", productId: "p".repeat(81), media: [] }],
+    });
+
+    expect(await validate(dto)).not.toHaveLength(0);
   });
 
   it("does not impose a store-wide limit on independent animation sections", async () => {

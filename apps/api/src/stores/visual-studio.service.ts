@@ -42,7 +42,7 @@ type AiDirection = {
   buttonStyle: "rounded" | "pill" | "square";
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "lift" | "pulse" | "none";
-  cartButtonLabel: "Ir a pagar" | "Completar pedido" | "Quiero comprar" | "Agregar y pagar";
+  cartButtonLabel: string;
   contentOrder: Array<"hero" | "products" | "about" | "gallery" | "motion" | "links">;
   layoutStyle: "cinematic" | "editorial" | "collage" | "catalog-first";
   experienceStyle: "coverflow" | "diagonal-marquee" | "story-scroller";
@@ -60,25 +60,83 @@ type AiDirection = {
 };
 
 const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "motion", "links"] as const;
-const MOTION_EXPERIENCES = ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"] as const;
+const MOTION_EXPERIENCES = [
+  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
+  "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+] as const;
 const SAFE_GENERATED_BACKGROUNDS = ["#eef1f5", "#e8f2ef", "#eeebf5"] as const;
 
 function expandMotionSections(value: unknown, animationIds: string[]): string[] {
   const baseSections = ["hero", "products", "about", "gallery", "links"];
-  const selected = animationIds.map((id) => `animation-${id}`);
   const result: string[] = [];
   const append = (section: string) => { if (!result.includes(section)) result.push(section); };
   if (Array.isArray(value)) {
     value.forEach((section) => {
-      if (section === "motion") selected.forEach(append);
-      else if (typeof section === "string" && baseSections.includes(section)) append(section);
+      if (typeof section === "string" && baseSections.includes(section)) append(section);
     });
   }
   baseSections.forEach(append);
-  const missing = selected.filter((section) => !result.includes(section));
+  if (!animationIds.length) return result;
+
+  // Split AI-authored motion around the catalog so the storefront has a visual
+  // lead-in and a visual continuation. The merchant can still reorder every
+  // named animation independently after applying the proposal.
+  const productIndex = result.indexOf("products");
   const linksIndex = result.indexOf("links");
-  result.splice(linksIndex < 0 ? result.length : linksIndex, 0, ...missing);
-  return result;
+  const beforeCount = Math.ceil(animationIds.length / 2);
+  const beforeIds = animationIds.slice(0, beforeCount);
+  const afterIds = animationIds.slice(beforeCount);
+  const beforeGaps = Array.from({ length: productIndex + 1 }, (_, gap) => gap);
+  const afterLastGap = linksIndex > productIndex ? linksIndex : result.length;
+  const afterGaps = Array.from({ length: Math.max(1, afterLastGap - productIndex) }, (_, index) => productIndex + 1 + index);
+  const animationGroups = Array.from({ length: result.length + 1 }, () => [] as string[]);
+  const distribute = (ids: string[], gaps: number[]) => ids.forEach((id, index) => {
+    const gapIndex = ids.length === 1 ? 0 : Math.round(index * (gaps.length - 1) / (ids.length - 1));
+    animationGroups[gaps[gapIndex] ?? gaps[0] ?? 0].push(`animation-${id}`);
+  });
+  distribute(beforeIds, beforeGaps);
+  distribute(afterIds, afterGaps);
+  return result.flatMap((section, index) => [...animationGroups[index], section]).concat(animationGroups[result.length]);
+}
+
+function animationMediaRequirement(type: string): { min: number; max: number } {
+  if (type === "clarity-marquee") return { min: 0, max: 0 };
+  if (["video-pill", "circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
+  return { min: ["hero-gallery-scroll", "zoom-parallax", "3d-gallery"].includes(type) ? 3 : 2, max: 8 };
+}
+
+function distributedAnimationMedia(
+  assets: MediaAsset[],
+  authoredMedia: Array<Record<string, unknown>>,
+  animationIndex: number,
+  animationCount: number,
+  type: string,
+): Array<Record<string, unknown>> {
+  const requirement = animationMediaRequirement(type);
+  if (!requirement.max || !assets.length) return [];
+  const draftsByUrl = new Map(authoredMedia.flatMap((item) => typeof item.imageUrl === "string" ? [[item.imageUrl, item] as const] : []));
+  const candidates = assets.map((asset) => ({
+    imageUrl: asset.url,
+    title: "",
+    caption: "",
+    body: "",
+    boxColor: "#f4ead7",
+    ...(draftsByUrl.get(asset.url) ?? {}),
+  }));
+  if (requirement.max === 1) return [candidates[animationIndex % candidates.length]];
+
+  const baseSize = Math.floor(candidates.length / animationCount);
+  const remainder = candidates.length % animationCount;
+  const start = animationIndex * baseSize + Math.min(animationIndex, remainder);
+  const uniqueSize = Math.min(requirement.max, baseSize + (animationIndex < remainder ? 1 : 0));
+  const selected = candidates.slice(start, start + uniqueSize);
+  for (let offset = 0; selected.length < Math.min(requirement.min, candidates.length); offset += 1) {
+    const candidate = candidates[(start + uniqueSize + offset) % candidates.length];
+    if (!selected.some((item) => item.imageUrl === candidate.imageUrl)) selected.push(candidate);
+  }
+  return selected;
 }
 
 function safeGeneratedBackground(candidate: unknown, index: number): string {
@@ -140,7 +198,7 @@ const AI_DIRECTIONS_SCHEMA = {
           buttonStyle: { type: "string", enum: ["rounded", "pill", "square"] },
           buttonVariant: { type: "string", enum: ["solid", "outline", "soft"] },
           buttonMotion: { type: "string", enum: ["lift", "pulse", "none"] },
-          cartButtonLabel: { type: "string", enum: ["Ir a pagar", "Completar pedido", "Quiero comprar", "Agregar y pagar"] },
+          cartButtonLabel: { type: "string", minLength: 2, maxLength: 36 },
           contentOrder: {
             type: "array",
             minItems: 6,
@@ -263,7 +321,7 @@ export class VisualStudioService {
       ...jsonImageUrls(store.heroSlides),
       ...jsonImageUrls(store.editorialGallery),
       ...products.flatMap((product) => product.imageUrls),
-    ].filter((url): url is string => typeof url === "string" && /^\/v1\/uploads\//.test(url)))].slice(0, 8);
+    ].filter((url): url is string => typeof url === "string" && /^\/v1\/uploads\//.test(url)))].slice(0, 24);
     const assets = await this.prisma.mediaAsset.findMany({
       where: { merchantId, url: { in: assetUrls }, mimeType: { in: ["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm"] } },
     });
@@ -293,19 +351,29 @@ export class VisualStudioService {
       (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience])
         .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
     )];
-    if (!motionExperiences.length) motionExperiences.push("coverflow-carousel");
     presets = presets.map((preset, index) => {
       const backgroundColor = safeGeneratedBackground(preset.config.backgroundColor, index);
-      const animationMedia = Array.isArray(preset.config.editorialGallery) ? preset.config.editorialGallery : [];
+      const authoredMedia = [
+        ...(Array.isArray(preset.config.editorialGallery) ? preset.config.editorialGallery : []),
+        ...(Array.isArray(preset.config.heroSlides) ? preset.config.heroSlides : []),
+      ].filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item));
       const animationNames: Record<string, string> = {
         "story-scroll": "Story Scroll",
         "coverflow-carousel": "Coverflow",
-        "hero-carousel": "Hero editorial",
+        "hero-carousel": "Slider principal",
         "image-stream": "Image Stream",
         "scroll-expansion": "Scroll Expansion",
         "hero-gallery-scroll": "Hero Gallery",
         "stagger-testimonials": "Reseñas",
         "zoom-parallax": "Zoom Parallax",
+        "video-pill": "Video que se abre",
+        "portfolio-scroller": "Menú de momentos",
+        "circle-reveal": "Revelado circular",
+        "clarity-marquee": "Preguntas en movimiento",
+        "full-screen-chapters": "Capítulos a pantalla completa",
+        "magnetic-target": "Llamado magnético",
+        "frame-sequence": "Secuencia por fotogramas",
+        "3d-gallery": "Galería tridimensional",
       };
       const animations = motionExperiences.map((type, animationIndex) => ({
         id: `ai-${index + 1}-${animationIndex + 1}-${type}`,
@@ -313,7 +381,7 @@ export class VisualStudioService {
         type,
         title: animationNames[type] ?? `Animación ${animationIndex + 1}`,
         subtitle: typeof preset.config.gallerySubtitle === "string" ? preset.config.gallerySubtitle : "Una experiencia visual creada con las imágenes reales de la marca.",
-        media: animationMedia,
+        media: distributedAnimationMedia(orderedAssets, authoredMedia, animationIndex, motionExperiences.length, type),
       }));
       return {
         ...preset,
@@ -328,8 +396,10 @@ export class VisualStudioService {
           announcementMode: dto.announcementMarqueeEnabled === undefined
             ? preset.config.announcementMode
             : dto.announcementMarqueeEnabled ? "marquee" : "static",
-          motionDuoEnabled: true,
-          motionExperience: motionExperiences[0],
+          heroSlides: [],
+          editorialGallery: [],
+          motionDuoEnabled: animations.length > 0,
+          motionExperience: motionExperiences[0] || "coverflow-carousel",
           motionExperiences,
           animations,
           contentOrder: expandMotionSections(preset.config.contentOrder, animations.map((animation) => animation.id)),
@@ -405,6 +475,18 @@ export class VisualStudioService {
 
   private presets(store: Store, dto: GenerateVisualProposalsDto, assets: MediaAsset[], products: StoreProductContext[], links: StoreLinkContext[]): ProposalPreset[] {
     const subject = dto.businessCategory?.trim() || products.slice(0, 3).map((product) => product.name).join(", ") || "los productos de la marca";
+    const normalizedCategory = subject.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const categoryProfile = /cafe|matcha|\bte\b|comida|restaurante|panader|reposter|bebida/.test(normalizedCategory)
+      ? { titles: ["Mesa abierta", "Carta de autor", "Antojo directo"], catalog: ["El menú", "Sabores para elegir", "Pide lo que te provoca"], ctas: ["Pedir ahora", "Ver el menú", "Armar mi pedido"], detail: "ritmo sensorial, producto apetecible y decisiones rápidas" }
+      : /ropa|moda|calzado|joy|accesorio/.test(normalizedCategory)
+        ? { titles: ["Colección viva", "Edición de temporada", "Lookbook directo"], catalog: ["La colección", "Piezas seleccionadas", "Encuentra tu próximo look"], ctas: ["Ver la colección", "Elegir mi pieza", "Explorar novedades"], detail: "dirección editorial, silueta, detalle y descubrimiento de colección" }
+        : /belleza|cosmetic|skincare|spa|bienestar/.test(normalizedCategory)
+          ? { titles: ["Ritual cotidiano", "Laboratorio sereno", "Resultados a tu ritmo"], catalog: ["Elige tu ritual", "Fórmulas y cuidados", "Encuentra tu cuidado"], ctas: ["Crear mi rutina", "Explorar cuidados", "Elegir mi producto"], detail: "claridad, confianza y una secuencia de cuidado fácil de entender" }
+          : /arte|ceram|decor|hogar|mueble|artesania/.test(normalizedCategory)
+            ? { titles: ["Taller en escena", "Piezas con historia", "Selección para habitar"], catalog: ["Explora las piezas", "Objetos con intención", "Encuentra tu pieza"], ctas: ["Ver las piezas", "Conocer la colección", "Elegir para mi espacio"], detail: "materialidad, escala, proceso y una lectura pausada de cada pieza" }
+            : /tecnolog|electron|software|servicio/.test(normalizedCategory)
+              ? { titles: ["Solución en foco", "Sistema claro", "Decisión informada"], catalog: ["Explora las opciones", "Compara con claridad", "Elige lo que necesitas"], ctas: ["Ver opciones", "Comparar productos", "Elegir una solución"], detail: "jerarquía funcional, comparación y reducción de incertidumbre" }
+              : { titles: [`${store.name}, de cerca`, "Selección con criterio", "Compra sin vueltas"], catalog: ["Descubre la tienda", "La selección", "Encuentra tu favorito"], ctas: ["Explorar productos", "Ver la selección", "Elegir ahora"], detail: `una experiencia específica para ${subject}, sin recursos genéricos de ecommerce` };
     const hero = (index: number, title: string, body: string) => assets.length
       ? Array.from({ length: 5 }, (_, offset) => ({
           imageUrl: assets[(index + offset) % assets.length].url,
@@ -446,6 +528,8 @@ export class VisualStudioService {
     ];
     return proposals.map((proposal, index) => ({
       ...proposal,
+      title: categoryProfile.titles[index],
+      rationale: `${proposal.rationale} La dirección responde al rubro con ${categoryProfile.detail}.`,
       config: {
         ...proposal.config,
         backgroundMode: "solid",
@@ -453,8 +537,9 @@ export class VisualStudioService {
         backgroundGradientEnd: proposal.config.backgroundColor,
         backgroundGradientAngle: 0,
         fontStyle: selectedFontStyle,
+        catalogTitle: categoryProfile.catalog[index],
+        cartButtonLabel: categoryProfile.ctas[index],
         contentOrder: contentOrders[index],
-        motionDuoEnabled: true,
       },
     }));
   }
@@ -478,6 +563,13 @@ export class VisualStudioService {
       const assetLegend = assets.map((asset, index) => `${index}: ${asset.mimeType} · ${asset.url}`).join("\n") || "Sin medios disponibles";
       const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
       const requestedFontStyle = ["mono", "modern", "editorial", "friendly"].includes(dto.fontStyle || "") ? dto.fontStyle : store.fontStyle;
+      const requestedMotionExperiences = [...new Set(
+        (dto.motionExperiences?.length ? dto.motionExperiences : dto.motionExperience ? [dto.motionExperience] : [])
+          .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
+      )];
+      const motionInstruction = requestedMotionExperiences.length
+        ? `Incluye únicamente estas animaciones como secciones independientes: ${requestedMotionExperiences.join(", ")}. Distribúyelas en el recorrido; nunca las agrupes todas. Usa medios diferentes para cada una siempre que haya suficientes.`
+        : "No agregues animaciones, carruseles ni sliders. La tienda debe funcionar como una composición estática y deliberada.";
       const prompt = [
         "Actúa como director de arte y arquitecto de ecommerce. Devuelve exactamente tres sitios completos cuya estructura, ritmo y jerarquía sean inequívocamente distintos; no aceptes la misma plantilla con otra paleta. Usa únicamente las imágenes ya existentes y no generes ni solicites imágenes nuevas.",
         `Clave creativa de esta generación: ${creativeRun}. Úsala para evitar repetir decisiones de generaciones anteriores sin mencionarla en el resultado.`,
@@ -487,8 +579,11 @@ export class VisualStudioService {
         `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         "Asigna a cada dirección un layoutStyle diferente. cinematic usa una portada inmersiva y relato gradual; editorial alterna imagen y texto con lectura pausada; collage superpone escalas y bloques visuales; catalog-first empieza por producto y usa la historia como prueba posterior.",
-        `Asigna también un experienceStyle distinto a cada dirección: coverflow crea un carrusel 3D controlable; diagonal-marquee crea filas fotográficas diagonales en movimiento; story-scroller crea una historia interactiva por capítulos y debe priorizar cualquier video disponible en heroSlides. Incluye estas animaciones como secciones independientes: ${(dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience || "coverflow-carousel"]).join(", ")}. Usa solamente medios reales de la tienda.`,
+        `Asigna también un experienceStyle distinto a cada dirección como lenguaje interno de composición. ${motionInstruction} Usa solamente medios reales de la tienda.`,
         "Cada dirección debe tener un contentOrder diferente y válido, con hero, products, about, gallery, motion y links exactamente una vez. En esta respuesta, motion representa el punto donde se insertarán las secciones de animación independientes; después el comercio podrá mover cada una por separado.",
+        "Aplica criterio de producto tipo Impeccable: primero identifica qué necesita sentir y decidir un comprador de este rubro. Haz que las tres propuestas cambien de verdad en jerarquía, densidad, escala, secuencia, copy, geometría y tratamiento de botones; no presentes la misma plantilla con color distinto.",
+        "Los botones deben ser específicos al rubro y a su acción inmediata, con etiquetas breves y concretas. Varía buttonStyle, buttonVariant y buttonMotion entre propuestas cuando sea coherente. Evita textos genéricos como Más información, Saber más o Click aquí.",
+        "Cada propuesta necesita una idea rectora distinta y evidente: una puede vender por emoción, otra por criterio editorial y otra por decisión rápida. La estructura debe apoyar esa idea sin tarjetas decorativas innecesarias, sin exceso de contenedores y con una sola acción primaria clara por zona.",
         "Crea entre cuatro y cinco slides por dirección. Cada slide cumple un rol distinto (promesa, producto, punto de vista, detalle, transición o acción), con título, texto sustancioso y botón breve. Cuando haya suficientes imágenes, no repitas assetIndex dentro del mismo slider.",
         "La editorialGallery no es una tira de pies de foto: genera para cada imagen un título, un caption breve y un body diferente de 2–3 frases. Ese contenido alimenta la animación seleccionada y, para stagger-testimonials, body funciona como reseña y caption como autor. Debe sentirse variado y específico al catálogo sin inventar hechos.",
         `Las tres direcciones también deben variar densidad, escala de imagen y relación entre historia y catálogo. El anuncio superior debe ser ${dto.announcementMarqueeEnabled === false ? "estático" : dto.announcementMarqueeEnabled === true ? "una marquesina en movimiento" : "estático o móvil según la dirección"}.`,
@@ -608,7 +703,7 @@ export class VisualStudioService {
       && enumValue(direction.buttonStyle, ["rounded", "pill", "square"])
       && enumValue(direction.buttonVariant, ["solid", "outline", "soft"])
       && enumValue(direction.buttonMotion, ["lift", "pulse", "none"])
-      && enumValue(direction.cartButtonLabel, ["Ir a pagar", "Completar pedido", "Quiero comprar", "Agregar y pagar"])
+      && typeof direction.cartButtonLabel === "string" && direction.cartButtonLabel.length >= 2 && direction.cartButtonLabel.length <= 36 && !/[<>\u0000-\u001f]/.test(direction.cartButtonLabel)
       && validOrder(direction.contentOrder)
       && enumValue(direction.layoutStyle, ["cinematic", "editorial", "collage", "catalog-first"])
       && enumValue(direction.experienceStyle, ["coverflow", "diagonal-marquee", "story-scroller"])

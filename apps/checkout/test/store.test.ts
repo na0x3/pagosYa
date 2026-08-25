@@ -1184,6 +1184,12 @@ describe("storefront routes", () => {
     await loadCheckout("/?link=taller-contacto");
     const form = document.querySelector<HTMLFormElement>("#store-contact-form")!;
     expect(form).toBeTruthy();
+    const siteHeader = document.querySelector<HTMLElement>(".store-site-header")!;
+    expect(siteHeader.querySelector(".store-site-brand .store-title")?.textContent).toBe("Taller abierto");
+    expect([...siteHeader.querySelectorAll<HTMLAnchorElement>(".store-site-nav a")].map((link) => [link.textContent, link.hash])).toEqual([
+      ["Tienda", "#store-products"],
+      ["Contacto", "#store-contact"],
+    ]);
     form.querySelector<HTMLInputElement>("#store-contact-name")!.value = "Ana";
     form.querySelector<HTMLInputElement>("#store-contact-email")!.value = "ana@gmail.com";
     form.querySelector<HTMLTextAreaElement>("#store-contact-message")!.value = "¿Abren los sábados?";
@@ -1220,6 +1226,7 @@ describe("storefront routes", () => {
     expect(location.querySelector("img")).toBeNull();
     expect(iframe.getAttribute("src")).toContain("openstreetmap.org/export/embed.html");
     expect(iframe.getAttribute("sandbox")).toContain("allow-scripts");
+    expect(document.querySelector<HTMLAnchorElement>('.store-site-nav a[href="#store-location"]')?.textContent).toBe("Ubicación");
     expect(location.compareDocumentPosition(document.querySelector(".secure-note")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
@@ -1901,6 +1908,14 @@ describe("storefront routes", () => {
     ["hero-gallery-scroll", "[data-gallery-scroll]"],
     ["stagger-testimonials", "[data-testimonials]"],
     ["zoom-parallax", "[data-motion-zoom]"],
+    ["video-pill", "[data-video-pill]"],
+    ["portfolio-scroller", "[data-portfolio-scroller]"],
+    ["circle-reveal", "[data-circle-reveal]"],
+    ["clarity-marquee", "[data-clarity-marquee]"],
+    ["full-screen-chapters", "[data-full-chapters]"],
+    ["magnetic-target", "[data-magnetic-target]"],
+    ["frame-sequence", "[data-frame-sequence]"],
+    ["3d-gallery", "[data-space-gallery]"],
   ] as const)("renders only the selected %s motion experience", async (motionExperience, selector) => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
@@ -1922,6 +1937,37 @@ describe("storefront routes", () => {
 
     expect(document.querySelector(selector)).not.toBeNull();
     expect(document.querySelector(".store-motion-section")?.getAttribute("data-motion-experience")).toBe(motionExperience);
+  });
+
+  it("renders the text-only marquee without animation media and links its featured product", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Heladería tropical",
+        contentOrder: ["hero", "products", "animation-questions", "links"],
+        animations: [{
+          id: "questions",
+          name: "Preguntas y respuestas",
+          type: "clarity-marquee",
+          title: "Todo sobre nuestros sabores",
+          subtitle: "Una guía rápida para elegir.",
+          productId: baseItem.id,
+          media: [],
+        }],
+        items: [{ ...baseItem, name: "Amarillo tropical", tags: ["Frutal", "Temporada"] }],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=text-only-product");
+
+    const section = document.querySelector<HTMLElement>("[data-clarity-marquee]");
+    expect(section).not.toBeNull();
+    expect(section?.querySelector("img, video")).toBeNull();
+    expect(section?.textContent).toContain("Amarillo tropical");
+    const productLink = document.querySelector<HTMLAnchorElement>(".store-motion-product-link");
+    expect(productLink?.textContent).toContain("Amarillo tropical");
+    expect(productLink?.getAttribute("href")).toContain(`/p/${baseItem.id}`);
   });
 
   it("renders every selected animation in the merchant's saved order", async () => {

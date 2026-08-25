@@ -19,6 +19,7 @@ import {
   CheckoutSession,
   CustomerContact,
   Store,
+  type StoreMotionExperience,
   StoreItem,
   StoreLocation,
   StoreLink,
@@ -26,6 +27,13 @@ import {
   TrackedOrder,
 } from "./api";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
+
+const STORE_MOTION_EXPERIENCES: readonly StoreMotionExperience[] = [
+  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
+  "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+];
 
 interface LinkHeader {
   storeName: string;
@@ -1739,7 +1747,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
       .slice(0, 5);
   }
   if (Array.isArray(source.contentOrder)) {
-    const motionSections = ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"].map((experience) => `motion-${experience}`);
+    const motionSections = STORE_MOTION_EXPERIENCES.map((experience) => `motion-${experience}`);
     const allowedSections = ["hero", "products", "about", "gallery", "contact", "links", "motion", ...motionSections];
     const order = source.contentOrder.filter((section): section is string =>
       typeof section === "string" && (allowedSections.includes(section) || /^animation-[a-z0-9][a-z0-9_-]{0,47}$/.test(section)),
@@ -1750,24 +1758,23 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (["cinematic", "editorial", "collage", "catalog-first"].includes(String(source.layoutStyle))) clean.layoutStyle = source.layoutStyle;
   if (["coverflow", "diagonal-marquee", "story-scroller"].includes(String(source.experienceStyle))) clean.experienceStyle = source.experienceStyle;
   if (typeof source.motionDuoEnabled === "boolean") clean.motionDuoEnabled = source.motionDuoEnabled;
-  if (["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"].includes(String(source.motionExperience))) clean.motionExperience = source.motionExperience;
+  if ((STORE_MOTION_EXPERIENCES as readonly string[]).includes(String(source.motionExperience))) clean.motionExperience = source.motionExperience;
   if (Array.isArray(source.motionExperiences)) {
-    const allowedMotionExperiences = ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"];
     const motionExperiences = source.motionExperiences.filter((experience): experience is string =>
-      typeof experience === "string" && allowedMotionExperiences.includes(experience),
+      typeof experience === "string" && (STORE_MOTION_EXPERIENCES as readonly string[]).includes(experience),
     );
     if (motionExperiences.length && new Set(motionExperiences).size === motionExperiences.length) clean.motionExperiences = motionExperiences;
   }
   if (Array.isArray(source.animations)) {
-    const allowedMotionExperiences = ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"];
     clean.animations = source.animations
       .filter((animation): animation is Record<string, unknown> => !!animation && typeof animation === "object" && !Array.isArray(animation))
       .map((animation) => ({
         id: typeof animation.id === "string" && /^[a-z0-9][a-z0-9_-]{0,47}$/.test(animation.id) ? animation.id : "",
         name: typeof animation.name === "string" ? animation.name.slice(0, 60) : "",
-        type: typeof animation.type === "string" && allowedMotionExperiences.includes(animation.type) ? animation.type : "",
+        type: typeof animation.type === "string" && (STORE_MOTION_EXPERIENCES as readonly string[]).includes(animation.type) ? animation.type : "",
         title: typeof animation.title === "string" ? animation.title.slice(0, 100) : "",
         subtitle: typeof animation.subtitle === "string" ? animation.subtitle.slice(0, 220) : "",
+        productId: typeof animation.productId === "string" ? animation.productId.slice(0, 80) : "",
         media: Array.isArray(animation.media)
           ? animation.media
               .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
@@ -2826,7 +2833,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         </div>
       </div>`
     : "";
-  const productsHtml = `<section class="store-products" aria-labelledby="store-products-title">
+  const productsHtml = `<section class="store-products" id="store-products" aria-labelledby="store-products-title">
     <div class="store-section-heading store-catalog-heading">
       <h2 id="store-products-title">${escapeHtml(catalogTitle)}</h2>
       <p>${escapeHtml(catalogSubtitle)}</p>
@@ -2910,8 +2917,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           ${editorialImages.length > 1 ? `<div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${editorialImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div>` : ""}
         </div>`;
   const hasGalleryExperience = experienceStyle === "story-scroller" ? storyEntries.length > 0 : editorialImages.length > 0;
-  const allowedMotionExperiences = ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"] as const;
-  const motionExperienceCopy: Record<(typeof allowedMotionExperiences)[number], [string, string]> = {
+  const allowedMotionExperiences = STORE_MOTION_EXPERIENCES;
+  const motionExperienceCopy: Record<StoreMotionExperience, [string, string]> = {
     "story-scroll": ["Nuestra historia", "Capítulos visuales de la marca."],
     "coverflow-carousel": ["La marca en imágenes", "Una selección visual para explorar."],
     "hero-carousel": ["Colección destacada", "Escenas elegidas de la tienda."],
@@ -2920,6 +2927,14 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     "hero-gallery-scroll": ["Galería destacada", "Una composición creada con imágenes de la tienda."],
     "stagger-testimonials": ["Lo que dicen nuestros clientes", "Experiencias compartidas por quienes ya nos eligieron."],
     "zoom-parallax": ["Detalles de la colección", "Una mirada en profundidad a la marca."],
+    "video-pill": ["Una escena que se abre", "Una historia visual que crece hasta ocupar la pantalla."],
+    "portfolio-scroller": ["Momentos de la marca", "Recorre cada escena y descubre su historia."],
+    "circle-reveal": ["Desde el centro", "Una imagen que revela poco a poco el universo de la marca."],
+    "clarity-marquee": ["Preguntas y respuestas", "Ideas clave que mantienen el ritmo de la historia."],
+    "full-screen-chapters": ["Historia por capítulos", "Escenas completas que avanzan con el recorrido."],
+    "magnetic-target": ["Encuentra tu próximo favorito", "Una invitación viva para continuar hacia la colección."],
+    "frame-sequence": ["El proceso, paso a paso", "Cada movimiento descubre un nuevo momento."],
+    "3d-gallery": ["Galería en profundidad", "Explora las imágenes con rueda, teclado o gesto."],
   };
   const savedMotionExperiences = Array.isArray(store.motionExperiences)
     ? store.motionExperiences.filter((experience) => allowedMotionExperiences.includes(experience))
@@ -2944,6 +2959,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           type,
           title: "",
           subtitle: "",
+          productId: "",
           media: store.editorialGallery ?? [],
         }))
       : [];
@@ -2976,7 +2992,10 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const [defaultTitle, defaultSubtitle] = motionExperienceCopy[animation.type];
     const publicTitle = animation.title?.trim() || defaultTitle;
     const publicSubtitle = animation.subtitle?.trim() || defaultSubtitle;
-    const motionImages = (animation.media ?? [])
+    const selectedProduct = animation.productId
+      ? store.items.find((item) => item.id === animation.productId)
+      : undefined;
+    const configuredMotionImages = (animation.media ?? [])
       .map((image) => ({
         mediaUrl: assetUrl(image.imageUrl),
         sourceUrl: image.imageUrl,
@@ -2986,6 +3005,25 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       }))
       .filter((image): image is typeof image & { mediaUrl: string } => !!image.mediaUrl)
       .slice(0, 8);
+    const productSourceUrl = selectedProduct?.imageUrls?.[0] || "";
+    const productMediaUrl = assetUrl(productSourceUrl);
+    const productMotionImage = selectedProduct && productMediaUrl
+      ? {
+          mediaUrl: productMediaUrl,
+          sourceUrl: productSourceUrl,
+          title: selectedProduct.name,
+          caption: selectedProduct.tags?.[0] || "Producto destacado",
+          body: selectedProduct.description || publicSubtitle,
+        }
+      : null;
+    const mediaLimit = animation.type === "clarity-marquee"
+      ? 0
+      : ["video-pill", "circle-reveal", "magnetic-target"].includes(animation.type) ? 1 : 8;
+    const fallbackProductMotionImage = configuredMotionImages.length === 0 ? productMotionImage : null;
+    const motionImages = [
+      ...(fallbackProductMotionImage ? [fallbackProductMotionImage] : []),
+      ...configuredMotionImages,
+    ].slice(0, mediaLimit);
     const motionStories = motionImages.slice(0, 5).map((image) => ({ ...image, isVideo: isVideoMediaUrl(image.mediaUrl) }));
     const sectionKey = `animation-${animation.id}`;
     const titleId = `store-animation-${animation.id}-title`;
@@ -3006,9 +3044,41 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(publicTitle)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<blockquote>“${escapeHtml(image.body)}”</blockquote><p>— ${escapeHtml(image.caption)}</p></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     } else if (animation.type === "zoom-parallax" && motionImages.length >= 3) {
       blockHtml = `<div class="store-motion-zoom" data-motion-zoom aria-label="${escapeHtml(publicTitle)}"><div class="store-motion-zoom-sticky">${motionImages.map((image, index) => `<div class="store-motion-zoom-layer store-motion-zoom-layer-${index}" data-zoom-index="${index}"><figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure></div>`).join("")}</div></div>`;
+    } else if (animation.type === "video-pill" && motionStories.length >= 1) {
+      const scene = motionStories[0];
+      blockHtml = `<div class="store-video-pill" data-video-pill aria-label="${escapeHtml(publicTitle)}"><div class="store-video-pill-sticky"><div class="store-video-pill-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-video-pill-copy"><span>01 · ${String(motionStories.length).padStart(2, "0")}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></div></div>`;
+    } else if (animation.type === "portfolio-scroller" && motionStories.length >= 2) {
+      blockHtml = `<div class="store-portfolio" data-portfolio-scroller tabindex="0" role="region" aria-label="${escapeHtml(publicTitle)}"><nav aria-label="Momentos de ${escapeHtml(publicTitle)}">${motionStories.map((scene, index) => `<button type="button" data-portfolio-to="${index}" aria-current="${index === 0}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(scene.title)}</strong></button>`).join("")}</nav><div class="store-portfolio-stage">${motionStories.map((scene, index) => `<article data-portfolio-panel="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><div class="store-portfolio-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-portfolio-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></article>`).join("")}</div></div>`;
+    } else if (animation.type === "circle-reveal" && motionStories.length >= 1) {
+      const scene = motionStories[0];
+      blockHtml = `<div class="store-circle-reveal" data-circle-reveal aria-label="${escapeHtml(publicTitle)}"><div class="store-circle-reveal-sticky"><div class="store-circle-reveal-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-circle-reveal-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></div></div>`;
+    } else if (animation.type === "clarity-marquee") {
+      const phrases = [...new Set([
+        selectedProduct?.name,
+        ...(selectedProduct?.tags ?? []),
+        ...store.items.map((item) => item.name),
+        publicTitle,
+        store.storeName,
+      ].map((phrase) => phrase?.trim()).filter((phrase): phrase is string => !!phrase))].slice(0, 8);
+      const phraseHtml = phrases.map((phrase, index) => `<span><b>${String(index + 1).padStart(2, "0")}</b>${escapeHtml(phrase)}</span>`).join("");
+      blockHtml = `<div class="store-clarity-marquee" data-clarity-marquee aria-label="${escapeHtml(publicTitle)}"><div class="store-clarity-marquee-copy"><h3>${escapeHtml(publicTitle)}</h3><p>${escapeHtml(publicSubtitle)}</p></div><div class="store-clarity-rail"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div><div class="store-clarity-rail reverse"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div></div>`;
+    } else if (animation.type === "full-screen-chapters" && motionStories.length >= 2) {
+      blockHtml = `<div class="store-full-chapters" data-full-chapters role="region" aria-label="${escapeHtml(publicTitle)}" style="height:${Math.max(220, motionStories.length * 90)}svh"><div class="store-full-chapters-sticky"><div class="store-full-chapter-backgrounds" aria-hidden="true">${motionStories.map((scene, index) => `<div data-full-chapter-bg="${index}" class="${index === 0 ? "active" : ""}">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, "")}</div>`).join("")}</div><div class="store-full-chapter-copy">${motionStories.map((scene, index) => `<article data-full-chapter-copy="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><span>${String(index + 1).padStart(2, "0")} / ${String(motionStories.length).padStart(2, "0")}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></article>`).join("")}</div><div class="store-full-chapter-progress" aria-hidden="true"><span></span></div></div></div>`;
+    } else if (animation.type === "magnetic-target" && motionImages.length >= 1) {
+      const scene = motionImages[0];
+      const magneticHref = selectedProduct ? productPageUrl(slug, selectedProduct.id) : "#store-grid";
+      const magneticLabel = selectedProduct ? `Ver ${selectedProduct.name}` : "Explorar colección";
+      blockHtml = `<div class="store-magnetic" data-magnetic-target style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)"><div class="store-magnetic-copy"><span>${escapeHtml(scene.caption)}</span><h3>${escapeHtml(publicTitle)}</h3><p>${escapeHtml(scene.body || publicSubtitle)}</p></div><a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
+    } else if (animation.type === "frame-sequence" && motionImages.length >= 2) {
+      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(publicTitle)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}" class="${index === 0 ? "active" : ""}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</div>`).join("")}</div><div class="store-frame-copy"><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-frame-title>${escapeHtml(motionImages[0].title)}</h3><p data-frame-body>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
+    } else if (animation.type === "3d-gallery" && motionImages.length >= 3) {
+      blockHtml = `<div class="store-space-gallery" data-space-gallery tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(publicTitle)}"><div class="store-space-gallery-stage">${motionImages.map((image, index) => `<figure data-space-card="${index}" style="--space-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure>`).join("")}</div><div class="store-experience-controls"><button type="button" data-space-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span data-space-status aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-space-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     }
+    const productActionHtml = selectedProduct && animation.type !== "magnetic-target"
+      ? `<a class="store-motion-product-link" href="${escapeHtml(productPageUrl(slug, selectedProduct.id))}"><span><small>Producto destacado</small><strong>${escapeHtml(selectedProduct.name)}</strong></span>${ICON_ARROW_RIGHT}</a>`
+      : "";
     const html = blockHtml
-      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-labelledby="${titleId}"><div class="store-motion-intro"><h2 id="${titleId}">${escapeHtml(publicTitle)}</h2><p>${escapeHtml(publicSubtitle)}</p></div>${blockHtml}</section>`
+      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-labelledby="${titleId}"><div class="store-motion-intro"><h2 id="${titleId}">${escapeHtml(publicTitle)}</h2><p>${escapeHtml(publicSubtitle)}</p></div>${blockHtml}${productActionHtml}</section>`
       : "";
     return [sectionKey, html];
   }));
@@ -3035,7 +3105,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     : "";
 
   const contactHtml = store.contactFormEnabled === true
-    ? `<section class="store-contact-section" aria-labelledby="store-contact-title">
+    ? `<section class="store-contact-section" id="store-contact" aria-labelledby="store-contact-title">
         <div class="store-contact-copy">
           <h2 id="store-contact-title">¿Tienes una pregunta?</h2>
           <p>Escríbele directamente al equipo de ${escapeHtml(store.storeName)}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.</p>
@@ -3084,7 +3154,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     </article>`;
   };
   const locationHtml = locations.length
-    ? `<section class="store-location-section${locations.length > 1 ? " has-many" : ""}" aria-labelledby="store-location-title">
+    ? `<section class="store-location-section${locations.length > 1 ? " has-many" : ""}" id="store-location" aria-labelledby="store-location-title">
         <div class="store-location-heading">
           <div><h2 id="store-location-title">Visítanos</h2><p>${locations.length === 1 ? "Encuentra esta tienda y elige cómo recibir tu pedido." : `${locations.length} ubicaciones para retirar o recibir tu pedido.`}</p></div>
           ${locations.length > 1 ? `<button class="store-locations-toggle" type="button" aria-expanded="false" aria-controls="store-locations-list">Ver ubicaciones <span>${locations.length}</span></button>` : ""}
@@ -3106,18 +3176,28 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     ...motionSectionHtmlByKey,
   };
   const orderedSectionsHtml = contentOrder.map((section) => sectionHtml[section] || "").join("");
+  const storefrontNavigationItems = [
+    { href: "#store-products", label: "Tienda", visible: true },
+    { href: "#store-location", label: "Ubicación", visible: locations.length > 0 },
+    { href: "#store-contact", label: "Contacto", visible: store.contactFormEnabled === true },
+  ].filter((item) => item.visible);
   app.innerHTML = `
-    ${storePreviewMode || storeOwnerMode ? "" : `<nav class="store-directory-nav" aria-label="Navegación de Mi Tienda">
-      <a class="store-directory-back" href="/stores/">${ICON_ARROW_LEFT}<span>Volver a Mi Tienda</span></a>
-    </nav>`}
-    ${announcementHtml}
-    <header class="merchant-header${!visibleStoreName && logoUrl ? " has-prominent-logo" : ""}${!visibleStoreName && logoUrl && !store.tagline ? " is-logo-only" : ""}">
-      ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="${visibleStoreName ? "" : "Logo de la tienda"}">` : ""}
-      ${visibleStoreName || store.tagline ? `<div class="merchant-header-copy">
-        ${visibleStoreName ? `<h1 class="store-title">${escapeHtml(visibleStoreName)}</h1>` : ""}
-        ${store.tagline ? `<div class="store-tagline">${escapeHtml(store.tagline)}</div>` : ""}
-      </div>` : ""}
+    <header class="merchant-header store-site-header${!visibleStoreName && logoUrl ? " has-prominent-logo" : ""}${!visibleStoreName && logoUrl && !store.tagline ? " is-logo-only" : ""}" id="store-top">
+      <a class="store-site-brand" href="#store-top" aria-label="${escapeHtml(visibleStoreName ? `Ir al inicio de ${visibleStoreName}` : "Ir al inicio de la tienda")}">
+        ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="${visibleStoreName ? "" : "Logo de la tienda"}">` : ""}
+        ${visibleStoreName || store.tagline ? `<div class="merchant-header-copy">
+          ${visibleStoreName ? `<h1 class="store-title">${escapeHtml(visibleStoreName)}</h1>` : ""}
+          ${store.tagline ? `<span class="store-tagline">${escapeHtml(store.tagline)}</span>` : ""}
+        </div>` : ""}
+      </a>
+      <nav class="store-site-nav" aria-label="Secciones de la tienda">
+        ${storefrontNavigationItems.map((item) => `<a href="${item.href}">${item.label}</a>`).join("")}
+      </nav>
+      <div class="store-site-utility">
+        ${storePreviewMode || storeOwnerMode ? "" : `<a class="store-directory-back" href="/stores/">${ICON_ARROW_LEFT}<span>Volver a Mi Tienda</span></a>`}
+      </div>
     </header>
+    ${announcementHtml}
     ${orderedSectionsHtml}
     ${appointmentsHtml}
     ${locationHtml}
@@ -3482,6 +3562,220 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     });
     show(0);
   });
+
+  app.querySelectorAll<HTMLElement>("[data-portfolio-scroller]").forEach((portfolio) => {
+    const buttons = Array.from(portfolio.querySelectorAll<HTMLButtonElement>("[data-portfolio-to]"));
+    const panels = Array.from(portfolio.querySelectorAll<HTMLElement>("[data-portfolio-panel]"));
+    const reduceMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let selected = 0;
+    let visible = true;
+    const syncVideos = () => panels.forEach((panel, index) => {
+      const video = panel.querySelector<HTMLVideoElement>("video");
+      if (!video) return;
+      if (index === selected && visible && !reduceMotion) void video.play().catch(() => undefined);
+      else video.pause();
+    });
+    const show = (next: number, focus = false) => {
+      selected = (next + panels.length) % panels.length;
+      buttons.forEach((button, index) => {
+        button.setAttribute("aria-current", String(index === selected));
+        button.tabIndex = index === selected ? 0 : -1;
+      });
+      panels.forEach((panel, index) => {
+        const active = index === selected;
+        panel.classList.toggle("active", active);
+        panel.setAttribute("aria-hidden", String(!active));
+      });
+      syncVideos();
+      if (focus) buttons[selected]?.focus({ preventScroll: true });
+    };
+    buttons.forEach((button, index) => button.addEventListener("click", () => show(index)));
+    portfolio.addEventListener("keydown", (event) => {
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      show(selected + (["ArrowUp", "ArrowLeft"].includes(event.key) ? -1 : 1), true);
+    });
+    const observer = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; syncVideos(); }, { threshold: .2 })
+      : null;
+    observer?.observe(portfolio);
+    show(0);
+    const priorCleanup = activeStoreExperienceCleanup;
+    activeStoreExperienceCleanup = () => {
+      priorCleanup?.();
+      observer?.disconnect();
+      panels.forEach((panel) => panel.querySelector<HTMLVideoElement>("video")?.pause());
+    };
+  });
+
+  app.querySelectorAll<HTMLElement>("[data-space-gallery]").forEach((gallery) => {
+    const cards = Array.from(gallery.querySelectorAll<HTMLElement>("[data-space-card]"));
+    const status = gallery.querySelector<HTMLElement>("[data-space-status]");
+    let selected = 0;
+    let pointerStart: number | null = null;
+    const show = (next: number) => {
+      selected = (next + cards.length) % cards.length;
+      cards.forEach((card, index) => {
+        let offset = index - selected;
+        if (offset > cards.length / 2) offset -= cards.length;
+        if (offset < -cards.length / 2) offset += cards.length;
+        card.style.setProperty("--space-offset", String(offset));
+        card.style.setProperty("--space-depth", String(Math.abs(offset)));
+        card.style.zIndex = String(20 - Math.abs(offset));
+        card.style.opacity = String(Math.max(.18, 1 - Math.abs(offset) * .22));
+        card.setAttribute("aria-hidden", String(index !== selected));
+      });
+      if (status) status.textContent = `${selected + 1} / ${cards.length}`;
+    };
+    gallery.querySelectorAll<HTMLButtonElement>("[data-space-step]").forEach((button) =>
+      button.addEventListener("click", () => show(selected + Number(button.dataset.spaceStep))),
+    );
+    gallery.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      show(selected + (event.key === "ArrowLeft" ? -1 : 1));
+    });
+    gallery.addEventListener("wheel", (event) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      show(selected + (event.deltaX > 0 ? 1 : -1));
+    }, { passive: false });
+    gallery.addEventListener("pointerdown", (event) => {
+      pointerStart = event.clientX;
+      gallery.setPointerCapture(event.pointerId);
+    });
+    gallery.addEventListener("pointerup", (event) => {
+      if (pointerStart === null) return;
+      const distance = event.clientX - pointerStart;
+      pointerStart = null;
+      if (Math.abs(distance) >= 48) show(selected + (distance < 0 ? 1 : -1));
+    });
+    gallery.addEventListener("pointercancel", () => { pointerStart = null; });
+    show(0);
+  });
+
+  app.querySelectorAll<HTMLElement>("[data-magnetic-target]").forEach((magnetic) => {
+    const link = magnetic.querySelector<HTMLElement>("[data-magnetic-link]");
+    if (!link) return;
+    const interactivePointer = typeof window.matchMedia === "function"
+      && window.matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)").matches;
+    const reset = () => { link.style.transform = "translate3d(0,0,0)"; };
+    const move = (event: PointerEvent) => {
+      if (!interactivePointer) return;
+      const rect = magnetic.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / Math.max(rect.width, 1) - .5) * 24;
+      const y = ((event.clientY - rect.top) / Math.max(rect.height, 1) - .5) * 24;
+      link.style.transform = `translate3d(${x}px,${y}px,0)`;
+    };
+    magnetic.addEventListener("pointermove", move);
+    magnetic.addEventListener("pointerleave", reset);
+    link.addEventListener("click", (event) => {
+      if (link.getAttribute("href") !== "#store-grid") return;
+      const target = app.querySelector<HTMLElement>("#store-grid, .store-products");
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: interactivePointer ? "smooth" : "auto", block: "start" });
+    });
+    const priorCleanup = activeStoreExperienceCleanup;
+    activeStoreExperienceCleanup = () => {
+      priorCleanup?.();
+      magnetic.removeEventListener("pointermove", move);
+      magnetic.removeEventListener("pointerleave", reset);
+    };
+  });
+
+  const videoPills = Array.from(app.querySelectorAll<HTMLElement>("[data-video-pill]"));
+  const circleReveals = Array.from(app.querySelectorAll<HTMLElement>("[data-circle-reveal]"));
+  const frameSequences = Array.from(app.querySelectorAll<HTMLElement>("[data-frame-sequence]"));
+  const fullChapters = Array.from(app.querySelectorAll<HTMLElement>("[data-full-chapters]"));
+  if (videoPills.length || circleReveals.length || frameSequences.length || fullChapters.length) {
+    const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    let frame = 0;
+    const progressFor = (element: HTMLElement) => {
+      const travel = Math.max(element.offsetHeight - window.innerHeight, 1);
+      return Math.max(0, Math.min(1, -element.getBoundingClientRect().top / travel));
+    };
+    const syncVideo = (container: HTMLElement, shouldPlay: boolean) => {
+      const video = container.querySelector<HTMLVideoElement>("video");
+      if (!video) return;
+      if (shouldPlay && !reduceMotion?.matches) void video.play().catch(() => undefined);
+      else video.pause();
+    };
+    const paint = () => {
+      frame = 0;
+      videoPills.forEach((pill) => {
+        const progress = reduceMotion?.matches ? 1 : progressFor(pill);
+        const media = pill.querySelector<HTMLElement>(".store-video-pill-media");
+        const copy = pill.querySelector<HTMLElement>(".store-video-pill-copy");
+        if (media) {
+          media.style.transform = `translate(-50%,-50%) scale(${.38 + progress * .62})`;
+          media.style.borderRadius = `${Math.max(0, 999 * (1 - progress))}px`;
+        }
+        if (copy) {
+          copy.style.opacity = String(Math.max(0, Math.min(1, (progress - .45) * 2.4)));
+          copy.style.transform = `translateY(${(1 - progress) * 24}px)`;
+        }
+        syncVideo(pill, progress > .08 && progress < .98);
+      });
+      circleReveals.forEach((reveal) => {
+        const progress = reduceMotion?.matches ? 1 : progressFor(reveal);
+        const media = reveal.querySelector<HTMLElement>(".store-circle-reveal-media");
+        const copy = reveal.querySelector<HTMLElement>(".store-circle-reveal-copy");
+        if (media) media.style.clipPath = `circle(${12 + progress * 138}% at 50% 50%)`;
+        if (copy) {
+          copy.style.opacity = String(Math.max(0, Math.min(1, (progress - .58) * 2.6)));
+          copy.style.transform = `translateY(${(1 - progress) * 20}px)`;
+        }
+        syncVideo(reveal, progress > .05 && progress < .98);
+      });
+      frameSequences.forEach((sequence) => {
+        const frames = Array.from(sequence.querySelectorAll<HTMLElement>("[data-frame]"));
+        const progress = reduceMotion?.matches ? 0 : progressFor(sequence);
+        const index = Math.min(frames.length - 1, Math.round(progress * (frames.length - 1)));
+        frames.forEach((item, itemIndex) => item.classList.toggle("active", itemIndex === index));
+        const image = frames[index];
+        const status = sequence.querySelector<HTMLElement>("[data-frame-status]");
+        const title = sequence.querySelector<HTMLElement>("[data-frame-title]");
+        const body = sequence.querySelector<HTMLElement>("[data-frame-body]");
+        if (status) status.textContent = `${String(index + 1).padStart(2, "0")} / ${String(frames.length).padStart(2, "0")}`;
+        if (title) title.textContent = image?.dataset.frameTitleValue || `Escena ${index + 1}`;
+        if (body) body.textContent = image?.dataset.frameBodyValue || "";
+      });
+      fullChapters.forEach((chapters) => {
+        const backgrounds = Array.from(chapters.querySelectorAll<HTMLElement>("[data-full-chapter-bg]"));
+        const copies = Array.from(chapters.querySelectorAll<HTMLElement>("[data-full-chapter-copy]"));
+        const progress = reduceMotion?.matches ? 0 : progressFor(chapters);
+        const index = Math.min(backgrounds.length - 1, Math.round(progress * (backgrounds.length - 1)));
+        backgrounds.forEach((background, itemIndex) => {
+          background.classList.toggle("active", itemIndex === index);
+          syncVideo(background, itemIndex === index && progress < .99);
+        });
+        copies.forEach((copy, itemIndex) => {
+          const active = itemIndex === index;
+          copy.classList.toggle("active", active);
+          copy.setAttribute("aria-hidden", String(!active));
+        });
+        const progressBar = chapters.querySelector<HTMLElement>(".store-full-chapter-progress span");
+        if (progressBar) progressBar.style.transform = `scaleX(${progress})`;
+      });
+    };
+    const requestPaint = () => { if (!frame) frame = window.requestAnimationFrame(paint); };
+    window.addEventListener("scroll", requestPaint, { passive: true });
+    window.addEventListener("resize", requestPaint);
+    reduceMotion?.addEventListener("change", requestPaint);
+    paint();
+    const priorCleanup = activeStoreExperienceCleanup;
+    activeStoreExperienceCleanup = () => {
+      (priorCleanup as (() => void) | null)?.();
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", requestPaint);
+      window.removeEventListener("resize", requestPaint);
+      reduceMotion?.removeEventListener("change", requestPaint);
+      [...videoPills, ...circleReveals, ...fullChapters].forEach((container) =>
+        container.querySelectorAll<HTMLVideoElement>("video").forEach((video) => video.pause()),
+      );
+    };
+  }
 
   app.querySelectorAll<HTMLElement>("[data-image-stream]").forEach((imageStream) => {
     let isVisible = true;

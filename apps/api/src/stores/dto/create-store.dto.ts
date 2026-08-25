@@ -67,6 +67,14 @@ export const STORE_MOTION_EXPERIENCES = [
   "hero-gallery-scroll",
   "stagger-testimonials",
   "zoom-parallax",
+  "video-pill",
+  "portfolio-scroller",
+  "circle-reveal",
+  "clarity-marquee",
+  "full-screen-chapters",
+  "magnetic-target",
+  "frame-sequence",
+  "3d-gallery",
 ] as const;
 export const STORE_ANIMATION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 export const STORE_ANIMATION_SECTION_PATTERN = /^animation-[a-z0-9][a-z0-9_-]{0,47}$/;
@@ -81,6 +89,14 @@ export const STORE_MOTION_CONTENT_SECTIONS = [
   "motion-hero-gallery-scroll",
   "motion-stagger-testimonials",
   "motion-zoom-parallax",
+  "motion-video-pill",
+  "motion-portfolio-scroller",
+  "motion-circle-reveal",
+  "motion-clarity-marquee",
+  "motion-full-screen-chapters",
+  "motion-magnetic-target",
+  "motion-frame-sequence",
+  "motion-3d-gallery",
 ] as const;
 // `motion` remains accepted so stores saved by the previous editor can be
 // expanded in place. New editors persist one section key per animation.
@@ -221,6 +237,12 @@ export class StoreAnimationDto {
   @IsSafeText()
   @MaxLength(220)
   subtitle?: string;
+
+  @ApiPropertyOptional({ example: "product_123", description: "Optional product featured by this animation." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  productId?: string;
 
   @ApiProperty({ description: "Ordered pictures and copy owned by this animation.", type: [StoreEditorialImageDto] })
   @IsArray()

@@ -100,7 +100,13 @@ export interface StoreHeroSlide {
   ctaUrl?: string;
 }
 
-export type StoreMotionExperience = "story-scroll" | "coverflow-carousel" | "hero-carousel" | "image-stream" | "scroll-expansion" | "hero-gallery-scroll" | "stagger-testimonials" | "zoom-parallax";
+export const STORE_MOTION_EXPERIENCES = [
+  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
+  "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+] as const;
+export type StoreMotionExperience = (typeof STORE_MOTION_EXPERIENCES)[number];
 export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}`;
 
 export interface StoreEditorialImage {
@@ -117,6 +123,7 @@ export interface StoreAnimation {
   type: StoreMotionExperience;
   title?: string;
   subtitle?: string;
+  productId?: string;
   media: StoreEditorialImage[];
 }
 

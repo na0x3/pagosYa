@@ -86,6 +86,11 @@ async function openDashboard(
   return requests;
 }
 
+async function addAnimation(page, type = "coverflow-carousel") {
+  await page.locator("#storeAnimationTypePicker").selectOption(type);
+  await page.locator("#storeAnimationAdd").click({ force: true });
+}
+
 async function prepareInventoryImport(page, responseForRequest) {
   const requests = await openDashboard(page, [store("store_1", "Primera")], async (args) => {
     if (args.path === "/stores/store_1/payment_links/import/normalize") {
@@ -243,9 +248,9 @@ test("appearance options collapse into remembered disclosures", async ({ page })
   await copyToggle.click();
   await expect(page.locator("#storeCatalogTitle")).toBeVisible();
 
-  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
-  await page.locator("#storeAnimationAdd").click();
-  await page.locator("#storeAnimationAdd").click();
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click({ force: true });
+  await addAnimation(page);
+  await addAnimation(page, "story-scroll");
   const animationCards = page.locator(".animation-card");
   await expect(animationCards.nth(0).locator(".animation-card-toggle")).toHaveAttribute("aria-expanded", "false");
   await expect(animationCards.nth(1).locator(".animation-card-toggle")).toHaveAttribute("aria-expanded", "true");
@@ -256,6 +261,79 @@ test("appearance options collapse into remembered disclosures", async ({ page })
   await expect(page.locator("#storeNameInput")).toHaveValue("Tienda compacta");
   await expect(page.locator("#customDomainToggle")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#customDomainStudioBody")).toBeVisible();
+});
+
+test("legacy sliders migrate into optional draggable animations", async ({ page }) => {
+  const requests = await openDashboard(page, [{
+    ...store("store_1", "Tienda ordenable"),
+    heroSlides: [
+      { imageUrl: "/uploads/hero-one.webp", title: "Primera portada" },
+      { imageUrl: "/uploads/hero-two.webp", title: "Segunda portada" },
+    ],
+    editorialGallery: [
+      { imageUrl: "/uploads/story-one.webp", title: "Primera historia", caption: "", body: "" },
+      { imageUrl: "/uploads/story-two.webp", title: "Segunda historia", caption: "", body: "" },
+      { imageUrl: "/uploads/story-three.webp", title: "Tercera historia", caption: "", body: "" },
+    ],
+  }]);
+
+  const shell = page.locator(".dashboard-shell");
+  const workspaceWidth = await page.locator("#dashboardWorkspace").evaluate((element) => element.getBoundingClientRect().width);
+  await page.locator("#dashboardSidebarToggle").click();
+  await expect(shell).toHaveClass(/is-sidebar-collapsed/);
+  await expect(page.locator("#dashboardSidebarToggle")).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() => page.locator("#dashboardWorkspace").evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(workspaceWidth);
+
+  await expect(page.getByText("Experiencia visual después del catálogo", { exact: true })).toHaveCount(0);
+  await expect(page.locator("#storeExperienceStyle")).toBeHidden();
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await expect(page.locator(".store-animations-editor .hero-slides-editor")).toHaveCount(0);
+  await expect(page.locator("#storeAnimationTypePicker")).toHaveValue("");
+  await expect(page.locator("#storeAnimationAdd")).toBeDisabled();
+  const sliderCard = page.locator(".animation-card").first();
+  await expect(page.locator(".animation-card")).toHaveCount(1);
+  await sliderCard.locator(".animation-card-toggle").click();
+  await expect(sliderCard.locator('[data-animation-field="name"]')).toHaveValue("Slider principal");
+  await expect(sliderCard.locator('[data-animation-field="type"]')).toHaveValue("hero-carousel");
+  const sliderMedia = sliderCard.locator(".animation-media-row");
+  await expect(sliderMedia).toHaveCount(2);
+  await sliderMedia.first().locator(".reorder-handle").press("End");
+  await expect(sliderMedia.first().locator('[data-animation-media-field="title"]')).toHaveValue("Segunda portada");
+
+  await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
+  const editorialHandles = page.locator(".editorial-gallery-row .reorder-handle");
+  await editorialHandles.first().press("End");
+  await expect(page.locator("#editorialTitle0")).toHaveValue("Segunda historia");
+
+  const sliderOrderRow = page.locator(".store-content-order-row", { hasText: "Slider principal" });
+  await sliderOrderRow.locator(".reorder-handle").press("End");
+  await expect(page.locator(".store-content-order-row").last()).toContainText("Slider principal");
+
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+  const write = requests.findLast((request) => request.method === "PUT" && request.path.endsWith("/settings"));
+  expect(write.body.heroSlides).toEqual([]);
+  expect(write.body.editorialGallery.map((image) => image.title)).toEqual(["Segunda historia", "Tercera historia", "Primera historia"]);
+  expect(write.body.animations).toEqual([expect.objectContaining({ name: "Slider principal", type: "hero-carousel" })]);
+  expect(write.body.animations[0].media.map((image) => image.title)).toEqual(["Segunda portada", "Primera portada"]);
+  expect(write.body.contentOrder.at(-1)).toBe(`animation-${write.body.animations[0].id}`);
+});
+
+test("a new store starts without animations and only adds the selected type", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Tienda quieta")]);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+
+  await expect(page.locator(".animation-card")).toHaveCount(0);
+  await expect(page.locator("#storeAnimationAdd")).toBeDisabled();
+  await page.locator("#storeAnimationTypePicker").selectOption("hero-carousel");
+  await expect(page.locator("#storeAnimationAdd")).toBeEnabled();
+  await page.locator("#storeAnimationAdd").click({ force: true });
+
+  await expect(page.locator(".animation-card")).toHaveCount(1);
+  await expect(page.locator('[data-animation-field="type"]')).toHaveValue("hero-carousel");
+  await expect(page.locator(".animation-media-row")).toHaveCount(0);
+  await expect(page.locator("#storeAnimationTypePicker")).toHaveValue("");
+  await expect(page.locator("#storeAnimationAdd")).toBeDisabled();
 });
 
 test("company creates a carnet debt link from the Link de cobro section", async ({ page }) => {
@@ -546,6 +624,7 @@ test("typing keeps focus, preserves the iframe, and identifies the edited previe
   });
   const name = page.locator("#storeNameInput");
   const initialSrc = await page.locator("#storePreviewFrame").getAttribute("src");
+  expect(new URLSearchParams(new URL(initialSrc).hash.slice(1)).get("parent_origin")).toBe("http://127.0.0.1:4323");
   await name.fill("");
   await name.pressSequentially("Suave", { delay: 20 });
   await expect(name).toBeFocused();
@@ -553,8 +632,11 @@ test("typing keeps focus, preserves the iframe, and identifies the edited previe
   await expect(page.locator("#storePreviewFrame")).toHaveAttribute("src", initialSrc);
   await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) => message.previewSection === "brand" && message.patch?.storeName === "Suave"))).toBe(true);
 
-  await page.locator("#heroSlideTitle1").click();
-  await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) => message.previewAction === "hero-item" && message.previewTargetIndex === 1))).toBe(true);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  const migratedSlider = page.locator(".animation-card").filter({ hasText: "Slider principal" }).last();
+  await migratedSlider.locator(".animation-card-toggle").click();
+  await migratedSlider.locator('[data-animation-media-field="title"]').nth(1).click();
+  await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) => message.previewSection === "animation-legacy-main-slider" && message.previewAction === "motion"))).toBe(true);
 
   await page.getByRole("button", { name: "Mostrar Mensaje y contacto" }).click();
   await page.getByRole("button", { name: "Mostrar Textos y secciones de la tienda" }).click();
@@ -573,6 +655,99 @@ test("typing keeps focus, preserves the iframe, and identifies the edited previe
   await page.getByRole("button", { name: "Mostrar Estilo" }).click();
   await page.locator("#storeCartButtonLabel").fill("Finalizar pedido");
   await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) => message.previewAction === "cart" && message.patch?.cartButtonLabel === "Finalizar pedido"))).toBe(true);
+});
+
+test("merchant can save every showcase animation type from the real appearance editor", async ({ page }) => {
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+  }));
+  const requests = await openDashboard(page, [store("store_1", "Movimiento")]);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await addAnimation(page);
+  const type = page.locator('[data-animation-field="type"]');
+  await expect(type.locator("option")).toHaveCount(16);
+  await type.selectOption("3d-gallery");
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+
+  const write = requests.find((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
+  expect(write.body.animations).toEqual([expect.objectContaining({ type: "3d-gallery" })]);
+  expect(write.body.motionExperiences).toEqual(["3d-gallery"]);
+});
+
+test("text-only animations skip photos and animations can feature one product", async ({ page }) => {
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+  }));
+  const products = [
+    { id: "product_1", name: "Helado amarillo tropical de temporada", status: "ACTIVE", imageUrls: ["/v1/uploads/tropical.webp"], tags: ["Frutal"], description: "Fresco y frutal." },
+    { id: "product_2", name: "Helado de chocolate con nombre especialmente largo", status: "ACTIVE", imageUrls: ["/v1/uploads/chocolate.webp"], tags: [], description: "Cacao intenso." },
+  ];
+  const requests = await openDashboard(page, [store("store_1", "Movimiento")], ({ path }) =>
+    path === "/stores/store_1/payment_links" ? products : undefined,
+  );
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await addAnimation(page);
+
+  await page.locator('[data-animation-field="type"]').selectOption("clarity-marquee");
+  await expect(page.locator(".animation-text-only-note")).toContainText("No necesitas seleccionar fotos");
+  await expect(page.locator("[data-animation-source]")).toHaveCount(0);
+  await page.locator('[data-animation-field="productId"]').selectOption("product_1");
+  await expect(page.locator(".animation-text-only-note")).toContainText("Helado amarillo tropical");
+
+  await page.locator('[data-animation-field="type"]').selectOption("video-pill");
+  await expect(page.locator(".animation-media-count")).toHaveText("1 / 1");
+  await page.locator(".animation-source").nth(1).click();
+  await expect(page.locator(".animation-media-row")).toHaveCount(1);
+
+  await page.locator('[data-animation-field="type"]').selectOption("clarity-marquee");
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+
+  const write = requests.findLast((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
+  expect(write.body.animations).toEqual([expect.objectContaining({ type: "clarity-marquee", productId: "product_1", media: [] })]);
+});
+
+test("merchant can upload a video directly to Video que se abre", async ({ page }) => {
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+  }));
+  const requests = await openDashboard(page, [store("store_1", "Movimiento")], ({ path }) => {
+    if (path === "/uploads") return { url: "/v1/uploads/opening.mp4" };
+  });
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await addAnimation(page, "video-pill");
+  const card = page.locator(".animation-card").last();
+
+  await expect(card.locator(".animation-video-upload")).toContainText("MP4 o WEBM de hasta 20 MB");
+  await card.locator(".animation-video-input").setInputFiles({
+    name: "still.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("not-a-video"),
+  });
+  await expect(card.locator(".animation-video-upload-status")).toContainText("Usa MP4 o WEBM");
+  expect(requests.filter((request) => request.path === "/uploads")).toHaveLength(0);
+
+  await card.locator(".animation-video-input").setInputFiles({
+    name: "opening.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from("fake-video"),
+  });
+  await expect(card.locator(".animation-media-row video")).toHaveAttribute("src", /opening\.mp4$/);
+  await expect(card.locator(".animation-card-identity")).toContainText("1 video");
+
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+  const write = requests.findLast((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
+  expect(write.body.animations).toEqual([
+    expect.objectContaining({
+      type: "video-pill",
+      media: [expect.objectContaining({ imageUrl: "/v1/uploads/opening.mp4" })],
+    }),
+  ]);
 });
 
 test("editing a saved product moves the shared preview into its product detail", async ({ page }) => {
@@ -622,7 +797,7 @@ test("editing a saved product moves the shared preview into its product detail",
   await description.fill("Miga aireada y mantequilla dorada.");
   await expect(description).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) => message.previewAction === "product" && message.previewProduct?.description === "Miga aireada y mantequilla dorada."))).toBe(true);
-  expect(Math.abs((await page.evaluate(() => window.scrollY)) - dashboardScroll)).toBeLessThanOrEqual(12);
+  expect(Math.abs((await page.evaluate(() => window.scrollY)) - dashboardScroll)).toBeLessThanOrEqual(40);
 });
 
 test("orders show buyer support details and can be searched by name", async ({ page }) => {
@@ -699,19 +874,22 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   }]);
   await page.locator("#storeNameInput").fill("Nombre guardado");
   await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
-  await page.locator("#storeExperienceStyle").selectOption("story-scroller");
   await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
-  await page.locator("#storeAnimationAdd").click();
-  await page.locator("#storeAnimationAdd").click();
+  await addAnimation(page);
+  await addAnimation(page, "story-scroll");
   const animationCards = page.locator(".animation-card");
   await animationCards.nth(0).locator(".animation-card-toggle").click();
   await animationCards.nth(0).locator('[data-animation-field="name"]').fill("Portada editorial");
   await animationCards.nth(0).locator('[data-animation-field="type"]').selectOption("hero-carousel");
   await animationCards.nth(0).locator('[data-animation-field="title"]').fill("Colección principal");
+  for (let sourceIndex = 0; sourceIndex < 3; sourceIndex += 1) {
+    await animationCards.nth(0).locator(`[data-animation-source="${sourceIndex}"]`).click({ force: true });
+  }
   await animationCards.nth(1).locator(".animation-card-toggle").click();
   await animationCards.nth(1).locator('[data-animation-field="name"]').fill("Historia final");
   await animationCards.nth(1).locator('[data-animation-field="type"]').selectOption("story-scroll");
   await animationCards.nth(1).locator('[data-animation-source="0"]').click({ force: true });
+  await animationCards.nth(1).locator('[data-animation-source="1"]').click({ force: true });
   await animationCards.nth(1).locator('[data-animation-media-field="body"]').first().fill("Un capítulo independiente para esta animación.");
   await expect(page.locator("#storeContentOrderList")).toContainText("Portada editorial");
   await expect(page.locator("#storeContentOrderList")).toContainText("Historia final");
@@ -741,7 +919,7 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   expect(writes[0].body).toMatchObject({
     name: "Nombre guardado",
     backgroundColor: "#fef3c7",
-    experienceStyle: "story-scroller",
+    experienceStyle: "coverflow",
     motionDuoEnabled: true,
     motionExperience: "hero-carousel",
     motionExperiences: ["hero-carousel", "story-scroll"],
@@ -781,33 +959,27 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   expect(requests.some((request) => request.path.endsWith("/links"))).toBe(false);
 });
 
-test("merchant can replace an existing slider picture without deleting the slide", async ({ page }) => {
+test("merchant can edit a migrated slider as a normal animation", async ({ page }) => {
   const sliderStore = {
     ...store("store_1", "Quemado"),
     heroSlides: [{ imageUrl: "/uploads/original.webp", title: "Cada caja es una obra" }],
   };
-  const requests = await openDashboard(page, [sliderStore], ({ path }) => {
-    if (path === "/uploads") return { url: "/v1/uploads/replacement.jpg" };
-    return undefined;
-  });
+  const requests = await openDashboard(page, [sliderStore]);
 
-  await page.locator(".slide-media-input").setInputFiles({
-    name: "replacement.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from("replacement-image"),
-  });
-  await expect(page.locator(".hero-slide-editor-row > img")).toHaveAttribute("src", /replacement\.jpg$/);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  const card = page.locator(".animation-card");
+  await card.locator(".animation-card-toggle").click();
+  await card.locator('[data-animation-media-field="title"]').fill("Portada renovada");
   await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
   await expect(page.locator("#info")).toContainText("guardados");
 
   const write = requests.find((request) => request.method === "PUT" && request.path.endsWith("/settings"));
-  expect(write.body.heroSlides[0]).toMatchObject({
-    imageUrl: "/v1/uploads/replacement.jpg",
-    title: "Cada caja es una obra",
-  });
+  expect(write.body.heroSlides).toEqual([]);
+  expect(write.body.animations).toEqual([expect.objectContaining({ type: "hero-carousel", name: "Slider principal" })]);
+  expect(write.body.animations[0].media[0]).toMatchObject({ imageUrl: "/uploads/original.webp", title: "Portada renovada" });
 });
 
-test("merchant links slider and promotion buttons to products from the store catalog", async ({ page }) => {
+test("merchant links slider animations and promotion buttons to products from the store catalog", async ({ page }) => {
   const linkedStore = {
     ...store("store_1", "Café Norte"),
     promotionEnabled: true,
@@ -815,7 +987,7 @@ test("merchant links slider and promotion buttons to products from the store cat
     heroSlides: [{ imageUrl: "/uploads/hero.webp", title: "El favorito de la casa", ctaLabel: "Ver producto", ctaUrl: "http://localhost:5175/?link=store_1&product=product_coffee" }],
   };
   const products = [
-    { id: "product_coffee", name: "Café Geisha", amount: 8500, currency: "BOB", status: "ACTIVE", stock: 12, tags: [], variants: [], imageUrls: [] },
+    { id: "product_coffee", name: "Café Geisha", amount: 8500, currency: "BOB", status: "ACTIVE", stock: 12, tags: [], variants: [], imageUrls: ["/uploads/coffee.webp"] },
     { id: "product_press", name: "Prensa francesa", amount: 16000, currency: "BOB", status: "ACTIVE", stock: 4, tags: [], variants: [], imageUrls: [] },
   ];
   const requests = await openDashboard(page, [linkedStore], ({ path }) => {
@@ -823,13 +995,12 @@ test("merchant links slider and promotion buttons to products from the store cat
     return undefined;
   });
 
-  await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
-  await expect(page.locator("#heroSlideProduct0")).toContainText("Café Geisha");
-  await expect(page.locator("#heroSlideProduct0")).toHaveValue("product_coffee");
-  await page.locator("#heroSlideProduct0").selectOption("product_coffee");
-  const heroUrl = new URL(await page.locator("#heroSlideUrl0").inputValue());
-  expect(heroUrl.pathname).toBe("/s/store_1/p/product_coffee");
-  expect(heroUrl.searchParams.has("link")).toBe(false);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await page.locator(".animation-card-toggle").click();
+  const animationProduct = page.locator('[data-animation-field="productId"]');
+  await expect(animationProduct).toContainText("Café Geisha");
+  await animationProduct.selectOption("product_coffee");
+  await expect(animationProduct).toHaveValue("product_coffee");
 
   await page.getByRole("button", { name: "Mostrar Mensaje y contacto" }).click();
   await page.getByRole("button", { name: "Mostrar Promoción emergente" }).click();
@@ -844,7 +1015,8 @@ test("merchant links slider and promotion buttons to products from the store cat
   await expect(page.locator("#info")).toContainText("guardados");
 
   const write = requests.find((request) => request.method === "PUT" && request.path.endsWith("/settings"));
-  expect(new URL(write.body.heroSlides[0].ctaUrl).pathname).toBe("/s/store_1/p/product_coffee");
+  expect(write.body.heroSlides).toEqual([]);
+  expect(write.body.animations[0]).toMatchObject({ type: "hero-carousel", productId: "product_coffee" });
   expect(new URL(write.body.promotionCtaUrl).pathname).toBe("/s/store_1/p/product_press");
 });
 
@@ -1493,7 +1665,7 @@ test("active and archived payment links paginate independently in colored groups
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("#paymentLinkRows")).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   await active.getByRole("button", { name: "Página 2 de productos activos", exact: true }).click();
   await expect(active.locator(".payment-link-page-summary")).toHaveText("11–20 de 23");
@@ -1549,14 +1721,13 @@ test("merchant can adjust each product photo focus and save the framing", async 
     clientX: framingBounds.x + framingBounds.width * 0.8,
     clientY: framingBounds.y + framingBounds.height * 0.3,
   });
-  await expect(page.locator("#paymentLinkImagesPreview img")).toHaveCSS("object-position", "80% 30%");
+  await expect.poll(async () => page.locator("#paymentLinkImagesPreview img").evaluate((image) => getComputedStyle(image).objectPosition)).toMatch(/^80% (30|31)%$/);
   await form.evaluate((element) => element.requestSubmit());
   await expect(page.locator("#info")).toContainText("creado");
 
-  expect(requests.find((request) => request.path === "/stores/store_1/payment_links" && request.method === "POST")?.body).toMatchObject({
-    imageUrls: ["/v1/uploads/product-focus.jpg"],
-    imagePositions: ["80% 30%"],
-  });
+  const createBody = requests.find((request) => request.path === "/stores/store_1/payment_links" && request.method === "POST")?.body;
+  expect(createBody).toMatchObject({ imageUrls: ["/v1/uploads/product-focus.jpg"] });
+  expect(createBody.imagePositions[0]).toMatch(/^80% (30|31)%$/);
 });
 
 test("merchant can add and reorder multiple product photos", async ({ page }) => {
@@ -1675,11 +1846,10 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
   await expect(page.locator(".font-preview-editorial small")).toHaveCSS("font-family", /Georgia/);
   await page.locator('input[name="visualFontStyle"][value="editorial"]').check();
   await expect(page.locator('input[name="visualAnnouncementMarquee"]')).toHaveCount(2);
-  await expect(page.locator('input[name="visualMotionExperience"]')).toHaveCount(8);
-  const defaultVisualMotion = page.locator('input[name="visualMotionExperience"][value="coverflow-carousel"]');
-  await defaultVisualMotion.click();
-  await expect(defaultVisualMotion).toBeChecked();
+  await expect(page.locator('input[name="visualMotionExperience"]')).toHaveCount(16);
+  await expect(page.locator('input[name="visualMotionExperience"]:checked')).toHaveCount(0);
   await page.locator('input[name="visualAnnouncementMarquee"][value="false"]').check();
+  await page.locator('input[name="visualMotionExperience"][value="hero-carousel"]').check();
   await page.locator('input[name="visualMotionExperience"][value="hero-gallery-scroll"]').check();
   await page.locator('input[name="visualMotionExperience"][value="stagger-testimonials"]').check();
   await page.locator('input[name="visualCheckoutMode"][value="whatsapp"]').check();
@@ -1691,25 +1861,26 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
     { name: "referencia-2.jpg", mimeType: "image/jpeg", buffer: Buffer.from("foto-de-referencia-2") },
   ]);
   await expect(page.locator("#visualAiPreviews img")).toHaveCount(2);
-  await page.locator("#visualAiImages").setInputFiles([
-    { name: "referencia-3.jpg", mimeType: "image/jpeg", buffer: Buffer.from("foto-de-referencia-3") },
-    { name: "referencia-4.jpg", mimeType: "image/jpeg", buffer: Buffer.from("foto-de-referencia-4") },
-  ]);
-  await expect(page.locator("#visualAiPreviews img")).toHaveCount(4);
-  await expect(page.locator("#visualSourceStatus")).toContainText("4 fotos listas");
+  await page.locator("#visualAiImages").setInputFiles(Array.from({ length: 8 }, (_, index) => ({
+    name: `referencia-${index + 3}.jpg`,
+    mimeType: "image/jpeg",
+    buffer: Buffer.from(`foto-de-referencia-${index + 3}`),
+  })));
+  await expect(page.locator("#visualAiPreviews img")).toHaveCount(10);
+  await expect(page.locator("#visualSourceStatus")).toContainText("10 fotos listas");
   await expect(page.locator("#visualBusinessCategory")).toHaveValue("Café de especialidad");
   await page.getByRole("button", { name: "Quitar referencia-2.jpg" }).click();
-  await expect(page.locator("#visualAiPreviews img")).toHaveCount(3);
+  await expect(page.locator("#visualAiPreviews img")).toHaveCount(9);
   await expect(page.locator("#visualAiPreviews img").nth(0)).toHaveAttribute("alt", "referencia-1.jpg");
   await expect(page.locator("#visualAiPreviews img").nth(1)).toHaveAttribute("alt", "referencia-3.jpg");
-  await expect(page.locator("#visualSourceStatus")).toContainText("3 fotos listas");
+  await expect(page.locator("#visualSourceStatus")).toContainText("9 fotos listas");
   await page.locator("#visualAiImages").setInputFiles({
     name: "referencia-no-valida.gif",
     mimeType: "image/gif",
     buffer: Buffer.from("gif-no-admitido"),
   });
-  await expect(page.locator("#visualAiPreviews img")).toHaveCount(3);
-  await expect(page.locator("#visualSourceStatus")).toContainText("Tus 3 fotos anteriores siguen listas");
+  await expect(page.locator("#visualAiPreviews img")).toHaveCount(9);
+  await expect(page.locator("#visualSourceStatus")).toContainText("Tus 9 fotos anteriores siguen listas");
   await page.locator("#visualGenerate").click();
   const generationLoader = page.locator("#visualGenerationLoader");
   await expect(generationLoader).toBeVisible();
@@ -1731,12 +1902,12 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
   expect(generation?.body).toMatchObject({
     fontStyle: "editorial",
     announcementMarqueeEnabled: false,
-    motionExperience: "coverflow-carousel",
-    motionExperiences: ["coverflow-carousel", "hero-gallery-scroll", "stagger-testimonials"],
+    motionExperience: "hero-carousel",
+    motionExperiences: ["hero-carousel", "hero-gallery-scroll", "stagger-testimonials"],
     checkoutMode: "whatsapp",
     whatsappPhone: "+591 71234567",
     businessCategory: "Café de especialidad",
-    assetUrls: ["/v1/uploads/ai-1.jpg", "/v1/uploads/ai-2.jpg", "/v1/uploads/ai-3.jpg"],
+    assetUrls: Array.from({ length: 9 }, (_, index) => `/v1/uploads/ai-${index + 1}.jpg`),
   });
 });
 

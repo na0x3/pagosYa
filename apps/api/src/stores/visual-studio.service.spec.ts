@@ -97,21 +97,75 @@ describe("VisualStudioService", () => {
     expect(result.originalsPreserved).toBe(true);
     expect(result.proposals).toHaveLength(3);
     expect(prisma.mediaAsset.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { storeId: "store_1" } }));
-    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+    for (const [proposalIndex, call] of prisma.storeVisualProposal.create.mock.calls.entries()) {
       expect(call[0].data.sourceAssetUrls).toEqual([originalUrl]);
-      expect(call[0].data.config.heroSlides[0]).toEqual(expect.objectContaining({ imageUrl: originalUrl }));
       expect(call[0].data.config).not.toHaveProperty("html");
       expect(call[0].data.config).not.toHaveProperty("css");
-      expect(call[0].data.config.heroSlides).toHaveLength(5);
+      expect(call[0].data.config.heroSlides).toEqual([]);
+      expect(call[0].data.config.editorialGallery).toEqual([]);
       expect(call[0].data.config.motionDuoEnabled).toBe(true);
       expect(call[0].data.config.motionExperience).toBe("hero-gallery-scroll");
       expect(call[0].data.config.motionExperiences).toEqual(["hero-gallery-scroll", "stagger-testimonials"]);
+      expect(call[0].data.config.animations).toHaveLength(2);
+      expect(call[0].data.config.animations[0].media[0]).toEqual(expect.objectContaining({ imageUrl: originalUrl }));
+      expect(call[0].data.config.contentOrder.indexOf(`animation-ai-${proposalIndex + 1}-1-hero-gallery-scroll`)).toBeLessThan(call[0].data.config.contentOrder.indexOf("hero"));
+      expect(call[0].data.config.contentOrder.indexOf(`animation-ai-${proposalIndex + 1}-2-stagger-testimonials`)).toBe(call[0].data.config.contentOrder.indexOf("products") + 1);
+      expect(call[0].data.config.contentOrder.some((section: string, sectionIndex: number, order: string[]) => section.startsWith("animation-") && order[sectionIndex + 1]?.startsWith("animation-"))).toBe(false);
       expect(call[0].data.config.announcementMode).toBe("static");
       expect(["#f6c84f", "#7f1d1d"]).not.toContain(call[0].data.config.backgroundColor);
     }
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.layoutStyle)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.experienceStyle))).toEqual(new Set(["coverflow", "diagonal-marquee", "story-scroller"]));
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => JSON.stringify(call[0].data.config.contentOrder))).size).toBe(3);
+    expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.cartButtonLabel)).size).toBe(3);
+  });
+
+  it("keeps every proposal static when the merchant selects no animations", async () => {
+    const { service, prisma } = setup();
+
+    await service.generate("merchant_1", "store_1", { businessCategory: "matcha", motionExperiences: [] });
+
+    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+      expect(call[0].data.config.motionDuoEnabled).toBe(false);
+      expect(call[0].data.config.motionExperiences).toEqual([]);
+      expect(call[0].data.config.animations).toEqual([]);
+      expect(call[0].data.config.heroSlides).toEqual([]);
+      expect(call[0].data.config.editorialGallery).toEqual([]);
+      expect(call[0].data.config.contentOrder.every((section: string) => !section.startsWith("animation-"))).toBe(true);
+    }
+  });
+
+  it("balances four generated animations on both sides of the product catalog", async () => {
+    const { service, prisma } = setup();
+
+    await service.generate("merchant_1", "store_1", {
+      motionExperiences: ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream"],
+    });
+
+    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+      const order = call[0].data.config.contentOrder as string[];
+      const productsIndex = order.indexOf("products");
+      const animationIndexes = order.flatMap((section, index) => section.startsWith("animation-") ? [index] : []);
+      expect(animationIndexes.filter((index) => index < productsIndex)).toHaveLength(2);
+      expect(animationIndexes.filter((index) => index > productsIndex)).toHaveLength(2);
+    }
+  });
+
+  it("accepts more than eight photos and allocates different photos to each animation", async () => {
+    const { service, prisma } = setup();
+    const urls = Array.from({ length: 12 }, (_, index) => `/v1/uploads/00000000-0000-4000-8000-${String(index).padStart(12, "0")}.jpg`);
+    prisma.paymentLink.findMany.mockResolvedValue([{ name: "Colección", description: "Doce piezas", imageUrls: urls, tags: [] }]);
+    prisma.mediaAsset.findMany.mockResolvedValue(urls.map((url, index) => ({ id: `asset_${index}`, merchantId: "merchant_1", storeId: null, url, storageKey: url.split("/").pop(), mimeType: "image/jpeg", byteSize: 10, kind: "ORIGINAL", parentAssetId: null, createdAt: new Date() })));
+
+    await service.generate("merchant_1", "store_1", {
+      motionExperiences: ["hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"],
+    });
+
+    const proposal = prisma.storeVisualProposal.create.mock.calls[0][0].data;
+    expect(proposal.sourceAssetUrls).toHaveLength(12);
+    const mediaSets = proposal.config.animations.map((animation: { media: Array<{ imageUrl: string }> }) => new Set(animation.media.map((media) => media.imageUrl)));
+    expect(mediaSets.map((set: Set<string>) => set.size)).toEqual([4, 4, 4]);
+    expect(new Set(mediaSets.flatMap((set: Set<string>) => [...set])).size).toBe(12);
   });
 
   it("keeps WhatsApp conversion and its phone in every generated proposal", async () => {
@@ -254,13 +308,14 @@ describe("VisualStudioService", () => {
         buttonVariant: "outline",
         buttonMotion: "none",
         cartButtonLabel: "Completar pedido",
-        contentOrder: ["hero", "about", "products", "gallery", "animation-ai-1-1-story-scroll", "links"],
+        contentOrder: ["animation-ai-1-1-story-scroll", "hero", "about", "products", "gallery", "links"],
         layoutStyle: "cinematic",
         experienceStyle: "coverflow",
         motionDuoEnabled: true,
         motionExperience: "story-scroll",
         animations: expect.arrayContaining([expect.objectContaining({ id: "ai-1-1-story-scroll", name: "Story Scroll", type: "story-scroll" })]),
-        heroSlides: expect.arrayContaining([expect.objectContaining({ imageUrl: "/v1/uploads/11111111-1111-4111-8111-111111111111.jpg", title: "Tu ritual empieza aquí" })]),
+        heroSlides: [],
+        editorialGallery: [],
       }));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).not.toHaveProperty("html");
       expect(prisma.storeVisualProposal.create.mock.calls[1][0].data.config.backgroundColor).toBe("#e8f2ef");

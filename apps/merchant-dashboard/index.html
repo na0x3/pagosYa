@@ -155,6 +155,10 @@
     padding: 20px; box-shadow: var(--pg-shadow); margin-bottom: 20px;
   }
   .panel-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  .sr-only {
+    position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important;
+    overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important;
+  }
   label { display: block; font-size: 0.76rem; font-weight: 600; color: var(--pg-text-muted); margin-bottom: 5px; }
   input {
     padding: 9px 11px; border: 1.5px solid var(--pg-border); border-radius: 9px; font-size: 0.88rem;
@@ -1094,6 +1098,9 @@
   .background-image-quality[data-quality="soft"] { border-color: var(--pg-warning); background: var(--pg-warning-soft); color: var(--pg-warning); }
   .hero-slides-editor { display: grid !important; gap: 12px; padding: 14px; border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-bg); }
   .hero-slides-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+  .hero-slides-head-copy { display: flex; min-width: 0; align-items: flex-start; gap: 9px; }
+  .hero-slides-head-copy > div { min-width: 0; }
+  .always-visible-badge { flex: 0 0 auto; padding: 3px 7px; border: 1px solid var(--pg-border-strong); border-radius: 999px; background: var(--pg-surface); color: var(--pg-text-muted); font-size: .62rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
   .hero-slides-head strong { display: block; margin-bottom: 4px; font-size: .86rem; }
   .hero-slides-head p { margin: 0; max-width: 60ch; line-height: 1.5; }
   .hero-slide-upload { position: relative; flex-shrink: 0; }
@@ -1115,21 +1122,28 @@
   .hero-slide-actions .remove-slide { color: var(--pg-error); margin-left: auto; }
   .store-content-order { display: grid; gap: 7px; }
   .store-content-order-row {
-    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 9px;
+    display: grid; grid-template-columns: 36px 28px minmax(0, 1fr); align-items: center; gap: 9px;
     min-height: 46px; padding: 7px 9px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface);
   }
   .store-content-order-index { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--pg-bg); color: var(--pg-text-faint); font-size: .72rem; font-weight: 700; }
   .store-content-order-copy { min-width: 0; }
   .store-content-order-copy strong { display: block; font-size: .8rem; }
   .store-content-order-copy span { display: block; margin-top: 2px; color: var(--pg-text-faint); font-size: .7rem; overflow-wrap: anywhere; }
-  .store-content-order-actions { display: flex; gap: 5px; }
-  .store-content-order-actions button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; }
-  .store-content-order-actions svg { width: 15px; height: 15px; }
+  .reorder-handle { display: inline-flex; min-width: 36px; min-height: 36px; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; cursor: grab; touch-action: none; }
+  .reorder-handle:active { cursor: grabbing; }
+  .reorder-handle svg { width: 17px; height: 17px; flex: 0 0 auto; }
+  .reorder-handle[disabled] { cursor: default; opacity: .42; }
+  .store-content-order-row.is-dragging, .animation-media-row.is-dragging, .hero-slide-editor-row.is-dragging, .editorial-gallery-row.is-dragging { opacity: .42; }
+  .store-content-order-row.is-drop-before, .animation-media-row.is-drop-before, .hero-slide-editor-row.is-drop-before, .editorial-gallery-row.is-drop-before { box-shadow: inset 0 3px 0 var(--pg-accent); }
+  .store-content-order-row.is-drop-after, .animation-media-row.is-drop-after, .hero-slide-editor-row.is-drop-after, .editorial-gallery-row.is-drop-after { box-shadow: inset 0 -3px 0 var(--pg-accent); }
+  .store-reorder-help { display: block; margin: 8px 0 0; color: var(--pg-text-faint); font-size: .68rem; line-height: 1.45; }
   .animation-workspace { display: grid !important; gap: 14px; }
   .store-animations-editor [hidden] { display: none !important; }
-  .animation-workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+  .animation-workspace-head { display: grid; gap: 12px; }
   .animation-workspace-head strong { display: block; margin-bottom: 4px; font-size: .9rem; }
   .animation-workspace-head p { margin: 0; max-width: 56ch; color: var(--pg-text-muted); font-size: .76rem; line-height: 1.55; }
+  .animation-add-control { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+  .animation-add-control select { width: 100%; min-width: 0; min-height: 40px; }
   .animation-add { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-height: 40px; }
   .animation-add svg { width: 16px; height: 16px; }
   .animation-workspace-note { margin: 0; padding: 10px 12px; border: 1px solid var(--pg-border); border-radius: 8px; background: var(--pg-bg); color: var(--pg-text-muted); font-size: .72rem; line-height: 1.5; }
@@ -1150,34 +1164,51 @@
   .animation-card-body { display: grid; gap: 15px; padding: 14px; }
   .animation-basics { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, .72fr); gap: 11px; }
   .animation-basics .full { grid-column: 1 / -1; }
+  .animation-basics > div { min-width: 0; }
+  .animation-product-field small { display: block; margin-top: 6px; color: var(--pg-text-faint); font-size: .68rem; line-height: 1.45; overflow-wrap: anywhere; }
   .animation-card label { display: block; margin-bottom: 6px; font-size: .75rem; }
+  .animation-text-only-note { padding: 13px 14px; border: 1px solid var(--pg-border); border-radius: 8px; background: var(--pg-bg); }
+  .animation-text-only-note strong { display: block; margin-bottom: 4px; font-size: .8rem; }
+  .animation-text-only-note p { margin: 0; max-width: 65ch; color: var(--pg-text-faint); font-size: .72rem; line-height: 1.5; overflow-wrap: anywhere; }
   .animation-media-picker { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--pg-border); }
   .animation-media-picker-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .animation-media-picker-head strong { display: block; margin-bottom: 3px; font-size: .8rem; }
   .animation-media-picker-head p { margin: 0; max-width: 54ch; color: var(--pg-text-faint); font-size: .7rem; line-height: 1.45; }
   .animation-media-count { flex: 0 0 auto; padding: 4px 8px; border: 1px solid var(--pg-border); border-radius: 999px; color: var(--pg-text-muted); font-size: .67rem; font-weight: 700; }
-  .animation-source-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 7px; max-height: 232px; overflow-y: auto; padding: 2px; }
-  .animation-source { position: relative; display: grid; gap: 5px; margin: 0 !important; cursor: pointer; }
+  .animation-source-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 8px; max-height: 270px; overflow-y: auto; padding: 2px; }
+  .animation-source { position: relative; display: grid; min-width: 0; grid-template-rows: auto minmax(2.5em, auto); align-content: start; gap: 6px; margin: 0 !important; cursor: pointer; }
   .animation-source input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .animation-source-visual { position: relative; display: block; overflow: hidden; aspect-ratio: 1; border: 1.5px solid var(--pg-border-strong); border-radius: 7px; background: var(--pg-bg); }
-  .animation-source-visual img { width: 100%; height: 100%; object-fit: cover; opacity: .55; transition: opacity .15s ease; }
+  .animation-source-visual :is(img, video) { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .55; transition: opacity .15s ease; }
   .animation-source-check { position: absolute; top: 5px; right: 5px; display: grid; width: 21px; height: 21px; place-items: center; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; background: rgba(10,10,10,.76); color: transparent; }
   .animation-source-check svg { width: 12px; height: 12px; }
-  .animation-source-label { overflow: hidden; color: var(--pg-text-faint); font-size: .64rem; text-overflow: ellipsis; white-space: nowrap; }
+  .animation-source-label { display: -webkit-box; min-width: 0; min-height: 2.5em; overflow: hidden; color: var(--pg-text-faint); font-size: .64rem; line-height: 1.25; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .animation-source input:checked + .animation-source-visual { border-color: var(--pg-accent); }
-  .animation-source input:checked + .animation-source-visual img { opacity: 1; }
+  .animation-source input:checked + .animation-source-visual :is(img, video) { opacity: 1; }
   .animation-source input:checked + .animation-source-visual .animation-source-check { border-color: var(--pg-accent); background: var(--pg-accent); color: var(--pg-accent-contrast, #241804); }
   .animation-source input:focus-visible + .animation-source-visual { border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
   .animation-source:has(input:disabled) { cursor: not-allowed; opacity: .45; }
   .animation-media-list { display: grid; gap: 8px; }
   .animation-media-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; padding: 10px; border: 1px solid var(--pg-border); border-radius: 8px; background: var(--pg-bg); }
-  .animation-media-row img { width: 92px; height: 92px; object-fit: cover; border-radius: 6px; background: var(--pg-surface); }
+  .animation-media-row > :is(img, video) { display: block; width: 92px; height: 92px; object-fit: cover; border-radius: 6px; background: var(--pg-surface); }
   .animation-media-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .animation-media-fields .full { grid-column: 1 / -1; }
   .animation-media-fields input, .animation-media-fields textarea { font-size: .75rem; }
-  .animation-media-actions { grid-column: 1 / -1; display: flex; gap: 6px; }
+  .animation-media-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
   .animation-media-actions button { padding: 5px 8px; font-size: .68rem; }
+  .animation-media-actions .reorder-handle { min-width: 38px; }
   .animation-media-actions .animation-media-remove { margin-left: auto; color: var(--pg-error); }
+  .animation-video-upload { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 10px; padding: 12px; border: 1px dashed var(--pg-border-strong); border-radius: 8px; background: var(--pg-surface); }
+  .animation-video-upload-copy { min-width: 0; }
+  .animation-video-upload-copy strong { display: block; margin-bottom: 4px; font-size: .78rem; }
+  .animation-video-upload-copy span { display: block; color: var(--pg-text-faint); font-size: .68rem; line-height: 1.45; overflow-wrap: anywhere; }
+  .animation-video-upload-action { position: relative; width: 100%; }
+  .animation-video-upload-action input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .animation-video-upload-button { display: inline-flex; width: 100%; min-height: 40px; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+  .animation-video-upload-button svg { width: 16px; height: 16px; }
+  .animation-video-upload-status { min-height: 1.4em; color: var(--pg-text-muted); font-size: .68rem; line-height: 1.4; }
+  .animation-source-grid > .editorial-photo-picker-empty { grid-column: 1 / -1; }
+  .animation-video-upload-status[role="alert"] { color: var(--pg-error); }
   .editorial-gallery-editor { display: grid !important; gap: 12px; margin-top: 6px; padding-top: 18px; border-top: 1px solid var(--pg-border); }
   .editorial-gallery-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
   .editorial-gallery-head strong { display: block; margin-bottom: 4px; font-size: .86rem; }
@@ -1517,6 +1548,7 @@
     .store-editor-section-body { grid-template-columns: 1fr; }
     .store-editor-section-body > .full { grid-column: 1; }
     .animation-workspace-head, .animation-media-picker-head { align-items: stretch; flex-direction: column; }
+    .animation-add-control { grid-template-columns: 1fr; align-items: stretch; }
     .animation-add { justify-content: center; }
     .animation-card-head { grid-template-columns: 34px minmax(0, 1fr); }
     .animation-card-actions { grid-column: 1 / -1; justify-content: flex-end; }
@@ -1524,7 +1556,9 @@
     .animation-basics .full { grid-column: 1; }
     .animation-source-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .animation-media-row { grid-template-columns: 1fr; }
-    .animation-media-row img { width: 100%; height: auto; max-height: 210px; }
+    .animation-media-row > :is(img, video) { width: 100%; height: auto; max-height: 210px; aspect-ratio: 16 / 10; }
+    .animation-video-upload { grid-template-columns: 1fr; }
+    .animation-video-upload-button { width: 100%; justify-content: center; }
     .animation-media-fields { grid-template-columns: 1fr; }
     .animation-media-fields .full { grid-column: 1; }
     .editor-settings-group { grid-template-columns: 1fr; gap: 15px; padding: 18px 0 24px; }
@@ -1975,6 +2009,25 @@
     background: var(--bento-card); box-shadow: var(--bento-shadow);
   }
   .dashboard-sidebar-head { padding: 8px 10px 18px; border-bottom: 3px solid var(--bento-keyline); }
+  .dashboard-sidebar-title { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+  .dashboard-sidebar-toggle { display: grid; width: 40px; min-width: 40px; min-height: 40px; place-items: center; padding: 0; border: 2px solid var(--bento-keyline); background: var(--pg-surface); color: var(--pg-text); }
+  .dashboard-sidebar-toggle svg { width: 18px; height: 18px; transition: transform 180ms var(--ease-out-ui); }
+  @media (min-width: 901px) {
+    .dashboard-shell { transition: grid-template-columns 220ms var(--ease-out-ui); }
+    .dashboard-shell.is-sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); gap: 22px; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar { padding-inline: 8px; overflow: hidden; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-head { display: flex; justify-content: center; padding-inline: 0; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-title strong,
+    .dashboard-shell.is-sidebar-collapsed .dashboard-nav-label,
+    .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-foot,
+    .dashboard-shell.is-sidebar-collapsed .ai-setup-launch span { display: none; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-title { justify-content: center; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-toggle svg { transform: rotate(180deg); }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-nav-button { justify-content: center; gap: 0; padding-inline: 7px; font-size: 0; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-nav-icon { width: 24px; height: 24px; }
+    .dashboard-shell.is-sidebar-collapsed .dashboard-nav-icon svg { width: 20px; height: 20px; }
+    .dashboard-shell.is-sidebar-collapsed .ai-setup-launch { justify-content: center; min-width: 0; padding-inline: 7px; }
+  }
   .dashboard-sidebar-kicker, .dashboard-nav-label, .workspace-kicker { font-weight: 900; letter-spacing: .07em; }
   .dashboard-sidebar-kicker, .workspace-kicker { display: none; }
   .dashboard-sidebar-head strong { margin-top: 8px; font-size: 1rem; text-transform: uppercase; }
@@ -2572,7 +2625,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .finance-product-bar, .finance-donut, .page-entering { animation: none; }
-    .dashboard-nav-button, button, .ai-setup-launch { transition-duration: .01ms; }
+    .dashboard-nav-button, button, .ai-setup-launch, .dashboard-shell, .dashboard-sidebar-toggle svg { transition-duration: .01ms; }
   }
 
   /* Login carries the same colored, hard-keyline bento language as the
@@ -2989,9 +3042,14 @@
       <aside class="dashboard-sidebar" aria-label="Navegación del panel">
         <div class="dashboard-sidebar-head">
           <span class="dashboard-sidebar-kicker">Espacio de trabajo</span>
-          <strong>Gestión del comercio</strong>
+          <div class="dashboard-sidebar-title">
+            <strong>Gestión del comercio</strong>
+            <button class="dashboard-sidebar-toggle" id="dashboardSidebarToggle" type="button" aria-controls="dashboardNav" aria-expanded="true" aria-label="Contraer Gestión del comercio" title="Contraer menú">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M21 4v16"/></svg>
+            </button>
+          </div>
         </div>
-        <nav class="dashboard-nav" aria-label="Secciones del panel">
+        <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
           <span class="dashboard-nav-label">Principal</span>
           <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
           <a class="dashboard-nav-button" href="#dashboard-progress" data-dashboard-view="progress"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Progreso</a>
@@ -3744,14 +3802,22 @@
               <fieldset class="visual-preference">
                 <legend>¿Qué animaciones quieres que componga la IA?</legend>
                 <div class="visual-preference-grid" style="--preference-columns:3">
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="coverflow-carousel" checked><span class="visual-preference-copy"><strong>Coverflow</strong><small>Carrusel 3D controlable con fotos y títulos.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="coverflow-carousel"><span class="visual-preference-copy"><strong>Coverflow</strong><small>Carrusel 3D controlable con fotos y títulos.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="story-scroll"><span class="visual-preference-copy"><strong>Story Scroll</strong><small>Capítulos editoriales que avanzan con el desplazamiento.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="hero-carousel"><span class="visual-preference-copy"><strong>Hero editorial</strong><small>Portada fotográfica con filmstrip navegable.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="hero-carousel"><span class="visual-preference-copy"><strong>Slider principal</strong><small>Carrusel fotográfico con filmstrip navegable.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="image-stream"><span class="visual-preference-copy"><strong>Image Stream</strong><small>Dos corrientes de imágenes atraviesan la escena.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="scroll-expansion"><span class="visual-preference-copy"><strong>Scroll Expansion</strong><small>La imagen se abre a medida que avanza la página.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="hero-gallery-scroll"><span class="visual-preference-copy"><strong>Hero Gallery</strong><small>Un mosaico de imágenes se recompone al desplazarse.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="stagger-testimonials"><span class="visual-preference-copy"><strong>Reseñas</strong><small>Comentarios en tarjetas escalonadas y navegables.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="zoom-parallax"><span class="visual-preference-copy"><strong>Zoom Parallax</strong><small>Las imágenes se abren en profundidad al desplazarse.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="video-pill"><span class="visual-preference-copy"><strong>Video que se abre</strong><small>Una cápsula visual crece hasta ocupar toda la escena.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="portfolio-scroller"><span class="visual-preference-copy"><strong>Menú de momentos</strong><small>El scroll y el teclado recorren escenas con su relato.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="circle-reveal"><span class="visual-preference-copy"><strong>Revelado circular</strong><small>La imagen nace en el centro y descubre la historia.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="clarity-marquee"><span class="visual-preference-copy"><strong>Preguntas en movimiento</strong><small>Frases y detalles forman un ritmo editorial continuo.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="full-screen-chapters"><span class="visual-preference-copy"><strong>Capítulos completos</strong><small>Palabras e imágenes avanzan como una secuencia dirigida.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="magnetic-target"><span class="visual-preference-copy"><strong>Llamado magnético</strong><small>Una invitación responde al cursor sin mover el contenido.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="frame-sequence"><span class="visual-preference-copy"><strong>Secuencia de cuadros</strong><small>El desplazamiento controla cada momento de la preparación.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="3d-gallery"><span class="visual-preference-copy"><strong>Galería tridimensional</strong><small>Las fotos atraviesan el espacio con rueda, teclado o gesto.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                 </div>
               </fieldset>
               <fieldset class="visual-conversion">
@@ -3775,7 +3841,7 @@
               </div>
               <div class="visual-upload-zone">
                 <label for="visualAiImages"><strong>Fotos para inspirar a la IA (opcional)</strong></label>
-                <p>Sube hasta 8 fotos de tu marca, espacio, productos o estilo. Se guardan en tu cuenta y la IA las reutiliza en las propuestas.</p>
+                <p>Sube hasta 24 fotos de tu marca, espacio, productos o estilo. La IA intentará usar fotos diferentes en cada animación elegida.</p>
                 <input id="visualAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple>
                 <div class="visual-ai-previews" id="visualAiPreviews" aria-live="polite"></div>
               </div>
@@ -3881,22 +3947,6 @@
                 <img class="image-preview" id="storeBannerPreview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Vista previa del banner">
                 <button type="button" class="ghost" id="storeBannerRemoveBtn" style="display:none">Quitar banner</button>
               </div>
-              <div class="hero-slides-editor full">
-                <div class="hero-slides-head">
-                  <div>
-                    <strong>Slider principal</strong>
-                    <p class="faint">Hasta 5 imágenes, GIFs o videos con texto y botón opcionales.</p>
-                  </div>
-                  <div class="hero-slide-upload">
-                    <input id="storeHeroSlidesInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" multiple>
-                    <label for="storeHeroSlidesInput">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                      Agregar medios
-                    </label>
-                  </div>
-                </div>
-                <div class="hero-slides-list" id="storeHeroSlidesList"></div>
-              </div>
             </div>
 
             <div class="store-editor-section">
@@ -3907,15 +3957,7 @@
               <div class="full">
                 <label>Jerarquía de secciones</label>
                 <div class="store-content-order" id="storeContentOrderList"></div>
-              </div>
-              <div class="full">
-                <label for="storeExperienceStyle">Experiencia visual después del catálogo</label>
-                <select id="storeExperienceStyle">
-                  <option value="coverflow">Coverflow 3D · carrusel controlable</option>
-                  <option value="diagonal-marquee">Galería diagonal · imágenes en movimiento</option>
-                  <option value="story-scroller">Relato interactivo · capítulos de marca</option>
-                </select>
-                <span class="faint">La IA elige una distinta en cada propuesta; puedes cambiarla aquí después.</span>
+                <span class="store-reorder-help" id="storeReorderStatus" role="status" aria-live="polite">Arrastra desde el agarrador. Con teclado usa ↑, ↓, Inicio o Fin.</span>
               </div>
               <div class="editorial-gallery-editor full">
                 <div class="editorial-gallery-head">
@@ -3956,16 +3998,27 @@
                     <strong>Secciones animadas de esta tienda</strong>
                     <p>Agrega todas las que necesites. Cada una aparece por su nombre en el organizador de secciones.</p>
                   </div>
-                  <button type="button" class="primary animation-add" id="storeAnimationAdd">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    Agregar animación
-                  </button>
+                  <div class="animation-add-control">
+                    <label class="sr-only" for="storeAnimationTypePicker">Tipo de animación</label>
+                    <select id="storeAnimationTypePicker"><option value="">Elegir animación…</option></select>
+                    <button type="button" class="primary animation-add" id="storeAnimationAdd" disabled>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                      Agregar
+                    </button>
+                  </div>
                 </div>
                 <p class="animation-workspace-note">El nombre sirve para organizarla; el título y subtítulo son los que verá el cliente. Las fotos y sus textos pertenecen solo a esa animación.</p>
                 <div class="animation-list" id="storeAnimationsList" aria-live="polite"></div>
                 <span class="faint" id="storeAnimationsStatus" role="status"></span>
               </div>
               <div hidden aria-hidden="true">
+                <input id="storeHeroSlidesInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" multiple tabindex="-1">
+                <div id="storeHeroSlidesList"></div>
+                <select id="storeExperienceStyle" tabindex="-1">
+                  <option value="coverflow">Coverflow 3D</option>
+                  <option value="diagonal-marquee">Galería diagonal</option>
+                  <option value="story-scroller">Relato interactivo</option>
+                </select>
                 <input type="checkbox" id="storeMotionDuoEnabled">
                 <input id="storeMotionCoverflow" type="checkbox" name="storeMotionExperience" value="coverflow-carousel">
                 <input id="storeMotionHero" type="checkbox" name="storeMotionExperience" value="hero-carousel">
@@ -6115,6 +6168,25 @@
     });
   }
 
+  function initDashboardSidebarToggle() {
+    const shell = document.querySelector(".dashboard-shell");
+    const toggle = document.getElementById("dashboardSidebarToggle");
+    if (!shell || !toggle) return;
+    const storageKey = "pagosya_dashboard_sidebar_collapsed";
+    document.querySelectorAll(".dashboard-nav-button").forEach((link) => {
+      link.title = link.textContent.trim();
+    });
+    const setCollapsed = (collapsed, remember = true) => {
+      shell.classList.toggle("is-sidebar-collapsed", collapsed);
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      toggle.setAttribute("aria-label", (collapsed ? "Expandir" : "Contraer") + " Gestión del comercio");
+      toggle.title = collapsed ? "Expandir menú" : "Contraer menú";
+      if (remember) localStorage.setItem(storageKey, String(collapsed));
+    };
+    setCollapsed(savedExpandedState(storageKey, false), false);
+    toggle.addEventListener("click", () => setCollapsed(!shell.classList.contains("is-sidebar-collapsed")));
+  }
+
   function initEditorSettingsGroups() {
     document.querySelectorAll(".editor-settings-group").forEach((group) => {
       const head = group.querySelector(":scope > .editor-settings-heading");
@@ -6282,6 +6354,7 @@
     });
   });
   document.getElementById("gamificationToastClose")?.addEventListener("click", () => hideGamificationToast());
+  initDashboardSidebarToggle();
   initInlineCollapsible("visualOnboarding", ".visual-onboarding-head", "visualAssistantToggle", "pagosya_visual_assistant_expanded", "asistente de IA", false);
   initInlineCollapsible("customDomainStudio", ".custom-domain-head", "customDomainToggle", "pagosya_custom_domain_expanded", "dominio propio", false);
   const inventoryToggle = document.createElement("button");
@@ -6302,6 +6375,7 @@
   // el formulario solo manda las rutas ("/v1/uploads/...") que devuelve —
   // pendingImageUrls es la galería completa, primera entrada = foto de portada.
   const MAX_IMAGE_BYTES = 8_000_000;
+  const MAX_AI_IMAGES = 24;
   const MAX_GIF_BYTES = 8_000_000;
   const MAX_VIDEO_BYTES = 20_000_000;
   const MAX_GALLERY_IMAGES = 10;
@@ -7055,12 +7129,19 @@
   const storeHeroSlidesInputEl = document.getElementById("storeHeroSlidesInput");
   const storeHeroSlidesListEl = document.getElementById("storeHeroSlidesList");
   const storeContentOrderListEl = document.getElementById("storeContentOrderList");
+  const storeReorderStatusEl = document.getElementById("storeReorderStatus");
   const storeExperienceStyleEl = document.getElementById("storeExperienceStyle");
+  const storeAnimationTypePickerEl = document.getElementById("storeAnimationTypePicker");
   const storeAnimationAddEl = document.getElementById("storeAnimationAdd");
   const storeAnimationsListEl = document.getElementById("storeAnimationsList");
   const storeAnimationsStatusEl = document.getElementById("storeAnimationsStatus");
   const storeMotionDuoEnabledEl = document.getElementById("storeMotionDuoEnabled");
-  const STORE_MOTION_EXPERIENCES = ["coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "story-scroll", "zoom-parallax"];
+  const STORE_MOTION_EXPERIENCES = [
+    "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion",
+    "hero-gallery-scroll", "stagger-testimonials", "story-scroll", "zoom-parallax",
+    "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+    "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+  ];
   const storeMotionExperienceEls = [...document.querySelectorAll('input[name="storeMotionExperience"]')];
   const storeEditorialGalleryInputEl = document.getElementById("storeEditorialGalleryInput");
   const storeEditorialGalleryListEl = document.getElementById("storeEditorialGalleryList");
@@ -7266,7 +7347,7 @@
     const status = document.getElementById("onboardingAiFileStatus");
     if (status) status.textContent = onboardingAiFiles.length
       ? `${onboardingAiFiles.length} ${onboardingAiFiles.length === 1 ? "foto lista" : "fotos listas"} para la IA.`
-      : "Hasta 8 fotos de tu marca, local, productos o estilo.";
+      : "Hasta 24 fotos de tu marca, local, productos o estilo.";
   }
 
   function renderOnboarding() {
@@ -7356,7 +7437,7 @@
         <div><label for="onboardingPersonality">Personalidad</label><select id="onboardingPersonality"><option value="">Déjame sorprender</option><option value="warm">Cálida y artesanal</option><option value="bold">Audaz y enérgica</option><option value="minimal">Limpia y minimal</option><option value="elegant">Elegante y serena</option><option value="playful">Alegre y cercana</option></select></div>
         <fieldset class="visual-conversion full"><legend>¿Cómo terminarán el pedido tus clientes?</legend><div class="visual-conversion-options"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="payment" checked><span><strong>Pago integrado</strong><small>Carrito y pago con pagosYa. Requiere KYC y NIT.</small></span></label><div class="visual-conversion-choice"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="whatsapp"><span><strong>WhatsApp</strong><small>El carrito llega como mensaje, sin pedir NIT.</small></span></label><div class="visual-whatsapp-phone" id="onboardingWhatsappWrap" hidden><label for="onboardingWhatsapp">Número que recibirá los pedidos</label><input id="onboardingWhatsapp" type="tel" maxlength="40" placeholder="+591 71234567"><span class="faint">Incluye el código de país.</span></div></div><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="external"><span><strong>Captar interesados</strong><small>Formulario de contacto enviado a tu correo, sin pedir NIT.</small></span></label></div></fieldset>
         <div class="onboarding-file full" id="onboardingLeadUrlWrap" hidden><input id="onboardingLeadUrl" type="hidden" value=""><span class="faint">Al finalizar, pagosYa pedirá solo su Gmail o correo y te lo enviará con el carrito seleccionado.</span></div>
-        <div class="onboarding-file full"><label for="onboardingAiImages">Fotos para la IA (opcional)</label><input id="onboardingAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingAiFileStatus"><span class="faint" id="onboardingAiFileStatus" role="status">Hasta 8 fotos de tu marca, local, productos o estilo.</span><div class="visual-ai-previews" id="onboardingAiPreviews" aria-live="polite"></div></div>
+        <div class="onboarding-file full"><label for="onboardingAiImages">Fotos para la IA (opcional)</label><input id="onboardingAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingAiFileStatus"><span class="faint" id="onboardingAiFileStatus" role="status">Hasta 24 fotos de tu marca, local, productos o estilo.</span><div class="visual-ai-previews" id="onboardingAiPreviews" aria-live="polite"></div></div>
       </div><div class="onboarding-safety" id="onboardingAiDisclosure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Al continuar autorizas el procesamiento del contenido existente por el proveedor de IA configurado. No se crean imágenes nuevas y nada se publica sin tu aprobación.</span></div>`;
       onboardingActionsEl.innerHTML = `<button class="primary" type="button" id="onboardingGenerate">Diseñar 3 sitios</button><button class="ghost" type="button" id="onboardingBackToCsv">Volver al catálogo</button>`;
       document.getElementById("onboardingBackToCsv").addEventListener("click", () => setOnboardingStep(2));
@@ -7377,9 +7458,9 @@
         if (selection.invalidFiles.length) {
           status.textContent = `No agregamos “${selection.invalidFiles[0].name}”: usa PNG, JPG o WEBP de máximo 8 MB. La selección anterior sigue lista.`;
         } else if (selection.validNewFiles.length > selection.availableSlots) {
-          status.textContent = `Agregamos ${selection.filesToAdd.length} fotos. Puedes usar hasta 8; las demás no se añadieron.`;
+          status.textContent = `Agregamos ${selection.filesToAdd.length} fotos. Puedes usar hasta 24; las demás no se añadieron.`;
         } else if (!selection.filesToAdd.length && selection.selectedFiles.length) {
-          status.textContent = selection.availableSlots === 0 ? "Ya tienes el máximo de 8 fotos. Quita una para agregar otra." : "Esas fotos ya estaban seleccionadas.";
+          status.textContent = selection.availableSlots === 0 ? "Ya tienes el máximo de 24 fotos. Quita una para agregar otra." : "Esas fotos ya estaban seleccionadas.";
         }
       });
       document.getElementById("onboardingAiPreviews").addEventListener("click", (event) => {
@@ -7467,18 +7548,27 @@
   let pendingPromotionImageUrl = null;
   let pendingHeroSlides = [];
   const DEFAULT_STORE_CONTENT_ORDER = ["hero", "about", "products", "gallery", "contact", "links"];
+  const REORDER_HANDLE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
   const STORE_MOTION_SECTION_COPY = {
     "story-scroll": ["Story Scroll", "Capítulos editoriales al desplazarse"],
     "coverflow-carousel": ["Coverflow", "Carrusel 3D controlable"],
-    "hero-carousel": ["Hero editorial", "Portada fotográfica y filmstrip"],
+    "hero-carousel": ["Slider principal", "Carrusel fotográfico y filmstrip"],
     "image-stream": ["Image Stream", "Corredor visual en movimiento"],
     "scroll-expansion": ["Scroll Expansion", "Imagen que se abre con la página"],
     "hero-gallery-scroll": ["Hero Gallery", "Mosaico que se recompone"],
     "stagger-testimonials": ["Reseñas", "Comentarios en tarjetas escalonadas"],
     "zoom-parallax": ["Zoom Parallax", "Imágenes que se abren en profundidad"],
+    "video-pill": ["Video que se abre", "Cápsula visual que ocupa la escena"],
+    "portfolio-scroller": ["Menú de momentos", "Escenas navegables por scroll y teclado"],
+    "circle-reveal": ["Revelado circular", "La imagen aparece desde el centro"],
+    "clarity-marquee": ["Preguntas en movimiento", "Frases en un ritmo editorial continuo"],
+    "full-screen-chapters": ["Capítulos completos", "Relato visual a pantalla completa"],
+    "magnetic-target": ["Llamado magnético", "Invitación que responde al cursor"],
+    "frame-sequence": ["Secuencia de cuadros", "El scroll controla cada escena"],
+    "3d-gallery": ["Galería tridimensional", "Fotos navegables en profundidad"],
   };
   const STORE_CONTENT_SECTION_COPY = {
-    hero: ["Slider principal", "Destacados, promociones o banner"],
+    hero: ["Portada", "Identidad, promoción o banner estático"],
     products: ["Productos", "Buscador, categorías y catálogo"],
     about: ["Nuestra historia", "El relato de la marca"],
     gallery: ["Fotos editoriales", "Imágenes con texto debajo"],
@@ -7553,6 +7643,21 @@
     return sources;
   }
 
+  function animationSourceMedia(type) {
+    const sources = editorialSourceImages();
+    if (type !== "video-pill") return sources;
+    const seen = new Set(sources.map((source) => source.key));
+    const addVideo = (imageUrl, label) => {
+      const key = normalizedAssetKey(imageUrl);
+      if (!key || seen.has(key) || !isVideoUploadUrl(imageUrl)) return;
+      seen.add(key);
+      sources.push({ imageUrl, label, key });
+    };
+    pendingHeroSlides.forEach((slide, index) => addVideo(slide.imageUrl, slide.title || `Video del slider ${index + 1}`));
+    pendingAnimations.forEach((animation) => animation.media.forEach((media) => addVideo(media.imageUrl, animation.name || "Video de otra animación")));
+    return sources;
+  }
+
   function animationId() {
     const token = typeof crypto?.randomUUID === "function"
       ? crypto.randomUUID().replace(/-/g, "").slice(0, 14)
@@ -7581,8 +7686,11 @@
     return STORE_MOTION_SECTION_COPY[type] || ["Animación", "Sección visual"];
   }
 
-  function animationMinimumMedia(type) {
-    return ["hero-gallery-scroll", "zoom-parallax"].includes(type) ? 3 : 2;
+  function animationMediaRequirement(type) {
+    if (type === "clarity-marquee") return { min: 0, max: 0, copy: "Este efecto usa el título, el subtítulo y los nombres del catálogo. No necesita fotos." };
+    if (["video-pill", "circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1, copy: "Usa exactamente una foto o video. Elegir otra pieza reemplaza la anterior." };
+    const min = ["hero-gallery-scroll", "zoom-parallax", "3d-gallery"].includes(type) ? 3 : 2;
+    return { min, max: 8, copy: `Necesita al menos ${min} fotos y admite hasta 8.` };
   }
 
   function cloneAnimationMedia(image) {
@@ -7602,6 +7710,33 @@
     return cloneAnimationMedia(editorial || remembered || { imageUrl });
   }
 
+  function animationProductMedia(product) {
+    const imageUrl = product?.imageUrls?.[0];
+    if (!imageUrl) return null;
+    const media = animationMediaDraft(imageUrl);
+    return {
+      ...media,
+      title: media.title || product.name || "Producto destacado",
+      caption: media.caption || product.tags?.[0] || "Producto destacado",
+      body: media.body || product.description || "",
+    };
+  }
+
+  function applyAnimationProduct(animation, productId) {
+    animation.productId = productId || "";
+    const requirement = animationMediaRequirement(animation.type);
+    if (!productId || requirement.max === 0) return;
+    const product = lastPaymentLinks.find((item) => item.id === productId && item.status !== "ARCHIVED");
+    const media = animationProductMedia(product);
+    if (!media) return;
+    if (requirement.max === 1) {
+      animation.media = [media];
+      return;
+    }
+    const key = normalizedAssetKey(media.imageUrl);
+    animation.media = [media, ...animation.media.filter((image) => normalizedAssetKey(image.imageUrl) !== key)].slice(0, requirement.max);
+  }
+
   function syncLegacyMotionState() {
     const types = new Set(pendingAnimations.map((animation) => animation.type));
     storeMotionDuoEnabledEl.checked = pendingAnimations.length > 0;
@@ -7618,7 +7753,8 @@
       type: animation.type,
       ...(animation.title.trim() && { title: animation.title.trim() }),
       ...(animation.subtitle.trim() && { subtitle: animation.subtitle.trim() }),
-      media: animation.media.map((image) => ({
+      ...(animation.productId && { productId: animation.productId }),
+      media: animation.media.slice(0, animationMediaRequirement(animation.type).max).map((image) => ({
         imageUrl: image.imageUrl,
         ...(image.title.trim() && { title: image.title.trim() }),
         ...(image.caption.trim() && { caption: image.caption.trim() }),
@@ -7638,50 +7774,82 @@
 
   function renderAnimationsEditor() {
     syncLegacyMotionState();
-    storeAnimationAddEl.disabled = false;
+    storeAnimationAddEl.disabled = !storeAnimationTypePickerEl.value;
     storeAnimationsStatusEl.textContent = `${pendingAnimations.length} ${pendingAnimations.length === 1 ? "animación" : "animaciones"}`;
     if (!pendingAnimations.length) {
       storeAnimationsListEl.innerHTML = `<div class="animation-empty"><div><strong>Tu tienda todavía no tiene animaciones</strong><p>Agrega una, ponle un nombre y elige sus fotos. Después podrás moverla como una sección independiente.</p></div></div>`;
       return;
     }
-    const sources = editorialSourceImages();
+    const animationSourcesByIndex = pendingAnimations.map((animation) => animationSourceMedia(animation.type));
     const typeOptions = STORE_MOTION_EXPERIENCES.map((type) => {
       const [label, description] = animationTypeCopy(type);
       return { type, label, description };
     });
     storeAnimationsListEl.innerHTML = pendingAnimations.map((animation, animationIndex) => {
+      const sources = animationSourcesByIndex[animationIndex];
       const [typeLabel, typeDescription] = animationTypeCopy(animation.type);
-      const selectedKeys = new Set(animation.media.map((image) => normalizedAssetKey(image.imageUrl)));
-      const atLimit = animation.media.length >= 8;
-      const sourceHtml = sources.length
+      const mediaRequirement = animationMediaRequirement(animation.type);
+      const usesMedia = mediaRequirement.max > 0;
+      const visibleMedia = animation.media.slice(0, mediaRequirement.max);
+      const selectedKeys = new Set(visibleMedia.map((image) => normalizedAssetKey(image.imageUrl)));
+      const atLimit = visibleMedia.length >= mediaRequirement.max;
+      const sourceHtml = usesMedia && sources.length
         ? sources.map((source, sourceIndex) => {
             const selected = selectedKeys.has(source.key);
+            const sourcePreview = isVideoUploadUrl(source.imageUrl)
+              ? `<video src="${esc(apiRoot() + source.imageUrl)}" muted playsinline preload="metadata" aria-label="${esc(source.label)}"></video>`
+              : `<img src="${esc(apiRoot() + source.imageUrl)}" alt="" style="object-position:${esc(catalogImagePosition(source.imageUrl))}">`;
             return `<label class="animation-source" title="${esc(source.label)}">
-              <input type="checkbox" data-animation-source="${sourceIndex}" ${selected ? "checked" : ""} ${atLimit && !selected ? "disabled" : ""} aria-label="${selected ? "Quitar" : "Agregar"} ${esc(source.label)} ${selected ? "de" : "a"} ${esc(animation.name || typeLabel)}">
-              <span class="animation-source-visual"><img src="${esc(apiRoot() + source.imageUrl)}" alt="" style="object-position:${esc(catalogImagePosition(source.imageUrl))}"><span class="animation-source-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span></span>
+              <input type="${mediaRequirement.max === 1 ? "radio" : "checkbox"}" ${mediaRequirement.max === 1 ? `name="animation-source-${animationIndex}"` : ""} data-animation-source="${sourceIndex}" ${selected ? "checked" : ""} ${atLimit && mediaRequirement.max > 1 && !selected ? "disabled" : ""} aria-label="${mediaRequirement.max === 1 ? "Usar" : selected ? "Quitar" : "Agregar"} ${esc(source.label)} ${mediaRequirement.max === 1 ? "en" : selected ? "de" : "a"} ${esc(animation.name || typeLabel)}">
+              <span class="animation-source-visual">${sourcePreview}<span class="animation-source-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span></span>
               <span class="animation-source-label">${esc(source.label)}</span>
             </label>`;
           }).join("")
-        : `<p class="editorial-photo-picker-empty">Agrega fotos a la identidad, galería o productos para usarlas aquí.</p>`;
-      const mediaHtml = animation.media.map((image, mediaIndex) => `<div class="animation-media-row" data-media-index="${mediaIndex}">
-        <img src="${esc(apiRoot() + image.imageUrl)}" alt="Vista previa de ${esc(image.title || `imagen ${mediaIndex + 1}`)}" style="object-position:${esc(catalogImagePosition(image.imageUrl))}">
+        : usesMedia ? `<p class="editorial-photo-picker-empty">${animation.type === "video-pill" ? "Sube un video o agrega una foto a la tienda para elegirla aquí." : "Agrega fotos a la identidad, galería o productos para usarlas aquí."}</p>` : "";
+      const mediaHtml = visibleMedia.map((image, mediaIndex) => {
+        const video = isVideoUploadUrl(image.imageUrl);
+        const mediaLabel = image.title || `${video ? "Video" : "Imagen"} ${mediaIndex + 1}`;
+        const preview = video
+          ? `<video src="${esc(apiRoot() + image.imageUrl)}" aria-label="Vista previa de ${esc(mediaLabel)}" controls muted playsinline preload="metadata"></video>`
+          : `<img src="${esc(apiRoot() + image.imageUrl)}" alt="Vista previa de ${esc(mediaLabel)}" style="object-position:${esc(catalogImagePosition(image.imageUrl))}">`;
+        return `<div class="animation-media-row" data-media-index="${mediaIndex}" data-reorder-key="${esc(image.imageUrl)}" data-reorder-label="${esc(mediaLabel)}">
+        ${preview}
         <div class="animation-media-fields">
-          <div><label for="animation-${animationIndex}-media-${mediaIndex}-title">Título de la imagen</label><input id="animation-${animationIndex}-media-${mediaIndex}-title" data-animation-media-field="title" maxlength="100" value="${esc(image.title)}" placeholder="Detalle de la colección"></div>
+          <div><label for="animation-${animationIndex}-media-${mediaIndex}-title">Título del ${video ? "video" : "medio"}</label><input id="animation-${animationIndex}-media-${mediaIndex}-title" data-animation-media-field="title" maxlength="100" value="${esc(image.title)}" placeholder="Detalle de la colección"></div>
           <div><label for="animation-${animationIndex}-media-${mediaIndex}-caption">Descripción corta</label><input id="animation-${animationIndex}-media-${mediaIndex}-caption" data-animation-media-field="caption" maxlength="180" value="${esc(image.caption)}" placeholder="Nombre, autor o contexto"></div>
           <div class="full"><label for="animation-${animationIndex}-media-${mediaIndex}-body">Texto largo${animation.type === "stagger-testimonials" ? " · comentario del cliente" : ""}</label><textarea id="animation-${animationIndex}-media-${mediaIndex}-body" data-animation-media-field="body" maxlength="360" rows="2" placeholder="${animation.type === "stagger-testimonials" ? "Escribe la reseña completa" : "Cuenta qué debe comunicar esta escena"}">${esc(image.body)}</textarea></div>
-          <div class="animation-media-actions"><button type="button" class="ghost animation-media-up" ${mediaIndex === 0 ? "disabled" : ""}>Subir</button><button type="button" class="ghost animation-media-down" ${mediaIndex === animation.media.length - 1 ? "disabled" : ""}>Bajar</button><button type="button" class="ghost animation-media-remove">Quitar</button></div>
+          <div class="animation-media-actions"><button type="button" class="ghost reorder-handle" aria-label="Mover ${esc(mediaLabel)}. Usa flechas, Inicio o Fin." aria-keyshortcuts="ArrowUp ArrowDown Home End" title="Arrastrar para ordenar">${REORDER_HANDLE_ICON}<span>Mover</span></button><button type="button" class="ghost animation-media-remove">Quitar</button></div>
         </div>
-      </div>`).join("");
+      </div>`;
+      }).join("");
+      const activeProducts = activeStoreCtaProducts();
+      const productOptions = [`<option value="">Sin producto vinculado</option>`, ...activeProducts.map((product) => `<option value="${esc(product.id)}" ${animation.productId === product.id ? "selected" : ""}>${esc(product.name)}</option>`)].join("");
+      const selectedProduct = activeProducts.find((product) => product.id === animation.productId);
+      const videoCount = visibleMedia.filter((media) => isVideoUploadUrl(media.imageUrl)).length;
+      const mediaSummary = usesMedia
+        ? videoCount === 1 && visibleMedia.length === 1 ? "1 video" : `${visibleMedia.length} ${visibleMedia.length === 1 ? "foto" : "fotos"}`
+        : "Sin fotos";
+      const videoUploadHtml = animation.type === "video-pill"
+        ? `<div class="animation-video-upload">
+            <div class="animation-video-upload-copy"><strong>${videoCount ? "Cambia el video de esta escena" : "Sube el video de esta escena"}</strong><span id="animation-video-help-${animationIndex}">MP4 o WEBM de hasta ${Math.floor(MAX_VIDEO_BYTES / 1_000_000)} MB. El video reemplaza el medio actual.</span></div>
+            <div class="animation-video-upload-action"><input id="animation-video-input-${animationIndex}" class="animation-video-input" type="file" accept="video/mp4,video/webm" aria-describedby="animation-video-help-${animationIndex} animation-video-status-${animationIndex}"><button type="button" class="ghost animation-video-upload-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>${videoCount ? "Cambiar video" : "Subir video"}</button></div>
+            <span class="animation-video-upload-status" id="animation-video-status-${animationIndex}" role="status" aria-live="polite"></span>
+          </div>`
+        : "";
+      const mediaEditorHtml = usesMedia
+        ? `<div class="animation-media-picker"><div class="animation-media-picker-head"><div><strong>${animation.type === "video-pill" ? "Video o imagen principal" : mediaRequirement.max === 1 ? "Imagen principal" : "Fotos y textos de esta animación"}</strong><p>${esc(typeDescription)}. ${esc(mediaRequirement.copy)}</p></div><span class="animation-media-count">${visibleMedia.length} / ${mediaRequirement.max}</span></div>${videoUploadHtml}<div class="animation-source-grid">${sourceHtml}</div><div class="animation-media-list">${mediaHtml}</div></div>`
+        : `<div class="animation-text-only-note"><strong>No necesitas seleccionar fotos</strong><p>${esc(mediaRequirement.copy)}${selectedProduct ? ` El producto “${esc(selectedProduct.name)}” también formará parte de las frases.` : ""}</p></div>`;
       return `<article class="animation-card" data-animation-index="${animationIndex}" data-animation-id="${esc(animation.id)}">
-        <div class="animation-card-head"><span class="animation-card-number">${animationIndex + 1}</span><div class="animation-card-identity"><strong>${esc(animation.name || typeLabel)}</strong><span>${esc(typeLabel)} · ${animation.media.length} ${animation.media.length === 1 ? "foto" : "fotos"}</span></div><div class="animation-card-actions"><button type="button" class="ghost animation-card-toggle" aria-controls="animation-card-body-${animationIndex}"><span>Mostrar</span>${COLLAPSE_CHEVRON}</button><button type="button" class="ghost animation-remove" aria-label="Eliminar ${esc(animation.name || typeLabel)}">Eliminar</button></div></div>
+        <div class="animation-card-head"><span class="animation-card-number">${animationIndex + 1}</span><div class="animation-card-identity"><strong>${esc(animation.name || typeLabel)}</strong><span>${esc(typeLabel)} · ${mediaSummary}${selectedProduct ? ` · ${esc(selectedProduct.name)}` : ""}</span></div><div class="animation-card-actions"><button type="button" class="ghost animation-card-toggle" aria-controls="animation-card-body-${animationIndex}"><span>Mostrar</span>${COLLAPSE_CHEVRON}</button><button type="button" class="ghost animation-remove" aria-label="Eliminar ${esc(animation.name || typeLabel)}">Eliminar</button></div></div>
         <div class="animation-card-body" id="animation-card-body-${animationIndex}">
           <div class="animation-basics">
             <div><label for="animation-${animationIndex}-name">Nombre para organizar</label><input id="animation-${animationIndex}-name" data-animation-field="name" maxlength="60" value="${esc(animation.name)}" placeholder="Ej. Lanzamiento de invierno"></div>
             <div><label for="animation-${animationIndex}-type">Tipo de animación</label><select id="animation-${animationIndex}-type" data-animation-field="type">${typeOptions.map((option) => `<option value="${option.type}" ${option.type === animation.type ? "selected" : ""}>${esc(option.label)} · ${esc(option.description)}</option>`).join("")}</select></div>
             <div><label for="animation-${animationIndex}-title">Título visible</label><input id="animation-${animationIndex}-title" data-animation-field="title" maxlength="100" value="${esc(animation.title)}" placeholder="${esc(animation.name || typeLabel)}"></div>
             <div><label for="animation-${animationIndex}-subtitle">Subtítulo visible</label><input id="animation-${animationIndex}-subtitle" data-animation-field="subtitle" maxlength="220" value="${esc(animation.subtitle)}" placeholder="Una frase que presenta esta sección"></div>
+            <div class="full animation-product-field"><label for="animation-${animationIndex}-product">Producto destacado (opcional)</label><select id="animation-${animationIndex}-product" data-animation-field="productId" ${activeProducts.length ? "" : "disabled"}>${productOptions}</select><small>${activeProducts.length ? "Su foto principal y contenido se incorporarán a la animación. También aparecerá un acceso directo al producto." : "Crea un producto activo para poder vincularlo a esta animación."}</small></div>
           </div>
-          <div class="animation-media-picker"><div class="animation-media-picker-head"><div><strong>Fotos y textos de esta animación</strong><p>${esc(typeDescription)}. Necesita al menos ${animationMinimumMedia(animation.type)} fotos para mostrarse en la tienda.</p></div><span class="animation-media-count">${animation.media.length} / 8</span></div><div class="animation-source-grid">${sourceHtml}</div><div class="animation-media-list">${mediaHtml}</div></div>
+          ${mediaEditorHtml}
         </div>
       </article>`;
     }).join("");
@@ -7689,6 +7857,7 @@
     storeAnimationsListEl.querySelectorAll(".animation-card").forEach((card) => {
       const animationIndex = Number(card.dataset.animationIndex);
       const animation = pendingAnimations[animationIndex];
+      const sources = animationSourcesByIndex[animationIndex];
       setAnimationCardExpanded(card, savedExpandedState(animationDisclosureKey(animation.id), false), false);
       card.querySelector(".animation-card-toggle").addEventListener("click", () => {
         const expanded = card.querySelector(".animation-card-toggle").getAttribute("aria-expanded") !== "true";
@@ -7699,21 +7868,72 @@
         }
         setAnimationCardExpanded(card, expanded);
       });
-      card.querySelectorAll("[data-animation-field]").forEach((field) => field.addEventListener(field.dataset.animationField === "type" ? "change" : "input", () => {
+      card.querySelectorAll("[data-animation-field]").forEach((field) => field.addEventListener(["type", "productId"].includes(field.dataset.animationField) ? "change" : "input", () => {
         const key = field.dataset.animationField;
-        animation[key] = field.value;
+        if (key === "productId") applyAnimationProduct(animation, field.value);
+        else animation[key] = field.value;
         if (key === "name") {
           card.querySelector(".animation-card-identity strong").textContent = field.value || animationTypeCopy(animation.type)[0];
           renderStoreContentOrderEditor();
         }
         setStoreSettingsDirty(true);
         scheduleStorePreview();
-        if (key === "type") renderAnimationsEditor();
+        if (key === "type") {
+          const requirement = animationMediaRequirement(animation.type);
+          animation.media = animation.media.slice(0, requirement.max);
+          if (animation.productId) applyAnimationProduct(animation, animation.productId);
+        }
+        if (["type", "productId"].includes(key)) renderAnimationsEditor();
       }));
+      const videoInput = card.querySelector(".animation-video-input");
+      const videoUploadButton = card.querySelector(".animation-video-upload-button");
+      const videoUploadStatus = card.querySelector(".animation-video-upload-status");
+      if (videoInput && videoUploadButton && videoUploadStatus) {
+        const uploadButtonHtml = videoUploadButton.innerHTML;
+        videoUploadButton.addEventListener("click", () => videoInput.click());
+        videoInput.addEventListener("change", async () => {
+          const file = videoInput.files?.[0];
+          if (!file) return;
+          const validationError = animationVideoValidationError(file);
+          if (validationError) {
+            videoUploadStatus.setAttribute("role", "alert");
+            videoUploadStatus.textContent = validationError;
+            videoInput.value = "";
+            return;
+          }
+          videoInput.disabled = true;
+          videoUploadButton.disabled = true;
+          videoUploadButton.setAttribute("aria-busy", "true");
+          videoUploadButton.textContent = "Subiendo…";
+          videoUploadStatus.setAttribute("role", "status");
+          videoUploadStatus.textContent = `Subiendo ${file.name}…`;
+          try {
+            const imageUrl = await uploadFile(file);
+            animation.media = [animationMediaDraft(imageUrl)];
+            localStorage.setItem(animationDisclosureKey(animation.id), "true");
+            storeSaveStatusEl.textContent = "Video listo. Guarda los cambios para publicarlo.";
+            renderAnimationsEditor();
+            commitAnimationStructureChange();
+          } catch (err) {
+            videoUploadStatus.setAttribute("role", "alert");
+            videoUploadStatus.textContent = `No pudimos subir el video: ${err.message}. Intenta de nuevo.`;
+          } finally {
+            if (card.isConnected) {
+              videoInput.disabled = false;
+              videoInput.value = "";
+              videoUploadButton.disabled = false;
+              videoUploadButton.removeAttribute("aria-busy");
+              videoUploadButton.innerHTML = uploadButtonHtml;
+            }
+          }
+        });
+      }
       card.querySelectorAll("input[data-animation-source]").forEach((input) => input.addEventListener("change", () => {
         const source = sources[Number(input.dataset.animationSource)];
         const existingIndex = animation.media.findIndex((image) => normalizedAssetKey(image.imageUrl) === source.key);
-        if (input.checked && existingIndex < 0 && animation.media.length < 8) animation.media.push(animationMediaDraft(source.imageUrl));
+        const requirement = animationMediaRequirement(animation.type);
+        if (input.checked && requirement.max === 1) animation.media = [animationMediaDraft(source.imageUrl)];
+        else if (input.checked && existingIndex < 0 && animation.media.length < requirement.max) animation.media.push(animationMediaDraft(source.imageUrl));
         if (!input.checked && existingIndex >= 0) animation.media.splice(existingIndex, 1);
         renderAnimationsEditor();
         commitAnimationStructureChange();
@@ -7725,21 +7945,21 @@
           setStoreSettingsDirty(true);
           scheduleStorePreview();
         }));
-        row.querySelector(".animation-media-up").addEventListener("click", () => {
-          [animation.media[mediaIndex - 1], animation.media[mediaIndex]] = [animation.media[mediaIndex], animation.media[mediaIndex - 1]];
-          renderAnimationsEditor();
-          commitAnimationStructureChange();
-        });
-        row.querySelector(".animation-media-down").addEventListener("click", () => {
-          [animation.media[mediaIndex], animation.media[mediaIndex + 1]] = [animation.media[mediaIndex + 1], animation.media[mediaIndex]];
-          renderAnimationsEditor();
-          commitAnimationStructureChange();
-        });
         row.querySelector(".animation-media-remove").addEventListener("click", () => {
           animation.media.splice(mediaIndex, 1);
           renderAnimationsEditor();
           commitAnimationStructureChange();
         });
+      });
+      wireSortableList({
+        container: card.querySelector(".animation-media-list"),
+        rowSelector: ".animation-media-row",
+        itemCount: animation.media.length,
+        onMove: (fromIndex, toIndex) => {
+          moveSortableEntry(animation.media, fromIndex, toIndex);
+          renderAnimationsEditor();
+          commitAnimationStructureChange();
+        },
       });
       card.querySelector(".animation-remove").addEventListener("click", () => {
         localStorage.removeItem(animationDisclosureKey(animation.id));
@@ -7750,12 +7970,22 @@
     });
   }
 
+  storeAnimationTypePickerEl.innerHTML += STORE_MOTION_EXPERIENCES.map((type) => {
+    const [label, description] = animationTypeCopy(type);
+    return `<option value="${esc(type)}">${esc(label)} · ${esc(description)}</option>`;
+  }).join("");
+  storeAnimationTypePickerEl.addEventListener("change", () => {
+    storeAnimationAddEl.disabled = !storeAnimationTypePickerEl.value;
+  });
+
   storeAnimationAddEl.addEventListener("click", () => {
-    const type = "coverflow-carousel";
-    const media = pendingEditorialGallery.slice(0, 4).map(cloneAnimationMedia);
+    const type = storeAnimationTypePickerEl.value;
+    if (!STORE_MOTION_EXPERIENCES.includes(type)) return;
     pendingAnimations.forEach((animation) => localStorage.setItem(animationDisclosureKey(animation.id), "false"));
     const id = animationId();
-    pendingAnimations.push({ id, name: `Animación ${pendingAnimations.length + 1}`, type, title: "", subtitle: "", media });
+    const [name] = animationTypeCopy(type);
+    pendingAnimations.push({ id, name, type, title: "", subtitle: "", productId: "", media: [] });
+    storeAnimationTypePickerEl.value = "";
     localStorage.setItem(animationDisclosureKey(id), "true");
     renderAnimationsEditor();
     commitAnimationStructureChange();
@@ -7985,22 +8215,16 @@
     const heroRow = control.closest(".hero-slide-editor-row");
     if (heroRow) {
       const index = Number(heroRow.dataset.index);
-      const targetIndex = control.closest(".move-slide-up") ? Math.max(0, index - 1)
-        : control.closest(".move-slide-down") ? Math.min(pendingHeroSlides.length - 1, index + 1)
-          : index;
-      return { section: "hero", action: "hero-item", targetIndex, targetKind: "media" };
+      return { section: "hero", action: "hero-item", targetIndex: index, targetKind: "media" };
     }
     const editorialRow = control.closest(".editorial-gallery-row");
     if (editorialRow) {
       const index = Number(editorialRow.dataset.index);
       if (control.closest(".remove-editorial-image")) return { section: "gallery", action: "motion" };
-      const targetIndex = control.closest(".move-editorial-up") ? Math.max(0, index - 1)
-        : control.closest(".move-editorial-down") ? Math.min(pendingEditorialGallery.length - 1, index + 1)
-          : index;
       return {
         section: "gallery",
         action: "editorial-item",
-        targetIndex,
+        targetIndex: index,
         targetKind: control.closest(".editorial-card-preview") ? "media" : "text",
       };
     }
@@ -8018,7 +8242,7 @@
       const index = sections.indexOf(editorSection);
       const sectionIntents = [
         { section: "brand", action: "scroll" },
-        { section: "hero", action: "scroll" },
+        { section: "gallery", action: "scroll" },
         { section: "gallery", action: "motion" },
         { section: "products", action: "cart" },
         { section: "brand", action: "scroll" },
@@ -8206,7 +8430,7 @@
   renderVisualLoaderDeck();
 
   function renderVisualSources() {
-    const visualCount = [pendingBannerUrl, pendingAboutImageUrl, pendingPromotionImageUrl, ...pendingHeroSlides.map((slide) => slide.imageUrl), ...pendingEditorialGallery.map((image) => image.imageUrl)].filter(Boolean).length;
+    const visualCount = [pendingBannerUrl, pendingAboutImageUrl, pendingPromotionImageUrl, ...pendingAnimations.flatMap((animation) => animation.media.map((image) => image.imageUrl)), ...pendingEditorialGallery.map((image) => image.imageUrl)].filter(Boolean).length;
     visualSourcePreviewsEl.innerHTML = `<span class="badge">${visualCount ? `${visualCount} recursos visuales detectados` : "Usaremos las fotos del catálogo"}</span><span class="badge">${pendingStoreLinks.length ? `${pendingStoreLinks.length} enlaces listos` : "Redes opcionales"}</span>`;
     visualGenerateEl.disabled = !currentStoreId;
   }
@@ -8218,12 +8442,6 @@
   function selectedVisualMotionExperiences() {
     return visualMotionExperienceEls.filter((input) => input.checked).map((input) => input.value);
   }
-
-  visualMotionExperienceEls.forEach((input) => {
-    input.addEventListener("change", () => {
-      if (!selectedVisualMotionExperiences().length) input.checked = true;
-    });
-  });
 
   function selectedStoreCheckoutMode() {
     return document.querySelector('input[name="storeCheckoutMode"]:checked')?.value || "payment";
@@ -8509,7 +8727,7 @@
       knownKeys.add(key);
       return true;
     });
-    const availableSlots = Math.max(0, 8 - existingFiles.length);
+    const availableSlots = Math.max(0, MAX_AI_IMAGES - existingFiles.length);
     return { selectedFiles, invalidFiles, validNewFiles, availableSlots, filesToAdd: validNewFiles.slice(0, availableSlots) };
   }
 
@@ -8536,9 +8754,9 @@
     if (selection.invalidFiles.length) {
       updateVisualAiFileStatus(`No agregamos “${selection.invalidFiles[0].name}”: usa PNG, JPG o WEBP de máximo 8 MB. Tus ${visualAiFiles.length} fotos anteriores siguen listas.`);
     } else if (selection.validNewFiles.length > selection.availableSlots) {
-      updateVisualAiFileStatus(`Agregamos ${selection.filesToAdd.length} fotos. Puedes usar hasta 8; las demás no se añadieron.`);
+      updateVisualAiFileStatus(`Agregamos ${selection.filesToAdd.length} fotos. Puedes usar hasta 24; las demás no se añadieron.`);
     } else if (!selection.filesToAdd.length && selection.selectedFiles.length) {
-      updateVisualAiFileStatus(selection.availableSlots === 0 ? "Ya tienes el máximo de 8 fotos. Quita una para agregar otra." : "Esas fotos ya estaban seleccionadas.");
+      updateVisualAiFileStatus(selection.availableSlots === 0 ? "Ya tienes el máximo de 24 fotos. Quita una para agregar otra." : "Esas fotos ya estaban seleccionadas.");
     } else {
       updateVisualAiFileStatus();
     }
@@ -8597,7 +8815,14 @@
         const layoutLabels = { cinematic: "Portada cinematográfica", editorial: "Relato editorial", collage: "Composición collage", "catalog-first": "Catálogo primero" };
         const proposalBackground = config.backgroundColor || "#f8fafc";
         const experienceLabels = { coverflow: "Coverflow 3D", "diagonal-marquee": "Galería diagonal", "story-scroller": "Relato interactivo" };
-        const motionLabels = { "story-scroll": "Story Scroll", "coverflow-carousel": "Coverflow animado", "hero-carousel": "Hero editorial", "image-stream": "Image Stream", "scroll-expansion": "Scroll Expansion", "hero-gallery-scroll": "Hero Gallery", "stagger-testimonials": "Reseñas escalonadas", "zoom-parallax": "Zoom Parallax" };
+        const motionLabels = {
+          "story-scroll": "Story Scroll", "coverflow-carousel": "Coverflow animado", "hero-carousel": "Slider principal",
+          "image-stream": "Image Stream", "scroll-expansion": "Scroll Expansion", "hero-gallery-scroll": "Hero Gallery",
+          "stagger-testimonials": "Reseñas escalonadas", "zoom-parallax": "Zoom Parallax", "video-pill": "Video que se abre",
+          "portfolio-scroller": "Menú de momentos", "circle-reveal": "Revelado circular", "clarity-marquee": "Preguntas en movimiento",
+          "full-screen-chapters": "Capítulos completos", "magnetic-target": "Llamado magnético",
+          "frame-sequence": "Secuencia de cuadros", "3d-gallery": "Galería tridimensional",
+        };
         const motionExperiences = Array.isArray(config.motionExperiences) && config.motionExperiences.length
           ? config.motionExperiences.filter((experience) => motionLabels[experience])
           : [motionLabels[config.motionExperience] ? config.motionExperience : "coverflow-carousel"];
@@ -8718,6 +8943,13 @@
     try {
       const url = new URL(storeUrl);
       url.searchParams.set("preview", "1");
+      // The dashboard deliberately sends Referrer-Policy: no-referrer, so the
+      // embedded checkout cannot discover its parent from document.referrer.
+      // Pass the authenticated postMessage recipient explicitly in the URL
+      // fragment (which is never sent to the checkout server).
+      const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
+      fragment.set("parent_origin", window.location.origin);
+      url.hash = fragment.toString();
       return url.toString();
     } catch {
       return storeUrl + (storeUrl.includes("?") ? "&" : "?") + "preview=1";
@@ -8828,8 +9060,8 @@
           personality: document.getElementById("visualPersonality").value || undefined,
           fontStyle: document.querySelector('input[name="visualFontStyle"]:checked')?.value || "mono",
           announcementMarqueeEnabled: document.querySelector('input[name="visualAnnouncementMarquee"]:checked')?.value === "true",
-          motionExperience: motionExperiences[0] || "coverflow-carousel",
-          motionExperiences: motionExperiences.length ? motionExperiences : ["coverflow-carousel"],
+          motionExperience: motionExperiences[0] || undefined,
+          motionExperiences,
           checkoutMode,
           whatsappPhone: checkoutMode === "whatsapp" ? whatsappPhone : undefined,
           leadCaptureUrl: undefined,
@@ -8953,6 +9185,105 @@
     return normalized;
   }
 
+  function moveSortableEntry(list, fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) return false;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    return true;
+  }
+
+  function announceStoreReorder(message) {
+    if (!storeReorderStatusEl) return;
+    storeReorderStatusEl.textContent = "";
+    window.requestAnimationFrame(() => (storeReorderStatusEl.textContent = message));
+  }
+
+  function focusReorderHandle(container, key) {
+    window.requestAnimationFrame(() => {
+      const row = [...container.querySelectorAll("[data-reorder-key]")].find((candidate) => candidate.dataset.reorderKey === key);
+      row?.querySelector(".reorder-handle")?.focus();
+    });
+  }
+
+  function sortableDestination(fromIndex, targetIndex, placeAfter, itemCount) {
+    let insertionIndex = targetIndex + (placeAfter ? 1 : 0);
+    if (fromIndex < insertionIndex) insertionIndex -= 1;
+    return Math.max(0, Math.min(insertionIndex, itemCount - 1));
+  }
+
+  function wireSortableList({ container, rowSelector, itemCount, onMove }) {
+    if (!container) return;
+    let draggedIndex = null;
+    const rows = [...container.querySelectorAll(rowSelector)];
+    const clearDragState = () => rows.forEach((row) => row.classList.remove("is-dragging", "is-drop-before", "is-drop-after"));
+    const move = (fromIndex, toIndex, row) => {
+      const key = row.dataset.reorderKey;
+      const label = row.dataset.reorderLabel || "Elemento";
+      if (fromIndex === toIndex) {
+        announceStoreReorder(label + " ya está en esa posición.");
+        return;
+      }
+      onMove(fromIndex, toIndex);
+      announceStoreReorder(label + " movido a la posición " + (toIndex + 1) + ".");
+      focusReorderHandle(container, key);
+    };
+
+    rows.forEach((row, index) => {
+      const handle = row.querySelector(".reorder-handle");
+      if (!handle) return;
+      row.draggable = false;
+      handle.disabled = itemCount <= 1;
+      handle.addEventListener("keydown", (event) => {
+        if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const targetIndex = event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? itemCount - 1
+            : Math.max(0, Math.min(index + (event.key === "ArrowUp" ? -1 : 1), itemCount - 1));
+        move(index, targetIndex, row);
+      });
+      let pointerActive = false;
+      let pointerTargetIndex = index;
+      let pointerPlaceAfter = false;
+      handle.addEventListener("pointerdown", (event) => {
+        if (itemCount <= 1 || event.button !== 0) return;
+        event.preventDefault();
+        pointerActive = true;
+        draggedIndex = index;
+        row.classList.add("is-dragging");
+        handle.setPointerCapture?.(event.pointerId);
+      });
+      handle.addEventListener("pointermove", (event) => {
+        if (!pointerActive) return;
+        event.preventDefault();
+        const candidate = document.elementFromPoint(event.clientX, event.clientY)?.closest(rowSelector);
+        const targetIndex = rows.indexOf(candidate);
+        if (targetIndex < 0) return;
+        const bounds = candidate.getBoundingClientRect();
+        pointerTargetIndex = targetIndex;
+        pointerPlaceAfter = event.clientY >= bounds.top + bounds.height / 2;
+        clearDragState();
+        row.classList.add("is-dragging");
+        if (targetIndex !== index) candidate.classList.add(pointerPlaceAfter ? "is-drop-after" : "is-drop-before");
+      });
+      handle.addEventListener("pointerup", (event) => {
+        if (!pointerActive) return;
+        handle.releasePointerCapture?.(event.pointerId);
+        pointerActive = false;
+        const targetIndex = sortableDestination(index, pointerTargetIndex, pointerPlaceAfter, itemCount);
+        clearDragState();
+        draggedIndex = null;
+        move(index, targetIndex, row);
+      });
+      handle.addEventListener("pointercancel", () => {
+        pointerActive = false;
+        draggedIndex = null;
+        clearDragState();
+      });
+    });
+  }
+
   function renderStoreContentOrderEditor() {
     pendingContentOrder = normalizeStoreContentOrder(pendingContentOrder);
     storeContentOrderListEl.innerHTML = pendingContentOrder
@@ -8963,32 +9294,23 @@
         const [label, description] = animation
           ? [animation.name.trim() || animationTypeCopy(animation.type)[0], `Animación · ${animationTypeCopy(animation.type)[0]}`]
           : STORE_CONTENT_SECTION_COPY[section] || ["Sección", "Contenido de la tienda"];
-        const cannotMoveUp = index === 0;
-        const cannotMoveDown = index === pendingContentOrder.length - 1;
-        return `<div class="store-content-order-row" data-index="${index}">
+        return `<div class="store-content-order-row" data-index="${index}" data-reorder-key="${esc(section)}" data-reorder-label="${esc(label)}">
+          <button type="button" class="ghost reorder-handle" aria-label="Mover ${esc(label)}. Usa flechas, Inicio o Fin." aria-keyshortcuts="ArrowUp ArrowDown Home End" title="Arrastrar ${esc(label)}">${REORDER_HANDLE_ICON}</button>
           <span class="store-content-order-index">${index + 1}</span>
           <span class="store-content-order-copy"><strong>${esc(label)}</strong><span>${esc(description)}</span></span>
-          <span class="store-content-order-actions">
-            <button type="button" class="ghost move-content-up" ${cannotMoveUp ? "disabled" : ""} aria-label="Subir ${esc(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></button>
-            <button type="button" class="ghost move-content-down" ${cannotMoveDown ? "disabled" : ""} aria-label="Bajar ${esc(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-          </span>
         </div>`;
       })
       .join("");
-    storeContentOrderListEl.querySelectorAll(".store-content-order-row").forEach((row) => {
-      const index = Number(row.dataset.index);
-      row.querySelector(".move-content-up").addEventListener("click", () => {
-        [pendingContentOrder[index - 1], pendingContentOrder[index]] = [pendingContentOrder[index], pendingContentOrder[index - 1]];
+    wireSortableList({
+      container: storeContentOrderListEl,
+      rowSelector: ".store-content-order-row",
+      itemCount: pendingContentOrder.length,
+      onMove: (fromIndex, toIndex) => {
+        moveSortableEntry(pendingContentOrder, fromIndex, toIndex);
         renderStoreContentOrderEditor();
         setStoreSettingsDirty(true);
         scheduleStorePreview();
-      });
-      row.querySelector(".move-content-down").addEventListener("click", () => {
-        [pendingContentOrder[index], pendingContentOrder[index + 1]] = [pendingContentOrder[index + 1], pendingContentOrder[index]];
-        renderStoreContentOrderEditor();
-        setStoreSettingsDirty(true);
-        scheduleStorePreview();
-      });
+      },
     });
   }
 
@@ -9006,7 +9328,7 @@
       .map((image, index) => {
         const boxColor = editorialBoxColor(image.boxColor);
         const previewText = [image.title.trim(), image.caption.trim(), image.body.trim()].filter(Boolean).join(" · ");
-        return `<article class="editorial-gallery-row" data-index="${index}">
+        return `<article class="editorial-gallery-row" data-index="${index}" data-reorder-key="${esc(image.imageUrl)}" data-reorder-label="${esc(image.title || `Historia ${index + 1}`)}">
           <figure class="editorial-card-preview" style="--editorial-card-bg:${boxColor};--editorial-card-ink:${editorialBoxInk(boxColor)}">
             <img src="${esc(apiRoot() + image.imageUrl)}" alt="Vista previa de foto editorial ${index + 1}" style="object-position:${esc(catalogImagePosition(image.imageUrl))}">
             <figcaption class="${previewText ? "" : "is-placeholder"}">${esc(previewText || "Tu historia aparecerá aquí.")}</figcaption>
@@ -9023,8 +9345,7 @@
               </div>
             </div>
             <div class="editorial-gallery-actions">
-              <button type="button" class="ghost move-editorial-up" ${index === 0 ? "disabled" : ""}>Subir</button>
-              <button type="button" class="ghost move-editorial-down" ${index === pendingEditorialGallery.length - 1 ? "disabled" : ""}>Bajar</button>
+              <button type="button" class="ghost reorder-handle" aria-label="Mover ${esc(image.title || `historia ${index + 1}`)}. Usa flechas, Inicio o Fin." aria-keyshortcuts="ArrowUp ArrowDown Home End" title="Arrastrar para ordenar">${REORDER_HANDLE_ICON}<span>Mover</span></button>
               <button type="button" class="ghost remove-editorial-image">No mostrar</button>
             </div>
           </div>
@@ -9063,18 +9384,6 @@
         setStoreSettingsDirty(true);
         scheduleStorePreview();
       });
-      row.querySelector(".move-editorial-up").addEventListener("click", () => {
-        [pendingEditorialGallery[index - 1], pendingEditorialGallery[index]] = [pendingEditorialGallery[index], pendingEditorialGallery[index - 1]];
-        renderEditorialGalleryEditor();
-        setStoreSettingsDirty(true);
-        scheduleStorePreview();
-      });
-      row.querySelector(".move-editorial-down").addEventListener("click", () => {
-        [pendingEditorialGallery[index], pendingEditorialGallery[index + 1]] = [pendingEditorialGallery[index + 1], pendingEditorialGallery[index]];
-        renderEditorialGalleryEditor();
-        setStoreSettingsDirty(true);
-        scheduleStorePreview();
-      });
       row.querySelector(".remove-editorial-image").addEventListener("click", () => {
         rememberEditorialGalleryDraft(pendingEditorialGallery[index]);
         pendingEditorialGallery.splice(index, 1);
@@ -9082,6 +9391,17 @@
         setStoreSettingsDirty(true);
         scheduleStorePreview();
       });
+    });
+    wireSortableList({
+      container: storeEditorialGalleryListEl,
+      rowSelector: ".editorial-gallery-row",
+      itemCount: pendingEditorialGallery.length,
+      onMove: (fromIndex, toIndex) => {
+        moveSortableEntry(pendingEditorialGallery, fromIndex, toIndex);
+        renderEditorialGalleryEditor();
+        setStoreSettingsDirty(true);
+        scheduleStorePreview();
+      },
     });
   }
 
@@ -9133,7 +9453,7 @@
         const mediaPreview = isVideoUploadUrl(slide.imageUrl)
           ? `<video src="${esc(mediaUrl)}" aria-label="Vista previa del video ${index + 1}" muted loop${autoplayVideo ? " autoplay" : ""} playsinline preload="metadata"></video>`
           : `<img src="${esc(mediaUrl)}" alt="Vista previa del slide ${index + 1}" style="object-position:${esc(catalogImagePosition(slide.imageUrl))}">`;
-        return `<article class="hero-slide-editor-row" data-index="${index}">
+        return `<article class="hero-slide-editor-row" data-index="${index}" data-reorder-key="${esc(slide.imageUrl)}" data-reorder-label="${esc(slide.title || `Slide ${index + 1}`)}">
           ${mediaPreview}
           <div class="hero-slide-fields">
             <div><label for="heroSlideTitle${index}">Título</label><input id="heroSlideTitle${index}" class="slide-title" maxlength="80" placeholder="Nueva colección" value="${esc(slide.title)}"></div>
@@ -9143,9 +9463,8 @@
             <div class="full"><label for="heroSlideUrl${index}">Enlace personalizado (opcional)</label><input id="heroSlideUrl${index}" class="slide-cta-url" type="url" maxlength="500" placeholder="https://mitienda.bo/coleccion" value="${esc(slide.ctaUrl)}"><p class="faint" style="margin:7px 0 0">Si eliges un producto arriba, completaremos este enlace automáticamente.</p></div>
             <div class="hero-slide-actions">
               <input class="slide-media-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" hidden>
+              <button type="button" class="ghost reorder-handle" aria-label="Mover ${esc(slide.title || `slide ${index + 1}`)}. Usa flechas, Inicio o Fin." aria-keyshortcuts="ArrowUp ArrowDown Home End" title="Arrastrar para ordenar">${REORDER_HANDLE_ICON}<span>Mover</span></button>
               <button type="button" class="ghost replace-slide-media" aria-label="Cambiar medio del slide ${index + 1}">Cambiar medio</button>
-              <button type="button" class="ghost move-slide-up" ${index === 0 ? "disabled" : ""}>Subir</button>
-              <button type="button" class="ghost move-slide-down" ${index === pendingHeroSlides.length - 1 ? "disabled" : ""}>Bajar</button>
               <button type="button" class="ghost remove-slide">Quitar slide</button>
             </div>
           </div>
@@ -9207,18 +9526,6 @@
           }
         }
       });
-      row.querySelector(".move-slide-up").addEventListener("click", () => {
-        [pendingHeroSlides[index - 1], pendingHeroSlides[index]] = [pendingHeroSlides[index], pendingHeroSlides[index - 1]];
-        renderHeroSlidesEditor();
-        setStoreSettingsDirty(true);
-        scheduleStorePreview();
-      });
-      row.querySelector(".move-slide-down").addEventListener("click", () => {
-        [pendingHeroSlides[index], pendingHeroSlides[index + 1]] = [pendingHeroSlides[index + 1], pendingHeroSlides[index]];
-        renderHeroSlidesEditor();
-        setStoreSettingsDirty(true);
-        scheduleStorePreview();
-      });
       row.querySelector(".remove-slide").addEventListener("click", () => {
         pendingHeroSlides.splice(index, 1);
         renderHeroSlidesEditor();
@@ -9226,6 +9533,17 @@
         setStoreSettingsDirty(true);
         scheduleStorePreview();
       });
+    });
+    wireSortableList({
+      container: storeHeroSlidesListEl,
+      rowSelector: ".hero-slide-editor-row",
+      itemCount: pendingHeroSlides.length,
+      onMove: (fromIndex, toIndex) => {
+        moveSortableEntry(pendingHeroSlides, fromIndex, toIndex);
+        renderHeroSlidesEditor();
+        setStoreSettingsDirty(true);
+        scheduleStorePreview();
+      },
     });
   }
 
@@ -9247,6 +9565,16 @@
     if (file.size > maxHeroMediaBytes(file)) {
       const limitMb = Math.floor(maxHeroMediaBytes(file) / 1_000_000);
       return `${file.name} supera el máximo de ${limitMb} MB.`;
+    }
+    return "";
+  }
+
+  function animationVideoValidationError(file) {
+    if (!["video/mp4", "video/webm"].includes(file.type)) {
+      return `Formato no soportado para ${file.name}. Usa MP4 o WEBM.`;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      return `${file.name} supera el máximo de ${Math.floor(MAX_VIDEO_BYTES / 1_000_000)} MB.`;
     }
     return "";
   }
@@ -10592,14 +10920,14 @@
         storeBannerPreviewEl.style.objectPosition = catalogImagePosition(store.bannerUrl);
       }
       storeBannerRemoveBtnEl.style.display = store.bannerUrl ? "inline-block" : "none";
-      pendingHeroSlides = (store.heroSlides || []).map((slide) => ({
+      const legacyHeroSlides = (store.heroSlides || []).map((slide) => ({
         imageUrl: slide.imageUrl,
         title: slide.title || "",
         body: slide.body || "",
         ctaLabel: slide.ctaLabel || "",
         ctaUrl: slide.ctaUrl || "",
       }));
-      renderHeroSlidesEditor();
+      pendingHeroSlides = [];
       pendingLayoutStyle = ["cinematic", "editorial", "collage", "catalog-first"].includes(store.layoutStyle) ? store.layoutStyle : "cinematic";
       storeExperienceStyleEl.value = ["coverflow", "diagonal-marquee", "story-scroller"].includes(store.experienceStyle) ? store.experienceStyle : "coverflow";
       const savedMotionExperiences = Array.isArray(store.motionExperiences) && store.motionExperiences.length
@@ -10621,6 +10949,7 @@
             type: animation.type,
             title: animation.title || "",
             subtitle: animation.subtitle || "",
+            productId: animation.productId || "",
             media: (animation.media || []).slice(0, 8).map(cloneAnimationMedia),
           }))
         : store.motionDuoEnabled === true
@@ -10630,10 +10959,37 @@
               type,
               title: animationTypeCopy(type)[0],
               subtitle: store.gallerySubtitle || "",
+              productId: "",
               media: pendingEditorialGallery.map(cloneAnimationMedia),
             }))
           : [];
-      pendingContentOrder = normalizeStoreContentOrder(store.contentOrder);
+      let contentOrderToMigrate = Array.isArray(store.contentOrder) ? [...store.contentOrder] : store.contentOrder;
+      if (legacyHeroSlides.length) {
+        let legacySliderId = "legacy-main-slider";
+        let suffix = 2;
+        while (pendingAnimations.some((animation) => animation.id === legacySliderId)) legacySliderId = `legacy-main-slider-${suffix++}`;
+        pendingAnimations.push({
+          id: legacySliderId,
+          name: "Slider principal",
+          type: "hero-carousel",
+          title: "Slider principal",
+          subtitle: store.tagline || "",
+          productId: "",
+          media: legacyHeroSlides.slice(0, 8).map((slide) => ({
+            imageUrl: slide.imageUrl,
+            title: slide.title,
+            caption: slide.ctaLabel,
+            body: slide.body,
+            boxColor: DEFAULT_EDITORIAL_BOX_COLOR,
+          })),
+        });
+        if (Array.isArray(contentOrderToMigrate)) {
+          const section = `animation-${legacySliderId}`;
+          const heroIndex = contentOrderToMigrate.indexOf("hero");
+          contentOrderToMigrate.splice(heroIndex >= 0 ? heroIndex + 1 : 0, 0, section);
+        }
+      }
+      pendingContentOrder = normalizeStoreContentOrder(contentOrderToMigrate);
       renderAnimationsEditor();
       renderStoreContentOrderEditor();
       renderEditorialGalleryEditor();

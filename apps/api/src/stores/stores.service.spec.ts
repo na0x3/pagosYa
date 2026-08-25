@@ -704,6 +704,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
         type: "hero-carousel",
         title: "Nueva colección",
         subtitle: "Piezas seleccionadas",
+        productId: "product_1",
         media: [{ imageUrl: "/v1/uploads/open.webp", title: "Lana" }],
       },
       {

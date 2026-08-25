@@ -10,9 +10,9 @@ export class GenerateVisualProposalsDto {
   @IsBoolean()
   announcementMarqueeEnabled?: boolean;
 
-  @ApiPropertyOptional({ description: "Animation treatment for the merchant-authored showcase section.", enum: ["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials"] })
+  @ApiPropertyOptional({ description: "Animation treatment for the merchant-authored showcase section.", enum: STORE_MOTION_EXPERIENCES })
   @IsOptional()
-  @IsIn(["story-scroll", "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials"])
+  @IsIn(STORE_MOTION_EXPERIENCES)
   motionExperience?: string;
 
   @ApiPropertyOptional({ description: "Animation treatments composed into the merchant-authored showcase section.", enum: STORE_MOTION_EXPERIENCES, isArray: true })
@@ -31,7 +31,7 @@ export class GenerateVisualProposalsDto {
   @ApiPropertyOptional({ description: "Optional extra merchant-owned image URLs. The generator automatically reuses images already present in the store and catalog.", type: [String] })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(8)
+  @ArrayMaxSize(24)
   @ArrayUnique()
   @IsString({ each: true })
   @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH, { each: true })
