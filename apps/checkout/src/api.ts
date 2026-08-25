@@ -107,7 +107,7 @@ export const STORE_MOTION_EXPERIENCES = [
   "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
 ] as const;
 export type StoreMotionExperience = (typeof STORE_MOTION_EXPERIENCES)[number];
-export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}`;
+export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "location" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}`;
 
 export interface StoreEditorialImage {
   imageUrl: string;

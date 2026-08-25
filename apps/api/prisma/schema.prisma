@@ -613,7 +613,8 @@ model Store {
   // never returned by the public storefront endpoint.
   contactFormEnabled           Boolean                          @default(true)
   contactFormEmail             String?
-  // Optional public location block fixed near the bottom of the storefront.
+  // Optional public location block. New stores place it at the bottom, and
+  // merchants can later move it through the shared content-order editor.
   // Only allow-listed map embed URLs reach this field (validated by the DTO);
   // merchant copy remains plain text and is escaped by the storefront.
   locationMapUrl               String?
@@ -673,7 +674,7 @@ model Store {
   heroSlides                   Json                             @default("[]")
   // Every public content section appears exactly once. The dashboard edits
   // this array as an ordered list; empty sections simply do not render.
-  contentOrder                 Json                             @default("[\"hero\",\"about\",\"products\",\"gallery\",\"motion\",\"contact\",\"links\"]")
+  contentOrder                 Json                             @default("[\"animation-welcome\",\"hero\",\"about\",\"products\",\"gallery\",\"links\",\"contact\",\"location\"]")
   // Structural storefront composition selected by the merchant or visual AI:
   // cinematic | editorial | collage | catalog-first.
   layoutStyle                  String                           @default("cinematic")
@@ -682,15 +683,15 @@ model Store {
   experienceStyle              String                           @default("coverflow")
   // Opt-in merchant-authored animation section. AI proposals enable it, but
   // merchants preview the selected template before applying it.
-  motionDuoEnabled             Boolean                          @default(false)
+  motionDuoEnabled             Boolean                          @default(true)
   // The selected animation template. Values are validated by CreateStoreDto.
-  motionExperience             String                           @default("coverflow-carousel")
+  motionExperience             String                           @default("clarity-marquee")
   // Ordered animation templates rendered inside the movable motion section.
   // motionExperience remains as a compatibility fallback for older clients.
-  motionExperiences            Json                             @default("[\"coverflow-carousel\"]")
+  motionExperiences            Json                             @default("[\"clarity-marquee\"]")
   // Named animation instances. Each owns its template, copy, and media and is
   // positioned independently through contentOrder as "animation-<id>".
-  animations                   Json                             @default("[]")
+  animations                   Json                             @default("[{\"id\":\"welcome\",\"name\":\"Bienvenida en movimiento\",\"type\":\"clarity-marquee\",\"title\":\"Descubre la tienda\",\"subtitle\":\"Conoce la selección y encuentra lo que buscas.\",\"media\":[]}]")
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
   editorialGallery             Json                             @default("[]")

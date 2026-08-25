@@ -69,7 +69,7 @@ const MOTION_EXPERIENCES = [
 const SAFE_GENERATED_BACKGROUNDS = ["#eef1f5", "#e8f2ef", "#eeebf5"] as const;
 
 function expandMotionSections(value: unknown, animationIds: string[]): string[] {
-  const baseSections = ["hero", "products", "about", "gallery", "links"];
+  const baseSections = ["hero", "products", "about", "gallery"];
   const result: string[] = [];
   const append = (section: string) => { if (!result.includes(section)) result.push(section); };
   if (Array.isArray(value)) {
@@ -78,6 +78,7 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
     });
   }
   baseSections.forEach(append);
+  ["links", "contact", "location"].forEach(append);
   if (!animationIds.length) return result;
 
   // Split AI-authored motion around the catalog so the storefront has a visual
@@ -348,7 +349,7 @@ export class VisualStudioService {
     }
 
     const motionExperiences = [...new Set(
-      (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience])
+      (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience ?? "clarity-marquee"])
         .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
     )];
     presets = presets.map((preset, index) => {
@@ -564,7 +565,7 @@ export class VisualStudioService {
       const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
       const requestedFontStyle = ["mono", "modern", "editorial", "friendly"].includes(dto.fontStyle || "") ? dto.fontStyle : store.fontStyle;
       const requestedMotionExperiences = [...new Set(
-        (dto.motionExperiences?.length ? dto.motionExperiences : dto.motionExperience ? [dto.motionExperience] : [])
+        (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience ?? "clarity-marquee"])
           .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
       )];
       const motionInstruction = requestedMotionExperiences.length
@@ -580,7 +581,7 @@ export class VisualStudioService {
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         "Asigna a cada dirección un layoutStyle diferente. cinematic usa una portada inmersiva y relato gradual; editorial alterna imagen y texto con lectura pausada; collage superpone escalas y bloques visuales; catalog-first empieza por producto y usa la historia como prueba posterior.",
         `Asigna también un experienceStyle distinto a cada dirección como lenguaje interno de composición. ${motionInstruction} Usa solamente medios reales de la tienda.`,
-        "Cada dirección debe tener un contentOrder diferente y válido, con hero, products, about, gallery, motion y links exactamente una vez. En esta respuesta, motion representa el punto donde se insertarán las secciones de animación independientes; después el comercio podrá mover cada una por separado.",
+        "Cada dirección debe tener un contentOrder diferente y válido, con hero, products, about, gallery, motion y links exactamente una vez. La primera animación siempre abre el recorrido; links, el formulario de contacto y la ubicación cierran la estructura. Después el comercio podrá mover cada sección por separado.",
         "Aplica criterio de producto tipo Impeccable: primero identifica qué necesita sentir y decidir un comprador de este rubro. Haz que las tres propuestas cambien de verdad en jerarquía, densidad, escala, secuencia, copy, geometría y tratamiento de botones; no presentes la misma plantilla con color distinto.",
         "Los botones deben ser específicos al rubro y a su acción inmediata, con etiquetas breves y concretas. Varía buttonStyle, buttonVariant y buttonMotion entre propuestas cuando sea coherente. Evita textos genéricos como Más información, Saber más o Click aquí.",
         "Cada propuesta necesita una idea rectora distinta y evidente: una puede vender por emoción, otra por criterio editorial y otra por decisión rápida. La estructura debe apoyar esa idea sin tarjetas decorativas innecesarias, sin exceso de contenedores y con una sola acción primaria clara por zona.",

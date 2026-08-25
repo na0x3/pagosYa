@@ -108,9 +108,11 @@ describe("VisualStudioService", () => {
       expect(call[0].data.config.motionExperiences).toEqual(["hero-gallery-scroll", "stagger-testimonials"]);
       expect(call[0].data.config.animations).toHaveLength(2);
       expect(call[0].data.config.animations[0].media[0]).toEqual(expect.objectContaining({ imageUrl: originalUrl }));
+      expect(call[0].data.config.contentOrder[0]).toBe(`animation-ai-${proposalIndex + 1}-1-hero-gallery-scroll`);
       expect(call[0].data.config.contentOrder.indexOf(`animation-ai-${proposalIndex + 1}-1-hero-gallery-scroll`)).toBeLessThan(call[0].data.config.contentOrder.indexOf("hero"));
       expect(call[0].data.config.contentOrder.indexOf(`animation-ai-${proposalIndex + 1}-2-stagger-testimonials`)).toBe(call[0].data.config.contentOrder.indexOf("products") + 1);
       expect(call[0].data.config.contentOrder.some((section: string, sectionIndex: number, order: string[]) => section.startsWith("animation-") && order[sectionIndex + 1]?.startsWith("animation-"))).toBe(false);
+      expect(call[0].data.config.contentOrder.slice(-3)).toEqual(["links", "contact", "location"]);
       expect(call[0].data.config.announcementMode).toBe("static");
       expect(["#f6c84f", "#7f1d1d"]).not.toContain(call[0].data.config.backgroundColor);
     }
@@ -120,18 +122,21 @@ describe("VisualStudioService", () => {
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.cartButtonLabel)).size).toBe(3);
   });
 
-  it("keeps every proposal static when the merchant selects no animations", async () => {
+  it("uses an editable text animation to open proposals when the merchant selects none", async () => {
     const { service, prisma } = setup();
 
     await service.generate("merchant_1", "store_1", { businessCategory: "matcha", motionExperiences: [] });
 
     for (const call of prisma.storeVisualProposal.create.mock.calls) {
-      expect(call[0].data.config.motionDuoEnabled).toBe(false);
-      expect(call[0].data.config.motionExperiences).toEqual([]);
-      expect(call[0].data.config.animations).toEqual([]);
+      expect(call[0].data.config.motionDuoEnabled).toBe(true);
+      expect(call[0].data.config.motionExperiences).toEqual(["clarity-marquee"]);
+      expect(call[0].data.config.animations).toEqual([
+        expect.objectContaining({ type: "clarity-marquee", media: [] }),
+      ]);
       expect(call[0].data.config.heroSlides).toEqual([]);
       expect(call[0].data.config.editorialGallery).toEqual([]);
-      expect(call[0].data.config.contentOrder.every((section: string) => !section.startsWith("animation-"))).toBe(true);
+      expect(call[0].data.config.contentOrder[0]).toMatch(/^animation-/);
+      expect(call[0].data.config.contentOrder.slice(-3)).toEqual(["links", "contact", "location"]);
     }
   });
 
@@ -308,7 +313,7 @@ describe("VisualStudioService", () => {
         buttonVariant: "outline",
         buttonMotion: "none",
         cartButtonLabel: "Completar pedido",
-        contentOrder: ["animation-ai-1-1-story-scroll", "hero", "about", "products", "gallery", "links"],
+        contentOrder: ["animation-ai-1-1-story-scroll", "hero", "about", "products", "gallery", "links", "contact", "location"],
         layoutStyle: "cinematic",
         experienceStyle: "coverflow",
         motionDuoEnabled: true,

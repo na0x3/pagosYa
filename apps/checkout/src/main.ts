@@ -2963,7 +2963,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           media: store.editorialGallery ?? [],
         }))
       : [];
-  const baseContentOrder = ["hero", "about", "products", "gallery", "contact", "links"];
+  const baseContentOrder = ["hero", "about", "products", "gallery", "links", "contact", "location"];
   const animationSections = animationInstances.map((animation) => `animation-${animation.id}`);
   const allowedContentSections = new Set([...baseContentOrder, "motion", ...animationSections]);
   const contentOrder: string[] = [];
@@ -3167,10 +3167,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   const sectionHtml: Record<string, string> = {
     hero: heroHtml,
-    products: productsHtml,
+    products: productsHtml + appointmentsHtml,
     about: aboutHtml,
     gallery: editorialGalleryHtml,
     contact: contactHtml,
+    location: locationHtml,
     motion: animationSections.map((section) => motionSectionHtmlByKey[section] || "").join(""),
     links: linksHtml,
     ...motionSectionHtmlByKey,
@@ -3199,8 +3200,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     </header>
     ${announcementHtml}
     ${orderedSectionsHtml}
-    ${appointmentsHtml}
-    ${locationHtml}
     <div class="secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>
     ${promotionHtml}
   `;

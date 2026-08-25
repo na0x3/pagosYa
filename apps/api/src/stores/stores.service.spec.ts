@@ -4,7 +4,7 @@ import { StoresService } from "./stores.service";
 
 function makeFakePrisma() {
   const prisma = {
-    store: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), delete: jest.fn(), update: jest.fn() },
+    store: { create: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), delete: jest.fn(), update: jest.fn() },
     merchant: { findUniqueOrThrow: jest.fn() },
     paymentLink: { findMany: jest.fn(), groupBy: jest.fn().mockResolvedValue([]), update: jest.fn() },
     storeLead: { create: jest.fn().mockResolvedValue({ id: "lead_1" }) },
@@ -37,6 +37,23 @@ function makeFakeUploads() {
 
 const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE };
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
+
+describe("StoresService.create", () => {
+  it("starts a new store with an editable opening animation and contact/location at the end", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await service.create("m_1", { name: "Tienda nueva" } as any);
+
+    expect(prisma.store.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        animations: [expect.objectContaining({ id: "welcome", type: "clarity-marquee", media: [] })],
+        contentOrder: ["animation-welcome", "hero", "about", "products", "gallery", "links", "contact", "location"],
+      }),
+    }));
+  });
+});
 
 describe("StoresService.createQuickQrPayment", () => {
   it("creates and starts a store-scoped QR payment from a dashboard session", async () => {
@@ -690,8 +707,9 @@ describe("StoresService.getStorePublic — sold counts", () => {
       "about",
       "products",
       "gallery",
-      "contact",
       "links",
+      "contact",
+      "location",
     ]);
   });
 
@@ -732,8 +750,9 @@ describe("StoresService.getStorePublic — sold counts", () => {
       "animation-apertura",
       "about",
       "gallery",
-      "contact",
       "links",
+      "contact",
+      "location",
     ]);
   });
 

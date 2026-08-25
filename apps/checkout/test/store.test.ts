@@ -1230,6 +1230,25 @@ describe("storefront routes", () => {
     expect(location.compareDocumentPosition(document.querySelector(".secure-note")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  it("lets the merchant move location through the same section order", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller móvil",
+        locationMapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=-68.2%2C-16.6%2C-68.1%2C-16.4",
+        contentOrder: ["location", "hero", "products", "about", "gallery", "links", "contact"],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=taller-movil");
+
+    const location = document.querySelector(".store-location-section")!;
+    const products = document.querySelector(".store-products")!;
+    expect(location.compareDocumentPosition(products) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("does not embed an untrusted location URL", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({

@@ -78,8 +78,8 @@ export const STORE_MOTION_EXPERIENCES = [
 ] as const;
 export const STORE_ANIMATION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 export const STORE_ANIMATION_SECTION_PATTERN = /^animation-[a-z0-9][a-z0-9_-]{0,47}$/;
-export const STORE_BASE_CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "contact", "links"] as const;
-const STORE_LEGACY_REQUIRED_CONTENT_SECTIONS = STORE_BASE_CONTENT_SECTIONS.filter((section) => section !== "contact");
+export const STORE_BASE_CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "links", "contact", "location"] as const;
+const STORE_LEGACY_REQUIRED_CONTENT_SECTIONS = STORE_BASE_CONTENT_SECTIONS.filter((section) => !["contact", "location"].includes(section));
 export const STORE_MOTION_CONTENT_SECTIONS = [
   "motion-story-scroll",
   "motion-coverflow-carousel",
@@ -128,7 +128,7 @@ function IsStoreContentOrder(validationOptions?: ValidationOptions) {
           return STORE_LEGACY_REQUIRED_CONTENT_SECTIONS.every((section) => unique.has(section));
         },
         defaultMessage(args: ValidationArguments) {
-          return `${args.property} must contain every required storefront section exactly once; contact and animation sections are optional and unique`;
+          return `${args.property} must contain every required storefront section exactly once; contact, location, and animation sections are optional and unique`;
         },
       },
     });

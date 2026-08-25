@@ -6,7 +6,7 @@ describe("CreateStoreDto storefront layout", () => {
   it("accepts every known content section once in a merchant-defined order", async () => {
     const dto = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
-      contentOrder: ["motion", "gallery", "products", "hero", "about", "links"],
+      contentOrder: ["motion", "gallery", "products", "hero", "about", "links", "contact", "location"],
       editorialGallery: [{ imageUrl: "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp", caption: "Nuestro taller", boxColor: "#f4ead7" }],
     });
 

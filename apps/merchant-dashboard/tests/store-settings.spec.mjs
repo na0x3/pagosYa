@@ -301,6 +301,8 @@ test("legacy sliders migrate into optional draggable animations", async ({ page 
   await expect(sliderMedia.first().locator('[data-animation-media-field="title"]')).toHaveValue("Segunda portada");
 
   await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
+  await expect(page.locator(".store-content-order-row").nth(-2)).toContainText("Contáctanos");
+  await expect(page.locator(".store-content-order-row").last()).toContainText("Ubicación");
   const editorialHandles = page.locator(".editorial-gallery-row .reorder-handle");
   await editorialHandles.first().press("End");
   await expect(page.locator("#editorialTitle0")).toHaveValue("Segunda historia");
@@ -332,6 +334,8 @@ test("a new store starts without animations and only adds the selected type", as
   await expect(page.locator(".animation-card")).toHaveCount(1);
   await expect(page.locator('[data-animation-field="type"]')).toHaveValue("hero-carousel");
   await expect(page.locator(".animation-media-row")).toHaveCount(0);
+  await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
+  await expect(page.locator(".store-content-order-row").first()).toContainText("Slider principal");
   await expect(page.locator("#storeAnimationTypePicker")).toHaveValue("");
   await expect(page.locator("#storeAnimationAdd")).toBeDisabled();
 });

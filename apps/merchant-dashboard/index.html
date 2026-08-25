@@ -3800,7 +3800,7 @@
                 </div>
               </fieldset>
               <fieldset class="visual-preference">
-                <legend>¿Qué animaciones quieres que componga la IA?</legend>
+                <legend>Elige la animación que abrirá la tienda y las escenas que continuarán después</legend>
                 <div class="visual-preference-grid" style="--preference-columns:3">
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="coverflow-carousel"><span class="visual-preference-copy"><strong>Coverflow</strong><small>Carrusel 3D controlable con fotos y títulos.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="story-scroll"><span class="visual-preference-copy"><strong>Story Scroll</strong><small>Capítulos editoriales que avanzan con el desplazamiento.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
@@ -3813,7 +3813,7 @@
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="video-pill"><span class="visual-preference-copy"><strong>Video que se abre</strong><small>Una cápsula visual crece hasta ocupar toda la escena.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="portfolio-scroller"><span class="visual-preference-copy"><strong>Menú de momentos</strong><small>El scroll y el teclado recorren escenas con su relato.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="circle-reveal"><span class="visual-preference-copy"><strong>Revelado circular</strong><small>La imagen nace en el centro y descubre la historia.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="clarity-marquee"><span class="visual-preference-copy"><strong>Preguntas en movimiento</strong><small>Frases y detalles forman un ritmo editorial continuo.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="clarity-marquee" checked><span class="visual-preference-copy"><strong>Preguntas en movimiento</strong><small>Frases y detalles forman un ritmo editorial continuo.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="full-screen-chapters"><span class="visual-preference-copy"><strong>Capítulos completos</strong><small>Palabras e imágenes avanzan como una secuencia dirigida.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="magnetic-target"><span class="visual-preference-copy"><strong>Llamado magnético</strong><small>Una invitación responde al cursor sin mover el contenido.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="frame-sequence"><span class="visual-preference-copy"><strong>Secuencia de cuadros</strong><small>El desplazamiento controla cada momento de la preparación.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
@@ -7547,7 +7547,7 @@
   let pendingAboutImageUrl = null;
   let pendingPromotionImageUrl = null;
   let pendingHeroSlides = [];
-  const DEFAULT_STORE_CONTENT_ORDER = ["hero", "about", "products", "gallery", "contact", "links"];
+  const DEFAULT_STORE_CONTENT_ORDER = ["hero", "about", "products", "gallery", "links", "contact", "location"];
   const REORDER_HANDLE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
   const STORE_MOTION_SECTION_COPY = {
     "story-scroll": ["Story Scroll", "Capítulos editoriales al desplazarse"],
@@ -7572,8 +7572,9 @@
     products: ["Productos", "Buscador, categorías y catálogo"],
     about: ["Nuestra historia", "El relato de la marca"],
     gallery: ["Fotos editoriales", "Imágenes con texto debajo"],
-    contact: ["Contáctanos", "Formulario directo al correo del dueño"],
     links: ["Redes y enlaces", "Instagram, WhatsApp, catálogo y más"],
+    contact: ["Contáctanos", "Formulario directo al correo del dueño"],
+    location: ["Ubicación", "Mapa, dirección y horarios de atención"],
     ...Object.fromEntries(Object.entries(STORE_MOTION_SECTION_COPY).map(([experience, copy]) => [`motion-${experience}`, copy])),
   };
   let pendingContentOrder = [...DEFAULT_STORE_CONTENT_ORDER];
@@ -9180,8 +9181,7 @@
     }
     DEFAULT_STORE_CONTENT_ORDER.forEach(append);
     const missingMotion = animationSections.filter((section) => !normalized.includes(section));
-    const linksIndex = normalized.indexOf("links");
-    normalized.splice(linksIndex < 0 ? normalized.length : linksIndex, 0, ...missingMotion);
+    if (missingMotion.length) normalized.unshift(...missingMotion);
     return normalized;
   }
 
@@ -10986,7 +10986,7 @@
         if (Array.isArray(contentOrderToMigrate)) {
           const section = `animation-${legacySliderId}`;
           const heroIndex = contentOrderToMigrate.indexOf("hero");
-          contentOrderToMigrate.splice(heroIndex >= 0 ? heroIndex + 1 : 0, 0, section);
+          contentOrderToMigrate.splice(heroIndex >= 0 ? heroIndex : 0, 0, section);
         }
       }
       pendingContentOrder = normalizeStoreContentOrder(contentOrderToMigrate);

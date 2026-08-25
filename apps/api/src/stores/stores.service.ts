@@ -58,6 +58,24 @@ type StoreAnimation = {
   productId?: string;
   media: StoreEditorialImage[];
 };
+const DEFAULT_STORE_ANIMATION: StoreAnimation = {
+  id: "welcome",
+  name: "Bienvenida en movimiento",
+  type: "clarity-marquee",
+  title: "Descubre la tienda",
+  subtitle: "Conoce la selección y encuentra lo que buscas.",
+  media: [],
+};
+const DEFAULT_STORE_CONTENT_ORDER: StoreContentSection[] = [
+  animationContentSection(DEFAULT_STORE_ANIMATION.id),
+  "hero",
+  "about",
+  "products",
+  "gallery",
+  "links",
+  "contact",
+  "location",
+];
 type StoreLocation = {
   id: string;
   name: string;
@@ -263,21 +281,15 @@ function readStoreContentOrder(value: unknown, animations: StoreAnimation[]): St
     }
     if ((STORE_BASE_CONTENT_SECTIONS as readonly string[]).includes(section)) append(section);
   });
-  STORE_BASE_CONTENT_SECTIONS.forEach((section) => {
+  ["hero", "products", "about", "gallery"].forEach((section) => {
     if (unique.includes(section)) return;
-    if (section === "links") {
-      append(section);
-      return;
-    }
-    const linksIndex = unique.indexOf("links");
-    if (linksIndex < 0) append(section);
-    else unique.splice(linksIndex, 0, section);
+    const footerIndex = unique.findIndex((entry) => ["links", "contact", "location"].includes(entry));
+    if (footerIndex < 0) append(section);
+    else unique.splice(footerIndex, 0, section);
   });
+  ["links", "contact", "location"].forEach(append);
   const missingAnimations = animationSections.filter((section) => !unique.includes(section));
-  if (missingAnimations.length) {
-    const linksIndex = unique.indexOf("links");
-    unique.splice(linksIndex < 0 ? unique.length : linksIndex, 0, ...missingAnimations);
-  }
+  if (missingAnimations.length) unique.unshift(...missingAnimations);
   return unique;
 }
 
@@ -494,6 +506,15 @@ export class StoresService {
   /** A merchant can run several independent stores under one account — each gets its own slug/branding/catalog. */
   async create(merchantId: string, dto: CreateStoreDto) {
     if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
+    const animations = dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }];
+    const contentOrder = dto.contentOrder
+      ? [...(dto.animations === undefined ? [animationContentSection(DEFAULT_STORE_ANIMATION.id)] : []), ...dto.contentOrder]
+      : dto.animations === undefined
+        ? [...DEFAULT_STORE_CONTENT_ORDER]
+        : [
+            ...dto.animations.map((animation) => animationContentSection(animation.id)),
+            ...DEFAULT_STORE_CONTENT_ORDER.filter((section) => section !== animationContentSection(DEFAULT_STORE_ANIMATION.id)),
+          ];
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         return await this.prisma.store.create({
@@ -542,7 +563,7 @@ export class StoresService {
             promotionCtaLabel: dto.promotionCtaLabel,
             promotionCtaUrl: dto.promotionCtaUrl,
             ...(dto.heroSlides !== undefined && { heroSlides: dto.heroSlides as unknown as Prisma.InputJsonValue }),
-            ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
+            contentOrder: contentOrder as unknown as Prisma.InputJsonValue,
             ...(dto.layoutStyle !== undefined && { layoutStyle: dto.layoutStyle }),
             ...(dto.experienceStyle !== undefined && { experienceStyle: dto.experienceStyle }),
             ...(dto.motionDuoEnabled !== undefined && { motionDuoEnabled: dto.motionDuoEnabled }),
@@ -551,12 +572,10 @@ export class StoresService {
               motionExperiences: dto.motionExperiences as unknown as Prisma.InputJsonValue,
               motionExperience: dto.motionExperiences[0],
             }),
-            ...(dto.animations !== undefined && {
-              animations: dto.animations as unknown as Prisma.InputJsonValue,
-              motionDuoEnabled: dto.animations.length > 0,
-              motionExperiences: [...new Set(dto.animations.map((animation: StoreAnimationDto) => animation.type))] as unknown as Prisma.InputJsonValue,
-              motionExperience: dto.animations[0]?.type ?? "coverflow-carousel",
-            }),
+            animations: animations as unknown as Prisma.InputJsonValue,
+            motionDuoEnabled: animations.length > 0,
+            motionExperiences: [...new Set(animations.map((animation: StoreAnimationDto | StoreAnimation) => animation.type))] as unknown as Prisma.InputJsonValue,
+            motionExperience: animations[0]?.type ?? "coverflow-carousel",
             ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
             buttonVariant: dto.buttonVariant,
             buttonMotion: dto.buttonMotion,
