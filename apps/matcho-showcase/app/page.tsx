@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CardLoader from "@/components/ui/card-stack-loader";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
@@ -14,6 +15,14 @@ import ScrollExpandMedia from "@/components/ui/scroll-expansion-hero";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { BentoCell, BentoGrid, ContainerScale, ContainerScroll } from "@/components/ui/hero-gallery-scroll-animation";
 import { ZoomParallax } from "@/components/ui/zoom-parallax";
+
+const WorkPageHero = dynamic(() => import("@/components/ui/work-page-hero").then((module) => module.WorkPageHero), { ssr: false });
+const HeroScrollVideoReveal = dynamic(() => import("@/components/ui/hero-scroll-video-pin-reveal").then((module) => module.HeroScrollVideoReveal), { ssr: false });
+const ClarityMarquee = dynamic(() => import("@/components/ui/vercep-feature-1").then((module) => module.Component), { ssr: false });
+const FullScreenScrollFX = dynamic(() => import("@/components/ui/full-screen-scroll-fx").then((module) => module.FullScreenScrollFX), { ssr: false });
+const CursorFloatingTarget = dynamic(() => import("@/components/ui/motion-cursor-floating-target"), { ssr: false });
+const FrameSequenceHero = dynamic(() => import("@/components/ui/mac-book-neo-hero").then((module) => module.FrameSequenceHero), { ssr: false });
+const InfiniteGallery = dynamic(() => import("@/components/ui/3d-gallery-photography"), { ssr: false });
 
 type Product = {
   id: string;
@@ -78,17 +87,58 @@ const parallaxImages = [
   { src: "/matcho/background.png", alt: "Textura visual de la marca MATCHO" },
 ];
 
-type AnimationStyle = "coverflow-carousel" | "hero-carousel" | "image-stream" | "scroll-expansion" | "hero-gallery-scroll" | "stagger-testimonials" | "story-scroll" | "zoom-parallax";
+type AnimationStyle =
+  | "coverflow-carousel"
+  | "hero-carousel"
+  | "image-stream"
+  | "scroll-expansion"
+  | "hero-gallery-scroll"
+  | "stagger-testimonials"
+  | "story-scroll"
+  | "zoom-parallax"
+  | "video-pill"
+  | "portfolio-scroller"
+  | "circle-reveal"
+  | "clarity-marquee"
+  | "full-screen-chapters"
+  | "magnetic-target"
+  | "frame-sequence"
+  | "3d-gallery";
 
-const animationOptions: Array<{ value: AnimationStyle; label: string }> = [
-  { value: "coverflow-carousel", label: "Coverflow" },
-  { value: "hero-carousel", label: "Hero editorial" },
-  { value: "image-stream", label: "Image Stream" },
-  { value: "scroll-expansion", label: "Scroll Expansion" },
-  { value: "hero-gallery-scroll", label: "Hero Gallery" },
-  { value: "stagger-testimonials", label: "Reseñas" },
-  { value: "story-scroll", label: "Story Scroll" },
-  { value: "zoom-parallax", label: "Zoom Parallax" },
+const animationOptions: Array<{ value: AnimationStyle; label: string; description: string }> = [
+  { value: "coverflow-carousel", label: "Carrusel en profundidad", description: "Recorre productos como portadas superpuestas." },
+  { value: "hero-carousel", label: "Portada editorial", description: "Una imagen protagonista cambia por capítulos." },
+  { value: "video-pill", label: "Video que se abre", description: "Una ventana de video crece hasta ocupar la escena." },
+  { value: "circle-reveal", label: "Revelado circular", description: "El video nace en el centro y descubre la historia." },
+  { value: "portfolio-scroller", label: "Menú de momentos", description: "Cada tramo del scroll activa un video y su relato." },
+  { value: "full-screen-chapters", label: "Capítulos a pantalla completa", description: "Palabras e imágenes avanzan como una secuencia dirigida." },
+  { value: "frame-sequence", label: "Secuencia por fotogramas", description: "El desplazamiento controla cada paso de preparación." },
+  { value: "3d-gallery", label: "Galería tridimensional", description: "Las fotos atraviesan el espacio con rueda, teclado o gesto." },
+  { value: "magnetic-target", label: "Llamado magnético", description: "Una invitación responde al cursor sin mover el contenido." },
+  { value: "clarity-marquee", label: "Preguntas en movimiento", description: "Las dudas frecuentes forman un ritmo editorial continuo." },
+  { value: "image-stream", label: "Corriente de imágenes", description: "La fotografía rodea un mensaje central." },
+  { value: "scroll-expansion", label: "Expansión de imagen", description: "Una foto se abre a medida que la persona avanza." },
+  { value: "hero-gallery-scroll", label: "Galería recompuesta", description: "Cinco piezas se ordenan en una sola composición." },
+  { value: "stagger-testimonials", label: "Reseñas escalonadas", description: "Testimonios breves aparecen con jerarquía legible." },
+  { value: "story-scroll", label: "Historia por escenas", description: "Tres capítulos conectan origen, mezcla y momento." },
+  { value: "zoom-parallax", label: "Profundidad fotográfica", description: "La galería usa escala para marcar distancia." },
+];
+
+const fullScreenSections = experienceSlides.slice(0, 4).map((slide) => ({
+  id: slide.title,
+  leftLabel: slide.title,
+  title: slide.subtitle,
+  rightLabel: slide.title,
+  background: slide.src,
+}));
+
+const sequenceFrames = Array.from({ length: 35 }, (_, index) => parallaxImages[Math.floor(index / 5) % parallaxImages.length].src);
+const matchoFramePath = (index: number) => sequenceFrames[(index - 1 + sequenceFrames.length) % sequenceFrames.length];
+const sequenceSteps = [
+  { from: 0.04, to: 0.28, color: "#ad8a49", num: "01", total: "04", title: "La hoja.", description: "El origen se presenta antes de hablar de sabores o variantes.", label: "Origen" },
+  { from: 0.28, to: 0.53, color: "#d9828b", num: "02", total: "04", title: "La mezcla.", description: "Fresa, hielo y matcha se conectan en una secuencia corta y directa.", label: "Mezcla" },
+  { from: 0.53, to: 0.78, color: "#7ca484", num: "03", total: "04", title: "La textura.", description: "La imagen cambia al mismo ritmo que la explicación del producto.", label: "Detalle" },
+  { from: 0.78, to: 1.01, color: "#f3eee5", num: "04", total: "04", title: "Tu pausa.", description: "El recorrido termina con una decisión clara y un producto reconocible.", label: "Momento" },
 ];
 
 const heroItems: HeroCarouselItem[] = experienceSlides.map((slide, index) => ({
@@ -283,7 +333,11 @@ export default function Home() {
       <section className="animation-builder" aria-labelledby="animation-builder-title">
         <div className="animation-builder-copy">
           <h2 id="animation-builder-title">Elige una o varias formas de mover la historia.</h2>
-          <p>Combina todas las opciones que quieras con las mismas fotos y textos reales. La posición se controla desde el orden de secciones de la tienda.</p>
+          <p>Combina las opciones con las mismas fotos y textos reales. Cada vista explica qué cambia; las experiencias pesadas se cargan solamente cuando las eliges.</p>
+          <div className="animation-selection-summary" aria-live="polite">
+            <strong>{animationStyles.length}</strong>
+            <span>{animationStyles.length === 1 ? "experiencia activa" : "experiencias activas"}</span>
+          </div>
         </div>
         <div className="animation-option-list" role="group" aria-label="Animación de muestra">
           {animationOptions.map((option) => (
@@ -295,7 +349,8 @@ export default function Home() {
                 ? current.length === 1 ? current : current.filter((value) => value !== option.value)
                 : [...current, option.value])}
             >
-              {option.label}
+              <strong>{option.label}</strong>
+              <span>{option.description}</span>
             </button>
           ))}
         </div>
@@ -310,6 +365,41 @@ export default function Home() {
       ) : null}
       {animationStyles.includes("coverflow-carousel") ? <section className="animation-stage"><CoverflowCarousel slides={experienceSlides} showCaption showNavigation showPagination cardWidth="clamp(190px, 28vw, 350px)" /></section> : null}
       {animationStyles.includes("hero-carousel") ? <section className="animation-stage full-bleed"><HeroCarousel items={heroItems} defaultIndex={1} brand="MATCHO" className="h-[720px]" /></section> : null}
+      {animationStyles.includes("video-pill") ? <WorkPageHero /> : null}
+      {animationStyles.includes("circle-reveal") ? <HeroScrollVideoReveal /> : null}
+      {animationStyles.includes("portfolio-scroller") ? <InteractiveVideoPortfolioScroller className="my-0" /> : null}
+      {animationStyles.includes("clarity-marquee") ? <ClarityMarquee /> : null}
+      {animationStyles.includes("full-screen-chapters") ? (
+        <FullScreenScrollFX
+          sections={fullScreenSections}
+          header={<><span className="block">El ritual</span><span className="block">MATCHO</span></>}
+          footer={<p className="m-0 text-xs font-bold tracking-[0.16em] uppercase">Desplázate para cambiar de capítulo</p>}
+        />
+      ) : null}
+      {animationStyles.includes("magnetic-target") ? <CursorFloatingTarget /> : null}
+      {animationStyles.includes("frame-sequence") ? (
+        <FrameSequenceHero
+          frameCount={sequenceFrames.length}
+          framePath={matchoFramePath}
+          eagerCount={10}
+          scrollHeight="480vh"
+          brand={<><span className="size-3 rounded-full bg-[#ad8a49]" /> MATCHO</>}
+          navLinks={[{ label: "Origen", href: "#top" }, { label: "Sabores", href: "#productos" }]}
+          ctaLabel="Ver carta"
+          title={<>MATCHO<br />en secuencia.</>}
+          subtitle="Desplázate para preparar la historia"
+          steps={sequenceSteps}
+        />
+      ) : null}
+      {animationStyles.includes("3d-gallery") ? (
+        <section className="relative h-screen min-h-[620px] overflow-hidden bg-[#0b2116] text-white">
+          <InfiniteGallery images={parallaxImages} speed={1.1} zSpacing={3} visibleCount={10} className="h-full w-full" />
+          <div className="pointer-events-none absolute inset-0 grid place-items-center px-5 text-center mix-blend-difference">
+            <h2 className="max-w-[13ch] font-serif text-[clamp(2.5rem,7vw,6rem)] leading-[0.95] tracking-[-0.04em]"><em>La imagen se acerca;</em><br />el producto se entiende.</h2>
+          </div>
+          <p className="pointer-events-none absolute inset-x-4 bottom-7 text-center text-xs font-bold tracking-[0.14em] uppercase">Rueda, flechas o gesto · el movimiento vuelve solo después de 3 segundos</p>
+        </section>
+      ) : null}
       {animationStyles.includes("image-stream") ? <ImageStreamHero images={parallaxImages} className="h-[680px] w-full bg-[#e5dfd4]"><div className="relative z-10 grid h-full place-items-center px-6 text-center"><h2 className="max-w-[10ch] text-5xl font-semibold tracking-tight text-[#0b2116] sm:text-7xl">La marca sigue en movimiento.</h2></div></ImageStreamHero> : null}
       {animationStyles.includes("scroll-expansion") ? <ScrollExpandMedia mediaType="image" mediaSrc="/matcho/hero.png" bgImageSrc="/matcho/background.png" title="El ritual MATCHO" date="Hecho al momento" scrollToExpand="Desplázate para abrir la imagen" textBlend /> : null}
       {animationStyles.includes("stagger-testimonials") ? <section className="animation-stage"><StaggerTestimonials testimonials={testimonialItems} /></section> : null}
@@ -327,8 +417,6 @@ export default function Home() {
           <div className="moving-gallery-copy"><h2>Sabores que se mueven contigo.</h2></div>
           <DiagonalMarqueeCarousel className="h-[720px]" cardClassName="h-[220px] w-[310px]" />
         </section>
-
-        <InteractiveVideoPortfolioScroller />
 
         <section className="showcase-finances" aria-labelledby="showcase-finances-title">
           <div className="experience-heading"><h2 id="showcase-finances-title">Una lectura clara del negocio.</h2></div>
