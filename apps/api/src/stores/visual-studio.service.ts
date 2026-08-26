@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { MediaAsset, Prisma, Store } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
+import { STORE_FONT_STYLES, type StoreFontStyle } from "./dto/create-store.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
 
 const VISUAL_FIELDS = [
@@ -38,7 +39,7 @@ type AiDirection = {
   gallerySubtitle: string;
   backgroundColor: string;
   accentColor: string;
-  fontStyle: "mono" | "modern" | "editorial" | "friendly";
+  fontStyle: StoreFontStyle;
   buttonStyle: "rounded" | "pill" | "square";
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "lift" | "pulse" | "none";
@@ -195,7 +196,7 @@ const AI_DIRECTIONS_SCHEMA = {
           gallerySubtitle: { type: "string", minLength: 3, maxLength: 220 },
           backgroundColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
           accentColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          fontStyle: { type: "string", enum: ["mono", "modern", "editorial", "friendly"] },
+          fontStyle: { type: "string", enum: STORE_FONT_STYLES },
           buttonStyle: { type: "string", enum: ["rounded", "pill", "square"] },
           buttonVariant: { type: "string", enum: ["solid", "outline", "soft"] },
           buttonMotion: { type: "string", enum: ["lift", "pulse", "none"] },
@@ -254,9 +255,14 @@ function snapshot(store: Store): Prisma.InputJsonObject {
   return Object.fromEntries(VISUAL_FIELDS.map((field) => [field, store[field] ?? null])) as Prisma.InputJsonObject;
 }
 
+function normalizeStoreFontStyle(value: unknown): StoreFontStyle {
+  return STORE_FONT_STYLES.includes(value as StoreFontStyle) ? value as StoreFontStyle : "modern";
+}
+
 function toStoreUpdate(config: unknown): Prisma.StoreUpdateInput {
   const value = config && typeof config === "object" && !Array.isArray(config) ? config as Record<string, unknown> : {};
   const allowed = Object.fromEntries(VISUAL_FIELDS.filter((field) => field in value).map((field) => [field, value[field]]));
+  if ("fontStyle" in allowed) allowed.fontStyle = normalizeStoreFontStyle(allowed.fontStyle);
   return allowed as Prisma.StoreUpdateInput;
 }
 
@@ -380,8 +386,6 @@ export class VisualStudioService {
         id: `ai-${index + 1}-${animationIndex + 1}-${type}`,
         name: animationNames[type] ?? `Animación ${animationIndex + 1}`,
         type,
-        title: animationNames[type] ?? `Animación ${animationIndex + 1}`,
-        subtitle: typeof preset.config.gallerySubtitle === "string" ? preset.config.gallerySubtitle : "Una experiencia visual creada con las imágenes reales de la marca.",
         media: distributedAnimationMedia(orderedAssets, authoredMedia, animationIndex, motionExperiences.length, type),
       }));
       return {
@@ -504,7 +508,7 @@ export class VisualStudioService {
       body: products[index]?.description || `Esta imagen amplía la historia de ${store.name} y da contexto a la selección antes de llegar al catálogo.`,
     }));
     const socialNote = links.length ? "Los enlaces sociales existentes aparecen como botones al final." : "Puedes agregar redes sociales y aparecerán como botones al final.";
-    const selectedFontStyle = ["mono", "modern", "editorial", "friendly"].includes(dto.fontStyle || "") ? dto.fontStyle : store.fontStyle;
+    const selectedFontStyle = normalizeStoreFontStyle(dto.fontStyle || store.fontStyle);
     const proposals: ProposalPreset[] = [
       {
         title: "Taller cálido",
@@ -563,7 +567,7 @@ export class VisualStudioService {
       const socialLinks = links.map((link) => `${link.label}: ${link.url}`).join("\n") || "Sin enlaces sociales configurados";
       const assetLegend = assets.map((asset, index) => `${index}: ${asset.mimeType} · ${asset.url}`).join("\n") || "Sin medios disponibles";
       const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
-      const requestedFontStyle = ["mono", "modern", "editorial", "friendly"].includes(dto.fontStyle || "") ? dto.fontStyle : store.fontStyle;
+      const requestedFontStyle = normalizeStoreFontStyle(dto.fontStyle || store.fontStyle);
       const requestedMotionExperiences = [...new Set(
         (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience ?? "clarity-marquee"])
           .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
@@ -700,7 +704,7 @@ export class VisualStudioService {
       && typeof direction.gallerySubtitle === "string" && direction.gallerySubtitle.length >= 3 && direction.gallerySubtitle.length <= 220
       && validColor(direction.backgroundColor)
       && validColor(direction.accentColor)
-      && enumValue(direction.fontStyle, ["mono", "modern", "editorial", "friendly"])
+      && enumValue(direction.fontStyle, STORE_FONT_STYLES)
       && enumValue(direction.buttonStyle, ["rounded", "pill", "square"])
       && enumValue(direction.buttonVariant, ["solid", "outline", "soft"])
       && enumValue(direction.buttonMotion, ["lift", "pulse", "none"])

@@ -26,7 +26,7 @@ const store = {
   galleryTitle: null,
   gallerySubtitle: null,
   accentColor: null,
-  fontStyle: "mono",
+  fontStyle: "modern",
   buttonStyle: "rounded",
   boardTexture: "chalkboard",
   announcement: null,
@@ -133,6 +133,8 @@ describe("VisualStudioService", () => {
       expect(call[0].data.config.animations).toEqual([
         expect.objectContaining({ type: "clarity-marquee", media: [] }),
       ]);
+      expect(call[0].data.config.animations[0]).not.toHaveProperty("title");
+      expect(call[0].data.config.animations[0]).not.toHaveProperty("subtitle");
       expect(call[0].data.config.heroSlides).toEqual([]);
       expect(call[0].data.config.editorialGallery).toEqual([]);
       expect(call[0].data.config.contentOrder[0]).toMatch(/^animation-/);

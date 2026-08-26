@@ -49,7 +49,7 @@ const baseStoreFields = {
   aboutText: null,
   aboutImageUrl: null,
   accentColor: null,
-  fontStyle: "mono",
+  fontStyle: "modern",
   buttonStyle: "rounded",
   buttonVariant: "solid",
   buttonMotion: "lift",
@@ -282,7 +282,8 @@ describe("storefront routes", () => {
     expect(document.activeElement).toBe(productLink);
     productLink.click();
     expect(window.location.pathname).toBe("/s/taller-norte/p/link_1");
-    expect(document.querySelector(".store-announcement")).toBeNull();
+    expect(document.querySelector(".store-announcement")?.textContent).toContain("ENVÍOS A TODO EL PAÍS");
+    expect(document.querySelector(".store-announcement")?.getAttribute("style")).toContain("--announcement-bg:#ffffff");
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
     expect(document.querySelector(".product-detail-description")?.textContent).toBe("Incluye lavado y peinado");
 
@@ -290,7 +291,7 @@ describe("storefront routes", () => {
     await vi.waitFor(() => expect(window.location.pathname).toBe("/s/taller-norte"));
     await vi.waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 684));
     expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
-    expect(document.querySelector(".store-announcement")).toBeNull();
+    expect(document.querySelector(".store-announcement")?.textContent).toContain("ENVÍOS A TODO EL PAÍS");
   });
 
   it("resolves a verified custom hostname at the root and keeps product URLs on that domain", async () => {
@@ -1187,7 +1188,8 @@ describe("storefront routes", () => {
     const siteHeader = document.querySelector<HTMLElement>(".store-site-header")!;
     expect(siteHeader.querySelector(".store-site-brand .store-title")?.textContent).toBe("Taller abierto");
     expect([...siteHeader.querySelectorAll<HTMLAnchorElement>(".store-site-nav a")].map((link) => [link.textContent, link.hash])).toEqual([
-      ["Tienda", "#store-products"],
+      ["Inicio", "#store-top"],
+      ["Catálogo", "#store-products"],
       ["Contacto", "#store-contact"],
     ]);
     form.querySelector<HTMLInputElement>("#store-contact-name")!.value = "Ana";
@@ -1433,7 +1435,7 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=multi-cat");
 
-    const sections = [...document.querySelectorAll<HTMLButtonElement>(".catalog-section-card")];
+    const sections = [...document.querySelectorAll<HTMLAnchorElement>(".catalog-section-card")];
     expect(sections.map((section) => section.querySelector("strong")?.textContent)).toEqual(["Servicios", "Otros"]);
     expect(sections.map((section) => section.querySelector("img")?.getAttribute("src"))).toEqual(["/servicios.webp", "/otros.webp"]);
     expect(document.querySelector(".store-toolbar")).toBeFalsy();
@@ -1441,9 +1443,43 @@ describe("storefront routes", () => {
 
     sections[0].click();
 
+    expect(window.location.pathname).toBe("/s/multi-cat/c/cat_1");
     expect(document.querySelector(".store-toolbar")).toBeTruthy();
     expect(document.body.textContent).toContain("Corte de cabello");
     expect(document.body.textContent).not.toContain("Manicure sin categoría");
+  });
+
+  it("opens a category as a focused, directly addressable catalog page", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Casa Nativa",
+        aboutText: "Objetos elegidos para vivir mejor.",
+        contactFormEnabled: true,
+        heroSlides: [{ imageUrl: "/hero.webp", title: "Nueva colección", body: "Hecha en Bolivia", ctaLabel: null, ctaUrl: null }],
+        categories: [
+          { id: "cat_hogar", name: "Hogar" },
+          { id: "cat_mesa", name: "Mesa" },
+        ],
+        items: [
+          { ...baseItem, id: "link_hogar", name: "Manta", categoryId: "cat_hogar", imageUrls: ["/manta.webp"] },
+          { ...baseItem, id: "link_mesa", name: "Taza", categoryId: "cat_mesa", imageUrls: ["/taza.webp"] },
+        ],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/casa-nativa/c/cat_mesa");
+
+    expect(document.body.classList.contains("category-page")).toBe(true);
+    expect(document.querySelector(".catalog-section-banner h3")?.textContent).toBe("Mesa");
+    expect([...document.querySelectorAll(".store-item-name")].map((item) => item.textContent)).toEqual(["Taza"]);
+    expect(document.body.textContent).not.toContain("Manta");
+    expect(document.querySelector(".store-carousel")).toBeNull();
+    expect(document.querySelector(".store-about")).toBeNull();
+    expect(document.querySelector(".store-contact-section")).toBeNull();
+    expect(document.querySelector(".store-site-nav a[aria-current='page']")?.textContent).toContain("Catálogo");
+    expect(document.querySelector<HTMLAnchorElement>(".product-page-link")?.href).toContain("category=cat_mesa");
   });
 
   it("renders no section headers at all when the store has no categories", async () => {
@@ -1745,8 +1781,9 @@ describe("storefront routes", () => {
 
     expect(document.querySelectorAll(".catalog-section-card")).toHaveLength(2);
     expect(document.querySelector(".store-search")).toBeFalsy();
-    document.querySelector<HTMLButtonElement>('[data-catalog-section="cat_2"]')!.click();
+    document.querySelector<HTMLAnchorElement>('[data-catalog-section="cat_2"]')!.click();
 
+    expect(window.location.pathname).toBe("/s/chips/c/cat_2");
     expect(document.querySelector(".store-search")).toBeTruthy();
     expect(document.querySelector(".store-sort")).toBeTruthy();
     expect(document.querySelector(".catalog-section-banner h3")?.textContent).toBe("Manicure");
@@ -1755,7 +1792,8 @@ describe("storefront routes", () => {
     const names = [...document.querySelectorAll(".store-item-name")].map((el) => el.textContent);
     expect(names).toEqual(["Manicure básico"]);
 
-    document.querySelector<HTMLButtonElement>(".catalog-section-back")!.click();
+    document.querySelector<HTMLAnchorElement>(".catalog-section-back")!.click();
+    expect(window.location.pathname).toBe("/s/chips");
     expect(document.querySelectorAll(".catalog-section-card")).toHaveLength(2);
     expect(document.querySelector(".store-search")).toBeFalsy();
   });
@@ -1922,7 +1960,7 @@ describe("storefront routes", () => {
     ["story-scroll", "[data-motion-flow]"],
     ["coverflow-carousel", ".store-motion-coverflow"],
     ["hero-carousel", "[data-motion-hero]"],
-    ["image-stream", "[data-image-stream]"],
+    ["image-stream", ".store-image-stream"],
     ["scroll-expansion", "[data-scroll-expansion]"],
     ["hero-gallery-scroll", "[data-gallery-scroll]"],
     ["stagger-testimonials", "[data-testimonials]"],
@@ -1956,6 +1994,83 @@ describe("storefront routes", () => {
 
     expect(document.querySelector(selector)).not.toBeNull();
     expect(document.querySelector(".store-motion-section")?.getAttribute("data-motion-experience")).toBe(motionExperience);
+    expect(document.querySelector(".store-motion-intro")).toBeNull();
+    if (motionExperience === "image-stream") {
+      expect(document.querySelectorAll(".store-image-stream-grid")).toHaveLength(1);
+      expect(document.querySelectorAll(".store-image-stream-grid figure")).toHaveLength(3);
+      expect(document.querySelector("[data-image-stream], .store-image-stream-rail")).toBeNull();
+    }
+  });
+
+  it("uses only the video media in a scroll-driven video pill", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con video",
+        contentOrder: ["animation-video-opening", "products"],
+        animations: [{
+          id: "video-opening",
+          name: "Video de apertura",
+          type: "video-pill",
+          title: "Una escena que se abre",
+          subtitle: "Una lectura de clarity-marquee y zoom-parallax, interrumpida por un video-pill de producto.",
+          topWord: "creando",
+          rightWord: "tu",
+          bottomWord: "historia",
+          media: [
+            { imageUrl: "/v1/uploads/apertura.mp4", title: "La colección en movimiento" },
+            { imageUrl: "/v1/uploads/apertura-poster.webp", title: "Fotograma de apertura" },
+          ],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=video-with-poster");
+
+    const video = document.querySelector<HTMLVideoElement>("[data-video-pill] video")!;
+    expect(video.getAttribute("poster")).toBeNull();
+    expect(video.getAttribute("preload")).toBe("auto");
+    expect(document.querySelector(".store-video-poster")).toBeNull();
+    expect(document.querySelector(".store-video-pill-word-top")?.textContent).toBe("creando");
+    expect(document.querySelector(".store-video-pill-word-right")?.textContent).toBe("tu");
+    expect(document.querySelector(".store-video-pill-word-bottom")?.textContent).toBe("historia");
+    expect(document.querySelector(".store-motion-description")).toBeNull();
+    expect(document.body.textContent).not.toContain("Una escena que se abre");
+    expect(document.body.textContent).not.toContain("clarity-marquee");
+    expect(document.querySelectorAll("[data-video-pill-clock]")).toHaveLength(3);
+  });
+
+  it("marks storefront sections for direct editing only in merchant preview mode", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda editable",
+        contentOrder: ["animation-video-opening", "products"],
+        animations: [{
+          id: "video-opening",
+          name: "Apertura",
+          type: "video-pill",
+          topWord: "creando",
+          rightWord: "tu",
+          bottomWord: "historia",
+          media: [{ imageUrl: "/v1/uploads/apertura.mp4" }],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=editable&preview=1");
+
+    expect(document.body.classList.contains("store-preview-editor-enabled")).toBe(true);
+    expect(document.querySelector(".store-title")?.getAttribute("data-store-editor-field")).toBe("storeName");
+    expect(document.querySelector(".store-item")?.getAttribute("data-store-editor-item-id")).toBe(baseItem.id);
+    expect(document.querySelector(".store-video-pill-word-top")?.getAttribute("data-store-editor-field")).toBe("topWord");
+    expect(document.querySelector(".store-video-pill-word-top")?.getAttribute("data-store-editor-animation-id")).toBe("video-opening");
   });
 
   it("renders the text-only marquee without animation media and links its featured product", async () => {
@@ -2061,8 +2176,10 @@ describe("storefront routes", () => {
 
     const sections = [...document.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]")];
     expect(sections.map((section) => section.dataset.animationId)).toEqual(["finale", "opening"]);
-    expect(sections[0].querySelector(".store-motion-intro h2")?.textContent).toBe("Últimos detalles");
-    expect(sections[1].querySelector(".store-motion-intro h2")?.textContent).toBe("Nueva temporada");
+    expect(sections[0].querySelector("h2")).toBeNull();
+    expect(sections[1].querySelector("h2")).toBeNull();
+    expect(sections[0].querySelector(".store-motion-description")?.textContent).toBe("Una selección distinta para cerrar la tienda.");
+    expect(sections[1].querySelector(".store-motion-description")?.textContent).toBe("Piezas para empezar el recorrido.");
     expect(sections[0].querySelector<HTMLImageElement>("img")?.src).toContain("end-1.webp");
     expect(sections[1].querySelector<HTMLImageElement>("img")?.src).toContain("open-1.webp");
     expect(sections[0].textContent).not.toContain("Organizador · cierre");

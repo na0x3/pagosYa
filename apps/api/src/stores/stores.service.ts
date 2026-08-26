@@ -55,6 +55,9 @@ type StoreAnimation = {
   type: string;
   title?: string;
   subtitle?: string;
+  topWord?: string;
+  rightWord?: string;
+  bottomWord?: string;
   productId?: string;
   media: StoreEditorialImage[];
 };
@@ -62,8 +65,6 @@ const DEFAULT_STORE_ANIMATION: StoreAnimation = {
   id: "welcome",
   name: "Bienvenida en movimiento",
   type: "clarity-marquee",
-  title: "Descubre la tienda",
-  subtitle: "Conoce la selección y encuentra lo que buscas.",
   media: [],
 };
 const DEFAULT_STORE_CONTENT_ORDER: StoreContentSection[] = [
@@ -367,6 +368,9 @@ function readStoreAnimations(
           type: entry.type as string,
           ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
           ...(typeof entry.subtitle === "string" && entry.subtitle ? { subtitle: entry.subtitle } : {}),
+          ...(typeof entry.topWord === "string" && entry.topWord ? { topWord: entry.topWord.slice(0, 48) } : {}),
+          ...(typeof entry.rightWord === "string" && entry.rightWord ? { rightWord: entry.rightWord.slice(0, 48) } : {}),
+          ...(typeof entry.bottomWord === "string" && entry.bottomWord ? { bottomWord: entry.bottomWord.slice(0, 48) } : {}),
           ...(typeof entry.productId === "string" && entry.productId ? { productId: entry.productId.slice(0, 80) } : {}),
           media: readStoreEditorialGallery(entry.media),
         }))

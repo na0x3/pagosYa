@@ -59,7 +59,7 @@ function useLiveTime() {
 
 export function WorkPageHero({
   videoSrc = "/matcho/story-01.mp4",
-  poster = "/matcho/hero.png",
+  poster,
   videoType = "auto",
   topWord = "cultivando",
   rightWord = "tu",
@@ -75,6 +75,7 @@ export function WorkPageHero({
   const containerRef = useRef<HTMLElement>(null);
   const videoWrapperRef = useRef<HTMLDivElement>(null);
   const textGroupRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const formatTime = useLiveTime();
   const isDirectVideo =
     videoType === "video" ||
@@ -98,6 +99,15 @@ export function WorkPageHero({
             scrub: 1,
             pin: true,
             anticipatePin: 1,
+            onUpdate: ({ progress }) => {
+              const htmlVideo = videoRef.current;
+              if (!htmlVideo) return;
+              if (progress > 0.08 && progress < 0.98) {
+                void htmlVideo.play().catch(() => undefined);
+              } else {
+                htmlVideo.pause();
+              }
+            },
           },
         });
         timeline
@@ -156,11 +166,26 @@ export function WorkPageHero({
         ) : null}
       </div>
 
-      <div ref={videoWrapperRef} className="absolute inset-0 z-20 overflow-hidden bg-[#0b2116]" style={{ willChange: "clip-path" }}>
+      <div
+        ref={videoWrapperRef}
+        className="absolute inset-0 z-20 overflow-hidden"
+        style={{ backgroundColor, willChange: "clip-path" }}
+      >
         {isDirectVideo ? (
-          <video src={videoSrc} poster={poster} autoPlay muted loop playsInline preload="metadata" className="h-full w-full object-cover">
-            <track kind="captions" src="/matcho/captions-es.vtt" srcLang="es" label="Español" default />
-          </video>
+          <>
+            <video
+              ref={videoRef}
+              src={videoSrc}
+              poster={poster}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="h-full w-full object-cover"
+            >
+              <track kind="captions" src="/matcho/captions-es.vtt" srcLang="es" label="Español" default />
+            </video>
+          </>
         ) : (
           <iframe
             src={videoSrc}

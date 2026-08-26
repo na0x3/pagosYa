@@ -76,6 +76,8 @@ export const STORE_MOTION_EXPERIENCES = [
   "frame-sequence",
   "3d-gallery",
 ] as const;
+export const STORE_FONT_STYLES = ["modern", "editorial", "friendly", "classic", "geometric"] as const;
+export type StoreFontStyle = (typeof STORE_FONT_STYLES)[number];
 export const STORE_ANIMATION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 export const STORE_ANIMATION_SECTION_PATTERN = /^animation-[a-z0-9][a-z0-9_-]{0,47}$/;
 export const STORE_BASE_CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "links", "contact", "location"] as const;
@@ -237,6 +239,27 @@ export class StoreAnimationDto {
   @IsSafeText()
   @MaxLength(220)
   subtitle?: string;
+
+  @ApiPropertyOptional({ example: "creando", description: "Top kinetic word used by Video que se abre." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(48)
+  topWord?: string;
+
+  @ApiPropertyOptional({ example: "tu", description: "Right kinetic word used by Video que se abre." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(48)
+  rightWord?: string;
+
+  @ApiPropertyOptional({ example: "historia", description: "Bottom kinetic word used by Video que se abre." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(48)
+  bottomWord?: string;
 
   @ApiPropertyOptional({ example: "product_123", description: "Optional product featured by this animation." })
   @IsOptional()
@@ -496,10 +519,10 @@ export class CreateStoreDto {
 
   @ApiPropertyOptional({
     description: "Curated font family used across the merchant's public storefront.",
-    enum: ["mono", "modern", "editorial", "friendly"],
+    enum: STORE_FONT_STYLES,
   })
   @IsOptional()
-  @IsIn(["mono", "modern", "editorial", "friendly"])
+  @IsIn(STORE_FONT_STYLES)
   fontStyle?: string;
 
   @ApiPropertyOptional({
@@ -547,9 +570,9 @@ export class CreateStoreDto {
   @IsIn(["small", "medium", "large"])
   announcementSize?: string;
 
-  @ApiPropertyOptional({ description: "Announcement strip color.", example: "#c58b3c" })
+  @ApiPropertyOptional({ description: "Announcement strip color.", example: "#ffffff" })
   @IsOptional()
-  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "announcementColor must be a 6-digit hex color, e.g. #c58b3c" })
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "announcementColor must be a 6-digit hex color, e.g. #ffffff" })
   announcementColor?: string;
 
   @ApiPropertyOptional({ description: "Whether the storefront promotion dialog is active." })

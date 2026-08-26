@@ -639,10 +639,10 @@ model Store {
   // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
   // title gradient). Null = pagosYa's default palette accent, per theme.
   accentColor                  String?
-  // Curated storefront typography: "mono" (default) | "modern" |
-  // "editorial" | "friendly". The dashboard itself always keeps pagosYa's
+  // Curated storefront typography: "modern" (default) | "editorial" |
+  // "friendly" | "classic" | "geometric". The dashboard itself always keeps pagosYa's
   // 0xProto Mono identity; this choice belongs only to the merchant storefront.
-  fontStyle                    String                           @default("mono")
+  fontStyle                    String                           @default("modern")
   // Corner treatment for the storefront's interactive elements:
   // "rounded" (default) | "pill" | "square". Validated at the DTO layer.
   buttonStyle                  String                           @default("rounded")
@@ -658,7 +658,7 @@ model Store {
   // Merchant-controlled announcement presentation. Color is the strip
   // background; storefront code derives a contrasting ink color automatically.
   announcementSize             String                           @default("medium")
-  announcementColor            String                           @default("#c58b3c")
+  announcementColor            String                           @default("#ffffff")
   // Merchant-authored promotion dialog. The customer can dismiss it for the
   // current browser session; preview mode always renders it for editing.
   promotionEnabled             Boolean                          @default(false)
@@ -691,7 +691,7 @@ model Store {
   motionExperiences            Json                             @default("[\"clarity-marquee\"]")
   // Named animation instances. Each owns its template, copy, and media and is
   // positioned independently through contentOrder as "animation-<id>".
-  animations                   Json                             @default("[{\"id\":\"welcome\",\"name\":\"Bienvenida en movimiento\",\"type\":\"clarity-marquee\",\"title\":\"Descubre la tienda\",\"subtitle\":\"Conoce la selección y encuentra lo que buscas.\",\"media\":[]}]")
+  animations                   Json                             @default("[{\"id\":\"welcome\",\"name\":\"Bienvenida en movimiento\",\"type\":\"clarity-marquee\",\"media\":[]}]")
   // Captioned brand/editorial photos, separate from product image galleries.
   // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
   editorialGallery             Json                             @default("[]")

@@ -103,6 +103,14 @@ const ICON_EXTERNAL =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>';
 const ICON_MAP_PIN =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+const ICON_SEARCH =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.75"/><path d="m16 16 4.25 4.25"/></svg>';
+const ICON_PERSON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.25" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20z"/></svg>';
+const ICON_BAG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8.5h14l-.75 12H5.75z"/><path d="M9 9V6.75a3 3 0 0 1 6 0V9"/></svg>';
+const ICON_CHEVRON_DOWN =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
 
 const app = document.getElementById("app")!;
 let selectedType: PaymentMethodType = PaymentMethodType.CARD;
@@ -349,31 +357,38 @@ function finishStoreEntrance(entrance: HTMLElement, store: Store) {
   window.setTimeout(() => entrance.remove(), 1410);
 }
 
-function storefrontRouteFromPathname(pathname: string): { slug: string | null; productId: string | null } {
-  const match = pathname.match(/^\/s\/([^/]+)(?:\/p\/([^/]+))?\/?$/);
+type StorefrontRoute = { slug: string | null; productId: string | null; categoryId: string | null };
+
+function storefrontRouteFromPathname(pathname: string): StorefrontRoute {
+  const match = pathname.match(/^\/s\/([^/]+)(?:(?:\/c\/([^/]+))|(?:\/p\/([^/]+)))?\/?$/);
   if (!match) {
     const customProduct = activeCustomDomainSlug ? pathname.match(/^\/p\/([^/]+)\/?$/) : null;
-    if (!activeCustomDomainSlug || (pathname !== "/" && !customProduct)) return { slug: null, productId: null };
+    const customCategory = activeCustomDomainSlug ? pathname.match(/^\/c\/([^/]+)\/?$/) : null;
+    if (!activeCustomDomainSlug || (pathname !== "/" && !customProduct && !customCategory)) {
+      return { slug: null, productId: null, categoryId: null };
+    }
     try {
       return {
         slug: activeCustomDomainSlug,
         productId: customProduct?.[1] ? decodeURIComponent(customProduct[1]) : null,
+        categoryId: customCategory?.[1] ? decodeURIComponent(customCategory[1]) : null,
       };
     } catch {
-      return { slug: null, productId: null };
+      return { slug: null, productId: null, categoryId: null };
     }
   }
   try {
     return {
       slug: decodeURIComponent(match[1]),
-      productId: match[2] ? decodeURIComponent(match[2]) : null,
+      categoryId: match[2] ? decodeURIComponent(match[2]) : null,
+      productId: match[3] ? decodeURIComponent(match[3]) : null,
     };
   } catch {
-    return { slug: null, productId: null };
+    return { slug: null, productId: null, categoryId: null };
   }
 }
 
-function storefrontRouteFromLocation(): { slug: string | null; productId: string | null } {
+function storefrontRouteFromLocation(): StorefrontRoute {
   return storefrontRouteFromPathname(window.location.pathname);
 }
 
@@ -609,7 +624,7 @@ async function main() {
   // A verified merchant domain opens the same existing Store at its root.
   // Hostname resolution is only attempted for clean storefront paths so the
   // checkout, debt portal, marketplace, and legacy links keep their behavior.
-  if (!linkSlug && !debtSlug && !clientSecret && (/^\/$/.test(window.location.pathname) || /^\/p\/[^/]+\/?$/.test(window.location.pathname))) {
+  if (!linkSlug && !debtSlug && !clientSecret && (/^\/$/.test(window.location.pathname) || /^\/(?:p|c)\/[^/]+\/?$/.test(window.location.pathname))) {
     try {
       const resolved = await resolveStoreDomain(window.location.hostname);
       activeCustomDomainSlug = resolved.slug;
@@ -1181,8 +1196,20 @@ function storeCatalogUrl(slug: string): string {
   return `${pathname}${query ? `?${query}` : ""}`;
 }
 
-function productPageUrl(slug: string, productId: string): string {
+function categoryPageUrl(slug: string, categoryId: string): string {
   const params = new URLSearchParams();
+  if (storePreviewMode) params.set("preview", "1");
+  if (storeOwnerMode) params.set("owner", "1");
+  const query = params.toString();
+  const pathname = activeCustomDomainSlug === slug
+    ? `/c/${encodeURIComponent(categoryId)}`
+    : `/s/${encodeURIComponent(slug)}/c/${encodeURIComponent(categoryId)}`;
+  return `${pathname}${query ? `?${query}` : ""}`;
+}
+
+function productPageUrl(slug: string, productId: string, categoryId = selectedCategoryId): string {
+  const params = new URLSearchParams();
+  if (categoryId !== "ALL") params.set("category", categoryId);
   if (storePreviewMode) params.set("preview", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
@@ -1245,11 +1272,14 @@ function consumeStoreContentOnce(kind: "announcement" | "promotion", storeId: st
 
 function storeAnnouncementHtml(store: Store): string {
   if (!store.announcement || !hasReadableContent(store.announcement)) return "";
-  if (!consumeStoreContentOnce("announcement", store.storeId, [store.announcement, store.announcementMode, store.announcementColor])) return "";
   const mode = store.announcementMode === "marquee" ? "marquee" : "static";
   const duration = Math.min(40, Math.max(8, Number(store.announcementSpeed) || 18));
   const size = "small";
-  const color = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#c58b3c";
+  const configuredColor = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor.toLowerCase() : "";
+  // The legacy amber value was the implicit default rather than an authored
+  // merchant choice. Render that value as the new white storefront default;
+  // explicitly selected colors remain available.
+  const color = configuredColor && configuredColor !== "#c58b3c" ? configuredColor : "#ffffff";
   const style = `--announcement-bg:${color};--announcement-ink:${accentContrastColor(color)};--marquee-duration:${duration}s`;
   if (mode === "static") {
     return `<div class="store-announcement announcement-size-${size}" style="${style}">${escapeHtml(store.announcement)}</div>`;
@@ -1267,6 +1297,44 @@ function storeAnnouncementHtml(store: Store): string {
       <span class="store-announcement-sequence" data-marquee-copy="duplicate">${sequence}</span>
     </div>
   </aside>`;
+}
+
+function storefrontHeaderHtml(
+  slug: string,
+  store: Store,
+  options: { current: "home" | "catalog"; catalogUrl?: string } = { current: "home" },
+): string {
+  const logoUrl = assetUrl(store.logoUrl);
+  const visibleStoreName = store.storeName.trim();
+  const storeUrl = storeCatalogUrl(slug);
+  const catalogUrl = options.catalogUrl || storeUrl;
+  const onStorePage = options.current === "home";
+  const homeHref = onStorePage ? "#store-top" : storeUrl;
+  const catalogHref = onStorePage || document.body.classList.contains("category-page")
+    ? "#store-products"
+    : `${catalogUrl}#store-products`;
+  const sectionHref = (section: string) => onStorePage ? `#${section}` : `${storeUrl}#${section}`;
+  const cartItems = cartCount();
+  return `<header class="merchant-header store-site-header${!visibleStoreName && logoUrl ? " has-prominent-logo" : ""}${!visibleStoreName && logoUrl && !store.tagline ? " is-logo-only" : ""}" id="store-top">
+    <a class="store-site-brand" href="${escapeHtml(homeHref)}" aria-label="${escapeHtml(visibleStoreName ? `Ir al inicio de ${visibleStoreName}` : "Ir al inicio de la tienda")}">
+      ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="${visibleStoreName ? "" : "Logo de la tienda"}">` : ""}
+      ${visibleStoreName || store.tagline ? `<span class="merchant-header-copy">
+        ${visibleStoreName ? `<strong class="store-title">${escapeHtml(visibleStoreName)}</strong>` : ""}
+        ${store.tagline ? `<span class="store-tagline">${escapeHtml(store.tagline)}</span>` : ""}
+      </span>` : ""}
+    </a>
+    <nav class="store-site-nav" aria-label="Secciones de la tienda">
+      <a href="${escapeHtml(homeHref)}"${options.current === "home" ? ' aria-current="page"' : ""}>Inicio</a>
+      <a href="${escapeHtml(catalogHref)}"${options.current === "catalog" ? ' aria-current="page"' : ""}><span>Catálogo</span>${ICON_CHEVRON_DOWN}</a>
+      ${store.locations?.length || store.locationMapUrl ? `<a href="${escapeHtml(sectionHref("store-location"))}">Ubicación</a>` : ""}
+      ${store.contactFormEnabled === true ? `<a href="${escapeHtml(sectionHref("store-contact"))}">Contacto</a>` : ""}
+    </nav>
+    <div class="store-site-utility" aria-label="Acciones de la tienda">
+      <a class="store-header-action store-header-search" href="${escapeHtml(catalogHref)}" aria-label="Buscar en el catálogo">${ICON_SEARCH}</a>
+      ${storePreviewMode || storeOwnerMode ? "" : `<a class="store-header-action store-directory-back" href="/stores/" aria-label="Volver a Mi Tienda">${ICON_PERSON}<span class="visually-hidden">Volver a Mi Tienda</span></a>`}
+      <button class="store-header-action store-header-cart" type="button" aria-label="Abrir carrito, ${cartItems} ${cartItems === 1 ? "producto" : "productos"}" ${cartItems === 0 ? "disabled" : ""}>${ICON_BAG}<span class="store-header-cart-count"${cartItems === 0 ? " hidden" : ""}>${cartItems}</span></button>
+    </div>
+  </header>`;
 }
 
 function bindStoreAnnouncementPlayback(): void {
@@ -1530,8 +1598,163 @@ function suppressStoreViewForMerchant(slug: string): boolean {
 
 let activePreviewStore: { slug: string; store: Store } | null = null;
 let previewReadyAnnounced = false;
+let storePreviewEditorEnabled = true;
+let storePreviewEditorHover: HTMLElement | null = null;
 const STORE_PREVIEW_SECTIONS = ["brand", "announcement", "hero", "products", "about", "gallery", "motion", "contact", "links", "location", "promotion"] as const;
 type StorePreviewSection = (typeof STORE_PREVIEW_SECTIONS)[number];
+
+interface StorePreviewEditorSelection {
+  section: StorePreviewSection | `animation-${string}`;
+  field: string;
+  label: string;
+  itemId?: string;
+  itemIndex?: number;
+  animationId?: string;
+}
+
+function storePreviewEditorLabel(): HTMLElement {
+  let label = document.querySelector<HTMLElement>(".store-preview-editor-label");
+  if (!label) {
+    label = document.createElement("div");
+    label.className = "store-preview-editor-label";
+    label.setAttribute("aria-hidden", "true");
+    document.body.appendChild(label);
+  }
+  return label;
+}
+
+function markStorePreviewEditorTarget(element: Element | null, selection: StorePreviewEditorSelection): void {
+  if (!(element instanceof HTMLElement)) return;
+  element.dataset.storeEditorTarget = "true";
+  element.dataset.storeEditorSection = selection.section;
+  element.dataset.storeEditorField = selection.field;
+  element.dataset.storeEditorLabel = selection.label;
+  if (selection.itemId) element.dataset.storeEditorItemId = selection.itemId;
+  if (Number.isInteger(selection.itemIndex)) element.dataset.storeEditorItemIndex = String(selection.itemIndex);
+  if (selection.animationId) element.dataset.storeEditorAnimationId = selection.animationId;
+}
+
+function markAllStorePreviewEditorTargets(
+  selector: string,
+  selection: StorePreviewEditorSelection | ((element: HTMLElement, index: number) => StorePreviewEditorSelection),
+): void {
+  app.querySelectorAll<HTMLElement>(selector).forEach((element, index) => {
+    markStorePreviewEditorTarget(element, typeof selection === "function" ? selection(element, index) : selection);
+  });
+}
+
+function syncStorePreviewEditorMode(): void {
+  document.body.classList.toggle("store-preview-editor-enabled", storePreviewMode && storePreviewEditorEnabled);
+  if (!storePreviewEditorEnabled && storePreviewEditorHover) {
+    storePreviewEditorHover.classList.remove("store-preview-editor-hover");
+    storePreviewEditorHover = null;
+  }
+}
+
+function annotateStorePreviewEditor(store: Store): void {
+  if (!storePreviewMode) return;
+  markStorePreviewEditorTarget(app.querySelector(".store-title"), { section: "brand", field: "storeName", label: "nombre de la tienda" });
+  markStorePreviewEditorTarget(app.querySelector(".store-tagline"), { section: "brand", field: "storeTagline", label: "descripción corta" });
+  markStorePreviewEditorTarget(app.querySelector(".merchant-header-logo"), { section: "brand", field: "storeLogo", label: "logo" });
+  markStorePreviewEditorTarget(app.querySelector(".store-announcement"), { section: "announcement", field: "announcementText", label: "anuncio superior" });
+  markStorePreviewEditorTarget(app.querySelector(".store-hero.has-banner img"), { section: "hero", field: "storeBanner", label: "imagen de portada" });
+  markAllStorePreviewEditorTargets(".store-slide", (element) => ({
+    section: "hero",
+    field: "media",
+    label: `escena ${Number(element.dataset.slideIndex || 0) + 1} de la portada`,
+    itemIndex: Number(element.dataset.slideIndex || 0),
+  }));
+  markAllStorePreviewEditorTargets(".store-slide h2", (element) => ({ section: "hero", field: "title", label: "título de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
+  markAllStorePreviewEditorTargets(".store-slide p", (element) => ({ section: "hero", field: "body", label: "texto de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
+  markAllStorePreviewEditorTargets(".store-slide-cta", (element) => ({ section: "hero", field: "ctaLabel", label: "botón de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
+  markStorePreviewEditorTarget(app.querySelector("#store-products-title"), { section: "products", field: "catalogTitle", label: "título del catálogo" });
+  markStorePreviewEditorTarget(app.querySelector(".store-catalog-heading p"), { section: "products", field: "catalogSubtitle", label: "subtítulo del catálogo" });
+  markAllStorePreviewEditorTargets(".store-item", (element) => {
+    const item = store.items.find((candidate) => candidate.id === element.dataset.id);
+    return { section: "products", field: "product", label: item ? `producto ${item.name}` : "producto", itemId: element.dataset.id };
+  });
+  markStorePreviewEditorTarget(app.querySelector(".store-about"), { section: "about", field: "aboutImage", label: "imagen de la historia" });
+  markStorePreviewEditorTarget(app.querySelector(".store-about-title-text"), { section: "about", field: "aboutTitle", label: "título de la historia" });
+  markStorePreviewEditorTarget(app.querySelector(".store-about-subtitle"), { section: "about", field: "aboutSubtitle", label: "subtítulo de la historia" });
+  markStorePreviewEditorTarget(app.querySelector(".store-about-body"), { section: "about", field: "aboutBody", label: "historia de la marca" });
+  markStorePreviewEditorTarget(app.querySelector("#store-gallery-title"), { section: "gallery", field: "galleryTitle", label: "título de la galería" });
+  markStorePreviewEditorTarget(app.querySelector(".store-editorial-gallery > .store-section-heading p"), { section: "gallery", field: "gallerySubtitle", label: "subtítulo de la galería" });
+  const editorialCount = Math.max(store.editorialGallery?.length || 0, 1);
+  markAllStorePreviewEditorTargets(".store-editorial-gallery .store-editorial-item", (_element, index) => ({ section: "gallery", field: "editorialMedia", label: `imagen editorial ${(index % editorialCount) + 1}`, itemIndex: index % editorialCount }));
+  markAllStorePreviewEditorTargets(".store-editorial-gallery .store-editorial-item figcaption strong", (element, index) => ({ section: "gallery", field: "editorialTitle", label: "título de imagen", itemIndex: Number(element.closest<HTMLElement>(".store-editorial-item")?.style.getPropertyValue("--experience-index") || index) % editorialCount }));
+  markAllStorePreviewEditorTargets(".store-editorial-gallery .store-editorial-item figcaption span", (element, index) => ({ section: "gallery", field: "editorialCaption", label: "línea de imagen", itemIndex: Number(element.closest<HTMLElement>(".store-editorial-item")?.style.getPropertyValue("--experience-index") || index) % editorialCount }));
+  markAllStorePreviewEditorTargets(".store-editorial-gallery .store-editorial-item figcaption p", (element, index) => ({ section: "gallery", field: "editorialBody", label: "texto de imagen", itemIndex: Number(element.closest<HTMLElement>(".store-editorial-item")?.style.getPropertyValue("--experience-index") || index) % editorialCount }));
+  app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]").forEach((section) => {
+    const animationId = section.dataset.animationId!;
+    const animation = store.animations?.find((candidate) => candidate.id === animationId);
+    markStorePreviewEditorTarget(section, { section: `animation-${animationId}`, field: "animation", label: animation?.name || "sección animada", animationId });
+    section.querySelectorAll<HTMLElement>("img, video, figure").forEach((media) => markStorePreviewEditorTarget(media, { section: `animation-${animationId}`, field: "media", label: "imagen o video de la animación", animationId }));
+    section.querySelectorAll<HTMLElement>("h3").forEach((heading) => markStorePreviewEditorTarget(heading, { section: `animation-${animationId}`, field: animation?.type === "video-pill" ? "topWord" : "title", label: "texto de la animación", animationId }));
+    section.querySelectorAll<HTMLElement>("p").forEach((copy) => markStorePreviewEditorTarget(copy, { section: `animation-${animationId}`, field: "body", label: "descripción de la animación", animationId }));
+    markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-top"), { section: `animation-${animationId}`, field: "topWord", label: "texto superior del video", animationId });
+    markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-right"), { section: `animation-${animationId}`, field: "rightWord", label: "texto derecho del video", animationId });
+    markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-bottom"), { section: `animation-${animationId}`, field: "bottomWord", label: "texto inferior del video", animationId });
+  });
+  markAllStorePreviewEditorTargets(".store-link-btn", (_element, index) => ({ section: "links", field: "linkLabel", label: `enlace social ${index + 1}`, itemIndex: index }));
+  markStorePreviewEditorTarget(app.querySelector(".store-contact-section"), { section: "contact", field: "contact", label: "formulario de contacto" });
+  markStorePreviewEditorTarget(app.querySelector(".store-location-section"), { section: "location", field: "location", label: "ubicaciones" });
+  markStorePreviewEditorTarget(app.querySelector(".promotion-image"), { section: "promotion", field: "promotionImage", label: "imagen de promoción" });
+  markStorePreviewEditorTarget(app.querySelector("#promotion-title"), { section: "promotion", field: "promotionTitle", label: "título de promoción" });
+  markStorePreviewEditorTarget(app.querySelector(".promotion-dialog p"), { section: "promotion", field: "promotionBody", label: "texto de promoción" });
+  markStorePreviewEditorTarget(app.querySelector(".promotion-action"), { section: "promotion", field: "promotionAction", label: "botón de promoción" });
+  markStorePreviewEditorTarget(app.querySelector("#cart-pay"), { section: "products", field: "cartButton", label: "botón del carrito" });
+  syncStorePreviewEditorMode();
+}
+
+function selectionFromStorePreviewEditorTarget(target: HTMLElement): StorePreviewEditorSelection | null {
+  const section = target.dataset.storeEditorSection;
+  const field = target.dataset.storeEditorField;
+  if (!section || !field) return null;
+  const selection: StorePreviewEditorSelection = {
+    section: section as StorePreviewEditorSelection["section"],
+    field,
+    label: target.dataset.storeEditorLabel || "parte de la tienda",
+  };
+  if (target.dataset.storeEditorItemId) selection.itemId = target.dataset.storeEditorItemId;
+  if (target.dataset.storeEditorItemIndex && Number.isInteger(Number(target.dataset.storeEditorItemIndex))) selection.itemIndex = Number(target.dataset.storeEditorItemIndex);
+  if (target.dataset.storeEditorAnimationId) selection.animationId = target.dataset.storeEditorAnimationId;
+  return selection;
+}
+
+function showStorePreviewEditorHover(target: HTMLElement | null): void {
+  if (storePreviewEditorHover && storePreviewEditorHover !== target) storePreviewEditorHover.classList.remove("store-preview-editor-hover");
+  storePreviewEditorHover = target;
+  const label = storePreviewEditorLabel();
+  if (!target || !storePreviewEditorEnabled) {
+    label.style.display = "none";
+    return;
+  }
+  target.classList.add("store-preview-editor-hover");
+  label.textContent = `Editar ${target.dataset.storeEditorLabel || "esta parte"}`;
+  const rect = target.getBoundingClientRect();
+  label.style.display = "block";
+  label.style.left = `${Math.max(8, Math.min(rect.left + 8, window.innerWidth - 270))}px`;
+  label.style.top = `${Math.max(8, Math.min(rect.top + 8, window.innerHeight - 48))}px`;
+}
+
+if (storePreviewMode) {
+  app.addEventListener("pointerover", (event) => {
+    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    showStorePreviewEditorHover(event.target.closest<HTMLElement>("[data-store-editor-target]"));
+  }, true);
+  app.addEventListener("pointerleave", () => showStorePreviewEditorHover(null), true);
+  app.addEventListener("click", (event) => {
+    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    const target = event.target.closest<HTMLElement>("[data-store-editor-target]");
+    const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
+    if (!selection) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    postToParent("STORE_EDITOR_SELECT", { selection });
+    showStorePreviewEditorHover(target);
+  }, true);
+}
 
 function scrollStorePreviewToSection(section: StorePreviewSection | `animation-${string}`): void {
   if (section.startsWith("animation-")) {
@@ -1708,7 +1931,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (typeof source.backgroundGradientStart === "string" && /^#[0-9a-f]{6}$/i.test(source.backgroundGradientStart)) clean.backgroundGradientStart = source.backgroundGradientStart.toLowerCase();
   if (typeof source.backgroundGradientEnd === "string" && /^#[0-9a-f]{6}$/i.test(source.backgroundGradientEnd)) clean.backgroundGradientEnd = source.backgroundGradientEnd.toLowerCase();
   if (Number.isInteger(source.backgroundGradientAngle)) clean.backgroundGradientAngle = Math.min(360, Math.max(0, source.backgroundGradientAngle as number));
-  if (["mono", "modern", "editorial", "friendly"].includes(String(source.fontStyle))) clean.fontStyle = source.fontStyle;
+  if (["modern", "editorial", "friendly", "classic", "geometric"].includes(String(source.fontStyle))) clean.fontStyle = source.fontStyle;
   if (["solid", "outline", "soft"].includes(String(source.buttonVariant))) clean.buttonVariant = source.buttonVariant;
   if (["lift", "pulse", "none"].includes(String(source.buttonMotion))) clean.buttonMotion = source.buttonMotion;
   if (typeof source.cartButtonLabel === "string") clean.cartButtonLabel = source.cartButtonLabel.slice(0, 36);
@@ -1774,6 +1997,9 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
         type: typeof animation.type === "string" && (STORE_MOTION_EXPERIENCES as readonly string[]).includes(animation.type) ? animation.type : "",
         title: typeof animation.title === "string" ? animation.title.slice(0, 100) : "",
         subtitle: typeof animation.subtitle === "string" ? animation.subtitle.slice(0, 220) : "",
+        topWord: typeof animation.topWord === "string" ? animation.topWord.slice(0, 48) : "",
+        rightWord: typeof animation.rightWord === "string" ? animation.rightWord.slice(0, 48) : "",
+        bottomWord: typeof animation.bottomWord === "string" ? animation.bottomWord.slice(0, 48) : "",
         productId: typeof animation.productId === "string" ? animation.productId.slice(0, 80) : "",
         media: Array.isArray(animation.media)
           ? animation.media
@@ -1868,7 +2094,7 @@ function applyStoreTheme(slug: string, store: Store): void {
     document.documentElement.style.setProperty("--pg-accent-contrast", palette.contrast);
   }
   document.body.classList.toggle("has-custom-accent", !!store.accentColor);
-  document.body.dataset.fontStyle = store.fontStyle || "mono";
+  document.body.dataset.fontStyle = store.fontStyle || "modern";
   document.body.dataset.buttonStyle = store.buttonStyle || "rounded";
   document.body.dataset.buttonVariant = store.buttonVariant || "solid";
   document.body.dataset.buttonMotion = store.buttonMotion || "lift";
@@ -1895,11 +2121,18 @@ function productIdFromLocation(): string | null {
   return storefrontRouteFromLocation().productId ?? new URLSearchParams(window.location.search).get("product");
 }
 
+function categoryIdFromLocation(): string | null {
+  return storefrontRouteFromLocation().categoryId ?? new URLSearchParams(window.location.search).get("category");
+}
+
 function renderStoreRoute(slug: string, store: Store, options: { focusPromotion?: boolean } = {}): void {
   activeStoreRoute = { slug, store };
   const productId = productIdFromLocation();
   if (productId) renderProductPage(slug, store, productId);
-  else renderStore(slug, store, options);
+  else {
+    selectedCategoryId = categoryIdFromLocation() ?? "ALL";
+    renderStore(slug, store, options);
+  }
 }
 
 function restoreCatalogScroll(scrollY: unknown): void {
@@ -2378,7 +2611,9 @@ function openCartReview(slug: string, store: Store, options: { preview?: boolean
 }
 
 function bindCartCheckout(slug: string, store: Store): void {
-  app.querySelector<HTMLButtonElement>("#cart-pay")?.addEventListener("click", () => openCartReview(slug, store));
+  app.querySelectorAll<HTMLButtonElement>("#cart-pay, .store-header-cart").forEach((button) => {
+    button.addEventListener("click", () => openCartReview(slug, store));
+  });
 }
 
 function renderProductPage(slug: string, store: Store, productId: string): void {
@@ -2391,26 +2626,37 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   activePromotionCleanup?.();
   activePromotionCleanup = null;
   document.body.classList.remove("promotion-open");
+  document.body.classList.remove("category-page");
   document.body.classList.add("product-detail-page");
   applyStoreTheme(slug, store);
 
   const item = store.items.find((candidate) => candidate.id === productId);
-  const catalogUrl = storeCatalogUrl(slug);
-  const logoUrl = assetUrl(store.logoUrl);
+  const returnCategoryId = categoryIdFromLocation();
+  const returnCategory = store.categories.find((candidate) => candidate.id === returnCategoryId);
+  const catalogUrl = returnCategory ? categoryPageUrl(slug, returnCategory.id) : storeCatalogUrl(slug);
   const visibleStoreName = store.storeName.trim();
-  const backToStoreLabel = visibleStoreName ? `Volver a ${visibleStoreName}` : "Volver al catálogo";
+  const backToStoreLabel = returnCategory
+    ? `Volver a ${returnCategory.name}`
+    : visibleStoreName
+      ? `Volver a ${visibleStoreName}`
+      : "Volver al catálogo";
   if (!item) {
     app.innerHTML = `
-      <header class="product-page-header">
+      ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
+      ${storeAnnouncementHtml(store)}
+      <div class="product-page-return">
         <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>${escapeHtml(backToStoreLabel)}</span></a>
-      </header>
+      </div>
       <main class="product-not-found">
         <span class="product-not-found-mark">?</span>
         <h1>Este producto ya no está disponible</h1>
         <p>Puede que haya sido retirado o que el enlace haya cambiado.</p>
         <a class="primary store-catalog-link" href="${escapeHtml(catalogUrl)}">Ver todos los productos</a>
       </main>`;
+    bindStoreAnnouncementPlayback();
     bindInternalStoreLinks(slug, store);
+    updateCartBar(store, store.items[0]?.currency || "BOB");
+    bindCartCheckout(slug, store);
     return;
   }
 
@@ -2430,7 +2676,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   const rememberedImageIndex = selectedProductImageByItem.get(item.id) ?? 0;
   const selectedImageIndex = Math.min(Math.max(rememberedImageIndex, 0), Math.max(images.length - 1, 0));
   selectedProductImageByItem.set(item.id, selectedImageIndex);
-  const category = store.categories.find((candidate) => candidate.id === item.categoryId);
+  const itemCategory = store.categories.find((candidate) => candidate.id === item.categoryId);
   const visibleStock = stockStatus(remainingStock(item, selectedVariant), store.showLowStockToCustomers === true);
   const discountPercent = activeProductDiscount(item);
   const detailSaleBanner = discountPercent === null ? "" : `<aside class="product-detail-sale" aria-label="Oferta por tiempo limitado"><strong>${discountPercent}% de descuento</strong><span data-discount-ends-at="${escapeHtml(item.discountEndsAt || "")}">${escapeHtml(discountRemainingLabel(item))}</span></aside>`;
@@ -2486,18 +2732,15 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
     : "";
 
   app.innerHTML = `
+    ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
     ${storeAnnouncementHtml(store)}
-    <header class="product-page-header">
+    <div class="product-page-return">
       <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>${escapeHtml(backToStoreLabel)}</span></a>
-      <a class="product-store-brand store-catalog-link" href="${escapeHtml(catalogUrl)}" aria-label="${escapeHtml(visibleStoreName ? `Ir a ${visibleStoreName}` : "Ir a la tienda")}">
-        ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="">` : `<span class="product-store-monogram">${escapeHtml(initials(visibleStoreName || "Tienda"))}</span>`}
-        ${visibleStoreName ? `<strong>${escapeHtml(visibleStoreName)}</strong>` : ""}
-      </a>
-    </header>
+    </div>
     <main class="product-detail-layout">
       <section class="product-detail-gallery" aria-label="Galería del producto">${galleryHtml}</section>
       <section class="product-detail-content">
-        ${category ? `<div class="product-detail-category">${escapeHtml(category.name)}</div>` : ""}
+        ${itemCategory ? `<div class="product-detail-category">${escapeHtml(itemCategory.name)}</div>` : ""}
         ${detailSaleBanner}
         ${item.tags.length ? `<div class="store-item-tags">${item.tags.map((tag) => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <h1>${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" aria-hidden="true"></span>` : ""}${escapeHtml(item.name)}</h1>
@@ -2608,13 +2851,12 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
   const currency = store.items[0]?.currency ?? "BOB";
-  const logoUrl = assetUrl(store.logoUrl);
   const visibleStoreName = store.storeName.trim();
   const bannerUrl = assetUrl(store.bannerUrl);
   if (activeCatalogStoreId !== store.storeId) {
     activeCatalogStoreId = store.storeId;
     searchQuery = "";
-    selectedCategoryId = "ALL";
+    selectedCategoryId = categoryIdFromLocation() ?? "ALL";
     sortMode = "featured";
   }
   const heroSlides = (store.heroSlides ?? [])
@@ -2628,6 +2870,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     selectedCategoryId = "ALL";
   }
   const selectedCatalogSection = catalogSections.find((section) => section.id === selectedCategoryId) ?? null;
+  document.body.classList.toggle("category-page", selectedCatalogSection !== null);
   // Categorized stores disclose their browsing tools after a shopper chooses
   // a section. Uncategorized stores keep the compact direct-catalog behavior.
   const showToolbar = hasCatalogSectionPicker ? selectedCatalogSection !== null : store.items.length > 1;
@@ -2667,13 +2910,15 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     mediaUrl: string,
     sourceUrl: string,
     alt: string,
-    options: { eager?: boolean } = {},
+    options: { eager?: boolean; className?: string } = {},
   ) => {
     const position = storeImagePosition(store, sourceUrl);
-    const loading = options.eager ? 'fetchpriority="high"' : 'loading="lazy"';
-    return `<span class="store-fidelity-media">
-      <img class="store-fidelity-media-source" src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(alt)}" ${loading} decoding="async" style="object-position:${position}">
-      <img class="store-fidelity-media-backdrop" src="${escapeHtml(mediaUrl)}" alt="" aria-hidden="true" loading="lazy" decoding="async" style="object-position:${position}">
+    const sourceLoading = options.eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
+    const backdropLoading = options.eager ? 'loading="eager"' : 'loading="lazy"';
+    const extraClass = options.className ? ` ${options.className}` : "";
+    return `<span class="store-fidelity-media${extraClass}">
+      <img class="store-fidelity-media-source" src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(alt)}" ${sourceLoading} decoding="async" style="object-position:${position}">
+      <img class="store-fidelity-media-backdrop" src="${escapeHtml(mediaUrl)}" alt="" aria-hidden="true" ${backdropLoading} decoding="async" style="object-position:${position}">
     </span>`;
   };
 
@@ -2795,7 +3040,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           ${catalogSections.map((section, index) => {
             const cover = sectionCover(section);
             const productCount = section.items.length;
-            return `<button type="button" class="catalog-section-card" data-catalog-section="${escapeHtml(section.id)}" aria-label="Ver ${escapeHtml(section.name)}, ${productCount} ${productCount === 1 ? "producto" : "productos"}">
+            return `<a class="catalog-section-card" href="${escapeHtml(categoryPageUrl(slug, section.id))}" data-catalog-section="${escapeHtml(section.id)}" aria-label="Ver ${escapeHtml(section.name)}, ${productCount} ${productCount === 1 ? "producto" : "productos"}">
               <span class="catalog-section-media">
                 ${cover.url
                   ? `<img src="${escapeHtml(cover.url)}" alt="" ${index === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${cover.position}">`
@@ -2805,7 +3050,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
                 <span><strong>${escapeHtml(section.name)}</strong><small>${productCount} ${productCount === 1 ? "producto" : "productos"}</small></span>
                 <span class="catalog-section-arrow">${ICON_ARROW_RIGHT}</span>
               </span>
-            </button>`;
+            </a>`;
           }).join("")}
         </div>
       </div>`
@@ -2817,7 +3062,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           ? `<div class="catalog-section-banner${selectedSectionCover?.url ? " has-image" : " is-placeholder"}" aria-labelledby="catalog-section-banner-title">
               ${selectedSectionCover?.url ? `<img src="${escapeHtml(selectedSectionCover.url)}" alt="" fetchpriority="high" decoding="async" style="object-position:${selectedSectionCover.position}">` : ""}
               <div class="catalog-section-banner-shade" aria-hidden="true"></div>
-              <button type="button" class="catalog-section-back">${ICON_ARROW_LEFT}<span>Ver secciones</span></button>
+              <a class="catalog-section-back" href="${escapeHtml(storeCatalogUrl(slug))}">${ICON_ARROW_LEFT}<span>Ver secciones</span></a>
               <div class="catalog-section-banner-copy">
                 <h3 id="catalog-section-banner-title">${escapeHtml(selectedCatalogSection.name)}</h3>
                 <p>${selectedCatalogSection.items.length} ${selectedCatalogSection.items.length === 1 ? "producto" : "productos"} en esta sección</p>
@@ -2833,11 +3078,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         </div>
       </div>`
     : "";
-  const productsHtml = `<section class="store-products" id="store-products" aria-labelledby="store-products-title">
-    <div class="store-section-heading store-catalog-heading">
+  const productsHtml = `<section class="store-products${selectedCatalogSection ? " category-products-page" : ""}" id="store-products" aria-labelledby="store-products-title">
+    ${selectedCatalogSection ? `<h2 class="visually-hidden" id="store-products-title">${escapeHtml(selectedCatalogSection.name)}</h2>` : `<div class="store-section-heading store-catalog-heading">
       <h2 id="store-products-title">${escapeHtml(catalogTitle)}</h2>
       <p>${escapeHtml(catalogSubtitle)}</p>
-    </div>
+    </div>`}
     ${catalogSectionPickerHtml}
     ${catalogBrowserHtml}
   </section>`;
@@ -2918,24 +3163,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         </div>`;
   const hasGalleryExperience = experienceStyle === "story-scroller" ? storyEntries.length > 0 : editorialImages.length > 0;
   const allowedMotionExperiences = STORE_MOTION_EXPERIENCES;
-  const motionExperienceCopy: Record<StoreMotionExperience, [string, string]> = {
-    "story-scroll": ["Nuestra historia", "Capítulos visuales de la marca."],
-    "coverflow-carousel": ["La marca en imágenes", "Una selección visual para explorar."],
-    "hero-carousel": ["Colección destacada", "Escenas elegidas de la tienda."],
-    "image-stream": ["Un recorrido visual", "Imágenes de la marca en movimiento."],
-    "scroll-expansion": ["Mira más de cerca", "Una escena que se abre mientras avanzas."],
-    "hero-gallery-scroll": ["Galería destacada", "Una composición creada con imágenes de la tienda."],
-    "stagger-testimonials": ["Lo que dicen nuestros clientes", "Experiencias compartidas por quienes ya nos eligieron."],
-    "zoom-parallax": ["Detalles de la colección", "Una mirada en profundidad a la marca."],
-    "video-pill": ["Una escena que se abre", "Una historia visual que crece hasta ocupar la pantalla."],
-    "portfolio-scroller": ["Momentos de la marca", "Recorre cada escena y descubre su historia."],
-    "circle-reveal": ["Desde el centro", "Una imagen que revela poco a poco el universo de la marca."],
-    "clarity-marquee": ["Preguntas y respuestas", "Ideas clave que mantienen el ritmo de la historia."],
-    "full-screen-chapters": ["Historia por capítulos", "Escenas completas que avanzan con el recorrido."],
-    "magnetic-target": ["Encuentra tu próximo favorito", "Una invitación viva para continuar hacia la colección."],
-    "frame-sequence": ["El proceso, paso a paso", "Cada movimiento descubre un nuevo momento."],
-    "3d-gallery": ["Galería en profundidad", "Explora las imágenes con rueda, teclado o gesto."],
-  };
   const savedMotionExperiences = Array.isArray(store.motionExperiences)
     ? store.motionExperiences.filter((experience) => allowedMotionExperiences.includes(experience))
     : [];
@@ -2959,6 +3186,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           type,
           title: "",
           subtitle: "",
+          topWord: "",
+          rightWord: "",
+          bottomWord: "",
           productId: "",
           media: store.editorialGallery ?? [],
         }))
@@ -2988,10 +3218,34 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const missingMotionSections = animationSections.filter((section) => !contentOrder.includes(section));
   const linksIndex = contentOrder.indexOf("links");
   contentOrder.splice(linksIndex < 0 ? contentOrder.length : linksIndex, 0, ...missingMotionSections);
+  const technicalAnimationTerms = STORE_MOTION_EXPERIENCES.map((type) => type.toLowerCase());
+  const generatedAnimationDescriptions = new Set([
+    "Conoce la selección y encuentra lo que buscas.",
+    "Una experiencia visual creada con las imágenes reales de la marca.",
+    "Capítulos visuales de la marca.",
+    "Una selección visual para explorar.",
+    "Escenas elegidas de la tienda.",
+    "Imágenes de la marca en movimiento.",
+    "Una escena que se abre mientras avanzas.",
+    "Una composición creada con imágenes de la tienda.",
+    "Experiencias compartidas por quienes ya nos eligieron.",
+    "Una mirada en profundidad a la marca.",
+    "Una historia visual que crece hasta ocupar la pantalla.",
+    "Recorre cada escena y descubre su historia.",
+    "Una imagen que revela poco a poco el universo de la marca.",
+    "Ideas clave que mantienen el ritmo de la historia.",
+    "Escenas completas que avanzan con el recorrido.",
+    "Una invitación viva para continuar hacia la colección.",
+    "Cada movimiento descubre un nuevo momento.",
+    "Explora las imágenes con rueda, teclado o gesto.",
+  ]);
   const motionSectionHtmlByKey = Object.fromEntries(animationInstances.map((animation) => {
-    const [defaultTitle, defaultSubtitle] = motionExperienceCopy[animation.type];
-    const publicTitle = animation.title?.trim() || defaultTitle;
-    const publicSubtitle = animation.subtitle?.trim() || defaultSubtitle;
+    const rawDescription = animation.subtitle?.trim() || "";
+    const publicDescription = generatedAnimationDescriptions.has(rawDescription)
+      || technicalAnimationTerms.some((term) => rawDescription.toLowerCase().includes(term))
+      ? ""
+      : rawDescription;
+    const accessibleLabel = animation.name?.trim() || "Animación visual";
     const selectedProduct = animation.productId
       ? store.items.find((item) => item.id === animation.productId)
       : undefined;
@@ -3013,7 +3267,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           sourceUrl: productSourceUrl,
           title: selectedProduct.name,
           caption: selectedProduct.tags?.[0] || "Producto destacado",
-          body: selectedProduct.description || publicSubtitle,
+          body: selectedProduct.description || publicDescription,
         }
       : null;
     const mediaLimit = animation.type === "clarity-marquee"
@@ -3026,59 +3280,64 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     ].slice(0, mediaLimit);
     const motionStories = motionImages.slice(0, 5).map((image) => ({ ...image, isVideo: isVideoMediaUrl(image.mediaUrl) }));
     const sectionKey = `animation-${animation.id}`;
-    const titleId = `store-animation-${animation.id}-title`;
     let blockHtml = "";
     if (animation.type === "story-scroll" && motionStories.length >= 2) {
       blockHtml = `<div class="store-flow-art" data-motion-flow aria-label="Story Scroll">${motionStories.map((entry, index) => `<article class="store-flow-section" style="--flow-index:${index}"><div class="store-flow-inner"><div class="store-flow-copy"><span>${String(index + 1).padStart(2, "0")}</span><h3>${escapeHtml(entry.title)}</h3><p>${escapeHtml(entry.body)}</p></div><figure>${entry.isVideo ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(entry.title)}" muted loop playsinline preload="metadata" controls></video>` : fidelityImageHtml(entry.mediaUrl, entry.sourceUrl, entry.caption)}</figure></div></article>`).join("")}</div>`;
     } else if (animation.type === "coverflow-carousel" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-coverflow store-motion-coverflow" data-coverflow tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(publicTitle)}"><div class="store-coverflow-stage">${motionImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}"><figure class="store-editorial-item store-coverflow-item">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure></div>`).join("")}</div><div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+      blockHtml = `<div class="store-coverflow store-motion-coverflow" data-coverflow tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-coverflow-stage">${motionImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}"><figure class="store-editorial-item store-coverflow-item">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure></div>`).join("")}</div><div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     } else if (animation.type === "hero-carousel" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-motion-hero" data-motion-hero role="region" aria-roledescription="carousel" aria-label="${escapeHtml(publicTitle)}" tabindex="0"><div class="store-motion-hero-backgrounds" aria-hidden="true">${motionImages.map((image, index) => `<img src="${escapeHtml(image.mediaUrl)}" alt="" data-motion-hero-background="${index}" class="${index === 0 ? "active" : ""}">`).join("")}</div><div class="store-motion-hero-copy"><h3 data-motion-hero-title>${escapeHtml(motionImages[0].title)}</h3><p data-motion-hero-caption>${escapeHtml(motionImages[0].caption)}</p></div><div class="store-motion-filmstrip">${motionImages.map((image, index) => `<button type="button" data-motion-hero-to="${index}" data-motion-title="${escapeHtml(image.title)}" data-motion-caption="${escapeHtml(image.caption)}" aria-label="Ver ${escapeHtml(image.title)}" aria-current="${index === 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</button>`).join("")}</div><div class="store-motion-hero-rail"><span data-motion-hero-status>01</span><span>${String(motionImages.length).padStart(2, "0")}</span></div></div>`;
+      blockHtml = `<div class="store-motion-hero" data-motion-hero role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}" tabindex="0"><div class="store-motion-hero-backgrounds" aria-hidden="true">${motionImages.map((image, index) => `<img src="${escapeHtml(image.mediaUrl)}" alt="" data-motion-hero-background="${index}" class="${index === 0 ? "active" : ""}">`).join("")}</div><div class="store-motion-hero-copy"><h3 data-motion-hero-title>${escapeHtml(motionImages[0].title)}</h3><p data-motion-hero-caption>${escapeHtml(motionImages[0].caption)}</p></div><div class="store-motion-filmstrip">${motionImages.map((image, index) => `<button type="button" data-motion-hero-to="${index}" data-motion-title="${escapeHtml(image.title)}" data-motion-caption="${escapeHtml(image.caption)}" aria-label="Ver ${escapeHtml(image.title)}" aria-current="${index === 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</button>`).join("")}</div><div class="store-motion-hero-rail"><span data-motion-hero-status>01</span><span>${String(motionImages.length).padStart(2, "0")}</span></div></div>`;
     } else if (animation.type === "image-stream" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-image-stream" data-image-stream style="--stream-count:${motionImages.length}" aria-label="${escapeHtml(publicTitle)}"><div class="store-image-stream-copy"><h3>${escapeHtml(publicTitle)}</h3><p>${escapeHtml(publicSubtitle)}</p></div><div class="store-image-stream-rail stream-right" aria-hidden="true">${motionImages.map((image, index) => `<figure style="--stream-index:${index}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, "")}</figure>`).join("")}</div><div class="store-image-stream-rail stream-left" aria-hidden="true">${motionImages.map((image, index) => `<figure style="--stream-index:${index}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, "")}</figure>`).join("")}</div></div>`;
+      blockHtml = `<div class="store-image-stream" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-image-stream-grid">${motionImages.map((image) => `<figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, "")}</figure>`).join("")}</div></div>`;
     } else if (animation.type === "scroll-expansion" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-scroll-expansion" data-scroll-expansion style="--expansion-progress:0" aria-label="${escapeHtml(publicTitle)}"><div class="store-scroll-expansion-sticky"><div class="store-scroll-expansion-background" aria-hidden="true">${fidelityImageHtml(motionImages[1].mediaUrl, motionImages[1].sourceUrl, "")}</div><figure>${fidelityImageHtml(motionImages[0].mediaUrl, motionImages[0].sourceUrl, motionImages[0].caption)}</figure><div class="store-scroll-expansion-copy"><h3>${escapeHtml(motionImages[0].title)}</h3><p>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
+      blockHtml = `<div class="store-scroll-expansion" data-scroll-expansion style="--expansion-progress:0" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-scroll-expansion-sticky"><div class="store-scroll-expansion-background" aria-hidden="true">${fidelityImageHtml(motionImages[1].mediaUrl, motionImages[1].sourceUrl, "")}</div><figure>${fidelityImageHtml(motionImages[0].mediaUrl, motionImages[0].sourceUrl, motionImages[0].caption)}</figure><div class="store-scroll-expansion-copy"><h3>${escapeHtml(motionImages[0].title)}</h3><p>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
     } else if (animation.type === "hero-gallery-scroll" && motionImages.length >= 3) {
-      blockHtml = `<div class="store-gallery-scroll" data-gallery-scroll aria-label="${escapeHtml(publicTitle)}"><div class="store-gallery-scroll-sticky"><div class="store-gallery-scroll-grid">${motionImages.slice(0, 5).map((image, index) => `<figure data-gallery-scroll-cell="${index}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure>`).join("")}</div><div class="store-gallery-scroll-copy"><h3>${escapeHtml(publicTitle)}</h3><p>${escapeHtml(publicSubtitle)}</p></div></div></div>`;
+      blockHtml = `<div class="store-gallery-scroll" data-gallery-scroll aria-label="${escapeHtml(accessibleLabel)}"><div class="store-gallery-scroll-sticky"><div class="store-gallery-scroll-grid">${motionImages.slice(0, 5).map((image, index) => `<figure data-gallery-scroll-cell="${index}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure>`).join("")}</div></div></div>`;
     } else if (animation.type === "stagger-testimonials" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(publicTitle)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<blockquote>“${escapeHtml(image.body)}”</blockquote><p>— ${escapeHtml(image.caption)}</p></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+      blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<blockquote>“${escapeHtml(image.body)}”</blockquote><p>— ${escapeHtml(image.caption)}</p></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     } else if (animation.type === "zoom-parallax" && motionImages.length >= 3) {
-      blockHtml = `<div class="store-motion-zoom" data-motion-zoom aria-label="${escapeHtml(publicTitle)}"><div class="store-motion-zoom-sticky">${motionImages.map((image, index) => `<div class="store-motion-zoom-layer store-motion-zoom-layer-${index}" data-zoom-index="${index}"><figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure></div>`).join("")}</div></div>`;
+      blockHtml = `<div class="store-motion-zoom" data-motion-zoom aria-label="${escapeHtml(accessibleLabel)}"><div class="store-motion-zoom-sticky">${motionImages.map((image, index) => `<div class="store-motion-zoom-layer store-motion-zoom-layer-${index}" data-zoom-index="${index}"><figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure></div>`).join("")}</div></div>`;
     } else if (animation.type === "video-pill" && motionStories.length >= 1) {
       const scene = motionStories[0];
-      blockHtml = `<div class="store-video-pill" data-video-pill aria-label="${escapeHtml(publicTitle)}"><div class="store-video-pill-sticky"><div class="store-video-pill-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-video-pill-copy"><span>01 · ${String(motionStories.length).padStart(2, "0")}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></div></div>`;
+      const kineticTopWord = animation.topWord?.trim() || "";
+      const kineticRightWord = animation.rightWord?.trim() || "";
+      const kineticBottomWord = animation.bottomWord?.trim() || "";
+      const kineticWordsHtml = `${kineticTopWord ? `<span class="store-video-pill-word store-video-pill-word-top">${escapeHtml(kineticTopWord)}</span>` : ""}${kineticRightWord ? `<span class="store-video-pill-word store-video-pill-word-right">${escapeHtml(kineticRightWord)}</span>` : ""}${kineticBottomWord ? `<span class="store-video-pill-word store-video-pill-word-bottom">${escapeHtml(kineticBottomWord)}</span>` : ""}`;
+      blockHtml = `<div class="store-video-pill" data-video-pill aria-label="${escapeHtml(accessibleLabel)}"><div class="store-video-pill-sticky"><div class="store-video-pill-kinetic" aria-hidden="true">${kineticWordsHtml}<div class="store-video-pill-clocks"><div><time data-video-pill-clock="Asia/Kolkata">--:--:--</time><span>INDIA</span></div><div><time data-video-pill-clock="America/New_York">--:--:--</time><span>NUEVA YORK</span></div><div><time data-video-pill-clock="Asia/Dubai">--:--:--</time><span>DUBÁI</span></div></div></div><div class="store-video-pill-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="auto"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div></div></div>`;
     } else if (animation.type === "portfolio-scroller" && motionStories.length >= 2) {
-      blockHtml = `<div class="store-portfolio" data-portfolio-scroller tabindex="0" role="region" aria-label="${escapeHtml(publicTitle)}"><nav aria-label="Momentos de ${escapeHtml(publicTitle)}">${motionStories.map((scene, index) => `<button type="button" data-portfolio-to="${index}" aria-current="${index === 0}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(scene.title)}</strong></button>`).join("")}</nav><div class="store-portfolio-stage">${motionStories.map((scene, index) => `<article data-portfolio-panel="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><div class="store-portfolio-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-portfolio-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></article>`).join("")}</div></div>`;
+      blockHtml = `<div class="store-portfolio" data-portfolio-scroller tabindex="0" role="region" aria-label="${escapeHtml(accessibleLabel)}"><nav aria-label="Escenas de ${escapeHtml(accessibleLabel)}">${motionStories.map((scene, index) => `<button type="button" data-portfolio-to="${index}" aria-current="${index === 0}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(scene.title)}</strong></button>`).join("")}</nav><div class="store-portfolio-stage">${motionStories.map((scene, index) => `<article data-portfolio-panel="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><div class="store-portfolio-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-portfolio-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></article>`).join("")}</div></div>`;
     } else if (animation.type === "circle-reveal" && motionStories.length >= 1) {
       const scene = motionStories[0];
-      blockHtml = `<div class="store-circle-reveal" data-circle-reveal aria-label="${escapeHtml(publicTitle)}"><div class="store-circle-reveal-sticky"><div class="store-circle-reveal-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-circle-reveal-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></div></div>`;
+      blockHtml = `<div class="store-circle-reveal" data-circle-reveal aria-label="${escapeHtml(accessibleLabel)}"><div class="store-circle-reveal-sticky"><div class="store-circle-reveal-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-circle-reveal-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></div></div>`;
     } else if (animation.type === "clarity-marquee") {
       const phrases = [...new Set([
         selectedProduct?.name,
         ...(selectedProduct?.tags ?? []),
         ...store.items.map((item) => item.name),
-        publicTitle,
         store.storeName,
       ].map((phrase) => phrase?.trim()).filter((phrase): phrase is string => !!phrase))].slice(0, 8);
       const phraseHtml = phrases.map((phrase, index) => `<span><b>${String(index + 1).padStart(2, "0")}</b>${escapeHtml(phrase)}</span>`).join("");
-      blockHtml = `<div class="store-clarity-marquee" data-clarity-marquee aria-label="${escapeHtml(publicTitle)}"><div class="store-clarity-marquee-copy"><h3>${escapeHtml(publicTitle)}</h3><p>${escapeHtml(publicSubtitle)}</p></div><div class="store-clarity-rail"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div><div class="store-clarity-rail reverse"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div></div>`;
+      blockHtml = `<div class="store-clarity-marquee" data-clarity-marquee aria-label="${escapeHtml(accessibleLabel)}"><div class="store-clarity-rail"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div><div class="store-clarity-rail reverse"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div></div>`;
     } else if (animation.type === "full-screen-chapters" && motionStories.length >= 2) {
-      blockHtml = `<div class="store-full-chapters" data-full-chapters role="region" aria-label="${escapeHtml(publicTitle)}" style="height:${Math.max(220, motionStories.length * 90)}svh"><div class="store-full-chapters-sticky"><div class="store-full-chapter-backgrounds" aria-hidden="true">${motionStories.map((scene, index) => `<div data-full-chapter-bg="${index}" class="${index === 0 ? "active" : ""}">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, "")}</div>`).join("")}</div><div class="store-full-chapter-copy">${motionStories.map((scene, index) => `<article data-full-chapter-copy="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><span>${String(index + 1).padStart(2, "0")} / ${String(motionStories.length).padStart(2, "0")}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></article>`).join("")}</div><div class="store-full-chapter-progress" aria-hidden="true"><span></span></div></div></div>`;
+      blockHtml = `<div class="store-full-chapters" data-full-chapters role="region" aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(220, motionStories.length * 90)}svh"><div class="store-full-chapters-sticky"><div class="store-full-chapter-backgrounds" aria-hidden="true">${motionStories.map((scene, index) => `<div data-full-chapter-bg="${index}" class="${index === 0 ? "active" : ""}">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, "")}</div>`).join("")}</div><div class="store-full-chapter-copy">${motionStories.map((scene, index) => `<article data-full-chapter-copy="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><span>${String(index + 1).padStart(2, "0")} / ${String(motionStories.length).padStart(2, "0")}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></article>`).join("")}</div><div class="store-full-chapter-progress" aria-hidden="true"><span></span></div></div></div>`;
     } else if (animation.type === "magnetic-target" && motionImages.length >= 1) {
       const scene = motionImages[0];
       const magneticHref = selectedProduct ? productPageUrl(slug, selectedProduct.id) : "#store-grid";
       const magneticLabel = selectedProduct ? `Ver ${selectedProduct.name}` : "Explorar colección";
-      blockHtml = `<div class="store-magnetic" data-magnetic-target style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)"><div class="store-magnetic-copy"><span>${escapeHtml(scene.caption)}</span><h3>${escapeHtml(publicTitle)}</h3><p>${escapeHtml(scene.body || publicSubtitle)}</p></div><a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
+      blockHtml = `<div class="store-magnetic" data-magnetic-target style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)"><div class="store-magnetic-copy"><span>${escapeHtml(scene.caption)}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div><a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
     } else if (animation.type === "frame-sequence" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(publicTitle)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}" class="${index === 0 ? "active" : ""}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</div>`).join("")}</div><div class="store-frame-copy"><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-frame-title>${escapeHtml(motionImages[0].title)}</h3><p data-frame-body>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
+      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}" class="${index === 0 ? "active" : ""}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</div>`).join("")}</div><div class="store-frame-copy"><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-frame-title>${escapeHtml(motionImages[0].title)}</h3><p data-frame-body>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
     } else if (animation.type === "3d-gallery" && motionImages.length >= 3) {
-      blockHtml = `<div class="store-space-gallery" data-space-gallery tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(publicTitle)}"><div class="store-space-gallery-stage">${motionImages.map((image, index) => `<figure data-space-card="${index}" style="--space-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure>`).join("")}</div><div class="store-experience-controls"><button type="button" data-space-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span data-space-status aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-space-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+      blockHtml = `<div class="store-space-gallery" data-space-gallery tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-space-gallery-stage">${motionImages.map((image, index) => `<figure data-space-card="${index}" style="--space-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure>`).join("")}</div><div class="store-experience-controls"><button type="button" data-space-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span data-space-status aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-space-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     }
     const productActionHtml = selectedProduct && animation.type !== "magnetic-target"
       ? `<a class="store-motion-product-link" href="${escapeHtml(productPageUrl(slug, selectedProduct.id))}"><span><small>Producto destacado</small><strong>${escapeHtml(selectedProduct.name)}</strong></span>${ICON_ARROW_RIGHT}</a>`
       : "";
+    const descriptionHtml = publicDescription
+      ? `<div class="store-motion-description"><p>${escapeHtml(publicDescription)}</p></div>`
+      : "";
     const html = blockHtml
-      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-labelledby="${titleId}"><div class="store-motion-intro"><h2 id="${titleId}">${escapeHtml(publicTitle)}</h2><p>${escapeHtml(publicSubtitle)}</p></div>${blockHtml}${productActionHtml}</section>`
+      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-label="${escapeHtml(accessibleLabel)}">${descriptionHtml}${blockHtml}${productActionHtml}</section>`
       : "";
     return [sectionKey, html];
   }));
@@ -3176,33 +3435,38 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     links: linksHtml,
     ...motionSectionHtmlByKey,
   };
-  const orderedSectionsHtml = contentOrder.map((section) => sectionHtml[section] || "").join("");
-  const storefrontNavigationItems = [
-    { href: "#store-products", label: "Tienda", visible: true },
-    { href: "#store-location", label: "Ubicación", visible: locations.length > 0 },
-    { href: "#store-contact", label: "Contacto", visible: store.contactFormEnabled === true },
-  ].filter((item) => item.visible);
+  const orderedSectionsHtml = selectedCatalogSection
+    ? productsHtml
+    : contentOrder.map((section) => sectionHtml[section] || "").join("");
   app.innerHTML = `
-    <header class="merchant-header store-site-header${!visibleStoreName && logoUrl ? " has-prominent-logo" : ""}${!visibleStoreName && logoUrl && !store.tagline ? " is-logo-only" : ""}" id="store-top">
-      <a class="store-site-brand" href="#store-top" aria-label="${escapeHtml(visibleStoreName ? `Ir al inicio de ${visibleStoreName}` : "Ir al inicio de la tienda")}">
-        ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="${visibleStoreName ? "" : "Logo de la tienda"}">` : ""}
-        ${visibleStoreName || store.tagline ? `<div class="merchant-header-copy">
-          ${visibleStoreName ? `<h1 class="store-title">${escapeHtml(visibleStoreName)}</h1>` : ""}
-          ${store.tagline ? `<span class="store-tagline">${escapeHtml(store.tagline)}</span>` : ""}
-        </div>` : ""}
-      </a>
-      <nav class="store-site-nav" aria-label="Secciones de la tienda">
-        ${storefrontNavigationItems.map((item) => `<a href="${item.href}">${item.label}</a>`).join("")}
-      </nav>
-      <div class="store-site-utility">
-        ${storePreviewMode || storeOwnerMode ? "" : `<a class="store-directory-back" href="/stores/">${ICON_ARROW_LEFT}<span>Volver a Mi Tienda</span></a>`}
-      </div>
-    </header>
+    ${storefrontHeaderHtml(slug, store, { current: selectedCatalogSection ? "catalog" : "home", catalogUrl: selectedCatalogSection ? categoryPageUrl(slug, selectedCatalogSection.id) : storeCatalogUrl(slug) })}
     ${announcementHtml}
     ${orderedSectionsHtml}
     <div class="secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>
-    ${promotionHtml}
+    ${selectedCatalogSection ? "" : promotionHtml}
   `;
+
+  // CSS transforms can place an image far from its untransformed box, which
+  // makes native lazy-loading postpone it until after the animation is visible.
+  // Warm each motion section shortly before it reaches the viewport instead.
+  const motionMediaSections = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section"));
+  const warmMotionMedia = (section: HTMLElement) => {
+    section.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((image) => {
+      image.loading = "eager";
+    });
+  };
+  if (typeof IntersectionObserver === "function") {
+    const motionMediaObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        warmMotionMedia(entry.target as HTMLElement);
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: "900px 0px" });
+    motionMediaSections.forEach((section) => motionMediaObserver.observe(section));
+  } else {
+    motionMediaSections.forEach(warmMotionMedia);
+  }
 
   app.querySelector<HTMLButtonElement>(".store-locations-toggle")?.addEventListener("click", (event) => {
     const button = event.currentTarget as HTMLButtonElement;
@@ -3689,6 +3953,49 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const fullChapters = Array.from(app.querySelectorAll<HTMLElement>("[data-full-chapters]"));
   if (videoPills.length || circleReveals.length || frameSequences.length || fullChapters.length) {
     const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    const videoPillClockFormatters = Array.from(
+      app.querySelectorAll<HTMLTimeElement>("[data-video-pill-clock]"),
+    ).map((clock) => {
+      try {
+        return {
+          clock,
+          formatter: new Intl.DateTimeFormat("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            timeZone: clock.dataset.videoPillClock || "UTC",
+            hour12: false,
+          }),
+        };
+      } catch {
+        return { clock, formatter: null };
+      }
+    });
+    const updateVideoPillClocks = () => {
+      const now = new Date();
+      videoPillClockFormatters.forEach(({ clock, formatter }) => {
+        clock.textContent = formatter?.format(now) || "--:--:--";
+      });
+    };
+    updateVideoPillClocks();
+    const videoPillClockTimer = videoPillClockFormatters.length
+      ? window.setInterval(updateVideoPillClocks, 1000)
+      : 0;
+    const videoPillPlaybackListeners = videoPills.flatMap((pill) => {
+      const video = pill.querySelector<HTMLVideoElement>("video");
+      const media = pill.querySelector<HTMLElement>(".store-video-pill-media");
+      if (!video || !media) return [];
+      const showVideo = () => media.classList.add("is-video-playing");
+      const showPoster = () => media.classList.remove("is-video-playing");
+      const showReadyVideo = () => media.classList.add("is-video-ready");
+      video.addEventListener("playing", showVideo);
+      video.addEventListener("loadeddata", showReadyVideo);
+      video.addEventListener("canplay", showReadyVideo);
+      video.addEventListener("error", showPoster);
+      video.addEventListener("emptied", showPoster);
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) showReadyVideo();
+      return [{ video, media, showVideo, showPoster, showReadyVideo }];
+    });
     let frame = 0;
     const progressFor = (element: HTMLElement) => {
       const travel = Math.max(element.offsetHeight - window.innerHeight, 1);
@@ -3697,24 +4004,42 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const syncVideo = (container: HTMLElement, shouldPlay: boolean) => {
       const video = container.querySelector<HTMLVideoElement>("video");
       if (!video) return;
-      if (shouldPlay && !reduceMotion?.matches) void video.play().catch(() => undefined);
-      else video.pause();
+      const media = video.closest<HTMLElement>(".store-video-pill-media");
+      const nextPlaybackState = shouldPlay && !reduceMotion?.matches ? "playing" : "paused";
+      if (video.dataset.motionPlayback === nextPlaybackState) return;
+      video.dataset.motionPlayback = nextPlaybackState;
+      if (nextPlaybackState === "playing") {
+        void video.play().then(() => {
+          if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) media?.classList.add("is-video-playing");
+        }).catch(() => {
+          video.dataset.motionPlayback = "paused";
+          media?.classList.remove("is-video-playing");
+        });
+      } else {
+        if (!video.paused) video.pause();
+        media?.classList.remove("is-video-playing");
+      }
     };
     const paint = () => {
       frame = 0;
       videoPills.forEach((pill) => {
-        const progress = reduceMotion?.matches ? 1 : progressFor(pill);
+        const reduced = Boolean(reduceMotion?.matches);
+        const progress = reduced ? 0 : progressFor(pill);
         const media = pill.querySelector<HTMLElement>(".store-video-pill-media");
-        const copy = pill.querySelector<HTMLElement>(".store-video-pill-copy");
+        const kinetic = pill.querySelector<HTMLElement>(".store-video-pill-kinetic");
         if (media) {
-          media.style.transform = `translate(-50%,-50%) scale(${.38 + progress * .62})`;
-          media.style.borderRadius = `${Math.max(0, 999 * (1 - progress))}px`;
+          const remaining = 1 - progress;
+          media.style.clipPath = reduced
+            ? "inset(8% 5% 8% 5% round 12px)"
+            : `inset(${18 * remaining}% ${18 * remaining}% ${18 * remaining}% ${22 * remaining}% round ${12 * remaining}px)`;
+          media.style.transform = "";
+          media.style.borderRadius = "";
         }
-        if (copy) {
-          copy.style.opacity = String(Math.max(0, Math.min(1, (progress - .45) * 2.4)));
-          copy.style.transform = `translateY(${(1 - progress) * 24}px)`;
+        if (kinetic) {
+          kinetic.style.opacity = String(1 - progress);
+          kinetic.style.transform = reduced ? "none" : `scale(${1 + progress * .15})`;
         }
-        syncVideo(pill, progress > .08 && progress < .98);
+        syncVideo(pill, !reduced && progress > .08 && progress < .98);
       });
       circleReveals.forEach((reveal) => {
         const progress = reduceMotion?.matches ? 1 : progressFor(reveal);
@@ -3767,33 +4092,24 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     activeStoreExperienceCleanup = () => {
       (priorCleanup as (() => void) | null)?.();
       if (frame) window.cancelAnimationFrame(frame);
+      if (videoPillClockTimer) window.clearInterval(videoPillClockTimer);
       window.removeEventListener("scroll", requestPaint);
       window.removeEventListener("resize", requestPaint);
       reduceMotion?.removeEventListener("change", requestPaint);
       [...videoPills, ...circleReveals, ...fullChapters].forEach((container) =>
         container.querySelectorAll<HTMLVideoElement>("video").forEach((video) => video.pause()),
       );
+      videoPillPlaybackListeners.forEach(({ video, media, showVideo, showPoster, showReadyVideo }) => {
+        video.removeEventListener("playing", showVideo);
+        video.removeEventListener("loadeddata", showReadyVideo);
+        video.removeEventListener("canplay", showReadyVideo);
+        video.removeEventListener("error", showPoster);
+        video.removeEventListener("emptied", showPoster);
+        media.classList.remove("is-video-playing");
+        media.classList.remove("is-video-ready");
+      });
     };
   }
-
-  app.querySelectorAll<HTMLElement>("[data-image-stream]").forEach((imageStream) => {
-    let isVisible = true;
-    const syncStream = () => imageStream.classList.toggle("is-paused", document.hidden || !isVisible);
-    const streamObserver = typeof IntersectionObserver === "function"
-      ? new IntersectionObserver(([entry]) => {
-          isVisible = entry?.isIntersecting ?? true;
-          syncStream();
-        }, { threshold: .05 })
-      : null;
-    streamObserver?.observe(imageStream);
-    document.addEventListener("visibilitychange", syncStream);
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
-      (priorCleanup as (() => void) | null)?.();
-      streamObserver?.disconnect();
-      document.removeEventListener("visibilitychange", syncStream);
-    };
-  });
 
   app.querySelectorAll<HTMLElement>("[data-scroll-expansion]").forEach((scrollExpansion) => {
     const expansionFigure = scrollExpansion.querySelector<HTMLElement>(".store-scroll-expansion-sticky > figure");
@@ -4025,7 +4341,13 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     });
   }
 
-  const moveToCatalogLayer = (nextCategoryId: string, targetSelector: string) => {
+  const moveToCatalogLayer = (nextCategoryId: string, targetSelector: string, destination: string) => {
+    const updateHistory = nextCategoryId === "ALL" ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
+    updateHistory(
+      { pagosyaView: nextCategoryId === "ALL" ? "catalog" : "category", categoryId: nextCategoryId === "ALL" ? null : nextCategoryId },
+      "",
+      destination,
+    );
     selectedCategoryId = nextCategoryId;
     searchQuery = "";
     renderStore(slug, store, { focusPromotion: false });
@@ -4040,17 +4362,24 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     });
   };
 
-  app.querySelectorAll<HTMLButtonElement>("[data-catalog-section]").forEach((sectionButton) => {
-    sectionButton.addEventListener("click", () => moveToCatalogLayer(sectionButton.dataset.catalogSection!, "#store-catalog-browser"));
+  app.querySelectorAll<HTMLAnchorElement>("[data-catalog-section]").forEach((sectionLink) => {
+    sectionLink.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      moveToCatalogLayer(sectionLink.dataset.catalogSection!, "#store-catalog-browser", sectionLink.href);
+    });
   });
-  app.querySelector<HTMLButtonElement>(".catalog-section-back")?.addEventListener("click", () => {
-    moveToCatalogLayer("ALL", ".catalog-section-picker");
+  app.querySelector<HTMLAnchorElement>(".catalog-section-back")?.addEventListener("click", (event) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    moveToCatalogLayer("ALL", ".catalog-section-picker", (event.currentTarget as HTMLAnchorElement).href);
   });
 
   bindCartCheckout(slug, store);
   bindInternalStoreLinks(slug, store);
 
   renderStoreGrid(slug, store, currency);
+  annotateStorePreviewEditor(store);
   hasStoreAnimatedIn = true;
   if (storePreviewMode && !previewReadyAnnounced) {
     previewReadyAnnounced = true;
@@ -4067,6 +4396,7 @@ if (storePreviewMode) {
     if (!event.data || event.data.type !== "PAGOSYA_STORE_PREVIEW") return;
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
+    storePreviewEditorEnabled = event.data.editorMode !== false;
     let previewStore = { ...activePreviewStore.store, ...patch };
     const previewProduct = sanitizeStorePreviewProduct(event.data.previewProduct, previewStore);
     if (previewProduct) {
@@ -4229,6 +4559,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
   bindInternalStoreLinks(slug, store);
 
   updateCartBar(store, currency);
+  annotateStorePreviewEditor(store);
 }
 
 function updateCartBar(store: Store, currency: string): void {
@@ -4245,6 +4576,17 @@ function updateCartBar(store: Store, currency: string): void {
   }
   const cartBar = app.querySelector<HTMLElement>(".cart-bar");
   if (cartBar) cartBar.hidden = cartCount() === 0;
+  const headerCart = app.querySelector<HTMLButtonElement>(".store-header-cart");
+  const headerCount = headerCart?.querySelector<HTMLElement>(".store-header-cart-count");
+  const count = cartCount();
+  if (headerCart) {
+    headerCart.disabled = count === 0;
+    headerCart.setAttribute("aria-label", `Abrir carrito, ${count} ${count === 1 ? "producto" : "productos"}`);
+  }
+  if (headerCount) {
+    headerCount.textContent = String(count);
+    headerCount.hidden = count === 0;
+  }
 }
 
 function renderForm(session: CheckoutSession, clientSecret: string) {

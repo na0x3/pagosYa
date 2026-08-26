@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
-import { STORE_MOTION_EXPERIENCES } from "./create-store.dto";
+import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "./create-store.dto";
 
 export class GenerateVisualProposalsDto {
   @ApiPropertyOptional({ description: "Whether the storefront announcement should move as a marquee instead of staying static." })
@@ -23,9 +23,9 @@ export class GenerateVisualProposalsDto {
   @IsIn(STORE_MOTION_EXPERIENCES, { each: true })
   motionExperiences?: string[];
 
-  @ApiPropertyOptional({ description: "Storefront font family every generated direction must use.", enum: ["mono", "modern", "editorial", "friendly"] })
+  @ApiPropertyOptional({ description: "Storefront font family every generated direction must use.", enum: STORE_FONT_STYLES })
   @IsOptional()
-  @IsIn(["mono", "modern", "editorial", "friendly"])
+  @IsIn(STORE_FONT_STYLES)
   fontStyle?: string;
 
   @ApiPropertyOptional({ description: "Optional extra merchant-owned image URLs. The generator automatically reuses images already present in the store and catalog.", type: [String] })

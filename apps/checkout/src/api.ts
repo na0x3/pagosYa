@@ -123,6 +123,9 @@ export interface StoreAnimation {
   type: StoreMotionExperience;
   title?: string;
   subtitle?: string;
+  topWord?: string;
+  rightWord?: string;
+  bottomWord?: string;
   productId?: string;
   media: StoreEditorialImage[];
 }
@@ -182,7 +185,7 @@ export interface Store {
   // "#RRGGBB" brand accent; null = default palette accent.
   accentColor: string | null;
   // Curated merchant storefront font family.
-  fontStyle: "mono" | "modern" | "editorial" | "friendly";
+  fontStyle: "modern" | "editorial" | "friendly" | "classic" | "geometric";
   // "rounded" | "pill" | "square"
   buttonStyle: string;
   // "chalkboard" | "kraft" | "painted" — storefront ground material.

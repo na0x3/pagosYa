@@ -5,6 +5,7 @@
 export type CheckoutEventType =
   | "CHECKOUT_READY"
   | "CHECKOUT_RESIZE"
+  | "STORE_EDITOR_SELECT"
   | "PAYMENT_PROCESSING"
   | "PAYMENT_SUCCEEDED"
   | "PAYMENT_FAILED"

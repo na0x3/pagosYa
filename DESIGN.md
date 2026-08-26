@@ -173,7 +173,7 @@ The shared semantic core still uses indigo for focus, amber for pagosYa brand ac
 
 **pagosYa Body/Label/Display Font:** "0xProto Mono" (bold weight only, loaded via `@font-face`), falling back to `ui-monospace, SF Mono, Menlo, monospace`.
 
-**Merchant Storefront Fonts:** one store-wide selection from four curated, local/system stacks: PagosYa Mono (`0xProto Mono`), Moderna (Avenir / system UI), Editorial (Georgia), or Cercana (Trebuchet MS / Avenir). Do not accept arbitrary font URLs, uploads, or CSS family values.
+**Merchant Storefront Fonts:** one store-wide selection from five curated, local/system stacks: Moderna (Avenir / system UI), Editorial (Georgia), Cercana (Trebuchet MS / Avenir), Clásica (Palatino / Book Antiqua), or Geométrica (Futura / Century Gothic). Do not accept arbitrary font URLs, uploads, or CSS family values. The pagosYa Mono face is reserved for pagosYa-owned product surfaces and is not a storefront option.
 
 **Character:** One face per surface. pagosYa-owned UI always uses 0xProto Mono. A merchant storefront uses exactly one selected family across navigation, story, catalog, prices, and calls to action; hierarchy still comes from size, weight, and spacing rather than mixing families.
 
@@ -330,7 +330,7 @@ Both admin workspaces deliberately break from that softness: primary containers 
 - Keep the flavor rail static and directly navigable; it is orientation and wayfinding, not a decorative ticker. Let the featured product span the catalog width on larger screens, then collapse every product to the same readable single-column sequence on small screens.
 
 ### Announcements & Promotions (storefront)
-- **Announcement marquee:** Duplicate copy only to create the seamless visual loop. Under `prefers-reduced-motion: reduce`, stop the animation and hide the duplicate so one readable announcement remains.
+- **Announcement marquee:** Keep the band permanently compact (34–37px) and directly below the storefront header on store, category, and product pages. White with graphite text is the default; an explicitly selected merchant color may override it. Duplicate copy only to create the seamless visual loop. Under `prefers-reduced-motion: reduce`, stop the animation and hide the duplicate so one readable announcement remains.
 - **Promotion dialog:** Use a true modal (`role="dialog"`, `aria-modal="true"`) with initial focus and a focus trap. Close it through the close button, CTA, backdrop, or Escape; dismissal must not depend on pointer input alone. Merchants may add one optional image, shown full-width above the copy without making the dialog depend on imagery.
 
 ### Branded Entry Loader
@@ -366,8 +366,9 @@ Both admin workspaces deliberately break from that softness: primary containers 
 ### Navigation
 - **Merchant dashboard:** a sticky, hard-shadowed side rail switches among Resumen, Tiendas, Categorías, Productos, Apariencia, Pagos, Desembolsos, and Cumplimiento. The active destination uses a section-specific pastel fill, dark ink, 2px keyline, and 4px block shadow. At 900px and narrower the rail becomes a horizontally scrollable full-width strip with a visible swipe hint; it does not collapse into a hidden hamburger menu.
 - **Ops:** retains its compact sticky anchor rail for reviews, incidents, and audit history; it does not inherit the merchant dashboard's pastel page-switching treatment.
-- **Checkout/storefront:** no global pagosYa navigation; the storefront uses its sticky search/filter toolbar and sticky cart bar.
-- **Public storefront return:** every customer-facing store begins with a visible **Volver a Mi Tienda** link to `/stores/`, before announcements and merchant identity, so shoppers can resume browsing the marketplace immediately. Keep it out of merchant preview and owner-device views. Treat it as a flat, merchant-deferential text control with a quiet 1px divider, no resting shadow, and the guarded store accent reserved for hover and the visible 3px focus ring.
+- **Checkout/storefront:** every hosted merchant site shares a white retail header with a 4px black top rule, merchant identity at left, Inicio/Catálogo plus available store sections in the middle, and search/marketplace/cart utilities at right. The header remains merchant-owned—never add global pagosYa product navigation—and becomes a two-row, horizontally scrollable composition on small screens.
+- **Public storefront return:** expose **Volver a Mi Tienda** as the labeled person/marketplace utility linking to `/stores/`; keep its accessible name even though the desktop reference uses icon-only utilities. Keep it out of merchant preview and owner-device views, and retain the guarded store accent for hover and the visible 3px focus ring.
+- **Image stream:** preserve saved image-stream content as a static, responsive image grid with its authored title and subtitle. Do not animate, duplicate, orbit, or auto-scroll these images.
 
 ### Merchant Dashboard View & Chart Motion
 - Page changes use one 220ms opacity-and-10px vertical entrance with the overshoot-free UI ease (`cubic-bezier(.23, 1, .32, 1)`).

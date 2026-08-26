@@ -661,6 +661,50 @@ test("typing keeps focus, preserves the iframe, and identifies the edited previe
   await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) => message.previewAction === "cart" && message.patch?.cartButtonLabel === "Finalizar pedido"))).toBe(true);
 });
 
+test("preview clicks open the exact editor and image colors become an editable palette", async ({ page }) => {
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+  }));
+  await page.route("http://localhost:3001/uploads/**", (route) => route.fulfill({
+    contentType: "image/svg+xml",
+    headers: { "access-control-allow-origin": "*", "cache-control": "public, max-age=3600" },
+    body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#d62828"/></svg>`,
+  }));
+  await openDashboard(page, [{
+    ...store("store_1", "Tienda editable"),
+    heroSlides: [{ imageUrl: "/uploads/hero-red.webp", title: "Temporada roja", body: "Una historia", ctaLabel: "Ver" }],
+    contentOrder: ["hero", "animation-opening", "products", "links"],
+    animations: [{ id: "opening", name: "Apertura", type: "video-pill", topWord: "creando", rightWord: "tu", bottomWord: "historia", media: [] }],
+  }]);
+
+  const previewFrame = page.frames().find((frame) => frame.url().startsWith("http://localhost:5175/"));
+  expect(previewFrame).toBeTruthy();
+  const selectInPreview = (selection) => previewFrame.evaluate((payload) => {
+    parent.postMessage({ source: "pagosya-checkout", type: "STORE_EDITOR_SELECT", payload: { selection: payload } }, "*");
+  }, selection);
+
+  await selectInPreview({ section: "brand", field: "storeName", label: "nombre de la tienda" });
+  await expect(page.locator("#storeNameInput")).toBeFocused();
+  await expect(page.locator("#previewSelectionStatus")).toContainText("nombre de la tienda");
+
+  await selectInPreview({ section: "animation-opening", field: "topWord", label: "texto superior", animationId: "opening" });
+  const animationCard = page.locator('.animation-card[data-animation-id="opening"]');
+  await expect(animationCard.locator('[data-animation-field="topWord"]')).toBeFocused();
+  await expect(animationCard.locator(".animation-card-toggle")).toHaveAttribute("aria-expanded", "true");
+
+  const paletteSwatch = page.locator("#storeImagePaletteSwatches [data-palette-color]").first();
+  await expect(paletteSwatch).toBeVisible();
+  const paletteColor = await paletteSwatch.getAttribute("data-palette-color");
+  await paletteSwatch.click();
+  await expect(page.locator("#storeAccentColor")).toHaveValue(paletteColor);
+  await expect(page.locator("#storeAccentToggle")).toBeChecked();
+
+  await page.locator("#previewEditMode").evaluate((button) => button.click());
+  await expect(page.locator("#previewEditMode")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#previewSelectionStatus")).toContainText("Navegación normal");
+});
+
 test("merchant can save every showcase animation type from the real appearance editor", async ({ page }) => {
   await page.route("http://localhost:5175/**", (route) => route.fulfill({
     contentType: "text/html",
@@ -726,6 +770,11 @@ test("merchant can upload a video directly to Video que se abre", async ({ page 
   await addAnimation(page, "video-pill");
   const card = page.locator(".animation-card").last();
 
+  await expect(card.locator('[data-animation-field="title"]')).toHaveCount(0);
+  await card.locator('[data-animation-field="topWord"]').fill("creando");
+  await card.locator('[data-animation-field="rightWord"]').fill("tu");
+  await card.locator('[data-animation-field="bottomWord"]').fill("historia");
+
   await expect(card.locator(".animation-video-upload")).toContainText("MP4 o WEBM de hasta 20 MB");
   await card.locator(".animation-video-input").setInputFiles({
     name: "still.png",
@@ -749,6 +798,9 @@ test("merchant can upload a video directly to Video que se abre", async ({ page 
   expect(write.body.animations).toEqual([
     expect.objectContaining({
       type: "video-pill",
+      topWord: "creando",
+      rightWord: "tu",
+      bottomWord: "historia",
       media: [expect.objectContaining({ imageUrl: "/v1/uploads/opening.mp4" })],
     }),
   ]);
@@ -885,7 +937,7 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   await animationCards.nth(0).locator(".animation-card-toggle").click();
   await animationCards.nth(0).locator('[data-animation-field="name"]').fill("Portada editorial");
   await animationCards.nth(0).locator('[data-animation-field="type"]').selectOption("hero-carousel");
-  await animationCards.nth(0).locator('[data-animation-field="title"]').fill("Colección principal");
+  await animationCards.nth(0).locator('[data-animation-field="subtitle"]').fill("Piezas elegidas para esta temporada.");
   for (let sourceIndex = 0; sourceIndex < 3; sourceIndex += 1) {
     await animationCards.nth(0).locator(`[data-animation-source="${sourceIndex}"]`).click({ force: true });
   }
@@ -951,7 +1003,8 @@ test("appearance and links save once to the captured store", async ({ page }) =>
   ]);
   expect(writes[0].body.contentOrder).toContain("contact");
   expect(writes[0].body.animations).toHaveLength(2);
-  expect(writes[0].body.animations[0]).toMatchObject({ name: "Portada editorial", type: "hero-carousel", title: "Colección principal" });
+  expect(writes[0].body.animations[0]).toMatchObject({ name: "Portada editorial", type: "hero-carousel", subtitle: "Piezas elegidas para esta temporada." });
+  expect(writes[0].body.animations[0]).not.toHaveProperty("title");
   expect(writes[0].body.animations[0].media).toHaveLength(3);
   expect(writes[0].body.animations[1]).toMatchObject({ name: "Historia final", type: "story-scroll" });
   expect(writes[0].body.animations[1].media).toHaveLength(2);
@@ -1820,6 +1873,21 @@ test("AI onboarding keeps prior photo batches and lets the merchant remove each 
   await expect(page.locator("#onboardingDialog")).toBeVisible();
 });
 
+test("storefront typography excludes Precisa and offers five curated choices", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Primera")]);
+  const assistantToggle = page.locator("#visualAssistantToggle");
+  if (await assistantToggle.getAttribute("aria-expanded") !== "true") await assistantToggle.click();
+
+  await expect(page.locator(".font-choice")).toHaveCount(5);
+  await expect(page.getByText("Precisa", { exact: true })).toHaveCount(0);
+  await expect(page.locator('.font-choice input[value="modern"]')).toBeChecked();
+  await expect(page.locator(".font-preview-editorial small")).toHaveCSS("font-family", /Georgia/);
+  await expect(page.locator(".font-preview-classic small")).toHaveCSS("font-family", /Palatino/);
+  await expect(page.locator(".font-preview-geometric small")).toHaveCSS("font-family", /Futura|Century Gothic|Avenir Next|Arial/);
+  await expect(page.locator("#storeFontStyle option")).toHaveCount(5);
+  await expect(page.locator('#storeFontStyle option[value="mono"]')).toHaveCount(0);
+});
+
 test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", async ({ page }) => {
   let uploadNumber = 0;
   let finishGeneration;
@@ -1846,7 +1914,7 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
 
   const assistantToggle = page.locator("#visualAssistantToggle");
   if (await assistantToggle.getAttribute("aria-expanded") !== "true") await assistantToggle.click();
-  await expect(page.locator(".font-choice")).toHaveCount(4);
+  await expect(page.locator(".font-choice")).toHaveCount(5);
   await expect(page.locator(".font-preview-editorial small")).toHaveCSS("font-family", /Georgia/);
   await page.locator('input[name="visualFontStyle"][value="editorial"]').check();
   await expect(page.locator('input[name="visualAnnouncementMarquee"]')).toHaveCount(2);

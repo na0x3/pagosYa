@@ -866,10 +866,11 @@
   .font-choice span { display: grid; gap: 5px; }
   .font-choice strong { font-size: 1rem; }
   .font-choice small { color: var(--pg-text-muted); font-size: .78rem; line-height: 1.35; }
-  .font-preview-mono { font-family: "0xProto Mono", "SFMono-Regular", Consolas, monospace; }
   .font-preview-modern { font-family: "Avenir Next", Avenir, system-ui, sans-serif; }
   .font-preview-editorial { font-family: Georgia, "Times New Roman", serif; }
   .font-preview-friendly { font-family: "Trebuchet MS", "Avenir Next", sans-serif; }
+  .font-preview-classic { font-family: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif; }
+  .font-preview-geometric { font-family: Futura, "Century Gothic", "Avenir Next", Arial, sans-serif; }
   .visual-conversion-choice { display: grid; gap: 8px; min-width: 0; }
   .visual-conversion-option { display: flex; align-items: flex-start; gap: 10px; min-height: 72px; padding: 11px 12px; border: 1.5px solid var(--pg-border); border-radius: 10px; background: var(--pg-surface); cursor: var(--pg-hand-cursor); transition: border-color .15s ease, background .15s ease; }
   .visual-conversion-option:has(input:checked) { border-color: var(--pg-accent); background: var(--pg-accent-soft); }
@@ -1268,6 +1269,27 @@
   .preview-device-switch { display: inline-flex; padding: 3px; border: 1px solid var(--pg-border); border-radius: 9px; background: var(--pg-bg); }
   .preview-device-switch button { padding: 5px 8px; border: 0; background: transparent; color: var(--pg-text-faint); font-size: 0.72rem; }
   .preview-device-switch button.active { background: var(--pg-surface); color: var(--pg-text); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .preview-edit-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 6px 9px; white-space: nowrap; }
+  .preview-edit-toggle svg { width: 15px; height: 15px; }
+  .preview-edit-toggle[aria-pressed="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
+  .preview-editor-tools { display: grid; gap: 9px; margin-bottom: 10px; }
+  .preview-section-nav { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+  .preview-section-nav button { flex: 0 0 auto; min-height: 34px; padding: 6px 9px; border-color: var(--pg-border); color: var(--pg-text-muted); font-size: .68rem; }
+  .preview-section-nav button[aria-current="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
+  .preview-selection-status { min-height: 1.4em; margin: 0; color: var(--pg-text-muted); font-size: .7rem; line-height: 1.45; }
+  .preview-selection-status strong { color: var(--pg-text); }
+  .store-image-palette { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 10px 11px; border: 2px solid var(--pg-border); background: var(--pg-surface); }
+  .store-image-palette-copy { min-width: 0; }
+  .store-image-palette-copy strong { display: block; margin-bottom: 2px; font-size: .74rem; }
+  .store-image-palette-copy span { display: block; color: var(--pg-text-muted); font-size: .65rem; line-height: 1.4; }
+  .store-image-palette-swatches { display: flex; align-items: center; gap: 6px; }
+  .store-image-palette-swatch { position: relative; width: 34px; height: 34px; padding: 0; overflow: hidden; border: 2px solid var(--pg-border-strong); background: var(--palette-color); color: transparent; }
+  .store-image-palette-swatch::after { content: ""; position: absolute; inset: 0; border: 2px solid color-mix(in srgb, var(--palette-color) 45%, white); pointer-events: none; }
+  .store-image-palette-swatch:hover, .store-image-palette-swatch:focus-visible { transform: translateY(-2px); border-color: var(--pg-text); }
+  .store-image-palette[aria-busy="true"] .store-image-palette-swatches { opacity: .45; }
+  .store-image-palette-empty { color: var(--pg-text-faint); font-size: .68rem; }
+  .editor-focus-pulse { position: relative; z-index: 1; animation: editor-focus-pulse 900ms var(--ease-out-ui); }
+  @keyframes editor-focus-pulse { 0%, 100% { box-shadow: none; } 25% { box-shadow: 0 0 0 4px var(--pg-focus-ring); } }
   .preview-icon-button { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid transparent; border-radius: 9px; color: var(--pg-text-muted); text-decoration: none; }
   .preview-icon-button:hover { background: var(--pg-accent-soft); color: var(--pg-text); }
   button.preview-icon-button:focus-visible,
@@ -1295,6 +1317,7 @@
     .store-preview-stage.is-loading .store-preview-status strong::before { animation-duration: 1.4s; }
     .visual-loader-card { transition: none; }
     .visual-loader-pulse { animation: none; }
+    .editor-focus-pulse { animation: none; outline: 3px solid var(--pg-accent); outline-offset: 3px; }
   }
 
   #error { color: var(--pg-error); background: var(--pg-error-soft); border: 1px solid var(--pg-error); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 0.85rem; white-space: pre-wrap; }
@@ -1576,6 +1599,9 @@
     .editor-feature > .full, .editor-feature-head { grid-column: 1; }
     .store-preview-toolbar { flex-wrap: wrap; }
     .store-preview-toolbar strong { flex: 1 0 100%; }
+    .preview-edit-toggle { flex: 1 1 auto; justify-content: center; }
+    .store-image-palette { grid-template-columns: 1fr; }
+    .store-image-palette-swatches { overflow-x: auto; padding-bottom: 3px; }
     .store-preview-stage { padding: 6px; }
     .visual-generating { grid-template-columns: 1fr; gap: 12px; }
     .visual-loader-shell { max-width: 330px; width: 100%; margin-inline: auto; }
@@ -3778,10 +3804,11 @@
               <fieldset class="visual-conversion visual-font-choice">
                 <legend>Elige la tipografía de tu sitio</legend>
                 <div class="font-choice-grid">
-                  <label class="font-choice font-preview-mono"><input type="radio" name="visualFontStyle" value="mono" checked><span><strong>Precisa</strong><small>Tu marca, clara y directa.</small></span></label>
-                  <label class="font-choice font-preview-modern"><input type="radio" name="visualFontStyle" value="modern"><span><strong>Moderna</strong><small>Tu marca, limpia y versátil.</small></span></label>
+                  <label class="font-choice font-preview-modern"><input type="radio" name="visualFontStyle" value="modern" checked><span><strong>Moderna</strong><small>Tu marca, limpia y versátil.</small></span></label>
                   <label class="font-choice font-preview-editorial"><input type="radio" name="visualFontStyle" value="editorial"><span><strong>Editorial</strong><small>Tu marca, elegante y artesanal.</small></span></label>
                   <label class="font-choice font-preview-friendly"><input type="radio" name="visualFontStyle" value="friendly"><span><strong>Cercana</strong><small>Tu marca, suave y amigable.</small></span></label>
+                  <label class="font-choice font-preview-classic"><input type="radio" name="visualFontStyle" value="classic"><span><strong>Clásica</strong><small>Tu marca, refinada y atemporal.</small></span></label>
+                  <label class="font-choice font-preview-geometric"><input type="radio" name="visualFontStyle" value="geometric"><span><strong>Geométrica</strong><small>Tu marca, expresiva y contemporánea.</small></span></label>
                 </div>
               </fieldset>
               <fieldset class="visual-preference">
@@ -4078,10 +4105,11 @@
               <div>
                 <label for="storeFontStyle">Tipografía de la tienda</label>
                 <select id="storeFontStyle">
-                  <option value="mono">PagosYa Mono: precisa y técnica</option>
                   <option value="modern">Moderna: limpia y versátil</option>
                   <option value="editorial">Editorial: elegante y artesanal</option>
                   <option value="friendly">Cercana: suave y amigable</option>
+                  <option value="classic">Clásica: refinada y atemporal</option>
+                  <option value="geometric">Geométrica: expresiva y contemporánea</option>
                 </select>
               </div>
               <div>
@@ -4149,7 +4177,7 @@
                   <input id="storeAnnouncementSize" type="hidden" value="small">
                   <p class="faint" style="margin:8px 0 0">Compacta, para que el anuncio acompañe sin quitar espacio al catálogo.</p>
                 </div>
-                <div><label for="storeAnnouncementColor">Color de fondo</label><input id="storeAnnouncementColor" type="color" value="#c58b3c"></div>
+                <div><label for="storeAnnouncementColor">Color de fondo</label><input id="storeAnnouncementColor" type="color" value="#ffffff"></div>
               </section>
 
               <section class="editor-settings-group is-disabled" id="storePromotionEditor" aria-labelledby="promotionSettingsTitle">
@@ -4263,6 +4291,10 @@
             <div class="store-preview-toolbar">
               <strong>Vista previa</strong>
               <span class="preview-live">En vivo</span>
+              <button type="button" class="ghost preview-edit-toggle" id="previewEditMode" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                Editar en pantalla
+              </button>
               <div class="preview-device-switch" aria-label="Tamaño de vista previa">
                 <button type="button" class="active" id="previewDesktop" aria-pressed="true">Escritorio</button>
                 <button type="button" id="previewMobile" aria-pressed="false">Móvil</button>
@@ -4273,6 +4305,23 @@
               <a class="preview-icon-button" id="previewOpen" href="#" target="_blank" rel="noopener noreferrer" title="Abrir tienda" aria-label="Abrir tienda en otra pestaña">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
               </a>
+            </div>
+            <div class="preview-editor-tools" id="previewEditorTools">
+              <nav class="preview-section-nav" aria-label="Editar tienda por secciones">
+                <button type="button" data-preview-editor-section="brand" data-preview-editor-field="storeNameInput">Identidad</button>
+                <button type="button" data-preview-editor-section="hero" data-preview-editor-field="storeBannerInput">Portada</button>
+                <button type="button" data-preview-editor-section="products" data-preview-editor-field="storeCatalogTitle">Catálogo</button>
+                <button type="button" data-preview-editor-section="about" data-preview-editor-field="storeAboutTitle">Historia</button>
+                <button type="button" data-preview-editor-section="gallery" data-preview-editor-field="storeGalleryTitle">Galería</button>
+                <button type="button" data-preview-editor-section="motion" data-preview-editor-field="animations">Animaciones</button>
+                <button type="button" data-preview-editor-section="contact" data-preview-editor-field="storeContactFormEnabled">Contacto</button>
+                <button type="button" data-preview-editor-section="links" data-preview-editor-field="links">Redes</button>
+              </nav>
+              <p class="preview-selection-status" id="previewSelectionStatus"><strong>Modo editor activo.</strong> Toca cualquier parte de la tienda para abrir su edición.</p>
+              <section class="store-image-palette" id="storeImagePalette" aria-labelledby="storeImagePaletteTitle" aria-busy="false">
+                <div class="store-image-palette-copy"><strong id="storeImagePaletteTitle">Paleta de tus fotos</strong><span id="storeImagePaletteStatus">Analizando las imágenes de esta tienda…</span></div>
+                <div class="store-image-palette-swatches" id="storeImagePaletteSwatches" aria-label="Colores extraídos de las imágenes"><span class="store-image-palette-empty">Sin colores todavía</span></div>
+              </section>
             </div>
             <div class="store-preview-stage is-empty" id="storePreviewStage">
               <iframe class="store-preview-frame" id="storePreviewFrame" title="Vista previa editable de la tienda" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
@@ -7142,6 +7191,9 @@
     "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
     "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
   ];
+  const STORE_FONT_STYLES = ["modern", "editorial", "friendly", "classic", "geometric"];
+  const STORE_FONT_STYLE_LABELS = { modern: "Moderna", editorial: "Editorial", friendly: "Cercana", classic: "Clásica", geometric: "Geométrica" };
+  const normalizeStoreFontStyle = (value) => STORE_FONT_STYLES.includes(value) ? value : "modern";
   const storeMotionExperienceEls = [...document.querySelectorAll('input[name="storeMotionExperience"]')];
   const storeEditorialGalleryInputEl = document.getElementById("storeEditorialGalleryInput");
   const storeEditorialGalleryListEl = document.getElementById("storeEditorialGalleryList");
@@ -7204,6 +7256,12 @@
   const previewOpenEl = document.getElementById("previewOpen");
   const previewDesktopEl = document.getElementById("previewDesktop");
   const previewMobileEl = document.getElementById("previewMobile");
+  const previewEditModeEl = document.getElementById("previewEditMode");
+  const previewEditorToolsEl = document.getElementById("previewEditorTools");
+  const previewSelectionStatusEl = document.getElementById("previewSelectionStatus");
+  const storeImagePaletteEl = document.getElementById("storeImagePalette");
+  const storeImagePaletteStatusEl = document.getElementById("storeImagePaletteStatus");
+  const storeImagePaletteSwatchesEl = document.getElementById("storeImagePaletteSwatches");
   const visualProgressEl = document.getElementById("visualProgress");
   const visualStepEls = [document.getElementById("visualStep1"), document.getElementById("visualStep2"), document.getElementById("visualStep3")];
   const visualSourcePreviewsEl = document.getElementById("visualSourcePreviews");
@@ -7591,6 +7649,10 @@
   let pendingStorePreviewTargetIndex = null;
   let pendingStorePreviewTargetKind = null;
   let pendingStorePreviewProduct = null;
+  let storePreviewEditorEnabled = true;
+  let storePaletteTimer = null;
+  let storePaletteRequest = 0;
+  let storePaletteSourceSignature = "";
   const STORE_PREVIEW_INPUT_DEBOUNCE_MS = 280;
   const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
   const MAX_HERO_SLIDES = 5;
@@ -7752,8 +7814,10 @@
       id: animation.id,
       name: animation.name.trim() || animationTypeCopy(animation.type)[0],
       type: animation.type,
-      ...(animation.title.trim() && { title: animation.title.trim() }),
       ...(animation.subtitle.trim() && { subtitle: animation.subtitle.trim() }),
+      ...(animation.type === "video-pill" && animation.topWord.trim() && { topWord: animation.topWord.trim() }),
+      ...(animation.type === "video-pill" && animation.rightWord.trim() && { rightWord: animation.rightWord.trim() }),
+      ...(animation.type === "video-pill" && animation.bottomWord.trim() && { bottomWord: animation.bottomWord.trim() }),
       ...(animation.productId && { productId: animation.productId }),
       media: animation.media.slice(0, animationMediaRequirement(animation.type).max).map((image) => ({
         imageUrl: image.imageUrl,
@@ -7840,14 +7904,19 @@
       const mediaEditorHtml = usesMedia
         ? `<div class="animation-media-picker"><div class="animation-media-picker-head"><div><strong>${animation.type === "video-pill" ? "Video o imagen principal" : mediaRequirement.max === 1 ? "Imagen principal" : "Fotos y textos de esta animación"}</strong><p>${esc(typeDescription)}. ${esc(mediaRequirement.copy)}</p></div><span class="animation-media-count">${visibleMedia.length} / ${mediaRequirement.max}</span></div>${videoUploadHtml}<div class="animation-source-grid">${sourceHtml}</div><div class="animation-media-list">${mediaHtml}</div></div>`
         : `<div class="animation-text-only-note"><strong>No necesitas seleccionar fotos</strong><p>${esc(mediaRequirement.copy)}${selectedProduct ? ` El producto “${esc(selectedProduct.name)}” también formará parte de las frases.` : ""}</p></div>`;
+      const videoWordsHtml = animation.type === "video-pill"
+        ? `<div><label for="animation-${animationIndex}-top-word">Texto superior</label><input id="animation-${animationIndex}-top-word" data-animation-field="topWord" maxlength="48" value="${esc(animation.topWord)}" placeholder="Ej. creando"></div>
+            <div><label for="animation-${animationIndex}-right-word">Texto derecho</label><input id="animation-${animationIndex}-right-word" data-animation-field="rightWord" maxlength="48" value="${esc(animation.rightWord)}" placeholder="Ej. tu"></div>
+            <div class="full"><label for="animation-${animationIndex}-bottom-word">Texto inferior</label><input id="animation-${animationIndex}-bottom-word" data-animation-field="bottomWord" maxlength="48" value="${esc(animation.bottomWord)}" placeholder="Ej. historia"><small>Estas tres líneas aparecen sobre el video y desaparecen mientras el visitante avanza.</small></div>`
+        : "";
       return `<article class="animation-card" data-animation-index="${animationIndex}" data-animation-id="${esc(animation.id)}">
         <div class="animation-card-head"><span class="animation-card-number">${animationIndex + 1}</span><div class="animation-card-identity"><strong>${esc(animation.name || typeLabel)}</strong><span>${esc(typeLabel)} · ${mediaSummary}${selectedProduct ? ` · ${esc(selectedProduct.name)}` : ""}</span></div><div class="animation-card-actions"><button type="button" class="ghost animation-card-toggle" aria-controls="animation-card-body-${animationIndex}"><span>Mostrar</span>${COLLAPSE_CHEVRON}</button><button type="button" class="ghost animation-remove" aria-label="Eliminar ${esc(animation.name || typeLabel)}">Eliminar</button></div></div>
         <div class="animation-card-body" id="animation-card-body-${animationIndex}">
           <div class="animation-basics">
             <div><label for="animation-${animationIndex}-name">Nombre para organizar</label><input id="animation-${animationIndex}-name" data-animation-field="name" maxlength="60" value="${esc(animation.name)}" placeholder="Ej. Lanzamiento de invierno"></div>
             <div><label for="animation-${animationIndex}-type">Tipo de animación</label><select id="animation-${animationIndex}-type" data-animation-field="type">${typeOptions.map((option) => `<option value="${option.type}" ${option.type === animation.type ? "selected" : ""}>${esc(option.label)} · ${esc(option.description)}</option>`).join("")}</select></div>
-            <div><label for="animation-${animationIndex}-title">Título visible</label><input id="animation-${animationIndex}-title" data-animation-field="title" maxlength="100" value="${esc(animation.title)}" placeholder="${esc(animation.name || typeLabel)}"></div>
-            <div><label for="animation-${animationIndex}-subtitle">Subtítulo visible</label><input id="animation-${animationIndex}-subtitle" data-animation-field="subtitle" maxlength="220" value="${esc(animation.subtitle)}" placeholder="Una frase que presenta esta sección"></div>
+            <div class="full"><label for="animation-${animationIndex}-subtitle">Descripción visible (opcional)</label><input id="animation-${animationIndex}-subtitle" data-animation-field="subtitle" maxlength="220" value="${esc(animation.subtitle)}" placeholder="Escribe una descripción o déjalo vacío"><small>No mostramos el nombre ni el tipo de animación en la tienda.</small></div>
+            ${videoWordsHtml}
             <div class="full animation-product-field"><label for="animation-${animationIndex}-product">Producto destacado (opcional)</label><select id="animation-${animationIndex}-product" data-animation-field="productId" ${activeProducts.length ? "" : "disabled"}>${productOptions}</select><small>${activeProducts.length ? "Su foto principal y contenido se incorporarán a la animación. También aparecerá un acceso directo al producto." : "Crea un producto activo para poder vincularlo a esta animación."}</small></div>
           </div>
           ${mediaEditorHtml}
@@ -7985,7 +8054,7 @@
     pendingAnimations.forEach((animation) => localStorage.setItem(animationDisclosureKey(animation.id), "false"));
     const id = animationId();
     const [name] = animationTypeCopy(type);
-    pendingAnimations.push({ id, name, type, title: "", subtitle: "", productId: "", media: [] });
+    pendingAnimations.push({ id, name, type, title: "", subtitle: "", topWord: "", rightWord: "", bottomWord: "", productId: "", media: [] });
     storeAnimationTypePickerEl.value = "";
     localStorage.setItem(animationDisclosureKey(id), "true");
     renderAnimationsEditor();
@@ -8332,7 +8401,7 @@
     const previewTargetKind = pendingStorePreviewTargetKind;
     const previewProduct = pendingStorePreviewProduct;
     storePreviewFrameEl.contentWindow.postMessage(
-      { type: "PAGOSYA_STORE_PREVIEW", patch: currentStorePreviewPatch(), previewSection, previewAction, previewTargetIndex, previewTargetKind, previewProduct },
+      { type: "PAGOSYA_STORE_PREVIEW", patch: currentStorePreviewPatch(), previewSection, previewAction, previewTargetIndex, previewTargetKind, previewProduct, editorMode: storePreviewEditorEnabled },
       targetOrigin,
     );
     if (storePreviewStageEl.classList.contains("is-ready")) {
@@ -8836,7 +8905,7 @@
             <div class="visual-proposal-meta">
               <span class="visual-swatch" style="background:${esc(proposalBackground)}" title="Fondo"></span>
               <span class="visual-swatch" style="background:${esc(config.accentColor || "#4f46e5")}" title="Acento"></span>
-              <span>${esc(config.fontStyle || "mono")} · ${proposal.provider?.startsWith("openai:") ? "sitio compuesto con IA" : "composición local"}</span>
+              <span>${esc(STORE_FONT_STYLE_LABELS[normalizeStoreFontStyle(config.fontStyle)])} · ${proposal.provider?.startsWith("openai:") ? "sitio compuesto con IA" : "composición local"}</span>
               ${featureLabels.map((label) => `<span class="visual-proposal-feature">${esc(label)}</span>`).join("")}
             </div>
           </div>
@@ -8936,6 +9005,7 @@
   function scheduleStorePreview(delay = 60) {
     clearTimeout(previewPostTimer);
     previewPostTimer = setTimeout(postStorePreview, delay);
+    scheduleStorePaletteExtraction();
   }
 
   function editableStorePreviewUrl() {
@@ -8994,14 +9064,303 @@
     }
   }
 
+  const STORE_PREVIEW_EDITOR_CONTROLS = {
+    storeName: "#storeNameInput",
+    storeTagline: "#storeTaglineInput",
+    storeLogo: "#storeLogoInput",
+    storeBanner: "#storeBannerInput",
+    storeBackground: "#storeBackgroundColor",
+    storeAccent: "#storeAccentColor",
+    announcementText: "#storeAnnouncementInput",
+    announcementMotion: "#storeAnnouncementMode",
+    catalogTitle: "#storeCatalogTitle",
+    catalogSubtitle: "#storeCatalogSubtitle",
+    aboutTitle: "#storeAboutTitle",
+    aboutSubtitle: "#storeAboutSubtitle",
+    aboutBody: "#storeAboutInput",
+    aboutImage: "#storeAboutImageInput",
+    galleryTitle: "#storeGalleryTitle",
+    gallerySubtitle: "#storeGallerySubtitle",
+    contact: "#storeContactFormEnabled",
+    location: "#storeLocationAdd",
+    promotionTitle: "#storePromotionTitle",
+    promotionBody: "#storePromotionBody",
+    promotionImage: "#storePromotionImageInput",
+    promotionAction: "#storePromotionCtaLabel",
+    cartButton: "#storeCartButtonLabel",
+    storeNameInput: "#storeNameInput",
+    storeBannerInput: "#storeBannerInput",
+    storeCatalogTitle: "#storeCatalogTitle",
+    storeAboutTitle: "#storeAboutTitle",
+    storeGalleryTitle: "#storeGalleryTitle",
+    storeContactFormEnabled: "#storeContactFormEnabled",
+  };
+
+  function setPreviewSectionCurrent(section) {
+    previewEditorToolsEl.querySelectorAll("[data-preview-editor-section]").forEach((button) => {
+      if (button.dataset.previewEditorSection === section || (section?.startsWith("animation-") && button.dataset.previewEditorSection === "motion")) {
+        button.setAttribute("aria-current", "true");
+      } else {
+        button.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  function expandEditorTarget(target) {
+    if (!(target instanceof Element)) return;
+    const editorSection = target.closest(".store-editor-section");
+    const editorToggle = editorSection?.querySelector(":scope > .editor-section-head .editor-section-toggle");
+    if (editorToggle?.getAttribute("aria-expanded") !== "true") editorToggle?.click();
+    const settingsGroup = target.closest(".editor-settings-group");
+    const settingsToggle = settingsGroup?.querySelector(":scope > .editor-settings-heading .settings-group-toggle");
+    if (settingsToggle?.getAttribute("aria-expanded") !== "true") settingsToggle?.click();
+    const animationCard = target.closest(".animation-card");
+    if (animationCard) {
+      storeAnimationsListEl.querySelectorAll(".animation-card").forEach((card) => {
+        if (card !== animationCard) setAnimationCardExpanded(card, false);
+      });
+      setAnimationCardExpanded(animationCard, true);
+    }
+  }
+
+  function focusEditorTarget(target, label) {
+    if (!(target instanceof HTMLElement)) return;
+    expandEditorTarget(target);
+    target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    window.setTimeout(() => {
+      if (typeof target.focus === "function") target.focus({ preventScroll: true });
+      const pulseTarget = target.closest(".animation-card, .editorial-gallery-row, .store-link-editor-row, .editor-settings-group, .store-editor-section") || target;
+      pulseTarget.classList.remove("editor-focus-pulse");
+      void pulseTarget.offsetWidth;
+      pulseTarget.classList.add("editor-focus-pulse");
+      window.setTimeout(() => pulseTarget.classList.remove("editor-focus-pulse"), 950);
+    }, 180);
+    previewSelectionStatusEl.innerHTML = `<strong>${esc(label || "Parte seleccionada")}.</strong> Ya abrimos su control de edición.`;
+  }
+
+  function selectStorePreviewEditorTarget(selection) {
+    const section = String(selection?.section || "");
+    const field = String(selection?.field || "");
+    const label = String(selection?.label || "Parte seleccionada").slice(0, 120);
+    setPreviewSectionCurrent(section);
+    if (selection?.itemId && lastPaymentLinks.some((product) => product.id === selection.itemId)) {
+      setDashboardView("products");
+      beginPaymentLinkEdit(lastPaymentLinks.find((product) => product.id === selection.itemId));
+      previewSelectionStatusEl.innerHTML = `<strong>${esc(label)}.</strong> El producto está listo para editarse.`;
+      return;
+    }
+    setDashboardView("appearance");
+    let target = null;
+    if ((section === "motion" || section.startsWith("animation-")) && selection?.animationId) {
+      const card = storeAnimationsListEl.querySelector(`.animation-card[data-animation-id="${CSS.escape(String(selection.animationId))}"]`);
+      if (card) {
+        const animationField = ["name", "type", "subtitle", "topWord", "rightWord", "bottomWord", "productId"].includes(field)
+          ? card.querySelector(`[data-animation-field="${field}"]`)
+          : ["title", "caption", "body"].includes(field)
+            ? card.querySelector(`[data-animation-media-field="${field}"]`)
+            : field === "media"
+              ? card.querySelector(".animation-video-upload-button, .animation-source, .animation-media-row")
+              : card.querySelector(".animation-card-toggle");
+        target = animationField || card;
+      }
+    } else if (section === "hero" && Number.isInteger(selection?.itemIndex)) {
+      const row = storeHeroSlidesListEl.querySelector(`.hero-slide-editor-row[data-index="${selection.itemIndex}"]`);
+      target = field === "title" ? row?.querySelector(".slide-title")
+        : field === "body" ? row?.querySelector(".slide-body")
+          : field === "ctaLabel" ? row?.querySelector(".slide-cta-label")
+            : row?.querySelector(".replace-slide-media") || row;
+    } else if (section === "gallery" && Number.isInteger(selection?.itemIndex)) {
+      const row = storeEditorialGalleryListEl.querySelector(`.editorial-gallery-row[data-index="${selection.itemIndex}"]`);
+      target = field === "editorialTitle" ? row?.querySelector(".editorial-title")
+        : field === "editorialCaption" ? row?.querySelector(".editorial-caption")
+          : field === "editorialBody" ? row?.querySelector(".editorial-body")
+            : row?.querySelector(".editorial-card-preview") || row;
+    } else if (section === "links") {
+      const index = Number.isInteger(selection?.itemIndex) ? selection.itemIndex : 0;
+      const row = storeLinksEditorEl.querySelector(`.store-link-editor-row[data-index="${index}"]`);
+      target = field === "linkUrl" ? row?.querySelector(".link-url") : row?.querySelector(".link-label") || document.getElementById("storeLinkAdd");
+    } else if (field === "animations") {
+      target = document.getElementById("storeAnimationTypePicker");
+    } else if (field === "links") {
+      target = storeLinksEditorEl.querySelector(".store-link-editor-row .link-label") || document.getElementById("storeLinkAdd");
+    } else {
+      target = document.querySelector(STORE_PREVIEW_EDITOR_CONTROLS[field] || "#storeNameInput");
+    }
+    focusEditorTarget(target, label);
+  }
+
+  function storePaletteImageUrls() {
+    const productImages = lastPaymentLinks.flatMap((product) => product.imageUrls || []);
+    const animationImages = pendingAnimations.flatMap((animation) => animation.media.map((media) => media.imageUrl));
+    return [...new Set([
+      pendingLogoUrl,
+      pendingBannerUrl,
+      pendingAboutImageUrl,
+      pendingPromotionImageUrl,
+      ...pendingHeroSlides.map((slide) => slide.imageUrl),
+      ...pendingEditorialGallery.map((image) => image.imageUrl),
+      ...animationImages,
+      ...productImages,
+    ].filter((url) => typeof url === "string" && url && !isVideoUploadUrl(url)))].slice(0, 8);
+  }
+
+  function dashboardAssetUrl(value) {
+    const source = String(value || "").trim();
+    if (!source) return "";
+    if (/^(?:data:|blob:|https?:\/\/)/i.test(source)) return source;
+    return apiRoot() + (source.startsWith("/") ? source : `/${source}`);
+  }
+
+  function palettePixelsForImage(source) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      let settled = false;
+      const finish = (pixels) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        resolve(pixels);
+      };
+      const timeout = window.setTimeout(() => {
+        image.src = "";
+        finish([]);
+      }, 3500);
+      image.crossOrigin = "anonymous";
+      image.decoding = "async";
+      image.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = 48;
+          canvas.height = 48;
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (!context) return finish([]);
+          context.drawImage(image, 0, 0, 48, 48);
+          finish([...context.getImageData(0, 0, 48, 48).data]);
+        } catch {
+          finish([]);
+        }
+      };
+      image.onerror = () => finish([]);
+      image.src = dashboardAssetUrl(source);
+    });
+  }
+
+  function paletteFromPixelSets(pixelSets) {
+    const buckets = new Map();
+    pixelSets.forEach((pixels) => {
+      for (let index = 0; index < pixels.length; index += 16) {
+        const alpha = pixels[index + 3];
+        if (alpha < 180) continue;
+        const red = pixels[index];
+        const green = pixels[index + 1];
+        const blue = pixels[index + 2];
+        const maximum = Math.max(red, green, blue);
+        const minimum = Math.min(red, green, blue);
+        const luminance = (maximum + minimum) / 2;
+        if (luminance < 18 || luminance > 244) continue;
+        const key = `${Math.round(red / 24) * 24},${Math.round(green / 24) * 24},${Math.round(blue / 24) * 24}`;
+        const bucket = buckets.get(key) || { red: 0, green: 0, blue: 0, count: 0, energy: 0 };
+        bucket.red += red;
+        bucket.green += green;
+        bucket.blue += blue;
+        bucket.count += 1;
+        bucket.energy += 1 + (maximum - minimum) / 255;
+        buckets.set(key, bucket);
+      }
+    });
+    const ranked = [...buckets.values()].sort((left, right) => right.energy - left.energy);
+    const selected = [];
+    for (const bucket of ranked) {
+      const color = [bucket.red, bucket.green, bucket.blue].map((channel) => Math.round(channel / bucket.count));
+      if (selected.some((existing) => Math.hypot(existing[0] - color[0], existing[1] - color[1], existing[2] - color[2]) < 58)) continue;
+      selected.push(color);
+      if (selected.length === 6) break;
+    }
+    return selected.map((color) => `#${color.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`);
+  }
+
+  function renderStoreImagePalette(colors) {
+    if (!colors.length) {
+      storeImagePaletteSwatchesEl.innerHTML = `<span class="store-image-palette-empty">Agrega una foto para crear la paleta</span>`;
+      storeImagePaletteStatusEl.textContent = "La paleta se actualizará al subir logo, productos o escenas.";
+      return;
+    }
+    storeImagePaletteStatusEl.textContent = "Toca un color para usarlo como acento de la tienda.";
+    storeImagePaletteSwatchesEl.innerHTML = colors.map((color) => `<button type="button" class="store-image-palette-swatch" style="--palette-color:${color}" data-palette-color="${color}" aria-label="Usar ${color} como color de marca" title="Usar ${color} como color de marca">${color}</button>`).join("");
+  }
+
+  async function extractStoreImagePalette(signature, sources) {
+    const request = ++storePaletteRequest;
+    storeImagePaletteEl.setAttribute("aria-busy", "true");
+    storeImagePaletteStatusEl.textContent = "Leyendo los colores dominantes…";
+    const pixelSets = await Promise.all(sources.map(palettePixelsForImage));
+    if (request !== storePaletteRequest || signature !== storePaletteSourceSignature) return;
+    renderStoreImagePalette(paletteFromPixelSets(pixelSets));
+    storeImagePaletteEl.setAttribute("aria-busy", "false");
+  }
+
+  function scheduleStorePaletteExtraction(delay = 180) {
+    const sources = storePaletteImageUrls();
+    const signature = sources.join("|");
+    if (signature === storePaletteSourceSignature) return;
+    storePaletteSourceSignature = signature;
+    window.clearTimeout(storePaletteTimer);
+    if (!sources.length) {
+      storePaletteRequest += 1;
+      storeImagePaletteEl.setAttribute("aria-busy", "false");
+      renderStoreImagePalette([]);
+      return;
+    }
+    storePaletteTimer = window.setTimeout(() => extractStoreImagePalette(signature, sources), delay);
+  }
+
+  storeImagePaletteSwatchesEl.addEventListener("click", (event) => {
+    const swatch = event.target.closest("[data-palette-color]");
+    if (!swatch) return;
+    storeAccentToggleEl.checked = true;
+    storeAccentColorEl.disabled = false;
+    storeAccentColorEl.value = swatch.dataset.paletteColor;
+    setStoreSettingsDirty(true);
+    pendingStorePreviewSection = "brand";
+    pendingStorePreviewAction = "scroll";
+    scheduleStorePreview(0);
+    focusEditorTarget(storeAccentColorEl, `Color ${swatch.dataset.paletteColor}`);
+  });
+
+  previewEditModeEl.addEventListener("click", () => {
+    storePreviewEditorEnabled = !storePreviewEditorEnabled;
+    previewEditModeEl.setAttribute("aria-pressed", String(storePreviewEditorEnabled));
+    previewSelectionStatusEl.innerHTML = storePreviewEditorEnabled
+      ? "<strong>Modo editor activo.</strong> Toca cualquier parte de la tienda para abrir su edición."
+      : "Navegación normal activa. Puedes probar enlaces, productos y controles de la tienda.";
+    scheduleStorePreview(0);
+  });
+
+  previewEditorToolsEl.querySelector(".preview-section-nav").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-preview-editor-section]");
+    if (!button) return;
+    const selection = { section: button.dataset.previewEditorSection, field: button.dataset.previewEditorField, label: button.textContent.trim() };
+    selectStorePreviewEditorTarget(selection);
+    pendingStorePreviewSection = selection.section === "motion" ? "gallery" : selection.section;
+    pendingStorePreviewAction = selection.section === "motion" ? "motion" : "scroll";
+    scheduleStorePreview(0);
+  });
+
   window.addEventListener("message", (event) => {
     if (event.source !== storePreviewFrameEl.contentWindow) return;
-    if (!event.data || event.data.source !== "pagosya-checkout" || event.data.type !== "CHECKOUT_READY") return;
+    if (!event.data || event.data.source !== "pagosya-checkout") return;
     try {
       if (event.origin !== new URL(storePreviewFrameEl.src).origin) return;
     } catch {
       return;
     }
+    if (event.data.type === "STORE_EDITOR_SELECT" && storePreviewEditorEnabled) {
+      selectStorePreviewEditorTarget(event.data.payload?.selection);
+      return;
+    }
+    if (event.data.type !== "CHECKOUT_READY") return;
     clearTimeout(previewReadyTimer);
     setStorePreviewState("ready");
     postStorePreview();
@@ -9059,7 +9418,7 @@
         body: JSON.stringify({
           businessCategory: document.getElementById("visualBusinessCategory").value.trim() || undefined,
           personality: document.getElementById("visualPersonality").value || undefined,
-          fontStyle: document.querySelector('input[name="visualFontStyle"]:checked')?.value || "mono",
+          fontStyle: document.querySelector('input[name="visualFontStyle"]:checked')?.value || "modern",
           announcementMarqueeEnabled: document.querySelector('input[name="visualAnnouncementMarquee"]:checked')?.value === "true",
           motionExperience: motionExperiences[0] || undefined,
           motionExperiences,
@@ -10949,6 +11308,9 @@
             type: animation.type,
             title: animation.title || "",
             subtitle: animation.subtitle || "",
+            topWord: animation.topWord || "",
+            rightWord: animation.rightWord || "",
+            bottomWord: animation.bottomWord || "",
             productId: animation.productId || "",
             media: (animation.media || []).slice(0, 8).map(cloneAnimationMedia),
           }))
@@ -10959,6 +11321,9 @@
               type,
               title: animationTypeCopy(type)[0],
               subtitle: store.gallerySubtitle || "",
+              topWord: "",
+              rightWord: "",
+              bottomWord: "",
               productId: "",
               media: pendingEditorialGallery.map(cloneAnimationMedia),
             }))
@@ -10974,6 +11339,9 @@
           type: "hero-carousel",
           title: "Slider principal",
           subtitle: store.tagline || "",
+          topWord: "",
+          rightWord: "",
+          bottomWord: "",
           productId: "",
           media: legacyHeroSlides.slice(0, 8).map((slide) => ({
             imageUrl: slide.imageUrl,
@@ -11053,7 +11421,7 @@
       storeAnnouncementModeEl.value = store.announcementMode || "static";
       storeAnnouncementSpeedEl.value = String(store.announcementSpeed || 18);
       storeAnnouncementSizeEl.value = "small";
-      storeAnnouncementColorEl.value = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#c58b3c";
+      storeAnnouncementColorEl.value = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor : "#ffffff";
       storePromotionEnabledEl.checked = !!store.promotionEnabled;
       pendingPromotionImageUrl = store.promotionImageUrl || null;
       storePromotionImagePreviewEl.style.display = store.promotionImageUrl ? "block" : "none";
@@ -11068,8 +11436,9 @@
       storeAccentToggleEl.checked = !!store.accentColor;
       storeAccentColorEl.disabled = !store.accentColor;
       if (store.accentColor) storeAccentColorEl.value = store.accentColor;
-      storeFontStyleEl.value = store.fontStyle || "mono";
-      const visualFont = document.querySelector(`input[name="visualFontStyle"][value="${store.fontStyle || "mono"}"]`);
+      const storeFontStyle = normalizeStoreFontStyle(store.fontStyle);
+      storeFontStyleEl.value = storeFontStyle;
+      const visualFont = document.querySelector(`input[name="visualFontStyle"][value="${storeFontStyle}"]`);
       if (visualFont) visualFont.checked = true;
       storeButtonStyleEl.value = store.buttonStyle || "rounded";
       storeButtonVariantEl.value = store.buttonVariant || "solid";
@@ -11081,11 +11450,14 @@
       renderStoreLinksEditor();
       renderVisualSources();
       renderCurrentStoreBanner();
+      scheduleStorePaletteExtraction(0);
       loadVisualStudioState(store.id);
     } else {
       window.updateYapiContext?.({ store: null, products: [] });
       refreshStorePreview();
       renderVisualSources();
+      storePaletteSourceSignature = "";
+      scheduleStorePaletteExtraction(0);
       loadVisualStudioState(null);
     }
   }
@@ -12440,6 +12812,56 @@
     }
   });
 
+  function beginPaymentLinkEdit(link) {
+    if (!link) return;
+    editingLinkId = link.id;
+    const form = document.getElementById("paymentLinkForm");
+    form.name.value = link.name;
+    form.description.value = link.description || "";
+    form.amount.value = (link.amount / 100).toFixed(2);
+    form.color.value = link.color || "#1d4ed8";
+    form.tags.value = (link.tags || []).join(", ");
+    form.stock.value = link.stock !== null && link.stock !== undefined ? link.stock : "";
+    paymentLinkDiscountToggleEl.checked = Boolean(link.discountPercent && link.discountStartsAt && link.discountEndsAt);
+    paymentLinkDiscountPercentEl.value = link.discountPercent || "";
+    paymentLinkDiscountStartsAtEl.value = localDateTimeInputValue(link.discountStartsAt);
+    paymentLinkDiscountEndsAtEl.value = localDateTimeInputValue(link.discountEndsAt);
+    syncProductDiscountControls();
+    pendingProductVariants = (link.variants || []).map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      amount: (variant.amount / 100).toFixed(2),
+      stock: variant.stock === null || variant.stock === undefined ? "" : String(variant.stock),
+      legacySharedStock: variant.stock === undefined,
+    }));
+    paymentLinkOptionsToggleEl.checked = pendingProductVariants.length > 0;
+    renderProductVariants();
+    pendingProductExtras = (link.extras || []).map((extra) => ({
+      id: extra.id,
+      name: extra.name,
+      amount: (extra.amount / 100).toFixed(2),
+      required: Boolean(extra.required),
+      groupName: extra.groupName || "",
+      freeAllowance: String(extra.freeAllowance ?? 0),
+      inventoryName: extra.inventoryName || "",
+      stock: Number.isInteger(extra.stock) ? String(extra.stock) : "",
+    }));
+    renderProductExtras();
+    paymentLinkCategoryEl.value = link.categoryId || "";
+    populateProductFiscalMapping(link).catch((error) => {
+      productFiscalStatusEl.textContent = `No pudimos preparar la clasificación guardada: ${error.message}`;
+    });
+    pendingImageUrls = [...(link.imageUrls || [])];
+    pendingImagePositions = pendingImageUrls.map((_, index) => link.imagePositions?.[index] || "50% 50%");
+    renderImageGalleryPreview();
+    document.getElementById("paymentLinkSubmit").textContent = "Guardar cambios";
+    document.getElementById("paymentLinkCancel").style.display = "inline-block";
+    setDashboardSectionExpanded("paymentLinksSection", true);
+    if (rememberProductPreviewIntent()) scheduleStorePreview(0);
+    form.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    window.setTimeout(() => form.elements.name?.focus({ preventScroll: true }), 180);
+  }
+
   function renderPaymentLinkRows(links) {
     lastPaymentLinks = links;
     pendingStoreLocations.forEach((location, locationIndex) => {
@@ -12641,52 +13063,7 @@
     document.querySelectorAll(".edit-link").forEach((btn) => {
       btn.addEventListener("click", () => {
         const link = lastPaymentLinks.find((l) => l.id === btn.dataset.id);
-        if (!link) return;
-        editingLinkId = link.id;
-        const form = document.getElementById("paymentLinkForm");
-        form.name.value = link.name;
-        form.description.value = link.description || "";
-        form.amount.value = (link.amount / 100).toFixed(2);
-        form.color.value = link.color || "#1d4ed8";
-        form.tags.value = (link.tags || []).join(", ");
-        form.stock.value = link.stock !== null && link.stock !== undefined ? link.stock : "";
-        paymentLinkDiscountToggleEl.checked = Boolean(link.discountPercent && link.discountStartsAt && link.discountEndsAt);
-        paymentLinkDiscountPercentEl.value = link.discountPercent || "";
-        paymentLinkDiscountStartsAtEl.value = localDateTimeInputValue(link.discountStartsAt);
-        paymentLinkDiscountEndsAtEl.value = localDateTimeInputValue(link.discountEndsAt);
-        syncProductDiscountControls();
-        pendingProductVariants = (link.variants || []).map((variant) => ({
-          id: variant.id,
-          name: variant.name,
-          amount: (variant.amount / 100).toFixed(2),
-          stock: variant.stock === null || variant.stock === undefined ? "" : String(variant.stock),
-          legacySharedStock: variant.stock === undefined,
-        }));
-        paymentLinkOptionsToggleEl.checked = pendingProductVariants.length > 0;
-        renderProductVariants();
-        pendingProductExtras = (link.extras || []).map((extra) => ({
-          id: extra.id,
-          name: extra.name,
-          amount: (extra.amount / 100).toFixed(2),
-          required: Boolean(extra.required),
-          groupName: extra.groupName || "",
-          freeAllowance: String(extra.freeAllowance ?? 0),
-          inventoryName: extra.inventoryName || "",
-          stock: Number.isInteger(extra.stock) ? String(extra.stock) : "",
-        }));
-        renderProductExtras();
-        paymentLinkCategoryEl.value = link.categoryId || "";
-        populateProductFiscalMapping(link).catch((error) => {
-          productFiscalStatusEl.textContent = `No pudimos preparar la clasificación guardada: ${error.message}`;
-        });
-        pendingImageUrls = [...(link.imageUrls || [])];
-        pendingImagePositions = pendingImageUrls.map((_, index) => link.imagePositions?.[index] || "50% 50%");
-        renderImageGalleryPreview();
-        document.getElementById("paymentLinkSubmit").textContent = "Guardar cambios";
-        document.getElementById("paymentLinkCancel").style.display = "inline-block";
-        setDashboardSectionExpanded("paymentLinksSection", true);
-        if (rememberProductPreviewIntent()) scheduleStorePreview(0);
-        form.scrollIntoView({ behavior: "smooth" });
+        beginPaymentLinkEdit(link);
       });
     });
   }
