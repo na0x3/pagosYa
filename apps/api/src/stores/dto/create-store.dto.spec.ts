@@ -13,6 +13,20 @@ describe("CreateStoreDto storefront layout", () => {
     await expect(validate(dto)).resolves.toHaveLength(0);
   });
 
+  it("accepts safe per-section backgrounds and rejects unknown sections or CSS", async () => {
+    const valid = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      sectionBackgrounds: { products: "#f4ead7", "animation-portada": "#102030" },
+    });
+    const invalid = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      sectionBackgrounds: { unknown: "red; background:url(https://invalid.test)" },
+    });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(await validate(invalid)).not.toHaveLength(0);
+  });
+
   it("accepts independently positioned animation sections including Zoom Parallax", async () => {
     const dto = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",

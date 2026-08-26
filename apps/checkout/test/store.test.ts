@@ -2073,6 +2073,31 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-video-pill-word-top")?.getAttribute("data-store-editor-animation-id")).toBe("video-opening");
   });
 
+  it("renders saved section backgrounds and merchant-editable section headings", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda por secciones",
+        contactFormEnabled: true,
+        contactTitle: "Conversemos",
+        contactSubtitle: "Cuéntanos qué necesitas.",
+        linksTitle: "Encuéntranos",
+        links: [{ id: "social_1", label: "Instagram", url: "https://instagram.com/tienda" }],
+        sectionBackgrounds: { products: "#d62828", contact: "#f4ead7" },
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=sections");
+
+    expect(document.querySelector<HTMLElement>(".store-products")?.style.getPropertyValue("--store-section-background")).toBe("#d62828");
+    expect(document.querySelector<HTMLElement>(".store-contact-section")?.style.getPropertyValue("--store-section-background")).toBe("#f4ead7");
+    expect(document.querySelector("#store-contact-title")?.textContent).toBe("Conversemos");
+    expect(document.querySelector(".store-contact-copy p")?.textContent).toBe("Cuéntanos qué necesitas.");
+    expect(document.querySelector("#store-links-title")?.textContent).toBe("Encuéntranos");
+  });
+
   it("renders the text-only marquee without animation media and links its featured product", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({

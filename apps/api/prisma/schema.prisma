@@ -613,6 +613,8 @@ model Store {
   // never returned by the public storefront endpoint.
   contactFormEnabled           Boolean                          @default(true)
   contactFormEmail             String?
+  contactTitle                 String?
+  contactSubtitle              String?
   // Optional public location block. New stores place it at the bottom, and
   // merchants can later move it through the shared content-order editor.
   // Only allow-listed map embed URLs reach this field (validated by the DTO);
@@ -620,6 +622,8 @@ model Store {
   locationMapUrl               String?
   locationDescription          String?
   locationHighlight            String?
+  locationTitle                String?
+  locationSubtitle             String?
   // Ordered branches. Public copy and fulfillment capabilities live here;
   // product quantities remain on PaymentLink.locationStocks so payment
   // confirmation can decrement one branch atomically.
@@ -636,6 +640,7 @@ model Store {
   catalogSubtitle              String?
   galleryTitle                 String?
   gallerySubtitle              String?
+  linksTitle                   String?
   // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
   // title gradient). Null = pagosYa's default palette accent, per theme.
   accentColor                  String?
@@ -675,6 +680,10 @@ model Store {
   // Every public content section appears exactly once. The dashboard edits
   // this array as an ordered list; empty sections simply do not render.
   contentOrder                 Json                             @default("[\"animation-welcome\",\"hero\",\"about\",\"products\",\"gallery\",\"links\",\"contact\",\"location\"]")
+  // Optional background colors keyed by contentOrder section id. Keeping this
+  // separate from content lets the visual editor recolor a section without
+  // rewriting its copy, media, or position.
+  sectionBackgrounds           Json                             @default("{}")
   // Structural storefront composition selected by the merchant or visual AI:
   // cinematic | editorial | collage | catalog-first.
   layoutStyle                  String                           @default("cinematic")

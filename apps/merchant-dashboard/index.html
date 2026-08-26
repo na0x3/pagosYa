@@ -1010,7 +1010,15 @@
   .visual-onboarding.is-collapsed, .inventory-importer.is-collapsed { padding-bottom: 12px; }
   .visual-onboarding.is-collapsed .visual-onboarding-head, .inventory-importer.is-collapsed .inventory-import-head { align-items: center; }
 
-  .store-studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr); gap: 22px; align-items: start; }
+  .store-studio { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .store-editor-shell { min-width: 0; }
+  .store-options-tab { display: none; width: 100%; min-height: 42px; margin-bottom: 8px; align-items: center; justify-content: center; gap: 7px; }
+  .store-options-tab svg { width: 16px; height: 16px; }
+  .store-studio.is-preview-expanded { grid-template-columns: 54px minmax(0, 1fr); }
+  .store-studio.is-preview-expanded .store-editor-shell { position: sticky; top: 16px; }
+  .store-studio.is-preview-expanded .store-options-tab { display: flex; min-height: 164px; padding: 10px 6px; writing-mode: vertical-rl; text-orientation: mixed; }
+  .store-studio.is-preview-expanded .store-options-tab svg { transform: rotate(90deg); }
+  .store-studio.is-preview-expanded .store-editor { display: none; }
   .product-editor-studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr); gap: 22px; align-items: start; }
   .product-preview-mount { min-width: 0; }
   .store-editor { display: grid; gap: 12px; min-width: 0; }
@@ -1273,6 +1281,17 @@
   .preview-edit-toggle svg { width: 15px; height: 15px; }
   .preview-edit-toggle[aria-pressed="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
   .preview-editor-tools { display: grid; gap: 9px; margin-bottom: 10px; }
+  .preview-section-inspector { display: grid; gap: 9px; padding: 10px; border: 1px solid var(--pg-border-strong); background: var(--pg-surface); }
+  .preview-section-inspector-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .preview-section-inspector-head span { display: block; margin-bottom: 2px; color: var(--pg-text-faint); font-size: .58rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .preview-section-inspector-head strong { font-size: .78rem; }
+  .preview-section-order { display: flex; gap: 4px; }
+  .preview-section-order .preview-icon-button { width: 30px; height: 30px; }
+  .preview-section-quick-controls { display: grid; grid-template-columns: minmax(180px, .72fr) minmax(220px, 1fr); gap: 8px; }
+  .preview-section-color, .preview-add-section { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 7px 8px; border: 1px solid var(--pg-border); background: var(--pg-bg); color: var(--pg-text-muted); font-size: .66rem; font-weight: 700; }
+  .preview-section-color input[type="color"] { width: 34px; min-width: 34px; height: 28px; margin-left: auto; padding: 2px; }
+  .preview-add-section span { flex: 0 0 auto; }
+  .preview-add-section select { width: 100%; min-width: 0; height: 30px; padding: 4px 24px 4px 7px; font-size: .66rem; }
   .preview-section-nav { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
   .preview-section-nav button { flex: 0 0 auto; min-height: 34px; padding: 6px 9px; border-color: var(--pg-border); color: var(--pg-text-muted); font-size: .68rem; }
   .preview-section-nav button[aria-current="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
@@ -1453,6 +1472,10 @@
      that were fighting it. */
   @media (max-width: 1180px) {
     .store-studio, .product-editor-studio { grid-template-columns: 1fr; }
+    .store-studio.is-preview-expanded { grid-template-columns: 1fr; }
+    .store-studio.is-preview-expanded .store-editor-shell { position: static; }
+    .store-studio.is-preview-expanded .store-options-tab { min-height: 42px; writing-mode: horizontal-tb; }
+    .store-studio.is-preview-expanded .store-options-tab svg { transform: none; }
     .store-preview-panel { position: static; }
     .store-preview-stage { min-height: 590px; }
     .store-preview-frame { height: 640px; }
@@ -1602,6 +1625,7 @@
     .preview-edit-toggle { flex: 1 1 auto; justify-content: center; }
     .store-image-palette { grid-template-columns: 1fr; }
     .store-image-palette-swatches { overflow-x: auto; padding-bottom: 3px; }
+    .preview-section-quick-controls { grid-template-columns: 1fr; }
     .store-preview-stage { padding: 6px; }
     .visual-generating { grid-template-columns: 1fr; gap: 12px; }
     .visual-loader-shell { max-width: 330px; width: 100%; margin-inline: auto; }
@@ -3955,7 +3979,12 @@
           <p class="custom-domain-status" id="customDomainStatus" role="status" aria-live="polite">Tu tienda seguirá disponible en el link de pagosYa durante la configuración.</p>
           <div class="custom-domain-list" id="customDomainList"></div>
         </section>
-        <div class="store-studio">
+        <div class="store-studio" id="storeStudio">
+          <div class="store-editor-shell" id="storeEditorShell">
+            <button type="button" class="ghost store-options-tab" id="storeOptionsTab" aria-expanded="true" aria-controls="storeSettingsForm" title="Mostrar u ocultar opciones">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <span>Opciones</span>
+            </button>
           <form class="store-editor" id="storeSettingsForm">
             <div class="store-editor-section">
               <div class="editor-section-head">
@@ -4214,6 +4243,8 @@
                   <h4 id="contactSettingsTitle">Atención al cliente</h4>
                   <p>Estos datos aparecen cuando una persona necesita consultar por su pedido o comprobante.</p>
                 </div>
+                <div><label for="storeContactTitle">Título visible</label><input id="storeContactTitle" maxlength="100" placeholder="¿Tienes una pregunta?"></div>
+                <div><label for="storeContactSubtitle">Texto visible</label><textarea id="storeContactSubtitle" rows="3" maxlength="320" placeholder="Escríbele directamente a nuestro equipo."></textarea></div>
                 <div><label for="storeContactEmailInput">Correo de soporte (opcional)</label><input id="storeContactEmailInput" name="contactEmail" type="email" placeholder="soporte@mitienda.bo"></div>
                 <div class="full">
                   <span class="checkbox-row">
@@ -4234,6 +4265,8 @@
                   <h4 id="storeLocationSettingsTitle">Ubicaciones e inventario</h4>
                   <p>Agrega sucursales, define si permiten retiro o entrega y reparte el stock real de cada producto.</p>
                 </div>
+                <div><label for="storeLocationTitle">Título visible</label><input id="storeLocationTitle" maxlength="100" placeholder="Visítanos"></div>
+                <div><label for="storeLocationSubtitle">Texto visible</label><input id="storeLocationSubtitle" maxlength="220" placeholder="Encuentra esta tienda y elige cómo recibir tu pedido."></div>
                 <div class="full store-locations-editor">
                   <div id="storeLocationsList"></div>
                   <button class="ghost" id="storeLocationAdd" type="button">Agregar ubicación</button>
@@ -4274,6 +4307,7 @@
                 </div>
                 <div class="full">
                   <label>Enlaces de la tienda (opcional)</label>
+                  <input id="storeLinksTitle" maxlength="100" placeholder="Síguenos" aria-label="Título visible de redes sociales">
                   <p class="faint" style="margin:0 0 8px">Agrega Instagram, TikTok, WhatsApp, un catálogo u otro destino útil.</p>
                   <div id="storeLinksEditor"></div>
                   <button type="button" class="ghost" id="storeLinkAdd" style="align-self:flex-start">+ Agregar enlace</button>
@@ -4286,6 +4320,7 @@
               <span class="store-save-status" id="storeSaveStatus" role="status">Todo guardado</span>
             </div>
           </form>
+          </div>
 
           <aside class="store-preview-panel" aria-label="Vista previa de la tienda">
             <div class="store-preview-toolbar">
@@ -4294,6 +4329,9 @@
               <button type="button" class="ghost preview-edit-toggle" id="previewEditMode" aria-pressed="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                 Editar en pantalla
+              </button>
+              <button type="button" class="ghost preview-icon-button" id="previewExpandToggle" aria-pressed="false" title="Agrandar vista previa" aria-label="Agrandar vista previa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg>
               </button>
               <div class="preview-device-switch" aria-label="Tamaño de vista previa">
                 <button type="button" class="active" id="previewDesktop" aria-pressed="true">Escritorio</button>
@@ -4307,15 +4345,31 @@
               </a>
             </div>
             <div class="preview-editor-tools" id="previewEditorTools">
+              <div class="preview-section-inspector" id="previewSectionInspector">
+                <div class="preview-section-inspector-head">
+                  <div><span>Editando sección</span><strong id="previewSelectedSection">Identidad</strong></div>
+                  <div class="preview-section-order" aria-label="Orden de esta sección">
+                    <button type="button" class="ghost preview-icon-button" id="previewSectionUp" title="Mover sección arriba" aria-label="Mover sección arriba"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
+                    <button type="button" class="ghost preview-icon-button" id="previewSectionDown" title="Mover sección abajo" aria-label="Mover sección abajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+                  </div>
+                </div>
+                <div class="preview-section-quick-controls">
+                  <label class="preview-section-color"><input type="checkbox" id="previewSectionColorEnabled"><span>Fondo propio</span><input type="color" id="previewSectionColor" value="#f8fafc" disabled aria-label="Color de fondo de la sección"></label>
+                  <label class="preview-add-section"><span>Agregar sección</span><select id="previewAddSection"><option value="">Elige una…</option><option value="about">Historia</option><option value="gallery">Galería de fotos</option><option value="motion">Animación</option><option value="links">Redes sociales</option><option value="contact">Contacto</option><option value="location">Ubicación</option></select></label>
+                </div>
+              </div>
               <nav class="preview-section-nav" aria-label="Editar tienda por secciones">
                 <button type="button" data-preview-editor-section="brand" data-preview-editor-field="storeNameInput">Identidad</button>
+                <button type="button" data-preview-editor-section="announcement" data-preview-editor-field="announcementText">Anuncio</button>
                 <button type="button" data-preview-editor-section="hero" data-preview-editor-field="storeBannerInput">Portada</button>
                 <button type="button" data-preview-editor-section="products" data-preview-editor-field="storeCatalogTitle">Catálogo</button>
                 <button type="button" data-preview-editor-section="about" data-preview-editor-field="storeAboutTitle">Historia</button>
                 <button type="button" data-preview-editor-section="gallery" data-preview-editor-field="storeGalleryTitle">Galería</button>
                 <button type="button" data-preview-editor-section="motion" data-preview-editor-field="animations">Animaciones</button>
                 <button type="button" data-preview-editor-section="contact" data-preview-editor-field="storeContactFormEnabled">Contacto</button>
+                <button type="button" data-preview-editor-section="location" data-preview-editor-field="location">Ubicación</button>
                 <button type="button" data-preview-editor-section="links" data-preview-editor-field="links">Redes</button>
+                <button type="button" data-preview-editor-section="promotion" data-preview-editor-field="promotionTitle">Promoción</button>
               </nav>
               <p class="preview-selection-status" id="previewSelectionStatus"><strong>Modo editor activo.</strong> Toca cualquier parte de la tienda para abrir su edición.</p>
               <section class="store-image-palette" id="storeImagePalette" aria-labelledby="storeImagePaletteTitle" aria-busy="false">
@@ -7206,8 +7260,12 @@
   const storeContactFormEditorEl = document.getElementById("storeContactFormEditor");
   const storeContactFormEnabledEl = document.getElementById("storeContactFormEnabled");
   const storeContactFormEmailEl = document.getElementById("storeContactFormEmail");
+  const storeContactTitleEl = document.getElementById("storeContactTitle");
+  const storeContactSubtitleEl = document.getElementById("storeContactSubtitle");
   const storeLocationsListEl = document.getElementById("storeLocationsList");
   const storeLocationAddEl = document.getElementById("storeLocationAdd");
+  const storeLocationTitleEl = document.getElementById("storeLocationTitle");
+  const storeLocationSubtitleEl = document.getElementById("storeLocationSubtitle");
   const storeAboutInputEl = document.getElementById("storeAboutInput");
   const storeAboutTitleEl = document.getElementById("storeAboutTitle");
   const storeAboutSubtitleEl = document.getElementById("storeAboutSubtitle");
@@ -7215,6 +7273,7 @@
   const storeCatalogSubtitleEl = document.getElementById("storeCatalogSubtitle");
   const storeGalleryTitleEl = document.getElementById("storeGalleryTitle");
   const storeGallerySubtitleEl = document.getElementById("storeGallerySubtitle");
+  const storeLinksTitleEl = document.getElementById("storeLinksTitle");
   const storeAboutImageInputEl = document.getElementById("storeAboutImageInput");
   const storeAboutImagePreviewEl = document.getElementById("storeAboutImagePreview");
   const storeAboutImageRemoveBtnEl = document.getElementById("storeAboutImageRemoveBtn");
@@ -7257,8 +7316,17 @@
   const previewDesktopEl = document.getElementById("previewDesktop");
   const previewMobileEl = document.getElementById("previewMobile");
   const previewEditModeEl = document.getElementById("previewEditMode");
+  const storeStudioEl = document.getElementById("storeStudio");
+  const storeOptionsTabEl = document.getElementById("storeOptionsTab");
+  const previewExpandToggleEl = document.getElementById("previewExpandToggle");
   const previewEditorToolsEl = document.getElementById("previewEditorTools");
   const previewSelectionStatusEl = document.getElementById("previewSelectionStatus");
+  const previewSelectedSectionEl = document.getElementById("previewSelectedSection");
+  const previewSectionColorEnabledEl = document.getElementById("previewSectionColorEnabled");
+  const previewSectionColorEl = document.getElementById("previewSectionColor");
+  const previewSectionUpEl = document.getElementById("previewSectionUp");
+  const previewSectionDownEl = document.getElementById("previewSectionDown");
+  const previewAddSectionEl = document.getElementById("previewAddSection");
   const storeImagePaletteEl = document.getElementById("storeImagePalette");
   const storeImagePaletteStatusEl = document.getElementById("storeImagePaletteStatus");
   const storeImagePaletteSwatchesEl = document.getElementById("storeImagePaletteSwatches");
@@ -7636,6 +7704,7 @@
     ...Object.fromEntries(Object.entries(STORE_MOTION_SECTION_COPY).map(([experience, copy]) => [`motion-${experience}`, copy])),
   };
   let pendingContentOrder = [...DEFAULT_STORE_CONTENT_ORDER];
+  let pendingSectionBackgrounds = {};
   let pendingLayoutStyle = "cinematic";
   let pendingEditorialGallery = [];
   let pendingAnimations = [];
@@ -7650,6 +7719,8 @@
   let pendingStorePreviewTargetKind = null;
   let pendingStorePreviewProduct = null;
   let storePreviewEditorEnabled = true;
+  let selectedPreviewSection = "brand";
+  let storePreviewExpanded = false;
   let storePaletteTimer = null;
   let storePaletteRequest = 0;
   let storePaletteSourceSignature = "";
@@ -8033,6 +8104,7 @@
       });
       card.querySelector(".animation-remove").addEventListener("click", () => {
         localStorage.removeItem(animationDisclosureKey(animation.id));
+        delete pendingSectionBackgrounds[`animation-${animation.id}`];
         pendingAnimations.splice(animationIndex, 1);
         renderAnimationsEditor();
         commitAnimationStructureChange();
@@ -8156,9 +8228,13 @@
       contactPhone: storeContactPhoneInputEl.value || null,
       contactEmail: storeContactEmailInputEl.value || null,
       contactFormEnabled: storeContactFormEnabledEl.checked,
+      contactTitle: storeContactTitleEl.value || null,
+      contactSubtitle: storeContactSubtitleEl.value || null,
       locationMapUrl: primaryLocation?.mapEmbedUrl || null,
       locationHighlight: primaryLocation?.highlight || null,
       locationDescription: primaryLocation?.description || null,
+      locationTitle: storeLocationTitleEl.value || null,
+      locationSubtitle: storeLocationSubtitleEl.value || null,
       locations,
       aboutText: storeAboutInputEl.value || null,
       aboutTitle: storeAboutTitleEl.value || null,
@@ -8168,6 +8244,7 @@
       catalogSubtitle: storeCatalogSubtitleEl.value || null,
       galleryTitle: storeGalleryTitleEl.value || null,
       gallerySubtitle: storeGallerySubtitleEl.value || null,
+      linksTitle: storeLinksTitleEl.value || null,
       announcement: storeAnnouncementInputEl.value || null,
       announcementMode: storeAnnouncementModeEl.value,
       announcementSpeed: Number(storeAnnouncementSpeedEl.value) || 18,
@@ -8187,6 +8264,7 @@
         ctaUrl: slide.ctaUrl.trim(),
       })),
       contentOrder: [...pendingContentOrder],
+      sectionBackgrounds: { ...pendingSectionBackgrounds },
       experienceStyle: storeExperienceStyleEl.value,
       motionDuoEnabled: pendingAnimations.length > 0,
       motionExperience: selectedStoreMotionExperiences()[0] || "coverflow-carousel",
@@ -8262,6 +8340,10 @@
     storeContactEmailInput: "products",
     storeContactFormEnabled: "contact",
     storeContactFormEmail: "contact",
+    storeContactTitle: "contact",
+    storeContactSubtitle: "contact",
+    storeLocationTitle: "location",
+    storeLocationSubtitle: "location",
     storeAboutTitle: "about",
     storeAboutSubtitle: "about",
     storeAboutInput: "about",
@@ -8271,6 +8353,7 @@
     storeCatalogSubtitle: "products",
     storeGalleryTitle: "gallery",
     storeGallerySubtitle: "gallery",
+    storeLinksTitle: "links",
     storeLinkAdd: "links",
   };
 
@@ -9082,12 +9165,17 @@
     galleryTitle: "#storeGalleryTitle",
     gallerySubtitle: "#storeGallerySubtitle",
     contact: "#storeContactFormEnabled",
+    contactTitle: "#storeContactTitle",
+    contactSubtitle: "#storeContactSubtitle",
     location: "#storeLocationAdd",
+    locationTitle: "#storeLocationTitle",
+    locationSubtitle: "#storeLocationSubtitle",
     promotionTitle: "#storePromotionTitle",
     promotionBody: "#storePromotionBody",
     promotionImage: "#storePromotionImageInput",
     promotionAction: "#storePromotionCtaLabel",
     cartButton: "#storeCartButtonLabel",
+    linksTitle: "#storeLinksTitle",
     storeNameInput: "#storeNameInput",
     storeBannerInput: "#storeBannerInput",
     storeCatalogTitle: "#storeCatalogTitle",
@@ -9096,7 +9184,56 @@
     storeContactFormEnabled: "#storeContactFormEnabled",
   };
 
+  const PREVIEW_SECTION_LABELS = {
+    brand: "Identidad",
+    announcement: "Anuncio superior",
+    hero: "Portada",
+    products: "Catálogo",
+    about: "Historia",
+    gallery: "Galería",
+    motion: "Animación",
+    contact: "Contacto",
+    links: "Redes sociales",
+    location: "Ubicación",
+    promotion: "Promoción",
+  };
+
+  function previewSectionKey(section) {
+    if (String(section).startsWith("animation-")) return String(section);
+    if (section === "motion") return pendingContentOrder.find((entry) => entry.startsWith("animation-")) || null;
+    return ["hero", "products", "about", "gallery", "contact", "links", "location"].includes(section) ? section : null;
+  }
+
+  function syncPreviewSectionInspector() {
+    const sectionKey = previewSectionKey(selectedPreviewSection);
+    const animation = sectionKey?.startsWith("animation-")
+      ? pendingAnimations.find((entry) => `animation-${entry.id}` === sectionKey)
+      : null;
+    previewSelectedSectionEl.textContent = animation?.name || PREVIEW_SECTION_LABELS[selectedPreviewSection] || "Sección";
+    const configuredColor = sectionKey ? pendingSectionBackgrounds[sectionKey] : null;
+    previewSectionColorEnabledEl.disabled = !sectionKey;
+    previewSectionColorEnabledEl.checked = !!configuredColor;
+    previewSectionColorEl.disabled = !sectionKey || !configuredColor;
+    previewSectionColorEl.value = configuredColor || storeBackgroundColorEl.value || "#f8fafc";
+    const orderIndex = sectionKey ? pendingContentOrder.indexOf(sectionKey) : -1;
+    previewSectionUpEl.disabled = orderIndex <= 0;
+    previewSectionDownEl.disabled = orderIndex < 0 || orderIndex >= pendingContentOrder.length - 1;
+  }
+
+  function setStorePreviewExpanded(expanded) {
+    storePreviewExpanded = expanded;
+    storeStudioEl.classList.toggle("is-preview-expanded", expanded);
+    previewExpandToggleEl.setAttribute("aria-pressed", String(expanded));
+    previewExpandToggleEl.setAttribute("aria-label", expanded ? "Mostrar opciones" : "Agrandar vista previa");
+    previewExpandToggleEl.title = expanded ? "Mostrar opciones" : "Agrandar vista previa";
+    storeOptionsTabEl.setAttribute("aria-expanded", String(!expanded));
+  }
+
+  previewExpandToggleEl.addEventListener("click", () => setStorePreviewExpanded(!storePreviewExpanded));
+  storeOptionsTabEl.addEventListener("click", () => setStorePreviewExpanded(false));
+
   function setPreviewSectionCurrent(section) {
+    selectedPreviewSection = section || "brand";
     previewEditorToolsEl.querySelectorAll("[data-preview-editor-section]").forEach((button) => {
       if (button.dataset.previewEditorSection === section || (section?.startsWith("animation-") && button.dataset.previewEditorSection === "motion")) {
         button.setAttribute("aria-current", "true");
@@ -9104,6 +9241,7 @@
         button.removeAttribute("aria-current");
       }
     });
+    syncPreviewSectionInspector();
   }
 
   function expandEditorTarget(target) {
@@ -9125,6 +9263,7 @@
 
   function focusEditorTarget(target, label) {
     if (!(target instanceof HTMLElement)) return;
+    setStorePreviewExpanded(false);
     expandEditorTarget(target);
     target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
     window.setTimeout(() => {
@@ -9138,11 +9277,71 @@
     previewSelectionStatusEl.innerHTML = `<strong>${esc(label || "Parte seleccionada")}.</strong> Ya abrimos su control de edición.`;
   }
 
+  function moveSelectedPreviewSection(direction) {
+    const sectionKey = previewSectionKey(selectedPreviewSection);
+    const index = sectionKey ? pendingContentOrder.indexOf(sectionKey) : -1;
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= pendingContentOrder.length) return;
+    const [section] = pendingContentOrder.splice(index, 1);
+    pendingContentOrder.splice(nextIndex, 0, section);
+    renderStoreContentOrderEditor();
+    setStoreSettingsDirty(true);
+    pendingStorePreviewSection = selectedPreviewSection;
+    pendingStorePreviewAction = selectedPreviewSection.startsWith("animation-") ? "motion" : "scroll";
+    scheduleStorePreview(0);
+    syncPreviewSectionInspector();
+  }
+
+  previewSectionUpEl.addEventListener("click", () => moveSelectedPreviewSection(-1));
+  previewSectionDownEl.addEventListener("click", () => moveSelectedPreviewSection(1));
+  previewSectionColorEnabledEl.addEventListener("change", () => {
+    const sectionKey = previewSectionKey(selectedPreviewSection);
+    if (!sectionKey) return;
+    if (previewSectionColorEnabledEl.checked) pendingSectionBackgrounds[sectionKey] = previewSectionColorEl.value;
+    else delete pendingSectionBackgrounds[sectionKey];
+    previewSectionColorEl.disabled = !previewSectionColorEnabledEl.checked;
+    setStoreSettingsDirty(true);
+    pendingStorePreviewSection = selectedPreviewSection;
+    pendingStorePreviewAction = selectedPreviewSection.startsWith("animation-") ? "motion" : "scroll";
+    scheduleStorePreview(0);
+  });
+  previewSectionColorEl.addEventListener("input", () => {
+    const sectionKey = previewSectionKey(selectedPreviewSection);
+    if (!sectionKey || !previewSectionColorEnabledEl.checked) return;
+    pendingSectionBackgrounds[sectionKey] = previewSectionColorEl.value;
+    setStoreSettingsDirty(true);
+    scheduleStorePreview();
+  });
+
+  previewAddSectionEl.addEventListener("change", () => {
+    const section = previewAddSectionEl.value;
+    previewAddSectionEl.value = "";
+    if (!section) return;
+    if (section === "motion") {
+      selectStorePreviewEditorTarget({ section: "motion", field: "animations", label: "nueva animación" });
+      return;
+    }
+    if (section === "links" && pendingStoreLinks.length === 0) document.getElementById("storeLinkAdd").click();
+    if (section === "contact" && !storeContactFormEnabledEl.checked) {
+      storeContactFormEnabledEl.checked = true;
+      syncStoreCustomizationControls();
+      setStoreSettingsDirty(true);
+      scheduleStorePreview(0);
+    }
+    if (section === "location" && pendingStoreLocations.length === 0) storeLocationAddEl.click();
+    const fields = { about: "aboutTitle", gallery: "galleryTitle", links: "links", contact: "contact", location: "location" };
+    selectStorePreviewEditorTarget({ section, field: fields[section], label: PREVIEW_SECTION_LABELS[section] || "sección" });
+  });
+
   function selectStorePreviewEditorTarget(selection) {
     const section = String(selection?.section || "");
     const field = String(selection?.field || "");
     const label = String(selection?.label || "Parte seleccionada").slice(0, 120);
     setPreviewSectionCurrent(section);
+    if (field === "section") {
+      previewSelectionStatusEl.innerHTML = `<strong>${esc(label)}.</strong> Usa Fondo propio, mueve la sección o toca uno de sus textos o imágenes.`;
+      return;
+    }
     if (selection?.itemId && lastPaymentLinks.some((product) => product.id === selection.itemId)) {
       setDashboardView("products");
       beginPaymentLinkEdit(lastPaymentLinks.find((product) => product.id === selection.itemId));
@@ -9287,7 +9486,7 @@
       storeImagePaletteStatusEl.textContent = "La paleta se actualizará al subir logo, productos o escenas.";
       return;
     }
-    storeImagePaletteStatusEl.textContent = "Toca un color para usarlo como acento de la tienda.";
+    storeImagePaletteStatusEl.textContent = "Toca un color para usarlo en la sección seleccionada.";
     storeImagePaletteSwatchesEl.innerHTML = colors.map((color) => `<button type="button" class="store-image-palette-swatch" style="--palette-color:${color}" data-palette-color="${color}" aria-label="Usar ${color} como color de marca" title="Usar ${color} como color de marca">${color}</button>`).join("");
   }
 
@@ -9319,6 +9518,17 @@
   storeImagePaletteSwatchesEl.addEventListener("click", (event) => {
     const swatch = event.target.closest("[data-palette-color]");
     if (!swatch) return;
+    const sectionKey = previewSectionKey(selectedPreviewSection);
+    if (sectionKey) {
+      pendingSectionBackgrounds[sectionKey] = swatch.dataset.paletteColor;
+      setStoreSettingsDirty(true);
+      syncPreviewSectionInspector();
+      pendingStorePreviewSection = selectedPreviewSection;
+      pendingStorePreviewAction = selectedPreviewSection.startsWith("animation-") ? "motion" : "scroll";
+      scheduleStorePreview(0);
+      previewSelectionStatusEl.innerHTML = `<strong>${esc(swatch.dataset.paletteColor)}.</strong> Fondo aplicado a ${esc(previewSelectedSectionEl.textContent)}.`;
+      return;
+    }
     storeAccentToggleEl.checked = true;
     storeAccentColorEl.disabled = false;
     storeAccentColorEl.value = swatch.dataset.paletteColor;
@@ -10123,10 +10333,14 @@
           contactPhone: storeContactPhoneInputEl.value || null,
           contactEmail: storeContactEmailInputEl.value || null,
           contactFormEnabled: storeContactFormEnabledEl.checked,
+          contactTitle: storeContactTitleEl.value || null,
+          contactSubtitle: storeContactSubtitleEl.value || null,
           contactFormEmail: storeContactFormEmailEl.value || null,
           locationMapUrl: primaryLocation?.mapEmbedUrl || null,
           locationHighlight: primaryLocation?.highlight || null,
           locationDescription: primaryLocation?.description || null,
+          locationTitle: storeLocationTitleEl.value || null,
+          locationSubtitle: storeLocationSubtitleEl.value || null,
           locations,
           aboutText: storeAboutInputEl.value || null,
           aboutTitle: storeAboutTitleEl.value || null,
@@ -10136,6 +10350,7 @@
           catalogSubtitle: storeCatalogSubtitleEl.value || null,
           galleryTitle: storeGalleryTitleEl.value || null,
           gallerySubtitle: storeGallerySubtitleEl.value || null,
+          linksTitle: storeLinksTitleEl.value || null,
           announcement: storeAnnouncementInputEl.value || null,
           announcementMode: storeAnnouncementModeEl.value,
           announcementSpeed: Number(storeAnnouncementSpeedEl.value) || 18,
@@ -10155,6 +10370,7 @@
             ...(slide.ctaUrl.trim() && { ctaUrl: slide.ctaUrl.trim() }),
           })),
           contentOrder: [...pendingContentOrder],
+          sectionBackgrounds: { ...pendingSectionBackgrounds },
           experienceStyle: storeExperienceStyleEl.value,
           motionDuoEnabled: pendingAnimations.length > 0,
           motionExperience: selectedStoreMotionExperiences()[0] || "coverflow-carousel",
@@ -11358,6 +11574,9 @@
         }
       }
       pendingContentOrder = normalizeStoreContentOrder(contentOrderToMigrate);
+      pendingSectionBackgrounds = store.sectionBackgrounds && typeof store.sectionBackgrounds === "object" && !Array.isArray(store.sectionBackgrounds)
+        ? Object.fromEntries(Object.entries(store.sectionBackgrounds).filter(([section, color]) => pendingContentOrder.includes(section) && /^#[0-9a-f]{6}$/i.test(color)))
+        : {};
       renderAnimationsEditor();
       renderStoreContentOrderEditor();
       renderEditorialGalleryEditor();
@@ -11378,6 +11597,8 @@
       storeContactEmailInputEl.value = store.contactEmail || "";
       storeContactFormEnabledEl.checked = store.contactFormEnabled === true;
       storeContactFormEmailEl.value = store.contactFormEmail || "";
+      storeContactTitleEl.value = store.contactTitle || "";
+      storeContactSubtitleEl.value = store.contactSubtitle || "";
       pendingStoreLocations = Array.isArray(store.locations) && store.locations.length
         ? store.locations.map((location) => ({
             id: location.id,
@@ -11406,6 +11627,8 @@
             }]
           : [];
       renderStoreLocationsEditor();
+      storeLocationTitleEl.value = store.locationTitle || "";
+      storeLocationSubtitleEl.value = store.locationSubtitle || "";
       storeAboutInputEl.value = store.aboutText || "";
       storeAboutTitleEl.value = store.aboutTitle || "";
       storeAboutSubtitleEl.value = store.aboutSubtitle || "";
@@ -11413,6 +11636,7 @@
       storeCatalogSubtitleEl.value = store.catalogSubtitle || "";
       storeGalleryTitleEl.value = store.galleryTitle || "";
       storeGallerySubtitleEl.value = store.gallerySubtitle || "";
+      storeLinksTitleEl.value = store.linksTitle || "";
       pendingAboutImageUrl = store.aboutImageUrl || null;
       storeAboutImagePreviewEl.style.display = store.aboutImageUrl ? "block" : "none";
       if (store.aboutImageUrl) storeAboutImagePreviewEl.src = apiRoot() + store.aboutImageUrl;
@@ -11450,12 +11674,15 @@
       renderStoreLinksEditor();
       renderVisualSources();
       renderCurrentStoreBanner();
+      syncPreviewSectionInspector();
       scheduleStorePaletteExtraction(0);
       loadVisualStudioState(store.id);
     } else {
       window.updateYapiContext?.({ store: null, products: [] });
       refreshStorePreview();
       renderVisualSources();
+      pendingSectionBackgrounds = {};
+      syncPreviewSectionInspector();
       storePaletteSourceSignature = "";
       scheduleStorePaletteExtraction(0);
       loadVisualStudioState(null);

@@ -3649,6 +3649,10 @@ body.store-page .store-tagline {
   pointer-events: none;
 }
 body.store-preview-editor-enabled [data-store-editor-target] { cursor: pointer !important; }
+body.store-page [data-store-section-key] {
+  background-color: var(--store-section-background, transparent);
+  color: var(--store-section-text, inherit);
+}
 body.store-preview-editor-enabled [data-store-editor-target].store-preview-editor-hover {
   outline: 3px solid #ffbd59 !important;
   outline-offset: -3px;

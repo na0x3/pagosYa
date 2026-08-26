@@ -8,7 +8,7 @@ import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto"
 
 const VISUAL_FIELDS = [
   "tagline", "bannerUrl", "backgroundColor", "backgroundMode", "backgroundGradientStart", "backgroundGradientEnd", "backgroundGradientAngle", "backgroundImageUrl", "aboutText", "aboutTitle", "aboutSubtitle", "aboutImageUrl",
-  "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle",
+  "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle", "linksTitle", "contactTitle", "contactSubtitle", "locationTitle", "locationSubtitle", "sectionBackgrounds",
   "accentColor", "fontStyle", "buttonStyle", "boardTexture", "announcement", "announcementMode",
   "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled", "promotionImageUrl", "promotionTitle",
   "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "layoutStyle", "experienceStyle", "motionDuoEnabled", "motionExperience", "motionExperiences", "animations", "editorialGallery",

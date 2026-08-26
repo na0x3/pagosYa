@@ -168,9 +168,13 @@ export interface Store {
   contactPhone: string | null;
   contactEmail: string | null;
   contactFormEnabled?: boolean;
+  contactTitle?: string | null;
+  contactSubtitle?: string | null;
   locationMapUrl?: string | null;
   locationDescription?: string | null;
   locationHighlight?: string | null;
+  locationTitle?: string | null;
+  locationSubtitle?: string | null;
   locations?: StoreLocation[];
   // Long-form brand story; blank lines separate paragraphs.
   aboutText: string | null;
@@ -182,6 +186,7 @@ export interface Store {
   catalogSubtitle?: string | null;
   galleryTitle?: string | null;
   gallerySubtitle?: string | null;
+  linksTitle?: string | null;
   // "#RRGGBB" brand accent; null = default palette accent.
   accentColor: string | null;
   // Curated merchant storefront font family.
@@ -206,6 +211,7 @@ export interface Store {
   // Optional while older previews/cached responses roll forward; checkout
   // supplies the canonical order and an empty gallery when absent.
   contentOrder?: StoreContentSection[];
+  sectionBackgrounds?: Record<string, string>;
   layoutStyle?: "cinematic" | "editorial" | "collage" | "catalog-first";
   experienceStyle?: "coverflow" | "diagonal-marquee" | "story-scroller";
   motionDuoEnabled?: boolean;

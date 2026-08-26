@@ -1480,9 +1480,13 @@ type StorePreviewPatch = Partial<
     | "contactPhone"
     | "contactEmail"
     | "contactFormEnabled"
+    | "contactTitle"
+    | "contactSubtitle"
     | "locationMapUrl"
     | "locationDescription"
     | "locationHighlight"
+    | "locationTitle"
+    | "locationSubtitle"
     | "locations"
     | "aboutText"
     | "aboutTitle"
@@ -1492,6 +1496,7 @@ type StorePreviewPatch = Partial<
     | "catalogSubtitle"
     | "galleryTitle"
     | "gallerySubtitle"
+    | "linksTitle"
     | "accentColor"
     | "fontStyle"
     | "buttonStyle"
@@ -1516,6 +1521,7 @@ type StorePreviewPatch = Partial<
     | "promotionCtaUrl"
     | "heroSlides"
     | "contentOrder"
+    | "sectionBackgrounds"
     | "layoutStyle"
     | "experienceStyle"
     | "motionDuoEnabled"
@@ -1651,8 +1657,58 @@ function syncStorePreviewEditorMode(): void {
   }
 }
 
+function applyStoreSectionBackgrounds(store: Store): void {
+  const configured = store.sectionBackgrounds && typeof store.sectionBackgrounds === "object"
+    ? store.sectionBackgrounds
+    : {};
+  const targets: Record<string, string> = {
+    hero: ".store-carousel, .store-hero",
+    products: ".store-products",
+    about: ".store-about",
+    gallery: ".store-editorial-gallery",
+    links: ".store-footer",
+    contact: ".store-contact-section",
+    location: ".store-location-section",
+  };
+  Object.entries(targets).forEach(([section, selector]) => {
+    app.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+      element.dataset.storeSectionKey = section;
+      const color = configured[section];
+      if (!/^#[0-9a-f]{6}$/i.test(color || "")) return;
+      const text = backgroundTheme(color).textColor;
+      element.style.setProperty("--store-section-background", color);
+      element.style.setProperty("--store-section-text", text);
+      element.style.setProperty("--pg-text", text);
+      element.style.setProperty("--pg-text-muted", `color-mix(in srgb, ${text} 76%, ${color})`);
+      element.style.setProperty("--pg-text-faint", `color-mix(in srgb, ${text} 62%, ${color})`);
+    });
+  });
+  app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]").forEach((element) => {
+    const section = `animation-${element.dataset.animationId}`;
+    element.dataset.storeSectionKey = section;
+    const color = configured[section];
+    if (!/^#[0-9a-f]{6}$/i.test(color || "")) return;
+    const text = backgroundTheme(color).textColor;
+    element.style.setProperty("--store-section-background", color);
+    element.style.setProperty("--store-section-text", text);
+    element.style.setProperty("--pg-text", text);
+    element.style.setProperty("--pg-text-muted", `color-mix(in srgb, ${text} 76%, ${color})`);
+    element.style.setProperty("--pg-text-faint", `color-mix(in srgb, ${text} 62%, ${color})`);
+  });
+}
+
 function annotateStorePreviewEditor(store: Store): void {
   if (!storePreviewMode) return;
+  app.querySelectorAll<HTMLElement>("[data-store-section-key]").forEach((element) => {
+    const section = element.dataset.storeSectionKey!;
+    const animationId = section.startsWith("animation-") ? section.slice("animation-".length) : undefined;
+    markStorePreviewEditorTarget(element, {
+      section: section as StorePreviewEditorSelection["section"],
+      field: "section",
+      label: animationId ? "sección animada" : `sección ${section}`,
+      ...(animationId ? { animationId } : {}),
+    });
+  });
   markStorePreviewEditorTarget(app.querySelector(".store-title"), { section: "brand", field: "storeName", label: "nombre de la tienda" });
   markStorePreviewEditorTarget(app.querySelector(".store-tagline"), { section: "brand", field: "storeTagline", label: "descripción corta" });
   markStorePreviewEditorTarget(app.querySelector(".merchant-header-logo"), { section: "brand", field: "storeLogo", label: "logo" });
@@ -1687,7 +1743,7 @@ function annotateStorePreviewEditor(store: Store): void {
   app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]").forEach((section) => {
     const animationId = section.dataset.animationId!;
     const animation = store.animations?.find((candidate) => candidate.id === animationId);
-    markStorePreviewEditorTarget(section, { section: `animation-${animationId}`, field: "animation", label: animation?.name || "sección animada", animationId });
+    markStorePreviewEditorTarget(section, { section: `animation-${animationId}`, field: "section", label: animation?.name || "sección animada", animationId });
     section.querySelectorAll<HTMLElement>("img, video, figure").forEach((media) => markStorePreviewEditorTarget(media, { section: `animation-${animationId}`, field: "media", label: "imagen o video de la animación", animationId }));
     section.querySelectorAll<HTMLElement>("h3").forEach((heading) => markStorePreviewEditorTarget(heading, { section: `animation-${animationId}`, field: animation?.type === "video-pill" ? "topWord" : "title", label: "texto de la animación", animationId }));
     section.querySelectorAll<HTMLElement>("p").forEach((copy) => markStorePreviewEditorTarget(copy, { section: `animation-${animationId}`, field: "body", label: "descripción de la animación", animationId }));
@@ -1696,8 +1752,13 @@ function annotateStorePreviewEditor(store: Store): void {
     markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-bottom"), { section: `animation-${animationId}`, field: "bottomWord", label: "texto inferior del video", animationId });
   });
   markAllStorePreviewEditorTargets(".store-link-btn", (_element, index) => ({ section: "links", field: "linkLabel", label: `enlace social ${index + 1}`, itemIndex: index }));
+  markStorePreviewEditorTarget(app.querySelector("#store-links-title"), { section: "links", field: "linksTitle", label: "título de redes sociales" });
   markStorePreviewEditorTarget(app.querySelector(".store-contact-section"), { section: "contact", field: "contact", label: "formulario de contacto" });
+  markStorePreviewEditorTarget(app.querySelector("#store-contact-title"), { section: "contact", field: "contactTitle", label: "título de contacto" });
+  markStorePreviewEditorTarget(app.querySelector(".store-contact-copy p"), { section: "contact", field: "contactSubtitle", label: "texto de contacto" });
   markStorePreviewEditorTarget(app.querySelector(".store-location-section"), { section: "location", field: "location", label: "ubicaciones" });
+  markStorePreviewEditorTarget(app.querySelector("#store-location-title"), { section: "location", field: "locationTitle", label: "título de ubicaciones" });
+  markStorePreviewEditorTarget(app.querySelector(".store-location-heading p"), { section: "location", field: "locationSubtitle", label: "texto de ubicaciones" });
   markStorePreviewEditorTarget(app.querySelector(".promotion-image"), { section: "promotion", field: "promotionImage", label: "imagen de promoción" });
   markStorePreviewEditorTarget(app.querySelector("#promotion-title"), { section: "promotion", field: "promotionTitle", label: "título de promoción" });
   markStorePreviewEditorTarget(app.querySelector(".promotion-dialog p"), { section: "promotion", field: "promotionBody", label: "texto de promoción" });
@@ -1745,6 +1806,8 @@ if (storePreviewMode) {
   app.addEventListener("pointerleave", () => showStorePreviewEditorHover(null), true);
   app.addEventListener("click", (event) => {
     if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    const interactive = event.target.closest("button, a, input, select, textarea, [role='button']");
+    if (interactive && !interactive.hasAttribute("data-store-editor-target")) return;
     const target = event.target.closest<HTMLElement>("[data-store-editor-target]");
     const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
     if (!selection) return;
@@ -1858,6 +1921,13 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const source = value as Record<string, unknown>;
   const clean: Record<string, unknown> = {};
+  if (source.sectionBackgrounds && typeof source.sectionBackgrounds === "object" && !Array.isArray(source.sectionBackgrounds)) {
+    clean.sectionBackgrounds = Object.fromEntries(
+      Object.entries(source.sectionBackgrounds as Record<string, unknown>)
+        .filter(([section, color]) => /^(?:hero|products|about|gallery|links|contact|location|motion|animation-[a-z0-9][a-z0-9_-]{0,47})$/.test(section) && typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color))
+        .slice(0, 32),
+    );
+  }
   const nullableStrings = [
     "tagline",
     "logoUrl",
@@ -1866,9 +1936,13 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     "backgroundImageUrl",
     "contactPhone",
     "contactEmail",
+    "contactTitle",
+    "contactSubtitle",
     "locationMapUrl",
     "locationDescription",
     "locationHighlight",
+    "locationTitle",
+    "locationSubtitle",
     "aboutText",
     "aboutTitle",
     "aboutSubtitle",
@@ -1877,6 +1951,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     "catalogSubtitle",
     "galleryTitle",
     "gallerySubtitle",
+    "linksTitle",
     "accentColor",
     "announcement",
     "promotionImageUrl",
@@ -3353,7 +3428,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   const linksHtml = safeLinks.length
     ? `<section class="store-footer" aria-labelledby="store-links-title">
-        <h2 class="store-footer-label" id="store-links-title">Síguenos</h2>
+        <h2 class="store-footer-label" id="store-links-title">${escapeHtml(store.linksTitle?.trim() || "Síguenos")}</h2>
         <div class="store-links">${safeLinks
           .map((link) => {
             const icon = linkIcon(link);
@@ -3366,8 +3441,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const contactHtml = store.contactFormEnabled === true
     ? `<section class="store-contact-section" id="store-contact" aria-labelledby="store-contact-title">
         <div class="store-contact-copy">
-          <h2 id="store-contact-title">¿Tienes una pregunta?</h2>
-          <p>Escríbele directamente al equipo de ${escapeHtml(store.storeName)}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.</p>
+          <h2 id="store-contact-title">${escapeHtml(store.contactTitle?.trim() || "¿Tienes una pregunta?")}</h2>
+          <p>${escapeHtml(store.contactSubtitle?.trim() || `Escríbele directamente al equipo de ${store.storeName}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.`)}</p>
         </div>
         <form class="store-contact-form" id="store-contact-form">
           <div class="field"><label for="store-contact-name">Nombre <span class="store-contact-optional">(opcional)</span></label><input id="store-contact-name" name="name" autocomplete="name" maxlength="120" placeholder="Cómo te llamas"></div>
@@ -3415,7 +3490,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const locationHtml = locations.length
     ? `<section class="store-location-section${locations.length > 1 ? " has-many" : ""}" id="store-location" aria-labelledby="store-location-title">
         <div class="store-location-heading">
-          <div><h2 id="store-location-title">Visítanos</h2><p>${locations.length === 1 ? "Encuentra esta tienda y elige cómo recibir tu pedido." : `${locations.length} ubicaciones para retirar o recibir tu pedido.`}</p></div>
+          <div><h2 id="store-location-title">${escapeHtml(store.locationTitle?.trim() || "Visítanos")}</h2><p>${escapeHtml(store.locationSubtitle?.trim() || (locations.length === 1 ? "Encuentra esta tienda y elige cómo recibir tu pedido." : `${locations.length} ubicaciones para retirar o recibir tu pedido.`))}</p></div>
           ${locations.length > 1 ? `<button class="store-locations-toggle" type="button" aria-expanded="false" aria-controls="store-locations-list">Ver ubicaciones <span>${locations.length}</span></button>` : ""}
         </div>
         <div class="store-locations-list${locations.length === 1 ? " is-single" : ""}" id="store-locations-list" ${locations.length > 1 ? "hidden" : ""}>
@@ -3445,6 +3520,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     <div class="secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>
     ${selectedCatalogSection ? "" : promotionHtml}
   `;
+  applyStoreSectionBackgrounds(store);
 
   // CSS transforms can place an image far from its untransformed box, which
   // makes native lazy-loading postpone it until after the animation is visible.

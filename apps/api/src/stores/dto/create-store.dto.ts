@@ -137,6 +137,32 @@ function IsStoreContentOrder(validationOptions?: ValidationOptions) {
   };
 }
 
+function IsStoreSectionBackgrounds(validationOptions?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    registerDecorator({
+      name: "isStoreSectionBackgrounds",
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown) {
+          if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+          const entries = Object.entries(value);
+          if (entries.length > 32) return false;
+          return entries.every(([section, color]) =>
+            ((STORE_CONTENT_SECTIONS as readonly string[]).includes(section) || STORE_ANIMATION_SECTION_PATTERN.test(section))
+            && typeof color === "string"
+            && /^#[0-9a-f]{6}$/i.test(color),
+          );
+        },
+        defaultMessage(args: ValidationArguments) {
+          return `${args.property} must map valid storefront section ids to 6-digit hex colors`;
+        },
+      },
+    });
+  };
+}
+
 export class StoreHeroSlideDto {
   @ApiProperty({ description: "Image, GIF, MP4, or WEBM path returned by POST /v1/uploads." })
   @IsString()
@@ -647,6 +673,15 @@ export class CreateStoreDto {
   contentOrder?: string[];
 
   @ApiPropertyOptional({
+    description: "Optional background color per storefront section id.",
+    type: "object",
+    additionalProperties: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+  })
+  @IsOptional()
+  @IsStoreSectionBackgrounds()
+  sectionBackgrounds?: Record<string, string>;
+
+  @ApiPropertyOptional({
     description: "Structural storefront composition.",
     enum: ["cinematic", "editorial", "collage", "catalog-first"],
   })
@@ -870,4 +905,44 @@ export class CreateStoreDto {
   @ValidateIf((_, value) => value !== null)
   @IsEmail()
   contactFormEmail?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Public heading of the contact section." })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  contactTitle?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Public supporting text of the contact section." })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(320)
+  contactSubtitle?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Public heading of the locations section." })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  locationTitle?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Public supporting text of the locations section." })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(220)
+  locationSubtitle?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Public heading above social and external links." })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(100)
+  linksTitle?: string | null;
 }

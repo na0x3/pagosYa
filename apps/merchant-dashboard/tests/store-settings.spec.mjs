@@ -671,7 +671,7 @@ test("preview clicks open the exact editor and image colors become an editable p
     headers: { "access-control-allow-origin": "*", "cache-control": "public, max-age=3600" },
     body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#d62828"/></svg>`,
   }));
-  await openDashboard(page, [{
+  const requests = await openDashboard(page, [{
     ...store("store_1", "Tienda editable"),
     heroSlides: [{ imageUrl: "/uploads/hero-red.webp", title: "Temporada roja", body: "Una historia", ctaLabel: "Ver" }],
     contentOrder: ["hero", "animation-opening", "products", "links"],
@@ -688,11 +688,20 @@ test("preview clicks open the exact editor and image colors become an editable p
   await expect(page.locator("#storeNameInput")).toBeFocused();
   await expect(page.locator("#previewSelectionStatus")).toContainText("nombre de la tienda");
 
+  await selectInPreview({ section: "products", field: "section", label: "sección catálogo" });
+  await expect(page.locator("#previewSelectedSection")).toHaveText("Catálogo");
+  await page.locator("#previewSectionColorEnabled").check();
+  await page.locator("#previewSectionColor").evaluate((input) => {
+    input.value = "#d62828";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
   await selectInPreview({ section: "animation-opening", field: "topWord", label: "texto superior", animationId: "opening" });
   const animationCard = page.locator('.animation-card[data-animation-id="opening"]');
   await expect(animationCard.locator('[data-animation-field="topWord"]')).toBeFocused();
   await expect(animationCard.locator(".animation-card-toggle")).toHaveAttribute("aria-expanded", "true");
 
+  await selectInPreview({ section: "brand", field: "storeName", label: "nombre de la tienda" });
   const paletteSwatch = page.locator("#storeImagePaletteSwatches [data-palette-color]").first();
   await expect(paletteSwatch).toBeVisible();
   const paletteColor = await paletteSwatch.getAttribute("data-palette-color");
@@ -703,6 +712,22 @@ test("preview clicks open the exact editor and image colors become an editable p
   await page.locator("#previewEditMode").evaluate((button) => button.click());
   await expect(page.locator("#previewEditMode")).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator("#previewSelectionStatus")).toContainText("Navegación normal");
+
+  await page.locator("#previewExpandToggle").evaluate((button) => button.click());
+  await expect(page.locator("#storeStudio")).toHaveClass(/is-preview-expanded/);
+  await expect(page.locator("#storeSettingsForm")).toBeHidden();
+  await page.locator("#storeOptionsTab").evaluate((button) => button.click());
+  await expect(page.locator("#storeSettingsForm")).toBeVisible();
+
+  await page.locator("#previewAddSection").selectOption("contact");
+  await expect(page.locator("#storeContactFormEnabled")).toBeChecked();
+
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+  const write = requests.find((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
+  expect(write.body.sectionBackgrounds).toEqual({ products: "#d62828" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test("merchant can save every showcase animation type from the real appearance editor", async ({ page }) => {
