@@ -122,19 +122,21 @@ describe("VisualStudioService", () => {
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.cartButtonLabel)).size).toBe(3);
   });
 
-  it("uses an editable text animation to open proposals when the merchant selects none", async () => {
+  it("chooses distinct safe motion suites when the merchant does not select templates", async () => {
     const { service, prisma } = setup();
 
-    await service.generate("merchant_1", "store_1", { businessCategory: "matcha", motionExperiences: [] });
+    await service.generate("merchant_1", "store_1", { businessCategory: "matcha" });
 
-    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+    const expectedSuites = [
+      ["clarity-marquee", "magnetic-target"],
+      ["circle-reveal", "clarity-marquee"],
+      ["magnetic-target", "circle-reveal"],
+    ];
+    for (const [proposalIndex, call] of prisma.storeVisualProposal.create.mock.calls.entries()) {
       expect(call[0].data.config.motionDuoEnabled).toBe(true);
-      expect(call[0].data.config.motionExperiences).toEqual(["clarity-marquee"]);
-      expect(call[0].data.config.animations).toEqual([
-        expect.objectContaining({ type: "clarity-marquee", media: [] }),
-      ]);
-      expect(call[0].data.config.animations[0]).not.toHaveProperty("title");
-      expect(call[0].data.config.animations[0]).not.toHaveProperty("subtitle");
+      expect(call[0].data.config.motionExperiences).toEqual(expectedSuites[proposalIndex]);
+      expect(call[0].data.config.animations.map((animation: { type: string }) => animation.type)).toEqual(expectedSuites[proposalIndex]);
+      expect(call[0].data.config.animations.every((animation: Record<string, unknown>) => !("title" in animation) && !("subtitle" in animation))).toBe(true);
       expect(call[0].data.config.heroSlides).toEqual([]);
       expect(call[0].data.config.editorialGallery).toEqual([]);
       expect(call[0].data.config.contentOrder[0]).toMatch(/^animation-/);
@@ -279,6 +281,7 @@ describe("VisualStudioService", () => {
       contentOrder: ["hero", "about", "products", "gallery", "motion", "links"],
       layoutStyle: "cinematic",
       experienceStyle: "coverflow",
+      motionExperiences: ["story-scroll", "clarity-marquee"],
       announcement: "MATCHO • Explora la selección actual",
       announcementMode: "marquee",
       announcementSpeed: 18,
@@ -294,33 +297,37 @@ describe("VisualStudioService", () => {
     });
     const directions = [
       direction("Bosque editorial"),
-      direction("Taller natural", { backgroundColor: "#b91c1c", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", experienceStyle: "story-scroller", contentOrder: ["motion", "about", "hero", "products", "links", "gallery"] }),
-      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["products", "hero", "motion", "about", "links", "gallery"] }),
+      direction("Taller natural", { backgroundColor: "#b91c1c", accentColor: "#7a351f", buttonStyle: "rounded", buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "editorial", experienceStyle: "story-scroller", motionExperiences: ["frame-sequence", "circle-reveal"], contentOrder: ["motion", "about", "hero", "products", "links", "gallery"] }),
+      direction("Mercado gráfico", { backgroundColor: "#f6c84f", accentColor: "#7f1d1d", buttonStyle: "pill", buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", motionExperiences: ["image-stream", "magnetic-target"], contentOrder: ["products", "hero", "motion", "about", "links", "gallery"] }),
     ];
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ directions }) }] }] }) });
 
     try {
-      const result = await service.generate("merchant_1", "store_1", { assetUrls: ["/v1/uploads/11111111-1111-4111-8111-111111111111.jpg"], businessCategory: "matcha", fontStyle: "friendly", announcementMarqueeEnabled: false, motionExperience: "story-scroll" });
+      const result = await service.generate("merchant_1", "store_1", { assetUrls: ["/v1/uploads/11111111-1111-4111-8111-111111111111.jpg"], businessCategory: "matcha", creativeBrief: "Que parezca una publicación cultural con fotos grandes y ritmo pausado." });
       expect(result.mode).toBe("ai");
       expect(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.title)).toEqual(directions.map((direction) => direction.title));
       expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config).toEqual(expect.objectContaining({
         tagline: "Matcha preparado para tu ritual diario",
-        announcementMode: "static",
+        announcementMode: "marquee",
         backgroundColor: "#edf3f8",
         accentColor: "#274c43",
-        fontStyle: "friendly",
+        fontStyle: "editorial",
         buttonStyle: "square",
         boardTexture: "painted",
         buttonVariant: "outline",
         buttonMotion: "none",
         cartButtonLabel: "Completar pedido",
-        contentOrder: ["animation-ai-1-1-story-scroll", "hero", "about", "products", "gallery", "links", "contact", "location"],
+        contentOrder: ["animation-ai-1-1-story-scroll", "hero", "about", "products", "animation-ai-1-2-clarity-marquee", "gallery", "links", "contact", "location"],
         layoutStyle: "cinematic",
         experienceStyle: "coverflow",
         motionDuoEnabled: true,
         motionExperience: "story-scroll",
-        animations: expect.arrayContaining([expect.objectContaining({ id: "ai-1-1-story-scroll", name: "Story Scroll", type: "story-scroll" })]),
+        motionExperiences: ["story-scroll", "clarity-marquee"],
+        animations: expect.arrayContaining([
+          expect.objectContaining({ id: "ai-1-1-story-scroll", name: "Story Scroll", type: "story-scroll" }),
+          expect.objectContaining({ id: "ai-1-2-clarity-marquee", type: "clarity-marquee" }),
+        ]),
         heroSlides: [],
         editorialGallery: [],
       }));

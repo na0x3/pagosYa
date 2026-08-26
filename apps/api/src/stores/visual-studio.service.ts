@@ -47,6 +47,7 @@ type AiDirection = {
   contentOrder: Array<"hero" | "products" | "about" | "gallery" | "motion" | "links">;
   layoutStyle: "cinematic" | "editorial" | "collage" | "catalog-first";
   experienceStyle: "coverflow" | "diagonal-marquee" | "story-scroller";
+  motionExperiences: string[];
   announcement: string;
   announcementMode: "static" | "marquee";
   announcementSpeed: number;
@@ -165,6 +166,29 @@ function safeGeneratedBackground(candidate: unknown, index: number): string {
     ? SAFE_GENERATED_BACKGROUNDS[index % SAFE_GENERATED_BACKGROUNDS.length]
     : candidate.toLowerCase();
 }
+
+function defaultMotionSuite(index: number, assetCount: number): string[] {
+  if (assetCount <= 1) {
+    return [
+      ["clarity-marquee", "magnetic-target"],
+      ["circle-reveal", "clarity-marquee"],
+      ["magnetic-target", "circle-reveal"],
+    ][index % 3];
+  }
+  if (assetCount === 2) {
+    return [
+      ["story-scroll", "clarity-marquee"],
+      ["coverflow-carousel", "circle-reveal"],
+      ["image-stream", "magnetic-target"],
+    ][index % 3];
+  }
+  return [
+    ["hero-gallery-scroll", "zoom-parallax", "clarity-marquee"],
+    ["coverflow-carousel", "frame-sequence", "circle-reveal"],
+    ["image-stream", "full-screen-chapters", "magnetic-target"],
+  ][index % 3];
+}
+
 const AI_DIRECTIONS_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -179,7 +203,7 @@ const AI_DIRECTIONS_SCHEMA = {
         additionalProperties: false,
         required: [
           "title", "rationale", "tagline", "aboutText", "aboutTitle", "aboutSubtitle", "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle", "backgroundColor", "accentColor", "fontStyle", "buttonStyle",
-          "buttonVariant", "buttonMotion", "cartButtonLabel", "contentOrder", "layoutStyle", "experienceStyle", "announcement",
+          "buttonVariant", "buttonMotion", "cartButtonLabel", "contentOrder", "layoutStyle", "experienceStyle", "motionExperiences", "announcement",
           "announcementMode", "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled",
           "promotionTitle", "promotionBody", "promotionCtaLabel", "heroSlides", "editorialGallery",
         ],
@@ -209,6 +233,13 @@ const AI_DIRECTIONS_SCHEMA = {
           },
           layoutStyle: { type: "string", enum: ["cinematic", "editorial", "collage", "catalog-first"] },
           experienceStyle: { type: "string", enum: ["coverflow", "diagonal-marquee", "story-scroller"] },
+          motionExperiences: {
+            type: "array",
+            minItems: 2,
+            maxItems: 4,
+            uniqueItems: true,
+            items: { type: "string", enum: MOTION_EXPERIENCES },
+          },
           announcement: { type: "string", minLength: 5, maxLength: 180 },
           announcementMode: { type: "string", enum: ["static", "marquee"] },
           announcementSpeed: { type: "integer", minimum: 8, maximum: 40 },
@@ -354,11 +385,19 @@ export class VisualStudioService {
       }
     }
 
-    const motionExperiences = [...new Set(
-      (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience ?? "clarity-marquee"])
+    const requestedMotionExperiences = [...new Set(
+      (dto.motionExperiences?.length ? dto.motionExperiences : dto.motionExperience ? [dto.motionExperience] : [])
         .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
     )];
     presets = presets.map((preset, index) => {
+      const proposedMotionExperiences = Array.isArray(preset.config.motionExperiences)
+        ? preset.config.motionExperiences.filter((experience): experience is string => typeof experience === "string" && MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number]))
+        : [];
+      const motionExperiences = requestedMotionExperiences.length
+        ? requestedMotionExperiences
+        : proposedMotionExperiences.length
+          ? [...new Set(proposedMotionExperiences)]
+          : defaultMotionSuite(index, orderedAssets.length);
       const backgroundColor = safeGeneratedBackground(preset.config.backgroundColor, index);
       const authoredMedia = [
         ...(Array.isArray(preset.config.editorialGallery) ? preset.config.editorialGallery : []),
@@ -562,23 +601,25 @@ export class VisualStudioService {
       }));
       const usableImages = imageInputs.filter((input): input is NonNullable<typeof input> => Boolean(input));
       const category = dto.businessCategory?.trim() || products.map((product) => product.name).slice(0, 6).join(", ") || "productos de la marca";
-      const personality = dto.personality?.trim() || "sin una personalidad indicada; infiérela de las fotos";
+      const personality = dto.personality?.trim() || "sin una personalidad prefijada; infiérela de las fotos y del catálogo";
+      const creativeBrief = dto.creativeBrief?.trim() || "Sin instrucciones adicionales. Sorprende con una dirección propia del rubro y del material visual disponible.";
       const catalog = products.slice(0, 12).map((product, index) => `${index + 1}. ${product.name}${product.description ? ` — ${product.description}` : ""}`).join("\n") || "Catálogo todavía vacío";
       const socialLinks = links.map((link) => `${link.label}: ${link.url}`).join("\n") || "Sin enlaces sociales configurados";
       const assetLegend = assets.map((asset, index) => `${index}: ${asset.mimeType} · ${asset.url}`).join("\n") || "Sin medios disponibles";
       const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
-      const requestedFontStyle = normalizeStoreFontStyle(dto.fontStyle || store.fontStyle);
+      const requestedFontStyle = dto.fontStyle ? normalizeStoreFontStyle(dto.fontStyle) : null;
       const requestedMotionExperiences = [...new Set(
-        (dto.motionExperiences?.length ? dto.motionExperiences : [dto.motionExperience ?? "clarity-marquee"])
+        (dto.motionExperiences?.length ? dto.motionExperiences : dto.motionExperience ? [dto.motionExperience] : [])
           .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
       )];
       const motionInstruction = requestedMotionExperiences.length
         ? `Incluye únicamente estas animaciones como secciones independientes: ${requestedMotionExperiences.join(", ")}. Distribúyelas en el recorrido; nunca las agrupes todas. Usa medios diferentes para cada una siempre que haya suficientes.`
-        : "No agregues animaciones, carruseles ni sliders. La tienda debe funcionar como una composición estática y deliberada.";
+        : "Elige de dos a cuatro motionExperiences que sirvan a esta dirección. Trátalas como coreografía editorial, no como efectos sueltos; combina ritmos distintos y usa medios diferentes cuando haya suficientes.";
       const prompt = [
         "Actúa como director de arte y arquitecto de ecommerce. Devuelve exactamente tres sitios completos cuya estructura, ritmo y jerarquía sean inequívocamente distintos; no aceptes la misma plantilla con otra paleta. Usa únicamente las imágenes ya existentes y no generes ni solicites imágenes nuevas.",
         `Clave creativa de esta generación: ${creativeRun}. Úsala para evitar repetir decisiones de generaciones anteriores sin mencionarla en el resultado.`,
         `Tienda: ${store.name}. Categoría: ${category}. Personalidad: ${personality}.`,
+        `Brief creativo del comercio:\n${creativeBrief}`,
         `Conversión elegida por el comercio: ${dto.checkoutMode === "whatsapp" ? "pedido por WhatsApp, sin pago integrado" : dto.checkoutMode === "external" ? "captación de interesados hacia un enlace externo, sin pago integrado" : "pago integrado con pagosYa"}. Respeta esta decisión en el tono de los llamados a la acción.`,
         `Catálogo actual:\n${catalog}`,
         `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
@@ -592,7 +633,7 @@ export class VisualStudioService {
         "Crea entre cuatro y cinco slides por dirección. Cada slide cumple un rol distinto (promesa, producto, punto de vista, detalle, transición o acción), con título, texto sustancioso y botón breve. Cuando haya suficientes imágenes, no repitas assetIndex dentro del mismo slider.",
         "La editorialGallery no es una tira de pies de foto: genera para cada imagen un título, un caption breve y un body diferente de 2–3 frases. Ese contenido alimenta la animación seleccionada y, para stagger-testimonials, body funciona como reseña y caption como autor. Debe sentirse variado y específico al catálogo sin inventar hechos.",
         `Las tres direcciones también deben variar densidad, escala de imagen y relación entre historia y catálogo. El anuncio superior debe ser ${dto.announcementMarqueeEnabled === false ? "estático" : dto.announcementMarqueeEnabled === true ? "una marquesina en movimiento" : "estático o móvil según la dirección"}.`,
-        `Usa fontStyle=${requestedFontStyle} en las tres direcciones. El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas. Nunca uses rojo ni amarillo como color de fondo; resérvalos, si hacen falta, para acentos pequeños.`,
+        `${requestedFontStyle ? `Usa fontStyle=${requestedFontStyle} en las tres direcciones por compatibilidad con una preferencia guardada.` : "Elige un fontStyle distinto y coherente para cada dirección; la tipografía forma parte de la propuesta, no es una pregunta para el comercio."} El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas. Nunca uses rojo ni amarillo como color de fondo; resérvalos, si hacen falta, para acentos pequeños.`,
         "heroSlides y editorialGallery deben referenciar solamente índices disponibles.",
         "Escribe textos borrador atractivos en español, sin inventar descuentos, envíos, certificaciones, origen, materiales ni promesas verificables. No devuelvas HTML, CSS ni texto fuera del esquema.",
       ].join("\n");
@@ -643,7 +684,7 @@ export class VisualStudioService {
           backgroundGradientAngle: 0,
           backgroundImageUrl: null,
           accentColor: direction.accentColor.toLowerCase(),
-          fontStyle: requestedFontStyle,
+          fontStyle: requestedFontStyle || direction.fontStyle,
           buttonStyle: direction.buttonStyle,
           boardTexture: "painted",
           buttonVariant: direction.buttonVariant,
@@ -652,6 +693,7 @@ export class VisualStudioService {
           contentOrder: direction.contentOrder,
           layoutStyle: direction.layoutStyle,
           experienceStyle: direction.experienceStyle,
+          motionExperiences: direction.motionExperiences,
           motionDuoEnabled: true,
           announcement: direction.announcement,
           announcementMode: direction.announcementMode,
@@ -712,6 +754,9 @@ export class VisualStudioService {
       && validOrder(direction.contentOrder)
       && enumValue(direction.layoutStyle, ["cinematic", "editorial", "collage", "catalog-first"])
       && enumValue(direction.experienceStyle, ["coverflow", "diagonal-marquee", "story-scroller"])
+      && Array.isArray(direction.motionExperiences) && direction.motionExperiences.length >= 2 && direction.motionExperiences.length <= 4
+      && new Set(direction.motionExperiences).size === direction.motionExperiences.length
+      && direction.motionExperiences.every((experience) => enumValue(experience, MOTION_EXPERIENCES))
       && typeof direction.announcement === "string" && direction.announcement.length >= 5 && direction.announcement.length <= 180
       && enumValue(direction.announcementMode, ["static", "marquee"])
       && validInteger(direction.announcementSpeed, 8, 40)

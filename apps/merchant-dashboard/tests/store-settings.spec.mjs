@@ -673,21 +673,95 @@ test("typing keeps focus, preserves the iframe, and identifies the edited previe
 });
 
 test("preview clicks open the exact editor and image colors become an editable palette", async ({ page }) => {
-  await page.route("http://localhost:5175/**", (route) => route.fulfill({
-    contentType: "text/html",
-    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
-  }));
+  if (!process.env.CAPTURE_VISUAL_EDITOR) {
+    await page.route("http://localhost:5175/**", (route) => route.fulfill({
+      contentType: "text/html",
+      body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+    }));
+  }
   await page.route("http://localhost:3001/uploads/**", (route) => route.fulfill({
     contentType: "image/svg+xml",
     headers: { "access-control-allow-origin": "*", "cache-control": "public, max-age=3600" },
     body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#d62828"/></svg>`,
   }));
-  const requests = await openDashboard(page, [{
+  const editableStore = {
     ...store("store_1", "Tienda editable"),
     heroSlides: [{ imageUrl: "/uploads/hero-red.webp", title: "Temporada roja", body: "Una historia", ctaLabel: "Ver" }],
     contentOrder: ["hero", "animation-opening", "products", "links"],
     animations: [{ id: "opening", name: "Apertura", type: "video-pill", topWord: "creando", rightWord: "tu", bottomWord: "historia", media: [] }],
-  }]);
+  };
+  const requests = await openDashboard(page, [editableStore], ({ path }) => {
+    if (!process.env.CAPTURE_VISUAL_EDITOR || path !== "/stores/public/store_1/store") return undefined;
+    return {
+      storeId: "store_1",
+      storeName: editableStore.name,
+      tagline: "Objetos cotidianos, hechos con intención.",
+      logoUrl: null,
+      bannerUrl: "/uploads/hero-red.webp",
+      backgroundColor: "#f7f2e8",
+      backgroundMode: "solid",
+      backgroundGradientStart: "#f7f2e8",
+      backgroundGradientEnd: "#f7f2e8",
+      backgroundGradientAngle: 0,
+      backgroundImageUrl: null,
+      contactPhone: null,
+      contactEmail: "hola@taller.local",
+      contactFormEnabled: true,
+      contactTitle: "Hablemos de tu próxima pieza",
+      contactSubtitle: "Cuéntanos qué imaginas y respondemos personalmente.",
+      aboutText: "Una colección pequeña de piezas honestas, hechas para acompañar todos los días.",
+      aboutTitle: "Hecho despacio. Vivido a diario.",
+      aboutSubtitle: "Materiales nobles y manos locales.",
+      aboutImageUrl: null,
+      catalogTitle: "La colección",
+      catalogSubtitle: "Series cortas, ninguna pieza de más.",
+      galleryTitle: "En el taller",
+      gallerySubtitle: "El proceso también forma parte del objeto.",
+      linksTitle: "Sigue el proceso",
+      locationMapUrl: null,
+      locationDescription: null,
+      locationHighlight: null,
+      accentColor: "#d62828",
+      fontStyle: "editorial",
+      buttonStyle: "square",
+      boardTexture: "kraft",
+      announcement: "Envíos a toda Bolivia · piezas limitadas",
+      announcementMode: "static",
+      announcementSpeed: 16,
+      announcementSize: "small",
+      announcementColor: "#171717",
+      promotionEnabled: false,
+      promotionImageUrl: null,
+      promotionTitle: null,
+      promotionBody: null,
+      promotionCtaLabel: null,
+      promotionCtaUrl: null,
+      heroSlides: editableStore.heroSlides,
+      contentOrder: editableStore.contentOrder,
+      sectionBackgrounds: {},
+      layoutStyle: "editorial",
+      experienceStyle: "coverflow",
+      motionDuoEnabled: false,
+      motionExperience: "video-pill",
+      motionExperiences: ["video-pill"],
+      animations: editableStore.animations,
+      editorialGallery: [],
+      buttonVariant: "solid",
+      buttonMotion: "lift",
+      cartButtonLabel: "Ver selección",
+      checkoutMode: "payment",
+      leadCaptureUrl: null,
+      cartRecommendationsEnabled: true,
+      cartRecommendationProductIds: [],
+      showLowStockToCustomers: false,
+      links: [{ id: "link_1", label: "Instagram", url: "https://instagram.com/taller" }],
+      categories: [{ id: "category_1", name: "Colección" }],
+      items: [
+        { id: "product_1", categoryId: "category_1", name: "Vaso Terracota", description: "Torno manual y esmalte mate.", imageUrls: ["/uploads/product-one.webp"], tags: ["Nuevo"], stock: 8, color: "#d62828", variants: [], extras: [], amount: 12500, currency: "BOB", discountPercent: null, discountStartsAt: null, discountEndsAt: null, soldCount: 12 },
+        { id: "product_2", categoryId: "category_1", name: "Jarra Obsidiana", description: "Una silueta firme para la mesa.", imageUrls: ["/uploads/product-two.webp"], tags: [], stock: 4, color: "#171717", variants: [], extras: [], amount: 24000, currency: "BOB", discountPercent: null, discountStartsAt: null, discountEndsAt: null, soldCount: 7 },
+      ],
+    };
+  });
 
   const previewFrame = page.frames().find((frame) => frame.url().startsWith("http://localhost:5175/"));
   expect(previewFrame).toBeTruthy();
@@ -739,6 +813,13 @@ test("preview clicks open the exact editor and image colors become an editable p
   await expect(page.locator("#storeAccentToggle")).toBeChecked();
   if (process.env.CAPTURE_VISUAL_EDITOR) {
     if (await page.locator("#assistantClose").isVisible()) await page.locator("#assistantClose").click();
+    await expect(page.locator("#storePreviewStage")).not.toHaveClass(/is-loading|is-error/);
+    await page.evaluate(() => {
+      if (!document.getElementById("storeStudio")?.classList.contains("is-preview-expanded")) {
+        document.getElementById("previewExpandToggle")?.click();
+      }
+    });
+    await page.locator(".store-preview-panel").scrollIntoViewIfNeeded();
     await page.screenshot({ path: "../../.impeccable/store-editor-desktop.png", fullPage: false });
   }
 
@@ -770,6 +851,11 @@ test("preview clicks open the exact editor and image colors become an editable p
   await expect(page.locator("#storeStudio")).toHaveClass(/is-preview-expanded/);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = document.getElementById("storePreviewStage")?.getBoundingClientRect();
+    const tools = document.getElementById("previewEditorTools")?.getBoundingClientRect();
+    return Boolean(canvas && tools && canvas.top < tools.top);
+  })).toBe(true);
   if (process.env.CAPTURE_VISUAL_EDITOR) {
     await page.screenshot({ path: "../../.impeccable/store-editor-mobile.png", fullPage: false });
   }
@@ -1947,17 +2033,18 @@ test("AI onboarding keeps prior photo batches and lets the merchant remove each 
   await expect(page.locator("#onboardingDialog")).toBeVisible();
 });
 
-test("storefront typography excludes Precisa and offers five curated choices", async ({ page }) => {
+test("AI creation hides technical design choices while advanced editing keeps curated typography", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Primera")]);
   const assistantToggle = page.locator("#visualAssistantToggle");
-  if (await assistantToggle.getAttribute("aria-expanded") !== "true") await assistantToggle.click();
+  await expect(page.locator("#previewAiCreate")).toBeVisible();
+  if (await assistantToggle.getAttribute("aria-expanded") !== "true") await page.locator("#previewAiCreate").click();
+  await expect(assistantToggle).toHaveAttribute("aria-expanded", "true");
 
-  await expect(page.locator(".font-choice")).toHaveCount(5);
+  await expect(page.locator("#visualCreativeBrief")).toBeVisible();
+  await expect(page.locator(".font-choice")).toHaveCount(0);
+  await expect(page.locator('input[name="visualAnnouncementMarquee"]')).toHaveCount(0);
+  await expect(page.locator('input[name="visualMotionExperience"]')).toHaveCount(0);
   await expect(page.getByText("Precisa", { exact: true })).toHaveCount(0);
-  await expect(page.locator('.font-choice input[value="modern"]')).toBeChecked();
-  await expect(page.locator(".font-preview-editorial small")).toHaveCSS("font-family", /Georgia/);
-  await expect(page.locator(".font-preview-classic small")).toHaveCSS("font-family", /Palatino/);
-  await expect(page.locator(".font-preview-geometric small")).toHaveCSS("font-family", /Futura|Century Gothic|Avenir Next|Arial/);
   await expect(page.locator("#storeFontStyle option")).toHaveCount(5);
   await expect(page.locator('#storeFontStyle option[value="mono"]')).toHaveCount(0);
 });
@@ -1988,20 +2075,15 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
 
   const assistantToggle = page.locator("#visualAssistantToggle");
   if (await assistantToggle.getAttribute("aria-expanded") !== "true") await assistantToggle.click();
-  await expect(page.locator(".font-choice")).toHaveCount(5);
-  await expect(page.locator(".font-preview-editorial small")).toHaveCSS("font-family", /Georgia/);
-  await page.locator('input[name="visualFontStyle"][value="editorial"]').check();
-  await expect(page.locator('input[name="visualAnnouncementMarquee"]')).toHaveCount(2);
-  await expect(page.locator('input[name="visualMotionExperience"]')).toHaveCount(16);
-  await expect(page.locator('input[name="visualMotionExperience"]:checked')).toHaveCount(0);
-  await page.locator('input[name="visualAnnouncementMarquee"][value="false"]').check();
-  await page.locator('input[name="visualMotionExperience"][value="hero-carousel"]').check();
-  await page.locator('input[name="visualMotionExperience"][value="hero-gallery-scroll"]').check();
-  await page.locator('input[name="visualMotionExperience"][value="stagger-testimonials"]').check();
+  await expect(page.locator("#visualCreativeBrief")).toBeVisible();
+  await expect(page.locator(".font-choice")).toHaveCount(0);
+  await expect(page.locator('input[name="visualAnnouncementMarquee"]')).toHaveCount(0);
+  await expect(page.locator('input[name="visualMotionExperience"]')).toHaveCount(0);
   await page.locator('input[name="visualCheckoutMode"][value="whatsapp"]').check();
   await expect(page.locator("#visualWhatsappPhoneWrap")).toBeVisible();
   await page.locator("#visualWhatsappPhone").fill("+591 71234567");
   await page.locator("#visualBusinessCategory").fill("Café de especialidad");
+  await page.locator("#visualCreativeBrief").fill("Como una revista gastronómica contemporánea: fotos grandes, ritmo sereno y nada genérico.");
   await page.locator("#visualAiImages").setInputFiles([
     { name: "referencia-1.jpg", mimeType: "image/jpeg", buffer: Buffer.from("foto-de-referencia-1") },
     { name: "referencia-2.jpg", mimeType: "image/jpeg", buffer: Buffer.from("foto-de-referencia-2") },
@@ -2046,15 +2128,15 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
 
   const generation = requests.find((request) => request.path === "/stores/store_1/visual-proposals");
   expect(generation?.body).toMatchObject({
-    fontStyle: "editorial",
-    announcementMarqueeEnabled: false,
-    motionExperience: "hero-carousel",
-    motionExperiences: ["hero-carousel", "hero-gallery-scroll", "stagger-testimonials"],
     checkoutMode: "whatsapp",
     whatsappPhone: "+591 71234567",
     businessCategory: "Café de especialidad",
+    creativeBrief: "Como una revista gastronómica contemporánea: fotos grandes, ritmo sereno y nada genérico.",
     assetUrls: Array.from({ length: 9 }, (_, index) => `/v1/uploads/ai-${index + 1}.jpg`),
   });
+  expect(generation?.body).not.toHaveProperty("fontStyle");
+  expect(generation?.body).not.toHaveProperty("announcementMarqueeEnabled");
+  expect(generation?.body).not.toHaveProperty("motionExperiences");
 });
 
 test("AI proposals preview in a new tab without applying and only the latest applied proposal stays in use", async ({ page }) => {

@@ -855,7 +855,10 @@
   .visual-progress span { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 7px; background: var(--pg-bg); font-size: .68rem; font-weight: 700; }
   .visual-step[hidden] { display: none; }
   .visual-input-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(180px, .8fr); gap: 12px; }
-  .visual-input-grid input, .visual-input-grid select { width: 100%; min-width: 0; }
+  .visual-input-grid input, .visual-input-grid select, .visual-input-grid textarea { width: 100%; min-width: 0; }
+  .visual-creative-brief { grid-column: 1 / -1; display: grid; gap: 7px; }
+  .visual-creative-brief textarea { min-height: 118px; resize: vertical; line-height: 1.55; }
+  .visual-creative-brief .faint { max-width: 74ch; line-height: 1.5; }
   .visual-conversion { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; }
   .visual-conversion legend { margin-bottom: 8px; font-size: .78rem; font-weight: 700; }
   .visual-conversion-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
@@ -1300,6 +1303,8 @@
   .preview-device-switch button.active { background: var(--pg-surface); color: var(--pg-text); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
   .preview-edit-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 6px 9px; white-space: nowrap; }
   .preview-edit-toggle svg { width: 15px; height: 15px; }
+  .preview-ai-create { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 6px 9px; border-color: var(--pg-accent); color: var(--pg-text); white-space: nowrap; }
+  .preview-ai-create svg { width: 15px; height: 15px; color: var(--pg-accent); }
   .preview-edit-toggle[aria-pressed="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
   .preview-editor-tools { display: grid; gap: 9px; margin-bottom: 10px; }
   .preview-section-inspector { display: grid; gap: 9px; padding: 10px; border: 1px solid var(--pg-border-strong); background: var(--pg-surface); }
@@ -1501,7 +1506,7 @@
   .onboarding-tour-item p { margin: 0; color: var(--pg-text-faint); font-size: .8rem; line-height: 1.5; }
   .onboarding-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 13px; margin-top: 18px; }
   .onboarding-form-grid .full { grid-column: 1 / -1; }
-  .onboarding-form-grid input, .onboarding-form-grid select { width: 100%; min-width: 0; }
+  .onboarding-form-grid input, .onboarding-form-grid select, .onboarding-form-grid textarea { width: 100%; min-width: 0; }
   .onboarding-file { padding: 13px; border: 1px dashed var(--pg-border-strong); border-radius: 11px; background: var(--pg-bg); }
   .onboarding-file .faint { display: block; margin-top: 6px; line-height: 1.45; }
   .onboarding-safety { display: flex; gap: 8px; align-items: flex-start; margin-top: 17px; color: var(--pg-success); font-size: .7rem; line-height: 1.5; }
@@ -1535,8 +1540,17 @@
     .store-studio.is-preview-expanded .store-options-tab { height: auto; min-height: 42px; margin-bottom: 8px; writing-mode: horizontal-tb; }
     .store-studio.is-preview-expanded .store-options-tab { display: none; }
     .store-studio.is-preview-expanded .store-options-tab svg { transform: none; }
-    .store-preview-panel, .store-studio.is-preview-expanded .store-preview-panel { position: static; display: block; height: auto; max-height: none; overflow: visible; }
-    .store-preview-stage { min-height: 590px; }
+    .store-preview-panel, .store-studio.is-preview-expanded .store-preview-panel {
+      position: static;
+      display: flex;
+      height: auto;
+      max-height: none;
+      flex-direction: column;
+      overflow: visible;
+    }
+    .store-preview-toolbar, .store-studio.is-preview-expanded .store-preview-toolbar { order: 1; }
+    .store-preview-stage, .store-studio.is-preview-expanded .store-preview-stage { order: 2; min-height: 590px; }
+    .preview-editor-tools, .store-studio.is-preview-expanded .preview-editor-tools { order: 3; margin: 10px 0 0; }
     .store-preview-frame { height: 640px; }
     .preview-context-grid, .preview-context-color-row, .preview-section-quick-controls { grid-template-columns: 1fr; }
   }
@@ -1725,6 +1739,7 @@
     .inventory-import-grid { grid-template-columns: 1fr; }
     .visual-onboarding-head { flex-direction: column; }
     .visual-input-grid { grid-template-columns: 1fr; }
+    .visual-creative-brief { grid-column: 1; }
     .visual-upload-zone { grid-column: 1; }
     .visual-preference-grid { grid-template-columns: 1fr; }
     .visual-conversion-options { grid-template-columns: 1fr; }
@@ -3874,63 +3889,11 @@
                 <label for="visualBusinessCategory">¿Qué vendes?</label>
                 <input id="visualBusinessCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil">
               </div>
-              <div>
-                <label for="visualPersonality">¿Cómo quieres sentirte?</label>
-                <select id="visualPersonality">
-                  <option value="">Déjame sorprender</option>
-                  <option value="warm">Cálida y artesanal</option>
-                  <option value="bold">Audaz y enérgica</option>
-                  <option value="minimal">Limpia y minimal</option>
-                  <option value="elegant">Elegante y serena</option>
-                  <option value="playful">Alegre y cercana</option>
-                </select>
+              <div class="visual-creative-brief">
+                <label for="visualCreativeBrief">Cuéntale a la IA cómo imaginas la marca</label>
+                <textarea id="visualCreativeBrief" rows="5" maxlength="1200" placeholder="Ej. Quiero que se sienta como una galería de arte joven: fotos enormes, mucho aire, textos directos y movimiento suave. No quiero que parezca una tienda genérica."></textarea>
+                <span class="faint">Puedes mencionar referencias, colores que evitar, energía, público o una idea visual. La IA decidirá tipografía, composición y movimiento.</span>
               </div>
-              <fieldset class="visual-conversion visual-font-choice">
-                <legend>Elige la tipografía de tu sitio</legend>
-                <div class="font-choice-grid">
-                  <label class="font-choice font-preview-modern"><input type="radio" name="visualFontStyle" value="modern" checked><span><strong>Moderna</strong><small>Tu marca, limpia y versátil.</small></span></label>
-                  <label class="font-choice font-preview-editorial"><input type="radio" name="visualFontStyle" value="editorial"><span><strong>Editorial</strong><small>Tu marca, elegante y artesanal.</small></span></label>
-                  <label class="font-choice font-preview-friendly"><input type="radio" name="visualFontStyle" value="friendly"><span><strong>Cercana</strong><small>Tu marca, suave y amigable.</small></span></label>
-                  <label class="font-choice font-preview-classic"><input type="radio" name="visualFontStyle" value="classic"><span><strong>Clásica</strong><small>Tu marca, refinada y atemporal.</small></span></label>
-                  <label class="font-choice font-preview-geometric"><input type="radio" name="visualFontStyle" value="geometric"><span><strong>Geométrica</strong><small>Tu marca, expresiva y contemporánea.</small></span></label>
-                </div>
-              </fieldset>
-              <fieldset class="visual-preference">
-                <legend>¿Quieres una marquesina en el anuncio superior?</legend>
-                <div class="visual-preference-grid">
-                  <label class="visual-preference-option">
-                    <input type="radio" name="visualAnnouncementMarquee" value="true" checked>
-                    <span class="visual-preference-copy"><strong>Sí, en movimiento</strong><small>Repite el anuncio suavemente en la parte superior.</small></span>
-                    <span class="visual-mini-preview visual-marquee-preview is-moving" aria-hidden="true"><span class="visual-marquee-line">NOVEDADES · COMPRA SEGURA · NOVEDADES</span><span class="visual-marquee-track"></span></span>
-                  </label>
-                  <label class="visual-preference-option">
-                    <input type="radio" name="visualAnnouncementMarquee" value="false">
-                    <span class="visual-preference-copy"><strong>No, anuncio fijo</strong><small>Muestra el mensaje una sola vez, sin desplazamiento.</small></span>
-                    <span class="visual-mini-preview visual-marquee-preview" aria-hidden="true"><span class="visual-marquee-line is-static">NOVEDADES · COMPRA SEGURA</span><span class="visual-marquee-track"></span></span>
-                  </label>
-                </div>
-              </fieldset>
-              <fieldset class="visual-preference">
-                <legend>Elige la animación que abrirá la tienda y las escenas que continuarán después</legend>
-                <div class="visual-preference-grid" style="--preference-columns:3">
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="coverflow-carousel"><span class="visual-preference-copy"><strong>Coverflow</strong><small>Carrusel 3D controlable con fotos y títulos.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="story-scroll"><span class="visual-preference-copy"><strong>Story Scroll</strong><small>Capítulos editoriales que avanzan con el desplazamiento.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="hero-carousel"><span class="visual-preference-copy"><strong>Slider principal</strong><small>Carrusel fotográfico con filmstrip navegable.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="image-stream"><span class="visual-preference-copy"><strong>Image Stream</strong><small>Dos corrientes de imágenes atraviesan la escena.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="scroll-expansion"><span class="visual-preference-copy"><strong>Scroll Expansion</strong><small>La imagen se abre a medida que avanza la página.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="hero-gallery-scroll"><span class="visual-preference-copy"><strong>Hero Gallery</strong><small>Un mosaico de imágenes se recompone al desplazarse.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="stagger-testimonials"><span class="visual-preference-copy"><strong>Reseñas</strong><small>Comentarios en tarjetas escalonadas y navegables.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="zoom-parallax"><span class="visual-preference-copy"><strong>Zoom Parallax</strong><small>Las imágenes se abren en profundidad al desplazarse.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="video-pill"><span class="visual-preference-copy"><strong>Video que se abre</strong><small>Una cápsula visual crece hasta ocupar toda la escena.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="portfolio-scroller"><span class="visual-preference-copy"><strong>Menú de momentos</strong><small>El scroll y el teclado recorren escenas con su relato.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="circle-reveal"><span class="visual-preference-copy"><strong>Revelado circular</strong><small>La imagen nace en el centro y descubre la historia.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="clarity-marquee"><span class="visual-preference-copy"><strong>Preguntas en movimiento</strong><small>Frases y detalles forman un ritmo editorial continuo.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="full-screen-chapters"><span class="visual-preference-copy"><strong>Capítulos completos</strong><small>Palabras e imágenes avanzan como una secuencia dirigida.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="magnetic-target"><span class="visual-preference-copy"><strong>Llamado magnético</strong><small>Una invitación responde al cursor sin mover el contenido.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="frame-sequence"><span class="visual-preference-copy"><strong>Secuencia de cuadros</strong><small>El desplazamiento controla cada momento de la preparación.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="3d-gallery"><span class="visual-preference-copy"><strong>Galería tridimensional</strong><small>Las fotos atraviesan el espacio con rueda, teclado o gesto.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                </div>
-              </fieldset>
               <fieldset class="visual-conversion">
                 <legend>¿Cómo quieres recibir los pedidos?</legend>
                 <div class="visual-conversion-options">
@@ -4389,6 +4352,10 @@
               <button type="button" class="ghost preview-edit-toggle" id="previewEditMode" aria-pressed="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                 Editar en pantalla
+              </button>
+              <button type="button" class="ghost preview-ai-create" id="previewAiCreate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7L12 3Z"/><path d="m5 16-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8L5 16Z"/></svg>
+                Rediseñar con IA
               </button>
               <button type="button" class="ghost preview-icon-button" id="previewExpandToggle" aria-pressed="true" title="Mostrar ajustes avanzados" aria-label="Mostrar ajustes avanzados">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg>
@@ -7431,7 +7398,6 @@
   const visualSourcePreviewsEl = document.getElementById("visualSourcePreviews");
   const visualSourceStatusEl = document.getElementById("visualSourceStatus");
   const visualGenerateEl = document.getElementById("visualGenerate");
-  const visualMotionExperienceEls = [...document.querySelectorAll('input[name="visualMotionExperience"]')];
   const visualGenerationLoaderEl = document.getElementById("visualGenerationLoader");
   const visualLoaderKickerEl = document.getElementById("visualLoaderKicker");
   const visualLoaderTitleEl = document.getElementById("visualLoaderTitle");
@@ -7656,7 +7622,7 @@
       onboardingCopyEl.textContent = "Elige cómo recibirás pedidos y agrega las fotos que quieres que guíen las tres propuestas.";
       onboardingBodyEl.innerHTML = `<div class="onboarding-form-grid">
         <div><label for="onboardingCategory">¿Qué vendes?</label><input id="onboardingCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil"></div>
-        <div><label for="onboardingPersonality">Personalidad</label><select id="onboardingPersonality"><option value="">Déjame sorprender</option><option value="warm">Cálida y artesanal</option><option value="bold">Audaz y enérgica</option><option value="minimal">Limpia y minimal</option><option value="elegant">Elegante y serena</option><option value="playful">Alegre y cercana</option></select></div>
+        <div class="full"><label for="onboardingCreativeBrief">¿Cómo imaginas la marca?</label><textarea id="onboardingCreativeBrief" rows="4" maxlength="1200" placeholder="Ej. Como una galería de arte joven: fotos enormes, mucho aire, textos directos y movimiento suave."></textarea><span class="faint">No necesitas elegir tipografías ni animaciones. La IA propondrá todo el lenguaje visual.</span></div>
         <fieldset class="visual-conversion full"><legend>¿Cómo terminarán el pedido tus clientes?</legend><div class="visual-conversion-options"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="payment" checked><span><strong>Pago integrado</strong><small>Carrito y pago con pagosYa. Requiere KYC y NIT.</small></span></label><div class="visual-conversion-choice"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="whatsapp"><span><strong>WhatsApp</strong><small>El carrito llega como mensaje, sin pedir NIT.</small></span></label><div class="visual-whatsapp-phone" id="onboardingWhatsappWrap" hidden><label for="onboardingWhatsapp">Número que recibirá los pedidos</label><input id="onboardingWhatsapp" type="tel" maxlength="40" placeholder="+591 71234567"><span class="faint">Incluye el código de país.</span></div></div><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="external"><span><strong>Captar interesados</strong><small>Formulario de contacto enviado a tu correo, sin pedir NIT.</small></span></label></div></fieldset>
         <div class="onboarding-file full" id="onboardingLeadUrlWrap" hidden><input id="onboardingLeadUrl" type="hidden" value=""><span class="faint">Al finalizar, pagosYa pedirá solo su Gmail o correo y te lo enviará con el carrito seleccionado.</span></div>
         <div class="onboarding-file full"><label for="onboardingAiImages">Fotos para la IA (opcional)</label><input id="onboardingAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingAiFileStatus"><span class="faint" id="onboardingAiFileStatus" role="status">Hasta 24 fotos de tu marca, local, productos o estilo.</span><div class="visual-ai-previews" id="onboardingAiPreviews" aria-live="polite"></div></div>
@@ -7707,7 +7673,7 @@
         }
         onboardingStatusEl.setAttribute("role", "status");
         document.getElementById("visualBusinessCategory").value = document.getElementById("onboardingCategory").value;
-        document.getElementById("visualPersonality").value = document.getElementById("onboardingPersonality").value;
+        document.getElementById("visualCreativeBrief").value = document.getElementById("onboardingCreativeBrief").value;
         document.querySelector(`input[name="visualCheckoutMode"][value="${checkoutMode}"]`).checked = true;
         visualWhatsappPhoneEl.value = whatsappPhone;
         visualLeadUrlEl.value = leadCaptureUrl;
@@ -8695,10 +8661,6 @@
     return document.querySelector('input[name="visualCheckoutMode"]:checked')?.value || "payment";
   }
 
-  function selectedVisualMotionExperiences() {
-    return visualMotionExperienceEls.filter((input) => input.checked).map((input) => input.value);
-  }
-
   function selectedStoreCheckoutMode() {
     return document.querySelector('input[name="storeCheckoutMode"]:checked')?.value || "payment";
   }
@@ -9609,6 +9571,12 @@
 
   previewExpandToggleEl.addEventListener("click", () => setStorePreviewExpanded(!storePreviewExpanded));
   storeOptionsTabEl.addEventListener("click", () => setStorePreviewExpanded(false));
+  document.getElementById("previewAiCreate").addEventListener("click", () => {
+    const assistantToggle = document.getElementById("visualAssistantToggle");
+    if (assistantToggle?.getAttribute("aria-expanded") !== "true") assistantToggle.click();
+    document.getElementById("visualOnboarding").scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => document.getElementById("visualCreativeBrief").focus({ preventScroll: true }), 260);
+  });
   setStorePreviewExpanded(true, { preservePosition: false });
 
   function setPreviewSectionCurrent(section) {
@@ -9973,7 +9941,6 @@
     if (!currentStoreId) return;
     const generationStoreId = currentStoreId;
     const checkoutMode = selectedVisualCheckoutMode();
-    const motionExperiences = selectedVisualMotionExperiences();
     const whatsappPhone = visualWhatsappPhoneEl.value.trim();
     if (checkoutMode === "whatsapp" && !hasUsableWhatsAppPhone(whatsappPhone)) {
       visualSourceStatusEl.textContent = "Escribe un número de WhatsApp válido, con 7 a 15 dígitos.";
@@ -10004,11 +9971,7 @@
         method: "POST",
         body: JSON.stringify({
           businessCategory: document.getElementById("visualBusinessCategory").value.trim() || undefined,
-          personality: document.getElementById("visualPersonality").value || undefined,
-          fontStyle: document.querySelector('input[name="visualFontStyle"]:checked')?.value || "modern",
-          announcementMarqueeEnabled: document.querySelector('input[name="visualAnnouncementMarquee"]:checked')?.value === "true",
-          motionExperience: motionExperiences[0] || undefined,
-          motionExperiences,
+          creativeBrief: document.getElementById("visualCreativeBrief").value.trim() || undefined,
           checkoutMode,
           whatsappPhone: checkoutMode === "whatsapp" ? whatsappPhone : undefined,
           leadCaptureUrl: undefined,
@@ -11203,7 +11166,7 @@
         : "Selecciona una tienda para comenzar.";
       renderVisualStudio();
       document.getElementById("visualBusinessCategory").value = "";
-      document.getElementById("visualPersonality").value = "";
+      document.getElementById("visualCreativeBrief").value = "";
       visualAiFiles = [];
       visualAiImagesEl.value = "";
       renderVisualAiFiles();
@@ -12066,8 +12029,6 @@
       if (store.accentColor) storeAccentColorEl.value = store.accentColor;
       const storeFontStyle = normalizeStoreFontStyle(store.fontStyle);
       storeFontStyleEl.value = storeFontStyle;
-      const visualFont = document.querySelector(`input[name="visualFontStyle"][value="${storeFontStyle}"]`);
-      if (visualFont) visualFont.checked = true;
       storeButtonStyleEl.value = store.buttonStyle || "rounded";
       storeButtonVariantEl.value = store.buttonVariant || "solid";
       storeButtonMotionEl.value = store.buttonMotion || "lift";

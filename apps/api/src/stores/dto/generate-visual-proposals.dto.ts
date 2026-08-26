@@ -5,6 +5,16 @@ import { IsSafeText } from "../../common/validation/safe-text.decorator";
 import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "./create-store.dto";
 
 export class GenerateVisualProposalsDto {
+  @ApiPropertyOptional({
+    description: "Free-form art direction, references, mood, and constraints for the generated storefront.",
+    example: "Que se sienta como una revista de arte joven: mucho espacio, fotos grandes y movimiento suave.",
+  })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(1200)
+  creativeBrief?: string;
+
   @ApiPropertyOptional({ description: "Whether the storefront announcement should move as a marquee instead of staying static." })
   @IsOptional()
   @IsBoolean()

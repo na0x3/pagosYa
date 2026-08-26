@@ -190,7 +190,7 @@ The shared semantic core still uses indigo for focus, amber for pagosYa brand ac
 ### Named Rules
 **The One Store, One Face Rule.** Never mix type families within a surface. pagosYa-owned UI stays on 0xProto Mono. A hosted storefront may use the merchant's single curated selection, applied consistently to the entire store.
 
-**The Font-Is-Fixed Rule.** The AI appearance chooser renders each option in the exact family stack it will publish. Once the merchant chooses a font, that choice is fixed across all generated proposals, their previews, and the resulting storefront; the AI may vary composition, color, and copy, but never the selected family.
+**The Curated-Type Rule.** AI proposals choose one allow-listed storefront font style as part of their art direction and apply it consistently across the store. Merchants can override that choice later from advanced appearance settings; neither path accepts arbitrary font URLs, uploads, or CSS values.
 
 **The Ledger Shouts, the Data Stays Exact Rule.** Merchant-dashboard page and section labels may be oversized, black-weight, and uppercase; transactional values remain tabular, unambiguous, and free of decorative letterforms.
 
@@ -204,7 +204,7 @@ Account Support extends Ops as a split case desk: search, case creation, and rec
 
 The hosted storefront is a spacious merchant lookbook capped at 1360px, while its payment-form card remains capped at 400px. The storefront catalog uses an auto-filling grid above 720px and becomes a deliberate single column at 720px and narrower. Its authored hero holds a cinematic 16:7 ratio on desktop and becomes a portrait 4:5 composition on mobile so imagery and overlaid copy remain useful rather than merely shrinking.
 
-**The Brand-First Storefront Rule.** Production storefronts keep one fixed narrative order: merchant identity, hero, and about/story before products; editorial gallery and merchant links after products. Appearance proposals may vary the composition inside those sections, but neither the AI nor the merchant editor may reorder them, and pagosYa chrome never becomes the opening visual hierarchy.
+**The Brand-First Storefront Rule.** Production storefronts keep merchant identity, real product data, contact capture, checkout behavior, and pagosYa security boundaries stable. AI proposals may compose and reorder the authored middle sections, and merchants may move those sections directly from the preview; pagosYa chrome never becomes the opening visual hierarchy.
 
 **The Fulfillment Location Rule.** Keep public location content at the storefront bottom, after appointment booking and immediately before pagosYa's secure-payment assurance. Show one location directly; when there are multiple locations, collapse the full list behind a count-bearing **Ver ubicaciones** disclosure. At checkout, ask for pickup or delivery before the branch, and enable only locations that support the selected method and can fulfill the whole cart from that branch's stock. A closed but otherwise eligible location may still accept the order, but the interface must state that it is closed and show its next local opening or fulfillment time before confirmation.
 
@@ -269,7 +269,7 @@ Both admin workspaces deliberately break from that softness: primary containers 
 ### Store Appearance Studio (merchant dashboard)
 - Pair the appearance editor with a sticky, sandboxed live storefront preview on wide screens; stack the preview below the editor at 1180px and narrower so the dashboard sidebar never squeezes either workspace.
 - Let merchants compare explicit **Escritorio** and **Móvil** preview widths before saving. The device buttons expose pressed state, and unsaved edits update the preview immediately while a separate status communicates whether changes are saved.
-- Offer the four named storefront font styles as a curated selector, with every option rendered in its exact publication family. Apply the unsaved choice to the whole preview immediately, lock it across every AI proposal, and persist only the enum value, never free-form CSS.
+- Ask for the desired visual world in plain language and let each AI proposal choose from the curated font and motion enums. Keep technical selectors out of the primary creation flow; expose the persisted enum values only in advanced appearance settings for precise overrides.
 - Group message controls by intent—announcement, promotion, support, store copy, and links—with visible subtitles and explanatory copy. Use 20–26px between groups and 12–18px within a group so proximity communicates structure.
 
 ### Yapi Workspace Assistant (merchant dashboard)
@@ -378,12 +378,12 @@ Both admin workspaces deliberately break from that softness: primary containers 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** set every pagosYa-owned UI element in 0xProto Mono and apply a merchant's selected family consistently across their entire hosted storefront.
+- **Do** set every pagosYa-owned UI element in 0xProto Mono and apply each proposal's curated font style consistently across the entire hosted storefront, including after a merchant overrides it in advanced settings.
 - **Do** reserve Signal Amber for pagosYa-owned primary actions; use workspace bento fills for merchant-dashboard data and Ops workflow grouping, never as a replacement for checkout's merchant-deferential action rules.
 - **Do** give every status a Badge (dot + semantic color), using square keylined badges in merchant dashboard and Ops and pills in checkout; never expose raw enum text or color-only signaling.
 - **Do** use real `<label for>` elements on every form field; placeholders are never a substitute for a label.
 - **Do** preserve the authored hero's visible pause/resume control, reduced-motion behavior, inactive-slide tab-order exclusion, and 24px minimum dot targets.
-- **Do** keep production storefronts ordered hero/about, then products, then gallery/links, and keep live finance bento tiles bound to real merchant data.
+- **Do** keep identity, real product data, contact capture, checkout behavior, and security boundaries stable while allowing the AI and merchant to reorder authored middle sections; keep live finance bento tiles bound to real merchant data.
 - **Do** make every AI proposal expose its selected post-catalog experience by name and let the merchant change it without regenerating the site.
 - **Do** keep merchant-dashboard authored motion to view entrances and chart reveals, with a complete reduced-motion removal; use plain 0.14–0.15s state transitions only for immediate hover, focus, and press feedback.
 - **Do** preserve the merchant dashboard's 3px keylines, 1–2px corners, and 8px hard block shadow as a coordinated set; they are its primary material signature.
@@ -394,7 +394,7 @@ Both admin workspaces deliberately break from that softness: primary containers 
 ### Don't:
 - **Don't** add a resting (non-hover) shadow to a checkout storefront component — checkout is flat until it moves.
 - **Don't** mix font families within one storefront or accept arbitrary font URLs, uploads, or CSS values; use the curated font-style enum.
-- **Don't** let AI proposals override the merchant's chosen font or show a font sample that differs from the exact family that will be published.
+- **Don't** let a proposal preview use typography that differs from its persisted curated font style, or accept arbitrary font code from either the model or merchant.
 - **Don't** use gradients, stripes, textures, or photography as merchant page or section backgrounds; merchant grounds are flat solid colors.
 - **Don't** treat workspace bento colors as global action semantics or bring them into checkout; in Ops, violet/yellow/red/blue identify workflow blocks while semantic states still use their named status colors.
 - **Don't** ship a new interactive control without a visible 3px focus ring — default to Focus Indigo, or derive it from the guarded effective accent on a merchant-themed storefront. Never remove the native outline without replacing it.
