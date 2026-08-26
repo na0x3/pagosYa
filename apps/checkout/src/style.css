@@ -2847,6 +2847,7 @@ body.promotion-open { overflow: hidden; }
 /* Merchant-authored animation section. It is a first-class content section,
    so the dashboard can place it anywhere in the storefront order. */
 .store-motion-section {
+  isolation: isolate;
   width: min(1180px, calc(100% - 32px));
   margin: clamp(70px, 10vw, 132px) auto;
 }
@@ -3648,6 +3649,17 @@ body.store-page .store-tagline {
   line-height: 1.25;
   pointer-events: none;
 }
+html.store-preview-mode {
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+html.store-preview-mode::-webkit-scrollbar { width: 12px; }
+html.store-preview-mode::-webkit-scrollbar-track { background: #f2eee7; }
+html.store-preview-mode::-webkit-scrollbar-thumb {
+  border: 3px solid #f2eee7;
+  border-radius: 999px;
+  background: #625d55;
+}
 body.store-preview-editor-enabled [data-store-editor-target] { cursor: pointer !important; }
 body.store-page [data-store-section-key] {
   background-color: var(--store-section-background, transparent);
@@ -3656,6 +3668,11 @@ body.store-page [data-store-section-key] {
 body.store-preview-editor-enabled [data-store-editor-target].store-preview-editor-hover {
   outline: 3px solid #ffbd59 !important;
   outline-offset: -3px;
+}
+body.store-preview-editor-enabled [data-store-editor-target].store-preview-editor-selected {
+  outline: 3px solid #050505 !important;
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 6px #ffbd59 !important;
 }
 body.store-preview-editor-enabled .store-preview-editor-label { display: block; }
 @media (prefers-reduced-motion: reduce) {

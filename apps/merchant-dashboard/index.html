@@ -1010,7 +1010,13 @@
   .visual-onboarding.is-collapsed, .inventory-importer.is-collapsed { padding-bottom: 12px; }
   .visual-onboarding.is-collapsed .visual-onboarding-head, .inventory-importer.is-collapsed .inventory-import-head { align-items: center; }
 
-  .store-studio { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  #storeSettingsSection > .panel,
+  #storeSettingsSection > .panel > .section-body:not([hidden]) { display: flex; flex-direction: column; }
+  #storeSettingsSection > .panel > .section-head { order: 0; }
+  #storeSettingsSection .store-studio { order: 1; }
+  #storeSettingsSection .visual-onboarding { order: 2; }
+  #storeSettingsSection .custom-domain-studio { order: 3; }
+  .store-studio { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; min-height: 0; }
   .store-editor-shell { min-width: 0; }
   .store-options-tab { display: none; width: 100%; min-height: 42px; margin-bottom: 8px; align-items: center; justify-content: center; gap: 7px; }
   .store-options-tab svg { width: 16px; height: 16px; }
@@ -1019,6 +1025,7 @@
   .store-studio.is-preview-expanded .store-options-tab { display: flex; min-height: 164px; padding: 10px 6px; writing-mode: vertical-rl; text-orientation: mixed; }
   .store-studio.is-preview-expanded .store-options-tab svg { transform: rotate(90deg); }
   .store-studio.is-preview-expanded .store-editor { display: none; }
+  .store-studio.is-preview-expanded .store-preview-panel { grid-column: 2; }
   .product-editor-studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr); gap: 22px; align-items: start; }
   .product-preview-mount { min-width: 0; }
   .store-editor { display: grid; gap: 12px; min-width: 0; }
@@ -1269,7 +1276,21 @@
   .store-save-status { font-size: 0.78rem; color: var(--pg-text-faint); }
   .store-save-status.is-dirty { color: var(--pg-warning); }
 
-  .store-preview-panel { position: sticky; top: 16px; min-width: 0; }
+  .store-preview-panel {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: calc(100dvh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow: hidden;
+  }
+  .store-studio.is-preview-expanded .store-preview-panel { display: grid; grid-template-columns: minmax(270px, 320px) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 0 12px; }
+  .store-studio.is-preview-expanded .store-preview-toolbar { grid-column: 1 / -1; }
+  .store-studio.is-preview-expanded .preview-editor-tools { grid-column: 1; grid-row: 2; min-height: 0; margin-bottom: 0; padding-right: 3px; overflow-y: auto; scrollbar-width: thin; }
+  .store-studio.is-preview-expanded .store-preview-stage { grid-column: 2; grid-row: 2; }
+  .store-studio.is-preview-expanded :is(.preview-context-grid, .preview-context-color-row, .preview-section-quick-controls) { grid-template-columns: 1fr; }
   .store-preview-toolbar { display: flex; align-items: center; gap: 8px; min-height: 38px; margin-bottom: 10px; }
   .store-preview-toolbar strong { font-size: 0.84rem; margin-right: auto; }
   .preview-live { display: inline-flex; align-items: center; gap: 6px; color: var(--pg-success); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
@@ -1287,12 +1308,37 @@
   .preview-section-inspector-head strong { font-size: .78rem; }
   .preview-section-order { display: flex; gap: 4px; }
   .preview-section-order .preview-icon-button { width: 30px; height: 30px; }
-  .preview-section-quick-controls { display: grid; grid-template-columns: minmax(180px, .72fr) minmax(220px, 1fr); gap: 8px; }
-  .preview-section-color, .preview-add-section { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 7px 8px; border: 1px solid var(--pg-border); background: var(--pg-bg); color: var(--pg-text-muted); font-size: .66rem; font-weight: 700; }
+  .preview-context-editor { display: grid; gap: 9px; min-width: 0; padding: 10px; border: 2px solid var(--pg-brand); background: color-mix(in srgb, var(--pg-brand) 9%, var(--pg-bg)); }
+  .preview-context-editor.is-idle { border-color: var(--pg-border); background: var(--pg-bg); }
+  .preview-context-copy { margin: 0; color: var(--pg-text-muted); font-size: .7rem; line-height: 1.45; }
+  .preview-context-copy strong { color: var(--pg-text); }
+  .preview-context-field { display: grid; gap: 5px; min-width: 0; }
+  .preview-context-field > label, .preview-context-field > span { color: var(--pg-text); font-size: .67rem; font-weight: 800; }
+  .preview-context-field :is(input:not([type="checkbox"]):not([type="color"]), textarea, select) { width: 100%; min-width: 0; border-color: var(--pg-border-strong); background: var(--pg-surface); font-size: .76rem; }
+  .preview-context-color-input { display: flex; align-items: center; gap: 9px; }
+  .preview-context-color-input input[type="color"] { width: 48px; min-width: 48px; height: 36px; padding: 3px; }
+  .preview-context-color-input output { color: var(--pg-text-muted); font-size: .68rem; font-variant-numeric: tabular-nums; text-transform: uppercase; }
+  .preview-context-field textarea { min-height: 76px; resize: vertical; }
+  .preview-context-field small { color: var(--pg-text-faint); font-size: .64rem; line-height: 1.4; }
+  .preview-context-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .preview-context-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+  .preview-context-actions button { min-height: 36px; padding: 7px 10px; font-size: .68rem; }
+  .preview-context-media { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 7px; max-height: 184px; overflow-y: auto; }
+  .preview-context-media button { position: relative; min-width: 0; aspect-ratio: 1; padding: 0; overflow: hidden; border: 2px solid var(--pg-border-strong); background: var(--pg-bg); }
+  .preview-context-media button[aria-pressed="true"] { border-color: var(--pg-brand); box-shadow: inset 0 0 0 2px var(--pg-brand); }
+  .preview-context-media :is(img, video) { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .preview-context-upload { position: relative; overflow: hidden; }
+  .preview-context-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .preview-context-color-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .preview-context-color { display: flex; min-width: 0; align-items: center; gap: 7px; padding: 7px 8px; border: 1px solid var(--pg-border); background: var(--pg-bg); color: var(--pg-text-muted); font-size: .66rem; font-weight: 700; }
+  .preview-context-color input[type="color"] { width: 38px; min-width: 38px; height: 30px; margin-left: auto; padding: 2px; }
+  .preview-section-quick-controls { display: grid; grid-template-columns: minmax(170px, .65fr) minmax(180px, .75fr) minmax(220px, 1fr); gap: 8px; }
+  .preview-section-color, .preview-section-position, .preview-add-section { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 7px 8px; border: 1px solid var(--pg-border); background: var(--pg-bg); color: var(--pg-text-muted); font-size: .66rem; font-weight: 700; }
+  .preview-section-color[hidden], .preview-section-position[hidden] { display: none; }
   .preview-section-color input[type="color"] { width: 34px; min-width: 34px; height: 28px; margin-left: auto; padding: 2px; }
-  .preview-add-section span { flex: 0 0 auto; }
-  .preview-add-section select { width: 100%; min-width: 0; height: 30px; padding: 4px 24px 4px 7px; font-size: .66rem; }
-  .preview-section-nav { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+  .preview-section-position span, .preview-add-section span { flex: 0 0 auto; }
+  .preview-section-position select, .preview-add-section select { width: 100%; min-width: 0; height: 30px; padding: 4px 24px 4px 7px; font-size: .66rem; }
+  .preview-section-nav { display: none; gap: 6px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
   .preview-section-nav button { flex: 0 0 auto; min-height: 34px; padding: 6px 9px; border-color: var(--pg-border); color: var(--pg-text-muted); font-size: .68rem; }
   .preview-section-nav button[aria-current="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
   .preview-selection-status { min-height: 1.4em; margin: 0; color: var(--pg-text-muted); font-size: .7rem; line-height: 1.45; }
@@ -1314,8 +1360,8 @@
   button.preview-icon-button:focus-visible,
   a.preview-icon-button:focus-visible { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
   .preview-icon-button svg { width: 15px; height: 15px; }
-  .store-preview-stage { position: relative; display: flex; justify-content: center; min-height: 650px; padding: 10px; overflow: hidden; border: 1px solid var(--pg-border); border-radius: 14px; background: var(--pg-bg); }
-  .store-preview-frame { display: block; width: 100%; height: 700px; border: 0; border-radius: 9px; background: #171717; opacity: 1; transition: opacity .15s ease; }
+  .store-preview-stage { position: relative; display: flex; flex: 1 1 auto; justify-content: center; min-height: 0; padding: 10px; overflow: hidden; border: 1px solid var(--pg-border); border-radius: 14px; background: var(--pg-bg); }
+  .store-preview-frame { display: block; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 9px; background: #171717; opacity: 1; transition: opacity .15s ease; }
   .store-preview-stage.mobile .store-preview-frame { width: min(390px, 100%); }
   .store-preview-empty { display: none; align-self: center; max-width: 28ch; color: var(--pg-text-faint); text-align: center; font-size: 0.8rem; line-height: 1.55; }
   .store-preview-stage.is-empty .store-preview-frame { display: none; }
@@ -1471,14 +1517,28 @@
      1 column on its own (auto-fit + minmax), this just removes the two rows
      that were fighting it. */
   @media (max-width: 1180px) {
-    .store-studio, .product-editor-studio { grid-template-columns: 1fr; }
-    .store-studio.is-preview-expanded { grid-template-columns: 1fr; }
-    .store-studio.is-preview-expanded .store-editor-shell { position: static; }
-    .store-studio.is-preview-expanded .store-options-tab { min-height: 42px; writing-mode: horizontal-tb; }
+    .product-editor-studio { grid-template-columns: 1fr; }
+    .store-studio.is-preview-expanded .store-preview-panel {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(180px, .55fr) minmax(420px, 1.45fr);
+    }
+    .store-studio.is-preview-expanded .store-preview-toolbar { grid-column: 1; grid-row: 1; }
+    .store-studio.is-preview-expanded .preview-editor-tools { grid-column: 1; grid-row: 2; max-height: none; }
+    .store-studio.is-preview-expanded .store-preview-stage { grid-column: 1; grid-row: 3; }
+    .store-studio.is-preview-expanded :is(.preview-context-grid, .preview-context-color-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .store-studio.is-preview-expanded .preview-section-quick-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 760px) {
+    .store-studio, .store-studio.is-preview-expanded { grid-template-columns: 1fr; height: auto; }
+    .store-editor-shell, .store-studio.is-preview-expanded .store-editor-shell { position: static; height: auto; padding-right: 0; overflow: visible; }
+    .store-studio.is-preview-expanded .store-options-tab { height: auto; min-height: 42px; margin-bottom: 8px; writing-mode: horizontal-tb; }
+    .store-studio.is-preview-expanded .store-options-tab { display: none; }
     .store-studio.is-preview-expanded .store-options-tab svg { transform: none; }
-    .store-preview-panel { position: static; }
+    .store-preview-panel, .store-studio.is-preview-expanded .store-preview-panel { position: static; display: block; height: auto; max-height: none; overflow: visible; }
     .store-preview-stage { min-height: 590px; }
     .store-preview-frame { height: 640px; }
+    .preview-context-grid, .preview-context-color-row, .preview-section-quick-controls { grid-template-columns: 1fr; }
   }
 
   @media (max-width: 900px) {
@@ -3788,8 +3848,8 @@
     <section class="block" id="storeSettingsSection" data-dashboard-page="appearance">
       <div class="panel">
         <div class="section-head">
-          <h2>Datos y apariencia de la tienda</h2>
-          <p class="muted" style="margin:4px 0 0">Edita tu marca y mira el resultado antes de guardar.</p>
+          <h2>Editor visual de la tienda</h2>
+          <p class="muted" style="margin:4px 0 0">Toca texto, imágenes o secciones en la vista previa y edítalos ahí mismo. Los ajustes avanzados quedan aparte.</p>
         </div>
         <section class="visual-onboarding" id="visualOnboarding" aria-labelledby="visualOnboardingTitle">
           <div class="visual-onboarding-head">
@@ -3864,7 +3924,7 @@
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="video-pill"><span class="visual-preference-copy"><strong>Video que se abre</strong><small>Una cápsula visual crece hasta ocupar toda la escena.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="portfolio-scroller"><span class="visual-preference-copy"><strong>Menú de momentos</strong><small>El scroll y el teclado recorren escenas con su relato.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="circle-reveal"><span class="visual-preference-copy"><strong>Revelado circular</strong><small>La imagen nace en el centro y descubre la historia.</small></span><span class="visual-mini-preview visual-motion-preview zoom" aria-hidden="true"><span></span><span></span><span></span></span></label>
-                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="clarity-marquee" checked><span class="visual-preference-copy"><strong>Preguntas en movimiento</strong><small>Frases y detalles forman un ritmo editorial continuo.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
+                  <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="clarity-marquee"><span class="visual-preference-copy"><strong>Preguntas en movimiento</strong><small>Frases y detalles forman un ritmo editorial continuo.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="full-screen-chapters"><span class="visual-preference-copy"><strong>Capítulos completos</strong><small>Palabras e imágenes avanzan como una secuencia dirigida.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="magnetic-target"><span class="visual-preference-copy"><strong>Llamado magnético</strong><small>Una invitación responde al cursor sin mover el contenido.</small></span><span class="visual-mini-preview visual-motion-preview both" aria-hidden="true"><span></span><span></span><span></span></span></label>
                   <label class="visual-preference-option"><input type="checkbox" name="visualMotionExperience" value="frame-sequence"><span class="visual-preference-copy"><strong>Secuencia de cuadros</strong><small>El desplazamiento controla cada momento de la preparación.</small></span><span class="visual-mini-preview visual-motion-preview story" aria-hidden="true"><span></span><span></span><span></span></span></label>
@@ -3981,9 +4041,9 @@
         </section>
         <div class="store-studio" id="storeStudio">
           <div class="store-editor-shell" id="storeEditorShell">
-            <button type="button" class="ghost store-options-tab" id="storeOptionsTab" aria-expanded="true" aria-controls="storeSettingsForm" title="Mostrar u ocultar opciones">
+            <button type="button" class="ghost store-options-tab" id="storeOptionsTab" aria-expanded="false" aria-controls="storeSettingsForm" title="Mostrar ajustes avanzados">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-              <span>Opciones</span>
+              <span>Avanzado</span>
             </button>
           <form class="store-editor" id="storeSettingsForm">
             <div class="store-editor-section">
@@ -4324,13 +4384,13 @@
 
           <aside class="store-preview-panel" aria-label="Vista previa de la tienda">
             <div class="store-preview-toolbar">
-              <strong>Vista previa</strong>
+              <strong>Tu tienda</strong>
               <span class="preview-live">En vivo</span>
               <button type="button" class="ghost preview-edit-toggle" id="previewEditMode" aria-pressed="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                 Editar en pantalla
               </button>
-              <button type="button" class="ghost preview-icon-button" id="previewExpandToggle" aria-pressed="false" title="Agrandar vista previa" aria-label="Agrandar vista previa">
+              <button type="button" class="ghost preview-icon-button" id="previewExpandToggle" aria-pressed="true" title="Mostrar ajustes avanzados" aria-label="Mostrar ajustes avanzados">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg>
               </button>
               <div class="preview-device-switch" aria-label="Tamaño de vista previa">
@@ -4343,6 +4403,7 @@
               <a class="preview-icon-button" id="previewOpen" href="#" target="_blank" rel="noopener noreferrer" title="Abrir tienda" aria-label="Abrir tienda en otra pestaña">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
               </a>
+              <button type="submit" form="storeSettingsForm" class="primary preview-save" id="previewSaveButton">Guardar</button>
             </div>
             <div class="preview-editor-tools" id="previewEditorTools">
               <div class="preview-section-inspector" id="previewSectionInspector">
@@ -4353,8 +4414,12 @@
                     <button type="button" class="ghost preview-icon-button" id="previewSectionDown" title="Mover sección abajo" aria-label="Mover sección abajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
                   </div>
                 </div>
+                <div class="preview-context-editor is-idle" id="previewContextEditor" aria-live="polite">
+                  <p class="preview-context-copy"><strong>Toca algo dentro de tu tienda.</strong> Aquí aparecerá su texto, imagen o configuración principal sin sacarte de la vista previa.</p>
+                </div>
                 <div class="preview-section-quick-controls">
                   <label class="preview-section-color"><input type="checkbox" id="previewSectionColorEnabled"><span>Fondo propio</span><input type="color" id="previewSectionColor" value="#f8fafc" disabled aria-label="Color de fondo de la sección"></label>
+                  <label class="preview-section-position"><span>Posición</span><select id="previewSectionPosition" disabled aria-label="Posición de la sección"></select></label>
                   <label class="preview-add-section"><span>Agregar sección</span><select id="previewAddSection"><option value="">Elige una…</option><option value="about">Historia</option><option value="gallery">Galería de fotos</option><option value="motion">Animación</option><option value="links">Redes sociales</option><option value="contact">Contacto</option><option value="location">Ubicación</option></select></label>
                 </div>
               </div>
@@ -4371,7 +4436,7 @@
                 <button type="button" data-preview-editor-section="links" data-preview-editor-field="links">Redes</button>
                 <button type="button" data-preview-editor-section="promotion" data-preview-editor-field="promotionTitle">Promoción</button>
               </nav>
-              <p class="preview-selection-status" id="previewSelectionStatus"><strong>Modo editor activo.</strong> Toca cualquier parte de la tienda para abrir su edición.</p>
+              <p class="preview-selection-status" id="previewSelectionStatus"><strong>Modo editor activo.</strong> Toca cualquier parte de la tienda para editarla aquí.</p>
               <section class="store-image-palette" id="storeImagePalette" aria-labelledby="storeImagePaletteTitle" aria-busy="false">
                 <div class="store-image-palette-copy"><strong id="storeImagePaletteTitle">Paleta de tus fotos</strong><span id="storeImagePaletteStatus">Analizando las imágenes de esta tienda…</span></div>
                 <div class="store-image-palette-swatches" id="storeImagePaletteSwatches" aria-label="Colores extraídos de las imágenes"><span class="store-image-palette-empty">Sin colores todavía</span></div>
@@ -4928,6 +4993,7 @@
   let assistantNotes = [];
   let assistantChat = [];
   let assistantSupportCases = [];
+  let assistantAutoHiddenForAppearance = false;
   let assistantDragState = null;
   let suppressAssistantClick = false;
   let assistantWalkTimer = null;
@@ -5524,6 +5590,24 @@
     }
   }
 
+  function syncAssistantWorkspaceVisibility(view) {
+    if (view === "appearance") {
+      if (assistantDockEl.hidden) return;
+      setAssistantOpen(false, false, false);
+      assistantDockEl.hidden = true;
+      assistantRestoreEl.hidden = false;
+      assistantAutoHiddenForAppearance = true;
+      return;
+    }
+    if (!assistantAutoHiddenForAppearance) return;
+    assistantAutoHiddenForAppearance = false;
+    let explicitlyHidden = false;
+    try { explicitlyHidden = localStorage.getItem(ASSISTANT_HIDDEN_KEY) === "true"; } catch {}
+    assistantDockEl.hidden = explicitlyHidden;
+    assistantRestoreEl.hidden = !explicitlyHidden;
+    if (!explicitlyHidden) scheduleAssistantIdleGesture();
+  }
+
   assistantObjectEl.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     const rect = assistantDockEl.getBoundingClientRect();
@@ -5579,7 +5663,10 @@
   });
 
   assistantHideEl.addEventListener("click", () => setAssistantVisible(false));
-  assistantRestoreEl.addEventListener("click", () => setAssistantVisible(true));
+  assistantRestoreEl.addEventListener("click", () => {
+    assistantAutoHiddenForAppearance = false;
+    setAssistantVisible(true);
+  });
   assistantCloseEl.addEventListener("click", () => setAssistantOpen(false));
   assistantPanelEl.addEventListener("animationend", positionAssistantPanel);
   assistantQuestionEls.forEach((button) => {
@@ -6360,6 +6447,9 @@
       setAdventureGuideOpen(false);
     }
     document.body.dataset.dashboardView = nextView;
+    requestAnimationFrame(() => {
+      if (document.body.dataset.dashboardView === nextView) syncAssistantWorkspaceVisibility(nextView);
+    });
     document.querySelectorAll("[data-dashboard-page]").forEach((element) => {
       element.hidden = element.dataset.dashboardPage !== nextView;
       element.classList.remove("page-entering");
@@ -6374,6 +6464,9 @@
     const [title, description] = DASHBOARD_VIEW_COPY[nextView];
     document.getElementById("workspaceTitle").textContent = title;
     document.getElementById("workspaceDescription").textContent = description;
+    if (nextView === "appearance" && dashboardSections.get("storeSettingsSection")?.toggle.getAttribute("aria-expanded") !== "true") {
+      setDashboardSectionExpanded("storeSettingsSection", true, false);
+    }
     placeStorePreviewForDashboardView(nextView);
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
@@ -7320,13 +7413,16 @@
   const storeOptionsTabEl = document.getElementById("storeOptionsTab");
   const previewExpandToggleEl = document.getElementById("previewExpandToggle");
   const previewEditorToolsEl = document.getElementById("previewEditorTools");
+  const previewContextEditorEl = document.getElementById("previewContextEditor");
   const previewSelectionStatusEl = document.getElementById("previewSelectionStatus");
   const previewSelectedSectionEl = document.getElementById("previewSelectedSection");
   const previewSectionColorEnabledEl = document.getElementById("previewSectionColorEnabled");
   const previewSectionColorEl = document.getElementById("previewSectionColor");
+  const previewSectionPositionEl = document.getElementById("previewSectionPosition");
   const previewSectionUpEl = document.getElementById("previewSectionUp");
   const previewSectionDownEl = document.getElementById("previewSectionDown");
   const previewAddSectionEl = document.getElementById("previewAddSection");
+  const previewSaveButtonEl = document.getElementById("previewSaveButton");
   const storeImagePaletteEl = document.getElementById("storeImagePalette");
   const storeImagePaletteStatusEl = document.getElementById("storeImagePaletteStatus");
   const storeImagePaletteSwatchesEl = document.getElementById("storeImagePaletteSwatches");
@@ -7720,7 +7816,9 @@
   let pendingStorePreviewProduct = null;
   let storePreviewEditorEnabled = true;
   let selectedPreviewSection = "brand";
-  let storePreviewExpanded = false;
+  let activePreviewSelection = null;
+  let pendingSectionInsertAfter = null;
+  let storePreviewExpanded = true;
   let storePaletteTimer = null;
   let storePaletteRequest = 0;
   let storePaletteSourceSignature = "";
@@ -8123,10 +8221,13 @@
   storeAnimationAddEl.addEventListener("click", () => {
     const type = storeAnimationTypePickerEl.value;
     if (!STORE_MOTION_EXPERIENCES.includes(type)) return;
+    const insertAfter = pendingSectionInsertAfter || previewSectionKey(selectedPreviewSection);
     pendingAnimations.forEach((animation) => localStorage.setItem(animationDisclosureKey(animation.id), "false"));
     const id = animationId();
     const [name] = animationTypeCopy(type);
     pendingAnimations.push({ id, name, type, title: "", subtitle: "", topWord: "", rightWord: "", bottomWord: "", productId: "", media: [] });
+    placeTopLevelContentSection(`animation-${id}`, insertAfter);
+    pendingSectionInsertAfter = null;
     storeAnimationTypePickerEl.value = "";
     localStorage.setItem(animationDisclosureKey(id), "true");
     renderAnimationsEditor();
@@ -8214,6 +8315,8 @@
     storeSettingsDirty = isDirty;
     storeSaveStatusEl.textContent = isDirty ? "Cambios sin guardar" : "Todo guardado";
     storeSaveStatusEl.classList.toggle("is-dirty", isDirty);
+    previewSaveButtonEl.disabled = !isDirty;
+    previewSaveButtonEl.textContent = isDirty ? "Guardar cambios" : "Guardado";
   }
 
   function currentStorePreviewPatch() {
@@ -8484,7 +8587,7 @@
     const previewTargetKind = pendingStorePreviewTargetKind;
     const previewProduct = pendingStorePreviewProduct;
     storePreviewFrameEl.contentWindow.postMessage(
-      { type: "PAGOSYA_STORE_PREVIEW", patch: currentStorePreviewPatch(), previewSection, previewAction, previewTargetIndex, previewTargetKind, previewProduct, editorMode: storePreviewEditorEnabled },
+      { type: "PAGOSYA_STORE_PREVIEW", patch: currentStorePreviewPatch(), previewSection, previewAction, previewTargetIndex, previewTargetKind, previewProduct, editorMode: storePreviewEditorEnabled, editorSelection: activePreviewSelection },
       targetOrigin,
     );
     if (storePreviewStageEl.classList.contains("is-ready")) {
@@ -9198,6 +9301,261 @@
     promotion: "Promoción",
   };
 
+  function previewEditorTarget(selection) {
+    const section = String(selection?.section || "");
+    const field = String(selection?.field || "");
+    if ((section === "motion" || section.startsWith("animation-")) && selection?.animationId) {
+      const card = storeAnimationsListEl.querySelector(`.animation-card[data-animation-id="${CSS.escape(String(selection.animationId))}"]`);
+      if (!card) return null;
+      if (["name", "type", "subtitle", "topWord", "rightWord", "bottomWord", "productId"].includes(field)) return card.querySelector(`[data-animation-field="${field}"]`);
+      if (["title", "caption", "body"].includes(field)) return card.querySelector(`[data-animation-media-field="${field}"]`);
+      if (field === "media") return card.querySelector(".animation-video-upload-button, .animation-source, .animation-media-row");
+      return card;
+    }
+    if (section === "hero" && Number.isInteger(selection?.itemIndex)) {
+      const row = storeHeroSlidesListEl.querySelector(`.hero-slide-editor-row[data-index="${selection.itemIndex}"]`);
+      if (field === "title") return row?.querySelector(".slide-title") || null;
+      if (field === "body") return row?.querySelector(".slide-body") || null;
+      if (field === "ctaLabel") return row?.querySelector(".slide-cta-label") || null;
+      return row?.querySelector(".replace-slide-media") || row || null;
+    }
+    if (section === "gallery" && Number.isInteger(selection?.itemIndex)) {
+      const row = storeEditorialGalleryListEl.querySelector(`.editorial-gallery-row[data-index="${selection.itemIndex}"]`);
+      if (field === "editorialTitle") return row?.querySelector(".editorial-title") || null;
+      if (field === "editorialCaption") return row?.querySelector(".editorial-caption") || null;
+      if (field === "editorialBody") return row?.querySelector(".editorial-body") || null;
+      return row?.querySelector(".editorial-card-preview") || row || null;
+    }
+    if (section === "links") {
+      const index = Number.isInteger(selection?.itemIndex) ? selection.itemIndex : 0;
+      const row = storeLinksEditorEl.querySelector(`.store-link-editor-row[data-index="${index}"]`);
+      if (field === "linkUrl") return row?.querySelector(".link-url") || null;
+      if (field === "linkLabel") return row?.querySelector(".link-label") || null;
+    }
+    if (field === "animations") return storeAnimationTypePickerEl;
+    if (field === "links") return storeLinksEditorEl.querySelector(".store-link-editor-row .link-label") || document.getElementById("storeLinkAdd");
+    return document.querySelector(STORE_PREVIEW_EDITOR_CONTROLS[field] || "#storeNameInput");
+  }
+
+  function previewContextAssetUrl(value) {
+    return dashboardAssetUrl(value);
+  }
+
+  function renderPreviewContextEditor(selection = activePreviewSelection, { focus = false } = {}) {
+    activePreviewSelection = selection;
+    const bindings = [];
+    const actions = [];
+    let controlIndex = 0;
+    const fieldMarkup = (getter, label, helper = "", { rerender = false, beforeChange = null } = {}) => {
+      const source = getter();
+      if (!(source instanceof HTMLInputElement || source instanceof HTMLTextAreaElement || source instanceof HTMLSelectElement)) return "";
+      const id = `previewContextControl${controlIndex++}`;
+      bindings.push({ id, getter, rerender, beforeChange });
+      let control = "";
+      if (source instanceof HTMLSelectElement) {
+        control = `<select id="${id}">${[...source.options].map((option) => `<option value="${esc(option.value)}" ${option.value === source.value ? "selected" : ""}>${esc(option.textContent)}</option>`).join("")}</select>`;
+      } else if (source.type === "checkbox") {
+        control = `<label class="checkbox-row"><input id="${id}" type="checkbox" ${source.checked ? "checked" : ""}><span>${esc(label)}</span></label>`;
+        label = "";
+      } else if (source.type === "color") {
+        control = `<span class="preview-context-color-input"><input id="${id}" type="color" value="${esc(source.value)}"><output for="${id}">${esc(source.value)}</output></span>`;
+      } else if (source instanceof HTMLTextAreaElement) {
+        control = `<textarea id="${id}" rows="${Math.max(2, source.rows || 2)}" ${source.maxLength > 0 ? `maxlength="${source.maxLength}"` : ""}>${esc(source.value)}</textarea>`;
+      } else {
+        const safeType = ["email", "tel", "url", "number"].includes(source.type) ? source.type : "text";
+        control = `<input id="${id}" type="${safeType}" value="${esc(source.value)}" ${source.maxLength > 0 ? `maxlength="${source.maxLength}"` : ""} ${source.placeholder ? `placeholder="${esc(source.placeholder)}"` : ""}>`;
+      }
+      return `<div class="preview-context-field">${label ? `<label for="${id}">${esc(label)}</label>` : ""}${control}${helper ? `<small>${esc(helper)}</small>` : ""}</div>`;
+    };
+    const actionMarkup = (label, handler, { primary = false, danger = false } = {}) => {
+      const id = `previewContextAction${controlIndex++}`;
+      actions.push({ id, handler });
+      return `<button type="button" class="${primary ? "primary" : "ghost"}${danger ? " danger" : ""}" id="${id}">${esc(label)}</button>`;
+    };
+    const uploadMarkup = (label, accept, handler) => {
+      const id = `previewContextUpload${controlIndex++}`;
+      const buttonId = `${id}Button`;
+      actions.push({ id: buttonId, handler: () => document.getElementById(id)?.click() });
+      actions.push({ id, event: "change", handler: (event) => handler(event.target.files?.[0], event.target) });
+      return `<span class="preview-context-upload"><input id="${id}" type="file" accept="${accept}"><button type="button" class="ghost" id="${buttonId}">${esc(label)}</button></span>`;
+    };
+
+    if (!selection) {
+      previewContextEditorEl.className = "preview-context-editor is-idle";
+      previewContextEditorEl.innerHTML = `<p class="preview-context-copy"><strong>Toca algo dentro de tu tienda.</strong> Aquí aparecerá su texto, imagen o configuración principal sin sacarte de la vista previa.</p>`;
+      return;
+    }
+
+    const section = String(selection.section || "brand");
+    const field = String(selection.field || "section");
+    const label = String(selection.label || PREVIEW_SECTION_LABELS[section] || "Parte seleccionada").slice(0, 120);
+    const animationId = selection.animationId || (section.startsWith("animation-") ? section.slice("animation-".length) : null);
+    const animationIndex = animationId ? pendingAnimations.findIndex((entry) => entry.id === animationId) : -1;
+    const animation = animationIndex >= 0 ? pendingAnimations[animationIndex] : null;
+    let content = `<p class="preview-context-copy"><strong>${esc(label)}</strong></p>`;
+
+    if (section === "hero" && Number.isInteger(selection.itemIndex) && pendingHeroSlides[selection.itemIndex]) {
+      const index = selection.itemIndex;
+      const row = () => storeHeroSlidesListEl.querySelector(`.hero-slide-editor-row[data-index="${index}"]`);
+      content += `<div class="preview-context-grid">${fieldMarkup(() => row()?.querySelector(".slide-title"), "Título")}${fieldMarkup(() => row()?.querySelector(".slide-cta-label"), "Texto del botón")}</div>`;
+      content += fieldMarkup(() => row()?.querySelector(".slide-body"), "Descripción");
+      content += `<div class="preview-context-actions">${actionMarkup("Cambiar imagen o video", () => row()?.querySelector(".replace-slide-media")?.click(), { primary: field === "media" })}</div>`;
+    } else if (section === "gallery" && Number.isInteger(selection.itemIndex) && pendingEditorialGallery[selection.itemIndex]) {
+      const index = selection.itemIndex;
+      const row = () => storeEditorialGalleryListEl.querySelector(`.editorial-gallery-row[data-index="${index}"]`);
+      content += `<div class="preview-context-grid">${fieldMarkup(() => row()?.querySelector(".editorial-title"), "Título")}${fieldMarkup(() => row()?.querySelector(".editorial-caption"), "Línea corta")}</div>`;
+      content += fieldMarkup(() => row()?.querySelector(".editorial-body"), "Texto");
+      content += `<div class="preview-context-grid">${fieldMarkup(() => row()?.querySelector(".editorial-box-color"), "Color de la caja")}</div>`;
+      content += `<div class="preview-context-actions">${uploadMarkup("Reemplazar foto", "image/png,image/jpeg,image/webp", async (file, input) => {
+        if (!file) return;
+        if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > MAX_IMAGE_BYTES) {
+          previewSelectionStatusEl.textContent = file.size > MAX_IMAGE_BYTES ? "La imagen supera el máximo de 8 MB." : "Usa una imagen PNG, JPEG o WEBP.";
+          input.value = "";
+          return;
+        }
+        input.disabled = true;
+        previewSelectionStatusEl.textContent = `Subiendo ${file.name}…`;
+        try {
+          pendingEditorialGallery[index].imageUrl = await uploadFile(file);
+          renderEditorialGalleryEditor();
+          setStoreSettingsDirty(true);
+          scheduleStorePreview(0);
+          renderPreviewContextEditor(selection);
+          previewSelectionStatusEl.innerHTML = `<strong>Foto reemplazada.</strong> Revisa el resultado y guarda cuando esté listo.`;
+        } catch (error) {
+          previewSelectionStatusEl.textContent = `No pudimos subir la foto: ${error.message}`;
+        } finally {
+          input.disabled = false;
+          input.value = "";
+        }
+      })}</div>`;
+    } else if (animation) {
+      const card = () => storeAnimationsListEl.querySelector(`.animation-card[data-animation-id="${CSS.escape(animation.id)}"]`);
+      content += `<div class="preview-context-grid">${fieldMarkup(() => card()?.querySelector('[data-animation-field="name"]'), "Nombre interno")}${fieldMarkup(() => card()?.querySelector('[data-animation-field="type"]'), "Tipo de animación", "Cambia el movimiento sin crear otra sección.", { rerender: true })}</div>`;
+      content += fieldMarkup(() => card()?.querySelector('[data-animation-field="subtitle"]'), "Descripción visible");
+      if (animation.type === "video-pill") {
+        content += `<div class="preview-context-grid">${fieldMarkup(() => card()?.querySelector('[data-animation-field="topWord"]'), "Texto superior")}${fieldMarkup(() => card()?.querySelector('[data-animation-field="rightWord"]'), "Texto derecho")}${fieldMarkup(() => card()?.querySelector('[data-animation-field="bottomWord"]'), "Texto inferior")}</div>`;
+      } else if (animation.media[0]) {
+        content += `<div class="preview-context-grid">${fieldMarkup(() => card()?.querySelector('[data-animation-media-field="title"]'), "Título")}${fieldMarkup(() => card()?.querySelector('[data-animation-media-field="caption"]'), "Línea corta")}</div>`;
+        content += fieldMarkup(() => card()?.querySelector('[data-animation-media-field="body"]'), "Texto");
+      }
+      const requirement = animationMediaRequirement(animation.type);
+      const sources = animationSourceMedia(animation.type);
+      if (requirement.max > 0 && sources.length) {
+        const selectedKeys = new Set(animation.media.map((media) => normalizedAssetKey(media.imageUrl)));
+        content += `<div class="preview-context-field"><span>Fotos de esta animación · ${animation.media.length}/${requirement.max}</span><div class="preview-context-media">${sources.map((source, sourceIndex) => {
+          const id = `previewContextAsset${controlIndex++}`;
+          actions.push({ id, handler: () => {
+            const existingIndex = animation.media.findIndex((media) => normalizedAssetKey(media.imageUrl) === source.key);
+            if (requirement.max === 1) animation.media = [animationMediaDraft(source.imageUrl)];
+            else if (existingIndex >= 0) animation.media.splice(existingIndex, 1);
+            else if (animation.media.length < requirement.max) animation.media.push(animationMediaDraft(source.imageUrl));
+            renderAnimationsEditor();
+            commitAnimationStructureChange();
+            renderPreviewContextEditor(selection);
+          }});
+          const sourceUrl = previewContextAssetUrl(source.imageUrl);
+          const media = isVideoUploadUrl(source.imageUrl) ? `<video src="${esc(sourceUrl)}" muted playsinline></video>` : `<img src="${esc(sourceUrl)}" alt="">`;
+          return `<button type="button" id="${id}" aria-label="Usar ${esc(source.label)}" aria-pressed="${selectedKeys.has(source.key)}" title="${esc(source.label)}">${media}</button>`;
+        }).join("")}</div></div>`;
+      }
+      const accept = animation.type === "video-pill" ? "video/mp4,video/webm,image/png,image/jpeg,image/webp" : "image/png,image/jpeg,image/webp";
+      content += `<div class="preview-context-actions">${uploadMarkup(animation.type === "video-pill" ? "Subir foto o video" : "Subir foto", accept, async (file, input) => {
+        if (!file) return;
+        const isVideo = file.type.startsWith("video/");
+        const validationError = isVideo ? animationVideoValidationError(file) : (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > MAX_IMAGE_BYTES ? "Usa una imagen PNG, JPEG o WEBP de hasta 8 MB." : "");
+        if (validationError) { previewSelectionStatusEl.textContent = validationError; input.value = ""; return; }
+        input.disabled = true;
+        previewSelectionStatusEl.textContent = `Subiendo ${file.name}…`;
+        try {
+          const imageUrl = await uploadFile(file);
+          if (requirement.max === 1) animation.media = [animationMediaDraft(imageUrl)];
+          else if (animation.media.length < requirement.max) animation.media.push(animationMediaDraft(imageUrl));
+          else animation.media[0] = animationMediaDraft(imageUrl);
+          renderAnimationsEditor();
+          commitAnimationStructureChange();
+          renderPreviewContextEditor(selection);
+          previewSelectionStatusEl.innerHTML = `<strong>Medio agregado.</strong> Ya aparece en la animación.`;
+        } catch (error) {
+          previewSelectionStatusEl.textContent = `No pudimos subir el archivo: ${error.message}`;
+        } finally {
+          input.disabled = false;
+          input.value = "";
+        }
+      })}${actionMarkup("Eliminar animación", () => {
+        delete pendingSectionBackgrounds[`animation-${animation.id}`];
+        pendingAnimations.splice(animationIndex, 1);
+        activePreviewSelection = { section: "motion", field: "animations", label: "Animaciones" };
+        renderAnimationsEditor();
+        commitAnimationStructureChange();
+        setPreviewSectionCurrent("motion");
+        renderPreviewContextEditor(activePreviewSelection);
+      }, { danger: true })}</div>`;
+    } else if (field === "animations" || section === "motion") {
+      const options = STORE_MOTION_EXPERIENCES.map((type) => {
+        const [name, description] = animationTypeCopy(type);
+        return `<option value="${esc(type)}">${esc(name)} · ${esc(description)}</option>`;
+      }).join("");
+      const selectId = `previewContextAnimationType${controlIndex++}`;
+      const addId = `previewContextAnimationAdd${controlIndex++}`;
+      actions.push({ id: addId, handler: () => {
+        const picker = document.getElementById(selectId);
+        storeAnimationTypePickerEl.value = picker.value;
+        storeAnimationTypePickerEl.dispatchEvent(new Event("change", { bubbles: true }));
+        storeAnimationAddEl.click();
+        const created = pendingAnimations.at(-1);
+        const nextSelection = created ? { section: `animation-${created.id}`, field: "section", label: created.name, animationId: created.id } : selection;
+        setPreviewSectionCurrent(nextSelection.section);
+        renderPreviewContextEditor(nextSelection, { focus: true });
+      }});
+      content += `<div class="preview-context-field"><label for="${selectId}">Nueva animación</label><select id="${selectId}">${options}</select><small>Elige el efecto; después seleccionas sus fotos y escribes sus textos aquí mismo.</small></div><div class="preview-context-actions"><button type="button" class="primary" id="${addId}">Agregar animación</button></div>`;
+    } else if (field === "section") {
+      content += `<p class="preview-context-copy">Usa el fondo y la posición de abajo, o toca un texto o una imagen dentro de esta sección para cambiarlo.</p>`;
+      const sectionActions = [];
+      if (section === "hero") sectionActions.push(actionMarkup("Agregar escena", () => storeHeroSlidesInputEl.click(), { primary: true }));
+      if (section === "gallery") sectionActions.push(actionMarkup("Agregar fotos", () => storeEditorialGalleryInputEl.click(), { primary: true }));
+      if (section === "links") sectionActions.push(actionMarkup("Agregar enlace", () => document.getElementById("storeLinkAdd").click(), { primary: true }));
+      if (section === "location") sectionActions.push(actionMarkup("Configurar ubicación", () => focusEditorTarget(storeLocationAddEl, "Ubicación"), { primary: true }));
+      if (section === "contact") content += fieldMarkup(() => storeContactFormEnabledEl, "Mostrar formulario de contacto");
+      if (sectionActions.length) content += `<div class="preview-context-actions">${sectionActions.join("")}</div>`;
+    } else {
+      const sourceGetter = () => previewEditorTarget(selection);
+      const source = sourceGetter();
+      if (source instanceof HTMLInputElement && source.type === "file") {
+        const removeIds = { storeLogo: "storeLogoRemoveBtn", storeBanner: "storeBannerRemoveBtn", aboutImage: "storeAboutImageRemoveBtn", promotionImage: "storePromotionImageRemoveBtn" };
+        content += `<div class="preview-context-actions">${actionMarkup("Cambiar imagen", () => sourceGetter()?.click(), { primary: true })}${removeIds[field] ? actionMarkup("Quitar imagen", () => document.getElementById(removeIds[field])?.click(), { danger: true }) : ""}</div>`;
+      } else if (source instanceof HTMLButtonElement) {
+        content += `<div class="preview-context-actions">${actionMarkup(source.textContent.trim() || "Abrir ajuste", () => sourceGetter()?.click(), { primary: true })}</div>`;
+      } else {
+        content += fieldMarkup(sourceGetter, label);
+      }
+      if (section === "brand") {
+        content += `<div class="preview-context-color-row">${fieldMarkup(() => storeBackgroundColorEl, "Fondo de la tienda")}${fieldMarkup(() => storeAccentColorEl, "Color de marca", "Se activa automáticamente.", { beforeChange: () => { storeAccentToggleEl.checked = true; storeAccentColorEl.disabled = false; storeAccentToggleEl.dispatchEvent(new Event("change", { bubbles: true })); } })}</div>`;
+      }
+    }
+
+    previewContextEditorEl.className = "preview-context-editor";
+    previewContextEditorEl.innerHTML = content;
+    bindings.forEach(({ id, getter, rerender, beforeChange }) => {
+      const proxy = document.getElementById(id);
+      if (!proxy) return;
+      const source = getter();
+      const eventName = source instanceof HTMLSelectElement || (source instanceof HTMLInputElement && source.type === "checkbox") ? "change" : "input";
+      proxy.addEventListener(eventName, () => {
+        const currentSource = getter();
+        if (!currentSource) return;
+        beforeChange?.();
+        if (currentSource instanceof HTMLInputElement && currentSource.type === "checkbox") currentSource.checked = proxy.checked;
+        else currentSource.value = proxy.value;
+        if (proxy.type === "color") proxy.closest(".preview-context-color-input")?.querySelector("output")?.replaceChildren(proxy.value.toUpperCase());
+        currentSource.dispatchEvent(new Event(eventName, { bubbles: true }));
+        if (rerender) window.requestAnimationFrame(() => renderPreviewContextEditor(selection));
+      });
+    });
+    actions.forEach(({ id, event = "click", handler }) => document.getElementById(id)?.addEventListener(event, handler));
+    if (focus) window.requestAnimationFrame(() => window.setTimeout(() => previewContextEditorEl.querySelector("input:not([type='file']), textarea, select, button")?.focus(), 0));
+  }
+
   function previewSectionKey(section) {
     if (String(section).startsWith("animation-")) return String(section);
     if (section === "motion") return pendingContentOrder.find((entry) => entry.startsWith("animation-")) || null;
@@ -9211,6 +9569,8 @@
       : null;
     previewSelectedSectionEl.textContent = animation?.name || PREVIEW_SECTION_LABELS[selectedPreviewSection] || "Sección";
     const configuredColor = sectionKey ? pendingSectionBackgrounds[sectionKey] : null;
+    previewSectionColorEnabledEl.closest(".preview-section-color").hidden = !sectionKey;
+    previewSectionPositionEl.closest(".preview-section-position").hidden = !sectionKey;
     previewSectionColorEnabledEl.disabled = !sectionKey;
     previewSectionColorEnabledEl.checked = !!configuredColor;
     previewSectionColorEl.disabled = !sectionKey || !configuredColor;
@@ -9218,19 +9578,38 @@
     const orderIndex = sectionKey ? pendingContentOrder.indexOf(sectionKey) : -1;
     previewSectionUpEl.disabled = orderIndex <= 0;
     previewSectionDownEl.disabled = orderIndex < 0 || orderIndex >= pendingContentOrder.length - 1;
+    previewSectionPositionEl.disabled = orderIndex < 0;
+    previewSectionPositionEl.innerHTML = pendingContentOrder.map((entry, index) => {
+      const entryAnimation = entry.startsWith("animation-") ? pendingAnimations.find((candidate) => `animation-${candidate.id}` === entry) : null;
+      const entryLabel = entryAnimation?.name || STORE_CONTENT_SECTION_COPY[entry]?.[0] || PREVIEW_SECTION_LABELS[entry] || "Sección";
+      return `<option value="${index}" ${index === orderIndex ? "selected" : ""}>${index + 1}. ${esc(entryLabel)}</option>`;
+    }).join("");
   }
 
-  function setStorePreviewExpanded(expanded) {
+  function setStorePreviewExpanded(expanded, { preservePosition = true } = {}) {
+    const previewPanel = document.querySelector(".store-preview-panel");
+    const previewTop = previewPanel?.getBoundingClientRect().top ?? 0;
+    const targetPreviewTop = expanded ? 16 : previewTop;
+    const changed = storePreviewExpanded !== expanded;
     storePreviewExpanded = expanded;
     storeStudioEl.classList.toggle("is-preview-expanded", expanded);
     previewExpandToggleEl.setAttribute("aria-pressed", String(expanded));
-    previewExpandToggleEl.setAttribute("aria-label", expanded ? "Mostrar opciones" : "Agrandar vista previa");
-    previewExpandToggleEl.title = expanded ? "Mostrar opciones" : "Agrandar vista previa";
+    previewExpandToggleEl.setAttribute("aria-label", expanded ? "Mostrar ajustes avanzados" : "Ocultar ajustes avanzados");
+    previewExpandToggleEl.title = expanded ? "Mostrar ajustes avanzados" : "Ocultar ajustes avanzados";
     storeOptionsTabEl.setAttribute("aria-expanded", String(!expanded));
+    if (!changed || !preservePosition) return;
+    window.requestAnimationFrame(() => {
+      if (!previewPanel) return;
+      const nextPreviewTop = previewPanel.getBoundingClientRect().top;
+      if (Math.abs(nextPreviewTop - targetPreviewTop) > 1) {
+        window.scrollBy({ top: nextPreviewTop - targetPreviewTop, left: 0, behavior: "auto" });
+      }
+    });
   }
 
   previewExpandToggleEl.addEventListener("click", () => setStorePreviewExpanded(!storePreviewExpanded));
   storeOptionsTabEl.addEventListener("click", () => setStorePreviewExpanded(false));
+  setStorePreviewExpanded(true, { preservePosition: false });
 
   function setPreviewSectionCurrent(section) {
     selectedPreviewSection = section || "brand";
@@ -9292,6 +9671,21 @@
     syncPreviewSectionInspector();
   }
 
+  previewSectionPositionEl.addEventListener("change", () => {
+    const sectionKey = previewSectionKey(selectedPreviewSection);
+    const fromIndex = sectionKey ? pendingContentOrder.indexOf(sectionKey) : -1;
+    const toIndex = Number(previewSectionPositionEl.value);
+    if (fromIndex < 0 || !Number.isInteger(toIndex) || toIndex < 0 || toIndex >= pendingContentOrder.length || fromIndex === toIndex) return;
+    const [section] = pendingContentOrder.splice(fromIndex, 1);
+    pendingContentOrder.splice(toIndex, 0, section);
+    renderStoreContentOrderEditor();
+    setStoreSettingsDirty(true);
+    pendingStorePreviewSection = selectedPreviewSection;
+    pendingStorePreviewAction = selectedPreviewSection.startsWith("animation-") ? "motion" : "scroll";
+    scheduleStorePreview(0);
+    syncPreviewSectionInspector();
+  });
+
   previewSectionUpEl.addEventListener("click", () => moveSelectedPreviewSection(-1));
   previewSectionDownEl.addEventListener("click", () => moveSelectedPreviewSection(1));
   previewSectionColorEnabledEl.addEventListener("change", () => {
@@ -9315,12 +9709,15 @@
 
   previewAddSectionEl.addEventListener("change", () => {
     const section = previewAddSectionEl.value;
+    const insertAfter = previewSectionKey(selectedPreviewSection);
     previewAddSectionEl.value = "";
     if (!section) return;
     if (section === "motion") {
+      pendingSectionInsertAfter = insertAfter;
       selectStorePreviewEditorTarget({ section: "motion", field: "animations", label: "nueva animación" });
       return;
     }
+    const moved = placeTopLevelContentSection(section, insertAfter);
     if (section === "links" && pendingStoreLinks.length === 0) document.getElementById("storeLinkAdd").click();
     if (section === "contact" && !storeContactFormEnabledEl.checked) {
       storeContactFormEnabledEl.checked = true;
@@ -9329,6 +9726,11 @@
       scheduleStorePreview(0);
     }
     if (section === "location" && pendingStoreLocations.length === 0) storeLocationAddEl.click();
+    if (moved) {
+      renderStoreContentOrderEditor();
+      setStoreSettingsDirty(true);
+      scheduleStorePreview(0);
+    }
     const fields = { about: "aboutTitle", gallery: "galleryTitle", links: "links", contact: "contact", location: "location" };
     selectStorePreviewEditorTarget({ section, field: fields[section], label: PREVIEW_SECTION_LABELS[section] || "sección" });
   });
@@ -9337,11 +9739,15 @@
     const section = String(selection?.section || "");
     const field = String(selection?.field || "");
     const label = String(selection?.label || "Parte seleccionada").slice(0, 120);
+    const normalizedSelection = {
+      section: section || "brand",
+      field: field || "section",
+      label,
+      ...(selection?.itemId ? { itemId: String(selection.itemId) } : {}),
+      ...(Number.isInteger(selection?.itemIndex) ? { itemIndex: selection.itemIndex } : {}),
+      ...(selection?.animationId ? { animationId: String(selection.animationId) } : {}),
+    };
     setPreviewSectionCurrent(section);
-    if (field === "section") {
-      previewSelectionStatusEl.innerHTML = `<strong>${esc(label)}.</strong> Usa Fondo propio, mueve la sección o toca uno de sus textos o imágenes.`;
-      return;
-    }
     if (selection?.itemId && lastPaymentLinks.some((product) => product.id === selection.itemId)) {
       setDashboardView("products");
       beginPaymentLinkEdit(lastPaymentLinks.find((product) => product.id === selection.itemId));
@@ -9349,43 +9755,14 @@
       return;
     }
     setDashboardView("appearance");
-    let target = null;
-    if ((section === "motion" || section.startsWith("animation-")) && selection?.animationId) {
-      const card = storeAnimationsListEl.querySelector(`.animation-card[data-animation-id="${CSS.escape(String(selection.animationId))}"]`);
-      if (card) {
-        const animationField = ["name", "type", "subtitle", "topWord", "rightWord", "bottomWord", "productId"].includes(field)
-          ? card.querySelector(`[data-animation-field="${field}"]`)
-          : ["title", "caption", "body"].includes(field)
-            ? card.querySelector(`[data-animation-media-field="${field}"]`)
-            : field === "media"
-              ? card.querySelector(".animation-video-upload-button, .animation-source, .animation-media-row")
-              : card.querySelector(".animation-card-toggle");
-        target = animationField || card;
-      }
-    } else if (section === "hero" && Number.isInteger(selection?.itemIndex)) {
-      const row = storeHeroSlidesListEl.querySelector(`.hero-slide-editor-row[data-index="${selection.itemIndex}"]`);
-      target = field === "title" ? row?.querySelector(".slide-title")
-        : field === "body" ? row?.querySelector(".slide-body")
-          : field === "ctaLabel" ? row?.querySelector(".slide-cta-label")
-            : row?.querySelector(".replace-slide-media") || row;
-    } else if (section === "gallery" && Number.isInteger(selection?.itemIndex)) {
-      const row = storeEditorialGalleryListEl.querySelector(`.editorial-gallery-row[data-index="${selection.itemIndex}"]`);
-      target = field === "editorialTitle" ? row?.querySelector(".editorial-title")
-        : field === "editorialCaption" ? row?.querySelector(".editorial-caption")
-          : field === "editorialBody" ? row?.querySelector(".editorial-body")
-            : row?.querySelector(".editorial-card-preview") || row;
-    } else if (section === "links") {
-      const index = Number.isInteger(selection?.itemIndex) ? selection.itemIndex : 0;
-      const row = storeLinksEditorEl.querySelector(`.store-link-editor-row[data-index="${index}"]`);
-      target = field === "linkUrl" ? row?.querySelector(".link-url") : row?.querySelector(".link-label") || document.getElementById("storeLinkAdd");
-    } else if (field === "animations") {
-      target = document.getElementById("storeAnimationTypePicker");
-    } else if (field === "links") {
-      target = storeLinksEditorEl.querySelector(".store-link-editor-row .link-label") || document.getElementById("storeLinkAdd");
-    } else {
-      target = document.querySelector(STORE_PREVIEW_EDITOR_CONTROLS[field] || "#storeNameInput");
-    }
-    focusEditorTarget(target, label);
+    setStorePreviewExpanded(true);
+    renderPreviewContextEditor(normalizedSelection, { focus: field !== "section" });
+    previewSelectionStatusEl.innerHTML = field === "section"
+      ? `<strong>${esc(label)}.</strong> Mueve la sección, cambia su fondo o toca uno de sus elementos.`
+      : `<strong>${esc(label)}.</strong> Edítalo arriba sin salir de la vista previa.`;
+    pendingStorePreviewSection = section;
+    pendingStorePreviewAction = section.startsWith("animation-") ? "motion" : "scroll";
+    scheduleStorePreview(0);
   }
 
   function storePaletteImageUrls() {
@@ -9536,7 +9913,7 @@
     pendingStorePreviewSection = "brand";
     pendingStorePreviewAction = "scroll";
     scheduleStorePreview(0);
-    focusEditorTarget(storeAccentColorEl, `Color ${swatch.dataset.paletteColor}`);
+    selectStorePreviewEditorTarget({ section: "brand", field: "storeAccent", label: `Color de marca ${swatch.dataset.paletteColor}` });
   });
 
   previewEditModeEl.addEventListener("click", () => {
@@ -9750,8 +10127,28 @@
     }
     DEFAULT_STORE_CONTENT_ORDER.forEach(append);
     const missingMotion = animationSections.filter((section) => !normalized.includes(section));
-    if (missingMotion.length) normalized.unshift(...missingMotion);
+    if (missingMotion.length) {
+      const linksIndex = normalized.indexOf("links");
+      normalized.splice(linksIndex < 0 ? normalized.length : linksIndex, 0, ...missingMotion);
+    }
     return normalized;
+  }
+
+  function placeTopLevelContentSection(section, afterSection = null) {
+    pendingContentOrder = normalizeStoreContentOrder(pendingContentOrder);
+    const currentIndex = pendingContentOrder.indexOf(section);
+    const anchorIndex = afterSection ? pendingContentOrder.indexOf(afterSection) : -1;
+    if (currentIndex === anchorIndex + 1 && anchorIndex >= 0) return false;
+    if (currentIndex >= 0) pendingContentOrder.splice(currentIndex, 1);
+    const updatedAnchorIndex = afterSection ? pendingContentOrder.indexOf(afterSection) : -1;
+    const fallbackIndex = pendingContentOrder.indexOf("links");
+    const insertionIndex = updatedAnchorIndex >= 0
+      ? updatedAnchorIndex + 1
+      : fallbackIndex >= 0
+        ? fallbackIndex
+        : pendingContentOrder.length;
+    pendingContentOrder.splice(insertionIndex, 0, section);
+    return true;
   }
 
   function moveSortableEntry(list, fromIndex, toIndex) {
@@ -10315,6 +10712,8 @@
     infoEl.textContent = "";
     storeSaveButtonEl.disabled = true;
     storeSaveButtonEl.textContent = "Guardando…";
+    previewSaveButtonEl.disabled = true;
+    previewSaveButtonEl.textContent = "Guardando…";
     storeSaveStatusEl.textContent = "Guardando cambios";
     try {
       await api(`/stores/${saveStoreId}/settings`, {
@@ -10423,6 +10822,8 @@
     } finally {
       storeSaveButtonEl.disabled = false;
       storeSaveButtonEl.textContent = "Guardar cambios";
+      previewSaveButtonEl.disabled = !storeSettingsDirty;
+      previewSaveButtonEl.textContent = storeSettingsDirty ? "Guardar cambios" : "Guardado";
     }
   });
 
@@ -10765,6 +11166,9 @@
     if (storeId) sessionStorage.setItem("pagosya_current_store_id", storeId);
     else sessionStorage.removeItem("pagosya_current_store_id");
     if (storeChanged) {
+      activePreviewSelection = null;
+      selectedPreviewSection = "brand";
+      renderPreviewContextEditor(null);
       birdUnlockQueue = birdUnlockQueue.filter((item) => {
         if (item.storeId === storeId) return true;
         queuedProgressLevels.delete(`${item.storeId}:${item.levelIndex}`);

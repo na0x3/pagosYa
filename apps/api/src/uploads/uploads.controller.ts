@@ -13,6 +13,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -63,6 +64,7 @@ export class UploadsController {
 
   /** Public — buyers on a checkout/storefront page must be able to load product photos and the merchant logo without any credential. */
   @Get(":filename")
+  @SkipThrottle()
   async getFile(@Param("filename") filename: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
     if (!UPLOAD_FILENAME_PATTERN.test(filename)) throw new NotFoundException("Not found");
     const body = await this.uploads.getBuffer(filename);

@@ -1606,6 +1606,7 @@ let activePreviewStore: { slug: string; store: Store } | null = null;
 let previewReadyAnnounced = false;
 let storePreviewEditorEnabled = true;
 let storePreviewEditorHover: HTMLElement | null = null;
+let storePreviewEditorSelection: StorePreviewEditorSelection | null = null;
 const STORE_PREVIEW_SECTIONS = ["brand", "announcement", "hero", "products", "about", "gallery", "motion", "contact", "links", "location", "promotion"] as const;
 type StorePreviewSection = (typeof STORE_PREVIEW_SECTIONS)[number];
 
@@ -1650,11 +1651,27 @@ function markAllStorePreviewEditorTargets(
 }
 
 function syncStorePreviewEditorMode(): void {
+  document.documentElement.classList.toggle("store-preview-mode", storePreviewMode);
   document.body.classList.toggle("store-preview-editor-enabled", storePreviewMode && storePreviewEditorEnabled);
   if (!storePreviewEditorEnabled && storePreviewEditorHover) {
     storePreviewEditorHover.classList.remove("store-preview-editor-hover");
     storePreviewEditorHover = null;
   }
+}
+
+function syncStorePreviewEditorSelection(): void {
+  app.querySelectorAll<HTMLElement>(".store-preview-editor-selected").forEach((element) => element.classList.remove("store-preview-editor-selected"));
+  const selection = storePreviewEditorSelection;
+  if (!selection || !storePreviewEditorEnabled) return;
+  const candidates = Array.from(app.querySelectorAll<HTMLElement>("[data-store-editor-target]")).filter((element) => {
+    if (element.dataset.storeEditorSection !== selection.section) return false;
+    if (selection.animationId && element.dataset.storeEditorAnimationId !== selection.animationId) return false;
+    if (selection.itemId && element.dataset.storeEditorItemId !== selection.itemId) return false;
+    if (Number.isInteger(selection.itemIndex) && Number(element.dataset.storeEditorItemIndex) !== selection.itemIndex) return false;
+    return element.dataset.storeEditorField === selection.field;
+  });
+  const target = candidates[0] || app.querySelector<HTMLElement>(`[data-store-editor-section="${CSS.escape(selection.section)}"]`);
+  target?.classList.add("store-preview-editor-selected");
 }
 
 function applyStoreSectionBackgrounds(store: Store): void {
@@ -1765,6 +1782,7 @@ function annotateStorePreviewEditor(store: Store): void {
   markStorePreviewEditorTarget(app.querySelector(".promotion-action"), { section: "promotion", field: "promotionAction", label: "botón de promoción" });
   markStorePreviewEditorTarget(app.querySelector("#cart-pay"), { section: "products", field: "cartButton", label: "botón del carrito" });
   syncStorePreviewEditorMode();
+  syncStorePreviewEditorSelection();
 }
 
 function selectionFromStorePreviewEditorTarget(target: HTMLElement): StorePreviewEditorSelection | null {
@@ -1814,6 +1832,8 @@ if (storePreviewMode) {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+    storePreviewEditorSelection = selection;
+    syncStorePreviewEditorSelection();
     postToParent("STORE_EDITOR_SELECT", { selection });
     showStorePreviewEditorHover(target);
   }, true);
@@ -4473,6 +4493,17 @@ if (storePreviewMode) {
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
     storePreviewEditorEnabled = event.data.editorMode !== false;
+    const requestedSelection = event.data.editorSelection;
+    storePreviewEditorSelection = requestedSelection && typeof requestedSelection === "object" && typeof requestedSelection.section === "string" && typeof requestedSelection.field === "string"
+      ? {
+          section: requestedSelection.section.slice(0, 64) as StorePreviewEditorSelection["section"],
+          field: requestedSelection.field.slice(0, 64),
+          label: typeof requestedSelection.label === "string" ? requestedSelection.label.slice(0, 120) : "parte seleccionada",
+          ...(typeof requestedSelection.itemId === "string" ? { itemId: requestedSelection.itemId.slice(0, 200) } : {}),
+          ...(Number.isInteger(requestedSelection.itemIndex) ? { itemIndex: Math.max(0, requestedSelection.itemIndex) } : {}),
+          ...(typeof requestedSelection.animationId === "string" ? { animationId: requestedSelection.animationId.slice(0, 64) } : {}),
+        }
+      : null;
     let previewStore = { ...activePreviewStore.store, ...patch };
     const previewProduct = sanitizeStorePreviewProduct(event.data.previewProduct, previewStore);
     if (previewProduct) {

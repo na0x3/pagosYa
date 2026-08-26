@@ -45,6 +45,7 @@ async function openDashboard(
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
+    localStorage.setItem("pagosya_dashboard_section_storeSettingsSection", "false");
   });
   await page.route("http://localhost:3001/v1/**", async (route) => {
     const request = route.request();
@@ -73,6 +74,7 @@ async function openDashboard(
   });
   await page.goto("/#dashboard-appearance");
   await expect(page.locator("#storeNameInput")).toHaveValue(stores[0].name);
+  await expect(page.locator("#onboardingDialog")).toBeVisible();
   await page.evaluate(() => {
     const openDialog = document.querySelector("dialog[open]");
     if (!openDialog) return;
@@ -81,7 +83,8 @@ async function openDashboard(
     else openDialog.close();
   });
   const appearanceToggle = page.locator("#storeSettingsSection > .panel > .section-head .section-toggle");
-  if (await appearanceToggle.getAttribute("aria-expanded") !== "true") await appearanceToggle.evaluate((button) => button.click());
+  await expect(appearanceToggle).toHaveAttribute("aria-expanded", "true");
+  if (await page.locator("#storeNameInput").isHidden()) await page.locator("#storeOptionsTab").evaluate((button) => button.click());
   await expect(page.locator("#storeNameInput")).toBeVisible();
   return requests;
 }
@@ -89,6 +92,13 @@ async function openDashboard(
 async function addAnimation(page, type = "coverflow-carousel") {
   await page.locator("#storeAnimationTypePicker").selectOption(type);
   await page.locator("#storeAnimationAdd").click({ force: true });
+}
+
+async function openYapi(page) {
+  const restore = page.locator("#assistantRestore");
+  if (await restore.isVisible()) await restore.click();
+  else if (await page.locator("#assistantPanel").isHidden()) await page.locator("#assistantObject").click();
+  await expect(page.locator("#assistantPanel")).toBeVisible();
 }
 
 async function prepareInventoryImport(page, responseForRequest) {
@@ -335,7 +345,8 @@ test("a new store starts without animations and only adds the selected type", as
   await expect(page.locator('[data-animation-field="type"]')).toHaveValue("hero-carousel");
   await expect(page.locator(".animation-media-row")).toHaveCount(0);
   await page.getByRole("button", { name: "Mostrar Contenido y orden" }).click();
-  await expect(page.locator(".store-content-order-row").first()).toContainText("Slider principal");
+  const contentLabels = await page.locator(".store-content-order-row .store-content-order-copy strong").allTextContents();
+  expect(contentLabels.indexOf("Slider principal")).toBe(contentLabels.indexOf("Redes y enlaces") - 1);
   await expect(page.locator("#storeAnimationTypePicker")).toHaveValue("");
   await expect(page.locator("#storeAnimationAdd")).toBeDisabled();
 });
@@ -685,7 +696,11 @@ test("preview clicks open the exact editor and image colors become an editable p
   }, selection);
 
   await selectInPreview({ section: "brand", field: "storeName", label: "nombre de la tienda" });
-  await expect(page.locator("#storeNameInput")).toBeFocused();
+  const inlineStoreName = page.locator("#previewContextEditor input[type='text']").first();
+  await expect(inlineStoreName).toBeVisible();
+  await expect(inlineStoreName).toHaveValue("Tienda editable");
+  await inlineStoreName.fill("Tienda desde el lienzo");
+  await expect(page.locator("#storeNameInput")).toHaveValue("Tienda desde el lienzo");
   await expect(page.locator("#previewSelectionStatus")).toContainText("nombre de la tienda");
 
   await selectInPreview({ section: "products", field: "section", label: "sección catálogo" });
@@ -695,11 +710,25 @@ test("preview clicks open the exact editor and image colors become an editable p
     input.value = "#d62828";
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
+  await page.locator("#previewSectionPosition").selectOption("0");
 
   await selectInPreview({ section: "animation-opening", field: "topWord", label: "texto superior", animationId: "opening" });
-  const animationCard = page.locator('.animation-card[data-animation-id="opening"]');
-  await expect(animationCard.locator('[data-animation-field="topWord"]')).toBeFocused();
-  await expect(animationCard.locator(".animation-card-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#previewContextEditor")).toContainText("Texto superior");
+  await expect(page.locator("#previewContextEditor").getByLabel("Texto superior")).toBeVisible();
+
+  const animationCountBeforeAdd = await page.locator(".animation-card").count();
+  await page.locator("#previewAddSection").selectOption("motion");
+  await page.locator("#previewContextEditor").getByLabel("Nueva animación").selectOption("story-scroll");
+  await page.locator("#previewContextEditor").getByRole("button", { name: "Agregar animación" }).click();
+  await expect(page.locator(".animation-card")).toHaveCount(animationCountBeforeAdd + 1);
+  const createdAnimationId = await page.locator(".animation-card").last().getAttribute("data-animation-id");
+  const sectionOrderAfterAdd = await page.locator("#storeContentOrderList [data-reorder-key]").evaluateAll((rows) => rows.map((row) => row.dataset.reorderKey));
+  expect(sectionOrderAfterAdd.indexOf(`animation-${createdAnimationId}`)).toBe(sectionOrderAfterAdd.indexOf("animation-opening") + 1);
+
+  await selectInPreview({ section: `animation-${createdAnimationId}`, field: "section", label: "animación nueva", animationId: createdAnimationId });
+  await page.locator("#previewAddSection").selectOption("about");
+  const sectionOrderAfterMove = await page.locator("#storeContentOrderList [data-reorder-key]").evaluateAll((rows) => rows.map((row) => row.dataset.reorderKey));
+  expect(sectionOrderAfterMove.indexOf("about")).toBe(sectionOrderAfterMove.indexOf(`animation-${createdAnimationId}`) + 1);
 
   await selectInPreview({ section: "brand", field: "storeName", label: "nombre de la tienda" });
   const paletteSwatch = page.locator("#storeImagePaletteSwatches [data-palette-color]").first();
@@ -708,15 +737,21 @@ test("preview clicks open the exact editor and image colors become an editable p
   await paletteSwatch.click();
   await expect(page.locator("#storeAccentColor")).toHaveValue(paletteColor);
   await expect(page.locator("#storeAccentToggle")).toBeChecked();
+  if (process.env.CAPTURE_VISUAL_EDITOR) {
+    if (await page.locator("#assistantClose").isVisible()) await page.locator("#assistantClose").click();
+    await page.screenshot({ path: "../../.impeccable/store-editor-desktop.png", fullPage: false });
+  }
 
   await page.locator("#previewEditMode").evaluate((button) => button.click());
   await expect(page.locator("#previewEditMode")).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator("#previewSelectionStatus")).toContainText("Navegación normal");
 
-  await page.locator("#previewExpandToggle").evaluate((button) => button.click());
+  const previewPanel = page.locator(".store-preview-panel");
+  await previewPanel.scrollIntoViewIfNeeded();
   await expect(page.locator("#storeStudio")).toHaveClass(/is-preview-expanded/);
   await expect(page.locator("#storeSettingsForm")).toBeHidden();
-  await page.locator("#storeOptionsTab").evaluate((button) => button.click());
+  await expect(previewPanel).toBeVisible();
+  await page.locator("#previewExpandToggle").evaluate((button) => button.click());
   await expect(page.locator("#storeSettingsForm")).toBeVisible();
 
   await page.locator("#previewAddSection").selectOption("contact");
@@ -726,8 +761,18 @@ test("preview clicks open the exact editor and image colors become an editable p
   await expect(page.locator("#info")).toContainText("guardados");
   const write = requests.find((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
   expect(write.body.sectionBackgrounds).toEqual({ products: "#d62828" });
+  expect(write.body.name).toBe("Tienda desde el lienzo");
+  expect(write.body.contentOrder.indexOf("products")).toBeLessThan(write.body.contentOrder.indexOf("hero"));
+  expect(write.body.animations).toHaveLength(animationCountBeforeAdd + 1);
+  await page.evaluate(() => {
+    if (!document.getElementById("storeStudio").classList.contains("is-preview-expanded")) document.getElementById("previewExpandToggle").click();
+  });
+  await expect(page.locator("#storeStudio")).toHaveClass(/is-preview-expanded/);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  if (process.env.CAPTURE_VISUAL_EDITOR) {
+    await page.screenshot({ path: "../../.impeccable/store-editor-mobile.png", fullPage: false });
+  }
 });
 
 test("merchant can save every showcase animation type from the real appearance editor", async ({ page }) => {
@@ -1246,6 +1291,7 @@ test("Yapi saves a store sales goal and shows revenue progress", async ({ page }
     }
     return undefined;
   });
+  await openYapi(page);
 
   await expect(page.locator("#assistantGoalView")).toBeHidden();
   await page.getByRole("tab", { name: "Meta" }).click();
@@ -1505,10 +1551,11 @@ test("a lead-only store hides NIT features until integrated payments are enabled
   expect(settingsWrite.body).toMatchObject({ checkoutMode: "payment", leadCaptureUrl: null });
 });
 
-test("Yapi opens by default without taking focus from the dashboard", async ({ page }) => {
+test("Yapi stays available without covering the appearance editor", async ({ page }) => {
   await openDashboard(page);
-  await expect(page.locator("#assistantPanel")).toBeVisible();
-  await expect(page.locator("#assistantObject")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#assistantPanel")).toBeHidden();
+  await expect(page.locator("#assistantObject")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#assistantRestore")).toBeVisible();
   await expect(page.locator("#assistantClose")).not.toBeFocused();
 });
 
@@ -1535,6 +1582,7 @@ test("Yapi calculates an honest 100% setup and explains digital invoicing", asyn
     }
     return undefined;
   });
+  await openYapi(page);
 
   await expect(page.locator("#assistantSetupPercent")).toHaveText("100%");
   await expect(page.locator("#assistantSetupTrack")).toHaveAttribute("aria-valuenow", "100");
@@ -1557,6 +1605,7 @@ test("Yapi reports low stock, saves notes, and stays anchored to the page", asyn
     }
     return undefined;
   });
+  await openYapi(page);
 
   await expect(page.locator("#assistantAlerts")).toContainText("Matcha: 3 disponibles");
   await expect(page.locator("#assistantAlerts")).toContainText("6 imágenes recomendadas");
