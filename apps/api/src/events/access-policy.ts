@@ -1,4 +1,5 @@
 export type AccessPolicyInput = {
+  eventStatus: string;
   admissionStatus: string;
   paymentStatus: string;
   biometricEnrollmentStatus: string;
@@ -21,6 +22,7 @@ export type AccessPolicyDecision =
 
 /** Pure authorization policy. Persistence and locking stay in EventsService. */
 export function evaluateAccess(input: AccessPolicyInput): AccessPolicyDecision {
+  if (input.direction === "ENTRY" && input.eventStatus !== "ACTIVE") return { decision: "DENY", reason: "EVENT_NOT_ACTIVE" };
   if (!["ACTIVE", "VALID"].includes(input.admissionStatus)) return { decision: "DENY", reason: `ADMISSION_${input.admissionStatus}` };
   if (input.paymentStatus !== "PAID") return { decision: "DENY", reason: `PAYMENT_${input.paymentStatus}` };
   if (input.biometricEnrollmentStatus !== "ENROLLED" && !input.manual) return { decision: "DENY", reason: "BIOMETRIC_NOT_ENROLLED" };

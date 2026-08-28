@@ -1,13 +1,17 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
+import { ConsumerUser } from "@prisma/client";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
+import { ConsumerAuthGuard } from "../consumer/consumer-auth.guard";
+import { CurrentConsumer } from "../consumer/current-consumer.decorator";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { EventsService } from "./events.service";
+import { FaceEntryService } from "./face-entry.service";
 import {
-  AddStaffDto, AttachEventTicketsBlockDto, CashSaleDto, ClaimAdmissionDto, CloseCashShiftDto, CompleteEnrollmentDto, CreateDeviceDto,
+  ActivateFaceEntryDto, AddStaffDto, AttachEventTicketsBlockDto, CashSaleDto, ClaimAdmissionDto, CloseCashShiftDto, CompleteEnrollmentDto, ConsumerEnrollmentSessionDto, CreateDeviceDto,
   CreateEnrollmentSessionDto, CreateEventDto, CreateInvitationDto, CreateReservationDto, CreateTicketTypeDto,
-  CreateVenueDto, DeleteBiometricDto, ManageReservationDto, ManualAccessDto, NormalizedDeviceEventDto, OpenCashShiftDto, SimulatorActionDto,
+  CreateVenueDto, DeleteBiometricDto, DeleteFaceEntryDto, ManageReservationDto, ManualAccessDto, NormalizedDeviceEventDto, OpenCashShiftDto, SimulatorActionDto,
 } from "./events.dto";
 
 type MerchantRequest = { merchantUser?: { id: string }; ip?: string };
@@ -15,7 +19,7 @@ type MerchantRequest = { merchantUser?: { id: string }; ip?: string };
 @ApiTags("events-public")
 @Controller("v1/events/public")
 export class EventsPublicController {
-  constructor(private readonly events: EventsService) {}
+  constructor(private readonly events: EventsService, private readonly faceEntry: FaceEntryService) {}
 
   @Get("id/:eventId")
   getById(@Param("eventId") eventId: string) { return this.events.publicEventById(eventId); }
@@ -41,7 +45,38 @@ export class EventsPublicController {
 
   @Post("enrollment-sessions/:sessionId/complete")
   @Throttle({ default: { limit: 8, ttl: 60_000 } })
-  completeEnrollment(@Param("sessionId") sessionId: string, @Body() dto: CompleteEnrollmentDto) { return this.events.completeEnrollment(sessionId, dto); }
+  completeEnrollment(@Param("sessionId") sessionId: string, @Body() dto: CompleteEnrollmentDto) { return this.faceEntry.completeEnrollment(sessionId, dto); }
+}
+
+@ApiTags("events-face-entry")
+@ApiBearerAuth()
+@UseGuards(ConsumerAuthGuard)
+@Controller("v1/events/consumer")
+export class EventsConsumerController {
+  constructor(private readonly faceEntry: FaceEntryService) {}
+
+  @Get("face-entry")
+  status(@CurrentConsumer() consumer: ConsumerUser) { return this.faceEntry.accountStatus(consumer.id); }
+
+  @Post("admissions/:admissionId/face-entry")
+  activate(@CurrentConsumer() consumer: ConsumerUser, @Param("admissionId") admissionId: string, @Body() dto: ActivateFaceEntryDto) {
+    return this.faceEntry.activateForAdmission(consumer.id, admissionId, dto.managementToken);
+  }
+
+  @Post("admissions/:admissionId/enrollment-session")
+  enrollmentSession(@CurrentConsumer() consumer: ConsumerUser, @Param("admissionId") admissionId: string, @Body() dto: ConsumerEnrollmentSessionDto) {
+    return this.faceEntry.createConsumerEnrollmentSession(consumer.id, admissionId, dto);
+  }
+
+  @Post("enrollment-sessions/:sessionId/complete")
+  completeEnrollment(@CurrentConsumer() consumer: ConsumerUser, @Param("sessionId") sessionId: string, @Body() dto: CompleteEnrollmentDto) {
+    return this.faceEntry.completeEnrollment(sessionId, dto, consumer.id);
+  }
+
+  @Delete("face-entry")
+  remove(@CurrentConsumer() consumer: ConsumerUser, @Body() dto: DeleteFaceEntryDto) {
+    return this.faceEntry.deleteForConsumer(consumer.id, dto.reason);
+  }
 }
 
 @ApiTags("events")
@@ -93,6 +128,26 @@ export class EventsController {
   @Get("devices/:deviceId/health")
   deviceHealth(@CurrentMerchant() merchant: { id: string }, @Param("deviceId") deviceId: string) { return this.events.deviceHealth(merchant.id, deviceId); }
 
+  @Post(":eventId/devices/:deviceId/roster/sync")
+  syncRoster(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("eventId") eventId: string, @Param("deviceId") deviceId: string) {
+    return this.events.syncEventRoster(merchant.id, eventId, deviceId, req.merchantUser?.id);
+  }
+
+  @Post(":eventId/devices/:deviceId/roster/remove")
+  removeRoster(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("eventId") eventId: string, @Param("deviceId") deviceId: string) {
+    return this.events.removeEventRoster(merchant.id, eventId, deviceId, req.merchantUser?.id);
+  }
+
+  @Post(":eventId/end")
+  endEvent(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("eventId") eventId: string) {
+    return this.events.endEvent(merchant.id, eventId, req.merchantUser?.id);
+  }
+
+  @Post(":eventId/biometrics/cleanup")
+  cleanupEventBiometrics(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("eventId") eventId: string) {
+    return this.events.cleanupEndedEvent(merchant.id, eventId, req.merchantUser?.id);
+  }
+
   @Post("device-events")
   @Throttle({ default: { limit: 240, ttl: 60_000 } })
   deviceEvent(@CurrentMerchant() merchant: { id: string }, @Body() dto: NormalizedDeviceEventDto) { return this.events.processDeviceEvent(dto as any, merchant.id); }
@@ -105,6 +160,11 @@ export class EventsController {
 
   @Post("biometric-credentials/:credentialId/delete")
   deleteCredential(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("credentialId") credentialId: string, @Body() dto: DeleteBiometricDto) { return this.events.deleteCredential(merchant.id, credentialId, req.merchantUser?.id, dto.reason); }
+
+  @Post("biometric-identities/:biometricIdentityId/delete")
+  deleteIdentity(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("biometricIdentityId") biometricIdentityId: string, @Body() dto: DeleteBiometricDto) {
+    return this.events.deleteBiometricIdentity(merchant.id, biometricIdentityId, dto.eventId, req.merchantUser?.id, dto.reason);
+  }
 
   @Post(":eventId/staff")
   addStaff(@CurrentMerchant() merchant: { id: string }, @Req() req: MerchantRequest, @Param("eventId") eventId: string, @Body() dto: AddStaffDto) { return this.events.addStaff(merchant.id, eventId, req.merchantUser?.id, dto.merchantUserId, dto.role, dto.permissions); }

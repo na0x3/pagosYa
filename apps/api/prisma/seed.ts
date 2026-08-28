@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { PrismaClient, ApiKeyMode, ApiKeyType, EventStaffRole, EventStatus, KycStatus, MerchantStatus, SettlementMode, TicketTypeKind } from "@prisma/client";
+import { PrismaClient, ApiKeyMode, ApiKeyType, BiometricConsentScope, BiometricProvider, DevicePersonSyncStatus, EventStaffRole, EventStatus, KycStatus, MerchantStatus, SettlementMode, TicketTypeKind } from "@prisma/client";
 import * as argon2 from "argon2";
 import { ApiKeyService } from "../src/auth/api-key.service";
 import { KycService } from "../src/merchants/kyc.service";
@@ -86,6 +86,11 @@ async function main() {
   });
   const demoPassword = "PayaDemo!2026";
   const hashedPassword = await argon2.hash(demoPassword);
+  await prisma.consumerUser.upsert({
+    where: { email: "maria.face@example.test" },
+    update: { name: "María Demo", deletedAt: null, emailVerifiedAt: new Date(), hashedPassword },
+    create: { name: "María Demo", email: "maria.face@example.test", carnet: "FACE-DEMO-001", hashedPassword, emailVerifiedAt: new Date() },
+  });
   const demoRoles = [
     ["admin", EventStaffRole.ORGANIZATION_ADMIN], ["manager", EventStaffRole.EVENT_MANAGER],
     ["cashier", EventStaffRole.CASHIER], ["doorstaff", EventStaffRole.DOOR_STAFF], ["promoter", EventStaffRole.PROMOTER],
@@ -135,8 +140,8 @@ async function main() {
   await prisma.promoterProfile.upsert({ where: { merchantUserId: promoterUser.id }, update: { displayName: "Promotor Demo" }, create: { merchantUserId: promoterUser.id, displayName: "Promotor Demo" } });
   const demoDevice = await prisma.accessDevice.upsert({
     where: { merchantId_serialNumber: { merchantId: demoMerchant.id, serialNumber: "MOCK-NOCHE-DEMO-01" } },
-    update: { eventId: event.id, venueId: venue.id, status: "ONLINE", role: "BIDIRECTIONAL" },
-    create: { merchantId: demoMerchant.id, venueId: venue.id, eventId: event.id, name: "SpeedFace simulado", vendor: "Mock", model: "Simulator", serialNumber: "MOCK-NOCHE-DEMO-01", status: "ONLINE", role: "BIDIRECTIONAL" },
+    update: { eventId: event.id, venueId: venue.id, status: "ONLINE", role: "BIDIRECTIONAL", faceCapacity: 5000, algorithmVersion: "MOCK-v1", providerCapabilities: { reusableProfiles: true, templatePortability: "SIMULATED" } },
+    create: { merchantId: demoMerchant.id, venueId: venue.id, eventId: event.id, name: "SpeedFace simulado", vendor: "Mock", model: "Simulator", serialNumber: "MOCK-NOCHE-DEMO-01", status: "ONLINE", role: "BIDIRECTIONAL", faceCapacity: 5000, algorithmVersion: "MOCK-v1", providerCapabilities: { reusableProfiles: true, templatePortability: "SIMULATED" } },
   });
   const siteDocument = {
     version: 1, direction: "Noche Demo", theme: { pageBackground: "#0b0b0f", textColor: "#f8fafc", accentColor: "#b6ff5c", secondaryColor: "#8b5cf6", surfaceColor: "#17171d", mutedColor: "#a1a1aa", borderColor: "#f8fafc", headingFont: "grotesk", bodyFont: "mono", radius: 10, shadow: "none", productLayout: "gallery", displayScale: "dramatic", density: "airy", imageTreatment: "cinematic" },
@@ -166,15 +171,18 @@ async function main() {
       create: { code: row.code, orderId: demoOrder.id, eventId: event.id, ticketTypeId: general.id, attendeeId: attendee.id, source: "COMPLIMENTARY", assignmentStatus: "CLAIMED", biometricEnrollmentStatus: enrolled ? "ENROLLED" : "PENDING", presenceStatus: row.presence },
     });
     if (enrolled) {
-      const consent = await prisma.biometricConsent.findFirst({ where: { admissionId: admission.id } })
-        ?? await prisma.biometricConsent.create({ data: { eventId: event.id, attendeeId: attendee.id, admissionId: admission.id, version: "events-biometric-v1", purpose: `Acceso a ${event.name}`, consentedAt: new Date(), retentionUntil: new Date(event.endsAt!.getTime() + event.retentionHours * 60 * 60_000) } });
-      void consent;
-      const credential = await prisma.biometricCredential.findFirst({ where: { admissionId: admission.id, deletedAt: null } })
-        ?? await prisma.biometricCredential.create({ data: { eventId: event.id, attendeeId: attendee.id, admissionId: admission.id, provider: "mock", externalCredentialId: `mock-seed-${admission.id}`, enrolledAt: new Date(), retentionUntil: new Date(event.endsAt!.getTime() + event.retentionHours * 60 * 60_000), metadata: { seeded: true } } });
+      let authorization = await prisma.eventBiometricAuthorization.findUnique({ where: { admissionId: admission.id }, include: { biometricIdentity: true } });
+      if (!authorization) {
+        const identity = await prisma.biometricIdentity.create({ data: { provider: BiometricProvider.MOCK, reusableAcrossEvents: false, providerExternalId: `mock-seed-${admission.id}`, algorithmVersion: "MOCK-v1", lastVerifiedAt: new Date(), metadata: { seeded: true } } });
+        const consent = await prisma.biometricConsent.create({ data: { eventId: event.id, attendeeId: attendee.id, admissionId: admission.id, biometricIdentityId: identity.id, scope: BiometricConsentScope.EVENT_ONLY, version: "events-biometric-v2", purpose: `Acceso a ${event.name}`, consentedAt: new Date(), retentionUntil: new Date(event.endsAt!.getTime() + event.retentionHours * 60 * 60_000) } });
+        await prisma.biometricIdentity.update({ where: { id: identity.id }, data: { activeConsentId: consent.id } });
+        await prisma.biometricCredential.create({ data: { biometricIdentityId: identity.id, provider: BiometricProvider.MOCK, providerExternalId: `mock-seed-${admission.id}`, algorithmVersion: "MOCK-v1", enrolledAt: new Date(), lastVerifiedAt: new Date(), metadata: { seeded: true } } });
+        authorization = await prisma.eventBiometricAuthorization.create({ data: { eventId: event.id, admissionId: admission.id, attendeeId: attendee.id, biometricIdentityId: identity.id, consentId: consent.id }, include: { biometricIdentity: true } });
+      }
       await prisma.devicePersonMapping.upsert({
-        where: { deviceId_credentialId: { deviceId: demoDevice.id, credentialId: credential.id } },
-        update: { deletedAt: null },
-        create: { deviceId: demoDevice.id, eventId: event.id, attendeeId: attendee.id, credentialId: credential.id, externalPersonId: `seed-${admission.id}` },
+        where: { deviceId_eventId_biometricIdentityId: { deviceId: demoDevice.id, eventId: event.id, biometricIdentityId: authorization.biometricIdentityId } },
+        update: { syncStatus: DevicePersonSyncStatus.SYNCED, removedAt: null, syncedAt: new Date() },
+        create: { deviceId: demoDevice.id, eventId: event.id, biometricIdentityId: authorization.biometricIdentityId, externalPersonId: `seed-${admission.id}`, syncStatus: DevicePersonSyncStatus.SYNCED, syncedAt: new Date(), algorithmVersion: "MOCK-v1" },
       });
     }
   }

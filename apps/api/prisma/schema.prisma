@@ -226,6 +226,48 @@ enum BiometricEnrollmentStatus {
   DELETED
 }
 
+enum BiometricProvider {
+  MOCK
+  ZKTECO
+  FUTURE_PROVIDER
+}
+
+enum BiometricIdentityStatus {
+  ACTIVE
+  REVOKED
+  DELETED
+  REQUIRES_REENROLLMENT
+}
+
+enum BiometricConsentScope {
+  EVENT_ONLY
+  REUSABLE
+}
+
+enum BiometricReenrollmentReason {
+  ALGORITHM_INCOMPATIBLE
+  POOR_ENROLLMENT
+  CREDENTIAL_CORRUPT
+  CUSTOMER_REQUESTED
+  VENDOR_MIGRATION
+  CONSENT_CHANGED
+}
+
+enum EventBiometricAuthorizationStatus {
+  AUTHORIZED
+  REVOKED
+  EXPIRED
+}
+
+enum DevicePersonSyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  REMOVAL_PENDING
+  REMOVED
+}
+
 enum PresenceStatus {
   NEVER_ENTERED
   OUTSIDE
@@ -494,21 +536,25 @@ model MerchantSession {
 // Buyer identity is deliberately separate from MerchantUser: a person may
 // shop at and hold obligations with many unrelated pagosYa merchants.
 model ConsumerUser {
-  id                 String                           @id @default(cuid())
-  name               String
-  email              String                           @unique
-  carnet             String                           @unique
-  hashedPassword     String
-  googleSubject      String?                          @unique
-  deletedAt          DateTime?
-  emailVerifiedAt    DateTime?
-  createdAt          DateTime                         @default(now())
-  updatedAt          DateTime                         @updatedAt
-  sessions           ConsumerSession[]
-  verificationTokens ConsumerVerificationToken[]
-  affiliations       ConsumerInstitutionAffiliation[]
-  paymentIntents     PaymentIntent[]
-  orders             StoreOrder[]
+  id                  String                           @id @default(cuid())
+  name                String
+  email               String                           @unique
+  carnet              String                           @unique
+  hashedPassword      String
+  googleSubject       String?                          @unique
+  deletedAt           DateTime?
+  emailVerifiedAt     DateTime?
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+  sessions            ConsumerSession[]
+  verificationTokens  ConsumerVerificationToken[]
+  affiliations        ConsumerInstitutionAffiliation[]
+  paymentIntents      PaymentIntent[]
+  orders              StoreOrder[]
+  eventAttendees      Attendee[]
+  biometricIdentities BiometricIdentity[]
+  biometricConsents   BiometricConsent[]
+  enrollmentSessions  EnrollmentSession[]
 }
 
 model ConsumerSession {
@@ -734,45 +780,45 @@ model Venue {
 }
 
 model Event {
-  id                      String                    @id @default(cuid())
+  id                      String                        @id @default(cuid())
   merchantId              String
-  merchant                Merchant                  @relation(fields: [merchantId], references: [id])
+  merchant                Merchant                      @relation(fields: [merchantId], references: [id])
   storeId                 String?
-  store                   Store?                    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  store                   Store?                        @relation(fields: [storeId], references: [id], onDelete: SetNull)
   venueId                 String?
-  venue                   Venue?                    @relation(fields: [venueId], references: [id])
-  slug                    String                    @unique
-  name                    String                    @map("title")
+  venue                   Venue?                        @relation(fields: [venueId], references: [id])
+  slug                    String                        @unique
+  name                    String                        @map("title")
   description             String?
-  publicityImageUrl       String                    @default("")
-  venueName               String                    @default("")
+  publicityImageUrl       String                        @default("")
+  venueName               String                        @default("")
   venueAddress            String?
   startsAt                DateTime
   endsAt                  DateTime?
   doorsOpenAt             DateTime?
   lastEntryAt             DateTime?
   capacity                Int?
-  currency                String                    @default("BOB")
-  pricingMode             EventPricingMode          @default(GENERAL_ADMISSION)
-  timezone                String                    @default("America/La_Paz")
-  status                  EventStatus               @default(DRAFT)
-  allowReentry            Boolean                   @default(true)
-  biometricRequired       Boolean                   @default(true)
-  retentionHours          Int                       @default(24)
-  salesAtDoorEnabled      Boolean                   @default(true)
-  onlineSalesEnabled      Boolean                   @default(true)
-  entryGracePeriodMinutes Int                       @default(0)
-  manualOverrideAllowed   Boolean                   @default(true)
-  reservationMinutes      Int                       @default(10)
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
+  currency                String                        @default("BOB")
+  pricingMode             EventPricingMode              @default(GENERAL_ADMISSION)
+  timezone                String                        @default("America/La_Paz")
+  status                  EventStatus                   @default(DRAFT)
+  allowReentry            Boolean                       @default(true)
+  biometricRequired       Boolean                       @default(true)
+  retentionHours          Int                           @default(24)
+  salesAtDoorEnabled      Boolean                       @default(true)
+  onlineSalesEnabled      Boolean                       @default(true)
+  entryGracePeriodMinutes Int                           @default(0)
+  manualOverrideAllowed   Boolean                       @default(true)
+  reservationMinutes      Int                           @default(10)
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
   ticketTypes             TicketType[]
   reservations            TicketReservation[]
   orders                  AdmissionOrder[]
   admissions              Admission[]
   attendees               Attendee[]
   consents                BiometricConsent[]
-  credentials             BiometricCredential[]
+  biometricAuthorizations EventBiometricAuthorization[]
   devices                 AccessDevice[]
   accessEvents            AccessEvent[]
   accessAttempts          AccessAttempt[]
@@ -898,33 +944,33 @@ model AdmissionOrder {
 }
 
 model Admission {
-  id                        String                    @id @default(cuid())
-  code                      String                    @unique @map("qrToken")
-  orderId                   String                    @map("eventOrderId")
-  order                     AdmissionOrder            @relation(fields: [orderId], references: [id])
-  legacySeatId              String?                   @unique @map("eventSeatId")
-  legacySeat                EventSeat?                @relation(fields: [legacySeatId], references: [id])
+  id                        String                       @id @default(cuid())
+  code                      String                       @unique @map("qrToken")
+  orderId                   String                       @map("eventOrderId")
+  order                     AdmissionOrder               @relation(fields: [orderId], references: [id])
+  legacySeatId              String?                      @unique @map("eventSeatId")
+  legacySeat                EventSeat?                   @relation(fields: [legacySeatId], references: [id])
   eventId                   String
-  event                     Event                     @relation(fields: [eventId], references: [id])
-  ticketTypeId              String?                   @map("eventPriceStageId")
-  ticketType                TicketType?               @relation(fields: [ticketTypeId], references: [id])
+  event                     Event                        @relation(fields: [eventId], references: [id])
+  ticketTypeId              String?                      @map("eventPriceStageId")
+  ticketType                TicketType?                  @relation(fields: [ticketTypeId], references: [id])
   attendeeId                String?
-  attendee                  Attendee?                 @relation(fields: [attendeeId], references: [id])
+  attendee                  Attendee?                    @relation(fields: [attendeeId], references: [id])
   source                    AdmissionSource
-  status                    AdmissionStatus           @default(ACTIVE)
-  legacyLabel               String?                   @map("gaLabel")
-  legacyUsedAt              DateTime?                 @map("usedAt")
-  assignmentStatus          AssignmentStatus          @default(UNASSIGNED)
-  biometricEnrollmentStatus BiometricEnrollmentStatus @default(PENDING)
-  presenceStatus            PresenceStatus            @default(NEVER_ENTERED)
+  status                    AdmissionStatus              @default(ACTIVE)
+  legacyLabel               String?                      @map("gaLabel")
+  legacyUsedAt              DateTime?                    @map("usedAt")
+  assignmentStatus          AssignmentStatus             @default(UNASSIGNED)
+  biometricEnrollmentStatus BiometricEnrollmentStatus    @default(PENDING)
+  presenceStatus            PresenceStatus               @default(NEVER_ENTERED)
   claimedAt                 DateTime?
   firstEnteredAt            DateTime?
   lastPresenceChangedAt     DateTime?
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @updatedAt
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
   assignments               AdmissionAssignment[]
   consents                  BiometricConsent[]
-  credentials               BiometricCredential[]
+  biometricAuthorization    EventBiometricAuthorization?
   accessEvents              AccessEvent[]
   accessAttempts            AccessAttempt[]
   enrollmentSessions        EnrollmentSession[]
@@ -980,100 +1026,166 @@ model AdmissionAssignment {
 }
 
 model Attendee {
-  id             String                @id @default(cuid())
-  merchantId     String
-  merchant       Merchant              @relation(fields: [merchantId], references: [id])
-  eventId        String
-  event          Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  displayName    String
-  email          String?
-  phone          String?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  admissions     Admission[]
-  assignments    AdmissionAssignment[]
-  consents       BiometricConsent[]
-  credentials    BiometricCredential[]
-  deviceMappings DevicePersonMapping[]
-  accessEvents   AccessEvent[]
-  accessAttempts AccessAttempt[]
+  id                      String                        @id @default(cuid())
+  merchantId              String
+  merchant                Merchant                      @relation(fields: [merchantId], references: [id])
+  eventId                 String
+  event                   Event                         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  consumerUserId          String?
+  consumerUser            ConsumerUser?                 @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  displayName             String
+  email                   String?
+  phone                   String?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  admissions              Admission[]
+  assignments             AdmissionAssignment[]
+  consents                BiometricConsent[]
+  biometricAuthorizations EventBiometricAuthorization[]
+  accessEvents            AccessEvent[]
+  accessAttempts          AccessAttempt[]
 
+  @@unique([eventId, consumerUserId])
   @@index([merchantId, createdAt])
   @@index([eventId, displayName])
   @@index([eventId, email])
   @@index([eventId, phone])
+  @@index([consumerUserId])
 }
 
 model BiometricConsent {
-  id             String    @id @default(cuid())
-  eventId        String
-  event          Event     @relation(fields: [eventId], references: [id])
-  attendeeId     String
-  attendee       Attendee  @relation(fields: [attendeeId], references: [id])
-  admissionId    String
-  admission      Admission @relation(fields: [admissionId], references: [id])
-  version        String
-  purpose        String
-  consentedAt    DateTime
-  revokedAt      DateTime?
-  retentionUntil DateTime
-  createdAt      DateTime  @default(now())
+  id                  String                        @id @default(cuid())
+  eventId             String
+  event               Event                         @relation(fields: [eventId], references: [id])
+  attendeeId          String
+  attendee            Attendee                      @relation(fields: [attendeeId], references: [id])
+  admissionId         String
+  admission           Admission                     @relation(fields: [admissionId], references: [id])
+  consumerUserId      String?
+  consumerUser        ConsumerUser?                 @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  biometricIdentityId String?
+  biometricIdentity   BiometricIdentity?            @relation("BiometricIdentityConsents", fields: [biometricIdentityId], references: [id])
+  activeForIdentity   BiometricIdentity?            @relation("ActiveBiometricConsent")
+  scope               BiometricConsentScope         @default(EVENT_ONLY)
+  version             String
+  purpose             String
+  consentedAt         DateTime
+  expiresAt           DateTime?
+  revokedAt           DateTime?
+  retentionUntil      DateTime?
+  createdAt           DateTime                      @default(now())
+  authorizations      EventBiometricAuthorization[]
 
   @@index([eventId, consentedAt])
   @@index([attendeeId, consentedAt])
   @@index([admissionId])
+  @@index([consumerUserId, scope, revokedAt])
+  @@index([biometricIdentityId, revokedAt])
+}
+
+model BiometricIdentity {
+  id                         String                        @id @default(cuid())
+  consumerUserId             String?
+  consumerUser               ConsumerUser?                 @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  provider                   BiometricProvider
+  status                     BiometricIdentityStatus       @default(ACTIVE)
+  reusableAcrossEvents       Boolean                       @default(false)
+  activeConsentId            String?                       @unique
+  activeConsent              BiometricConsent?             @relation("ActiveBiometricConsent", fields: [activeConsentId], references: [id])
+  providerExternalId         String?
+  algorithmVersion           String?
+  encryptedVendorPayload     String?
+  encryptedTemplateReference String?
+  metadata                   Json?
+  lastVerifiedAt             DateTime?
+  reenrollmentReason         BiometricReenrollmentReason?
+  revokedAt                  DateTime?
+  deletedAt                  DateTime?
+  createdAt                  DateTime                      @default(now())
+  updatedAt                  DateTime                      @updatedAt
+  consents                   BiometricConsent[]            @relation("BiometricIdentityConsents")
+  credentials                BiometricCredential[]
+  authorizations             EventBiometricAuthorization[]
+  deviceMappings             DevicePersonMapping[]
+  deletionJobs               BiometricDeletionJob[]
+
+  @@index([consumerUserId, status, reusableAcrossEvents])
+  @@index([provider, providerExternalId])
+  @@index([status, updatedAt])
 }
 
 model BiometricCredential {
-  id                   String                 @id @default(cuid())
-  eventId              String
-  event                Event                  @relation(fields: [eventId], references: [id])
-  attendeeId           String
-  attendee             Attendee               @relation(fields: [attendeeId], references: [id])
-  admissionId          String
-  admission            Admission              @relation(fields: [admissionId], references: [id])
-  provider             String
-  externalCredentialId String?
-  enrolledAt           DateTime
-  retentionUntil       DateTime
-  deletedAt            DateTime?
-  metadata             Json?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  deviceMappings       DevicePersonMapping[]
-  deletionJobs         BiometricDeletionJob[]
+  id                         String            @id @default(cuid())
+  biometricIdentityId        String
+  biometricIdentity          BiometricIdentity @relation(fields: [biometricIdentityId], references: [id])
+  provider                   BiometricProvider
+  providerExternalId         String?
+  algorithmVersion           String?
+  encryptedVendorPayload     String?
+  encryptedTemplateReference String?
+  enrolledAt                 DateTime
+  lastVerifiedAt             DateTime?
+  deletedAt                  DateTime?
+  metadata                   Json?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
 
-  @@index([eventId, deletedAt])
-  @@index([attendeeId, deletedAt])
-  @@index([admissionId, deletedAt])
-  @@index([externalCredentialId])
+  @@index([biometricIdentityId, deletedAt])
+  @@index([provider, providerExternalId])
+}
+
+model EventBiometricAuthorization {
+  id                  String                            @id @default(cuid())
+  eventId             String
+  event               Event                             @relation(fields: [eventId], references: [id])
+  admissionId         String                            @unique
+  admission           Admission                         @relation(fields: [admissionId], references: [id])
+  attendeeId          String
+  attendee            Attendee                          @relation(fields: [attendeeId], references: [id])
+  biometricIdentityId String
+  biometricIdentity   BiometricIdentity                 @relation(fields: [biometricIdentityId], references: [id])
+  consentId           String
+  consent             BiometricConsent                  @relation(fields: [consentId], references: [id])
+  status              EventBiometricAuthorizationStatus @default(AUTHORIZED)
+  authorizedAt        DateTime                          @default(now())
+  revokedAt           DateTime?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+
+  @@unique([eventId, biometricIdentityId])
+  @@index([eventId, status])
+  @@index([attendeeId, status])
+  @@index([biometricIdentityId, status])
 }
 
 model AccessDevice {
-  id               String                @id @default(cuid())
-  merchantId       String
-  venueId          String
-  venue            Venue                 @relation(fields: [venueId], references: [id])
-  eventId          String?
-  event            Event?                @relation(fields: [eventId], references: [id])
-  name             String
-  vendor           String                @default("ZKTeco")
-  model            String                @default("SpeedFace-V5")
-  serialNumber     String?
-  ipAddress        String?
-  port             Int?
-  role             AccessDeviceRole
-  status           AccessDeviceStatus    @default(OFFLINE)
-  lastSeenAt       DateTime?
-  firmwareVersion  String?
-  configuration    Json?
-  encryptedSecrets String?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  personMappings   DevicePersonMapping[]
-  ingestedEvents   DeviceEventIngest[]
-  accessEvents     AccessEvent[]
-  accessAttempts   AccessAttempt[]
+  id                   String                @id @default(cuid())
+  merchantId           String
+  venueId              String
+  venue                Venue                 @relation(fields: [venueId], references: [id])
+  eventId              String?
+  event                Event?                @relation(fields: [eventId], references: [id])
+  name                 String
+  vendor               String                @default("ZKTeco")
+  model                String                @default("SpeedFace-V5")
+  serialNumber         String?
+  ipAddress            String?
+  port                 Int?
+  role                 AccessDeviceRole
+  status               AccessDeviceStatus    @default(OFFLINE)
+  lastSeenAt           DateTime?
+  firmwareVersion      String?
+  faceCapacity         Int?
+  algorithmVersion     String?
+  providerCapabilities Json?
+  configuration        Json?
+  encryptedSecrets     String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  personMappings       DevicePersonMapping[]
+  ingestedEvents       DeviceEventIngest[]
+  accessEvents         AccessEvent[]
+  accessAttempts       AccessAttempt[]
 
   @@unique([merchantId, serialNumber])
   @@index([eventId, role, status])
@@ -1081,21 +1193,27 @@ model AccessDevice {
 }
 
 model DevicePersonMapping {
-  id               String              @id @default(cuid())
-  deviceId         String
-  device           AccessDevice        @relation(fields: [deviceId], references: [id])
-  eventId          String
-  attendeeId       String
-  attendee         Attendee            @relation(fields: [attendeeId], references: [id])
-  credentialId     String
-  credential       BiometricCredential @relation(fields: [credentialId], references: [id])
-  externalPersonId String
-  createdAt        DateTime            @default(now())
-  deletedAt        DateTime?
+  id                  String                 @id @default(cuid())
+  deviceId            String
+  device              AccessDevice           @relation(fields: [deviceId], references: [id])
+  eventId             String
+  biometricIdentityId String
+  biometricIdentity   BiometricIdentity      @relation(fields: [biometricIdentityId], references: [id])
+  externalPersonId    String
+  syncStatus          DevicePersonSyncStatus @default(PENDING)
+  contentFingerprint  String?
+  algorithmVersion    String?
+  syncedAt            DateTime?
+  lastAttemptedAt     DateTime?
+  removedAt           DateTime?
+  lastError           String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   @@unique([deviceId, eventId, externalPersonId])
-  @@unique([deviceId, credentialId])
-  @@index([attendeeId])
+  @@unique([deviceId, eventId, biometricIdentityId])
+  @@index([biometricIdentityId, syncStatus])
+  @@index([eventId, syncStatus])
   @@index([externalPersonId])
 }
 
@@ -1170,38 +1288,43 @@ model AccessAttempt {
 }
 
 model EnrollmentSession {
-  id          String    @id @default(cuid())
-  eventId     String
-  event       Event     @relation(fields: [eventId], references: [id])
-  admissionId String
-  admission   Admission @relation(fields: [admissionId], references: [id])
-  deviceId    String?
-  codeHash    String    @unique
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  failedAt    DateTime?
-  createdAt   DateTime  @default(now())
+  id             String                @id @default(cuid())
+  eventId        String
+  event          Event                 @relation(fields: [eventId], references: [id])
+  admissionId    String
+  admission      Admission             @relation(fields: [admissionId], references: [id])
+  deviceId       String?
+  consumerUserId String?
+  consumerUser   ConsumerUser?         @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  requestedScope BiometricConsentScope @default(EVENT_ONLY)
+  codeHash       String                @unique
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  failedAt       DateTime?
+  createdAt      DateTime              @default(now())
 
   @@index([eventId, expiresAt])
   @@index([admissionId, expiresAt])
 }
 
 model BiometricDeletionJob {
-  id            String                  @id @default(cuid())
-  eventId       String
-  event         Event                   @relation(fields: [eventId], references: [id])
-  credentialId  String
-  credential    BiometricCredential     @relation(fields: [credentialId], references: [id])
-  status        BiometricDeletionStatus @default(PENDING)
-  requestedById String?
-  requestedAt   DateTime                @default(now())
-  startedAt     DateTime?
-  completedAt   DateTime?
-  failureReason String?
-  attempts      Int                     @default(0)
+  id                  String                  @id @default(cuid())
+  eventId             String?
+  event               Event?                  @relation(fields: [eventId], references: [id])
+  biometricIdentityId String
+  biometricIdentity   BiometricIdentity       @relation(fields: [biometricIdentityId], references: [id])
+  status              BiometricDeletionStatus @default(PENDING)
+  requestedById       String?
+  reason              String
+  requestedAt         DateTime                @default(now())
+  startedAt           DateTime?
+  completedAt         DateTime?
+  failureReason       String?
+  attempts            Int                     @default(0)
 
   @@index([status, requestedAt])
   @@index([eventId, status])
+  @@index([biometricIdentityId, status])
 }
 
 model CashShift {

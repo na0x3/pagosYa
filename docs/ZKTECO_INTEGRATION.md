@@ -13,7 +13,8 @@ This document does not claim compatibility with a particular SpeedFace-V5 firmwa
 - `MockAccessControlProvider` supports enrollment, deletion, roster sync, health, normalized events, unknown faces, spoof rejection, online/offline changes, enrollment failure, and duplicate input.
 - `ZKTecoSpeedFaceProvider` is an isolated fail-closed skeleton. Every operation raises `ZKTecoDocumentationRequiredError`.
 - The application consumes `NormalizedDeviceEvent`; vendor payloads never enter access policy code.
-- PagosYa maps an event/device-specific `externalPersonId` to an attendee, credential reference, and admission.
+- PagosYa maps an event/device-specific `externalPersonId` to a central `BiometricIdentity`, then resolves the event-specific authorization and admission.
+- SpeedFace devices are treated as temporary event-roster cache targets. The central identity can outlive a device mapping only when the customer explicitly selected reusable consent.
 - PagosYa's database is authoritative for payment validity, admission state, presence, capacity, re-entry, and anti-passback.
 - Provider selection uses `ZKTECO_INTEGRATION_MODE=mock|push|sdk`. The `push` and `sdk` values select the documented skeleton and cannot communicate with hardware yet.
 - `apps/edge` is executable in local-only or cloud-forwarding mode and persists normalized events in an owner-only queue file. This confirms the PagosYa replay boundary, not any SpeedFace transport behavior.
@@ -28,6 +29,8 @@ The following are deliberately **UNCONFIRMED** and must not be inferred from oth
 - Transport security/TLS support and certificate behavior.
 - Authentication and session establishment.
 - Person/user record schema and identifier constraints.
+- Whether face templates or other enrollment artifacts are portable between the exact selected devices, firmware, and algorithm versions.
+- Whether a supported server-side identity/reference can be synchronized without transferring a template through PagosYa.
 - Face enrollment command, whether enrollment can be initiated remotely, and where liveness/quality results are exposed.
 - Recognition/access event schema, delivery guarantees, ordering, retry, and acknowledgement behavior.
 - Event identifiers suitable for idempotency.
@@ -60,10 +63,13 @@ Supply official documentation matching the exact device and firmware:
 | Enrollment | `enrollPerson(input)` | Mock confirmed; SpeedFace requires docs |
 | Delete credential/person | `deletePerson(input)` | Mock confirmed; SpeedFace requires docs |
 | Event roster | `syncEventRoster(input)` | Mock confirmed; SpeedFace requires docs |
+| Remove event roster | `removeEventRoster(input)` | Mock confirmed; SpeedFace requires docs |
 | Recognition events | `listenForEvents` / `getRecentEvents` | Mock confirmed; SpeedFace requires docs |
 | Optional unlock | `unlockDoor(input)` | Mock acknowledgement only; SpeedFace requires docs |
 
-`externalPersonId` is opaque to PagosYa and namespaced by device + event in `DevicePersonMapping`. It must not be a CI, email, phone, admission code, or other personal identifier. Vendor constraints on its format are pending documentation.
+`externalPersonId` is opaque to PagosYa and namespaced by device + event in `DevicePersonMapping`. It must not be a CI, email, phone, admission code, or other personal identifier. The same `BiometricIdentity` may have a different external ID on every terminal. Vendor constraints on its format are pending documentation.
+
+`faceCapacity`, `algorithmVersion`, and `providerCapabilities` are configuration fields, not product claims. Production values must come from the exact hardware/firmware documentation or an approved hardware acceptance test. The application does not hardcode a SpeedFace-V5 capacity.
 
 ## Network and deployment
 

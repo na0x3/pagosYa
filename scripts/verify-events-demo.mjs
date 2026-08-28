@@ -83,8 +83,8 @@ await assert.rejects(() => request(`/events/${event.id}/operations`, { token: pr
 
 const operations = await request(`/events/${event.id}/operations`, { token: admin });
 const cashAdmission = operations.admissions.find((item) => item.id === cash.admissions[1].admissionId);
-assert.equal(Object.hasOwn(cashAdmission.credentials[0] || {}, "externalCredentialId"), false, "operations response must not expose device credential identifiers");
-const deletion = await request(`/events/biometric-credentials/${cashAdmission.credentials[0].id}/delete`, { token: admin, method: "POST", body: { reason: "Verificación de eliminación MVP" } });
+assert.equal(Object.hasOwn(cashAdmission.biometricAuthorization || {}, "providerExternalId"), false, "operations response must not expose device credential identifiers");
+const deletion = await request(`/events/biometric-identities/${cashAdmission.biometricAuthorization.biometricIdentityId}/delete`, { token: admin, method: "POST", body: { eventId: event.id, reason: "Verificación de eliminación MVP" } });
 assert.equal(deletion.status, "COMPLETED");
 
 dashboard = await request(`/events/${event.id}/dashboard`, { token: admin });

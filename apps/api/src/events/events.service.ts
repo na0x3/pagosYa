@@ -1,12 +1,14 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { AccessDecision, AccessDirection, AdmissionSource, BiometricDeletionStatus, BiometricEnrollmentStatus, EventPaymentMethod, EventPaymentStatus, EventStaffRole, EventStatus, Prisma, PresenceStatus, TicketReservationStatus } from "@prisma/client";
-import { MockAccessControlProvider, type AccessControlDevice, type AccessControlProvider, type EnrollmentResult, type NormalizedDeviceEvent } from "@pagosya/access-control";
+import { AccessDecision, AccessDirection, AdmissionSource, BiometricEnrollmentStatus, BiometricIdentityStatus, DevicePersonSyncStatus, EventBiometricAuthorizationStatus, EventPaymentMethod, EventPaymentStatus, EventStaffRole, EventStatus, Prisma, PresenceStatus, TicketReservationStatus } from "@prisma/client";
+import { MockAccessControlProvider, type AccessControlProvider, type NormalizedDeviceEvent } from "@pagosya/access-control";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { admissionCode, digestEventToken, enrollmentCode, secureToken } from "./event-security";
-import type { CashSaleDto, ClaimAdmissionDto, CompleteEnrollmentDto, CreateDeviceDto, CreateEventDto, CreateInvitationDto, CreateReservationDto, CreateTicketTypeDto, CreateVenueDto, ManualAccessDto } from "./events.dto";
+import type { CashSaleDto, ClaimAdmissionDto, CreateDeviceDto, CreateEventDto, CreateInvitationDto, CreateReservationDto, CreateTicketTypeDto, CreateVenueDto, ManualAccessDto } from "./events.dto";
 import { ACCESS_CONTROL_PROVIDER } from "./access-control.provider";
 import { evaluateAccess } from "./access-policy";
+import { EventRosterService } from "./event-roster.service";
+import { FaceEntryService } from "./face-entry.service";
 
 const ADMIN_ROLES = [EventStaffRole.ORGANIZATION_ADMIN, EventStaffRole.EVENT_MANAGER];
 
@@ -17,6 +19,8 @@ export class EventsService {
     private readonly paymentIntents: PaymentIntentsService,
     @Inject(ACCESS_CONTROL_PROVIDER) private readonly provider: AccessControlProvider,
     readonly mockProvider: MockAccessControlProvider,
+    private readonly rosters: EventRosterService,
+    private readonly faceEntry: FaceEntryService,
   ) {}
 
   private async assertRole(merchantId: string, eventId: string, userId: string | undefined, allowed: EventStaffRole[]) {
@@ -303,62 +307,26 @@ export class EventsService {
     return { id: session.id, code, expiresAt: session.expiresAt };
   }
 
-  private deviceInput(device: { id: string; name: string; vendor: string; model: string; role: string; ipAddress: string | null; port: number | null; configuration: Prisma.JsonValue; encryptedSecrets: string | null }): AccessControlDevice {
-    return { id: device.id, name: device.name, vendor: device.vendor, model: device.model, role: device.role as AccessControlDevice["role"], host: device.ipAddress ?? undefined, port: device.port ?? undefined, configuration: device.configuration && typeof device.configuration === "object" && !Array.isArray(device.configuration) ? device.configuration as Record<string, unknown> : undefined, encryptedSecrets: device.encryptedSecrets ?? undefined };
-  }
-
-  async completeEnrollment(sessionId: string, dto: CompleteEnrollmentDto) {
-    if (!dto.consent) throw new BadRequestException("Explicit biometric consent is required");
-    const session = await this.prisma.enrollmentSession.findFirst({ where: { id: sessionId, codeHash: digestEventToken(dto.code), consumedAt: null, failedAt: null, expiresAt: { gt: new Date() } }, include: { admission: { include: { order: true, event: true } } } });
-    if (!session) throw new BadRequestException("Enrollment session is invalid, expired, or already used");
-    if (!session.admission.event.venueId) throw new BadRequestException("This legacy event must be assigned to a venue before biometric enrollment");
-    const device = await this.prisma.accessDevice.findFirst({ where: { id: dto.deviceId, venueId: session.admission.event.venueId, role: { in: ["ENROLLMENT", "BIDIRECTIONAL"] }, status: { not: "DISABLED" } } });
-    if (!device) throw new BadRequestException("Enrollment device is unavailable");
-    const attendee = session.admission.attendeeId
-      ? await this.prisma.attendee.findUniqueOrThrow({ where: { id: session.admission.attendeeId } })
-      : await this.prisma.attendee.create({ data: { merchantId: session.admission.order.merchantId, eventId: session.eventId, displayName: dto.displayName.trim(), email: dto.email?.trim().toLowerCase(), phone: dto.phone?.trim() } });
-    const externalPersonId = `person-${secureToken(12)}`;
-    let enrolled: EnrollmentResult | undefined;
-    try {
-      const eventEndsAt = session.admission.event.endsAt ?? session.admission.event.startsAt;
-      const enrollment = await this.provider.enrollPerson({ device: this.deviceInput(device), eventId: session.eventId, externalPersonId, displayName: attendee.displayName, expiresAt: new Date(eventEndsAt.getTime() + session.admission.event.retentionHours * 60 * 60_000).toISOString(), enrollmentReference: session.id });
-      enrolled = enrollment;
-      return await this.prisma.$transaction(async (tx) => {
-        const consumed = await tx.enrollmentSession.updateMany({ where: { id: session.id, consumedAt: null, expiresAt: { gt: new Date() } }, data: { consumedAt: new Date(), deviceId: device.id } });
-        if (!consumed.count) throw new BadRequestException("Enrollment session was already consumed");
-        const retentionUntil = new Date(eventEndsAt.getTime() + session.admission.event.retentionHours * 60 * 60_000);
-        await tx.biometricConsent.create({ data: { eventId: session.eventId, attendeeId: attendee.id, admissionId: session.admissionId, version: dto.consentVersion, purpose: `Acceso a ${session.admission.event.name}`, consentedAt: new Date(), retentionUntil } });
-        const credential = await tx.biometricCredential.create({ data: { eventId: session.eventId, attendeeId: attendee.id, admissionId: session.admissionId, provider: "mock", externalCredentialId: enrollment.externalCredentialId, enrolledAt: new Date(enrollment.enrolledAt), retentionUntil, metadata: { quality: enrollment.quality } } });
-        await tx.devicePersonMapping.create({ data: { deviceId: device.id, eventId: session.eventId, attendeeId: attendee.id, credentialId: credential.id, externalPersonId } });
-        await tx.admission.update({ where: { id: session.admissionId }, data: { attendeeId: attendee.id, assignmentStatus: "CLAIMED", biometricEnrollmentStatus: BiometricEnrollmentStatus.ENROLLED } });
-        await tx.eventAuditLog.create({ data: { merchantId: session.admission.order.merchantId, eventId: session.eventId, action: "BIOMETRIC_ENROLLED", entityType: "BiometricCredential", entityId: credential.id, metadata: { deviceId: device.id } } });
-        return { admissionId: session.admissionId, attendeeId: attendee.id, credentialId: credential.id, externalPersonId, status: "ENROLLED" };
-      });
-    } catch (error) {
-      if (enrolled) await this.provider.deletePerson({ device: this.deviceInput(device), eventId: session.eventId, externalPersonId }).catch(() => undefined);
-      await this.prisma.enrollmentSession.updateMany({ where: { id: session.id, consumedAt: null }, data: { failedAt: new Date() } });
-      await this.prisma.admission.update({ where: { id: session.admissionId }, data: { biometricEnrollmentStatus: BiometricEnrollmentStatus.FAILED } });
-      throw error;
-    }
-  }
-
   async createDevice(merchantId: string, userId: string | undefined, dto: CreateDeviceDto) {
     if (dto.eventId) await this.assertRole(merchantId, dto.eventId, userId, ADMIN_ROLES);
     else await this.assertOrganizationAdmin(merchantId, userId);
     const venue = await this.prisma.venue.findFirst({ where: { id: dto.venueId, merchantId } }); if (!venue) throw new NotFoundException("Venue not found");
-    const device = await this.prisma.accessDevice.create({ data: { merchantId, venueId: venue.id, eventId: dto.eventId, name: dto.name.trim(), vendor: dto.vendor || "Mock", model: dto.model || "Simulator", serialNumber: dto.serialNumber, ipAddress: dto.ipAddress, port: dto.port, role: dto.role, configuration: dto.configuration as Prisma.InputJsonValue | undefined, encryptedSecrets: dto.encryptedSecrets } });
-    await this.audit(merchantId, dto.eventId, userId, "DEVICE_CREATED", "AccessDevice", device.id, { role: device.role, vendor: device.vendor, model: device.model });
+    const device = await this.prisma.accessDevice.create({ data: { merchantId, venueId: venue.id, eventId: dto.eventId, name: dto.name.trim(), vendor: dto.vendor || "Mock", model: dto.model || "Simulator", serialNumber: dto.serialNumber, ipAddress: dto.ipAddress, port: dto.port, role: dto.role, faceCapacity: dto.faceCapacity, algorithmVersion: dto.algorithmVersion, providerCapabilities: dto.providerCapabilities as Prisma.InputJsonValue | undefined, configuration: dto.configuration as Prisma.InputJsonValue | undefined, encryptedSecrets: dto.encryptedSecrets } });
+    await this.audit(merchantId, dto.eventId, userId, "DEVICE_CREATED", "AccessDevice", device.id, { role: device.role, vendor: device.vendor, model: device.model, faceCapacity: device.faceCapacity, algorithmVersion: device.algorithmVersion });
     return { ...device, encryptedSecrets: device.encryptedSecrets ? "configured" : null };
   }
 
   async deviceHealth(merchantId: string, deviceId: string) {
     const device = await this.prisma.accessDevice.findFirst({ where: { id: deviceId, merchantId } }); if (!device) throw new NotFoundException("Device not found");
-    return this.provider.healthCheck(this.deviceInput(device));
+    return this.provider.healthCheck(this.rosters.deviceInput(device));
   }
 
   async simulatorExternalPerson(merchantId: string, deviceId: string, attendeeId?: string) {
     if (!attendeeId) return undefined;
-    const mapping = await this.prisma.devicePersonMapping.findFirst({ where: { deviceId, attendeeId, deletedAt: null, device: { merchantId } }, select: { externalPersonId: true } });
+    const mapping = await this.prisma.devicePersonMapping.findFirst({
+      where: { deviceId, syncStatus: DevicePersonSyncStatus.SYNCED, device: { merchantId }, biometricIdentity: { authorizations: { some: { attendeeId, status: EventBiometricAuthorizationStatus.AUTHORIZED } } } },
+      select: { externalPersonId: true },
+    });
     if (!mapping) throw new BadRequestException("The selected attendee is not enrolled on this device");
     return mapping.externalPersonId;
   }
@@ -383,14 +351,23 @@ export class EventsService {
           await tx.deviceEventIngest.update({ where: { id: ingest.id }, data: { processedAt: new Date(), accessAttemptId: attempt.id } });
           return { decision: "DENY", reason };
         }
-        const mapping = await tx.devicePersonMapping.findFirst({ where: { deviceId: device.id, externalPersonId: input.externalPersonId, deletedAt: null }, include: { credential: true } });
-        if (!mapping || mapping.credential.deletedAt) {
+        const mapping = await tx.devicePersonMapping.findFirst({ where: { deviceId: device.id, externalPersonId: input.externalPersonId, syncStatus: DevicePersonSyncStatus.SYNCED }, include: { biometricIdentity: true } });
+        if (!mapping || mapping.biometricIdentity.status !== BiometricIdentityStatus.ACTIVE || mapping.eventId !== device.eventId) {
           const attempt = await tx.accessAttempt.create({ data: { eventId: device.eventId, deviceId: device.id, decision: AccessDecision.DENY, reason: "UNKNOWN_FACE", externalPersonId: input.externalPersonId, occurredAt: new Date(input.occurredAt) } });
           await tx.deviceEventIngest.update({ where: { id: ingest.id }, data: { processedAt: new Date(), accessAttemptId: attempt.id } });
           return { decision: "DENY", reason: "UNKNOWN_FACE" };
         }
+        const authorization = await tx.eventBiometricAuthorization.findUnique({
+          where: { eventId_biometricIdentityId: { eventId: mapping.eventId, biometricIdentityId: mapping.biometricIdentityId } },
+          include: { consent: true },
+        });
+        if (!authorization || authorization.status !== EventBiometricAuthorizationStatus.AUTHORIZED || authorization.consent.revokedAt || (authorization.consent.expiresAt && authorization.consent.expiresAt <= new Date(input.occurredAt))) {
+          const denied = await tx.accessAttempt.create({ data: { eventId: device.eventId, deviceId: device.id, decision: AccessDecision.DENY, reason: "BIOMETRIC_AUTHORIZATION_INVALID", externalPersonId: input.externalPersonId, occurredAt: new Date(input.occurredAt) } });
+          await tx.deviceEventIngest.update({ where: { id: ingest.id }, data: { processedAt: new Date(), accessAttemptId: denied.id } });
+          return { decision: "DENY", reason: "BIOMETRIC_AUTHORIZATION_INVALID" };
+        }
         const direction = input.direction || (device.role === "EXIT" ? "EXIT" : "ENTRY");
-        return this.decideAccess(tx, { ingestId: ingest.id, deviceId: device.id, admissionId: mapping.credential.admissionId, attendeeId: mapping.attendeeId, eventId: mapping.eventId, direction, occurredAt: new Date(input.occurredAt) });
+        return this.decideAccess(tx, { ingestId: ingest.id, deviceId: device.id, admissionId: authorization.admissionId, attendeeId: authorization.attendeeId, eventId: mapping.eventId, direction, occurredAt: new Date(input.occurredAt) });
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (error: any) {
         if (error?.code === "P2002") {
@@ -413,14 +390,14 @@ export class EventsService {
 
   private async decideAccess(tx: Prisma.TransactionClient, input: { ingestId?: string; deviceId?: string; admissionId: string; attendeeId: string; eventId: string; direction: "ENTRY" | "EXIT"; occurredAt: Date; actorUserId?: string; manualReason?: string }) {
     await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${input.eventId} FOR UPDATE`;
-    const rows = await tx.$queryRaw<Array<{ id: string; status: string; presenceStatus: PresenceStatus; biometricEnrollmentStatus: BiometricEnrollmentStatus; paymentStatus: EventPaymentStatus; reentryAllowed: boolean; allowReentry: boolean; capacity: number; capacityContribution: number; doorsOpenAt: Date; endsAt: Date; lastEntryAt: Date | null }>>`
-      SELECT a.id, a.status, a."presenceStatus", a."biometricEnrollmentStatus", o.status AS "paymentStatus", t."reentryAllowed", e."allowReentry", e.capacity, t."capacityContribution", e."doorsOpenAt", e."endsAt", e."lastEntryAt"
+    const rows = await tx.$queryRaw<Array<{ id: string; status: string; eventStatus: string; presenceStatus: PresenceStatus; biometricEnrollmentStatus: BiometricEnrollmentStatus; paymentStatus: EventPaymentStatus; reentryAllowed: boolean; allowReentry: boolean; capacity: number; capacityContribution: number; doorsOpenAt: Date; endsAt: Date; lastEntryAt: Date | null }>>`
+      SELECT a.id, a.status, e.status AS "eventStatus", a."presenceStatus", a."biometricEnrollmentStatus", o.status AS "paymentStatus", t."reentryAllowed", e."allowReentry", e.capacity, t."capacityContribution", e."doorsOpenAt", e."endsAt", e."lastEntryAt"
       FROM "EventTicket" a JOIN "EventOrder" o ON o.id = a."eventOrderId" JOIN "EventPriceStage" t ON t.id = a."eventPriceStageId" JOIN "Event" e ON e.id = a."eventId"
       WHERE a.id = ${input.admissionId} FOR UPDATE OF a
     `;
     const admission = rows[0]; if (!admission || !admission.capacity || !admission.doorsOpenAt || !admission.endsAt) throw new NotFoundException("Admission or access configuration not found");
     const inside = input.direction === "ENTRY" ? await tx.admission.count({ where: { eventId: input.eventId, presenceStatus: PresenceStatus.INSIDE } }) : 0;
-    const policy = evaluateAccess({ admissionStatus: admission.status, paymentStatus: admission.paymentStatus, biometricEnrollmentStatus: admission.biometricEnrollmentStatus, presenceStatus: admission.presenceStatus, direction: input.direction, allowReentry: admission.allowReentry, ticketReentryAllowed: admission.reentryAllowed, occurredAt: input.occurredAt, doorsOpenAt: admission.doorsOpenAt, lastEntryAt: admission.lastEntryAt ?? admission.endsAt, manual: Boolean(input.actorUserId), insideCount: inside, capacity: admission.capacity, capacityContribution: admission.capacityContribution });
+    const policy = evaluateAccess({ eventStatus: admission.eventStatus, admissionStatus: admission.status, paymentStatus: admission.paymentStatus, biometricEnrollmentStatus: admission.biometricEnrollmentStatus, presenceStatus: admission.presenceStatus, direction: input.direction, allowReentry: admission.allowReentry, ticketReentryAllowed: admission.reentryAllowed, occurredAt: input.occurredAt, doorsOpenAt: admission.doorsOpenAt, lastEntryAt: admission.lastEntryAt ?? admission.endsAt, manual: Boolean(input.actorUserId), insideCount: inside, capacity: admission.capacity, capacityContribution: admission.capacityContribution });
     if (policy.decision !== "ALLOW") {
       const attempt = await tx.accessAttempt.create({ data: { eventId: input.eventId, deviceId: input.deviceId, admissionId: input.admissionId, attendeeId: input.attendeeId, direction: input.direction, decision: policy.decision === "IGNORED" ? AccessDecision.IGNORED : AccessDecision.DENY, reason: policy.reason, occurredAt: input.occurredAt } });
       if (input.ingestId) await tx.deviceEventIngest.update({ where: { id: input.ingestId }, data: { processedAt: new Date(), accessAttemptId: attempt.id } });
@@ -444,7 +421,7 @@ export class EventsService {
 
   async dashboard(merchantId: string, eventId: string, userId?: string) {
     await this.assertRole(merchantId, eventId, userId, [...ADMIN_ROLES, EventStaffRole.CASHIER, EventStaffRole.DOOR_STAFF, EventStaffRole.AUDITOR]);
-    const event = await this.prisma.event.findFirst({ where: { id: eventId, merchantId }, include: { ticketTypes: true, devices: { select: { id: true, name: true, role: true, status: true, lastSeenAt: true } } } }); if (!event) throw new NotFoundException("Event not found");
+    const event = await this.prisma.event.findFirst({ where: { id: eventId, merchantId }, include: { ticketTypes: true, devices: { select: { id: true, name: true, role: true, status: true, lastSeenAt: true, faceCapacity: true, algorithmVersion: true } } } }); if (!event) throw new NotFoundException("Event not found");
     const [inside, entered, exited, admissions, denied, revenue, cash, recent] = await Promise.all([
       this.prisma.admission.count({ where: { eventId, presenceStatus: PresenceStatus.INSIDE } }),
       this.prisma.accessEvent.count({ where: { eventId, direction: { in: [AccessDirection.ENTRY, AccessDirection.MANUAL_ENTRY] }, decision: AccessDecision.ALLOW } }),
@@ -463,7 +440,7 @@ export class EventsService {
     const event = await this.prisma.event.findFirst({ where: { id: eventId, merchantId }, select: { id: true } });
     if (!event) throw new NotFoundException("Event not found");
     const [admissions, shifts, audit] = await Promise.all([
-      this.prisma.admission.findMany({ where: { eventId }, select: { id: true, code: true, status: true, assignmentStatus: true, biometricEnrollmentStatus: true, presenceStatus: true, attendee: { select: { id: true, displayName: true } }, ticketType: { select: { id: true, name: true } }, credentials: { where: { deletedAt: null }, select: { id: true }, take: 1 } }, orderBy: { createdAt: "desc" }, take: 200 }),
+      this.prisma.admission.findMany({ where: { eventId }, select: { id: true, code: true, status: true, assignmentStatus: true, biometricEnrollmentStatus: true, presenceStatus: true, attendee: { select: { id: true, displayName: true } }, ticketType: { select: { id: true, name: true } }, biometricAuthorization: { select: { biometricIdentityId: true, status: true } } }, orderBy: { createdAt: "desc" }, take: 200 }),
       this.prisma.cashShift.findMany({ where: { eventId }, select: { id: true, cashierId: true, openedAt: true, closedAt: true, openingFloat: true, expectedCash: true, declaredCash: true, difference: true }, orderBy: { openedAt: "desc" }, take: 20 }),
       this.prisma.eventAuditLog.findMany({ where: { eventId }, select: { id: true, action: true, entityType: true, entityId: true, metadata: true, createdAt: true, actorUserId: true }, orderBy: { createdAt: "desc" }, take: 100 }),
     ]);
@@ -471,24 +448,40 @@ export class EventsService {
   }
 
   async deleteCredential(merchantId: string, credentialId: string, userId: string | undefined, reason: string) {
-    const credential = await this.prisma.biometricCredential.findFirst({ where: { id: credentialId, event: { merchantId }, deletedAt: null }, include: { event: true, deviceMappings: { where: { deletedAt: null }, include: { device: true } } } });
+    const credential = await this.prisma.biometricCredential.findFirst({ where: { id: credentialId, deletedAt: null }, include: { biometricIdentity: { include: { authorizations: { where: { event: { merchantId } }, take: 1 } } } } });
     if (!credential) throw new NotFoundException("Biometric credential not found");
-    await this.assertRole(merchantId, credential.eventId, userId, ADMIN_ROLES);
-    const job = await this.prisma.biometricDeletionJob.create({ data: { eventId: credential.eventId, credentialId, requestedById: userId, status: BiometricDeletionStatus.PROCESSING, startedAt: new Date(), attempts: 1 } });
-    try {
-      for (const mapping of credential.deviceMappings) await this.provider.deletePerson({ device: this.deviceInput(mapping.device), eventId: credential.eventId, externalPersonId: mapping.externalPersonId });
-      await this.prisma.$transaction(async (tx) => {
-        await tx.devicePersonMapping.updateMany({ where: { credentialId, deletedAt: null }, data: { deletedAt: new Date() } });
-        await tx.biometricCredential.update({ where: { id: credentialId }, data: { deletedAt: new Date(), externalCredentialId: null, metadata: Prisma.JsonNull } });
-        await tx.admission.update({ where: { id: credential.admissionId }, data: { biometricEnrollmentStatus: BiometricEnrollmentStatus.DELETED } });
-        await tx.biometricDeletionJob.update({ where: { id: job.id }, data: { status: BiometricDeletionStatus.COMPLETED, completedAt: new Date() } });
-        await tx.eventAuditLog.create({ data: { actorUserId: userId, merchantId, eventId: credential.eventId, action: "BIOMETRIC_DELETED", entityType: "BiometricCredential", entityId: credentialId, metadata: { reason } } });
-      });
-      return { jobId: job.id, status: "COMPLETED" };
-    } catch (error) {
-      await this.prisma.biometricDeletionJob.update({ where: { id: job.id }, data: { status: BiometricDeletionStatus.FAILED, failureReason: error instanceof Error ? error.message.slice(0, 240) : "UNKNOWN" } });
-      throw error;
-    }
+    const eventId = credential.biometricIdentity.authorizations[0]?.eventId;
+    if (!eventId) throw new NotFoundException("Biometric credential is not associated with this merchant");
+    await this.assertRole(merchantId, eventId, userId, ADMIN_ROLES);
+    return this.faceEntry.deleteForEventAdmin(merchantId, credential.biometricIdentityId, eventId, userId, reason);
+  }
+
+  async deleteBiometricIdentity(merchantId: string, biometricIdentityId: string, eventId: string | undefined, userId: string | undefined, reason: string) {
+    if (!eventId) throw new BadRequestException("eventId is required for merchant biometric deletion");
+    await this.assertRole(merchantId, eventId, userId, ADMIN_ROLES);
+    return this.faceEntry.deleteForEventAdmin(merchantId, biometricIdentityId, eventId, userId, reason);
+  }
+
+  async syncEventRoster(merchantId: string, eventId: string, deviceId: string, userId: string | undefined) {
+    await this.assertRole(merchantId, eventId, userId, ADMIN_ROLES);
+    return this.rosters.syncEventRoster(merchantId, eventId, deviceId, userId);
+  }
+
+  async removeEventRoster(merchantId: string, eventId: string, deviceId: string, userId: string | undefined) {
+    await this.assertRole(merchantId, eventId, userId, ADMIN_ROLES);
+    return this.rosters.removeEventRoster(merchantId, eventId, deviceId, userId);
+  }
+
+  async endEvent(merchantId: string, eventId: string, userId: string | undefined) {
+    await this.assertRole(merchantId, eventId, userId, ADMIN_ROLES);
+    const event = await this.prisma.event.update({ where: { id: eventId }, data: { status: EventStatus.ENDED } });
+    await this.audit(merchantId, eventId, userId, "EVENT_ENDED", "Event", eventId);
+    return { event, cleanupRequired: true };
+  }
+
+  async cleanupEndedEvent(merchantId: string, eventId: string, userId: string | undefined) {
+    await this.assertRole(merchantId, eventId, userId, ADMIN_ROLES);
+    return this.rosters.cleanupEndedEvent(merchantId, eventId, userId);
   }
 
   async addStaff(merchantId: string, eventId: string, actorUserId: string | undefined, merchantUserId: string, role: EventStaffRole, permissions?: Record<string, boolean>) {

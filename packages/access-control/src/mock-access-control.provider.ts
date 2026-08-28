@@ -9,13 +9,14 @@ import type {
   EnrollmentResult,
   NormalizedDeviceEvent,
   RecentEventsInput,
+  RemoveEventRosterInput,
   SyncEventRosterInput,
   SyncPersonInput,
   SyncResult,
   UnlockDoorInput,
 } from "./types";
 
-type MockPerson = EnrollmentResult & { eventId: string; expiresAt: string };
+type MockPerson = EnrollmentResult & { biometricIdentityId: string; eventId: string; expiresAt: string };
 
 export class MockAccessControlProvider implements AccessControlProvider {
   private readonly health = new Map<string, DeviceHealth["status"]>();
@@ -50,7 +51,7 @@ export class MockAccessControlProvider implements AccessControlProvider {
       quality: 0.99,
     };
     const devicePeople = this.people.get(input.device.id) ?? new Map<string, MockPerson>();
-    devicePeople.set(input.externalPersonId, { ...result, eventId: input.eventId, expiresAt: input.expiresAt });
+    devicePeople.set(input.externalPersonId, { ...result, biometricIdentityId: input.biometricIdentityId, eventId: input.eventId, expiresAt: input.expiresAt });
     this.people.set(input.device.id, devicePeople);
     await this.emit({
       externalEventId: randomUUID(), deviceId: input.device.id, occurredAt: result.enrolledAt,
@@ -64,7 +65,19 @@ export class MockAccessControlProvider implements AccessControlProvider {
   }
 
   async syncPerson(input: SyncPersonInput): Promise<void> {
-    await this.enrollPerson(input);
+    if ((this.health.get(input.device.id) ?? "ONLINE") !== "ONLINE") throw new Error("DEVICE_OFFLINE");
+    const devicePeople = this.people.get(input.device.id) ?? new Map<string, MockPerson>();
+    devicePeople.set(input.externalPersonId, {
+      externalPersonId: input.externalPersonId,
+      externalCredentialId: input.externalCredentialId ?? input.profile.providerExternalId ?? `mock-sync-${input.profile.biometricIdentityId}`,
+      providerExternalId: input.profile.providerExternalId,
+      algorithmVersion: input.profile.algorithmVersion,
+      enrolledAt: new Date().toISOString(),
+      biometricIdentityId: input.profile.biometricIdentityId,
+      eventId: input.eventId,
+      expiresAt: input.expiresAt,
+    });
+    this.people.set(input.device.id, devicePeople);
   }
 
   async syncEventRoster(input: SyncEventRosterInput): Promise<SyncResult> {
@@ -75,6 +88,26 @@ export class MockAccessControlProvider implements AccessControlProvider {
       catch (error) { failed.push({ externalPersonId: person.externalPersonId, reason: error instanceof Error ? error.message : "UNKNOWN" }); }
     }
     return { requested: input.people.length, succeeded, failed };
+  }
+
+  async removeEventRoster(input: RemoveEventRosterInput): Promise<SyncResult> {
+    const failed: Array<{ externalPersonId: string; reason: string }> = [];
+    let succeeded = 0;
+    for (const person of input.people) {
+      try {
+        const current = this.people.get(input.device.id)?.get(person.externalPersonId);
+        if (current?.eventId === input.eventId) this.people.get(input.device.id)?.delete(person.externalPersonId);
+        succeeded += 1;
+      } catch (error) {
+        failed.push({ externalPersonId: person.externalPersonId, reason: error instanceof Error ? error.message : "UNKNOWN" });
+      }
+    }
+    return { requested: input.people.length, succeeded, removed: succeeded, failed };
+  }
+
+  getDeviceRoster(deviceId: string, eventId?: string): ReadonlyArray<MockPerson> {
+    const people = [...(this.people.get(deviceId)?.values() ?? [])];
+    return people.filter((person) => !eventId || person.eventId === eventId).map((person) => Object.freeze({ ...person }));
   }
 
   async listenForEvents(handler: DeviceEventHandler): Promise<() => void> {

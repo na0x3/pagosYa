@@ -1,6 +1,6 @@
 import { Type } from "class-transformer";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
-import { AccessDeviceRole, AdmissionSource, EventPaymentMethod, EventStaffRole, EventStatus, TicketTypeKind } from "@prisma/client";
+import { AccessDeviceRole, AdmissionSource, BiometricConsentScope, EventPaymentMethod, EventStaffRole, EventStatus, TicketTypeKind } from "@prisma/client";
 
 export class CreateVenueDto {
   @IsString() @IsNotEmpty() @MaxLength(120) name!: string;
@@ -104,6 +104,16 @@ export class CompleteEnrollmentDto {
   @IsOptional() @IsString() @MaxLength(40) phone?: string;
   @IsBoolean() consent!: boolean;
   @IsString() @IsNotEmpty() @MaxLength(40) consentVersion!: string;
+  @IsOptional() @IsDateString() consentExpiresAt?: string;
+}
+
+export class ActivateFaceEntryDto {
+  @IsOptional() @IsString() @MaxLength(200) managementToken?: string;
+}
+
+export class ConsumerEnrollmentSessionDto extends ActivateFaceEntryDto {
+  @IsOptional() @IsString() deviceId?: string;
+  @IsEnum(BiometricConsentScope) scope!: BiometricConsentScope;
 }
 
 export class CreateDeviceDto {
@@ -115,6 +125,9 @@ export class CreateDeviceDto {
   @IsOptional() @IsString() @MaxLength(120) serialNumber?: string;
   @IsOptional() @IsString() @MaxLength(80) ipAddress?: string;
   @IsOptional() @IsInt() @Min(1) @Max(65535) port?: number;
+  @IsOptional() @IsInt() @Min(1) faceCapacity?: number;
+  @IsOptional() @IsString() @MaxLength(120) algorithmVersion?: string;
+  @IsOptional() @IsObject() providerCapabilities?: Record<string, unknown>;
   @IsEnum(AccessDeviceRole) role!: AccessDeviceRole;
   @IsOptional() @IsObject() configuration?: Record<string, unknown>;
   @IsOptional() @IsString() encryptedSecrets?: string;
@@ -146,6 +159,11 @@ export class ManualAccessDto {
 }
 
 export class DeleteBiometricDto {
+  @IsString() @IsNotEmpty() @MaxLength(240) reason!: string;
+  @IsOptional() @IsString() eventId?: string;
+}
+
+export class DeleteFaceEntryDto {
   @IsString() @IsNotEmpty() @MaxLength(240) reason!: string;
 }
 

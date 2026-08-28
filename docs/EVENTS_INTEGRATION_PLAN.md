@@ -90,7 +90,7 @@ The existing `Transaction` cannot represent cash without a `PaymentIntent`, so E
 
 Legacy models extended in place: `Event`, `TicketType` → `EventPriceStage`, `AdmissionOrder` → `EventOrder`, `Admission` → `EventTicket`, and preserved `EventSeat`.
 
-New commerce/access models: `Venue`, `TicketReservation`, `TicketReservationItem`, `AdmissionAssignment`, `Attendee`, `EnrollmentSession`, `BiometricConsent`, `BiometricCredential`, `BiometricDeletionJob`, `AccessDevice`, `DevicePersonMapping`, `DeviceEventIngest`, `AccessEvent`, `AccessAttempt`, `CashShift`, `EventFinancialTransaction`, `EventRefund`, `EventStaffMembership`, `PromoterProfile`, `EventPromoterAllocation`, `GuestListEntry`, and `EventAuditLog`.
+New commerce/access models: `Venue`, `TicketReservation`, `TicketReservationItem`, `AdmissionAssignment`, `Attendee`, `EnrollmentSession`, `BiometricIdentity`, `BiometricConsent`, `BiometricCredential`, `EventBiometricAuthorization`, `BiometricDeletionJob`, `AccessDevice`, `DevicePersonMapping`, `DeviceEventIngest`, `AccessEvent`, `AccessAttempt`, `CashShift`, `EventFinancialTransaction`, `EventRefund`, `EventStaffMembership`, `PromoterProfile`, `EventPromoterAllocation`, `GuestListEntry`, and `EventAuditLog`.
 
 State remains orthogonal: payment state stays on PagosYa `PaymentIntent`; reservation, admission, assignment, enrollment, presence, consent, and device health use independent fields/enums.
 
@@ -125,6 +125,6 @@ Idempotency is enforced by unique reservation/payment relations plus conditional
 
 Application services consume `NormalizedDeviceEvent` and `AccessControlProvider`, never ZKTeco payloads. The complete mock provider emits the same normalized events used by production ingestion. `ZKTecoSpeedFaceProvider` contains no network endpoint or payload assumption until official SpeedFace-V5 SDK/PUSH/ADMS documentation is supplied.
 
-The platform database—not terminal memory—is authoritative for admission validity, payment policy, presence, capacity, anti-passback, consent, and deletion state. Device person IDs are event/device-scoped mappings. Raw templates/images are never part of normal application records or logs.
+The platform database—not terminal memory—is authoritative for admission validity, payment policy, presence, capacity, anti-passback, consent, and deletion state. `ConsumerUser` owns an explicitly reusable `BiometricIdentity`; `Attendee` remains event-local; `EventBiometricAuthorization` connects identity, attendee, admission, and consent for one event. SpeedFace devices are event-specific cache targets, and device person IDs are event/device-scoped mappings. Raw templates/images are never part of normal application records or logs. The full decision is documented in `docs/FACE_ENTRY_ARCHITECTURE.md`.
 
 No SpeedFace protocol documentation was found in the inspected PagosYa repository. The evidence required to implement the real adapter is tracked in `docs/ZKTECO_INTEGRATION.md`.

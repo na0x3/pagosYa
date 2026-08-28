@@ -19,6 +19,7 @@
     "demo:inventory-sync": "node examples/cafe-aroma/sync-stock.mjs",
     "demo:subscriptions-sync": "node examples/cafe-aroma/sync-subscriptions.mjs",
     "verify:events": "node scripts/verify-events-demo.mjs",
+    "verify:face-entry": "node scripts/verify-reusable-face-entry.mjs",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test"
   },

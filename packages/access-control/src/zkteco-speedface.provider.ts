@@ -1,7 +1,7 @@
 import type {
   AccessControlDevice, AccessControlProvider, DeletePersonInput, DeviceEventHandler, DeviceHealth,
   EnrollPersonInput, EnrollmentResult, NormalizedDeviceEvent, RecentEventsInput, SyncEventRosterInput,
-  SyncPersonInput, SyncResult, UnlockDoorInput,
+  RemoveEventRosterInput, SyncPersonInput, SyncResult, UnlockDoorInput,
 } from "./types";
 
 export type ZKTecoIntegrationMode = "push" | "sdk";
@@ -35,6 +35,7 @@ export class ZKTecoSpeedFaceProvider implements AccessControlProvider {
   deletePerson(_input: DeletePersonInput): Promise<void> { return Promise.reject(new ZKTecoDocumentationRequiredError("person deletion")); }
   syncPerson(_input: SyncPersonInput): Promise<void> { return Promise.reject(new ZKTecoDocumentationRequiredError("person synchronization")); }
   syncEventRoster(_input: SyncEventRosterInput): Promise<SyncResult> { return Promise.reject(new ZKTecoDocumentationRequiredError("event roster synchronization")); }
+  removeEventRoster(_input: RemoveEventRosterInput): Promise<SyncResult> { return Promise.reject(new ZKTecoDocumentationRequiredError("event roster removal")); }
   listenForEvents(_handler: DeviceEventHandler): Promise<() => void> { return Promise.reject(new ZKTecoDocumentationRequiredError("event listener")); }
   getRecentEvents(_input: RecentEventsInput): Promise<NormalizedDeviceEvent[]> { return Promise.reject(new ZKTecoDocumentationRequiredError("event retrieval")); }
   unlockDoor(_input: UnlockDoorInput): Promise<void> { return Promise.reject(new ZKTecoDocumentationRequiredError("door unlock")); }

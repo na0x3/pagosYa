@@ -15,8 +15,12 @@ flowchart LR
   RES --> PAY[Existing PagosYa<br/>PaymentIntent + checkout]
   PAY -->|trusted success transaction| ADM[Independent admissions]
   CASH[Event cashier] --> ADM
-  ADM --> PERSON[Attendee + consent]
-  PERSON --> PROVIDER[AccessControlProvider]
+  ADM --> PERSON[Event-local attendee]
+  CUSTOMER[PagosYa ConsumerUser] --> ID[Central BiometricIdentity<br/>explicit reusable consent]
+  PERSON --> AUTH[Event authorization]
+  ID --> AUTH
+  AUTH --> ROSTER[Temporary event roster]
+  ROSTER --> PROVIDER[AccessControlProvider]
   PROVIDER --> MOCK[Mock / simulator]
   PROVIDER -. official docs required .-> ZK[SpeedFace-V5]
   MOCK --> POLICY[Atomic access policy]
@@ -30,6 +34,7 @@ Key boundaries:
 - Online money remains in PagosYa `PaymentIntent`, `Transaction`, ledger and webhook infrastructure. Events only references the successful payment.
 - The buyer and attendee are independent. A three-ticket payment creates three admissions that can be claimed by three people.
 - Payment, admission, assignment, biometric enrollment and presence have separate state machines.
+- A customer may explicitly keep one reusable PagosYa Face Entry identity; each venue device receives only the temporary roster authorized for its active event.
 - The terminal recognizes; PagosYa authorizes. PostgreSQL decides admission validity, capacity, presence and anti-passback atomically.
 - No face model, image or template is implemented or logged. Application records contain consent and opaque provider/device references only.
 
@@ -76,9 +81,10 @@ To run the repeatable API/database acceptance flow:
 
 ```bash
 API_BASE_URL=http://localhost:3001/v1 node scripts/verify-events-demo.mjs
+API_BASE_URL=http://localhost:3001/v1 node scripts/verify-reusable-face-entry.mjs
 ```
 
-It verifies a group cash sale, independent enrollment, entry, immediate anti-passback, exit, re-entry, two simultaneous readers, replay idempotency, Bs 240 reconciliation, online purchase through the existing PaymentIntent, three online admissions, invitation/claim, RBAC, privacy filtering and biometric deletion.
+The first script verifies a group cash sale, independent enrollment, entry, immediate anti-passback, exit, re-entry, two simultaneous readers, replay idempotency, Bs 240 reconciliation, online purchase through the existing PaymentIntent, three online admissions, invitation/claim, RBAC, privacy filtering and biometric deletion. The second verifies reusable consent, cross-event identity reuse without another scan, event roster removal, central Face Entry deletion, preserved financial/admission history, and event-only retention cleanup.
 
 ### Optional venue edge
 
@@ -127,7 +133,7 @@ pnpm --filter @pagosya/edge run test
 pnpm --filter @pagosya/edge run build
 ```
 
-Current status and intentionally deferred scope are tracked in [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md). The implementation/design decision record is [`docs/EVENTS_INTEGRATION_PLAN.md`](docs/EVENTS_INTEGRATION_PLAN.md).
+Current status and intentionally deferred scope are tracked in [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md). The integration decision record is [`docs/EVENTS_INTEGRATION_PLAN.md`](docs/EVENTS_INTEGRATION_PLAN.md), and the reusable identity/device-cache design is documented in [`docs/FACE_ENTRY_ARCHITECTURE.md`](docs/FACE_ENTRY_ARCHITECTURE.md).
 
 ### SpeedFace-V5 and privacy limitation
 

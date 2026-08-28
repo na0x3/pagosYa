@@ -19,9 +19,23 @@ export interface AccessControlDevice {
   role: AccessDeviceRole;
   host?: string;
   port?: number;
+  faceCapacity?: number;
+  algorithmVersion?: string;
+  providerCapabilities?: Readonly<Record<string, unknown>>;
   configuration?: Readonly<Record<string, unknown>>;
   /** Encrypted-at-rest secret envelope. Providers receive it only at execution time. */
   encryptedSecrets?: string;
+}
+
+export interface BiometricProfileReference {
+  biometricIdentityId: string;
+  provider: "MOCK" | "ZKTECO" | "FUTURE_PROVIDER";
+  providerExternalId?: string;
+  algorithmVersion?: string;
+  /** Opaque encrypted reference. Core access logic never interprets its contents. */
+  encryptedTemplateReference?: string;
+  /** Opaque encrypted provider envelope. It must never be written to logs. */
+  encryptedVendorPayload?: string;
 }
 
 export interface DeviceHealth {
@@ -34,6 +48,7 @@ export interface DeviceHealth {
 
 export interface EnrollPersonInput {
   device: AccessControlDevice;
+  biometricIdentityId: string;
   externalPersonId: string;
   displayName?: string;
   eventId: string;
@@ -47,6 +62,15 @@ export interface EnrollmentResult {
   externalCredentialId: string;
   enrolledAt: string;
   quality?: number;
+  algorithmVersion?: string;
+  /** Provider-owned opaque identifier, not a globally portable person ID. */
+  providerExternalId?: string;
+  /**
+   * Optional provider-produced central references. A future documented adapter
+   * may return either value; core code stores but never parses or logs them.
+   */
+  encryptedTemplateReference?: string;
+  encryptedVendorPayload?: string;
 }
 
 export interface DeletePersonInput {
@@ -57,6 +81,7 @@ export interface DeletePersonInput {
 
 export interface SyncPersonInput extends EnrollPersonInput {
   externalCredentialId?: string;
+  profile: BiometricProfileReference;
 }
 
 export interface SyncEventRosterInput {
@@ -68,7 +93,15 @@ export interface SyncEventRosterInput {
 export interface SyncResult {
   requested: number;
   succeeded: number;
+  unchanged?: number;
+  removed?: number;
   failed: ReadonlyArray<{ externalPersonId: string; reason: string }>;
+}
+
+export interface RemoveEventRosterInput {
+  device: AccessControlDevice;
+  eventId: string;
+  people: ReadonlyArray<{ externalPersonId: string; biometricIdentityId: string }>;
 }
 
 export interface RecentEventsInput {
@@ -103,6 +136,7 @@ export interface AccessControlProvider {
   deletePerson(input: DeletePersonInput): Promise<void>;
   syncPerson(input: SyncPersonInput): Promise<void>;
   syncEventRoster(input: SyncEventRosterInput): Promise<SyncResult>;
+  removeEventRoster(input: RemoveEventRosterInput): Promise<SyncResult>;
   listenForEvents(handler: DeviceEventHandler): Promise<() => void>;
   getRecentEvents(input: RecentEventsInput): Promise<NormalizedDeviceEvent[]>;
   unlockDoor?(input: UnlockDoorInput): Promise<void>;

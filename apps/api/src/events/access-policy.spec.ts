@@ -2,7 +2,7 @@ import { evaluateAccess, type AccessPolicyInput } from "./access-policy";
 
 const now = new Date("2026-08-27T23:00:00.000Z");
 const base: AccessPolicyInput = {
-  admissionStatus: "ACTIVE", paymentStatus: "PAID", biometricEnrollmentStatus: "ENROLLED",
+  eventStatus: "ACTIVE", admissionStatus: "ACTIVE", paymentStatus: "PAID", biometricEnrollmentStatus: "ENROLLED",
   presenceStatus: "OUTSIDE", direction: "ENTRY", allowReentry: true, ticketReentryAllowed: true,
   occurredAt: now, doorsOpenAt: new Date(now.getTime() - 60_000), lastEntryAt: new Date(now.getTime() + 60_000),
   manual: false, insideCount: 10, capacity: 900, capacityContribution: 1,
@@ -23,5 +23,6 @@ describe("event access policy", () => {
     expect(evaluateAccess({ ...base, biometricEnrollmentStatus: "PENDING", manual: true }).decision).toBe("ALLOW");
   });
   it("enforces event entry time", () => expect(evaluateAccess({ ...base, occurredAt: new Date(now.getTime() + 120_000) })).toEqual({ decision: "DENY", reason: "ENTRY_WINDOW_CLOSED" }));
+  it("stops new entry when an event has ended", () => expect(evaluateAccess({ ...base, eventStatus: "ENDED" })).toEqual({ decision: "DENY", reason: "EVENT_NOT_ACTIVE" }));
   it("enforces server-side capacity", () => expect(evaluateAccess({ ...base, insideCount: 900 })).toEqual({ decision: "DENY", reason: "CAPACITY_REACHED" }));
 });
