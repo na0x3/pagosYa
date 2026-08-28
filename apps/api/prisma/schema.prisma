@@ -137,6 +137,157 @@ enum SupportCaseStatus {
   RESOLVED
 }
 
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum EventPricingMode {
+  SEATED
+  GENERAL_ADMISSION
+}
+
+enum EventSeatStatus {
+  AVAILABLE
+  HELD
+  SOLD
+}
+
+enum TicketTypeKind {
+  GENERAL
+  VIP
+  EARLY_BIRD
+  TABLE
+  GUEST
+  STAFF
+  CUSTOM
+}
+
+enum TicketReservationStatus {
+  RESERVED
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+enum AdmissionSource {
+  ONLINE
+  CASH_DOOR
+  PROMOTER
+  COMPLIMENTARY
+  ADMIN
+  PARTNER
+}
+
+enum EventPaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  QR_PAYMENT
+  ONLINE_GATEWAY
+  COMPLIMENTARY
+}
+
+enum EventPaymentStatus {
+  PENDING
+  PAID
+  CANCELED
+  REFUNDED
+  VOID
+
+  @@map("EventOrderStatus")
+}
+
+enum AdmissionStatus {
+  VALID
+  ACTIVE
+  REVOKED
+  USED
+  VOID
+  CANCELLED
+
+  @@map("EventTicketStatus")
+}
+
+enum AssignmentStatus {
+  UNASSIGNED
+  CLAIMED
+}
+
+enum BiometricEnrollmentStatus {
+  NOT_REQUIRED
+  PENDING
+  ENROLLED
+  FAILED
+  DELETED
+}
+
+enum PresenceStatus {
+  NEVER_ENTERED
+  OUTSIDE
+  INSIDE
+}
+
+enum EventStaffRole {
+  ORGANIZATION_ADMIN
+  EVENT_MANAGER
+  CASHIER
+  DOOR_STAFF
+  PROMOTER
+  AUDITOR
+}
+
+enum AccessDeviceRole {
+  ENTRY
+  EXIT
+  BIDIRECTIONAL
+  ENROLLMENT
+}
+
+enum AccessDeviceStatus {
+  ONLINE
+  OFFLINE
+  DEGRADED
+  DISABLED
+}
+
+enum AccessDirection {
+  ENTRY
+  EXIT
+  MANUAL_ENTRY
+  MANUAL_EXIT
+}
+
+enum AccessDecision {
+  ALLOW
+  DENY
+  IGNORED
+}
+
+enum BiometricDeletionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PromoterAllocationKind {
+  COMPLIMENTARY
+  DISCOUNTED
+}
+
+enum GuestListStatus {
+  INVITED
+  CLAIMED
+  ENROLLED
+  ENTERED
+  CANCELLED
+}
+
 // A named pagosYa staff member allowed to review KYC — replaces a single
 // shared INTERNAL_OPS_SECRET so every review decision is attributable to a
 // specific, revocable person instead of "whoever had the secret."
@@ -233,36 +384,48 @@ model Merchant {
   productStats     StoreProductStat[]
   storeLeads       StoreLead[]
   supportCases     SupportCase[]
+  venues           Venue[]
+  events           Event[]
+  eventAttendees   Attendee[]
+  eventStaff       EventStaffMembership[]
+  eventOrders      AdmissionOrder[]
+  eventAuditLogs   EventAuditLog[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
 // ApiKey. The dashboard must never need a merchant's secret key in the
 // browser; this is what apps/merchant-dashboard authenticates with instead.
 model MerchantUser {
-  id                  String                   @id @default(cuid())
-  merchantId          String
-  merchant            Merchant                 @relation(fields: [merchantId], references: [id])
-  email               String                   @unique
-  hashedPassword      String
+  id                    String                        @id @default(cuid())
+  merchantId            String
+  merchant              Merchant                      @relation(fields: [merchantId], references: [id])
+  email                 String                        @unique
+  hashedPassword        String
   // Daily-login stars are user-scoped so signing into more than one store does
   // not multiply the same day's reward.
-  dailyLoginStars     Int                      @default(0)
-  lastDailyStarAt     DateTime?
+  dailyLoginStars       Int                           @default(0)
+  lastDailyStarAt       DateTime?
   // Stable Google OpenID Connect subject. Email is display/contact data and
   // can change; provider identity must always be keyed by `sub`.
-  googleSubject       String?                  @unique
+  googleSubject         String?                       @unique
   // Account deletion is intentionally a deactivation. Financial, tax,
   // fulfillment, support, and audit evidence stays attached to stable IDs.
-  deletedAt           DateTime?
+  deletedAt             DateTime?
   // Null until the confirmation link is used. An unverified row doesn't
   // permanently claim its email — see MerchantUserService.signup for why.
-  emailVerifiedAt     DateTime?
-  createdAt           DateTime                 @default(now())
-  sessions            MerchantSession[]
-  verificationTokens  EmailVerificationToken[]
-  passwordResetTokens PasswordResetToken[]
-  supportCases        SupportCase[]            @relation("SupportCaseMerchantCreator")
-  progressCelebrations MerchantProgressCelebration[]
+  emailVerifiedAt       DateTime?
+  createdAt             DateTime                      @default(now())
+  sessions              MerchantSession[]
+  verificationTokens    EmailVerificationToken[]
+  passwordResetTokens   PasswordResetToken[]
+  supportCases          SupportCase[]                 @relation("SupportCaseMerchantCreator")
+  progressCelebrations  MerchantProgressCelebration[]
+  eventStaffMemberships EventStaffMembership[]
+  cashShifts            CashShift[]
+  eventAuditLogs        EventAuditLog[]
+  manualAccessEvents    AccessEvent[]
+  eventRefunds          EventRefund[]
+  promoterProfile       PromoterProfile?
 }
 
 // Durable acknowledgement for a newly unlocked companion. This is scoped to
@@ -272,8 +435,8 @@ model MerchantProgressCelebration {
   merchantUser        MerchantUser @relation(fields: [merchantUserId], references: [id], onDelete: Cascade)
   storeId             String
   store               Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  lastCelebratedLevel Int           @default(-1)
-  updatedAt           DateTime      @updatedAt
+  lastCelebratedLevel Int          @default(-1)
+  updatedAt           DateTime     @updatedAt
 
   @@id([merchantUserId, storeId])
   @@index([storeId])
@@ -546,9 +709,646 @@ model PaymentIntent {
   invoice              Invoice?
   debtRecords          DebtRecord[]
   storeOrder           StoreOrder?
+  ticketReservation    TicketReservation?
+  admissionOrder       AdmissionOrder?
 
   @@index([merchantId, createdAt])
   @@index([consumerUserId, createdAt])
+}
+
+model Venue {
+  id         String         @id @default(cuid())
+  merchantId String
+  merchant   Merchant       @relation(fields: [merchantId], references: [id])
+  name       String
+  address    String?
+  city       String         @default("La Paz")
+  timezone   String         @default("America/La_Paz")
+  capacity   Int?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  events     Event[]
+  devices    AccessDevice[]
+
+  @@index([merchantId, createdAt])
+}
+
+model Event {
+  id                      String                    @id @default(cuid())
+  merchantId              String
+  merchant                Merchant                  @relation(fields: [merchantId], references: [id])
+  storeId                 String?
+  store                   Store?                    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  venueId                 String?
+  venue                   Venue?                    @relation(fields: [venueId], references: [id])
+  slug                    String                    @unique
+  name                    String                    @map("title")
+  description             String?
+  publicityImageUrl       String                    @default("")
+  venueName               String                    @default("")
+  venueAddress            String?
+  startsAt                DateTime
+  endsAt                  DateTime?
+  doorsOpenAt             DateTime?
+  lastEntryAt             DateTime?
+  capacity                Int?
+  currency                String                    @default("BOB")
+  pricingMode             EventPricingMode          @default(GENERAL_ADMISSION)
+  timezone                String                    @default("America/La_Paz")
+  status                  EventStatus               @default(DRAFT)
+  allowReentry            Boolean                   @default(true)
+  biometricRequired       Boolean                   @default(true)
+  retentionHours          Int                       @default(24)
+  salesAtDoorEnabled      Boolean                   @default(true)
+  onlineSalesEnabled      Boolean                   @default(true)
+  entryGracePeriodMinutes Int                       @default(0)
+  manualOverrideAllowed   Boolean                   @default(true)
+  reservationMinutes      Int                       @default(10)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  ticketTypes             TicketType[]
+  reservations            TicketReservation[]
+  orders                  AdmissionOrder[]
+  admissions              Admission[]
+  attendees               Attendee[]
+  consents                BiometricConsent[]
+  credentials             BiometricCredential[]
+  devices                 AccessDevice[]
+  accessEvents            AccessEvent[]
+  accessAttempts          AccessAttempt[]
+  cashShifts              CashShift[]
+  staff                   EventStaffMembership[]
+  promoterAllocations     EventPromoterAllocation[]
+  guestList               GuestListEntry[]
+  auditLogs               EventAuditLog[]
+  enrollmentSessions      EnrollmentSession[]
+  deletionJobs            BiometricDeletionJob[]
+  legacySeats             EventSeat[]
+
+  @@index([merchantId, startsAt])
+  @@index([venueId, startsAt])
+  @@index([status, startsAt])
+}
+
+model TicketType {
+  id                   String                    @id @default(cuid())
+  eventId              String
+  event                Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  kind                 TicketTypeKind            @default(CUSTOM)
+  name                 String
+  price                Int
+  currency             String                    @default("BOB")
+  inventory            Int?                      @map("quantity")
+  sortOrder            Int                       @default(0) @map("order")
+  reservedQuantity     Int                       @default(0) @map("heldCount")
+  soldQuantity         Int                       @default(0) @map("soldCount")
+  salesStart           DateTime?
+  salesEnd             DateTime?
+  reentryAllowed       Boolean                   @default(true)
+  capacityContribution Int                       @default(1)
+  active               Boolean                   @default(true)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  reservationItems     TicketReservationItem[]
+  admissions           Admission[]
+  guestList            GuestListEntry[]
+  promoterAllocations  EventPromoterAllocation[]
+  legacyOrders         AdmissionOrder[]          @relation("LegacyOrderTicketType")
+
+  @@unique([eventId, name])
+  @@index([eventId, active])
+  @@map("EventPriceStage")
+}
+
+model TicketReservation {
+  id                       String                  @id @default(cuid())
+  merchantId               String
+  eventId                  String
+  event                    Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status                   TicketReservationStatus @default(RESERVED)
+  totalAmount              Int
+  currency                 String                  @default("BOB")
+  buyerName                String?
+  buyerEmail               String?
+  buyerPhone               String?
+  managementTokenHash      String                  @unique
+  managementTokenExpiresAt DateTime
+  expiresAt                DateTime
+  completedAt              DateTime?
+  paymentIntentId          String?                 @unique
+  paymentIntent            PaymentIntent?          @relation(fields: [paymentIntentId], references: [id])
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  items                    TicketReservationItem[]
+  order                    AdmissionOrder?
+
+  @@index([eventId, status, expiresAt])
+  @@index([merchantId, createdAt])
+}
+
+model TicketReservationItem {
+  id            String            @id @default(cuid())
+  reservationId String
+  reservation   TicketReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  ticketTypeId  String
+  ticketType    TicketType        @relation(fields: [ticketTypeId], references: [id])
+  quantity      Int
+  unitAmount    Int
+  createdAt     DateTime          @default(now())
+
+  @@unique([reservationId, ticketTypeId])
+  @@index([ticketTypeId])
+}
+
+model AdmissionOrder {
+  id                    String                      @id @default(cuid())
+  merchantId            String
+  merchant              Merchant                    @relation(fields: [merchantId], references: [id])
+  eventId               String
+  event                 Event                       @relation(fields: [eventId], references: [id])
+  reservationId         String?                     @unique
+  reservation           TicketReservation?          @relation(fields: [reservationId], references: [id])
+  paymentIntentId       String?                     @unique
+  paymentIntent         PaymentIntent?              @relation(fields: [paymentIntentId], references: [id])
+  cashShiftId           String?
+  cashShift             CashShift?                  @relation(fields: [cashShiftId], references: [id])
+  source                AdmissionSource
+  paymentMethod         EventPaymentMethod
+  paymentStatus         EventPaymentStatus          @default(PENDING) @map("status")
+  totalAmount           Int                         @map("amount")
+  currency              String                      @default("BOB")
+  buyerName             String?
+  buyerEmail            String?
+  buyerPhone            String?
+  legacyTicketTypeId    String?                     @map("gaPriceStageId")
+  legacyTicketType      TicketType?                 @relation("LegacyOrderTicketType", fields: [legacyTicketTypeId], references: [id])
+  legacyQuantity        Int?                        @map("gaQuantity")
+  legacyHoldExpiresAt   DateTime?                   @map("holdExpiresAt")
+  managementTokenHash   String?                     @unique
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  admissions            Admission[]
+  financialTransactions EventFinancialTransaction[]
+  refunds               EventRefund[]
+
+  @@index([merchantId, createdAt])
+  @@index([eventId, source, createdAt])
+  @@index([paymentStatus, createdAt])
+  @@map("EventOrder")
+}
+
+model Admission {
+  id                        String                    @id @default(cuid())
+  code                      String                    @unique @map("qrToken")
+  orderId                   String                    @map("eventOrderId")
+  order                     AdmissionOrder            @relation(fields: [orderId], references: [id])
+  legacySeatId              String?                   @unique @map("eventSeatId")
+  legacySeat                EventSeat?                @relation(fields: [legacySeatId], references: [id])
+  eventId                   String
+  event                     Event                     @relation(fields: [eventId], references: [id])
+  ticketTypeId              String?                   @map("eventPriceStageId")
+  ticketType                TicketType?               @relation(fields: [ticketTypeId], references: [id])
+  attendeeId                String?
+  attendee                  Attendee?                 @relation(fields: [attendeeId], references: [id])
+  source                    AdmissionSource
+  status                    AdmissionStatus           @default(ACTIVE)
+  legacyLabel               String?                   @map("gaLabel")
+  legacyUsedAt              DateTime?                 @map("usedAt")
+  assignmentStatus          AssignmentStatus          @default(UNASSIGNED)
+  biometricEnrollmentStatus BiometricEnrollmentStatus @default(PENDING)
+  presenceStatus            PresenceStatus            @default(NEVER_ENTERED)
+  claimedAt                 DateTime?
+  firstEnteredAt            DateTime?
+  lastPresenceChangedAt     DateTime?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  assignments               AdmissionAssignment[]
+  consents                  BiometricConsent[]
+  credentials               BiometricCredential[]
+  accessEvents              AccessEvent[]
+  accessAttempts            AccessAttempt[]
+  enrollmentSessions        EnrollmentSession[]
+  guestListEntry            GuestListEntry?
+
+  @@index([eventId, presenceStatus])
+  @@index([eventId, status])
+  @@index([attendeeId])
+  @@index([orderId])
+  @@index([ticketTypeId])
+  @@map("EventTicket")
+}
+
+model EventSeat {
+  id                    String          @id @default(cuid())
+  eventId               String
+  event                 Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label                 String
+  section               String          @default("General")
+  rowLabel              String
+  seatNumber            Int
+  x                     Int
+  y                     Int
+  price                 Int
+  currency              String          @default("BOB")
+  status                EventSeatStatus @default(AVAILABLE)
+  heldByPaymentIntentId String?
+  holdExpiresAt         DateTime?
+  soldAt                DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  admission             Admission?
+
+  @@unique([eventId, label])
+  @@index([eventId, status])
+  @@index([heldByPaymentIntentId])
+}
+
+model AdmissionAssignment {
+  id             String    @id @default(cuid())
+  admissionId    String
+  admission      Admission @relation(fields: [admissionId], references: [id], onDelete: Cascade)
+  attendeeId     String
+  attendee       Attendee  @relation(fields: [attendeeId], references: [id])
+  claimTokenHash String?   @unique
+  expiresAt      DateTime?
+  claimedAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([admissionId, createdAt])
+  @@index([attendeeId, createdAt])
+}
+
+model Attendee {
+  id             String                @id @default(cuid())
+  merchantId     String
+  merchant       Merchant              @relation(fields: [merchantId], references: [id])
+  eventId        String
+  event          Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  displayName    String
+  email          String?
+  phone          String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  admissions     Admission[]
+  assignments    AdmissionAssignment[]
+  consents       BiometricConsent[]
+  credentials    BiometricCredential[]
+  deviceMappings DevicePersonMapping[]
+  accessEvents   AccessEvent[]
+  accessAttempts AccessAttempt[]
+
+  @@index([merchantId, createdAt])
+  @@index([eventId, displayName])
+  @@index([eventId, email])
+  @@index([eventId, phone])
+}
+
+model BiometricConsent {
+  id             String    @id @default(cuid())
+  eventId        String
+  event          Event     @relation(fields: [eventId], references: [id])
+  attendeeId     String
+  attendee       Attendee  @relation(fields: [attendeeId], references: [id])
+  admissionId    String
+  admission      Admission @relation(fields: [admissionId], references: [id])
+  version        String
+  purpose        String
+  consentedAt    DateTime
+  revokedAt      DateTime?
+  retentionUntil DateTime
+  createdAt      DateTime  @default(now())
+
+  @@index([eventId, consentedAt])
+  @@index([attendeeId, consentedAt])
+  @@index([admissionId])
+}
+
+model BiometricCredential {
+  id                   String                 @id @default(cuid())
+  eventId              String
+  event                Event                  @relation(fields: [eventId], references: [id])
+  attendeeId           String
+  attendee             Attendee               @relation(fields: [attendeeId], references: [id])
+  admissionId          String
+  admission            Admission              @relation(fields: [admissionId], references: [id])
+  provider             String
+  externalCredentialId String?
+  enrolledAt           DateTime
+  retentionUntil       DateTime
+  deletedAt            DateTime?
+  metadata             Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  deviceMappings       DevicePersonMapping[]
+  deletionJobs         BiometricDeletionJob[]
+
+  @@index([eventId, deletedAt])
+  @@index([attendeeId, deletedAt])
+  @@index([admissionId, deletedAt])
+  @@index([externalCredentialId])
+}
+
+model AccessDevice {
+  id               String                @id @default(cuid())
+  merchantId       String
+  venueId          String
+  venue            Venue                 @relation(fields: [venueId], references: [id])
+  eventId          String?
+  event            Event?                @relation(fields: [eventId], references: [id])
+  name             String
+  vendor           String                @default("ZKTeco")
+  model            String                @default("SpeedFace-V5")
+  serialNumber     String?
+  ipAddress        String?
+  port             Int?
+  role             AccessDeviceRole
+  status           AccessDeviceStatus    @default(OFFLINE)
+  lastSeenAt       DateTime?
+  firmwareVersion  String?
+  configuration    Json?
+  encryptedSecrets String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  personMappings   DevicePersonMapping[]
+  ingestedEvents   DeviceEventIngest[]
+  accessEvents     AccessEvent[]
+  accessAttempts   AccessAttempt[]
+
+  @@unique([merchantId, serialNumber])
+  @@index([eventId, role, status])
+  @@index([venueId, status])
+}
+
+model DevicePersonMapping {
+  id               String              @id @default(cuid())
+  deviceId         String
+  device           AccessDevice        @relation(fields: [deviceId], references: [id])
+  eventId          String
+  attendeeId       String
+  attendee         Attendee            @relation(fields: [attendeeId], references: [id])
+  credentialId     String
+  credential       BiometricCredential @relation(fields: [credentialId], references: [id])
+  externalPersonId String
+  createdAt        DateTime            @default(now())
+  deletedAt        DateTime?
+
+  @@unique([deviceId, eventId, externalPersonId])
+  @@unique([deviceId, credentialId])
+  @@index([attendeeId])
+  @@index([externalPersonId])
+}
+
+model DeviceEventIngest {
+  id                      String         @id @default(cuid())
+  externalEventId         String         @unique
+  deviceId                String
+  device                  AccessDevice   @relation(fields: [deviceId], references: [id])
+  occurredAt              DateTime
+  eventType               String
+  externalPersonId        String?
+  matchConfidence         Float?
+  livenessPassed          Boolean?
+  rawVendorEventReference String?
+  receivedAt              DateTime       @default(now())
+  processedAt             DateTime?
+  accessEventId           String?        @unique
+  accessEvent             AccessEvent?   @relation(fields: [accessEventId], references: [id])
+  accessAttemptId         String?        @unique
+  accessAttempt           AccessAttempt? @relation(fields: [accessAttemptId], references: [id])
+
+  @@index([deviceId, occurredAt])
+  @@index([occurredAt])
+}
+
+model AccessEvent {
+  id          String             @id @default(cuid())
+  eventId     String
+  event       Event              @relation(fields: [eventId], references: [id])
+  deviceId    String?
+  device      AccessDevice?      @relation(fields: [deviceId], references: [id])
+  admissionId String
+  admission   Admission          @relation(fields: [admissionId], references: [id])
+  attendeeId  String
+  attendee    Attendee           @relation(fields: [attendeeId], references: [id])
+  actorUserId String?
+  actorUser   MerchantUser?      @relation(fields: [actorUserId], references: [id])
+  direction   AccessDirection
+  decision    AccessDecision     @default(ALLOW)
+  reason      String?
+  occurredAt  DateTime
+  createdAt   DateTime           @default(now())
+  ingest      DeviceEventIngest?
+
+  @@index([eventId, occurredAt])
+  @@index([admissionId, occurredAt])
+  @@index([attendeeId, occurredAt])
+  @@index([deviceId, occurredAt])
+}
+
+model AccessAttempt {
+  id               String             @id @default(cuid())
+  eventId          String?
+  event            Event?             @relation(fields: [eventId], references: [id])
+  deviceId         String?
+  device           AccessDevice?      @relation(fields: [deviceId], references: [id])
+  admissionId      String?
+  admission        Admission?         @relation(fields: [admissionId], references: [id])
+  attendeeId       String?
+  attendee         Attendee?          @relation(fields: [attendeeId], references: [id])
+  direction        AccessDirection?
+  decision         AccessDecision
+  reason           String
+  externalPersonId String?
+  occurredAt       DateTime
+  createdAt        DateTime           @default(now())
+  ingest           DeviceEventIngest?
+
+  @@index([eventId, occurredAt])
+  @@index([admissionId, occurredAt])
+  @@index([deviceId, occurredAt])
+}
+
+model EnrollmentSession {
+  id          String    @id @default(cuid())
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id])
+  admissionId String
+  admission   Admission @relation(fields: [admissionId], references: [id])
+  deviceId    String?
+  codeHash    String    @unique
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  failedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([eventId, expiresAt])
+  @@index([admissionId, expiresAt])
+}
+
+model BiometricDeletionJob {
+  id            String                  @id @default(cuid())
+  eventId       String
+  event         Event                   @relation(fields: [eventId], references: [id])
+  credentialId  String
+  credential    BiometricCredential     @relation(fields: [credentialId], references: [id])
+  status        BiometricDeletionStatus @default(PENDING)
+  requestedById String?
+  requestedAt   DateTime                @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failureReason String?
+  attempts      Int                     @default(0)
+
+  @@index([status, requestedAt])
+  @@index([eventId, status])
+}
+
+model CashShift {
+  id           String                      @id @default(cuid())
+  eventId      String
+  event        Event                       @relation(fields: [eventId], references: [id])
+  cashierId    String
+  cashier      MerchantUser                @relation(fields: [cashierId], references: [id])
+  openedAt     DateTime                    @default(now())
+  closedAt     DateTime?
+  openingFloat Int
+  expectedCash Int?
+  declaredCash Int?
+  difference   Int?
+  orders       AdmissionOrder[]
+  transactions EventFinancialTransaction[]
+
+  @@index([eventId, openedAt])
+  @@index([cashierId, openedAt])
+}
+
+model EventFinancialTransaction {
+  id              String                      @id @default(cuid())
+  eventId         String
+  orderId         String
+  order           AdmissionOrder              @relation(fields: [orderId], references: [id])
+  cashShiftId     String?
+  cashShift       CashShift?                  @relation(fields: [cashShiftId], references: [id])
+  type            String
+  paymentMethod   EventPaymentMethod
+  status          EventPaymentStatus
+  amount          Int
+  currency        String                      @default("BOB")
+  reason          String?
+  actorUserId     String?
+  adjustmentForId String?
+  adjustmentFor   EventFinancialTransaction?  @relation("FinancialAdjustments", fields: [adjustmentForId], references: [id])
+  adjustments     EventFinancialTransaction[] @relation("FinancialAdjustments")
+  createdAt       DateTime                    @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([cashShiftId, createdAt])
+  @@index([orderId, createdAt])
+}
+
+model EventRefund {
+  id          String         @id @default(cuid())
+  orderId     String
+  order       AdmissionOrder @relation(fields: [orderId], references: [id])
+  amount      Int
+  currency    String         @default("BOB")
+  reason      String
+  actorUserId String
+  actorUser   MerchantUser   @relation(fields: [actorUserId], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model EventStaffMembership {
+  id             String         @id @default(cuid())
+  merchantId     String
+  merchant       Merchant       @relation(fields: [merchantId], references: [id])
+  eventId        String
+  event          Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  merchantUserId String
+  merchantUser   MerchantUser   @relation(fields: [merchantUserId], references: [id])
+  role           EventStaffRole
+  permissions    Json?
+  revokedAt      DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@unique([eventId, merchantUserId, role])
+  @@index([merchantId, eventId])
+  @@index([merchantUserId, revokedAt])
+}
+
+model PromoterProfile {
+  id             String                    @id @default(cuid())
+  merchantUserId String                    @unique
+  merchantUser   MerchantUser              @relation(fields: [merchantUserId], references: [id])
+  displayName    String
+  createdAt      DateTime                  @default(now())
+  allocations    EventPromoterAllocation[]
+  guests         GuestListEntry[]
+}
+
+model EventPromoterAllocation {
+  id             String                 @id @default(cuid())
+  eventId        String
+  event          Event                  @relation(fields: [eventId], references: [id])
+  promoterId     String
+  promoter       PromoterProfile        @relation(fields: [promoterId], references: [id])
+  ticketTypeId   String?
+  ticketType     TicketType?            @relation(fields: [ticketTypeId], references: [id])
+  kind           PromoterAllocationKind
+  quota          Int
+  used           Int                    @default(0)
+  discountAmount Int?
+  createdAt      DateTime               @default(now())
+  guests         GuestListEntry[]
+
+  @@unique([eventId, promoterId, kind, ticketTypeId])
+  @@index([promoterId, eventId])
+}
+
+model GuestListEntry {
+  id           String                  @id @default(cuid())
+  eventId      String
+  event        Event                   @relation(fields: [eventId], references: [id])
+  promoterId   String
+  promoter     PromoterProfile         @relation(fields: [promoterId], references: [id])
+  allocationId String
+  allocation   EventPromoterAllocation @relation(fields: [allocationId], references: [id])
+  ticketTypeId String?
+  ticketType   TicketType?             @relation(fields: [ticketTypeId], references: [id])
+  admissionId  String?                 @unique
+  admission    Admission?              @relation(fields: [admissionId], references: [id])
+  guestName    String
+  guestEmail   String?
+  guestPhone   String?
+  status       GuestListStatus         @default(INVITED)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@index([eventId, status])
+  @@index([promoterId, createdAt])
+}
+
+model EventAuditLog {
+  id          String        @id @default(cuid())
+  actorUserId String?
+  actorUser   MerchantUser? @relation(fields: [actorUserId], references: [id])
+  merchantId  String
+  merchant    Merchant      @relation(fields: [merchantId], references: [id])
+  eventId     String?
+  event       Event?        @relation(fields: [eventId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime      @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([eventId, createdAt])
+  @@index([entityType, entityId])
 }
 
 enum PaymentLinkStatus {
@@ -754,6 +1554,8 @@ model Store {
   consumerAffiliations         ConsumerInstitutionAffiliation[]
   promoCodes                   PromoCode[]
   progressCelebrations         MerchantProgressCelebration[]
+  events                       Event[]
+
   @@index([merchantId, createdAt])
 }
 
@@ -779,25 +1581,25 @@ model CustomDomain {
 // Payment status and fulfillment status are separate. Item snapshots survive
 // later catalog edits and remain truthful in the buyer's history.
 model StoreOrder {
-  id              String                  @id @default(cuid())
-  paymentIntentId String                  @unique
-  paymentIntent   PaymentIntent           @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
-  consumerUserId  String?
-  consumerUser    ConsumerUser?           @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
-  merchantId      String
-  storeId         String
-  storeName       String
-  fulfillmentLocationId      String?
-  fulfillmentLocationName    String?
-  fulfillmentMethod          String?
-  fulfillmentReadyAt         DateTime?
-  items           Json
-  amount          Int
-  currency        String                  @default("BOB")
-  status          OrderFulfillmentStatus  @default(AWAITING_PAYMENT)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  statusEvents    StoreOrderStatusEvent[]
+  id                      String                  @id @default(cuid())
+  paymentIntentId         String                  @unique
+  paymentIntent           PaymentIntent           @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+  consumerUserId          String?
+  consumerUser            ConsumerUser?           @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  merchantId              String
+  storeId                 String
+  storeName               String
+  fulfillmentLocationId   String?
+  fulfillmentLocationName String?
+  fulfillmentMethod       String?
+  fulfillmentReadyAt      DateTime?
+  items                   Json
+  amount                  Int
+  currency                String                  @default("BOB")
+  status                  OrderFulfillmentStatus  @default(AWAITING_PAYMENT)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  statusEvents            StoreOrderStatusEvent[]
 
   @@index([consumerUserId, createdAt])
   @@index([merchantId, createdAt])
@@ -1182,21 +1984,21 @@ model IdempotencyKey {
 // foreign keys where erasing the parent is safe.
 
 model BusinessCustomer {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   merchantId       String
   storeId          String
   name             String
   email            String?
   phone            String?
   document         String?
-  tags             String[] @default([])
-  marketingConsent Boolean  @default(false)
-  loyaltyPoints    Int      @default(0)
-  lifetimeValue    Int      @default(0)
-  orderCount       Int      @default(0)
+  tags             String[]  @default([])
+  marketingConsent Boolean   @default(false)
+  loyaltyPoints    Int       @default(0)
+  lifetimeValue    Int       @default(0)
+  orderCount       Int       @default(0)
   lastOrderAt      DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@unique([storeId, email])
   @@index([merchantId, updatedAt])
@@ -1217,52 +2019,52 @@ model CustomerLoyaltyEntry {
 }
 
 model MerchantAutomation {
-  id          String   @id @default(cuid())
-  merchantId  String
-  storeId     String
-  name        String
-  kind        String
-  channel     String   @default("EMAIL")
-  delayHours  Int      @default(24)
-  subject     String?
-  message     String
-  isActive    Boolean  @default(true)
-  lastRunAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  merchantId String
+  storeId    String
+  name       String
+  kind       String
+  channel    String    @default("EMAIL")
+  delayHours Int       @default(24)
+  subject    String?
+  message    String
+  isActive   Boolean   @default(true)
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([storeId, isActive, kind])
 }
 
 model AutomationDelivery {
-  id              String   @id @default(cuid())
-  automationId    String
-  merchantId      String
-  storeId         String
-  recipient       String
-  sourceType      String
-  sourceId        String
-  status          String   @default("DELIVERED")
-  failureReason   String?
-  deliveredAt     DateTime?
-  createdAt       DateTime @default(now())
+  id            String    @id @default(cuid())
+  automationId  String
+  merchantId    String
+  storeId       String
+  recipient     String
+  sourceType    String
+  sourceId      String
+  status        String    @default("DELIVERED")
+  failureReason String?
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
 
   @@unique([automationId, sourceType, sourceId])
   @@index([storeId, createdAt])
 }
 
 model DeliveryZone {
-  id                String   @id @default(cuid())
-  merchantId        String
-  storeId           String
-  name              String
-  fee               Int
-  minimumOrder      Int      @default(0)
-  radiusKm          Float?
-  estimatedMinutes  Int?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String   @id @default(cuid())
+  merchantId       String
+  storeId          String
+  name             String
+  fee              Int
+  minimumOrder     Int      @default(0)
+  radiusKm         Float?
+  estimatedMinutes Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([storeId, name])
   @@index([storeId, isActive])
@@ -1305,49 +2107,49 @@ model DeliveryAssignment {
 }
 
 model Supplier {
-  id           String   @id @default(cuid())
-  merchantId   String
-  storeId      String
-  name         String
-  contactName  String?
-  email        String?
-  phone        String?
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  merchantId  String
+  storeId     String
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([storeId, name])
   @@index([storeId, updatedAt])
 }
 
 model PurchaseOrder {
-  id             String    @id @default(cuid())
-  merchantId     String
-  storeId        String
-  supplierId     String
-  status         String    @default("DRAFT")
-  currency       String    @default("BOB")
-  expectedAt     DateTime?
-  receivedAt     DateTime?
-  totalAmount    Int       @default(0)
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  merchantId  String
+  storeId     String
+  supplierId  String
+  status      String    @default("DRAFT")
+  currency    String    @default("BOB")
+  expectedAt  DateTime?
+  receivedAt  DateTime?
+  totalAmount Int       @default(0)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([storeId, status, createdAt])
   @@index([supplierId, createdAt])
 }
 
 model PurchaseOrderItem {
-  id              String   @id @default(cuid())
-  purchaseOrderId String
-  paymentLinkId   String?
-  sku             String?
-  name            String
-  quantity        Int
-  unitCost        Int
-  receivedQuantity Int     @default(0)
-  createdAt       DateTime @default(now())
+  id               String   @id @default(cuid())
+  purchaseOrderId  String
+  paymentLinkId    String?
+  sku              String?
+  name             String
+  quantity         Int
+  unitCost         Int
+  receivedQuantity Int      @default(0)
+  createdAt        DateTime @default(now())
 
   @@index([purchaseOrderId])
   @@index([paymentLinkId])
@@ -1370,32 +2172,32 @@ model InventoryMovement {
 }
 
 model ReconciliationImport {
-  id             String   @id @default(cuid())
-  merchantId     String
-  storeId        String
-  source         String
-  currency       String   @default("BOB")
-  totalAmount    Int
-  matchedAmount  Int      @default(0)
-  unmatchedAmount Int     @default(0)
-  status         String   @default("PROCESSING")
-  createdAt      DateTime @default(now())
-  completedAt    DateTime?
+  id              String    @id @default(cuid())
+  merchantId      String
+  storeId         String
+  source          String
+  currency        String    @default("BOB")
+  totalAmount     Int
+  matchedAmount   Int       @default(0)
+  unmatchedAmount Int       @default(0)
+  status          String    @default("PROCESSING")
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
 
   @@index([storeId, createdAt])
 }
 
 model ReconciliationEntry {
-  id             String   @id @default(cuid())
-  importId       String
-  externalId     String
-  occurredAt     DateTime
-  amount         Int
-  description    String?
-  railReference  String?
-  transactionId  String?
-  status         String   @default("UNMATCHED")
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  importId      String
+  externalId    String
+  occurredAt    DateTime
+  amount        Int
+  description   String?
+  railReference String?
+  transactionId String?
+  status        String   @default("UNMATCHED")
+  createdAt     DateTime @default(now())
 
   @@unique([importId, externalId])
   @@index([importId, status])
@@ -1414,18 +2216,18 @@ model CustomerFavorite {
 }
 
 model CustomerReturnRequest {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   merchantId     String
   storeId        String
   orderId        String
   consumerUserId String?
   reason         String
   details        String?
-  status         String   @default("REQUESTED")
+  status         String    @default("REQUESTED")
   resolution     String?
   dueAt          DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([storeId, status, createdAt])
   @@index([storeId, status, dueAt])
@@ -1433,15 +2235,15 @@ model CustomerReturnRequest {
 }
 
 model PosSession {
-  id             String    @id @default(cuid())
-  merchantId     String
-  storeId        String
-  cashierName    String
-  openingFloat   Int       @default(0)
-  closingAmount  Int?
-  status         String    @default("OPEN")
-  openedAt       DateTime  @default(now())
-  closedAt       DateTime?
+  id            String    @id @default(cuid())
+  merchantId    String
+  storeId       String
+  cashierName   String
+  openingFloat  Int       @default(0)
+  closingAmount Int?
+  status        String    @default("OPEN")
+  openedAt      DateTime  @default(now())
+  closedAt      DateTime?
 
   @@index([storeId, status, openedAt])
 }
@@ -1464,29 +2266,29 @@ model PosSale {
 }
 
 model IntegrationConnection {
-  id          String    @id @default(cuid())
-  merchantId  String
-  storeId     String
-  kind        String
-  name        String
-  secretHash  String
-  status      String    @default("ACTIVE")
-  lastSyncAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  merchantId String
+  storeId    String
+  kind       String
+  name       String
+  secretHash String
+  status     String    @default("ACTIVE")
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([storeId, name])
   @@index([storeId, status, kind])
 }
 
 model IntegrationProductMapping {
-  id             String   @id @default(cuid())
-  connectionId   String
-  paymentLinkId  String
-  externalSku    String
-  externalName   String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  connectionId  String
+  paymentLinkId String
+  externalSku   String
+  externalName  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([connectionId, externalSku])
   @@unique([connectionId, paymentLinkId])
@@ -1614,63 +2416,63 @@ model CalendarOauthState {
 }
 
 model SubscriptionPlan {
-  id               String   @id @default(cuid())
-  merchantId       String
-  storeId          String
-  name             String
-  amount           Int
-  currency         String   @default("BOB")
-  interval         String   @default("MONTHLY")
-  intervalCount    Int      @default(1)
-  reminderHoursBefore Int   @default(24)
-  collectionMode   String   @default("MANUAL_LINK")
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  merchantId          String
+  storeId             String
+  name                String
+  amount              Int
+  currency            String   @default("BOB")
+  interval            String   @default("MONTHLY")
+  intervalCount       Int      @default(1)
+  reminderHoursBefore Int      @default(24)
+  collectionMode      String   @default("MANUAL_LINK")
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([storeId, name])
   @@index([storeId, isActive])
 }
 
 model CustomerSubscription {
-  id             String    @id @default(cuid())
-  merchantId     String
-  storeId        String
-  planId         String
-  customerId     String?
-  customerName   String
-  customerEmail  String?
-  customerPhone  String?
-  amountOverride Int?
+  id                 String    @id @default(cuid())
+  merchantId         String
+  storeId            String
+  planId             String
+  customerId         String?
+  customerName       String
+  customerEmail      String?
+  customerPhone      String?
+  amountOverride     Int?
   nextAmountOverride Int?
-  activeKey      String?   @unique
-  status         String    @default("ACTIVE")
-  startedAt      DateTime  @default(now())
-  nextBillingAt  DateTime
-  canceledAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  activeKey          String?   @unique
+  status             String    @default("ACTIVE")
+  startedAt          DateTime  @default(now())
+  nextBillingAt      DateTime
+  canceledAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([storeId, status, nextBillingAt])
   @@index([planId, status])
 }
 
 model SubscriptionInvoice {
-  id             String    @id @default(cuid())
-  subscriptionId String
-  merchantId     String
-  storeId        String
-  periodStart    DateTime
-  amount         Int
-  currency       String    @default("BOB")
-  status         String    @default("DUE")
+  id              String    @id @default(cuid())
+  subscriptionId  String
+  merchantId      String
+  storeId         String
+  periodStart     DateTime
+  amount          Int
+  currency        String    @default("BOB")
+  status          String    @default("DUE")
   paymentIntentId String?
-  dueAt          DateTime
-  paidAt         DateTime?
+  dueAt           DateTime
+  paidAt          DateTime?
   initialNoticeAt DateTime?
-  lastReminderAt DateTime?
-  reminderCount  Int       @default(0)
-  createdAt      DateTime  @default(now())
+  lastReminderAt  DateTime?
+  reminderCount   Int       @default(0)
+  createdAt       DateTime  @default(now())
 
   @@unique([subscriptionId, periodStart])
   @@index([storeId, status, dueAt])

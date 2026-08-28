@@ -1,0 +1,10 @@
+{
+  "name": "@pagosya/edge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "jest --runInBand", "start": "node dist/main.js" },
+  "dependencies": { "@pagosya/access-control": "workspace:*" },
+  "devDependencies": { "@types/jest": "^29.5.13", "@types/node": "^20.16.11", "jest": "^29.7.0", "ts-jest": "^29.2.5", "typescript": "^5.6.3" }
+}

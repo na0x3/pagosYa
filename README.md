@@ -1,4 +1,151 @@
-# pagosYa
+# paya
+
+> This workspace extends the existing PagosYa commerce platform with a bounded **Events / Ticketing / Facial Access** module. PagosYa remains the online-payment and hosted-storefront source of truth; Events owns inventory, admissions, attendance, and access decisions.
+
+Licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`).
+
+## PagosYa Events MVP
+
+Events is part of the existing PagosYa merchant experience—not a second product or payment stack. An organizer creates an event and ticket types, adds the native **Event Tickets** block to an existing PagosYa Store, sells through the incumbent `PaymentIntent` checkout, then manages cash sales, enrollment, access and capacity from the same merchant dashboard.
+
+```mermaid
+flowchart LR
+  BUYER[Comprador] --> STORE[PagosYa Store<br/>Event Tickets block]
+  STORE --> RES[Events reservation<br/>atomic inventory hold]
+  RES --> PAY[Existing PagosYa<br/>PaymentIntent + checkout]
+  PAY -->|trusted success transaction| ADM[Independent admissions]
+  CASH[Event cashier] --> ADM
+  ADM --> PERSON[Attendee + consent]
+  PERSON --> PROVIDER[AccessControlProvider]
+  PROVIDER --> MOCK[Mock / simulator]
+  PROVIDER -. official docs required .-> ZK[SpeedFace-V5]
+  MOCK --> POLICY[Atomic access policy]
+  ZK -. normalized event .-> POLICY
+  EDGE[Optional venue edge<br/>persistent replay queue] --> POLICY
+  POLICY --> PG[(PagosYa PostgreSQL<br/>business source of truth)]
+```
+
+Key boundaries:
+
+- Online money remains in PagosYa `PaymentIntent`, `Transaction`, ledger and webhook infrastructure. Events only references the successful payment.
+- The buyer and attendee are independent. A three-ticket payment creates three admissions that can be claimed by three people.
+- Payment, admission, assignment, biometric enrollment and presence have separate state machines.
+- The terminal recognizes; PagosYa authorizes. PostgreSQL decides admission validity, capacity, presence and anti-passback atomically.
+- No face model, image or template is implemented or logged. Application records contain consent and opaque provider/device references only.
+
+### Run the Events demo locally
+
+Node 20+, pnpm and PostgreSQL are required. The repository's embedded Postgres helper defaults to port `54329`.
+
+```bash
+pnpm install
+pnpm dev:db
+pnpm --filter @pagosya/api exec prisma migrate deploy
+pnpm --filter @pagosya/api run prisma:generate
+pnpm --filter @pagosya/api run seed
+
+# Terminal 1 — PagosYa API and OpenAPI
+PORT=3001 \
+ZKTECO_INTEGRATION_MODE=mock \
+EVENT_TOKEN_SECRET=replace-with-at-least-32-random-characters \
+pnpm --filter @pagosya/api run start:dev
+
+# Terminal 2 — hosted Store + existing checkout
+VITE_API_BASE_URL=http://localhost:3001/v1 \
+pnpm --filter @pagosya/checkout run dev -- --port 5175
+
+# Terminal 3 — existing merchant dashboard
+pnpm --filter @pagosya/merchant-dashboard run start
+```
+
+Open `http://localhost:4323`, set the API URL to `http://localhost:3001/v1` if needed, and sign in with one of the synthetic seed users:
+
+| Role | User | Password |
+|---|---|---|
+| Organization admin | `admin@demo.pagosya.bo` | `PayaDemo!2026` |
+| Event manager | `manager@demo.pagosya.bo` | `PayaDemo!2026` |
+| Cashier | `cashier@demo.pagosya.bo` | `PayaDemo!2026` |
+| Door staff | `doorstaff@demo.pagosya.bo` | `PayaDemo!2026` |
+| Promoter | `promoter@demo.pagosya.bo` | `PayaDemo!2026` |
+
+The seed creates **Noche Demo**, **Club Demo La Paz**, **Fiesta Demo** (capacity 900), General Bs 80, VIP Bs 150, a published `/s/noche-demo` Store with an Event Tickets block, staff memberships, a promoter allocation, simulated attendees and a bidirectional mock device. These credentials are development-only and the seed refuses production mode.
+
+In the dashboard choose **Events**. The tabs provide event setup, cashier/POS, facial registration, door state, device simulator and immutable audit history. The simulator invokes the same normalized ingestion and access service used by a future hardware adapter.
+
+To run the repeatable API/database acceptance flow:
+
+```bash
+API_BASE_URL=http://localhost:3001/v1 node scripts/verify-events-demo.mjs
+```
+
+It verifies a group cash sale, independent enrollment, entry, immediate anti-passback, exit, re-entry, two simultaneous readers, replay idempotency, Bs 240 reconciliation, online purchase through the existing PaymentIntent, three online admissions, invitation/claim, RBAC, privacy filtering and biometric deletion.
+
+### Optional venue edge
+
+`apps/edge` is a small executable Node process. It accepts only normalized device events, persists them to an owner-only local JSON queue, de-duplicates by `externalEventId`, retries with backoff, forwards an idempotency key, and reports queue lag.
+
+```bash
+pnpm --filter @pagosya/access-control run build
+pnpm --filter @pagosya/edge run build
+
+EDGE_PORT=3012 \
+EDGE_QUEUE_FILE=./data/edge-device-events.json \
+EDGE_CLOUD_EVENTS_URL=http://localhost:3001/v1/events/device-events \
+EDGE_CLOUD_TOKEN=dash_or_dedicated_service_token \
+EDGE_INGEST_TOKEN=local-lan-ingress-secret \
+pnpm --filter @pagosya/edge run start
+
+curl http://localhost:3012/health
+```
+
+Cloud authorization remains primary in this MVP. Provision a dedicated least-privilege edge identity and finish reviewed local roster/config caching before relying on offline authorization at a live venue.
+
+### Events environment variables
+
+| Variable | Purpose |
+|---|---|
+| `EVENT_TOKEN_SECRET` | HMAC key for management, claim and enrollment-token digests; required at 32+ characters in production. |
+| `ZKTECO_INTEGRATION_MODE` | `mock` is functional; `push`/`sdk` intentionally fail closed pending official documentation. |
+| `ZKTECO_DEVICE_HOST`, `ZKTECO_DEVICE_PORT` | Reserved real-adapter connection settings; unused by mock. |
+| `ZKTECO_USERNAME`, `ZKTECO_PASSWORD` | Reserved vendor credentials; inject through secrets management and never commit. |
+| `DEVICE_RAW_EVENT_RETENTION_HOURS` | Raw vendor payload retention policy; `0` by default. Normalized references are stored instead. |
+| `EDGE_PORT`, `EDGE_QUEUE_FILE`, `EDGE_FLUSH_INTERVAL_MS` | Venue edge listener, persistent queue and retry cadence. |
+| `EDGE_CLOUD_EVENTS_URL`, `EDGE_CLOUD_TOKEN` | Authenticated cloud ingestion target. |
+| `EDGE_INGEST_TOKEN` | Optional bearer protection for local edge ingestion. |
+
+See [`.env.example`](.env.example) for the full PagosYa configuration.
+
+### Verification
+
+```bash
+pnpm --filter @pagosya/api run build
+pnpm --filter @pagosya/api run test -- --runInBand src/events
+pnpm --filter @pagosya/checkout run build
+pnpm --filter @pagosya/access-control run test
+pnpm --filter @pagosya/access-control run build
+pnpm --filter @pagosya/edge run test
+pnpm --filter @pagosya/edge run build
+```
+
+Current status and intentionally deferred scope are tracked in [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md). The implementation/design decision record is [`docs/EVENTS_INTEGRATION_PLAN.md`](docs/EVENTS_INTEGRATION_PLAN.md).
+
+### SpeedFace-V5 and privacy limitation
+
+The repository contains no official SpeedFace-V5 SDK, PUSH, ADMS or protocol documentation. `ZKTecoSpeedFaceProvider` therefore contains no network requests, invented commands or guessed payloads and fails closed. Supply documentation for the exact model, regional variant and firmware before real adapter work; the required evidence and network questions are enumerated in [`docs/ZKTECO_INTEGRATION.md`](docs/ZKTECO_INTEGRATION.md).
+
+This implementation is privacy-by-design engineering, not a claim of legal compliance. Qualified Bolivian legal/privacy review is mandatory before launch. Review consent wording, retention, attendee rights, minors, vendor contracts, cross-border transfers and incident procedures in [`docs/PRIVACY_AND_COMPLIANCE.md`](docs/PRIVACY_AND_COMPLIANCE.md).
+
+### Events production checklist
+
+- Apply both Events migrations in staging, inspect legacy Event data, back up and test rollback/recovery.
+- Use TLS, strong session/cookie settings, production CORS allow-lists, rate limits and a real secret/KMS envelope for device credentials.
+- Replace demo users/passwords and provision least-privilege event and edge identities.
+- Complete legal review, approved Spanish consent copy, privacy impact assessment and staff training.
+- Add the scheduled retention/deletion worker, retries and deletion-failure alerts.
+- Complete promoter management/reporting and Event refund/void operator endpoints.
+- Load-test reservation expiry, high-rate door ingestion, capacity and multi-reader contention.
+- Run browser accessibility/mobile smoke tests and hardware-in-the-loop tests.
+- Do not enable `push` or `sdk` mode until the real adapter passes tests derived from official vendor documentation.
 
 Developer integrations are documented in [`docs/DEVELOPER_API.md`](docs/DEVELOPER_API.md). Interactive OpenAPI is enabled by default only outside production; production requires the explicit `EXPOSE_API_DOCS=true` opt-in.
 

@@ -2,6 +2,7 @@
   "name": "pagosya",
   "private": true,
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "engines": {
     "node": ">=20"
   },
@@ -17,6 +18,7 @@
     "demo:inventory-stock": "node examples/cafe-aroma/update-stock.mjs",
     "demo:inventory-sync": "node examples/cafe-aroma/sync-stock.mjs",
     "demo:subscriptions-sync": "node examples/cafe-aroma/sync-subscriptions.mjs",
+    "verify:events": "node scripts/verify-events-demo.mjs",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test"
   },

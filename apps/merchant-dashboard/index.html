@@ -3151,6 +3151,60 @@
     .operations-credential-field input { flex-basis: 100%; }
     .operations-credential-field button { flex: 1; }
   }
+  /* Events shares PagosYa's business-bento operating language. */
+  .events-workspace { display: grid; gap: 22px; }
+  .events-command { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 18px; align-items: end; padding: 22px; border: 3px solid var(--bento-keyline); background: var(--bento-violet); color: #09090b; box-shadow: 7px 7px 0 var(--bento-keyline); }
+  .events-command h2 { margin: 0; font-size: clamp(1.8rem,4vw,4.4rem); line-height: .92; letter-spacing: -.04em; text-transform: uppercase; }
+  .events-command p { max-width: 65ch; margin: 10px 0 0; font-weight: 800; }
+  .events-command-controls { display: flex; flex-wrap: wrap; gap: 9px; align-items: end; }
+  .events-command-controls label { min-width: 220px; font-size: .68rem; font-weight: 900; text-transform: uppercase; }
+  .events-command-controls select { margin-top: 6px; background: #fff; color: #09090b; }
+  .events-kpis { display: grid; grid-template-columns: 1.35fr repeat(3,minmax(0,1fr)); gap: 0; border: 3px solid var(--bento-keyline); box-shadow: 7px 7px 0 var(--bento-keyline); }
+  .events-kpi { min-height: 132px; padding: 18px; border-right: 3px solid var(--bento-keyline); background: var(--pg-surface); }
+  .events-kpi:last-child { border-right: 0; }
+  .events-kpi.capacity { background: var(--bento-green); color: #09090b; }
+  .events-kpi span, .events-kpi strong { display: block; }
+  .events-kpi span { font-size: .65rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+  .events-kpi strong { margin-top: 18px; font-size: clamp(1.8rem,3vw,3.5rem); line-height: .9; font-variant-numeric: tabular-nums; }
+  .events-kpi small { display: block; margin-top: 8px; font-weight: 800; }
+  .events-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 3px 3px 7px; scrollbar-width: thin; }
+  .events-tab { min-height: 44px; white-space: nowrap; }
+  .events-tab[aria-selected="true"] { background: var(--pg-primary); color: var(--pg-primary-text); }
+  .events-pane { display: grid; gap: 18px; }
+  .events-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+  .events-panel { min-width: 0; padding: 20px; border: 3px solid var(--bento-keyline); background: var(--pg-surface); box-shadow: 6px 6px 0 var(--bento-keyline); }
+  .events-panel.is-yellow { background: var(--bento-yellow); color: #09090b; }
+  .events-panel.is-blue { background: var(--bento-blue); color: #09090b; }
+  .events-panel h3 { margin: 0; font-size: 1.15rem; text-transform: uppercase; }
+  .events-panel > p { max-width: 65ch; margin: 7px 0 18px; }
+  .events-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .events-form .wide { grid-column: 1/-1; }
+  .events-form label { display: grid; gap: 6px; min-width: 0; font-size: .67rem; font-weight: 900; text-transform: uppercase; }
+  .events-form button { align-self: end; }
+  .events-list { display: grid; gap: 8px; }
+  .events-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; padding: 13px; border: 2px solid var(--bento-keyline); background: var(--pg-bg); }
+  .events-row strong, .events-row span, .events-row small { display: block; overflow-wrap: anywhere; }
+  .events-row span, .events-row small { margin-top: 4px; color: var(--pg-text-muted); font-size: .68rem; }
+  .events-access-state { display: grid; min-height: 240px; place-items: center; padding: 28px; border: 4px solid var(--bento-keyline); background: var(--pg-surface); text-align: center; }
+  .events-access-state.is-allowed { background: var(--bento-green); color: #09090b; }
+  .events-access-state.is-denied { background: var(--bento-red); color: #09090b; }
+  .events-access-state strong { display: block; font-size: clamp(2.4rem,6vw,6rem); line-height: .9; letter-spacing: -.04em; }
+  .events-access-state span { display: block; margin-top: 14px; font-size: 1rem; font-weight: 900; }
+  .events-setup[hidden], .events-pane[hidden] { display: none !important; }
+  .events-notice { min-height: 1.5em; margin: 0; font-size: .72rem; font-weight: 850; }
+  .events-notice.is-error { color: var(--pg-error); }
+  @media (max-width: 980px) {
+    .events-command, .events-grid { grid-template-columns: 1fr; }
+    .events-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .events-kpi:nth-child(2) { border-right: 0; }
+    .events-kpi:nth-child(-n+2) { border-bottom: 3px solid var(--bento-keyline); }
+  }
+  @media (max-width: 620px) {
+    .events-kpis, .events-form { grid-template-columns: 1fr; }
+    .events-kpi { border-right: 0; border-bottom: 3px solid var(--bento-keyline); }
+    .events-kpi:last-child { border-bottom: 0; }
+    .events-command-controls, .events-command-controls label { width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -3327,6 +3381,7 @@
           <a class="dashboard-nav-button" href="#dashboard-appearance" data-dashboard-view="appearance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Apariencia</a>
           <span class="dashboard-nav-label" style="padding-top:12px">Operaciones</span>
           <a class="dashboard-nav-button" href="#dashboard-operations" data-dashboard-view="operations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M17 13v8M13 17h8"/></svg></span>Centro operativo</a>
+          <a class="dashboard-nav-button" href="#dashboard-events" data-dashboard-view="events"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v3M19 3v3M4 8h16M5 5h14a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2z"/><path d="M8 12h3v3H8zM14 12h2M14 16h3"/></svg></span>Eventos</a>
           <a class="dashboard-nav-button" href="#dashboard-charge-links" data-dashboard-view="charge-links"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg></span>Link de cobro</a>
           <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
           <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
@@ -4831,6 +4886,45 @@
         </div>
 
       </div>
+    </section>
+
+    <section class="block events-workspace" id="eventsSection" data-dashboard-page="events">
+      <header class="events-command">
+        <div><h2>Eventos y acceso</h2><p>Vende con PagosYa, registra cada rostro en el evento y controla el aforo sin entradas transferibles.</p></div>
+        <div class="events-command-controls"><label for="eventsEventSelect">Evento<select id="eventsEventSelect"><option value="">Selecciona un evento</option></select></label><button class="secondary" id="eventsRefresh" type="button">Actualizar</button><button class="primary" id="eventsShowCreate" type="button">Crear evento</button></div>
+      </header>
+      <p class="events-notice" id="eventsNotice" role="status" aria-live="polite"></p>
+
+      <section class="events-setup events-grid" id="eventsSetup" hidden>
+        <form class="events-panel events-form" id="eventsVenueForm"><div class="wide"><h3>Primero, el lugar</h3><p>El dispositivo y el aforo se organizan por venue.</p></div><label class="wide">Nombre<input name="name" required maxlength="120" placeholder="Club Demo La Paz"></label><label>Ciudad<input name="city" value="La Paz"></label><label>Capacidad<input name="capacity" type="number" min="1" value="900"></label><button class="primary wide" type="submit">Guardar lugar</button></form>
+        <form class="events-panel events-form" id="eventsCreateForm"><div class="wide"><h3>Crear evento</h3><p>Las fechas se guardan con la zona America/La_Paz.</p></div><label class="wide">Lugar<select name="venueId" id="eventsVenueSelect" required></select></label><label class="wide">Nombre<input name="name" required maxlength="140" placeholder="Fiesta Demo"></label><label>Apertura<input name="doorsOpenAt" type="datetime-local" required></label><label>Inicio<input name="startsAt" type="datetime-local" required></label><label>Fin<input name="endsAt" type="datetime-local" required></label><label>Capacidad<input name="capacity" type="number" min="1" value="900" required></label><label><span>Reingreso</span><select name="allowReentry"><option value="true">Permitido</option><option value="false">No permitido</option></select></label><label><span>Acceso biométrico</span><select name="biometricRequired"><option value="true">Requerido</option><option value="false">No requerido</option></select></label><button class="primary wide" type="submit">Crear evento</button></form>
+      </section>
+
+      <div class="events-kpis" id="eventsKpis" hidden>
+        <article class="events-kpi capacity"><span>Aforo ahora</span><strong id="eventsInside">0 / 0</strong><small id="eventsRemaining">0 disponibles</small></article>
+        <article class="events-kpi"><span>Entradas</span><strong id="eventsAdmissions">0</strong><small>emitidas</small></article>
+        <article class="events-kpi"><span>Ingresos</span><strong id="eventsRevenue">Bs 0</strong><small>online + puerta</small></article>
+        <article class="events-kpi"><span>Denegados</span><strong id="eventsDenied">0</strong><small>intentos auditados</small></article>
+      </div>
+
+      <div class="events-tabs" id="eventsTabs" role="tablist" aria-label="Operación del evento" hidden>
+        <button class="events-tab" type="button" role="tab" aria-selected="true" data-events-tab="overview">Resumen</button><button class="events-tab" type="button" role="tab" aria-selected="false" data-events-tab="cashier">Caja</button><button class="events-tab" type="button" role="tab" aria-selected="false" data-events-tab="enrollment">Registro facial</button><button class="events-tab" type="button" role="tab" aria-selected="false" data-events-tab="door">Puerta</button><button class="events-tab" type="button" role="tab" aria-selected="false" data-events-tab="simulator">Simulador</button><button class="events-tab" type="button" role="tab" aria-selected="false" data-events-tab="audit">Auditoría</button>
+      </div>
+
+      <section class="events-pane" data-events-pane="overview" id="eventsOverview" hidden>
+        <div class="events-grid"><form class="events-panel events-form" id="eventsTicketForm"><div class="wide"><h3>Tipo de entrada</h3><p>Los montos se envían al checkout existente de PagosYa.</p></div><label>Tipo<select name="kind"><option>GENERAL</option><option>VIP</option><option>EARLY_BIRD</option><option>TABLE</option><option>GUEST</option><option>STAFF</option><option>CUSTOM</option></select></label><label>Nombre<input name="name" required placeholder="General"></label><label>Precio (Bs)<input name="price" type="number" min="0" step="0.01" value="80" required></label><label>Inventario<input name="inventory" type="number" min="1" value="600" required></label><button class="primary wide" type="submit">Agregar tipo</button></form><div class="events-panel"><h3>Entradas disponibles</h3><p>Inventario reservado y vendido se controla en el servidor.</p><div class="events-list" id="eventsTicketList"></div></div></div>
+        <div class="events-grid"><form class="events-panel events-form is-blue" id="eventsLandingPageForm"><div class="wide"><h3>Vender en tu página PagosYa</h3><p>Añade el bloque Event Tickets al builder existente. La reserva usa el checkout y PaymentIntent actuales.</p></div><label class="wide">Página<select name="storeId" id="eventsStoreSelect" required></select></label><button class="primary wide" type="submit">Añadir bloque Event Tickets</button></form><div class="events-panel"><h3>Actividad reciente</h3><p>El aforo se deriva de presencia, nunca de un contador del navegador.</p><div class="events-list" id="eventsRecentList"></div></div></div>
+      </section>
+
+      <section class="events-pane" data-events-pane="cashier" hidden><div class="events-grid"><form class="events-panel events-form is-yellow" id="eventsShiftForm"><div class="wide"><h3>Turno de caja</h3><p>Abre un turno antes de cobrar en efectivo.</p></div><label class="wide">Fondo inicial (Bs)<input name="openingFloat" type="number" min="0" step="0.01" value="0"></label><button class="primary" type="submit">Abrir turno</button><button class="secondary" id="eventsCloseShift" type="button">Cerrar turno</button><p class="events-notice wide" id="eventsShiftState">Sin turno abierto.</p></form><form class="events-panel events-form" id="eventsCashSaleForm"><div class="wide"><h3>Cobrar en puerta</h3><p>Un grupo genera una admisión y un registro facial por persona.</p></div><label class="wide">Entrada<select name="ticketTypeId" id="eventsCashTicket" required></select></label><label>Cantidad<input name="quantity" type="number" min="1" max="20" value="1" required></label><label>Pago<select name="paymentMethod"><option value="CASH">Efectivo</option><option value="QR_PAYMENT">QR / otro</option></select></label><button class="primary wide" type="submit">Cobrar</button></form></div><div class="events-panel"><h3>Pago registrado</h3><p>Cada código es temporal, de un solo uso y no contiene datos biométricos.</p><div class="events-list" id="eventsSaleResult"></div></div></section>
+
+      <section class="events-pane" data-events-pane="enrollment" hidden><div class="events-grid"><form class="events-panel events-form is-blue" id="eventsEnrollmentForm"><div class="wide"><h3>Registrar rostro</h3><p>El consentimiento explícito se registra antes de asociar el identificador del dispositivo.</p></div><label class="wide">Admisión<select name="admissionId" id="eventsEnrollmentAdmission" required></select></label><label class="wide">Dispositivo<select name="deviceId" id="eventsEnrollmentDevice" required></select></label><label class="wide">Nombre visible<input name="displayName" required maxlength="100" placeholder="Invitado 1"></label><label class="wide"><span>Consentimiento</span><select name="consent" required><option value="true">Sí, consentimiento explícito confirmado</option></select></label><button class="primary wide" type="submit">Registrar en simulador</button></form><div class="events-panel"><h3>Estado de inscripciones</h3><p>El personal ve estado operativo, no plantillas ni imágenes.</p><div class="events-list" id="eventsAdmissionList"></div></div></div></section>
+
+      <section class="events-pane" data-events-pane="door" hidden><div class="events-access-state" id="eventsAccessState"><div><strong>LISTO</strong><span>Esperando reconocimiento facial</span></div></div><div class="events-panel"><h3>Eventos recientes</h3><div class="events-list" id="eventsDoorRecent"></div></div></section>
+
+      <section class="events-pane" data-events-pane="simulator" hidden><div class="events-grid"><form class="events-panel events-form" id="eventsDeviceForm"><div class="wide"><h3>Dispositivo simulado</h3><p>Usa el mismo contrato que el futuro SpeedFace-V5.</p></div><label class="wide">Nombre<input name="name" required value="Puerta principal"></label><label>Rol<select name="role"><option value="ENTRY">Entrada</option><option value="EXIT">Salida</option><option value="BIDIRECTIONAL">Bidireccional</option><option value="ENROLLMENT">Registro</option></select></label><label>Modelo<input value="Simulator" disabled></label><button class="primary wide" type="submit">Agregar dispositivo</button></form><form class="events-panel events-form" id="eventsSimulatorForm"><div class="wide"><h3>Enviar evento</h3><p>El backend procesa presencia, capacidad e idempotencia.</p></div><label class="wide">Dispositivo<select name="deviceId" id="eventsSimulatorDevice" required></select></label><label class="wide">Asistente<select name="attendeeId" id="eventsSimulatorAttendee"></select></label><div class="wide events-tabs"><button type="submit" name="action" value="FACE_RECOGNIZED_ENTRY">Entrada</button><button type="submit" name="action" value="FACE_RECOGNIZED_EXIT">Salida</button><button type="submit" name="action" value="DUPLICATE_ENTRY">Duplicada</button><button type="submit" name="action" value="UNKNOWN_FACE">Desconocido</button><button type="submit" name="action" value="SPOOF_ATTEMPT">Spoof</button><button type="submit" name="action" value="DEVICE_OFFLINE">Offline</button><button type="submit" name="action" value="DEVICE_ONLINE">Online</button></div></form></div></section>
+
+      <section class="events-pane" data-events-pane="audit" hidden><div class="events-panel"><h3>Auditoría inmutable</h3><p>Ventas, registro facial, acceso manual, dispositivos y conciliación dejan evidencia.</p><div class="events-list" id="eventsAuditList"></div></div></section>
     </section>
 
     <section class="block" id="paymentsSection" data-dashboard-page="payments">
@@ -6588,6 +6682,7 @@
     products: ["Productos", "Gestiona productos, precios, inventario y enlaces de pago."],
     appearance: ["Apariencia", "Personaliza la identidad visual y revisa los cambios en vivo."],
     operations: ["Centro operativo", "Coordina clientes, inventario, agenda, entregas, caja y conexiones externas."],
+    events: ["Eventos", "Vende entradas, registra asistentes y controla acceso y aforo en una sola operación."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
@@ -6638,6 +6733,7 @@
       requestAnimationFrame(() => renderAnimalAdventure(lastAdventureState.currentXP, { animate: false, commerce: lastAdventureCommerceState }));
     }
     if (nextView === "operations" && currentStoreId) loadOperationsHub().catch(showOperationsError);
+    if (nextView === "events" && sessionToken) loadEventsWorkspace().catch(showEventsError);
   }
 
   document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
@@ -16810,6 +16906,155 @@
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     }
+  });
+
+  let eventsCatalog = [];
+  let eventsVenues = [];
+  let eventsDashboardState = null;
+  let eventsOperationsState = null;
+  let currentEventId = "";
+  let currentEventShiftId = "";
+
+  function showEventsError(error) {
+    const notice = document.getElementById("eventsNotice");
+    notice.textContent = `No se pudo completar la operación: ${error.message}`;
+    notice.classList.add("is-error");
+  }
+
+  function eventsMessage(message) {
+    const notice = document.getElementById("eventsNotice");
+    notice.textContent = message;
+    notice.classList.remove("is-error");
+  }
+
+  function eventDate(value) {
+    return value ? new Intl.DateTimeFormat("es-BO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/La_Paz" }).format(new Date(value)) : "—";
+  }
+
+  function setEventsPane(name) {
+    document.querySelectorAll("[data-events-tab]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.eventsTab === name)));
+    document.querySelectorAll("[data-events-pane]").forEach((pane) => { pane.hidden = pane.dataset.eventsPane !== name; });
+  }
+
+  document.querySelectorAll("[data-events-tab]").forEach((button) => button.addEventListener("click", () => setEventsPane(button.dataset.eventsTab)));
+  document.querySelector('#eventsDeviceForm select[name="role"]').value = "BIDIRECTIONAL";
+
+  function renderEventsWorkspace() {
+    const select = document.getElementById("eventsEventSelect");
+    select.innerHTML = '<option value="">Selecciona un evento</option>' + eventsCatalog.map((event) => `<option value="${esc(event.id)}">${esc(event.name)} · ${esc(eventDate(event.startsAt))}</option>`).join("");
+    if (currentEventId && eventsCatalog.some((event) => event.id === currentEventId)) select.value = currentEventId;
+    document.getElementById("eventsVenueSelect").innerHTML = eventsVenues.map((venue) => `<option value="${esc(venue.id)}">${esc(venue.name)} · ${esc(venue.city)}</option>`).join("") || '<option value="">Crea un lugar primero</option>';
+    document.getElementById("eventsStoreSelect").innerHTML = lastStores.filter((store) => (store.checkoutMode || "payment") === "payment").map((store) => `<option value="${esc(store.id)}">${esc(store.name)}</option>`).join("") || '<option value="">Crea una página con pagos primero</option>';
+    const hasEvent = Boolean(currentEventId && eventsDashboardState);
+    document.getElementById("eventsSetup").hidden = hasEvent;
+    document.getElementById("eventsKpis").hidden = !hasEvent;
+    document.getElementById("eventsTabs").hidden = !hasEvent;
+    document.querySelectorAll("[data-events-pane]").forEach((pane) => { if (!hasEvent) pane.hidden = true; });
+    if (!hasEvent) return;
+    setEventsPane(document.querySelector('[data-events-tab][aria-selected="true"]')?.dataset.eventsTab || "overview");
+    const dashboard = eventsDashboardState;
+    const operations = eventsOperationsState || { admissions: [], shifts: [], audit: [] };
+    document.getElementById("eventsInside").textContent = `${dashboard.capacity.inside} / ${dashboard.capacity.capacity}`;
+    document.getElementById("eventsRemaining").textContent = `${dashboard.capacity.remaining} disponibles`;
+    document.getElementById("eventsAdmissions").textContent = String(dashboard.sales.admissions);
+    document.getElementById("eventsRevenue").textContent = money(dashboard.sales.revenue);
+    document.getElementById("eventsDenied").textContent = String(dashboard.deniedAttempts);
+    document.getElementById("eventsTicketList").innerHTML = dashboard.ticketTypes.map((ticket) => `<article class="events-row"><div><strong>${esc(ticket.name)}</strong><span>${money(ticket.price)} · ${ticket.soldQuantity} vendidas · ${ticket.reservedQuantity} reservadas</span></div><small>${Math.max(0,ticket.inventory-ticket.soldQuantity-ticket.reservedQuantity)} libres</small></article>`).join("") || '<p class="muted">Agrega General, VIP u otro tipo para comenzar.</p>';
+    const ticketOptions = dashboard.ticketTypes.map((ticket) => `<option value="${esc(ticket.id)}">${esc(ticket.name)} · ${money(ticket.price)}</option>`).join("");
+    document.getElementById("eventsCashTicket").innerHTML = ticketOptions || '<option value="">Sin tipos disponibles</option>';
+    const deviceOptions = dashboard.devices.map((device) => `<option value="${esc(device.id)}">${esc(device.name)} · ${esc(device.role)} · ${esc(device.status)}</option>`).join("");
+    document.getElementById("eventsEnrollmentDevice").innerHTML = dashboard.devices.filter((device) => ["ENROLLMENT","BIDIRECTIONAL"].includes(device.role)).map((device) => `<option value="${esc(device.id)}">${esc(device.name)}</option>`).join("") || '<option value="">Agrega un dispositivo de registro</option>';
+    document.getElementById("eventsSimulatorDevice").innerHTML = deviceOptions || '<option value="">Agrega un dispositivo</option>';
+    document.getElementById("eventsEnrollmentAdmission").innerHTML = operations.admissions.filter((admission) => admission.biometricEnrollmentStatus !== "ENROLLED").map((admission) => `<option value="${esc(admission.id)}">${esc(admission.code)} · ${esc(admission.ticketType.name)}</option>`).join("") || '<option value="">No hay registros pendientes</option>';
+    document.getElementById("eventsSimulatorAttendee").innerHTML = '<option value="">Sin persona / desconocido</option>' + operations.admissions.filter((admission) => admission.attendee).map((admission) => `<option value="${esc(admission.attendee.id)}">${esc(admission.attendee.displayName)} · ${esc(admission.ticketType.name)}</option>`).join("");
+    document.getElementById("eventsAdmissionList").innerHTML = operations.admissions.map((admission) => `<article class="events-row"><div><strong>${esc(admission.attendee?.displayName || admission.code)}</strong><span>${esc(admission.ticketType.name)} · ${esc(admission.biometricEnrollmentStatus)} · ${esc(admission.presenceStatus)}</span></div><small>${esc(admission.assignmentStatus)}</small></article>`).join("") || '<p class="muted">Las admisiones aparecerán después de una venta.</p>';
+    const recentHtml = dashboard.recentEvents.map((event) => `<article class="events-row"><div><strong>${esc(event.attendee.displayName)}</strong><span>${esc(event.admission.ticketType.name)} · ${esc(event.direction)}</span></div><small>${esc(eventDate(event.occurredAt))}</small></article>`).join("") || '<p class="muted">Aún no se registraron entradas o salidas.</p>';
+    document.getElementById("eventsRecentList").innerHTML = recentHtml;
+    document.getElementById("eventsDoorRecent").innerHTML = recentHtml;
+    document.getElementById("eventsAuditList").innerHTML = operations.audit.map((entry) => `<article class="events-row"><div><strong>${esc(entry.action.replaceAll("_"," "))}</strong><span>${esc(entry.entityType)} · ${esc(entry.entityId)}</span></div><small>${esc(eventDate(entry.createdAt))}</small></article>`).join("") || '<p class="muted">La auditoría se llenará con la operación.</p>';
+    const openShift = operations.shifts.find((shift) => !shift.closedAt);
+    currentEventShiftId = openShift?.id || currentEventShiftId;
+    document.getElementById("eventsShiftState").textContent = openShift ? `Turno abierto desde ${eventDate(openShift.openedAt)}.` : "Sin turno abierto.";
+  }
+
+  async function loadEventDetail(eventId) {
+    if (!eventId) { currentEventId = ""; eventsDashboardState = null; eventsOperationsState = null; renderEventsWorkspace(); return; }
+    currentEventId = eventId;
+    [eventsDashboardState, eventsOperationsState] = await Promise.all([api(`/events/${eventId}/dashboard`), api(`/events/${eventId}/operations`)]);
+    renderEventsWorkspace();
+  }
+
+  async function loadEventsWorkspace() {
+    [eventsCatalog, eventsVenues] = await Promise.all([api("/events"), api("/events/venues")]);
+    if (!currentEventId && eventsCatalog.length) currentEventId = eventsCatalog[0].id;
+    if (currentEventId) await loadEventDetail(currentEventId); else renderEventsWorkspace();
+  }
+
+  document.getElementById("eventsEventSelect").addEventListener("change", (event) => loadEventDetail(event.target.value).catch(showEventsError));
+  document.getElementById("eventsRefresh").addEventListener("click", () => loadEventsWorkspace().then(() => eventsMessage("Eventos actualizados.")).catch(showEventsError));
+  document.getElementById("eventsShowCreate").addEventListener("click", () => { currentEventId = ""; eventsDashboardState = null; renderEventsWorkspace(); document.getElementById("eventsSetup").hidden = false; });
+
+  document.getElementById("eventsVenueForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    try { await api("/events/venues", { method: "POST", body: JSON.stringify({ name: form.get("name"), city: form.get("city"), capacity: Number(form.get("capacity")) }) }); await loadEventsWorkspace(); eventsMessage("Lugar guardado. Ya puedes crear el evento."); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsCreateForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget); const iso = (name) => new Date(String(form.get(name))).toISOString();
+    try { const created = await api("/events", { method: "POST", body: JSON.stringify({ venueId: form.get("venueId"), name: form.get("name"), doorsOpenAt: iso("doorsOpenAt"), startsAt: iso("startsAt"), endsAt: iso("endsAt"), capacity: Number(form.get("capacity")), allowReentry: form.get("allowReentry") === "true", biometricRequired: form.get("biometricRequired") === "true", status: "ACTIVE" }) }); await loadEventsWorkspace(); await loadEventDetail(created.id); eventsMessage("Evento creado. Agrega los tipos de entrada."); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsTicketForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    try { await api(`/events/${currentEventId}/ticket-types`, { method: "POST", body: JSON.stringify({ kind: form.get("kind"), name: form.get("name"), price: Math.round(Number(form.get("price"))*100), inventory: Number(form.get("inventory")), currency: "BOB", reentryAllowed: true }) }); event.currentTarget.reset(); await loadEventDetail(currentEventId); eventsMessage("Tipo de entrada agregado."); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsLandingPageForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    try { const result = await api(`/events/${currentEventId}/landing-page-block`, { method: "POST", body: JSON.stringify({ storeId: form.get("storeId") }) }); eventsMessage(`Bloque agregado a la página. Publica o previsualiza /s/${result.storeSlug}.`); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsShiftForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    try { const shift = await api("/events/cash-shifts/open", { method: "POST", body: JSON.stringify({ eventId: currentEventId, openingFloat: Math.round(Number(form.get("openingFloat"))*100) }) }); currentEventShiftId = shift.id; await loadEventDetail(currentEventId); eventsMessage("Turno de caja abierto."); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsCloseShift").addEventListener("click", async () => {
+    if (!currentEventShiftId) return showEventsError(new Error("Abre un turno antes de cerrarlo."));
+    const declared = window.prompt("Efectivo declarado al cerrar (Bs)", "0"); if (declared === null) return;
+    try { const shift = await api(`/events/cash-shifts/${currentEventShiftId}/close`, { method: "POST", body: JSON.stringify({ declaredCash: Math.round(Number(declared)*100) }) }); currentEventShiftId = ""; await loadEventDetail(currentEventId); eventsMessage(`Turno cerrado. Esperado ${money(shift.expectedCash)} · diferencia ${money(shift.difference)}.`); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsCashSaleForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); if (!currentEventShiftId) return showEventsError(new Error("Abre un turno de caja antes de cobrar.")); const form = new FormData(event.currentTarget);
+    try { const result = await api(`/events/${currentEventId}/orders/cash`, { method: "POST", body: JSON.stringify({ cashShiftId: currentEventShiftId, paymentMethod: form.get("paymentMethod"), items: [{ ticketTypeId: form.get("ticketTypeId"), quantity: Number(form.get("quantity")) }] }) }); document.getElementById("eventsSaleResult").innerHTML = result.admissions.map((admission,index) => `<article class="events-row"><div><strong>Persona ${index+1} · ${esc(admission.admissionCode)}</strong><span>Código de registro facial: ${esc(admission.enrollmentCode)}</span></div><button type="button" data-enroll-admission="${esc(admission.admissionId)}">Registrar</button></article>`).join(""); await loadEventDetail(currentEventId); eventsMessage(`${result.message}. ${result.admissions.length} admisiones independientes creadas.`); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsSaleResult").addEventListener("click", (event) => { const button = event.target.closest("[data-enroll-admission]"); if (!button) return; document.getElementById("eventsEnrollmentAdmission").value = button.dataset.enrollAdmission; setEventsPane("enrollment"); });
+
+  document.getElementById("eventsEnrollmentForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget); const admissionId = String(form.get("admissionId"));
+    try { const session = await api(`/events/admissions/${admissionId}/enrollment-session`, { method: "POST", body: JSON.stringify({ deviceId: form.get("deviceId") }) }); await fetch(apiBaseEl.value.replace(/\/$/,"") + `/events/public/enrollment-sessions/${session.id}/complete`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: session.code, deviceId: form.get("deviceId"), displayName: form.get("displayName"), consent: true, consentVersion: "events-biometric-v1" }) }).then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.message || response.statusText); return body; }); await loadEventDetail(currentEventId); eventsMessage("Rostro simulado registrado. La admisión ya puede entrar."); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsDeviceForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget); const current = eventsCatalog.find((item) => item.id === currentEventId);
+    try { await api("/events/devices", { method: "POST", body: JSON.stringify({ venueId: current.venueId, eventId: currentEventId, name: form.get("name"), role: form.get("role"), vendor: "Mock", model: "Simulator" }) }); await loadEventDetail(currentEventId); eventsMessage("Dispositivo simulado agregado."); }
+    catch (error) { showEventsError(error); }
+  });
+
+  document.getElementById("eventsSimulatorForm").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = new FormData(event.currentTarget); const action = event.submitter?.value;
+    try { const result = await api("/events/dev/device-simulator", { method: "POST", body: JSON.stringify({ deviceId: form.get("deviceId"), attendeeId: form.get("attendeeId") || undefined, action }) }); const decision = result.second || result; const state = document.getElementById("eventsAccessState"); state.className = `events-access-state ${decision.decision === "ALLOW" ? "is-allowed" : "is-denied"}`; state.innerHTML = `<div><strong>${decision.decision === "ALLOW" ? "AUTORIZADO" : "DENEGADO"}</strong><span>${esc(decision.reason || decision.presenceStatus || action)}</span></div>`; await loadEventDetail(currentEventId); setEventsPane("door"); }
+    catch (error) { showEventsError(error); }
   });
 
   if (sessionToken) {

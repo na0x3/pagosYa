@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { PrismaClient, ApiKeyMode, ApiKeyType, KycStatus, SettlementMode } from "@prisma/client";
+import { PrismaClient, ApiKeyMode, ApiKeyType, EventStaffRole, EventStatus, KycStatus, MerchantStatus, SettlementMode, TicketTypeKind } from "@prisma/client";
+import * as argon2 from "argon2";
 import { ApiKeyService } from "../src/auth/api-key.service";
 import { KycService } from "../src/merchants/kyc.service";
 import { MerchantsService } from "../src/merchants/merchants.service";
@@ -8,6 +9,7 @@ import { AuditLogService } from "../src/ops/audit-log.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 
 async function main() {
+  if (process.env.NODE_ENV === "production") throw new Error("The development seed must never run in production");
   const prisma = new PrismaClient();
   const apiKeys = new ApiKeyService(prisma as unknown as PrismaService);
   const auditLog = new AuditLogService(prisma as unknown as PrismaService);
@@ -76,6 +78,111 @@ async function main() {
       console.log(`  kyc:             not submitted (status: ${merchant.status})`);
     }
   }
+
+  const demoMerchant = await prisma.merchant.upsert({
+    where: { email: "eventos-demo@pagosya.bo" },
+    update: { name: "Noche Demo", status: MerchantStatus.ACTIVE },
+    create: { name: "Noche Demo", email: "eventos-demo@pagosya.bo", status: MerchantStatus.ACTIVE, settlementMode: SettlementMode.AGGREGATOR },
+  });
+  const demoPassword = "PayaDemo!2026";
+  const hashedPassword = await argon2.hash(demoPassword);
+  const demoRoles = [
+    ["admin", EventStaffRole.ORGANIZATION_ADMIN], ["manager", EventStaffRole.EVENT_MANAGER],
+    ["cashier", EventStaffRole.CASHIER], ["doorstaff", EventStaffRole.DOOR_STAFF], ["promoter", EventStaffRole.PROMOTER],
+  ] as const;
+  const demoUsers = new Map<EventStaffRole, { id: string }>();
+  for (const [label, role] of demoRoles) {
+    const email = `${label}@demo.pagosya.bo`;
+    const user = await prisma.merchantUser.upsert({
+      where: { email },
+      update: { merchantId: demoMerchant.id, deletedAt: null, emailVerifiedAt: new Date() },
+      create: { merchantId: demoMerchant.id, email, hashedPassword, emailVerifiedAt: new Date() },
+    });
+    demoUsers.set(role, user);
+  }
+  const venue = await prisma.venue.findFirst({ where: { merchantId: demoMerchant.id, name: "Club Demo La Paz" } })
+    ?? await prisma.venue.create({ data: { merchantId: demoMerchant.id, name: "Club Demo La Paz", city: "La Paz", capacity: 900 } });
+  const store = await prisma.store.upsert({
+    where: { slug: "noche-demo" },
+    update: { merchantId: demoMerchant.id, name: "Noche Demo", checkoutMode: "payment" },
+    create: { merchantId: demoMerchant.id, slug: "noche-demo", name: "Noche Demo", tagline: "Entradas y experiencias en La Paz", checkoutMode: "payment" },
+  });
+  const now = Date.now();
+  const event = await prisma.event.upsert({
+    where: { slug: "fiesta-demo" },
+    update: { merchantId: demoMerchant.id, storeId: store.id, venueId: venue.id, venueName: venue.name, name: "Fiesta Demo", doorsOpenAt: new Date(now - 60 * 60_000), startsAt: new Date(now), endsAt: new Date(now + 8 * 60 * 60_000), capacity: 900, status: EventStatus.ACTIVE, onlineSalesEnabled: true, salesAtDoorEnabled: true },
+    create: { merchantId: demoMerchant.id, storeId: store.id, venueId: venue.id, venueName: venue.name, slug: "fiesta-demo", name: "Fiesta Demo", publicityImageUrl: "", doorsOpenAt: new Date(now - 60 * 60_000), startsAt: new Date(now), endsAt: new Date(now + 8 * 60 * 60_000), capacity: 900, status: EventStatus.ACTIVE, onlineSalesEnabled: true, salesAtDoorEnabled: true },
+  });
+  const general = await prisma.ticketType.upsert({
+    where: { eventId_name: { eventId: event.id, name: "General" } },
+    update: { kind: TicketTypeKind.GENERAL, price: 8000, inventory: 600, currency: "BOB", sortOrder: 0, active: true },
+    create: { eventId: event.id, kind: TicketTypeKind.GENERAL, name: "General", price: 8000, inventory: 600, currency: "BOB", sortOrder: 0 },
+  });
+  await prisma.ticketType.upsert({
+    where: { eventId_name: { eventId: event.id, name: "VIP" } },
+    update: { kind: TicketTypeKind.VIP, price: 15000, inventory: 100, currency: "BOB", sortOrder: 1, active: true },
+    create: { eventId: event.id, kind: TicketTypeKind.VIP, name: "VIP", price: 15000, inventory: 100, currency: "BOB", sortOrder: 1 },
+  });
+  for (const [, role] of demoRoles) {
+    const user = demoUsers.get(role)!;
+    await prisma.eventStaffMembership.upsert({
+      where: { eventId_merchantUserId_role: { eventId: event.id, merchantUserId: user.id, role } },
+      update: { revokedAt: null },
+      create: { merchantId: demoMerchant.id, eventId: event.id, merchantUserId: user.id, role },
+    });
+  }
+  const promoterUser = demoUsers.get(EventStaffRole.PROMOTER)!;
+  await prisma.promoterProfile.upsert({ where: { merchantUserId: promoterUser.id }, update: { displayName: "Promotor Demo" }, create: { merchantUserId: promoterUser.id, displayName: "Promotor Demo" } });
+  const demoDevice = await prisma.accessDevice.upsert({
+    where: { merchantId_serialNumber: { merchantId: demoMerchant.id, serialNumber: "MOCK-NOCHE-DEMO-01" } },
+    update: { eventId: event.id, venueId: venue.id, status: "ONLINE", role: "BIDIRECTIONAL" },
+    create: { merchantId: demoMerchant.id, venueId: venue.id, eventId: event.id, name: "SpeedFace simulado", vendor: "Mock", model: "Simulator", serialNumber: "MOCK-NOCHE-DEMO-01", status: "ONLINE", role: "BIDIRECTIONAL" },
+  });
+  const siteDocument = {
+    version: 1, direction: "Noche Demo", theme: { pageBackground: "#0b0b0f", textColor: "#f8fafc", accentColor: "#b6ff5c", secondaryColor: "#8b5cf6", surfaceColor: "#17171d", mutedColor: "#a1a1aa", borderColor: "#f8fafc", headingFont: "grotesk", bodyFont: "mono", radius: 10, shadow: "none", productLayout: "gallery", displayScale: "dramatic", density: "airy", imageTreatment: "cinematic" },
+    navigation: { layout: "brand-left", sticky: true, transparent: false, logoTreatment: "wordmark" }, motion: { intensity: "restrained" }, merchandising: { featuredProductIds: [], productOrderIds: [], spotlightLayout: "collection", showDescriptions: true }, experience: { type: "none", placement: "after-catalog", title: "", body: "", mediaUrls: [] },
+    sections: [
+      { id: "hero", kind: "hero", layout: "centered", width: "wide", align: "left", motion: "reveal", title: "Fiesta Demo", body: "Una noche en La Paz. Compra, registra tu rostro y entra.", ctaLabel: "Ver entradas", backgroundColor: "#0b0b0f", textColor: "#f8fafc", mediaUrls: [], items: [] },
+      { id: "event-demo", kind: "event-tickets", eventId: event.id, layout: "stacked", width: "wide", align: "left", motion: "reveal", title: "Entradas", body: "Elige General o VIP. Tu inventario se reserva antes de abrir el pago PagosYa.", ctaLabel: "Comprar entradas", backgroundColor: "#17171d", textColor: "#f8fafc", mediaUrls: [], items: [] },
+      { id: "catalog", kind: "catalog", layout: "grid", width: "wide", align: "left", motion: "none", title: "Más de Noche Demo", body: "", ctaLabel: "", backgroundColor: "#0b0b0f", textColor: "#f8fafc", mediaUrls: [], items: [] },
+      { id: "contact", kind: "contact", layout: "split", width: "wide", align: "left", motion: "reveal", title: "¿Necesitas ayuda?", body: "Escríbenos antes del evento.", ctaLabel: "", backgroundColor: "#17171d", textColor: "#f8fafc", mediaUrls: [], items: [] },
+    ],
+  };
+  await prisma.store.update({ where: { id: store.id }, data: { siteDocument } });
+  const demoOrder = await prisma.admissionOrder.findFirst({ where: { eventId: event.id, source: "COMPLIMENTARY", buyerName: "Datos de demostración" } })
+    ?? await prisma.admissionOrder.create({ data: { merchantId: demoMerchant.id, eventId: event.id, source: "COMPLIMENTARY", paymentMethod: "COMPLIMENTARY", paymentStatus: "PAID", totalAmount: 0, currency: "BOB", buyerName: "Datos de demostración" } });
+  const demoAttendees = [
+    { code: "DEMO-EXTERIOR", name: "Invitada Demo Exterior", presence: "OUTSIDE" as const },
+    { code: "DEMO-INTERIOR", name: "Invitado Demo Interior", presence: "INSIDE" as const },
+    { code: "DEMO-PENDIENTE", name: "Invitada Demo Pendiente", presence: "NEVER_ENTERED" as const },
+  ];
+  for (const row of demoAttendees) {
+    const attendee = await prisma.attendee.findFirst({ where: { eventId: event.id, displayName: row.name } })
+      ?? await prisma.attendee.create({ data: { merchantId: demoMerchant.id, eventId: event.id, displayName: row.name } });
+    const enrolled = row.presence !== "NEVER_ENTERED";
+    const admission = await prisma.admission.upsert({
+      where: { code: row.code },
+      update: { attendeeId: attendee.id, presenceStatus: row.presence, assignmentStatus: "CLAIMED", biometricEnrollmentStatus: enrolled ? "ENROLLED" : "PENDING" },
+      create: { code: row.code, orderId: demoOrder.id, eventId: event.id, ticketTypeId: general.id, attendeeId: attendee.id, source: "COMPLIMENTARY", assignmentStatus: "CLAIMED", biometricEnrollmentStatus: enrolled ? "ENROLLED" : "PENDING", presenceStatus: row.presence },
+    });
+    if (enrolled) {
+      const consent = await prisma.biometricConsent.findFirst({ where: { admissionId: admission.id } })
+        ?? await prisma.biometricConsent.create({ data: { eventId: event.id, attendeeId: attendee.id, admissionId: admission.id, version: "events-biometric-v1", purpose: `Acceso a ${event.name}`, consentedAt: new Date(), retentionUntil: new Date(event.endsAt!.getTime() + event.retentionHours * 60 * 60_000) } });
+      void consent;
+      const credential = await prisma.biometricCredential.findFirst({ where: { admissionId: admission.id, deletedAt: null } })
+        ?? await prisma.biometricCredential.create({ data: { eventId: event.id, attendeeId: attendee.id, admissionId: admission.id, provider: "mock", externalCredentialId: `mock-seed-${admission.id}`, enrolledAt: new Date(), retentionUntil: new Date(event.endsAt!.getTime() + event.retentionHours * 60 * 60_000), metadata: { seeded: true } } });
+      await prisma.devicePersonMapping.upsert({
+        where: { deviceId_credentialId: { deviceId: demoDevice.id, credentialId: credential.id } },
+        update: { deletedAt: null },
+        create: { deviceId: demoDevice.id, eventId: event.id, attendeeId: attendee.id, credentialId: credential.id, externalPersonId: `seed-${admission.id}` },
+      });
+    }
+  }
+  const seededAdmissions = await prisma.admission.count({ where: { eventId: event.id, ticketTypeId: general.id } });
+  await prisma.ticketType.update({ where: { id: general.id }, data: { soldQuantity: seededAdmissions } });
+  console.log(`\nNoche Demo seeded: admin@demo.pagosya.bo / ${demoPassword}`);
+  console.log(`  storefront: /s/${store.slug}`);
+  console.log(`  event:      ${event.name} (${event.id}), General ${general.price / 100} BOB`);
 
   await prisma.$disconnect();
 }
