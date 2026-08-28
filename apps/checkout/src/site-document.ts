@@ -218,6 +218,7 @@ export interface SiteDocumentLegacyPatch {
   bannerUrl?: string | null;
   aboutImageUrl?: string | null;
   editorialGallery?: Array<{ imageUrl: string }>;
+  animations?: Array<{ id: string }>;
   sectionBackgrounds?: Record<string, string>;
 }
 
@@ -238,6 +239,10 @@ export function synchronizeSiteDocument(
     document.theme.headingFont = fontRoles[patch.fontStyle];
     document.theme.bodyFont = fontRoles[patch.fontStyle];
   }
+  // The appearance studio materializes the AI signature as a regular named
+  // animation. Once that editable list is present, the hidden authored copy
+  // must stop rendering or a deleted/retargeted animation would reappear.
+  if (Array.isArray(patch.animations)) document.experience = { ...document.experience, type: "none" };
   const backgrounds = patch.sectionBackgrounds ?? {};
   const backgroundKey: Record<StoreSiteDocument["sections"][number]["kind"], string> = {
     hero: "hero", story: "about", catalog: "products", gallery: "gallery", contact: "contact", location: "location", links: "links",

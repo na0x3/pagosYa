@@ -348,7 +348,7 @@ Both admin workspaces deliberately break from that softness: primary containers 
 ### Branded Entry Loader
 - On every full dashboard or storefront navigation, show the pagosYa mark and name over a dark full-viewport surface with a slim Signal Amber progress bar while session/store data settles.
 - Treat the bar as indeterminate unless real progress exists, provide a timeout escape so it cannot trap the user, and replace movement with a complete static bar under `prefers-reduced-motion: reduce`.
-- **Merchant motion duo:** Story Scroll and Zoom Parallax are an opt-in pair for post-catalog brand storytelling. They must use merchant-owned media, animate transforms only, appear in the live/proposal preview before save or apply, and collapse into a readable static grid under `prefers-reduced-motion: reduce`.
+- **Merchant-authored motion:** Every AI-generated signature moment is promoted into the same named, editable animation model as merchant-authored motion, including copy, media, layout, order, type changes, and deletion. Zoom Parallax is retired; generated and manual animation pickers must not offer or render it.
 
 ### Card Stack Processing Loader
 - Use the cycling card stack for bounded, multi-step creative processing such as visual-proposal generation or as an expressive merchant-showcase entry; it does not replace the standard pagosYa navigation loader. Adapt its cards to the active surface palette and label the current operation; under reduced motion, present the stacked state without cycling, pulsing, or spinning.

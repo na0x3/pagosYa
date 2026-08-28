@@ -142,4 +142,24 @@ describe("synchronizeSiteDocument", () => {
     expect(synchronized.sections.find((section) => section.id === "shop")?.backgroundColor).toBe("#224466");
     expect(synchronized.sections.find((section) => section.id === "story")?.backgroundColor).toBe("#f5f2ea");
   });
+
+  it("retires the hidden AI signature once the editable animation list takes ownership", () => {
+    const fixture = {
+      ...documentFixture(),
+      experience: {
+        type: "text-rotate",
+        placement: "after-catalog",
+        title: "Vestidos|Abrigos",
+        body: "Encuentra tu favorito",
+        mediaUrls: [],
+      },
+    };
+    const document = sanitizeSiteDocument(fixture)!;
+    const synchronized = synchronizeSiteDocument(document, {
+      animations: [{ id: "ai-signature-experience" }],
+    });
+
+    expect(synchronized.experience.type).toBe("none");
+    expect(synchronized.experience.title).toBe("Vestidos|Abrigos");
+  });
 });

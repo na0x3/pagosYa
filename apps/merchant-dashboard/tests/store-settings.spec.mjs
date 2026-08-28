@@ -134,6 +134,100 @@ test("AI storefront sections keep their own order and background controls", asyn
   expect(write.body.sectionBackgrounds).toEqual({ "site-shop": "#224466" });
 });
 
+test("AI signature text becomes a normal editable animation and saves through the animation model", async ({ page }) => {
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+  }));
+  const aiStore = {
+    ...store("store_1", "Tienda IA tipográfica"),
+    contentOrder: ["site-opening", "site-shop", "site-information"],
+    siteDocument: {
+      version: 1,
+      theme: { textColor: "#f4ead7", surfaceColor: "#171612" },
+      experience: {
+        type: "text-rotate",
+        placement: "after-catalog",
+        title: "Vestidos|Abrigos",
+        body: "Encuentra tu próximo favorito",
+        mediaUrls: [],
+      },
+      sections: [
+        { id: "opening", kind: "hero", title: "Portada" },
+        { id: "shop", kind: "catalog", title: "Colección" },
+        { id: "information", kind: "links", title: "Síguenos" },
+      ],
+    },
+  };
+  const requests = await openDashboard(page, [aiStore]);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await page.locator("#storeAnimationTextTab").click();
+
+  const signature = page.locator('.animation-card[data-animation-id="ai-signature-experience"]');
+  await expect(signature).toBeVisible();
+  await signature.locator(".animation-card-toggle").click();
+  await expect(signature.locator('[data-animation-field="title"]')).toHaveValue("Vestidos|Abrigos");
+  await expect(signature.locator('[data-animation-field="subtitle"]')).toHaveValue("Encuentra tu próximo favorito");
+  await signature.locator('[data-animation-field="title"]').fill("Blusas|Pantalones");
+  await signature.locator('[data-animation-field="subtitle"]').fill("Hecho para acompañarte");
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+
+  const write = requests.find((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
+  expect(write.body.animations).toContainEqual(expect.objectContaining({
+    id: "ai-signature-experience",
+    type: "text-rotate",
+    title: "Blusas|Pantalones",
+    subtitle: "Hecho para acompañarte",
+  }));
+  expect(write.body.contentOrder).toEqual(["site-opening", "site-shop", "animation-ai-signature-experience", "site-information"]);
+});
+
+test("AI signature pictures are editable and Zoom Parallax is no longer offered", async ({ page }) => {
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script>`,
+  }));
+  const aiStore = {
+    ...store("store_1", "Tienda IA visual"),
+    contentOrder: ["site-opening", "site-shop", "site-information"],
+    siteDocument: {
+      version: 1,
+      theme: { textColor: "#fffaf2", surfaceColor: "#111111" },
+      experience: {
+        type: "coverflow-carousel",
+        placement: "after-catalog",
+        title: "Mundo visual",
+        body: "Dos escenas editables",
+        mediaUrls: ["/uploads/ai-one.webp", "/uploads/ai-two.webp"],
+      },
+      sections: [
+        { id: "opening", kind: "hero", title: "Portada" },
+        { id: "shop", kind: "catalog", title: "Colección" },
+        { id: "information", kind: "links", title: "Síguenos" },
+      ],
+    },
+  };
+  const requests = await openDashboard(page, [aiStore]);
+  await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
+  await page.locator("#storeAnimationVisualTab").click();
+
+  const signature = page.locator('.animation-card[data-animation-id="ai-signature-experience"]');
+  await expect(signature).toBeVisible();
+  await signature.locator(".animation-card-toggle").click();
+  await expect(signature.locator(".animation-media-row")).toHaveCount(2);
+  await expect(page.locator('#storeAnimationTypePicker option[value="zoom-parallax"]')).toHaveCount(0);
+  await signature.locator(".animation-media-row").nth(1).getByRole("button", { name: "Quitar" }).click();
+  await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#info")).toContainText("guardados");
+
+  const write = requests.find((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
+  const savedSignature = write.body.animations.find((animation) => animation.id === "ai-signature-experience");
+  expect(savedSignature.media).toHaveLength(1);
+  expect(savedSignature.media[0].imageUrl).toBe("/uploads/ai-one.webp");
+  expect(write.body.motionExperiences).not.toContain("zoom-parallax");
+});
+
 test("AI gallery pictures open the exact replacement control from the live preview", async ({ page }) => {
   await page.route("http://localhost:5175/**", (route) => route.fulfill({
     contentType: "text/html",
@@ -955,11 +1049,30 @@ test("preview clicks open the exact editor and image colors become an editable p
 
   const previewFrame = page.frames().find((frame) => frame.url().startsWith("http://localhost:5175/"));
   expect(previewFrame).toBeTruthy();
+  await page.evaluate(() => {
+    window.__appearanceClassMutations = 0;
+    const appearance = document.querySelector('[data-dashboard-page="appearance"]');
+    window.__appearanceClassObserver = new MutationObserver((records) => {
+      window.__appearanceClassMutations += records.filter((record) => record.attributeName === "class").length;
+    });
+    window.__appearanceClassObserver.observe(appearance, { attributes: true, attributeFilter: ["class"] });
+  });
+  await previewFrame.evaluate(() => {
+    window.__dashboardSelectionMessages = [];
+    addEventListener("message", (event) => {
+      if (event.data?.type === "PAGOSYA_STORE_EDITOR_SELECTION") window.__dashboardSelectionMessages.push(event.data);
+    });
+  });
   const selectInPreview = (selection) => previewFrame.evaluate((payload) => {
     parent.postMessage({ source: "pagosya-checkout", type: "STORE_EDITOR_SELECT", payload: { selection: payload } }, "*");
   }, selection);
 
   await selectInPreview({ section: "brand", field: "storeName", label: "nombre de la tienda" });
+  await expect.poll(() => previewFrame.evaluate(() => window.__dashboardSelectionMessages.some((message) =>
+    message.editorSelection?.section === "brand" && message.reveal === false,
+  ))).toBe(true);
+  await page.waitForTimeout(50);
+  expect(await page.evaluate(() => window.__appearanceClassMutations)).toBe(0);
   const inlineStoreName = page.locator("#previewContextEditor input[type='text']").first();
   await expect(inlineStoreName).toBeVisible();
   await expect(inlineStoreName).toHaveValue("Tienda editable");
@@ -1007,6 +1120,8 @@ test("preview clicks open the exact editor and image colors become an editable p
   const openingMedia = page.locator('.animation-card[data-animation-id="opening"] .animation-media-row img');
   await expect(openingMedia.nth(0)).toHaveAttribute("src", /hero-red\.webp$/);
   await expect(openingMedia.nth(1)).toHaveAttribute("src", /product-two\.webp$/);
+  await expect(page.locator('#animation-0-media-1-title')).toHaveValue("Escribe aquí tu título");
+  await expect(page.locator('#animation-0-media-1-caption')).toHaveValue("Escribe aquí tu subtítulo");
 
   const animationCountBeforeAdd = await page.locator(".animation-card").count();
   await page.locator("#previewAddSection").selectOption("motion");
@@ -1032,7 +1147,7 @@ test("preview clicks open the exact editor and image colors become an editable p
   if (process.env.CAPTURE_VISUAL_EDITOR) {
     if (await page.locator("#assistantClose").isVisible()) await page.locator("#assistantClose").click();
     await selectInPreview({ section: "animation-opening", field: "subtitle", label: "descripción visible", animationId: "opening" });
-    await page.locator("#previewContextEditor").getByLabel("Título general").fill("Una historia a tu manera");
+    await page.locator("#previewContextEditor").getByLabel("Título general", { exact: true }).fill("Una historia a tu manera");
     await page.locator("#previewContextEditor").getByLabel("Alineación").selectOption("right");
     await page.locator("#previewContextEditor").getByLabel("Fondo de la animación").evaluate((input) => {
       input.value = "#24114f";
@@ -1063,21 +1178,15 @@ test("preview clicks open the exact editor and image colors become an editable p
     await expect(openingCopy).toHaveAttribute("data-animation-text-x", "72");
     await expect(openingCopy).toHaveAttribute("data-animation-text-y", "38");
     const widthBefore = Number(await openingCopy.getAttribute("data-animation-text-width-percent"));
-    await openingSection.locator('[data-animation-layout-handle="width"]').first().evaluate((handle) => {
-      const bounds = handle.getBoundingClientRect();
-      const pointer = (target, type, x, y, buttons) => target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 42, pointerType: "touch", button: 0, buttons, clientX: x, clientY: y }));
-      pointer(handle, "pointerdown", bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, 1);
-      pointer(window, "pointermove", bounds.left - 70, bounds.top + bounds.height / 2, 1);
-      pointer(window, "pointerup", bounds.left - 70, bounds.top + bounds.height / 2, 0);
+    await page.locator("#previewContextEditor").getByLabel("Ancho preciso").evaluate((input) => {
+      input.value = String(Math.min(Number(input.max), Number(input.value) + 12));
+      input.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await expect.poll(async () => Number(await openingCopy.getAttribute("data-animation-text-width-percent"))).toBeGreaterThan(widthBefore);
     const scaleBefore = Number(await openingCopy.getAttribute("data-animation-text-scale"));
-    await openingSection.locator('[data-animation-layout-handle="scale"]').first().evaluate((handle) => {
-      const bounds = handle.getBoundingClientRect();
-      const pointer = (target, type, x, y, buttons) => target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 43, pointerType: "touch", button: 0, buttons, clientX: x, clientY: y }));
-      pointer(handle, "pointerdown", bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, 1);
-      pointer(window, "pointermove", bounds.right + 70, bounds.bottom + 70, 1);
-      pointer(window, "pointerup", bounds.right + 70, bounds.bottom + 70, 0);
+    await page.locator("#previewContextEditor").getByLabel("Tamaño preciso").evaluate((input) => {
+      input.value = String(Math.min(Number(input.max), Number(input.value) + 20));
+      input.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await expect.poll(async () => Number(await openingCopy.getAttribute("data-animation-text-scale"))).toBeGreaterThan(scaleBefore);
     const draggedAnimationText = openingSection.locator('[data-animation-copy] [data-store-editor-inline="text"]').first();
@@ -1361,6 +1470,10 @@ test("editing slider text keeps the selected slide pinned without rebuilding the
   await page.waitForTimeout(120);
   await page.evaluate(() => { window.__previewTestMessages = []; });
 
+  await page.locator('#storeNameInput').focus();
+  await page.waitForTimeout(220);
+  expect(await page.evaluate(() => window.__previewTestMessages.some((message) => message.type === "PAGOSYA_STORE_PREVIEW"))).toBe(false);
+
   await page.locator('#animation-0-media-0-title').fill("Primera escena actualizada");
   await page.locator('#animation-0-media-0-title').press("Tab");
   await expect.poll(() => page.evaluate(() => window.__previewTestMessages.some((message) =>
@@ -1467,7 +1580,7 @@ test("merchant can save every showcase animation type from the real appearance e
   await page.getByRole("button", { name: "Mostrar Animaciones" }).click();
   await addAnimation(page);
   const type = page.locator('[data-animation-field="type"]');
-  await expect(type.locator("option")).toHaveCount(20);
+  await expect(type.locator("option")).toHaveCount(19);
   await type.selectOption("3d-gallery");
   await page.locator("#storeSettingsForm").evaluate((form) => form.requestSubmit());
   await expect(page.locator("#info")).toContainText("guardados");

@@ -372,7 +372,6 @@ const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "scroll-expansion": "Scroll Expansion",
   "hero-gallery-scroll": "Hero Gallery",
   "stagger-testimonials": "Reseñas",
-  "zoom-parallax": "Zoom Parallax",
   "portfolio-scroller": "Menú de momentos",
   "circle-reveal": "Revelado circular",
   "clarity-marquee": "Preguntas en movimiento",
@@ -455,6 +454,12 @@ function synchronizedSiteDocument(
     const fontRoles: Record<string, string> = { modern: "grotesk", editorial: "editorial", friendly: "humanist", classic: "classic", geometric: "geometric" };
     theme.headingFont = fontRoles[dto.fontStyle] ?? theme.headingFont;
     theme.bodyFont = fontRoles[dto.fontStyle] ?? theme.bodyFont;
+  }
+  // The dashboard promotes the generated signature experience into the
+  // ordinary animations array so its copy, media, layout, type, and deletion
+  // all use the same editor and persistence path as merchant-authored motion.
+  if (dto.animations !== undefined && document.experience && typeof document.experience === "object" && !Array.isArray(document.experience)) {
+    document.experience = { ...document.experience, type: "none" };
   }
   const backgrounds = dto.sectionBackgrounds ?? {};
   const backgroundKey: Record<string, string> = { hero: "hero", story: "about", catalog: "products", gallery: "gallery", contact: "contact", location: "location", links: "links" };

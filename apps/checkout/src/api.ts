@@ -103,7 +103,7 @@ export interface StoreHeroSlide {
 
 export const STORE_MOTION_EXPERIENCES = [
   "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
-  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
+  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",

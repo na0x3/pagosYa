@@ -60,7 +60,7 @@ type BrandAnalysis = {
 const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "motion", "links"] as const;
 const MOTION_EXPERIENCES = [
   "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
-  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
+  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
@@ -104,7 +104,7 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
 function animationMediaRequirement(type: string): { min: number; max: number } {
   if (["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"].includes(type)) return { min: 0, max: 0 };
   if (["circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
-  return { min: ["hero-gallery-scroll", "zoom-parallax", "3d-gallery"].includes(type) ? 3 : 2, max: 8 };
+  return { min: ["hero-gallery-scroll", "3d-gallery"].includes(type) ? 3 : 2, max: 8 };
 }
 
 function distributedAnimationMedia(
@@ -222,7 +222,7 @@ function defaultMotionSuite(index: number, assetCount: number): string[] {
     ][index % 3];
   }
   return [
-    ["hero-gallery-scroll", "zoom-parallax", "text-along-path"],
+    ["hero-gallery-scroll", "frame-sequence", "text-along-path"],
     ["coverflow-carousel", "frame-sequence", "circle-reveal"],
     ["image-stream", "full-screen-chapters", "magnetic-target"],
   ][index % 3];

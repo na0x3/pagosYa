@@ -693,7 +693,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       contentOrder: ["hero", "motion", "about", "products", "gallery", "links"],
       motionDuoEnabled: true,
       motionExperience: "hero-carousel",
-      motionExperiences: ["hero-carousel", "zoom-parallax"],
+      motionExperiences: ["hero-carousel", "frame-sequence"],
     });
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
@@ -703,7 +703,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     expect(result.contentOrder).toEqual([
       "hero",
       "animation-legacy-1-hero-carousel",
-      "animation-legacy-2-zoom-parallax",
+      "animation-legacy-2-frame-sequence",
       "about",
       "products",
       "gallery",
@@ -935,6 +935,7 @@ describe("StoresService.update — authored AI site", () => {
     const siteDocument = {
       version: 1,
       theme: { pageBackground: "#f5f2ea", accentColor: "#315c49", headingFont: "editorial", bodyFont: "grotesk" },
+      experience: { type: "text-rotate", placement: "after-catalog", title: "Vestidos|Abrigos", body: "Favoritos", mediaUrls: [] },
       sections: [section("opening", "hero"), section("shop", "catalog"), section("story", "story"), section("information", "contact")],
     };
     prisma.store.findFirst.mockResolvedValue({ ...store, bannerUrl: null, aboutImageUrl: null, editorialGallery: [], siteDocument });
@@ -947,6 +948,7 @@ describe("StoresService.update — authored AI site", () => {
       accentColor: "#aa2244",
       sectionBackgrounds: { "site-shop": "#eee8dd" },
       bannerUrl: null,
+      animations: [{ id: "ai-signature-experience", name: "IA · Texto", type: "text-rotate", media: [] }],
     } as any);
 
     const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
@@ -956,6 +958,7 @@ describe("StoresService.update — authored AI site", () => {
     expect(saved.sections.find((entry: any) => entry.kind === "story").backgroundColor).toBe("#f5f2ea");
     expect(saved.sections.find((entry: any) => entry.kind === "contact").body).toBe("Cuéntanos qué necesitas");
     expect(saved.theme.accentColor).toBe("#aa2244");
+    expect(saved.experience.type).toBe("none");
   });
 });
 

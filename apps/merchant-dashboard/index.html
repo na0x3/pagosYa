@@ -4327,7 +4327,6 @@
                 <input id="storeMotionGallery" type="checkbox" name="storeMotionExperience" value="hero-gallery-scroll">
                 <input id="storeMotionTestimonials" type="checkbox" name="storeMotionExperience" value="stagger-testimonials">
                 <input id="storeMotionStory" type="checkbox" name="storeMotionExperience" value="story-scroll">
-                <input id="storeMotionZoom" type="checkbox" name="storeMotionExperience" value="zoom-parallax">
               </div>
             </div>
 
@@ -6701,20 +6700,23 @@
 
   function setDashboardView(view, { remember = true } = {}) {
     const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
+    const viewChanged = document.body.dataset.dashboardView !== nextView;
     if (nextView !== "progress" && document.getElementById("adventureGuide")?.getAttribute("aria-expanded") === "true") {
       setAdventureGuideOpen(false);
     }
-    document.body.dataset.dashboardView = nextView;
-    requestAnimationFrame(() => {
-      if (document.body.dataset.dashboardView === nextView) syncAssistantWorkspaceVisibility(nextView);
-    });
-    document.querySelectorAll("[data-dashboard-page]").forEach((element) => {
-      element.hidden = element.dataset.dashboardPage !== nextView;
-      element.classList.remove("page-entering");
-      if (!element.hidden) {
-        requestAnimationFrame(() => element.classList.add("page-entering"));
-      }
-    });
+    if (viewChanged) {
+      document.body.dataset.dashboardView = nextView;
+      requestAnimationFrame(() => {
+        if (document.body.dataset.dashboardView === nextView) syncAssistantWorkspaceVisibility(nextView);
+      });
+      document.querySelectorAll("[data-dashboard-page]").forEach((element) => {
+        element.hidden = element.dataset.dashboardPage !== nextView;
+        element.classList.remove("page-entering");
+        if (!element.hidden) {
+          requestAnimationFrame(() => element.classList.add("page-entering"));
+        }
+      });
+    }
     document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
       if (button.dataset.dashboardView === nextView) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
@@ -7610,7 +7612,7 @@
   const storeMotionDuoEnabledEl = document.getElementById("storeMotionDuoEnabled");
   const STORE_MOTION_EXPERIENCES = [
     "coverflow-carousel", "hero-carousel", "image-stream", "scroll-expansion",
-    "hero-gallery-scroll", "stagger-testimonials", "story-scroll", "zoom-parallax",
+    "hero-gallery-scroll", "stagger-testimonials", "story-scroll",
     "portfolio-scroller", "circle-reveal", "clarity-marquee",
     "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
     "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
@@ -7618,6 +7620,7 @@
   const STORE_TEXT_ANIMATIONS = new Set([
     "clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   ]);
+  const AI_SIGNATURE_ANIMATION_ID = "ai-signature-experience";
   const STORE_FONT_STYLES = ["modern", "editorial", "friendly", "classic", "geometric"];
   const STORE_FONT_STYLE_LABELS = { modern: "Moderna", editorial: "Editorial", friendly: "Cercana", classic: "Clásica", geometric: "Geométrica" };
   const normalizeStoreFontStyle = (value) => STORE_FONT_STYLES.includes(value) ? value : "modern";
@@ -8067,12 +8070,11 @@
     "scroll-expansion": ["Scroll Expansion", "Imagen que se abre con la página"],
     "hero-gallery-scroll": ["Hero Gallery", "Mosaico que se recompone"],
     "stagger-testimonials": ["Reseñas", "Comentarios en tarjetas escalonadas"],
-    "zoom-parallax": ["Zoom Parallax", "Imágenes que se abren en profundidad"],
     "portfolio-scroller": ["Menú de momentos", "Escenas navegables por scroll y teclado"],
     "circle-reveal": ["Revelado circular", "La imagen aparece desde el centro"],
     "clarity-marquee": ["Preguntas en movimiento", "Frases en un ritmo editorial continuo"],
     "layered-text": ["Texto en capas", "Palabras escalonadas que cambian al pasar el cursor"],
-    "text-rotate": ["Palabra rotativa", "Una frase cambia de palabra con ritmo controlado"],
+    "text-rotate": ["Texto mecanografiado", "Una frase editorial escribe, pausa y reemplaza su final"],
     "text-glitch": ["Texto revelado", "El mensaje descubre una segunda frase al interactuar"],
     "text-reveal-block": ["Revelado por bloques", "Cada línea llega detrás de un bloque de color"],
     "text-along-path": ["Texto en recorrido", "Una frase circula por un trazado editorial"],
@@ -8123,7 +8125,7 @@
   let storePaletteSourceSignature = "";
   // Sliders and color controls should feel live. Text fields are handled
   // separately and only redraw the storefront when their value is committed.
-  const STORE_PREVIEW_INPUT_DEBOUNCE_MS = 80;
+  const STORE_PREVIEW_INPUT_DEBOUNCE_MS = 180;
   const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
   const MAX_HERO_SLIDES = 5;
   // Botones/enlaces de la tienda (Instagram, catálogo, etc.) — se editan aquí
@@ -8235,7 +8237,7 @@
   function animationMediaRequirement(type) {
     if (STORE_TEXT_ANIMATIONS.has(type)) return { min: 0, max: 0, copy: "Este efecto usa el título, el subtítulo y la paleta de la tienda. No necesita fotos." };
     if (["circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1, copy: "Usa exactamente una foto. Elegir otra pieza reemplaza la anterior." };
-    const min = ["hero-gallery-scroll", "zoom-parallax", "3d-gallery"].includes(type) ? 3 : 2;
+    const min = ["hero-gallery-scroll", "3d-gallery"].includes(type) ? 3 : 2;
     return { min, max: 8, copy: `Necesita al menos ${min} fotos y admite hasta 8.` };
   }
 
@@ -8254,6 +8256,64 @@
       ...(["left", "center", "right"].includes(image.textAlign) ? { textAlign: image.textAlign } : {}),
       ...(/^#[0-9a-f]{6}$/i.test(image.textColor || "") ? { textColor: image.textColor } : {}),
     };
+  }
+
+  function editableAiSignatureAnimation(store) {
+    const document = store?.siteDocument;
+    const experience = document?.experience;
+    const type = String(experience?.type || "");
+    if (!type || type === "none" || !STORE_MOTION_EXPERIENCES.includes(type)) return null;
+
+    const mediaUrls = Array.isArray(experience.mediaUrls)
+      ? [...new Set(experience.mediaUrls.filter((url) => typeof url === "string" && url.trim()))].slice(0, 8)
+      : [];
+    const textOnly = STORE_TEXT_ANIMATIONS.has(type);
+    if (!textOnly && mediaUrls.length < 2) return null;
+
+    const authoredTitle = String(experience.title || "").trim();
+    const authoredBody = String(experience.body || "").trim();
+    const productPhrases = [...new Set(lastPaymentLinks
+      .filter((product) => product.status !== "ARCHIVED")
+      .map((product) => String(product.name || "").trim())
+      .filter(Boolean))]
+      .slice(0, 5);
+    const shouldSplitTypewriter = type === "text-rotate" && !authoredTitle.includes("|");
+    const [typeLabel] = animationTypeCopy(type);
+
+    return {
+      id: AI_SIGNATURE_ANIMATION_ID,
+      name: `IA · ${typeLabel}`,
+      type,
+      title: shouldSplitTypewriter ? productPhrases.join("|") || authoredTitle : authoredTitle,
+      subtitle: shouldSplitTypewriter ? authoredTitle : authoredBody,
+      productId: "",
+      textColor: textOnly ? "#f4ead7" : document?.theme?.textColor,
+      backgroundColor: textOnly ? "#171612" : document?.theme?.surfaceColor,
+      media: mediaUrls.map((imageUrl, index) => cloneAnimationMedia({
+        imageUrl,
+        title: authoredTitle || `Escena ${index + 1}`,
+        caption: authoredBody,
+        body: authoredBody,
+      })),
+    };
+  }
+
+  function placeAiSignatureAnimation(order, store, animationId) {
+    const document = store?.siteDocument;
+    const sections = Array.isArray(document?.sections) ? document.sections : [];
+    const baseOrder = Array.isArray(order) ? [...order] : sections.map((section) => `site-${section.id}`);
+    const animationSection = `animation-${animationId}`;
+    const withoutAnimation = baseOrder.filter((section) => section !== animationSection);
+    const placementKind = {
+      "after-hero": "hero",
+      "after-story": "story",
+      "after-catalog": "catalog",
+    }[document?.experience?.placement] || "catalog";
+    const placementSection = sections.find((section) => section?.kind === placementKind);
+    const placementKey = placementSection ? `site-${placementSection.id}` : placementKind === "story" ? "about" : placementKind === "catalog" ? "products" : "hero";
+    const placementIndex = withoutAnimation.indexOf(placementKey);
+    withoutAnimation.splice(placementIndex < 0 ? withoutAnimation.length : placementIndex + 1, 0, animationSection);
+    return withoutAnimation;
   }
 
   function animationMediaDraft(imageUrl) {
@@ -8299,7 +8359,8 @@
     const media = animationProductMedia(product);
     if (!media) return;
     if (requirement.max === 1) {
-      animation.media = [media];
+      if (animation.media.length) replaceAnimationMediaAt(animation, 0, media.imageUrl);
+      else animation.media = [media];
       return;
     }
     const key = normalizedAssetKey(media.imageUrl);
@@ -8308,13 +8369,17 @@
 
   function replaceAnimationMediaAt(animation, targetIndex, imageUrl) {
     if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= animation.media.length) return false;
-    const replacement = animationMediaDraft(imageUrl);
     const replacementIndex = animation.media.findIndex((image) => normalizedAssetKey(image.imageUrl) === normalizedAssetKey(imageUrl));
     if (replacementIndex === targetIndex) return false;
     if (replacementIndex >= 0) {
-      [animation.media[targetIndex], animation.media[replacementIndex]] = [animation.media[replacementIndex], animation.media[targetIndex]];
+      // Text and layout belong to the scene slot, not to the underlying photo.
+      // Swap only the image URLs so changing a picture never makes authored
+      // copy disappear or strands its drag/resize coordinates on another scene.
+      const targetImageUrl = animation.media[targetIndex].imageUrl;
+      animation.media[targetIndex] = { ...animation.media[targetIndex], imageUrl: animation.media[replacementIndex].imageUrl };
+      animation.media[replacementIndex] = { ...animation.media[replacementIndex], imageUrl: targetImageUrl };
     } else {
-      animation.media[targetIndex] = replacement;
+      animation.media[targetIndex] = { ...animation.media[targetIndex], imageUrl };
     }
     return true;
   }
@@ -8404,8 +8469,8 @@
         ? sources.map((source, sourceIndex) => {
             const selected = selectedKeys.has(source.key);
             const sourcePreview = isVideoUploadUrl(source.imageUrl)
-              ? `<video src="${esc(apiRoot() + source.imageUrl)}" muted playsinline preload="metadata" aria-label="${esc(source.label)}"></video>`
-              : `<img src="${esc(apiRoot() + source.imageUrl)}" alt="" style="object-position:${esc(catalogImagePosition(source.imageUrl))}">`;
+              ? `<video src="${esc(dashboardAssetUrl(source.imageUrl))}" muted playsinline preload="metadata" aria-label="${esc(source.label)}"></video>`
+              : `<img src="${esc(dashboardAssetUrl(source.imageUrl))}" alt="" style="object-position:${esc(catalogImagePosition(source.imageUrl))}">`;
             return `<label class="animation-source" title="${esc(source.label)}">
               <input type="${mediaRequirement.max === 1 ? "radio" : "checkbox"}" ${mediaRequirement.max === 1 ? `name="animation-source-${animationIndex}"` : ""} data-animation-source="${sourceIndex}" ${selected ? "checked" : ""} aria-label="${mediaRequirement.max === 1 ? "Usar" : selected ? "Quitar" : atLimit ? "Reemplazar la última foto por" : "Agregar"} ${esc(source.label)} ${mediaRequirement.max === 1 ? "en" : selected ? "de" : "a"} ${esc(animation.name || typeLabel)}">
               <span class="animation-source-visual">${sourcePreview}<span class="animation-source-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span></span>
@@ -8417,8 +8482,8 @@
         const video = isVideoUploadUrl(image.imageUrl);
         const mediaLabel = image.title || `${video ? "Video" : "Imagen"} ${mediaIndex + 1}`;
         const preview = video
-          ? `<video src="${esc(apiRoot() + image.imageUrl)}" aria-label="Vista previa de ${esc(mediaLabel)}" controls muted playsinline preload="metadata"></video>`
-          : `<img src="${esc(apiRoot() + image.imageUrl)}" alt="Vista previa de ${esc(mediaLabel)}" style="object-position:${esc(catalogImagePosition(image.imageUrl))}">`;
+          ? `<video src="${esc(dashboardAssetUrl(image.imageUrl))}" aria-label="Vista previa de ${esc(mediaLabel)}" controls muted playsinline preload="metadata"></video>`
+          : `<img src="${esc(dashboardAssetUrl(image.imageUrl))}" alt="Vista previa de ${esc(mediaLabel)}" style="object-position:${esc(catalogImagePosition(image.imageUrl))}">`;
         return `<div class="animation-media-row" data-media-index="${mediaIndex}" data-reorder-key="${esc(image.imageUrl)}" data-reorder-label="${esc(mediaLabel)}">
         ${preview}
         <div class="animation-media-fields">
@@ -8539,9 +8604,13 @@
         const source = sources[Number(input.dataset.animationSource)];
         const existingIndex = animation.media.findIndex((image) => normalizedAssetKey(image.imageUrl) === source.key);
         const requirement = animationMediaRequirement(animation.type);
-        if (input.checked && requirement.max === 1) animation.media = [animationMediaDraft(source.imageUrl)];
+        pushAnimationUndo(input.checked ? "cambiar las fotos de la animación" : "quitar una foto de la animación", animation);
+        if (input.checked && requirement.max === 1) {
+          if (animation.media.length) replaceAnimationMediaAt(animation, 0, source.imageUrl);
+          else animation.media = [animationMediaDraft(source.imageUrl)];
+        }
         else if (input.checked && existingIndex < 0 && animation.media.length < requirement.max) animation.media.push(animationMediaDraft(source.imageUrl));
-        else if (input.checked && existingIndex < 0 && animation.media.length >= requirement.max) animation.media.splice(-1, 1, animationMediaDraft(source.imageUrl));
+        else if (input.checked && existingIndex < 0 && animation.media.length >= requirement.max) replaceAnimationMediaAt(animation, animation.media.length - 1, source.imageUrl);
         if (!input.checked && existingIndex >= 0) animation.media.splice(existingIndex, 1);
         renderAnimationsEditor();
         commitAnimationStructureChange();
@@ -9019,6 +9088,26 @@
     pendingStorePreviewTargetKind = intent?.targetKind || null;
     pendingStorePreviewProduct = null;
     return intent;
+  }
+
+  function postStorePreviewNavigation(intent) {
+    if (!intent || !storePreviewFrameEl.contentWindow) return;
+    let targetOrigin = "*";
+    try {
+      targetOrigin = new URL(storePreviewFrameEl.src).origin;
+    } catch {
+      // The preview itself already reports a malformed URL.
+    }
+    storePreviewFrameEl.contentWindow.postMessage(
+      {
+        type: "PAGOSYA_STORE_PREVIEW_NAVIGATION",
+        previewSection: intent.section || null,
+        previewAction: intent.action || null,
+        previewTargetIndex: Number.isInteger(intent.targetIndex) ? intent.targetIndex : null,
+        previewTargetKind: intent.targetKind || null,
+      },
+      targetOrigin,
+    );
   }
 
   function currentProductPreview() {
@@ -9710,7 +9799,7 @@
         const motionLabels = {
           "story-scroll": "Story Scroll", "coverflow-carousel": "Coverflow animado", "hero-carousel": "Slider principal",
           "image-stream": "Image Stream", "scroll-expansion": "Scroll Expansion", "hero-gallery-scroll": "Hero Gallery",
-          "stagger-testimonials": "Reseñas escalonadas", "zoom-parallax": "Zoom Parallax",
+          "stagger-testimonials": "Reseñas escalonadas",
           "portfolio-scroller": "Menú de momentos", "circle-reveal": "Revelado circular", "clarity-marquee": "Preguntas en movimiento",
           "full-screen-chapters": "Capítulos completos", "magnetic-target": "Llamado magnético",
           "frame-sequence": "Secuencia de cuadros", "3d-gallery": "Galería tridimensional",
@@ -10073,6 +10162,7 @@
         const animation = pendingAnimations.find((entry) => entry.id === animationId);
         if (!animation || !animation.media[normalized.itemIndex]) throw new Error("No encontramos esa imagen en la animación.");
         const imageUrl = await uploadFile(file);
+        pushAnimationUndo(`cambiar imagen ${normalized.itemIndex + 1}`, animation);
         replaceAnimationMediaAt(animation, normalized.itemIndex, imageUrl);
         renderAnimationsEditor();
         commitAnimationStructureChange();
@@ -10141,7 +10231,7 @@
 
     if (!selection) {
       previewContextEditorEl.className = "preview-context-editor is-idle";
-      previewContextEditorEl.innerHTML = `<p class="preview-context-copy"><strong>Edita directamente en tu tienda.</strong> Arrastra el texto, usa los tiradores para cambiar su caja y haz un clic para escribir. Usa Ctrl+C y Ctrl+V para repetirlo; Ctrl+Z deshace.</p>`;
+      previewContextEditorEl.innerHTML = `<p class="preview-context-copy"><strong>Edita directamente en tu tienda.</strong> Usa el agarre de seis puntos para mover el texto y haz clic para escribir. El ancho y el tamaño quedan aquí, sin llenar el lienzo de controles. Usa Ctrl+C y Ctrl+V para repetirlo; Ctrl+Z deshace.</p>`;
       return;
     }
 
@@ -10336,17 +10426,22 @@
           const id = `previewContextAsset${controlIndex++}`;
           actions.push({ id, handler: () => {
             if (selectedAnimationMediaIndex !== null) {
+              pushAnimationUndo(`cambiar imagen ${selectedAnimationMediaIndex + 1}`, animation);
               replaceAnimationMediaAt(animation, selectedAnimationMediaIndex, source.imageUrl);
               renderAnimationsEditor();
               commitAnimationStructureChange();
               renderPreviewContextEditor(selection);
               return;
             }
+            pushAnimationUndo("cambiar las fotos de la animación", animation);
             const existingIndex = animation.media.findIndex((media) => normalizedAssetKey(media.imageUrl) === source.key);
-            if (requirement.max === 1) animation.media = [animationMediaDraft(source.imageUrl)];
+            if (requirement.max === 1) {
+              if (animation.media.length) replaceAnimationMediaAt(animation, 0, source.imageUrl);
+              else animation.media = [animationMediaDraft(source.imageUrl)];
+            }
             else if (existingIndex >= 0) animation.media.splice(existingIndex, 1);
             else if (animation.media.length < requirement.max) animation.media.push(animationMediaDraft(source.imageUrl));
-            else animation.media.splice(-1, 1, animationMediaDraft(source.imageUrl));
+            else replaceAnimationMediaAt(animation, animation.media.length - 1, source.imageUrl);
             renderAnimationsEditor();
             commitAnimationStructureChange();
             renderPreviewContextEditor(selection);
@@ -10366,10 +10461,23 @@
         previewSelectionStatusEl.textContent = `Subiendo ${file.name}…`;
         try {
           const imageUrl = await uploadFile(file);
-          if (selectedAnimationMediaIndex !== null) replaceAnimationMediaAt(animation, selectedAnimationMediaIndex, imageUrl);
-          else if (requirement.max === 1) animation.media = [animationMediaDraft(imageUrl)];
-          else if (animation.media.length < requirement.max) animation.media.push(animationMediaDraft(imageUrl));
-          else animation.media[0] = animationMediaDraft(imageUrl);
+          if (selectedAnimationMediaIndex !== null) {
+            pushAnimationUndo(`cambiar imagen ${selectedAnimationMediaIndex + 1}`, animation);
+            replaceAnimationMediaAt(animation, selectedAnimationMediaIndex, imageUrl);
+          }
+          else if (requirement.max === 1) {
+            pushAnimationUndo("cambiar la imagen de la animación", animation);
+            if (animation.media.length) replaceAnimationMediaAt(animation, 0, imageUrl);
+            else animation.media = [animationMediaDraft(imageUrl)];
+          }
+          else if (animation.media.length < requirement.max) {
+            pushAnimationUndo("agregar una imagen a la animación", animation);
+            animation.media.push(animationMediaDraft(imageUrl));
+          }
+          else {
+            pushAnimationUndo("cambiar la imagen de la animación", animation);
+            replaceAnimationMediaAt(animation, 0, imageUrl);
+          }
           renderAnimationsEditor();
           commitAnimationStructureChange();
           renderPreviewContextEditor(selection);
@@ -10700,7 +10808,7 @@
     selectStorePreviewEditorTarget({ section, field: fields[section], label: PREVIEW_SECTION_LABELS[section] || "sección" });
   });
 
-  function selectStorePreviewEditorTarget(selection) {
+  function selectStorePreviewEditorTarget(selection, { reveal = true } = {}) {
     const section = String(selection?.section || "");
     const field = String(selection?.field || "");
     const label = String(selection?.label || "Parte seleccionada").slice(0, 120);
@@ -10727,7 +10835,7 @@
       : `<strong>${esc(label)}.</strong> Edítalo arriba sin salir de la vista previa.`;
     // Selecting an element is presentation state, not store data. Updating it
     // directly keeps the current carousel scene and avoids a full iframe redraw.
-    postStorePreviewEditorSelection(normalizedSelection);
+    postStorePreviewEditorSelection(normalizedSelection, { reveal });
   }
 
   function storePaletteImageUrls() {
@@ -10969,7 +11077,11 @@
     }
     try {
     if (event.data.type === "STORE_EDITOR_SELECT" && storePreviewEditorEnabled) {
-      selectStorePreviewEditorTarget(event.data.payload?.selection);
+      // The merchant clicked something that is already visible inside the
+      // preview. Echo the highlight without scrolling the iframe back to that
+      // section; the old reveal caused a brief trip through the large blank
+      // spacing between storefront sections on every click.
+      selectStorePreviewEditorTarget(event.data.payload?.selection, { reveal: false });
       return;
     }
     if (event.data.type === "STORE_EDITOR_INLINE_TEXT" && storePreviewEditorEnabled) {
@@ -11195,17 +11307,16 @@
 
   storeSettingsFormEl.addEventListener("click", (event) => {
     const intent = rememberStorePreviewIntent(event.target);
-    // A touch/click is itself preview intent, even when the control does not
-    // change value. This covers section buttons, image cards, reorder actions,
-    // cart controls, and returning to an already-focused text field.
+    // Touching a control is presentation state, not store data. Keep the
+    // current preview DOM alive; the control's actual input/change handler
+    // will publish a patch only when something changes.
     if (postAnimationControlSelection(event.target, intent)) return;
-    if (intent) scheduleStorePreview(0);
+    postStorePreviewNavigation(intent);
   }, true);
   storeSettingsFormEl.addEventListener("focusin", (event) => {
     const intent = rememberStorePreviewIntent(event.target);
     if (!intent) return;
     if (postAnimationControlSelection(event.target, intent)) return;
-    scheduleStorePreview(0);
   });
   storeSettingsFormEl.addEventListener("input", (event) => {
     rememberStorePreviewIntent(event.target);
@@ -13235,6 +13346,16 @@
             .map((section) => ({ id: section.id, kind: section.kind, title: section.title || "" }))
         : [];
       let contentOrderToMigrate = Array.isArray(store.contentOrder) ? [...store.contentOrder] : store.contentOrder;
+      const aiSignatureAnimation = editableAiSignatureAnimation(store);
+      const hasEditableSignature = pendingAnimations.some((animation) => animation.id === AI_SIGNATURE_ANIMATION_ID);
+      const signatureAlreadyRepresented = aiSignatureAnimation
+        && pendingAnimations.some((animation) => animation.type === aiSignatureAnimation.type);
+      if (aiSignatureAnimation && !hasEditableSignature && !signatureAlreadyRepresented) {
+        pendingAnimations.push(aiSignatureAnimation);
+        contentOrderToMigrate = placeAiSignatureAnimation(contentOrderToMigrate, store, aiSignatureAnimation.id);
+      } else if (hasEditableSignature && (!Array.isArray(contentOrderToMigrate) || !contentOrderToMigrate.includes(`animation-${AI_SIGNATURE_ANIMATION_ID}`))) {
+        contentOrderToMigrate = placeAiSignatureAnimation(contentOrderToMigrate, store, AI_SIGNATURE_ANIMATION_ID);
+      }
       if (legacyHeroSlides.length) {
         let legacySliderId = "legacy-main-slider";
         let suffix = 2;

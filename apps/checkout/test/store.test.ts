@@ -778,6 +778,9 @@ describe("storefront routes", () => {
     expect(document.querySelectorAll(".store-announcement-sequence")).toHaveLength(2);
     expect(document.querySelectorAll(".store-announcement-phrase")).toHaveLength(4);
     expect(document.querySelector(".store-announcement-a11y")?.textContent).toBe("Envío gratis hoy • Compra local");
+    const announcement = document.querySelector(".store-announcement.marquee")!;
+    const header = document.querySelector(".store-site-header")!;
+    expect(announcement.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.querySelector(".promotion-dialog")?.textContent).toContain("20% de descuento");
     expect(document.querySelector<HTMLImageElement>(".promotion-image")?.src).toContain("promo.webp");
     expect(document.body.dataset.buttonStyle).toBe("pill");
@@ -842,6 +845,34 @@ describe("storefront routes", () => {
     expect(document.body.dataset.buttonVariant).toBe("soft");
     expect(document.body.dataset.buttonMotion).toBe("pulse");
     expect(document.querySelector("#cart-pay")?.textContent).toBe("Completar pedido");
+  });
+
+  it("does not rebuild the storefront for duplicate preview messages", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Vista estable",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=stable-preview&preview=1&editor=1");
+    const message = {
+      type: "PAGOSYA_STORE_PREVIEW",
+      previewSection: "products",
+      previewAction: "scroll",
+      patch: { storeName: "Vista estable editada", catalogTitle: "Colección estable" },
+    };
+    window.dispatchEvent(new MessageEvent("message", { source: window, data: message }));
+    const originalHeader = document.querySelector(".merchant-header");
+    const originalProducts = document.querySelector(".store-products");
+
+    window.dispatchEvent(new MessageEvent("message", { source: window, data: message }));
+
+    expect(document.querySelector(".merchant-header")).toBe(originalHeader);
+    expect(document.querySelector(".store-products")).toBe(originalProducts);
+    expect(document.querySelector(".store-catalog-heading")?.textContent).toContain("Colección estable");
   });
 
   it("enlarges a preview logo when the store name is blank and reveals the edited section", async () => {
@@ -1166,8 +1197,8 @@ describe("storefront routes", () => {
     expect(document.querySelector(".bespoke-hero .store-carousel-toggle")?.textContent).toBe("Pausar");
     expect(document.querySelectorAll(".bespoke-story .store-flow-section")).toHaveLength(3);
     expect(document.querySelector("[data-text-reveal]")).not.toBeNull();
-    expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-background")).toBe("#fffaf2");
-    expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-text-color")).toBe("#152b2f");
+    expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-background")).toBe("#171612");
+    expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-text-color")).toBe("#f4ead7");
     expect(document.querySelector(".bespoke-story > .bespoke-media")).toBeNull();
     document.querySelector<HTMLButtonElement>(".bespoke-hero .store-carousel-arrow.next")!.click();
     expect(document.querySelector('.bespoke-hero .store-slide[data-slide-index="1"]')?.classList.contains("active")).toBe(true);
@@ -2191,7 +2222,6 @@ describe("storefront routes", () => {
     ["scroll-expansion", "[data-scroll-expansion]"],
     ["hero-gallery-scroll", "[data-gallery-scroll]"],
     ["stagger-testimonials", "[data-testimonials]"],
-    ["zoom-parallax", "[data-motion-zoom]"],
     ["portfolio-scroller", "[data-portfolio-scroller]"],
     ["circle-reveal", "[data-circle-reveal]"],
     ["clarity-marquee", "[data-clarity-marquee]"],
@@ -2483,6 +2513,34 @@ describe("storefront routes", () => {
     expect(document.querySelector(".product-detail-content h1")?.textContent).toBe("Amarillo tropical");
   });
 
+  it("renders rotating text as an editorial typewriter with an authored prefix", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Pastelería editorial",
+        contentOrder: ["hero", "animation-typewriter", "products", "links"],
+        animations: [{
+          id: "typewriter",
+          name: "Frase de marca",
+          type: "text-rotate",
+          title: "mejor|más feliz",
+          subtitle: "disfruta comer 🍰",
+          media: [],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=editorial-typewriter");
+
+    const typewriter = document.querySelector<HTMLElement>("[data-text-rotate]")!;
+    expect(typewriter.dataset.textRotateValues?.split("\u001f").slice(0, 2)).toEqual(["mejor", "más feliz"]);
+    expect(typewriter.querySelector(".store-text-rotate-prefix")?.textContent).toBe("disfruta comer 🍰");
+    expect(typewriter.querySelector("[data-text-rotate-current]")?.textContent).toBe("mejor");
+    expect(typewriter.querySelector(".store-text-typewriter-cursor")?.textContent).toBe("_");
+  });
+
   it("renders every selected animation in the merchant's saved order", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
@@ -2699,7 +2757,7 @@ describe("storefront routes", () => {
     expect(secondSection.querySelector('[data-coverflow-index="0"]')?.classList.contains("store-preview-editor-selected")).toBe(true);
   });
 
-  it("lets the store editor drag, widen, and scale animation text directly on the canvas", async () => {
+  it("lets the store editor move and rewrite animation text with one clean canvas grabber", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -2729,8 +2787,8 @@ describe("storefront routes", () => {
     const section = document.querySelector<HTMLElement>('[data-animation-id="opening"]')!;
     const copy = section.querySelector<HTMLElement>("[data-animation-copy]")!;
     expect(copy.querySelector('[data-animation-layout-handle="move"]')).not.toBeNull();
-    expect(copy.querySelector('[data-animation-layout-handle="width"]')).not.toBeNull();
-    expect(copy.querySelector('[data-animation-layout-handle="scale"]')).not.toBeNull();
+    expect(copy.querySelector('[data-animation-layout-handle="width"]')).toBeNull();
+    expect(copy.querySelector('[data-animation-layout-handle="scale"]')).toBeNull();
 
     const bounds = { x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500, toJSON: () => ({}) } as DOMRect;
     const copyBounds = { x: 200, y: 200, left: 200, top: 200, right: 500, bottom: 300, width: 300, height: 100, toJSON: () => ({}) } as DOMRect;
@@ -2751,20 +2809,6 @@ describe("storefront routes", () => {
     expect(copy.style.getPropertyValue("--animation-text-y")).toBe("50%");
     expect(copy.dataset.animationTextX).toBe("55");
     expect(copy.dataset.animationTextY).toBe("50");
-
-    const widthHandle = copy.querySelector<HTMLElement>('[data-animation-layout-handle="width"]')!;
-    pointer(widthHandle, "pointerdown", 12, 500, 250, 1);
-    pointer(window, "pointermove", 12, 700, 250, 1);
-    pointer(window, "pointerup", 12, 700, 250, 0);
-    expect(copy.style.getPropertyValue("--animation-copy-width")).toBe("80%");
-    expect(copy.dataset.animationTextWidthPercent).toBe("80");
-
-    const scaleHandle = copy.querySelector<HTMLElement>('[data-animation-layout-handle="scale"]')!;
-    pointer(scaleHandle, "pointerdown", 13, 500, 300, 1);
-    pointer(window, "pointermove", 13, 600, 400, 1);
-    pointer(window, "pointerup", 13, 600, 400, 0);
-    expect(copy.dataset.animationTextScale).toBe("120");
-    expect(copy.style.getPropertyValue("--animation-heading-size")).toContain("48px");
 
     const heading = copy.querySelector<HTMLElement>('[data-store-editor-inline="text"]')!;
     await new Promise((resolve) => window.setTimeout(resolve, 0));

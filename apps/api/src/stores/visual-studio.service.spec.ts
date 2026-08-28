@@ -196,7 +196,7 @@ describe("VisualStudioService", () => {
     prisma.mediaAsset.findMany.mockResolvedValue(urls.map((url, index) => ({ id: `asset_${index}`, merchantId: "merchant_1", storeId: null, url, storageKey: url.split("/").pop(), mimeType: "image/jpeg", byteSize: 10, kind: "ORIGINAL", parentAssetId: null, createdAt: new Date() })));
 
     await service.generate("merchant_1", "store_1", {
-      motionExperiences: ["hero-gallery-scroll", "stagger-testimonials", "zoom-parallax"],
+      motionExperiences: ["hero-gallery-scroll", "stagger-testimonials", "frame-sequence"],
     });
 
     const proposal = prisma.storeVisualProposal.create.mock.calls[0][0].data;

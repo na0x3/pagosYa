@@ -37,14 +37,14 @@ describe("CreateStoreDto storefront layout", () => {
     await expect(validate(dto)).resolves.toHaveLength(0);
   });
 
-  it("accepts independently positioned animation sections including Zoom Parallax", async () => {
+  it("rejects the retired Zoom Parallax animation", async () => {
     const dto = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
       contentOrder: ["motion-zoom-parallax", "hero", "products", "about", "gallery", "motion-stagger-testimonials", "links"],
       motionExperiences: ["zoom-parallax", "stagger-testimonials"],
     });
 
-    await expect(validate(dto)).resolves.toHaveLength(0);
+    expect(await validate(dto)).not.toHaveLength(0);
   });
 
   it("keeps accepting legacy orders only when motion is the omitted section", async () => {
@@ -248,7 +248,7 @@ describe("CreateStoreDto storefront layout", () => {
   it("accepts multiple unique animation templates and rejects duplicates", async () => {
     const valid = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
-      motionExperiences: ["coverflow-carousel", "hero-carousel", "stagger-testimonials", "zoom-parallax", "portfolio-scroller", "circle-reveal", "clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path", "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery"],
+      motionExperiences: ["coverflow-carousel", "hero-carousel", "stagger-testimonials", "portfolio-scroller", "circle-reveal", "clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path", "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery"],
     });
     const duplicated = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
@@ -273,7 +273,7 @@ describe("CreateStoreDto storefront layout", () => {
       name: "Taller Norte",
       animations: [
         { id: "repetida", name: "Una", type: "coverflow-carousel", media: [] },
-        { id: "repetida", name: "Dos", type: "zoom-parallax", media: [] },
+        { id: "repetida", name: "Dos", type: "3d-gallery", media: [] },
       ],
     });
 
