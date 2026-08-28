@@ -392,7 +392,7 @@ describe("PaymentLinksService inventory import", () => {
     const { service, prisma, config } = makeService();
     config.get.mockImplementation((key: string) => ({
       "app.openAi.apiKey": "server-key",
-      "app.openAi.inventoryModel": "gpt-5.6-luna",
+      "app.openAi.inventoryModel": "gpt-5.6-sol",
     } as Record<string, string>)[key]);
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({
@@ -427,6 +427,101 @@ describe("PaymentLinksService inventory import", () => {
       expect(global.fetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", expect.objectContaining({
         headers: expect.objectContaining({ Authorization: "Bearer server-key" }),
       }));
+      const request = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+      expect(request.model).toBe("gpt-5.6-sol");
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it("accepts a headerless pipe-delimited product and gives Sol the selected image filenames", async () => {
+    const { service, config } = makeService();
+    config.get.mockImplementation((key: string) => key === "app.openAi.apiKey" ? "server-key" : undefined);
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({
+        output: [{ content: [{ type: "output_text", text: JSON.stringify({
+          warnings: [],
+          products: [{
+            sourceRow: 1,
+            name: "Té verde",
+            codigoProducto: "TE-01",
+            amount: 1250,
+            currency: "BOB",
+            categoryName: null,
+            stock: 8,
+            description: null,
+            tags: [],
+            imageNames: ["TE-01 portada.webp"],
+            variants: [],
+            color: null,
+            errors: [],
+          }],
+        }) }] }],
+      }),
+    }) as unknown as typeof fetch;
+
+    try {
+      const result = await service.normalizeInventoryCsv(
+        "merchant_1",
+        "store_1",
+        "Té verde|12,50|8|TE-01",
+        ["TE-01 portada.webp"],
+      );
+      expect(result.products[0]).toMatchObject({ name: "Té verde", imageNames: ["TE-01 portada.webp"] });
+      const request = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+      expect(request.model).toBe("gpt-5.6-sol");
+      expect(request.input[1].content[0].text).toContain("TE-01 portada.webp");
+      expect(request.input[1].content[0].text).toContain("Té verde|12,50|8|TE-01");
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it("splits a long tab-separated inventory into bounded model batches", async () => {
+    const { service, config } = makeService();
+    config.get.mockImplementation((key: string) => key === "app.openAi.apiKey" ? "server-key" : undefined);
+    const originalFetch = global.fetch;
+    let responseIndex = 0;
+    global.fetch = jest.fn().mockImplementation(async () => {
+      const batchNumber = ++responseIndex;
+      return {
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({
+          output: [{ content: [{ type: "output_text", text: JSON.stringify({
+            warnings: [`Lote ${batchNumber} revisado`],
+            products: [{
+              sourceRow: batchNumber + 1,
+              name: `Producto lote ${batchNumber}`,
+              codigoProducto: `SKU-${batchNumber}`,
+              amount: batchNumber * 100,
+              currency: "BOB",
+              categoryName: null,
+              stock: null,
+              description: null,
+              tags: [],
+              imageNames: [],
+              variants: [],
+              color: null,
+              errors: [],
+            }],
+          }) }] }],
+        }),
+      };
+    }) as unknown as typeof fetch;
+    const csv = ["item\tprice\tsku", ...Array.from({ length: 60 }, (_, index) => `Producto ${index + 1}\t${index + 1}\tSKU-${index + 1}`)].join("\n");
+
+    try {
+      const result = await service.normalizeInventoryCsv("merchant_1", "store_1", csv);
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      expect(result.products).toHaveLength(3);
+      expect(result.warnings).toEqual(["Lote 1 revisado", "Lote 2 revisado", "Lote 3 revisado"]);
+      const secondRequest = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body);
+      expect(secondRequest.input[1].content[0].text).toContain("Registro de referencia del inicio del archivo");
+      expect(secondRequest.input[1].content[0].text).toContain("item\tprice\tsku");
     } finally {
       global.fetch = originalFetch;
     }

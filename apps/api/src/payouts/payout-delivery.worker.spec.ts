@@ -66,6 +66,10 @@ describe("PayoutDeliveryWorker.tick", () => {
     const worker = new PayoutDeliveryWorker(prisma, makeFakePayoutsService() as any, new LedgerService(), provider as any);
     await worker.tick();
 
+    expect(prisma.payout.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ nextRetryAt: expect.any(Date) }),
+    }));
+
     expect(prisma.payout.update).toHaveBeenCalledWith({
       where: { id: "payout_1" },
       data: expect.objectContaining({

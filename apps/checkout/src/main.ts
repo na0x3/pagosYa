@@ -19,6 +19,7 @@ import {
   CheckoutSession,
   CustomerContact,
   Store,
+  type StoreAnimation,
   type StoreMotionExperience,
   StoreItem,
   StoreLocation,
@@ -27,11 +28,13 @@ import {
   TrackedOrder,
 } from "./api";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
+import { sanitizeSiteDocument, synchronizeSiteDocument, type StoreSiteDocument } from "./site-document";
 
 const STORE_MOTION_EXPERIENCES: readonly StoreMotionExperience[] = [
   "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
   "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
-  "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
 ];
 
@@ -1190,33 +1193,42 @@ function promoDiscountAmount(store: Store): number {
 function storeCatalogUrl(slug: string): string {
   const params = new URLSearchParams();
   if (storePreviewMode) params.set("preview", "1");
+  if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
   const pathname = activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
-  return `${pathname}${query ? `?${query}` : ""}`;
+  return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
 }
 
 function categoryPageUrl(slug: string, categoryId: string): string {
   const params = new URLSearchParams();
   if (storePreviewMode) params.set("preview", "1");
+  if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
   const pathname = activeCustomDomainSlug === slug
     ? `/c/${encodeURIComponent(categoryId)}`
     : `/s/${encodeURIComponent(slug)}/c/${encodeURIComponent(categoryId)}`;
-  return `${pathname}${query ? `?${query}` : ""}`;
+  return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
 }
 
 function productPageUrl(slug: string, productId: string, categoryId = selectedCategoryId): string {
   const params = new URLSearchParams();
   if (categoryId !== "ALL") params.set("category", categoryId);
   if (storePreviewMode) params.set("preview", "1");
+  if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
   const pathname = activeCustomDomainSlug === slug
     ? `/p/${encodeURIComponent(productId)}`
     : `/s/${encodeURIComponent(slug)}/p/${encodeURIComponent(productId)}`;
-  return `${pathname}${query ? `?${query}` : ""}`;
+  return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
+}
+
+function storePreviewFragment(): string {
+  if (!storePreviewMode || !window.location.hash) return "";
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  return params.has("proposal") || params.has("parent_origin") ? window.location.hash : "";
 }
 
 function productImagePosition(item: StoreItem, index: number): string {
@@ -1270,11 +1282,26 @@ function consumeStoreContentOnce(kind: "announcement" | "promotion", storeId: st
   return true;
 }
 
+function announcementLetteringHtml(text: string, effect: NonNullable<Store["announcementEffect"]>): string {
+  if (effect === "none") return escapeHtml(text);
+  return Array.from(text).map((character, index) => {
+    const classes = character.trim() ? "store-announcement-letter" : "store-announcement-letter is-space";
+    return `<span class="${classes}" style="--letter-index:${index}">${escapeHtml(character)}</span>`;
+  }).join("");
+}
+
 function storeAnnouncementHtml(store: Store): string {
   if (!store.announcement || !hasReadableContent(store.announcement)) return "";
   const mode = store.announcementMode === "marquee" ? "marquee" : "static";
   const duration = Math.min(40, Math.max(8, Number(store.announcementSpeed) || 18));
   const size = "small";
+  const font = ["store", "modern", "editorial", "friendly", "classic", "geometric"].includes(store.announcementFont || "")
+    ? store.announcementFont!
+    : "store";
+  const effect: NonNullable<Store["announcementEffect"]> = ["wave", "pulse", "sparkle"].includes(store.announcementEffect || "")
+    ? store.announcementEffect as NonNullable<Store["announcementEffect"]>
+    : "none";
+  const presentationClasses = `announcement-size-${size} announcement-font-${font} announcement-effect-${effect}`;
   const configuredColor = /^#[0-9a-f]{6}$/i.test(store.announcementColor || "") ? store.announcementColor.toLowerCase() : "";
   // The legacy amber value was the implicit default rather than an authored
   // merchant choice. Render that value as the new white storefront default;
@@ -1282,15 +1309,15 @@ function storeAnnouncementHtml(store: Store): string {
   const color = configuredColor && configuredColor !== "#c58b3c" ? configuredColor : "#ffffff";
   const style = `--announcement-bg:${color};--announcement-ink:${accentContrastColor(color)};--marquee-duration:${duration}s`;
   if (mode === "static") {
-    return `<div class="store-announcement announcement-size-${size}" style="${style}">${escapeHtml(store.announcement)}</div>`;
+    return `<aside class="store-announcement ${presentationClasses}" style="${style}" aria-label="${escapeHtml(store.announcement)}"><span class="store-announcement-copy" aria-hidden="true">${announcementLetteringHtml(store.announcement, effect)}</span></aside>`;
   }
   const sequence = store.announcement
     .split(/\s*(?:[•·|]|\r?\n)\s*/u)
     .map((phrase) => phrase.trim())
     .filter(Boolean)
-    .map((phrase) => `<span class="store-announcement-phrase">${escapeHtml(phrase)}</span><span class="store-announcement-separator">•</span>`)
+    .map((phrase) => `<span class="store-announcement-phrase">${announcementLetteringHtml(phrase, effect)}</span><span class="store-announcement-separator">•</span>`)
     .join("");
-  return `<aside class="store-announcement marquee announcement-size-${size}" style="${style}" aria-label="Anuncio">
+  return `<aside class="store-announcement marquee ${presentationClasses}" style="${style}" aria-label="Anuncio">
     <span class="store-announcement-a11y">${escapeHtml(store.announcement)}</span>
     <div class="store-announcement-track" aria-hidden="true">
       <span class="store-announcement-sequence">${sequence}</span>
@@ -1309,14 +1336,16 @@ function storefrontHeaderHtml(
   const storeUrl = storeCatalogUrl(slug);
   const catalogUrl = options.catalogUrl || storeUrl;
   const onStorePage = options.current === "home";
-  const homeHref = onStorePage ? "#store-top" : storeUrl;
+  const preservePreview = Boolean(storePreviewFragment());
+  const homeHref = onStorePage ? (preservePreview ? storeUrl : "#store-top") : storeUrl;
   const catalogHref = onStorePage || document.body.classList.contains("category-page")
-    ? "#store-products"
-    : `${catalogUrl}#store-products`;
-  const sectionHref = (section: string) => onStorePage ? `#${section}` : `${storeUrl}#${section}`;
+    ? (preservePreview ? storeUrl : "#store-products")
+    : (preservePreview ? catalogUrl : `${catalogUrl}#store-products`);
+  const sectionHref = (section: string) => onStorePage ? (preservePreview ? storeUrl : `#${section}`) : storeUrl;
+  const scrollTarget = (section: string) => onStorePage && preservePreview ? ` data-store-scroll-target="#${section}"` : "";
   const cartItems = cartCount();
   return `<header class="merchant-header store-site-header${!visibleStoreName && logoUrl ? " has-prominent-logo" : ""}${!visibleStoreName && logoUrl && !store.tagline ? " is-logo-only" : ""}" id="store-top">
-    <a class="store-site-brand" href="${escapeHtml(homeHref)}" aria-label="${escapeHtml(visibleStoreName ? `Ir al inicio de ${visibleStoreName}` : "Ir al inicio de la tienda")}">
+    <a class="store-site-brand" href="${escapeHtml(homeHref)}"${scrollTarget("store-top")} aria-label="${escapeHtml(visibleStoreName ? `Ir al inicio de ${visibleStoreName}` : "Ir al inicio de la tienda")}">
       ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="${visibleStoreName ? "" : "Logo de la tienda"}">` : ""}
       ${visibleStoreName || store.tagline ? `<span class="merchant-header-copy">
         ${visibleStoreName ? `<strong class="store-title">${escapeHtml(visibleStoreName)}</strong>` : ""}
@@ -1324,13 +1353,13 @@ function storefrontHeaderHtml(
       </span>` : ""}
     </a>
     <nav class="store-site-nav" aria-label="Secciones de la tienda">
-      <a href="${escapeHtml(homeHref)}"${options.current === "home" ? ' aria-current="page"' : ""}>Inicio</a>
-      <a href="${escapeHtml(catalogHref)}"${options.current === "catalog" ? ' aria-current="page"' : ""}><span>Catálogo</span>${ICON_CHEVRON_DOWN}</a>
-      ${store.locations?.length || store.locationMapUrl ? `<a href="${escapeHtml(sectionHref("store-location"))}">Ubicación</a>` : ""}
-      ${store.contactFormEnabled === true ? `<a href="${escapeHtml(sectionHref("store-contact"))}">Contacto</a>` : ""}
+      <a href="${escapeHtml(homeHref)}"${scrollTarget("store-top")}${options.current === "home" ? ' aria-current="page"' : ""}>Inicio</a>
+      <a href="${escapeHtml(catalogHref)}"${scrollTarget("store-products")}${options.current === "catalog" ? ' aria-current="page"' : ""}><span>Catálogo</span>${ICON_CHEVRON_DOWN}</a>
+      ${store.locations?.length || store.locationMapUrl ? `<a href="${escapeHtml(sectionHref("store-location"))}"${scrollTarget("store-location")}>Ubicación</a>` : ""}
+      ${store.contactFormEnabled === true ? `<a href="${escapeHtml(sectionHref("store-contact"))}"${scrollTarget("store-contact")}>Contacto</a>` : ""}
     </nav>
     <div class="store-site-utility" aria-label="Acciones de la tienda">
-      <a class="store-header-action store-header-search" href="${escapeHtml(catalogHref)}" aria-label="Buscar en el catálogo">${ICON_SEARCH}</a>
+      <a class="store-header-action store-header-search" href="${escapeHtml(catalogHref)}"${scrollTarget("store-products")} aria-label="Buscar en el catálogo">${ICON_SEARCH}</a>
       ${storePreviewMode || storeOwnerMode ? "" : `<a class="store-header-action store-directory-back" href="/stores/" aria-label="Volver a Mi Tienda">${ICON_PERSON}<span class="visually-hidden">Volver a Mi Tienda</span></a>`}
       <button class="store-header-action store-header-cart" type="button" aria-label="Abrir carrito, ${cartItems} ${cartItems === 1 ? "producto" : "productos"}" ${cartItems === 0 ? "disabled" : ""}>${ICON_BAG}<span class="store-header-cart-count"${cartItems === 0 ? " hidden" : ""}>${cartItems}</span></button>
     </div>
@@ -1340,7 +1369,7 @@ function storefrontHeaderHtml(
 function bindStoreAnnouncementPlayback(): void {
   activeAnnouncementCleanup?.();
   activeAnnouncementCleanup = null;
-  const announcement = app.querySelector<HTMLElement>(".store-announcement.marquee");
+  const announcement = app.querySelector<HTMLElement>(".store-announcement");
   if (!announcement) return;
   let isInView = true;
   const syncPlayback = () => announcement.classList.toggle("is-paused", document.hidden || !isInView);
@@ -1359,7 +1388,13 @@ function bindStoreAnnouncementPlayback(): void {
   };
 }
 
-function renderProductCard(slug: string, item: StoreItem, index: number, showLowStock: boolean): string {
+function renderProductCard(
+  slug: string,
+  item: StoreItem,
+  index: number,
+  showLowStock: boolean,
+  presentation: { featured?: boolean; showDescription?: boolean } = {},
+): string {
   const variants = itemVariants(item);
   const selectedVariant = selectedVariantFor(item);
   const selectedExtras = selectedExtrasFor(item);
@@ -1432,13 +1467,14 @@ function renderProductCard(slug: string, item: StoreItem, index: number, showLow
     : "";
 
   return `
-    <div class="store-item ${soldOut ? "sold-out" : ""}${discountPercent === null ? "" : " has-sale"}" data-id="${item.id}"${staggerStyle}>
+    <div class="store-item ${soldOut ? "sold-out" : ""}${discountPercent === null ? "" : " has-sale"}${presentation.featured ? " is-site-featured" : ""}" data-id="${item.id}"${staggerStyle}>
       ${saleBadgeHtml}
       ${galleryHtml}
       <div class="store-item-info">
+        ${presentation.featured ? `<span class="site-featured-label">Selección destacada</span>` : ""}
         ${tagsHtml}
         <a class="store-item-name product-page-link" href="${escapeHtml(detailUrl)}">${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" title="${escapeHtml(item.color)}"></span>` : ""}${escapeHtml(item.name)}</a>
-        ${item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
+        ${presentation.showDescription !== false && item.description ? `<div class="store-item-description">${escapeHtml(item.description)}</div>` : ""}
         ${variantsHtml}
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note">Completa las opciones requeridas para agregar.</div>` : ""}
@@ -1503,6 +1539,7 @@ type StorePreviewPatch = Partial<
     | "buttonVariant"
     | "buttonMotion"
     | "cartButtonLabel"
+    | "siteDocument"
     | "checkoutMode"
     | "leadCaptureUrl"
     | "cartRecommendationsEnabled"
@@ -1513,6 +1550,8 @@ type StorePreviewPatch = Partial<
     | "announcementSpeed"
     | "announcementSize"
     | "announcementColor"
+    | "announcementFont"
+    | "announcementEffect"
     | "promotionEnabled"
     | "promotionImageUrl"
     | "promotionTitle"
@@ -1581,6 +1620,7 @@ function sanitizeStorePreviewProduct(value: unknown, store: Store): StoreItem | 
 }
 
 const storePreviewMode = new URLSearchParams(window.location.search).get("preview") === "1";
+const storeEditorMode = storePreviewMode && new URLSearchParams(window.location.search).get("editor") === "1";
 const storeOwnerMode = new URLSearchParams(window.location.search).get("owner") === "1";
 const MERCHANT_STORE_VIEW_KEY_PREFIX = "pagosya_merchant_store_view_";
 
@@ -1604,19 +1644,49 @@ function suppressStoreViewForMerchant(slug: string): boolean {
 
 let activePreviewStore: { slug: string; store: Store } | null = null;
 let previewReadyAnnounced = false;
-let storePreviewEditorEnabled = true;
+let storePreviewEditorEnabled = storeEditorMode;
 let storePreviewEditorHover: HTMLElement | null = null;
 let storePreviewEditorSelection: StorePreviewEditorSelection | null = null;
+let storePreviewInlineEditorTarget: HTMLElement | null = null;
+let storePreviewInlineEditorFinish: ((commit: boolean) => void) | null = null;
+let storePreviewEditorClickTimer: number | null = null;
+let storePreviewEditorSuppressNextClick = false;
 const STORE_PREVIEW_SECTIONS = ["brand", "announcement", "hero", "products", "about", "gallery", "motion", "contact", "links", "location", "promotion"] as const;
 type StorePreviewSection = (typeof STORE_PREVIEW_SECTIONS)[number];
 
+const STORE_PREVIEW_INLINE_TEXT_FIELDS = new Set([
+  "storeName", "storeTagline", "title", "caption", "body", "ctaLabel",
+  "animationTitle", "animationSubtitle", "buttonLabel",
+  "catalogTitle", "catalogSubtitle", "aboutTitle", "aboutSubtitle", "aboutBody",
+  "galleryTitle", "gallerySubtitle", "editorialTitle", "editorialCaption", "editorialBody",
+  "linksTitle", "linkLabel", "contactTitle", "contactSubtitle", "locationTitle",
+  "locationSubtitle", "promotionTitle", "promotionBody", "promotionAction", "cartButton",
+]);
+const STORE_PREVIEW_INLINE_IMAGE_FIELDS = new Set([
+  "storeLogo", "storeBanner", "aboutImage", "editorialMedia", "media", "promotionImage",
+]);
+
 interface StorePreviewEditorSelection {
-  section: StorePreviewSection | `animation-${string}`;
+  section: StorePreviewSection | `animation-${string}` | `site-${string}`;
   field: string;
   label: string;
   itemId?: string;
   itemIndex?: number;
   animationId?: string;
+}
+
+function sanitizeStorePreviewEditorSelection(value: unknown): StorePreviewEditorSelection | null {
+  if (!value || typeof value !== "object") return null;
+  const selection = value as Record<string, unknown>;
+  if (typeof selection.section !== "string" || typeof selection.field !== "string") return null;
+  return {
+    section: selection.section.slice(0, 64) as StorePreviewEditorSelection["section"],
+    field: selection.field.slice(0, 64),
+    label: typeof selection.label === "string" ? selection.label.slice(0, 120) : "parte seleccionada",
+    ...(typeof selection.itemId === "string" ? { itemId: selection.itemId.slice(0, 200) } : {}),
+    ...(Number.isInteger(selection.itemIndex) ? { itemIndex: Math.max(0, Number(selection.itemIndex)) } : {}),
+    ...(typeof selection.animationId === "string" ? { animationId: selection.animationId.slice(0, 64) } : {}),
+  };
 }
 
 function storePreviewEditorLabel(): HTMLElement {
@@ -1639,6 +1709,13 @@ function markStorePreviewEditorTarget(element: Element | null, selection: StoreP
   if (selection.itemId) element.dataset.storeEditorItemId = selection.itemId;
   if (Number.isInteger(selection.itemIndex)) element.dataset.storeEditorItemIndex = String(selection.itemIndex);
   if (selection.animationId) element.dataset.storeEditorAnimationId = selection.animationId;
+  if (STORE_PREVIEW_INLINE_TEXT_FIELDS.has(selection.field)) element.dataset.storeEditorInline = "text";
+  else if (STORE_PREVIEW_INLINE_IMAGE_FIELDS.has(selection.field)) {
+    element.dataset.storeEditorInline = "image";
+    element.tabIndex = 0;
+    element.setAttribute("role", "button");
+    element.setAttribute("aria-label", `Cambiar ${selection.label}`);
+  }
 }
 
 function markAllStorePreviewEditorTargets(
@@ -1652,7 +1729,8 @@ function markAllStorePreviewEditorTargets(
 
 function syncStorePreviewEditorMode(): void {
   document.documentElement.classList.toggle("store-preview-mode", storePreviewMode);
-  document.body.classList.toggle("store-preview-editor-enabled", storePreviewMode && storePreviewEditorEnabled);
+  document.documentElement.classList.toggle("store-editor-mode", storeEditorMode);
+  document.body.classList.toggle("store-preview-editor-enabled", storeEditorMode && storePreviewEditorEnabled);
   if (!storePreviewEditorEnabled && storePreviewEditorHover) {
     storePreviewEditorHover.classList.remove("store-preview-editor-hover");
     storePreviewEditorHover = null;
@@ -1661,8 +1739,18 @@ function syncStorePreviewEditorMode(): void {
 
 function syncStorePreviewEditorSelection(): void {
   app.querySelectorAll<HTMLElement>(".store-preview-editor-selected").forEach((element) => element.classList.remove("store-preview-editor-selected"));
+  app.querySelectorAll<HTMLElement>(".store-animation-layout-selected").forEach((element) => element.classList.remove("store-animation-layout-selected"));
   const selection = storePreviewEditorSelection;
   if (!selection || !storePreviewEditorEnabled) return;
+  if (selection.animationId) {
+    const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
+      .find((candidate) => candidate.dataset.animationId === selection.animationId);
+    const copies = Array.from(section?.querySelectorAll<HTMLElement>("[data-animation-copy]") ?? []);
+    const selectedCopy = Number.isInteger(selection.itemIndex)
+      ? copies.find((copy) => Number(copy.dataset.animationMediaIndex) === selection.itemIndex)
+      : copies.find((copy) => !copy.hasAttribute("data-animation-media-index")) || copies[0];
+    selectedCopy?.classList.add("store-animation-layout-selected");
+  }
   const candidates = Array.from(app.querySelectorAll<HTMLElement>("[data-store-editor-target]")).filter((element) => {
     if (element.dataset.storeEditorSection !== selection.section) return false;
     if (selection.animationId && element.dataset.storeEditorAnimationId !== selection.animationId) return false;
@@ -1670,7 +1758,8 @@ function syncStorePreviewEditorSelection(): void {
     if (Number.isInteger(selection.itemIndex) && Number(element.dataset.storeEditorItemIndex) !== selection.itemIndex) return false;
     return element.dataset.storeEditorField === selection.field;
   });
-  const target = candidates[0] || app.querySelector<HTMLElement>(`[data-store-editor-section="${CSS.escape(selection.section)}"]`);
+  const target = candidates[0] || Array.from(app.querySelectorAll<HTMLElement>("[data-store-editor-section]"))
+    .find((candidate) => candidate.dataset.storeEditorSection === selection.section);
   target?.classList.add("store-preview-editor-selected");
 }
 
@@ -1710,12 +1799,55 @@ function applyStoreSectionBackgrounds(store: Store): void {
     element.style.setProperty("--store-section-text", text);
     element.style.setProperty("--pg-text", text);
     element.style.setProperty("--pg-text-muted", `color-mix(in srgb, ${text} 76%, ${color})`);
+      element.style.setProperty("--pg-text-faint", `color-mix(in srgb, ${text} 62%, ${color})`);
+  });
+  app.querySelectorAll<HTMLElement>(".bespoke-zone[data-site-section]").forEach((element) => {
+    const siteId = element.dataset.siteSection;
+    if (!siteId) return;
+    const section = `site-${siteId}`;
+    element.dataset.storeSectionKey = section;
+    const color = configured[section];
+    if (!/^#[0-9a-f]{6}$/i.test(color || "")) return;
+    const text = backgroundTheme(color).textColor;
+    element.style.setProperty("--zone-bg", color);
+    element.style.setProperty("--zone-ink", text);
+    element.style.setProperty("--store-section-background", color);
+    element.style.setProperty("--store-section-text", text);
+    element.style.setProperty("--pg-text", text);
+    element.style.setProperty("--pg-text-muted", `color-mix(in srgb, ${text} 76%, ${color})`);
     element.style.setProperty("--pg-text-faint", `color-mix(in srgb, ${text} 62%, ${color})`);
   });
 }
 
 function annotateStorePreviewEditor(store: Store): void {
-  if (!storePreviewMode) return;
+  if (!storeEditorMode) return;
+  app.querySelectorAll<HTMLElement>(".bespoke-zone[data-site-kind]").forEach((element) => {
+    const kind = element.dataset.siteKind;
+    const id = element.dataset.siteSection;
+    const section = id ? `site-${id}` : kind === "catalog" ? "products" : kind === "story" ? "about" : kind;
+    if (!section) return;
+    markStorePreviewEditorTarget(element, { section: section as StorePreviewSection, field: "section", label: `sección ${kind}` });
+  });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-hero .bespoke-copy h2'), { section: "hero", field: "storeTagline", label: "título de portada" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-hero .bespoke-media'), { section: "hero", field: "storeBanner", label: "imagen de portada" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-story .bespoke-copy h2'), { section: "about", field: "aboutTitle", label: "título de la historia" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-story .bespoke-copy p'), { section: "about", field: "aboutBody", label: "historia de la marca" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-story .bespoke-media'), { section: "about", field: "aboutImage", label: "imagen de la historia" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-gallery .bespoke-copy h2'), { section: "gallery", field: "galleryTitle", label: "título de la galería" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-gallery .bespoke-copy p'), { section: "gallery", field: "gallerySubtitle", label: "subtítulo de la galería" });
+  app.querySelectorAll<HTMLElement>(".bespoke-gallery[data-site-section]").forEach((gallery) => {
+    const siteSectionId = gallery.dataset.siteSection;
+    if (!siteSectionId) return;
+    const mediaTargets = gallery.querySelectorAll<HTMLElement>(":scope > .bespoke-media > .store-fidelity-media, :scope > .bespoke-media > video");
+    mediaTargets.forEach((media, itemIndex) => {
+      markStorePreviewEditorTarget(media, {
+        section: `site-${siteSectionId}`,
+        field: "editorialMedia",
+        label: `imagen ${itemIndex + 1} de ${gallery.getAttribute("aria-label") || "la galería"}`,
+        itemIndex,
+      });
+    });
+  });
   app.querySelectorAll<HTMLElement>("[data-store-section-key]").forEach((element) => {
     const section = element.dataset.storeSectionKey!;
     const animationId = section.startsWith("animation-") ? section.slice("animation-".length) : undefined;
@@ -1729,7 +1861,14 @@ function annotateStorePreviewEditor(store: Store): void {
   markStorePreviewEditorTarget(app.querySelector(".store-title"), { section: "brand", field: "storeName", label: "nombre de la tienda" });
   markStorePreviewEditorTarget(app.querySelector(".store-tagline"), { section: "brand", field: "storeTagline", label: "descripción corta" });
   markStorePreviewEditorTarget(app.querySelector(".merchant-header-logo"), { section: "brand", field: "storeLogo", label: "logo" });
-  markStorePreviewEditorTarget(app.querySelector(".store-announcement"), { section: "announcement", field: "announcementText", label: "anuncio superior" });
+  const announcement = app.querySelector<HTMLElement>(".store-announcement");
+  markStorePreviewEditorTarget(announcement, { section: "announcement", field: "announcementText", label: "marquesina superior" });
+  if (announcement) {
+    announcement.tabIndex = 0;
+    announcement.setAttribute("role", "button");
+    announcement.setAttribute("aria-label", "Editar marquesina superior");
+    announcement.setAttribute("aria-description", "Cambia el texto, movimiento, velocidad y color de la marquesina.");
+  }
   markStorePreviewEditorTarget(app.querySelector(".store-hero.has-banner img"), { section: "hero", field: "storeBanner", label: "imagen de portada" });
   markAllStorePreviewEditorTargets(".store-slide", (element) => ({
     section: "hero",
@@ -1761,12 +1900,94 @@ function annotateStorePreviewEditor(store: Store): void {
     const animationId = section.dataset.animationId!;
     const animation = store.animations?.find((candidate) => candidate.id === animationId);
     markStorePreviewEditorTarget(section, { section: `animation-${animationId}`, field: "section", label: animation?.name || "sección animada", animationId });
-    section.querySelectorAll<HTMLElement>("img, video, figure").forEach((media) => markStorePreviewEditorTarget(media, { section: `animation-${animationId}`, field: "media", label: "imagen o video de la animación", animationId }));
-    section.querySelectorAll<HTMLElement>("h3").forEach((heading) => markStorePreviewEditorTarget(heading, { section: `animation-${animationId}`, field: animation?.type === "video-pill" ? "topWord" : "title", label: "texto de la animación", animationId }));
-    section.querySelectorAll<HTMLElement>("p").forEach((copy) => markStorePreviewEditorTarget(copy, { section: `animation-${animationId}`, field: "body", label: "descripción de la animación", animationId }));
-    markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-top"), { section: `animation-${animationId}`, field: "topWord", label: "texto superior del video", animationId });
-    markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-right"), { section: `animation-${animationId}`, field: "rightWord", label: "texto derecho del video", animationId });
-    markStorePreviewEditorTarget(section.querySelector(".store-video-pill-word-bottom"), { section: `animation-${animationId}`, field: "bottomWord", label: "texto inferior del video", animationId });
+    const animationMediaUrls = (animation?.media ?? []).map((entry) => assetUrl(entry.imageUrl));
+    const markAnimationMediaTarget = (element: HTMLElement | null, itemIndex: number) => {
+      if (!element || itemIndex < 0 || itemIndex >= animationMediaUrls.length) return;
+      markStorePreviewEditorTarget(element, {
+        section: `animation-${animationId}`,
+        field: "media",
+        label: `imagen ${itemIndex + 1} de la animación`,
+        animationId,
+        itemIndex,
+      });
+    };
+    section.querySelectorAll<HTMLElement>("img[src], video[src]").forEach((media) => {
+      if (media.closest("[data-animation-product-card]")) return;
+      const itemIndex = animationMediaUrls.indexOf(media.getAttribute("src"));
+      markAnimationMediaTarget(media, itemIndex);
+    });
+    const indexedTargets = [
+      [".store-flow-section", null],
+      ["[data-coverflow-index]", "data-coverflow-index"],
+      ["[data-motion-hero-to]", "data-motion-hero-to"],
+      ["[data-gallery-scroll-cell]", "data-gallery-scroll-cell"],
+      ["[data-testimonial-index]", "data-testimonial-index"],
+      ["[data-zoom-index]", "data-zoom-index"],
+      ["[data-portfolio-panel]", "data-portfolio-panel"],
+      ["[data-full-chapter-copy]", "data-full-chapter-copy"],
+      ["[data-frame]", "data-frame"],
+      ["[data-space-card]", "data-space-card"],
+    ] as const;
+    indexedTargets.forEach(([selector, attribute]) => {
+      section.querySelectorAll<HTMLElement>(selector).forEach((element, fallbackIndex) => {
+        const itemIndex = attribute ? Number(element.getAttribute(attribute)) : fallbackIndex;
+        if (Number.isInteger(itemIndex)) markAnimationMediaTarget(element, itemIndex);
+      });
+    });
+    section.querySelectorAll<HTMLElement>(".store-image-stream-grid > figure").forEach(markAnimationMediaTarget);
+    markAnimationMediaTarget(section.querySelector<HTMLElement>(".store-scroll-expansion-sticky > figure"), 0);
+    markAnimationMediaTarget(section.querySelector<HTMLElement>(".store-scroll-expansion-background"), 1);
+    const magneticTarget = section.querySelector<HTMLElement>("[data-magnetic-target]");
+    markAnimationMediaTarget(magneticTarget, 0);
+    section.querySelectorAll<HTMLElement>(
+      "[data-animation-general-copy] > h3, [data-animation-general-copy] > p, [data-animation-copy] > h3, [data-animation-copy] > strong, [data-animation-copy] > p, [data-animation-copy] > blockquote, [data-animation-copy] > [data-animation-copy-field]",
+    ).forEach((text) => {
+      const general = !!text.closest("[data-animation-general-copy]");
+      const copy = text.closest<HTMLElement>("[data-animation-copy]");
+      const itemIndex = Number(copy?.dataset.animationMediaIndex);
+      const explicitField = text.dataset.animationCopyField;
+      const inferredField = text.matches("h3, strong") ? "title" : text.matches("blockquote") ? "body" : "body";
+      const field = general
+        ? text.matches("h3") ? "animationTitle" : "animationSubtitle"
+        : explicitField || inferredField;
+      const labels: Record<string, string> = {
+        title: "título de la escena",
+        caption: "subtítulo de la escena",
+        body: "texto de la escena",
+        animationTitle: "título general de la animación",
+        animationSubtitle: "subtítulo general de la animación",
+      };
+      markStorePreviewEditorTarget(text, {
+        section: `animation-${animationId}`,
+        field,
+        label: labels[field] || "texto de la animación",
+        animationId,
+        ...(!general && Number.isInteger(itemIndex) ? { itemIndex } : {}),
+      });
+    });
+    section.querySelectorAll<HTMLElement>("[data-animation-copy]").forEach((copy, copyIndex) => {
+      if (copy.hasAttribute("data-animation-media-index")) applyAnimationCopySceneLayout(copy);
+      copy.dataset.animationLayoutTarget = animationId;
+      copy.dataset.animationCopyIndex = String(copyIndex);
+      copy.tabIndex = 0;
+      copy.classList.toggle("store-animation-layout-static", getComputedStyle(copy).position === "static");
+      copy.setAttribute("aria-description", "Arrastra para mover el texto, haz un clic para escribir y usa los controles para cambiar su ancho o tamaño.");
+      if (copy.querySelector(":scope > .store-animation-layout-controls")) return;
+      const controls = document.createElement("span");
+      controls.className = "store-animation-layout-controls";
+      controls.setAttribute("aria-label", "Controles para cambiar la forma del texto");
+      controls.innerHTML = `
+        <button type="button" data-animation-layout-handle="move" aria-label="Mover texto" title="Arrastrar para mover el texto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></button>
+        <button type="button" data-animation-layout-handle="width" aria-label="Cambiar ancho del texto" title="Arrastrar para cambiar el ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg></button>
+        <button type="button" data-animation-layout-handle="scale" aria-label="Cambiar tamaño del texto" title="Arrastrar para cambiar el tamaño"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M10 7h7v7M7 10v7h7"/></svg></button>`;
+      copy.appendChild(controls);
+    });
+    markStorePreviewEditorTarget(section.querySelector<HTMLElement>(".store-animation-cta-label"), {
+      section: `animation-${animationId}`,
+      field: "buttonLabel",
+      label: "botón de la animación",
+      animationId,
+    });
   });
   markAllStorePreviewEditorTargets(".store-link-btn", (_element, index) => ({ section: "links", field: "linkLabel", label: `enlace social ${index + 1}`, itemIndex: index }));
   markStorePreviewEditorTarget(app.querySelector("#store-links-title"), { section: "links", field: "linksTitle", label: "título de redes sociales" });
@@ -1809,42 +2030,483 @@ function showStorePreviewEditorHover(target: HTMLElement | null): void {
     return;
   }
   target.classList.add("store-preview-editor-hover");
-  label.textContent = `Editar ${target.dataset.storeEditorLabel || "esta parte"}`;
+  const animationCopy = target.closest<HTMLElement>("[data-animation-copy][data-animation-layout-target]");
+  const action = target.dataset.storeEditorInline === "image" ? "cambiar" : target.dataset.storeEditorInline === "text" ? "editar" : "abrir";
+  label.textContent = target.dataset.storeEditorField === "announcementText"
+    ? "Toca para editar la marquesina"
+    : target.dataset.storeEditorInline === "image" && !animationCopy
+    ? `Toca para editar ${target.dataset.storeEditorLabel || "esta imagen"}`
+    : animationCopy
+    ? `Arrastra para mover · doble clic para ${action}`
+    : `${target.dataset.storeEditorInline === "text" ? "Un clic" : "Doble clic"} para ${action} ${target.dataset.storeEditorLabel || "esta parte"}`;
   const rect = target.getBoundingClientRect();
   label.style.display = "block";
   label.style.left = `${Math.max(8, Math.min(rect.left + 8, window.innerWidth - 270))}px`;
   label.style.top = `${Math.max(8, Math.min(rect.top + 8, window.innerHeight - 48))}px`;
 }
 
-if (storePreviewMode) {
+function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePreviewEditorSelection): void {
+  if (storePreviewInlineEditorTarget) return;
+  const originalText = target.textContent || "";
+  storePreviewInlineEditorTarget = target;
+  target.classList.add("store-preview-inline-editing");
+  target.setAttribute("contenteditable", "plaintext-only");
+  target.setAttribute("role", "textbox");
+  target.setAttribute("aria-label", `Editando ${selection.label}. Enter guarda y Escape cancela.`);
+  target.spellcheck = true;
+  target.focus({ preventScroll: true });
+  const range = document.createRange();
+  range.selectNodeContents(target);
+  const browserSelection = window.getSelection();
+  browserSelection?.removeAllRanges();
+  browserSelection?.addRange(range);
+
+  let finished = false;
+  const finish = (commit: boolean) => {
+    if (finished) return;
+    finished = true;
+    const value = (target.textContent || "").replace(/\u00a0/g, " ").trim();
+    if (!commit) target.textContent = originalText;
+    target.removeAttribute("contenteditable");
+    target.removeAttribute("role");
+    target.removeAttribute("aria-label");
+    target.classList.remove("store-preview-inline-editing");
+    storePreviewInlineEditorTarget = null;
+    if (storePreviewInlineEditorFinish === finish) storePreviewInlineEditorFinish = null;
+    if (commit && value !== originalText.trim()) postToParent("STORE_EDITOR_INLINE_TEXT", { selection, value });
+    showStorePreviewEditorHover(target);
+  };
+  storePreviewInlineEditorFinish = finish;
+  target.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      finish(false);
+      return;
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      finish(true);
+    }
+  }, { capture: true });
+  target.addEventListener("blur", () => finish(true), { once: true });
+}
+
+function beginStorePreviewInlineImageEdit(selection: StorePreviewEditorSelection): void {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/png,image/jpeg,image/webp";
+  input.className = "store-preview-inline-file-input";
+  input.setAttribute("aria-label", `Cambiar ${selection.label}`);
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (file) postToParent("STORE_EDITOR_INLINE_IMAGE", { selection, file });
+    input.remove();
+  }, { once: true });
+  input.addEventListener("cancel", () => input.remove(), { once: true });
+  document.body.appendChild(input);
+  input.click();
+}
+
+function animationTextScaleVariables(section: HTMLElement, textScale: number): void {
+  const scale = textScale / 100;
+  section.style.setProperty("--animation-heading-size", `clamp(${Math.round(40 * scale)}px, ${(6.5 * scale).toFixed(2)}vw, ${Math.round(88 * scale)}px)`);
+  section.style.setProperty("--animation-card-copy-size", `clamp(${Math.round(20 * scale)}px, ${(2.6 * scale).toFixed(2)}vw, ${Math.round(26 * scale)}px)`);
+  section.style.setProperty("--animation-body-size", `clamp(${Math.round(15 * scale)}px, ${(1.7 * scale).toFixed(2)}vw, ${Math.round(20 * scale)}px)`);
+}
+
+function applyAnimationCopySceneLayout(copy: HTMLElement, source: HTMLElement = copy): void {
+  const hasCustomLayout = source.hasAttribute("data-animation-copy-custom-layout");
+  copy.toggleAttribute("data-animation-copy-custom-layout", hasCustomLayout);
+  const index = Number(source.dataset.animationMediaIndex);
+  if (Number.isInteger(index)) {
+    copy.dataset.animationMediaIndex = String(index);
+    copy.querySelectorAll<HTMLElement>("[data-store-editor-target]").forEach((target) => {
+      target.dataset.storeEditorItemIndex = String(index);
+      if (target.dataset.storeEditorField === "title") target.dataset.storeEditorLabel = `texto de la escena ${index + 1}`;
+      if (target.dataset.storeEditorField === "caption") target.dataset.storeEditorLabel = `subtítulo de la escena ${index + 1}`;
+      if (target.dataset.storeEditorField === "body") target.dataset.storeEditorLabel = `descripción de la escena ${index + 1}`;
+    });
+  }
+  const textPositionX = Number(source.dataset.animationTextX || 18);
+  const textPositionY = Number(source.dataset.animationTextY || 76);
+  const textScale = Number(source.dataset.animationTextScale || 100);
+  const textWidthPercent = Number(source.dataset.animationTextWidthPercent || 62);
+  copy.dataset.animationTextX = String(textPositionX);
+  copy.dataset.animationTextY = String(textPositionY);
+  copy.dataset.animationTextScale = String(textScale);
+  copy.dataset.animationTextWidthPercent = String(textWidthPercent);
+  copy.dataset.animationTextAlign = source.dataset.animationTextAlign || "left";
+  if (hasCustomLayout) {
+    copy.style.setProperty("--animation-text-x", `${textPositionX}%`);
+    copy.style.setProperty("--animation-text-y", `${textPositionY}%`);
+    copy.style.setProperty("--animation-copy-width", `${textWidthPercent}%`);
+    animationTextScaleVariables(copy, textScale);
+    copy.style.setProperty("--animation-copy-align", copy.dataset.animationTextAlign);
+    const translateX = copy.dataset.animationTextAlign === "right" ? "-100%" : copy.dataset.animationTextAlign === "center" ? "-50%" : "0";
+    copy.style.setProperty("--animation-copy-translate", `${translateX} -50%`);
+  } else {
+    ["--animation-text-x", "--animation-text-y", "--animation-copy-width", "--animation-heading-size", "--animation-card-copy-size", "--animation-body-size", "--animation-copy-align", "--animation-copy-translate"].forEach((property) => copy.style.removeProperty(property));
+  }
+  if (source.dataset.animationTextColor) {
+    copy.dataset.animationTextColor = source.dataset.animationTextColor;
+    copy.style.setProperty("--animation-scene-text-color", source.dataset.animationTextColor);
+  } else {
+    delete copy.dataset.animationTextColor;
+    copy.style.removeProperty("--animation-scene-text-color");
+  }
+}
+
+function beginAnimationTextGesture(event: PointerEvent, copy: HTMLElement, action: "move" | "width" | "scale"): void {
+  if (!storePreviewEditorEnabled || event.button !== 0 || storePreviewInlineEditorTarget) return;
+  const section = copy.closest<HTMLElement>(".store-motion-section[data-animation-id]");
+  const animationId = section?.dataset.animationId;
+  if (!section || !animationId) return;
+  const positioner = copy.offsetParent instanceof HTMLElement ? copy.offsetParent : section;
+  const bounds = positioner.getBoundingClientRect();
+  if (bounds.width < 1 || bounds.height < 1) return;
+  const copyBounds = copy.getBoundingClientRect();
+  const copyHasCustomLayout = copy.hasAttribute("data-animation-copy-custom-layout");
+  const sectionHasCustomLayout = section.hasAttribute("data-animation-custom-layout");
+  const alreadyCustom = copyHasCustomLayout || sectionHasCustomLayout;
+  const mediaIndex = Number(copy.dataset.animationMediaIndex);
+  const selection: StorePreviewEditorSelection = {
+    section: `animation-${animationId}`,
+    field: "layout",
+    label: "posición y tamaño del texto",
+    animationId,
+    ...(Number.isInteger(mediaIndex) ? { itemIndex: mediaIndex } : {}),
+  };
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const align = copyHasCustomLayout ? (copy.dataset.animationTextAlign || "left") : (section.dataset.animationTextAlign || "left");
+  const inferredAnchorX = align === "right"
+    ? copyBounds.right
+    : align === "center" ? copyBounds.left + (copyBounds.width / 2) : copyBounds.left;
+  const finiteNumber = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  const startPositionX = alreadyCustom
+    ? finiteNumber(copyHasCustomLayout ? copy.dataset.animationTextX : section.dataset.animationTextX, 18)
+    : Math.round(Math.min(100, Math.max(0, ((inferredAnchorX - bounds.left) / bounds.width) * 100)));
+  const startPositionY = alreadyCustom
+    ? finiteNumber(copyHasCustomLayout ? copy.dataset.animationTextY : section.dataset.animationTextY, 76)
+    : Math.round(Math.min(100, Math.max(0, (((copyBounds.top + (copyBounds.height / 2)) - bounds.top) / bounds.height) * 100)));
+  const startWidth = alreadyCustom
+    ? finiteNumber(copyHasCustomLayout ? copy.dataset.animationTextWidthPercent : section.dataset.animationTextWidthPercent, 62)
+    : Math.round(Math.min(100, Math.max(20, (copyBounds.width / bounds.width) * 100)));
+  const startScale = finiteNumber(copyHasCustomLayout ? copy.dataset.animationTextScale : section.dataset.animationTextScale, 100);
+  let positionX = startPositionX;
+  let positionY = startPositionY;
+  let textWidthPercent = startWidth;
+  let textScale = startScale;
+  let moved = false;
+  let gestureActive = false;
+  const activateGesture = () => {
+    if (gestureActive) return;
+    gestureActive = true;
+    storePreviewEditorSelection = selection;
+    syncStorePreviewEditorSelection();
+    showStorePreviewEditorHover(null);
+    section.classList.add("store-animation-layout-dragging");
+    try {
+      copy.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Synthetic pointer events and older embedded browsers may not own the id.
+    }
+  };
+  if (action !== "move") {
+    activateGesture();
+    event.preventDefault();
+  }
+
+  const move = (moveEvent: PointerEvent) => {
+    if (moveEvent.pointerId !== event.pointerId) return;
+    const deltaX = moveEvent.clientX - startX;
+    const deltaY = moveEvent.clientY - startY;
+    if (!moved && Math.hypot(deltaX, deltaY) < 4) return;
+    moved = true;
+    activateGesture();
+    moveEvent.preventDefault();
+    if (!copy.hasAttribute("data-animation-copy-custom-layout")) {
+      copy.setAttribute("data-animation-copy-custom-layout", "");
+      copy.style.setProperty("--animation-text-x", `${startPositionX}%`);
+      copy.style.setProperty("--animation-text-y", `${startPositionY}%`);
+      copy.style.setProperty("--animation-copy-width", `${startWidth}%`);
+      animationTextScaleVariables(copy, startScale);
+      copy.dataset.animationTextAlign = align;
+      copy.style.setProperty("--animation-copy-align", align);
+      copy.style.setProperty("--animation-copy-translate", `${align === "right" ? "-100%" : align === "center" ? "-50%" : "0"} -50%`);
+    }
+    if (action === "move") {
+      // Keep the point that the merchant grabbed under their pointer. Mapping
+      // the pointer itself to the text anchor made the copy jump on press.
+      positionX = Math.round(Math.min(100, Math.max(0, startPositionX + ((deltaX / bounds.width) * 100))));
+      positionY = Math.round(Math.min(100, Math.max(0, startPositionY + ((deltaY / bounds.height) * 100))));
+      copy.style.setProperty("--animation-text-x", `${positionX}%`);
+      copy.style.setProperty("--animation-text-y", `${positionY}%`);
+    } else if (action === "width") {
+      const direction = align === "right" ? -1 : align === "center" ? 2 : 1;
+      textWidthPercent = Math.round(Math.min(100, Math.max(20, startWidth + ((deltaX / bounds.width) * 100 * direction))));
+      copy.style.setProperty("--animation-copy-width", `${textWidthPercent}%`);
+    } else {
+      const scaleDelta = ((deltaX + deltaY) / 2 / Math.max(160, Math.min(bounds.width, bounds.height))) * 100;
+      textScale = Math.round(Math.min(200, Math.max(50, startScale + scaleDelta)));
+      animationTextScaleVariables(copy, textScale);
+    }
+  };
+  const finish = (finishEvent: PointerEvent, commit = true) => {
+    if (finishEvent.pointerId !== event.pointerId) return;
+    window.removeEventListener("pointermove", move, true);
+    window.removeEventListener("pointerup", finish, true);
+    window.removeEventListener("pointercancel", cancel, true);
+    if (gestureActive) section.classList.remove("store-animation-layout-dragging");
+    try {
+      copy.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // The pointer may already have been released by the browser.
+    }
+    if (!moved || !commit) return;
+    // Consume only the synthetic click produced by this drag. A timed lock also
+    // swallowed the merchant's next intentional double-click to edit the text.
+    storePreviewEditorSuppressNextClick = true;
+    window.setTimeout(() => {
+      storePreviewEditorSuppressNextClick = false;
+    }, 0);
+    copy.dataset.animationTextX = String(positionX);
+    copy.dataset.animationTextY = String(positionY);
+    copy.dataset.animationTextWidthPercent = String(textWidthPercent);
+    copy.dataset.animationTextScale = String(textScale);
+    postToParent("STORE_EDITOR_ANIMATION_LAYOUT", {
+      selection,
+      textPositionX: positionX,
+      textPositionY: positionY,
+      textWidthPercent,
+      textScale,
+      textAlign: align,
+    });
+  };
+  const cancel = (cancelEvent: PointerEvent) => {
+    if (cancelEvent.pointerId !== event.pointerId) return;
+    copy.style.setProperty("--animation-text-x", `${startPositionX}%`);
+    copy.style.setProperty("--animation-text-y", `${startPositionY}%`);
+    copy.style.setProperty("--animation-copy-width", `${startWidth}%`);
+    animationTextScaleVariables(copy, startScale);
+    if (!alreadyCustom) copy.removeAttribute("data-animation-copy-custom-layout");
+    finish(cancelEvent, false);
+  };
+  window.addEventListener("pointermove", move, { capture: true, passive: false });
+  window.addEventListener("pointerup", finish, true);
+  window.addEventListener("pointercancel", cancel, true);
+}
+
+function beginAnimationButtonGesture(event: PointerEvent, button: HTMLElement): void {
+  if (!storePreviewEditorEnabled || event.button !== 0 || storePreviewInlineEditorTarget) return;
+  const section = button.closest<HTMLElement>(".store-motion-section[data-animation-id]");
+  const animationId = section?.dataset.animationId;
+  if (!section || !animationId) return;
+  const bounds = section.getBoundingClientRect();
+  if (bounds.width < 1 || bounds.height < 1) return;
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const startPositionX = Number(button.dataset.animationButtonX || 18);
+  const startPositionY = Number(button.dataset.animationButtonY || 86);
+  let positionX = startPositionX;
+  let positionY = startPositionY;
+  let moved = false;
+  const selection: StorePreviewEditorSelection = {
+    section: `animation-${animationId}`,
+    field: "buttonLabel",
+    label: "botón de la animación",
+    animationId,
+  };
+  const move = (moveEvent: PointerEvent) => {
+    if (moveEvent.pointerId !== event.pointerId) return;
+    const deltaX = moveEvent.clientX - startX;
+    const deltaY = moveEvent.clientY - startY;
+    if (!moved && Math.hypot(deltaX, deltaY) < 4) return;
+    if (!moved) {
+      moved = true;
+      storePreviewEditorSelection = selection;
+      syncStorePreviewEditorSelection();
+      showStorePreviewEditorHover(null);
+      section.classList.add("store-animation-layout-dragging");
+      try { button.setPointerCapture?.(event.pointerId); } catch {}
+    }
+    moveEvent.preventDefault();
+    positionX = Math.round(Math.min(100, Math.max(0, startPositionX + (deltaX / bounds.width) * 100)));
+    positionY = Math.round(Math.min(100, Math.max(0, startPositionY + (deltaY / bounds.height) * 100)));
+    button.style.setProperty("--animation-button-x", `${positionX}%`);
+    button.style.setProperty("--animation-button-y", `${positionY}%`);
+  };
+  const finish = (finishEvent: PointerEvent, commit = true) => {
+    if (finishEvent.pointerId !== event.pointerId) return;
+    window.removeEventListener("pointermove", move, true);
+    window.removeEventListener("pointerup", finish, true);
+    window.removeEventListener("pointercancel", cancel, true);
+    section.classList.remove("store-animation-layout-dragging");
+    try { button.releasePointerCapture?.(event.pointerId); } catch {}
+    if (!moved || !commit) return;
+    storePreviewEditorSuppressNextClick = true;
+    window.setTimeout(() => { storePreviewEditorSuppressNextClick = false; }, 0);
+    button.dataset.animationButtonX = String(positionX);
+    button.dataset.animationButtonY = String(positionY);
+    postToParent("STORE_EDITOR_ANIMATION_BUTTON_LAYOUT", {
+      selection,
+      buttonPositionX: positionX,
+      buttonPositionY: positionY,
+    });
+  };
+  const cancel = (cancelEvent: PointerEvent) => {
+    if (cancelEvent.pointerId !== event.pointerId) return;
+    button.style.setProperty("--animation-button-x", `${startPositionX}%`);
+    button.style.setProperty("--animation-button-y", `${startPositionY}%`);
+    finish(cancelEvent, false);
+  };
+  window.addEventListener("pointermove", move, { capture: true, passive: false });
+  window.addEventListener("pointerup", finish, true);
+  window.addEventListener("pointercancel", cancel, true);
+}
+
+if (storeEditorMode) {
+  document.addEventListener("keydown", (event) => {
+    if ((event.key === "Enter" || event.key === " ") && event.target instanceof HTMLElement) {
+      const target = event.target.closest<HTMLElement>('[data-store-editor-target][role="button"]');
+      const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
+      if (target && selection) {
+        event.preventDefault();
+        storePreviewEditorSelection = selection;
+        syncStorePreviewEditorSelection();
+        showStorePreviewEditorHover(target);
+        postToParent("STORE_EDITOR_SELECT", { selection });
+        return;
+      }
+    }
+    if (!(event.ctrlKey || event.metaKey)) return;
+    const target = event.target;
+    const nativeTextUndo = target instanceof HTMLTextAreaElement
+      || (target instanceof HTMLInputElement && ["text", "search", "email", "url", "tel", "number"].includes(target.type))
+      || (target instanceof HTMLElement && target.isContentEditable);
+    if (nativeTextUndo) return;
+    const key = event.key.toLowerCase();
+    if (key === "z" && !event.shiftKey) {
+      event.preventDefault();
+      postToParent("STORE_EDITOR_UNDO", {});
+    } else if (key === "c" && storePreviewEditorSelection?.animationId) {
+      event.preventDefault();
+      postToParent("STORE_EDITOR_COPY_TEXT", { selection: storePreviewEditorSelection });
+    } else if (key === "v" && storePreviewEditorSelection?.animationId) {
+      event.preventDefault();
+      postToParent("STORE_EDITOR_PASTE_TEXT", { selection: storePreviewEditorSelection });
+    }
+  }, true);
+  window.addEventListener("blur", () => storePreviewInlineEditorFinish?.(true));
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") storePreviewInlineEditorFinish?.(true);
+  });
   app.addEventListener("pointerover", (event) => {
     if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
     showStorePreviewEditorHover(event.target.closest<HTMLElement>("[data-store-editor-target]"));
   }, true);
   app.addEventListener("pointerleave", () => showStorePreviewEditorHover(null), true);
+  app.addEventListener("pointerdown", (event) => {
+    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    const button = event.target.closest<HTMLElement>(".store-animation-cta[data-animation-button-layout-target]");
+    if (button) {
+      event.stopPropagation();
+      if (event.detail <= 1) beginAnimationButtonGesture(event, button);
+      return;
+    }
+    const copy = event.target.closest<HTMLElement>("[data-animation-copy][data-animation-layout-target]");
+    if (!copy) return;
+    // Editor gestures own this pointer. Do not let an underlying carousel or
+    // swipe controller interpret the same press as scene navigation.
+    event.stopPropagation();
+    const handle = event.target.closest<HTMLElement>("[data-animation-layout-handle]");
+    // The first press remains available for dragging. The second press of a
+    // double-click must remain untouched so the inline text editor can open.
+    if (!handle && event.detail > 1) return;
+    const action = handle?.dataset.animationLayoutHandle;
+    beginAnimationTextGesture(event, copy, action === "width" || action === "scale" ? action : "move");
+  }, true);
   app.addEventListener("click", (event) => {
     if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    if (storePreviewEditorSuppressNextClick) {
+      storePreviewEditorSuppressNextClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (storePreviewInlineEditorTarget && event.target.closest("[contenteditable]")) return;
     const interactive = event.target.closest("button, a, input, select, textarea, [role='button']");
     if (interactive && !interactive.hasAttribute("data-store-editor-target")) return;
     const target = event.target.closest<HTMLElement>("[data-store-editor-target]");
     const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
-    if (!selection) return;
+    if (!target || !selection) return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
     storePreviewEditorSelection = selection;
     syncStorePreviewEditorSelection();
-    postToParent("STORE_EDITOR_SELECT", { selection });
+    if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
+    if (target.dataset.storeEditorInline === "text" && !selection.animationId) {
+      storePreviewEditorClickTimer = null;
+      showStorePreviewEditorHover(null);
+      beginStorePreviewInlineTextEdit(target, selection);
+      return;
+    }
+    if (selection.animationId && Number.isInteger(selection.itemIndex)) {
+      const section = target.closest<HTMLElement>(".store-motion-section[data-animation-id]");
+      section?.dispatchEvent(new CustomEvent("pagosya:editor-scene", { detail: { index: selection.itemIndex } }));
+      // Scene-driven carousels reuse one copy node and update its media index
+      // while showing the scene, so apply the selection after that update.
+      syncStorePreviewEditorSelection();
+      showStorePreviewEditorHover(target);
+      storePreviewEditorClickTimer = null;
+      postToParent("STORE_EDITOR_SELECT", { selection });
+      return;
+    }
     showStorePreviewEditorHover(target);
+    storePreviewEditorClickTimer = window.setTimeout(() => {
+      storePreviewEditorClickTimer = null;
+      postToParent("STORE_EDITOR_SELECT", { selection });
+    }, 320);
+  }, true);
+  app.addEventListener("dblclick", (event) => {
+    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    storePreviewEditorSuppressNextClick = false;
+    const target = event.target.closest<HTMLElement>("[data-store-editor-target]");
+    const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
+    if (!target || !selection || !target.dataset.storeEditorInline) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
+    storePreviewEditorClickTimer = null;
+    storePreviewEditorSelection = selection;
+    syncStorePreviewEditorSelection();
+    showStorePreviewEditorHover(null);
+    if (target.dataset.storeEditorInline === "text") beginStorePreviewInlineTextEdit(target, selection);
+    else beginStorePreviewInlineImageEdit(selection);
   }, true);
 }
 
-function scrollStorePreviewToSection(section: StorePreviewSection | `animation-${string}`): void {
+function scrollStorePreviewToSection(section: StorePreviewSection | `animation-${string}` | `site-${string}`): void {
   if (section.startsWith("animation-")) {
     window.requestAnimationFrame(() => {
       const id = section.slice("animation-".length);
       const target = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
         .find((entry) => entry.dataset.animationId === id);
+      if (target) scrollStorePreviewToElement(target);
+    });
+    return;
+  }
+  if (section.startsWith("site-")) {
+    window.requestAnimationFrame(() => {
+      const id = section.slice("site-".length);
+      const target = Array.from(app.querySelectorAll<HTMLElement>(".bespoke-zone[data-site-section]"))
+        .find((entry) => entry.dataset.siteSection === id);
       if (target) scrollStorePreviewToElement(target);
     });
     return;
@@ -1925,8 +2587,10 @@ function scrollStorePreviewToEditorialItem(index: number, _kind: "media" | "text
       const targetIndex = Math.min(safeIndex, Math.min(storyTabs.length, storyPanels.length) - 1);
       storyTabs.forEach((tab, tabIndex) => tab.setAttribute("aria-selected", String(tabIndex === targetIndex)));
       storyPanels.forEach((panel, panelIndex) => {
-        panel.classList.toggle("active", panelIndex === targetIndex);
-        panel.setAttribute("aria-hidden", String(panelIndex !== targetIndex));
+        const active = panelIndex === targetIndex;
+        panel.classList.toggle("active", active);
+        panel.setAttribute("aria-hidden", String(!active));
+        panel.inert = !active;
       });
       const gallery = app.querySelector<HTMLElement>(".store-editorial-gallery");
       if (gallery) scrollStorePreviewToElement(gallery);
@@ -1941,10 +2605,14 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const source = value as Record<string, unknown>;
   const clean: Record<string, unknown> = {};
+  if ("siteDocument" in source) {
+    const siteDocument = sanitizeSiteDocument(source.siteDocument);
+    clean.siteDocument = siteDocument;
+  }
   if (source.sectionBackgrounds && typeof source.sectionBackgrounds === "object" && !Array.isArray(source.sectionBackgrounds)) {
     clean.sectionBackgrounds = Object.fromEntries(
       Object.entries(source.sectionBackgrounds as Record<string, unknown>)
-        .filter(([section, color]) => /^(?:hero|products|about|gallery|links|contact|location|motion|animation-[a-z0-9][a-z0-9_-]{0,47})$/.test(section) && typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color))
+        .filter(([section, color]) => /^(?:hero|products|about|gallery|links|contact|location|motion|animation-[a-z0-9][a-z0-9_-]{0,47}|site-[a-z][a-z0-9-]{1,47})$/.test(section) && typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color))
         .slice(0, 32),
     );
   }
@@ -2050,6 +2718,12 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (typeof source.announcementColor === "string" && /^#[0-9a-f]{6}$/i.test(source.announcementColor)) {
     clean.announcementColor = source.announcementColor.toLowerCase();
   }
+  if (["store", "modern", "editorial", "friendly", "classic", "geometric"].includes(String(source.announcementFont))) {
+    clean.announcementFont = source.announcementFont as Store["announcementFont"];
+  }
+  if (["none", "wave", "pulse", "sparkle"].includes(String(source.announcementEffect))) {
+    clean.announcementEffect = source.announcementEffect as Store["announcementEffect"];
+  }
   if (typeof source.promotionEnabled === "boolean") clean.promotionEnabled = source.promotionEnabled;
   if (Array.isArray(source.heroSlides)) {
     clean.heroSlides = source.heroSlides
@@ -2066,12 +2740,13 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   }
   if (Array.isArray(source.contentOrder)) {
     const motionSections = STORE_MOTION_EXPERIENCES.map((experience) => `motion-${experience}`);
-    const allowedSections = ["hero", "products", "about", "gallery", "contact", "links", "motion", ...motionSections];
+    const allowedSections = ["hero", "products", "about", "gallery", "contact", "location", "links", "motion", ...motionSections];
     const order = source.contentOrder.filter((section): section is string =>
-      typeof section === "string" && (allowedSections.includes(section) || /^animation-[a-z0-9][a-z0-9_-]{0,47}$/.test(section)),
+      typeof section === "string" && (allowedSections.includes(section) || /^animation-[a-z0-9][a-z0-9_-]{0,47}$/.test(section) || /^site-[a-z][a-z0-9-]{1,47}$/.test(section)),
     );
     const requiredSections = ["hero", "products", "about", "gallery", "contact", "links"];
-    if (requiredSections.every((section) => order.includes(section)) && new Set(order).size === order.length) clean.contentOrder = order;
+    const authoredOrder = order.some((section) => /^site-[a-z]/.test(section));
+    if ((authoredOrder || requiredSections.every((section) => order.includes(section))) && new Set(order).size === order.length) clean.contentOrder = order;
   }
   if (["cinematic", "editorial", "collage", "catalog-first"].includes(String(source.layoutStyle))) clean.layoutStyle = source.layoutStyle;
   if (["coverflow", "diagonal-marquee", "story-scroller"].includes(String(source.experienceStyle))) clean.experienceStyle = source.experienceStyle;
@@ -2092,19 +2767,35 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
         type: typeof animation.type === "string" && (STORE_MOTION_EXPERIENCES as readonly string[]).includes(animation.type) ? animation.type : "",
         title: typeof animation.title === "string" ? animation.title.slice(0, 100) : "",
         subtitle: typeof animation.subtitle === "string" ? animation.subtitle.slice(0, 220) : "",
-        topWord: typeof animation.topWord === "string" ? animation.topWord.slice(0, 48) : "",
-        rightWord: typeof animation.rightWord === "string" ? animation.rightWord.slice(0, 48) : "",
-        bottomWord: typeof animation.bottomWord === "string" ? animation.bottomWord.slice(0, 48) : "",
         productId: typeof animation.productId === "string" ? animation.productId.slice(0, 80) : "",
+        ...(typeof animation.buttonLabel === "string" ? { buttonLabel: animation.buttonLabel.slice(0, 36) } : {}),
+        ...(typeof animation.buttonPositionX === "number" && Number.isInteger(animation.buttonPositionX) && animation.buttonPositionX >= 0 && animation.buttonPositionX <= 100 ? { buttonPositionX: animation.buttonPositionX } : {}),
+        ...(typeof animation.buttonPositionY === "number" && Number.isInteger(animation.buttonPositionY) && animation.buttonPositionY >= 0 && animation.buttonPositionY <= 100 ? { buttonPositionY: animation.buttonPositionY } : {}),
+        ...(typeof animation.textPositionX === "number" && Number.isInteger(animation.textPositionX) && animation.textPositionX >= 0 && animation.textPositionX <= 100 ? { textPositionX: animation.textPositionX } : {}),
+        ...(typeof animation.textPositionY === "number" && Number.isInteger(animation.textPositionY) && animation.textPositionY >= 0 && animation.textPositionY <= 100 ? { textPositionY: animation.textPositionY } : {}),
+        ...(typeof animation.textScale === "number" && Number.isInteger(animation.textScale) && animation.textScale >= 50 && animation.textScale <= 200 ? { textScale: animation.textScale } : {}),
+        ...(typeof animation.textWidthPercent === "number" && Number.isInteger(animation.textWidthPercent) && animation.textWidthPercent >= 20 && animation.textWidthPercent <= 100 ? { textWidthPercent: animation.textWidthPercent } : {}),
+        ...(typeof animation.textAlign === "string" && ["left", "center", "right"].includes(animation.textAlign) ? { textAlign: animation.textAlign as StoreAnimation["textAlign"] } : {}),
+        ...(typeof animation.textSize === "string" && ["small", "medium", "large"].includes(animation.textSize) ? { textSize: animation.textSize as StoreAnimation["textSize"] } : {}),
+        ...(typeof animation.textWidth === "string" && ["narrow", "medium", "wide"].includes(animation.textWidth) ? { textWidth: animation.textWidth as StoreAnimation["textWidth"] } : {}),
+        ...(typeof animation.textColor === "string" && /^#[0-9a-f]{6}$/i.test(animation.textColor) ? { textColor: animation.textColor } : {}),
+        ...(typeof animation.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(animation.backgroundColor) ? { backgroundColor: animation.backgroundColor } : {}),
         media: Array.isArray(animation.media)
           ? animation.media
               .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
               .map((image) => ({
                 imageUrl: typeof image.imageUrl === "string" && /^\/v1\/uploads\//.test(image.imageUrl) ? image.imageUrl : "",
+                ...(typeof image.productId === "string" && image.productId.length <= 80 ? { productId: image.productId } : {}),
                 title: typeof image.title === "string" ? image.title.slice(0, 100) : "",
                 caption: typeof image.caption === "string" ? image.caption.slice(0, 180) : "",
                 body: typeof image.body === "string" ? image.body.slice(0, 360) : "",
                 boxColor: typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? image.boxColor : undefined,
+                ...(typeof image.textPositionX === "number" && Number.isInteger(image.textPositionX) && image.textPositionX >= 0 && image.textPositionX <= 100 ? { textPositionX: image.textPositionX } : {}),
+                ...(typeof image.textPositionY === "number" && Number.isInteger(image.textPositionY) && image.textPositionY >= 0 && image.textPositionY <= 100 ? { textPositionY: image.textPositionY } : {}),
+                ...(typeof image.textScale === "number" && Number.isInteger(image.textScale) && image.textScale >= 50 && image.textScale <= 200 ? { textScale: image.textScale } : {}),
+                ...(typeof image.textWidthPercent === "number" && Number.isInteger(image.textWidthPercent) && image.textWidthPercent >= 20 && image.textWidthPercent <= 100 ? { textWidthPercent: image.textWidthPercent } : {}),
+                ...(typeof image.textAlign === "string" && ["left", "center", "right"].includes(image.textAlign) ? { textAlign: image.textAlign as "left" | "center" | "right" } : {}),
+                ...(typeof image.textColor === "string" && /^#[0-9a-f]{6}$/i.test(image.textColor) ? { textColor: image.textColor } : {}),
               }))
               .filter((image) => image.imageUrl)
               .slice(0, 8)
@@ -2117,6 +2808,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
       .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
       .map((image) => ({
         imageUrl: typeof image.imageUrl === "string" && /^\/v1\/uploads\//.test(image.imageUrl) ? image.imageUrl : "",
+        ...(typeof image.productId === "string" && image.productId.length <= 80 ? { productId: image.productId } : {}),
         title: typeof image.title === "string" ? image.title.slice(0, 100) : "",
         caption: typeof image.caption === "string" ? image.caption.slice(0, 180) : "",
         body: typeof image.body === "string" ? image.body.slice(0, 360) : "",
@@ -2155,11 +2847,51 @@ function applyStoreTheme(slug: string, store: Store): void {
   if (storePreviewMode) activePreviewStore = { slug, store };
   document.body.classList.remove("payment-page", "payment-success-page", "debt-collection-page");
   document.body.classList.add("store-page");
+  const siteDocument = sanitizeSiteDocument(store.siteDocument);
+  document.body.classList.toggle("has-bespoke-site", Boolean(siteDocument));
+  if (siteDocument) {
+    store.siteDocument = siteDocument;
+    document.body.dataset.siteHeadingFont = siteDocument.theme.headingFont;
+    document.body.dataset.siteBodyFont = siteDocument.theme.bodyFont;
+    document.body.dataset.siteNav = siteDocument.navigation.layout;
+    document.body.dataset.siteSticky = String(siteDocument.navigation.sticky);
+    document.body.dataset.siteTransparent = String(siteDocument.navigation.transparent);
+    document.body.dataset.siteProducts = siteDocument.theme.productLayout;
+    document.body.dataset.siteShadow = siteDocument.theme.shadow;
+    document.body.dataset.siteScale = siteDocument.theme.displayScale;
+    document.body.dataset.siteDensity = siteDocument.theme.density;
+    document.body.dataset.siteImageTreatment = siteDocument.theme.imageTreatment;
+    document.body.dataset.siteLogoTreatment = siteDocument.navigation.logoTreatment;
+    document.body.dataset.siteMotionIntensity = siteDocument.motion.intensity;
+    document.body.dataset.siteSpotlight = siteDocument.merchandising.spotlightLayout;
+    document.documentElement.style.setProperty("--site-page", siteDocument.theme.pageBackground);
+    document.documentElement.style.setProperty("--site-ink", siteDocument.theme.textColor);
+    document.documentElement.style.setProperty("--site-accent", siteDocument.theme.accentColor);
+    document.documentElement.style.setProperty("--site-secondary", siteDocument.theme.secondaryColor);
+    document.documentElement.style.setProperty("--site-surface", siteDocument.theme.surfaceColor);
+    document.documentElement.style.setProperty("--site-muted", siteDocument.theme.mutedColor);
+    document.documentElement.style.setProperty("--site-border", siteDocument.theme.borderColor);
+    document.documentElement.style.setProperty("--site-radius", `${siteDocument.theme.radius}px`);
+  } else {
+    delete document.body.dataset.siteHeadingFont;
+    delete document.body.dataset.siteBodyFont;
+    delete document.body.dataset.siteNav;
+    delete document.body.dataset.siteSticky;
+    delete document.body.dataset.siteTransparent;
+    delete document.body.dataset.siteProducts;
+    delete document.body.dataset.siteShadow;
+    delete document.body.dataset.siteScale;
+    delete document.body.dataset.siteDensity;
+    delete document.body.dataset.siteImageTreatment;
+    delete document.body.dataset.siteLogoTreatment;
+    delete document.body.dataset.siteMotionIntensity;
+    delete document.body.dataset.siteSpotlight;
+  }
 
   // Storefront branding is per-store, not per-page. Set it for both the
   // catalog and product routes so a shared product link still feels wholly
   // owned by the merchant and never inherits another store's appearance.
-  const solidBackground = store.backgroundColor || "#0a0a0a";
+  const solidBackground = siteDocument?.theme.pageBackground || store.backgroundColor || "#0a0a0a";
   document.documentElement.style.setProperty("--pg-page-bg", solidBackground);
   const pageTheme = { background: solidBackground, ...backgroundTheme(solidBackground) };
   document.documentElement.style.setProperty("--pg-page-background", pageTheme.background);
@@ -2177,8 +2909,9 @@ function applyStoreTheme(slug: string, store: Store): void {
     document.documentElement.style.setProperty(property, pageTheme.textColor);
   }
 
-  if (store.accentColor) {
-    const effectiveAccent = clampAccentLightness(store.accentColor);
+  const authoredAccent = siteDocument?.theme.accentColor || store.accentColor;
+  if (authoredAccent) {
+    const effectiveAccent = clampAccentLightness(authoredAccent);
     document.documentElement.style.setProperty("--pg-accent", effectiveAccent);
     document.documentElement.style.setProperty("--pg-accent-2", effectiveAccent);
     document.documentElement.style.setProperty("--pg-accent-contrast", accentContrastColor(effectiveAccent));
@@ -2188,13 +2921,16 @@ function applyStoreTheme(slug: string, store: Store): void {
     document.documentElement.style.setProperty("--pg-accent-2", palette.accent2);
     document.documentElement.style.setProperty("--pg-accent-contrast", palette.contrast);
   }
-  document.body.classList.toggle("has-custom-accent", !!store.accentColor);
+  document.body.classList.toggle("has-custom-accent", !!authoredAccent);
   document.body.dataset.fontStyle = store.fontStyle || "modern";
   document.body.dataset.buttonStyle = store.buttonStyle || "rounded";
   document.body.dataset.buttonVariant = store.buttonVariant || "solid";
   document.body.dataset.buttonMotion = store.buttonMotion || "lift";
   document.body.dataset.boardTexture = store.boardTexture || "chalkboard";
-  document.body.dataset.layoutStyle = store.layoutStyle || "cinematic";
+  // A generated site document owns its composition. Letting an older store
+  // layout leak through here made otherwise-desktop heroes inherit compact
+  // catalog-first heights or collage insets inside the appearance preview.
+  document.body.dataset.layoutStyle = siteDocument ? "cinematic" : store.layoutStyle || "cinematic";
 }
 
 let activeStoreRoute: { slug: string; store: Store } | null = null;
@@ -2281,6 +3017,16 @@ function navigateWithinStore(slug: string, store: Store, productId?: string): vo
 }
 
 function bindInternalStoreLinks(slug: string, store: Store): void {
+  app.querySelectorAll<HTMLAnchorElement>("[data-store-scroll-target]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const selector = link.dataset.storeScrollTarget || "";
+      const target = selector ? app.querySelector<HTMLElement>(selector) : null;
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    });
+  });
   app.querySelectorAll<HTMLAnchorElement>(".product-page-link").forEach((link) => {
     link.addEventListener("click", (event) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -2945,6 +3691,15 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   activeStoreExperienceCleanup = null;
   document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
+  const siteDocument = sanitizeSiteDocument(store.siteDocument);
+  if (siteDocument?.merchandising.productOrderIds.length) {
+    const productRank = new Map(siteDocument.merchandising.productOrderIds.map((id, index) => [id, index]));
+    store = {
+      ...store,
+      items: [...store.items].sort((first, second) => (productRank.get(first.id) ?? Number.MAX_SAFE_INTEGER) - (productRank.get(second.id) ?? Number.MAX_SAFE_INTEGER)),
+    };
+  }
+  const siteSection = (kind: StoreSiteDocument["sections"][number]["kind"]) => siteDocument?.sections.find((section) => section.kind === kind);
   const currency = store.items[0]?.currency ?? "BOB";
   const visibleStoreName = store.storeName.trim();
   const bannerUrl = assetUrl(store.bannerUrl);
@@ -2954,7 +3709,18 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     selectedCategoryId = categoryIdFromLocation() ?? "ALL";
     sortMode = "featured";
   }
-  const heroSlides = (store.heroSlides ?? [])
+  const siteHeroSection = siteSection("hero");
+  const siteHeroSlides = (siteHeroSection?.mediaUrls ?? []).map((imageUrl, index) => {
+    const item = siteHeroSection?.items.find((candidate) => candidate.mediaUrl === imageUrl) ?? siteHeroSection?.items[index];
+    return {
+      imageUrl,
+      title: item?.title || (index === 0 ? siteHeroSection?.title : ""),
+      body: item?.body || (index === 0 ? siteHeroSection?.body : ""),
+      ctaLabel: index === 0 ? siteHeroSection?.ctaLabel : "",
+      ctaUrl: "",
+    };
+  });
+  const heroSlides = (siteDocument ? siteHeroSlides : store.heroSlides ?? [])
     .map((slide) => ({ ...slide, resolvedMediaUrl: assetUrl(slide.imageUrl) }))
     .filter((slide): slide is typeof slide & { resolvedMediaUrl: string } => !!slide.resolvedMediaUrl)
     .slice(0, 5);
@@ -3016,6 +3782,21 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       <img class="store-fidelity-media-backdrop" src="${escapeHtml(mediaUrl)}" alt="" aria-hidden="true" ${backdropLoading} decoding="async" style="object-position:${position}">
     </span>`;
   };
+  const linkedEditorialMediaHtml = (
+    mediaUrl: string,
+    sourceUrl: string,
+    alt: string,
+    productId?: string,
+    allowLink = true,
+  ) => {
+    const media = fidelityImageHtml(mediaUrl, sourceUrl, alt);
+    const product = productId ? store.items.find((item) => item.id === productId) : undefined;
+    if (!product || !allowLink || storeEditorMode) return media;
+    return `<a class="store-editorial-product-link product-page-link" href="${escapeHtml(productPageUrl(slug, product.id))}" aria-label="Ver ${escapeHtml(product.name)}">
+      ${media}
+      <span class="store-editorial-product-cue"><span>Ver ${escapeHtml(product.name)}</span>${ICON_ARROW_RIGHT}</span>
+    </a>`;
+  };
 
   const announcementHtml = storeAnnouncementHtml(store);
 
@@ -3056,6 +3837,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
             .map((slide, index) => {
               const safeCtaUrl = slide.ctaUrl && /^https?:\/\//i.test(slide.ctaUrl) ? slide.ctaUrl : null;
               const hasCopy = !!(slide.title || slide.body || slide.ctaLabel);
+              const titleLength = Array.from(slide.title || "").length;
+              const titleClass = titleLength > 88 ? " is-very-long" : titleLength > 56 ? " is-long" : "";
               return `<article class="store-slide ${index === 0 ? "active" : ""}" data-slide-index="${index}" aria-hidden="${index === 0 ? "false" : "true"}">
                 ${
                   isVideoMediaUrl(slide.resolvedMediaUrl)
@@ -3065,7 +3848,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
                 ${
                   hasCopy
                     ? `<div class="store-slide-overlay">
-                        ${slide.title ? `<h2>${escapeHtml(slide.title)}</h2>` : ""}
+                        ${slide.title ? `<h2 class="store-slide-title${titleClass}">${escapeHtml(slide.title)}</h2>` : ""}
                         ${slide.body ? `<p>${escapeHtml(slide.body)}</p>` : ""}
                         ${
                           slide.ctaLabel
@@ -3117,8 +3900,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </div>`
     : "";
 
-  const catalogTitle = store.catalogTitle?.trim() || "La tienda";
-  const catalogSubtitle = store.catalogSubtitle?.trim() || (visibleStoreName ? `Explora la selección de ${visibleStoreName}.` : "Explora nuestra selección.");
+  const catalogTitle = siteSection("catalog")?.title || store.catalogTitle?.trim() || "La tienda";
+  const catalogSubtitle = siteSection("catalog")?.body || store.catalogSubtitle?.trim() || (visibleStoreName ? `Explora la selección de ${visibleStoreName}.` : "Explora nuestra selección.");
   const sectionCover = (section: CatalogSection): { url: string | null; position: string } => {
     for (const item of section.items) {
       const imageIndex = item.imageUrls.findIndex((imageUrl) => !!imageUrl);
@@ -3182,8 +3965,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     ${catalogBrowserHtml}
   </section>`;
 
-  const aboutTitle = store.aboutTitle?.trim() || "Conoce la marca";
-  const aboutSubtitle = store.aboutSubtitle?.trim() || store.tagline?.trim() || "Una mirada a la intención detrás de cada elección.";
+  const aboutTitle = siteSection("story")?.title || store.aboutTitle?.trim() || "Conoce la marca";
+  const aboutSubtitle = siteSection("story")?.body || store.aboutSubtitle?.trim() || store.tagline?.trim() || "Una mirada a la intención detrás de cada elección.";
   const aboutHtml = aboutParagraphs.length || aboutImageUrl || store.aboutTitle || store.aboutSubtitle
     ? `<section class="store-about${aboutImageUrl ? " has-image" : ""}${hasStoreAnimatedIn ? "" : " story-intro"}" aria-labelledby="store-about-title"${aboutImageUrl ? ` style="--store-about-image:url(&quot;${escapeHtml(aboutImageUrl)}&quot;);--store-about-position:${storeImagePosition(store, store.aboutImageUrl)}"` : ""}>
         <div class="store-about-heading">
@@ -3206,6 +3989,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       caption: "Historia en movimiento",
       body: slide.body || "Un capítulo visual que continúa el recorrido después del catálogo.",
       isVideo: true,
+      productId: undefined,
     }));
   const storyEntries = storyVideoEntries.length
     ? storyVideoEntries
@@ -3216,14 +4000,15 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         caption: image.caption || "Historia visual",
         body: image.body || "Un capítulo visual que continúa el recorrido después del catálogo.",
         isVideo: false,
+        productId: image.productId,
       }));
-  const editorialFigure = (image: (typeof editorialImages)[number], index: number, extraClass = "") => {
+  const editorialFigure = (image: (typeof editorialImages)[number], index: number, extraClass = "", allowProductLink = true) => {
     const boxColor = typeof image.boxColor === "string" && /^#[0-9a-f]{6}$/i.test(image.boxColor) ? image.boxColor : null;
     const boxStyle = boxColor
       ? `--store-editorial-card-bg:${boxColor};--store-editorial-card-ink:${accentContrastColor(boxColor)};`
       : "";
     return `<figure class="store-editorial-item ${extraClass}" style="${boxStyle}--experience-index:${index}">
-      ${fidelityImageHtml(image.resolvedImageUrl, image.imageUrl, image.caption || `Imagen de la tienda ${index + 1}`)}
+      ${linkedEditorialMediaHtml(image.resolvedImageUrl, image.imageUrl, image.caption || `Imagen de la tienda ${index + 1}`, image.productId, allowProductLink)}
       ${(image.title || image.caption || image.body) ? `<figcaption>${image.title ? `<strong>${escapeHtml(image.title)}</strong>` : ""}${image.caption ? `<span>${escapeHtml(image.caption)}</span>` : ""}${image.body ? `<p>${escapeHtml(image.body)}</p>` : ""}</figcaption>` : ""}
     </figure>`;
   };
@@ -3231,7 +4016,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     ? `<div class="store-diagonal-marquee" aria-label="Galería diagonal en movimiento">
         <div class="store-diagonal-rail">
           <div class="store-diagonal-set">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item")).join("")}</div>
-          <div class="store-diagonal-set" aria-hidden="true">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item")).join("")}</div>
+          <div class="store-diagonal-set" aria-hidden="true">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item", false)).join("")}</div>
         </div>
       </div>`
     : experienceStyle === "story-scroller"
@@ -3244,7 +4029,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
               <figure class="store-editorial-item store-story-item">
                 ${entry.isVideo
                   ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(entry.title)}" muted loop playsinline preload="metadata" controls></video>`
-                  : fidelityImageHtml(entry.mediaUrl, entry.sourceUrl, entry.caption)}
+                  : linkedEditorialMediaHtml(entry.mediaUrl, entry.sourceUrl, entry.caption, entry.productId)}
                 <figcaption><strong>${escapeHtml(entry.title)}</strong><span>${escapeHtml(entry.caption)}</span><p>${escapeHtml(entry.body)}</p></figcaption>
               </figure>
             </div>`).join("")}
@@ -3272,7 +4057,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         allowedMotionExperiences.includes(animation.type),
       )
     : [];
-  const animationInstances = savedAnimations.length
+  const legacyAnimationInstances: StoreAnimation[] = savedAnimations.length
     ? savedAnimations
     : store.motionDuoEnabled === true
       ? motionExperiences.map((type, index) => ({
@@ -3281,13 +4066,35 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           type,
           title: "",
           subtitle: "",
-          topWord: "",
-          rightWord: "",
-          bottomWord: "",
           productId: "",
           media: store.editorialGallery ?? [],
         }))
       : [];
+  const authoredExperience = siteDocument?.experience;
+  const signatureAnimation: StoreAnimation | null = authoredExperience
+    && authoredExperience.type !== "none"
+    && (["layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"].includes(authoredExperience.type)
+      || authoredExperience.mediaUrls.length >= 2)
+      ? {
+          id: "ai-signature-experience",
+          name: authoredExperience.title || "Experiencia visual",
+          type: authoredExperience.type,
+          title: authoredExperience.title,
+          subtitle: authoredExperience.body,
+          textColor: siteDocument?.theme.textColor,
+          backgroundColor: siteDocument?.theme.surfaceColor,
+          media: authoredExperience.mediaUrls.map((imageUrl, index) => ({
+            imageUrl,
+            title: authoredExperience.title || `Escena ${index + 1}`,
+            caption: authoredExperience.body,
+            body: authoredExperience.body,
+          })),
+        }
+      : null;
+  const animationInstances: StoreAnimation[] = [
+    ...legacyAnimationInstances,
+    ...(signatureAnimation && !legacyAnimationInstances.some((animation) => animation.type === signatureAnimation.type) ? [signatureAnimation] : []),
+  ];
   const baseContentOrder = ["hero", "about", "products", "gallery", "links", "contact", "location"];
   const animationSections = animationInstances.map((animation) => `animation-${animation.id}`);
   const allowedContentSections = new Set([...baseContentOrder, "motion", ...animationSections]);
@@ -3348,9 +4155,15 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       .map((image) => ({
         mediaUrl: assetUrl(image.imageUrl),
         sourceUrl: image.imageUrl,
-        title: image.title || "Una escena de la marca",
-        caption: image.caption || image.title || "Escena de la marca",
-        body: image.body || image.caption || "Una mirada más cercana a la historia de la marca.",
+        title: image.title?.trim() || "",
+        caption: image.caption?.trim() || "",
+        body: image.body?.trim() || "",
+        textPositionX: image.textPositionX,
+        textPositionY: image.textPositionY,
+        textScale: image.textScale,
+        textWidthPercent: image.textWidthPercent,
+        textAlign: image.textAlign,
+        textColor: image.textColor,
       }))
       .filter((image): image is typeof image & { mediaUrl: string } => !!image.mediaUrl)
       .slice(0, 8);
@@ -3363,47 +4176,120 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           title: selectedProduct.name,
           caption: selectedProduct.tags?.[0] || "Producto destacado",
           body: selectedProduct.description || publicDescription,
+          textPositionX: undefined,
+          textPositionY: undefined,
+          textScale: undefined,
+          textWidthPercent: undefined,
+          textAlign: undefined,
+          textColor: undefined,
         }
       : null;
     const mediaLimit = animation.type === "clarity-marquee"
       ? 0
-      : ["video-pill", "circle-reveal", "magnetic-target"].includes(animation.type) ? 1 : 8;
+      : ["circle-reveal", "magnetic-target"].includes(animation.type) ? 1 : 8;
     const fallbackProductMotionImage = configuredMotionImages.length === 0 ? productMotionImage : null;
     const motionImages = [
       ...(fallbackProductMotionImage ? [fallbackProductMotionImage] : []),
       ...configuredMotionImages,
     ].slice(0, mediaLimit);
-    const motionStories = motionImages.slice(0, 5).map((image) => ({ ...image, isVideo: isVideoMediaUrl(image.mediaUrl) }));
+    const motionStories = motionImages.map((image) => ({ ...image, isVideo: isVideoMediaUrl(image.mediaUrl) }));
+    const motionMediaLabel = (image: (typeof motionImages)[number], index: number) => image.title || image.caption || `Imagen ${index + 1}`;
+    const motionHeadingHtml = (value: string, attributes = "") => value ? `<h3 data-animation-copy-field="title"${attributes}>${escapeHtml(value)}</h3>` : "";
+    const motionParagraphHtml = (value: string, attributes = "") => value ? `<p data-animation-copy-field="body"${attributes}>${escapeHtml(value)}</p>` : "";
+    const motionCaptionHtml = (value: string) => value ? `<span data-animation-copy-field="caption">${escapeHtml(value)}</span>` : "";
+    const motionSceneDataAttributes = (image: (typeof motionImages)[number], index: number) => {
+      const hasLayout = Number.isInteger(image.textPositionX)
+        || Number.isInteger(image.textPositionY)
+        || Number.isInteger(image.textScale)
+        || Number.isInteger(image.textWidthPercent)
+        || !!image.textAlign
+        || !!image.textColor;
+      const sceneScale = Number.isInteger(image.textScale) ? image.textScale! : 100;
+      return ` data-animation-media-index="${index}"${hasLayout ? " data-animation-copy-custom-layout" : ""}`
+        + ` data-animation-text-x="${Number.isInteger(image.textPositionX) ? image.textPositionX : 18}"`
+        + ` data-animation-text-y="${Number.isInteger(image.textPositionY) ? image.textPositionY : 76}"`
+        + ` data-animation-text-scale="${sceneScale}"`
+        + ` data-animation-text-width-percent="${Number.isInteger(image.textWidthPercent) ? image.textWidthPercent : 62}"`
+        + ` data-animation-text-align="${image.textAlign || "left"}"`
+        + `${image.textColor ? ` data-animation-text-color="${image.textColor}"` : ""}`;
+    };
+    const motionCopyAttributes = (image: (typeof motionImages)[number], index: number) => `data-animation-copy${motionSceneDataAttributes(image, index)}`;
+    const motionFigureCaptionHtml = (image: (typeof motionImages)[number], index: number) => {
+      const hasCopy = !!(image.title || image.caption || image.body);
+      return `<figcaption ${motionCopyAttributes(image, index)}${hasCopy ? "" : " hidden"}><strong data-animation-copy-field="title"${image.title ? "" : " hidden"}>${escapeHtml(image.title)}</strong><span data-animation-copy-field="caption"${image.caption ? "" : " hidden"}>${escapeHtml(image.caption)}</span><p data-animation-copy-field="body"${image.body ? "" : " hidden"}>${escapeHtml(image.body)}</p></figcaption>`;
+    };
+    const hasCustomTextLayout = Number.isInteger(animation.textPositionX)
+      || Number.isInteger(animation.textPositionY)
+      || Number.isInteger(animation.textScale)
+      || Number.isInteger(animation.textWidthPercent)
+      || !!animation.textAlign
+      || !!animation.textSize
+      || !!animation.textWidth;
+    const textPositionX = Number.isInteger(animation.textPositionX) ? animation.textPositionX! : 18;
+    const textPositionY = Number.isInteger(animation.textPositionY) ? animation.textPositionY! : 76;
+    const textAlign = animation.textAlign || "left";
+    const textSize = animation.textSize || "medium";
+    const textWidth = animation.textWidth || "medium";
+    const textScale = Number.isInteger(animation.textScale)
+      ? animation.textScale!
+      : ({ small: 80, medium: 100, large: 135 } as const)[textSize];
+    const textWidthPercent = Number.isInteger(animation.textWidthPercent)
+      ? animation.textWidthPercent!
+      : ({ narrow: 42, medium: 62, wide: 86 } as const)[textWidth];
+    const scale = textScale / 100;
+    const animationStyle = [
+      `--animation-text-x:${textPositionX}%`,
+      `--animation-text-y:${textPositionY}%`,
+      `--animation-copy-width:${textWidthPercent}%`,
+      `--animation-heading-size:clamp(${Math.round(40 * scale)}px,${(6.5 * scale).toFixed(2)}vw,${Math.round(88 * scale)}px)`,
+      `--animation-card-copy-size:clamp(${Math.round(20 * scale)}px,${(2.6 * scale).toFixed(2)}vw,${Math.round(26 * scale)}px)`,
+      `--animation-body-size:clamp(${Math.round(15 * scale)}px,${(1.7 * scale).toFixed(2)}vw,${Math.round(20 * scale)}px)`,
+      ...(animation.textColor ? [`--animation-text-color:${animation.textColor}`] : []),
+      ...(animation.backgroundColor ? [`--animation-background:${animation.backgroundColor}`] : []),
+    ].join(";");
+    const animationAttributes = `${hasCustomTextLayout ? " data-animation-custom-layout" : ""} data-animation-text-x="${textPositionX}" data-animation-text-y="${textPositionY}" data-animation-text-align="${textAlign}" data-animation-text-size="${textSize}" data-animation-text-width="${textWidth}" data-animation-text-scale="${textScale}" data-animation-text-width-percent="${textWidthPercent}"${animation.textColor ? " data-animation-has-text-color" : ""}${animation.backgroundColor ? " data-animation-has-background" : ""} style="${animationStyle}"`;
     const sectionKey = `animation-${animation.id}`;
+    const hasMotionImages = (minimum: number) => motionImages.length >= minimum || (storeEditorMode && motionImages.length > 0);
+    const hasMotionStories = (minimum: number) => motionStories.length >= minimum || (storeEditorMode && motionStories.length > 0);
+    const textAnimationTypes = ["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"];
+    const isTextAnimation = animation.type !== "clarity-marquee" && textAnimationTypes.includes(animation.type);
+    const textPhrases = [...new Set([
+      animation.title?.includes("|") ? null : animation.title,
+      ...(animation.title?.split("|") ?? []),
+      animation.subtitle,
+      selectedProduct?.name,
+      ...(selectedProduct?.tags ?? []),
+      ...store.items.slice(0, 6).map((item) => item.name),
+      store.storeName,
+    ].map((phrase) => phrase?.trim()).filter((phrase): phrase is string => !!phrase))].slice(0, 8);
+    const primaryText = animation.title?.split("|")[0]?.trim() || textPhrases[0] || store.storeName;
+    const secondaryText = animation.subtitle?.trim() || textPhrases[1] || store.storeName;
     let blockHtml = "";
-    if (animation.type === "story-scroll" && motionStories.length >= 2) {
-      blockHtml = `<div class="store-flow-art" data-motion-flow aria-label="Story Scroll">${motionStories.map((entry, index) => `<article class="store-flow-section" style="--flow-index:${index}"><div class="store-flow-inner"><div class="store-flow-copy"><span>${String(index + 1).padStart(2, "0")}</span><h3>${escapeHtml(entry.title)}</h3><p>${escapeHtml(entry.body)}</p></div><figure>${entry.isVideo ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(entry.title)}" muted loop playsinline preload="metadata" controls></video>` : fidelityImageHtml(entry.mediaUrl, entry.sourceUrl, entry.caption)}</figure></div></article>`).join("")}</div>`;
-    } else if (animation.type === "coverflow-carousel" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-coverflow store-motion-coverflow" data-coverflow tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-coverflow-stage">${motionImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}"><figure class="store-editorial-item store-coverflow-item">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure></div>`).join("")}</div><div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
-    } else if (animation.type === "hero-carousel" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-motion-hero" data-motion-hero role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}" tabindex="0"><div class="store-motion-hero-backgrounds" aria-hidden="true">${motionImages.map((image, index) => `<img src="${escapeHtml(image.mediaUrl)}" alt="" data-motion-hero-background="${index}" class="${index === 0 ? "active" : ""}">`).join("")}</div><div class="store-motion-hero-copy"><h3 data-motion-hero-title>${escapeHtml(motionImages[0].title)}</h3><p data-motion-hero-caption>${escapeHtml(motionImages[0].caption)}</p></div><div class="store-motion-filmstrip">${motionImages.map((image, index) => `<button type="button" data-motion-hero-to="${index}" data-motion-title="${escapeHtml(image.title)}" data-motion-caption="${escapeHtml(image.caption)}" aria-label="Ver ${escapeHtml(image.title)}" aria-current="${index === 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</button>`).join("")}</div><div class="store-motion-hero-rail"><span data-motion-hero-status>01</span><span>${String(motionImages.length).padStart(2, "0")}</span></div></div>`;
-    } else if (animation.type === "image-stream" && motionImages.length >= 2) {
+    if (animation.type === "story-scroll" && hasMotionStories(2)) {
+      blockHtml = `<div class="store-flow-art" data-motion-flow aria-label="Story Scroll">${motionStories.map((entry, index) => `<article class="store-flow-section" style="--flow-index:${index}"><div class="store-flow-inner"><div class="store-flow-copy" ${motionCopyAttributes(entry, index)}><span>${String(index + 1).padStart(2, "0")}</span>${motionHeadingHtml(entry.title)}${motionParagraphHtml(entry.body)}</div><figure>${entry.isVideo ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(motionMediaLabel(entry, index))}" muted loop playsinline preload="metadata" controls></video>` : fidelityImageHtml(entry.mediaUrl, entry.sourceUrl, entry.caption)}</figure></div></article>`).join("")}</div>`;
+    } else if (animation.type === "coverflow-carousel" && hasMotionImages(2)) {
+      blockHtml = `<div class="store-coverflow store-motion-coverflow" data-coverflow tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-coverflow-stage">${motionImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}"><figure class="store-editorial-item store-coverflow-item">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}${motionFigureCaptionHtml(image, index)}</figure></div>`).join("")}</div><div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+    } else if (animation.type === "hero-carousel" && hasMotionImages(2)) {
+      blockHtml = `<div class="store-motion-hero" data-motion-hero role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}" tabindex="0"><div class="store-motion-hero-backgrounds" aria-hidden="true">${motionImages.map((image, index) => `<img src="${escapeHtml(image.mediaUrl)}" alt="" data-motion-hero-background="${index}" class="${index === 0 ? "active" : ""}">`).join("")}</div><div class="store-motion-hero-copy" ${motionCopyAttributes(motionImages[0], 0)}><h3 data-animation-copy-field="title" data-motion-hero-title ${motionImages[0].title ? "" : "hidden"}>${escapeHtml(motionImages[0].title)}</h3><p data-animation-copy-field="caption" data-motion-hero-caption ${motionImages[0].caption ? "" : "hidden"}>${escapeHtml(motionImages[0].caption)}</p></div><div class="store-motion-filmstrip">${motionImages.map((image, index) => `<button type="button" data-motion-hero-to="${index}" data-motion-title="${escapeHtml(image.title)}" data-motion-caption="${escapeHtml(image.caption)}"${motionSceneDataAttributes(image, index)} aria-label="Ver ${escapeHtml(motionMediaLabel(image, index))}" aria-current="${index === 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</button>`).join("")}</div><div class="store-motion-hero-rail"><span data-motion-hero-status>01</span><span>${String(motionImages.length).padStart(2, "0")}</span></div></div>`;
+    } else if (animation.type === "image-stream" && hasMotionImages(2)) {
       blockHtml = `<div class="store-image-stream" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-image-stream-grid">${motionImages.map((image) => `<figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, "")}</figure>`).join("")}</div></div>`;
-    } else if (animation.type === "scroll-expansion" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-scroll-expansion" data-scroll-expansion style="--expansion-progress:0" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-scroll-expansion-sticky"><div class="store-scroll-expansion-background" aria-hidden="true">${fidelityImageHtml(motionImages[1].mediaUrl, motionImages[1].sourceUrl, "")}</div><figure>${fidelityImageHtml(motionImages[0].mediaUrl, motionImages[0].sourceUrl, motionImages[0].caption)}</figure><div class="store-scroll-expansion-copy"><h3>${escapeHtml(motionImages[0].title)}</h3><p>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
-    } else if (animation.type === "hero-gallery-scroll" && motionImages.length >= 3) {
+    } else if (animation.type === "scroll-expansion" && hasMotionImages(2)) {
+      const image = motionImages[0];
+      const background = motionImages[1] ?? image;
+      const copy = image.title || image.body ? `<div class="store-scroll-expansion-copy" ${motionCopyAttributes(image, 0)}>${motionHeadingHtml(image.title)}${motionParagraphHtml(image.body)}</div>` : "";
+      blockHtml = `<div class="store-scroll-expansion" data-scroll-expansion style="--expansion-progress:0" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-scroll-expansion-sticky"><div class="store-scroll-expansion-background" aria-hidden="true">${fidelityImageHtml(background.mediaUrl, background.sourceUrl, "")}</div><figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure>${copy}</div></div>`;
+    } else if (animation.type === "hero-gallery-scroll" && hasMotionImages(3)) {
       blockHtml = `<div class="store-gallery-scroll" data-gallery-scroll aria-label="${escapeHtml(accessibleLabel)}"><div class="store-gallery-scroll-sticky"><div class="store-gallery-scroll-grid">${motionImages.slice(0, 5).map((image, index) => `<figure data-gallery-scroll-cell="${index}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure>`).join("")}</div></div></div>`;
-    } else if (animation.type === "stagger-testimonials" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<blockquote>“${escapeHtml(image.body)}”</blockquote><p>— ${escapeHtml(image.caption)}</p></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
-    } else if (animation.type === "zoom-parallax" && motionImages.length >= 3) {
+    } else if (animation.type === "stagger-testimonials" && hasMotionImages(2)) {
+      blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<div class="store-testimonial-copy" ${motionCopyAttributes(image, index)}>${image.body ? `<blockquote data-animation-copy-field="body">“${escapeHtml(image.body)}”</blockquote>` : ""}${image.caption ? `<p data-animation-copy-field="caption">— ${escapeHtml(image.caption)}</p>` : ""}</div></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+    } else if (animation.type === "zoom-parallax" && hasMotionImages(3)) {
       blockHtml = `<div class="store-motion-zoom" data-motion-zoom aria-label="${escapeHtml(accessibleLabel)}"><div class="store-motion-zoom-sticky">${motionImages.map((image, index) => `<div class="store-motion-zoom-layer store-motion-zoom-layer-${index}" data-zoom-index="${index}"><figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure></div>`).join("")}</div></div>`;
-    } else if (animation.type === "video-pill" && motionStories.length >= 1) {
-      const scene = motionStories[0];
-      const kineticTopWord = animation.topWord?.trim() || "";
-      const kineticRightWord = animation.rightWord?.trim() || "";
-      const kineticBottomWord = animation.bottomWord?.trim() || "";
-      const kineticWordsHtml = `${kineticTopWord ? `<span class="store-video-pill-word store-video-pill-word-top">${escapeHtml(kineticTopWord)}</span>` : ""}${kineticRightWord ? `<span class="store-video-pill-word store-video-pill-word-right">${escapeHtml(kineticRightWord)}</span>` : ""}${kineticBottomWord ? `<span class="store-video-pill-word store-video-pill-word-bottom">${escapeHtml(kineticBottomWord)}</span>` : ""}`;
-      blockHtml = `<div class="store-video-pill" data-video-pill aria-label="${escapeHtml(accessibleLabel)}"><div class="store-video-pill-sticky"><div class="store-video-pill-kinetic" aria-hidden="true">${kineticWordsHtml}<div class="store-video-pill-clocks"><div><time data-video-pill-clock="Asia/Kolkata">--:--:--</time><span>INDIA</span></div><div><time data-video-pill-clock="America/New_York">--:--:--</time><span>NUEVA YORK</span></div><div><time data-video-pill-clock="Asia/Dubai">--:--:--</time><span>DUBÁI</span></div></div></div><div class="store-video-pill-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="auto"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div></div></div>`;
-    } else if (animation.type === "portfolio-scroller" && motionStories.length >= 2) {
-      blockHtml = `<div class="store-portfolio" data-portfolio-scroller tabindex="0" role="region" aria-label="${escapeHtml(accessibleLabel)}"><nav aria-label="Escenas de ${escapeHtml(accessibleLabel)}">${motionStories.map((scene, index) => `<button type="button" data-portfolio-to="${index}" aria-current="${index === 0}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(scene.title)}</strong></button>`).join("")}</nav><div class="store-portfolio-stage">${motionStories.map((scene, index) => `<article data-portfolio-panel="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><div class="store-portfolio-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-portfolio-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></article>`).join("")}</div></div>`;
+    } else if (animation.type === "portfolio-scroller" && hasMotionStories(2)) {
+      blockHtml = `<div class="store-portfolio" data-portfolio-scroller tabindex="0" role="region" aria-label="${escapeHtml(accessibleLabel)}"><nav aria-label="Escenas de ${escapeHtml(accessibleLabel)}">${motionStories.map((scene, index) => `<button type="button" data-portfolio-to="${index}" aria-label="Ver ${escapeHtml(motionMediaLabel(scene, index))}" aria-current="${index === 0}"><span>${String(index + 1).padStart(2, "0")}</span>${scene.title ? `<strong>${escapeHtml(scene.title)}</strong>` : ""}</button>`).join("")}</nav><div class="store-portfolio-stage">${motionStories.map((scene, index) => `<article data-portfolio-panel="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><div class="store-portfolio-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(motionMediaLabel(scene, index))}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div>${scene.title || scene.body ? `<div class="store-portfolio-copy" ${motionCopyAttributes(scene, index)}>${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</div>` : ""}</article>`).join("")}</div></div>`;
     } else if (animation.type === "circle-reveal" && motionStories.length >= 1) {
       const scene = motionStories[0];
-      blockHtml = `<div class="store-circle-reveal" data-circle-reveal aria-label="${escapeHtml(accessibleLabel)}"><div class="store-circle-reveal-sticky"><div class="store-circle-reveal-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(scene.title)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div><div class="store-circle-reveal-copy"><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div></div></div>`;
+      const copy = scene.title || scene.body ? `<div class="store-circle-reveal-copy" ${motionCopyAttributes(scene, 0)}>${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</div>` : "";
+      blockHtml = `<div class="store-circle-reveal" data-circle-reveal aria-label="${escapeHtml(accessibleLabel)}"><div class="store-circle-reveal-sticky"><div class="store-circle-reveal-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(motionMediaLabel(scene, 0))}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div>${copy}</div></div>`;
     } else if (animation.type === "clarity-marquee") {
       const phrases = [...new Set([
         selectedProduct?.name,
@@ -3413,34 +4299,79 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       ].map((phrase) => phrase?.trim()).filter((phrase): phrase is string => !!phrase))].slice(0, 8);
       const phraseHtml = phrases.map((phrase, index) => `<span><b>${String(index + 1).padStart(2, "0")}</b>${escapeHtml(phrase)}</span>`).join("");
       blockHtml = `<div class="store-clarity-marquee" data-clarity-marquee aria-label="${escapeHtml(accessibleLabel)}"><div class="store-clarity-rail"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div><div class="store-clarity-rail reverse"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div></div>`;
-    } else if (animation.type === "full-screen-chapters" && motionStories.length >= 2) {
-      blockHtml = `<div class="store-full-chapters" data-full-chapters role="region" aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(220, motionStories.length * 90)}svh"><div class="store-full-chapters-sticky"><div class="store-full-chapter-backgrounds" aria-hidden="true">${motionStories.map((scene, index) => `<div data-full-chapter-bg="${index}" class="${index === 0 ? "active" : ""}">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, "")}</div>`).join("")}</div><div class="store-full-chapter-copy">${motionStories.map((scene, index) => `<article data-full-chapter-copy="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><span>${String(index + 1).padStart(2, "0")} / ${String(motionStories.length).padStart(2, "0")}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></article>`).join("")}</div><div class="store-full-chapter-progress" aria-hidden="true"><span></span></div></div></div>`;
+    } else if (animation.type === "layered-text") {
+      const authoredLayeredPhrases = (animation.title?.split("|") ?? []).map((phrase) => phrase.trim()).filter(Boolean);
+      const layeredPhrases = [...new Set([
+        ...(authoredLayeredPhrases.length > 1 ? authoredLayeredPhrases : [primaryText]),
+        secondaryText,
+      ])].slice(0, 5);
+      const layeredLines = Array.from({ length: Math.min(7, Math.max(4, layeredPhrases.length + 1)) }, (_, index) => {
+        const top = index === 0 ? "\u00a0" : layeredPhrases[(index - 1) % layeredPhrases.length];
+        const bottom = index === Math.min(7, Math.max(4, layeredPhrases.length + 1)) - 1 ? "\u00a0" : layeredPhrases[index % layeredPhrases.length];
+        return `<li style="--layer-index:${index}"><span>${escapeHtml(top)}</span><span>${escapeHtml(bottom)}</span></li>`;
+      }).join("");
+      blockHtml = `<div class="store-layered-text" data-layered-text tabindex="0" aria-label="${escapeHtml(accessibleLabel)}"><ul>${layeredLines}</ul><span class="sr-only" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
+    } else if (animation.type === "text-rotate") {
+      const rotatingValues = textPhrases.length > 1 ? textPhrases : [primaryText, secondaryText];
+      blockHtml = `<div class="store-text-rotate" data-text-rotate data-text-rotate-values="${escapeHtml(rotatingValues.join("\u001f"))}" aria-label="${escapeHtml(accessibleLabel)}"><p data-animation-copy><span class="store-text-rotate-prefix" data-animation-copy-field="body">${escapeHtml(animation.subtitle?.trim() || "Descubre")}</span><span class="store-text-rotate-window"><span data-text-rotate-current data-animation-copy-field="title" aria-live="polite">${escapeHtml(rotatingValues[0])}</span></span></p></div>`;
+    } else if (animation.type === "text-glitch") {
+      blockHtml = `<div class="store-text-glitch" data-text-glitch tabindex="0" data-hover-text="${escapeHtml(secondaryText)}" aria-label="${escapeHtml(accessibleLabel)}"><span class="store-text-glitch-base" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="store-text-glitch-hover" data-text-glitch-hover aria-hidden="true">${escapeHtml(secondaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
+    } else if (animation.type === "text-reveal-block") {
+      blockHtml = `<div class="store-text-reveal" data-text-reveal aria-label="${escapeHtml(accessibleLabel)}"><span class="store-text-reveal-line"><strong data-animation-copy-field="title">${escapeHtml(primaryText)}</strong></span><span class="store-text-reveal-line"><span data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></span></div>`;
+    } else if (animation.type === "text-along-path") {
+      const pathId = `store-text-path-${animation.id.replace(/[^a-z0-9_-]/gi, "")}`;
+      const pathText = `${primaryText} · ${secondaryText} · ${primaryText} · ${secondaryText} · `;
+      blockHtml = `<div class="store-text-path" data-text-along-path aria-label="${escapeHtml(accessibleLabel)}"><svg viewBox="0 0 1000 360" role="img" aria-labelledby="${pathId}-title" preserveAspectRatio="xMidYMid meet"><title id="${pathId}-title">${escapeHtml(primaryText)}</title><path id="${pathId}" d="M70 180 C180 20 360 20 500 180 S820 340 930 180" fill="none"/><text><textPath href="#${pathId}" startOffset="0%"><animate attributeName="startOffset" from="-100%" to="100%" dur="18s" repeatCount="indefinite"/>${escapeHtml(pathText)}</textPath></text></svg><span class="sr-only" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
+    } else if (animation.type === "full-screen-chapters" && hasMotionStories(2)) {
+      blockHtml = `<div class="store-full-chapters" data-full-chapters role="region" aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(220, motionStories.length * 90)}svh"><div class="store-full-chapters-sticky"><div class="store-full-chapter-backgrounds" aria-hidden="true">${motionStories.map((scene, index) => `<div data-full-chapter-bg="${index}" class="${index === 0 ? "active" : ""}">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, "")}</div>`).join("")}</div><div class="store-full-chapter-copy">${motionStories.map((scene, index) => `<article data-full-chapter-copy="${index}" ${motionCopyAttributes(scene, index)} class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><span>${String(index + 1).padStart(2, "0")} / ${String(motionStories.length).padStart(2, "0")}</span>${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</article>`).join("")}</div><div class="store-full-chapter-progress" aria-hidden="true"><span></span></div></div></div>`;
     } else if (animation.type === "magnetic-target" && motionImages.length >= 1) {
       const scene = motionImages[0];
       const magneticHref = selectedProduct ? productPageUrl(slug, selectedProduct.id) : "#store-grid";
       const magneticLabel = selectedProduct ? `Ver ${selectedProduct.name}` : "Explorar colección";
-      blockHtml = `<div class="store-magnetic" data-magnetic-target style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)"><div class="store-magnetic-copy"><span>${escapeHtml(scene.caption)}</span><h3>${escapeHtml(scene.title)}</h3><p>${escapeHtml(scene.body)}</p></div><a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
-    } else if (animation.type === "frame-sequence" && motionImages.length >= 2) {
-      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}" class="${index === 0 ? "active" : ""}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</div>`).join("")}</div><div class="store-frame-copy"><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-frame-title>${escapeHtml(motionImages[0].title)}</h3><p data-frame-body>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
-    } else if (animation.type === "3d-gallery" && motionImages.length >= 3) {
-      blockHtml = `<div class="store-space-gallery" data-space-gallery tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-space-gallery-stage">${motionImages.map((image, index) => `<figure data-space-card="${index}" style="--space-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<figcaption><strong>${escapeHtml(image.title)}</strong><span>${escapeHtml(image.caption)}</span></figcaption></figure>`).join("")}</div><div class="store-experience-controls"><button type="button" data-space-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span data-space-status aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-space-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+      const copy = scene.caption || scene.title || scene.body ? `<div class="store-magnetic-copy" ${motionCopyAttributes(scene, 0)}>${motionCaptionHtml(scene.caption)}${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</div>` : "";
+      blockHtml = `<div class="store-magnetic" data-magnetic-target style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)">${copy}<a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
+    } else if (animation.type === "frame-sequence" && hasMotionImages(2)) {
+      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}"${motionSceneDataAttributes(image, index)} class="${index === 0 ? "active" : ""}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</div>`).join("")}</div><div class="store-frame-copy" ${motionCopyAttributes(motionImages[0], 0)}><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-animation-copy-field="title" data-frame-title ${motionImages[0].title ? "" : "hidden"}>${escapeHtml(motionImages[0].title)}</h3><p data-animation-copy-field="body" data-frame-body ${motionImages[0].body ? "" : "hidden"}>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
+    } else if (animation.type === "3d-gallery" && hasMotionImages(3)) {
+      blockHtml = `<div class="store-space-gallery" data-space-gallery tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-space-gallery-stage">${motionImages.map((image, index) => `<figure data-space-card="${index}" style="--space-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}${motionFigureCaptionHtml(image, index)}</figure>`).join("")}</div><div class="store-experience-controls"><button type="button" data-space-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span data-space-status aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-space-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     }
-    const productActionHtml = selectedProduct && animation.type !== "magnetic-target"
-      ? `<a class="store-motion-product-link" href="${escapeHtml(productPageUrl(slug, selectedProduct.id))}"><span><small>Producto destacado</small><strong>${escapeHtml(selectedProduct.name)}</strong></span>${ICON_ARROW_RIGHT}</a>`
+    const productCardImageUrl = selectedProduct?.imageUrls?.[0] ? assetUrl(selectedProduct.imageUrls[0]) : null;
+    const productActionHtml = selectedProduct
+      ? `<a class="store-motion-product-link store-motion-product-card product-page-link" data-animation-product-card href="${escapeHtml(productPageUrl(slug, selectedProduct.id))}" aria-label="Ver ${escapeHtml(selectedProduct.name)}">
+          <span class="store-motion-product-media">${productCardImageUrl
+            ? `<img src="${escapeHtml(productCardImageUrl)}" alt="" style="object-position:${productImagePosition(selectedProduct, 0)}">`
+            : `<span aria-hidden="true">${escapeHtml(initials(selectedProduct.name))}</span>`}</span>
+          <span class="store-motion-product-copy">
+            <small>Producto en esta animación</small>
+            <strong>${escapeHtml(selectedProduct.name)}</strong>
+            ${selectedProduct.description ? `<span class="store-motion-product-description">${escapeHtml(selectedProduct.description)}</span>` : ""}
+            ${salePriceHtml(selectedProduct, discountedProductAmount(selectedProduct, selectedProduct.amount), selectedProduct.amount, "store-motion-product-price")}
+          </span>
+          <span class="store-motion-product-action"><span>Ver producto</span>${ICON_ARROW_RIGHT}</span>
+        </a>`
       : "";
-    const descriptionHtml = publicDescription
-      ? `<div class="store-motion-description"><p>${escapeHtml(publicDescription)}</p></div>`
+    const buttonLabel = animation.buttonLabel?.trim() || "";
+    const buttonPositionX = Number.isInteger(animation.buttonPositionX) ? animation.buttonPositionX! : 18;
+    const buttonPositionY = Number.isInteger(animation.buttonPositionY) ? animation.buttonPositionY! : 86;
+    const buttonHref = selectedProduct ? productPageUrl(slug, selectedProduct.id) : "#store-products";
+    const buttonActionHtml = buttonLabel
+      ? `<a class="store-animation-cta" href="${escapeHtml(buttonHref)}" data-animation-button-layout-target data-animation-button-x="${buttonPositionX}" data-animation-button-y="${buttonPositionY}" style="--animation-button-x:${buttonPositionX}%;--animation-button-y:${buttonPositionY}%"><span class="store-animation-cta-label">${escapeHtml(buttonLabel)}</span>${ICON_ARROW_RIGHT}</a>`
+      : "";
+    const hasSceneCopy = !["image-stream", "hero-gallery-scroll", "zoom-parallax", ...textAnimationTypes].includes(animation.type);
+    const generalTitle = animation.title?.trim() || "";
+    const descriptionHtml = !isTextAnimation && (generalTitle || publicDescription)
+      ? `<div class="store-motion-description" data-animation-general-copy${hasSceneCopy ? "" : " data-animation-copy"}>${generalTitle ? `<h3>${escapeHtml(generalTitle)}</h3>` : ""}${publicDescription ? `<p>${escapeHtml(publicDescription)}</p>` : ""}</div>`
       : "";
     const html = blockHtml
-      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-label="${escapeHtml(accessibleLabel)}">${descriptionHtml}${blockHtml}${productActionHtml}</section>`
+      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-label="${escapeHtml(accessibleLabel)}"${animationAttributes}>${descriptionHtml}${blockHtml}${buttonActionHtml}${productActionHtml}</section>`
       : "";
     return [sectionKey, html];
   }));
   const editorialGalleryHtml = hasGalleryExperience
     ? `<section class="store-editorial-gallery" data-experience-style="${experienceStyle}" aria-labelledby="store-gallery-title">
         <div class="store-section-heading">
-          <h2 id="store-gallery-title">${escapeHtml(store.galleryTitle?.trim() || "La marca en imágenes")}</h2>
-          <p>${escapeHtml(store.gallerySubtitle?.trim() || "Detalles, atmósferas y perspectivas que completan la historia.")}</p>
+          <h2 id="store-gallery-title">${escapeHtml(siteSection("gallery")?.title || store.galleryTitle?.trim() || "La marca en imágenes")}</h2>
+          <p>${escapeHtml(siteSection("gallery")?.body || store.gallerySubtitle?.trim() || "Detalles, atmósferas y perspectivas que completan la historia.")}</p>
         </div>
         ${galleryExperienceHtml}
       </section>`
@@ -3448,7 +4379,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   const linksHtml = safeLinks.length
     ? `<section class="store-footer" aria-labelledby="store-links-title">
-        <h2 class="store-footer-label" id="store-links-title">${escapeHtml(store.linksTitle?.trim() || "Síguenos")}</h2>
+        <h2 class="store-footer-label" id="store-links-title">${escapeHtml(siteSection("links")?.title || store.linksTitle?.trim() || "Síguenos")}</h2>
         <div class="store-links">${safeLinks
           .map((link) => {
             const icon = linkIcon(link);
@@ -3461,8 +4392,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const contactHtml = store.contactFormEnabled === true
     ? `<section class="store-contact-section" id="store-contact" aria-labelledby="store-contact-title">
         <div class="store-contact-copy">
-          <h2 id="store-contact-title">${escapeHtml(store.contactTitle?.trim() || "¿Tienes una pregunta?")}</h2>
-          <p>${escapeHtml(store.contactSubtitle?.trim() || `Escríbele directamente al equipo de ${store.storeName}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.`)}</p>
+          <h2 id="store-contact-title">${escapeHtml(siteSection("contact")?.title || store.contactTitle?.trim() || "¿Tienes una pregunta?")}</h2>
+          <p>${escapeHtml(siteSection("contact")?.body || store.contactSubtitle?.trim() || `Escríbele directamente al equipo de ${store.storeName}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.`)}</p>
         </div>
         <form class="store-contact-form" id="store-contact-form">
           <div class="field"><label for="store-contact-name">Nombre <span class="store-contact-optional">(opcional)</span></label><input id="store-contact-name" name="name" autocomplete="name" maxlength="120" placeholder="Cómo te llamas"></div>
@@ -3510,7 +4441,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const locationHtml = locations.length
     ? `<section class="store-location-section${locations.length > 1 ? " has-many" : ""}" id="store-location" aria-labelledby="store-location-title">
         <div class="store-location-heading">
-          <div><h2 id="store-location-title">${escapeHtml(store.locationTitle?.trim() || "Visítanos")}</h2><p>${escapeHtml(store.locationSubtitle?.trim() || (locations.length === 1 ? "Encuentra esta tienda y elige cómo recibir tu pedido." : `${locations.length} ubicaciones para retirar o recibir tu pedido.`))}</p></div>
+          <div><h2 id="store-location-title">${escapeHtml(siteSection("location")?.title || store.locationTitle?.trim() || "Visítanos")}</h2><p>${escapeHtml(siteSection("location")?.body || store.locationSubtitle?.trim() || (locations.length === 1 ? "Encuentra esta tienda y elige cómo recibir tu pedido." : `${locations.length} ubicaciones para retirar o recibir tu pedido.`))}</p></div>
           ${locations.length > 1 ? `<button class="store-locations-toggle" type="button" aria-expanded="false" aria-controls="store-locations-list">Ver ubicaciones <span>${locations.length}</span></button>` : ""}
         </div>
         <div class="store-locations-list${locations.length === 1 ? " is-single" : ""}" id="store-locations-list" ${locations.length > 1 ? "hidden" : ""}>
@@ -3518,6 +4449,78 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         </div>
       </section>`
     : "";
+
+  const bespokeMediaHtml = (section: StoreSiteDocument["sections"][number]) => {
+    const media = section.mediaUrls.flatMap((source, index) => {
+      const resolved = assetUrl(source);
+      if (!resolved) return [];
+      const label = section.title || `${visibleStoreName || "La tienda"}, imagen ${index + 1}`;
+      return [isVideoMediaUrl(resolved)
+        ? `<video src="${escapeHtml(resolved)}" aria-label="${escapeHtml(label)}" muted loop playsinline preload="metadata" ${index === 0 ? "autoplay" : ""}></video>`
+        : fidelityImageHtml(resolved, source, label, { eager: section.kind === "hero" && index === 0 })];
+    }).join("");
+    if (!media) return "";
+    return `<div class="bespoke-media" data-count="${section.mediaUrls.length}">${media}</div>`;
+  };
+  const bespokeStoryFlowHtml = (section: StoreSiteDocument["sections"][number]) => {
+    const scenes = section.mediaUrls.slice(0, 3).flatMap((source, index) => {
+      const resolved = assetUrl(source);
+      if (!resolved) return [];
+      const item = section.items.find((candidate) => candidate.mediaUrl === source) ?? section.items[index];
+      return [{
+        source,
+        resolved,
+        title: item?.title || (index === 0 ? section.title : ""),
+        body: item?.body || (index === 0 ? section.body : ""),
+      }];
+    });
+    if (scenes.length < 2) return "";
+    return `<div class="store-flow-art bespoke-story-flow" data-motion-flow aria-label="${escapeHtml(section.title || "Historia de la marca")}">
+      ${scenes.map((scene, index) => `<article class="store-flow-section" style="--flow-index:${index}">
+        <div class="store-flow-inner">
+          <div class="store-flow-copy"><span>${String(index + 1).padStart(2, "0")}</span>${scene.title ? `<h3>${escapeHtml(scene.title)}</h3>` : ""}${scene.body ? `<p>${escapeHtml(scene.body)}</p>` : ""}</div>
+          <figure>${isVideoMediaUrl(scene.resolved)
+            ? `<video src="${escapeHtml(scene.resolved)}" aria-label="${escapeHtml(scene.title || `Escena ${index + 1}`)}" muted loop playsinline preload="metadata" controls></video>`
+            : fidelityImageHtml(scene.resolved, scene.source, scene.title || `Escena ${index + 1}`)}</figure>
+        </div>
+      </article>`).join("")}
+    </div>`;
+  };
+  const bespokeFrame = (
+    section: StoreSiteDocument["sections"][number],
+    content: string,
+    element: "section" | "div" = "section",
+    modifier = "",
+  ) => {
+    if (!content) return "";
+    const label = section.title ? ` aria-label="${escapeHtml(section.title)}"` : "";
+    return `<${element} class="bespoke-zone bespoke-${section.kind}${modifier ? ` ${modifier}` : ""}" data-site-section="${escapeHtml(section.id)}" data-site-kind="${section.kind}" data-site-layout="${section.layout}" data-site-width="${section.width}" data-site-align="${section.align}" data-site-motion="${section.motion}" style="--zone-bg:${section.backgroundColor};--zone-ink:${section.textColor}"${label}>${content}</${element}>`;
+  };
+  const bespokeCopy = (section: StoreSiteDocument["sections"][number], showCta = false) => `<div class="bespoke-copy">
+    ${section.title ? `<h2>${escapeHtml(section.title)}</h2>` : ""}
+    ${section.body ? `<p>${escapeHtml(section.body)}</p>` : ""}
+    ${showCta && section.ctaLabel ? `<button type="button" class="bespoke-cta hero-catalog-cta">${escapeHtml(section.ctaLabel)}${ICON_ARROW_RIGHT}</button>` : ""}
+  </div>`;
+  const renderBespokeSection = (section: StoreSiteDocument["sections"][number]): string => {
+    if (section.kind === "hero") return carouselHtml
+      ? bespokeFrame(section, carouselHtml, "div", "has-site-carousel")
+      : bespokeFrame(section, `${bespokeCopy(section, true)}${bespokeMediaHtml(section)}`);
+    if (section.kind === "story") {
+      const storyFlow = section.motion === "story-scroll" ? bespokeStoryFlowHtml(section) : "";
+      return storyFlow
+        ? bespokeFrame(section, storyFlow, "section", "has-story-flow")
+        : bespokeFrame(section, `${bespokeCopy(section)}${bespokeMediaHtml(section)}`);
+    }
+    if (section.kind === "gallery") {
+      const authoredGallery = bespokeMediaHtml(section);
+      return authoredGallery || editorialGalleryHtml ? bespokeFrame(section, `${bespokeCopy(section)}${authoredGallery || editorialGalleryHtml}`) : "";
+    }
+    if (section.kind === "catalog") return bespokeFrame(section, productsHtml + appointmentsHtml, "div");
+    if (section.kind === "contact") return bespokeFrame(section, contactHtml, "div");
+    if (section.kind === "location") return bespokeFrame(section, locationHtml, "div");
+    if (section.kind === "links") return bespokeFrame(section, linksHtml, "div");
+    return "";
+  };
 
   const sectionHtml: Record<string, string> = {
     hero: heroHtml,
@@ -3530,9 +4533,42 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     links: linksHtml,
     ...motionSectionHtmlByKey,
   };
+  const signatureSectionKey = signatureAnimation && animationInstances.some((animation) => animation.id === signatureAnimation.id)
+    ? `animation-${signatureAnimation.id}`
+    : null;
+  const preservedAnimationHtml = animationSections
+    .filter((section) => section !== signatureSectionKey)
+    .map((section) => motionSectionHtmlByKey[section] || "")
+    .join("");
+  const bespokeSectionHtmlByKey = Object.fromEntries((siteDocument?.sections ?? []).map((section) => [`site-${section.id}`, renderBespokeSection(section)]));
+  const defaultBespokeOrder: string[] = siteDocument?.sections.map((section) => `site-${section.id}`) ?? [];
+  const legacyBespokeSectionsHtml = siteDocument?.sections.map((section) => {
+    const base = renderBespokeSection(section);
+    const placement = `after-${section.kind}`;
+    const signatureHtml = signatureSectionKey && siteDocument.experience.placement === placement
+      ? motionSectionHtmlByKey[signatureSectionKey] || ""
+      : "";
+    const legacyHtml = section.kind === "catalog" ? preservedAnimationHtml : "";
+    return `${base}${signatureHtml}${legacyHtml}`;
+  }).join("") ?? "";
+  const requestedBespokeOrder = requestedContentOrder.filter((section) => bespokeSectionHtmlByKey[section] || motionSectionHtmlByKey[section]);
+  const hasAuthoredBespokeOrder = requestedBespokeOrder.some((section) => section.startsWith("site-"));
+  const authoredBespokeOrder: string[] = hasAuthoredBespokeOrder ? [...requestedBespokeOrder] : [];
+  if (hasAuthoredBespokeOrder) {
+    defaultBespokeOrder.forEach((section) => { if (!authoredBespokeOrder.includes(section)) authoredBespokeOrder.push(section); });
+    animationSections.forEach((section) => {
+      if (authoredBespokeOrder.includes(section)) return;
+      const linksIndex = authoredBespokeOrder.findIndex((entry) => entry === `site-${siteSection("links")?.id}`);
+      authoredBespokeOrder.splice(linksIndex < 0 ? authoredBespokeOrder.length : linksIndex, 0, section);
+    });
+  }
   const orderedSectionsHtml = selectedCatalogSection
     ? productsHtml
-    : contentOrder.map((section) => sectionHtml[section] || "").join("");
+    : siteDocument
+      ? hasAuthoredBespokeOrder
+        ? authoredBespokeOrder.map((section) => bespokeSectionHtmlByKey[section] || motionSectionHtmlByKey[section] || "").join("")
+        : legacyBespokeSectionsHtml
+      : contentOrder.map((section) => sectionHtml[section] || "").join("");
   app.innerHTML = `
     ${storefrontHeaderHtml(slug, store, { current: selectedCatalogSection ? "catalog" : "home", catalogUrl: selectedCatalogSection ? categoryPageUrl(slug, selectedCatalogSection.id) : storeCatalogUrl(slug) })}
     ${announcementHtml}
@@ -3745,6 +4781,15 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     if (options.focusPromotion !== false) closeButton.focus();
   }
 
+  app.querySelectorAll<HTMLButtonElement>(".hero-catalog-cta").forEach((button) =>
+    button.addEventListener("click", () => {
+      const target = app.querySelector<HTMLElement>(".catalog-section-picker")
+        ?? app.querySelector<HTMLElement>("#store-grid")
+        ?? app.querySelector<HTMLElement>(".store-products");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }),
+  );
+
   const carousel = app.querySelector<HTMLElement>(".store-carousel");
   if (carousel) {
     const slides = Array.from(carousel.querySelectorAll<HTMLElement>(".store-slide"));
@@ -3793,7 +4838,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     };
     const startAutoplay = () => {
       stopAutoplay();
-      if (slides.length > 1 && !prefersReducedMotion && !autoplayPausedByUser) {
+      if (slides.length > 1 && !prefersReducedMotion && !autoplayPausedByUser && !storePreviewEditorEnabled) {
         autoplayTimer = window.setInterval(() => showSlide(activeIndex + 1), 6000);
       }
     };
@@ -3825,14 +4870,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     carousel.addEventListener("focusout", startAutoplay);
     const syncCarouselVisibility = () => document.hidden ? stopAutoplay() : startAutoplay();
     document.addEventListener("visibilitychange", syncCarouselVisibility);
-    carousel.querySelectorAll<HTMLButtonElement>(".hero-catalog-cta").forEach((button) =>
-      button.addEventListener("click", () => {
-        const target = app.querySelector<HTMLElement>(".catalog-section-picker")
-          ?? app.querySelector<HTMLElement>("#store-grid")
-          ?? app.querySelector<HTMLElement>(".store-products");
-        target?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }),
-    );
     showSlide(0);
     startAutoplay();
     activeHeroCleanup = () => {
@@ -3842,11 +4879,36 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     };
   }
 
+  const editorSceneIndexFor = (container: HTMLElement, count: number) => {
+    if (!storePreviewEditorEnabled || !storePreviewEditorSelection?.animationId || !Number.isInteger(storePreviewEditorSelection.itemIndex)) return 0;
+    const section = container.closest<HTMLElement>(".store-motion-section[data-animation-id]");
+    if (section?.dataset.animationId !== storePreviewEditorSelection.animationId) return 0;
+    return Math.min(Math.max(storePreviewEditorSelection.itemIndex!, 0), Math.max(count - 1, 0));
+  };
+
+  const selectEditorAnimationScene = (container: HTMLElement, itemIndex: number) => {
+    if (!storePreviewEditorEnabled || !Number.isInteger(itemIndex)) return;
+    const section = container.closest<HTMLElement>(".store-motion-section[data-animation-id]");
+    const animationId = section?.dataset.animationId;
+    if (!animationId) return;
+    const selection: StorePreviewEditorSelection = {
+      section: `animation-${animationId}`,
+      field: "media",
+      label: `imagen ${itemIndex + 1} de la animación`,
+      animationId,
+      itemIndex,
+    };
+    storePreviewEditorSelection = selection;
+    syncStorePreviewEditorSelection();
+    postToParent("STORE_EDITOR_SELECT", { selection });
+  };
+
   app.querySelectorAll<HTMLElement>(".store-coverflow").forEach((coverflow) => {
     const cards = Array.from(coverflow.querySelectorAll<HTMLElement>("[data-coverflow-index]"));
     const status = coverflow.querySelector<HTMLElement>(".store-coverflow-status");
-    let selected = 0;
+    let selected = editorSceneIndexFor(coverflow, cards.length);
     const showCard = (next: number) => {
+      if (!cards.length) return;
       selected = (next + cards.length) % cards.length;
       cards.forEach((card, index) => {
         let offset = index - selected;
@@ -3859,14 +4921,21 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       if (status) status.textContent = `${selected + 1} / ${cards.length}`;
     };
     coverflow.querySelectorAll<HTMLButtonElement>("[data-coverflow-step]").forEach((button) =>
-      button.addEventListener("click", () => showCard(selected + Number(button.dataset.coverflowStep))),
+      button.addEventListener("click", () => {
+        showCard(selected + Number(button.dataset.coverflowStep));
+        selectEditorAnimationScene(coverflow, selected);
+      }),
     );
     coverflow.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       showCard(selected + (event.key === "ArrowLeft" ? -1 : 1));
+      selectEditorAnimationScene(coverflow, selected);
     });
-    showCard(0);
+    coverflow.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
+      showCard(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
+    });
+    showCard(selected);
   });
 
   app.querySelectorAll<HTMLElement>("[data-motion-hero]").forEach((motionHero) => {
@@ -3875,30 +4944,47 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const title = motionHero.querySelector<HTMLElement>("[data-motion-hero-title]");
     const caption = motionHero.querySelector<HTMLElement>("[data-motion-hero-caption]");
     const status = motionHero.querySelector<HTMLElement>("[data-motion-hero-status]");
-    let selected = 0;
+    const animationCopy = motionHero.querySelector<HTMLElement>("[data-animation-copy]");
+    let selected = editorSceneIndexFor(motionHero, buttons.length);
     const show = (next: number, focus = false) => {
+      if (!buttons.length) return;
       selected = (next + buttons.length) % buttons.length;
       backgrounds.forEach((background, index) => background.classList.toggle("active", index === selected));
       buttons.forEach((button, index) => button.setAttribute("aria-current", String(index === selected)));
-      if (title) title.textContent = buttons[selected]?.dataset.motionTitle ?? "";
-      if (caption) caption.textContent = buttons[selected]?.dataset.motionCaption ?? "";
+      if (title) {
+        title.textContent = buttons[selected]?.dataset.motionTitle ?? "";
+        title.hidden = !title.textContent;
+      }
+      if (caption) {
+        caption.textContent = buttons[selected]?.dataset.motionCaption ?? "";
+        caption.hidden = !caption.textContent;
+      }
+      if (animationCopy && buttons[selected]) applyAnimationCopySceneLayout(animationCopy, buttons[selected]);
       if (status) status.textContent = String(selected + 1).padStart(2, "0");
       if (focus) buttons[selected]?.focus({ preventScroll: true });
     };
-    buttons.forEach((button, index) => button.addEventListener("click", () => show(index)));
+    buttons.forEach((button, index) => button.addEventListener("click", () => {
+      show(index);
+      selectEditorAnimationScene(motionHero, selected);
+    }));
     motionHero.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       show(selected + (event.key === "ArrowLeft" ? -1 : 1), true);
+      selectEditorAnimationScene(motionHero, selected);
     });
-    show(0);
+    motionHero.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
+      show(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
+    });
+    show(selected);
   });
 
   app.querySelectorAll<HTMLElement>("[data-testimonials]").forEach((testimonials) => {
     const cards = Array.from(testimonials.querySelectorAll<HTMLElement>("[data-testimonial-index]"));
     const status = testimonials.querySelector<HTMLElement>(".store-testimonial-status");
-    let selected = 0;
+    let selected = editorSceneIndexFor(testimonials, cards.length);
     const show = (next: number) => {
+      if (!cards.length) return;
       selected = (next + cards.length) % cards.length;
       cards.forEach((card, index) => {
         let offset = index - selected;
@@ -3912,21 +4998,28 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       if (status) status.textContent = `${selected + 1} / ${cards.length}`;
     };
     testimonials.querySelectorAll<HTMLButtonElement>("[data-testimonial-step]").forEach((button) =>
-      button.addEventListener("click", () => show(selected + Number(button.dataset.testimonialStep))),
+      button.addEventListener("click", () => {
+        show(selected + Number(button.dataset.testimonialStep));
+        selectEditorAnimationScene(testimonials, selected);
+      }),
     );
     testimonials.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       show(selected + (event.key === "ArrowLeft" ? -1 : 1));
+      selectEditorAnimationScene(testimonials, selected);
     });
-    show(0);
+    testimonials.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
+      show(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
+    });
+    show(selected);
   });
 
   app.querySelectorAll<HTMLElement>("[data-portfolio-scroller]").forEach((portfolio) => {
     const buttons = Array.from(portfolio.querySelectorAll<HTMLButtonElement>("[data-portfolio-to]"));
     const panels = Array.from(portfolio.querySelectorAll<HTMLElement>("[data-portfolio-panel]"));
     const reduceMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let selected = 0;
+    let selected = editorSceneIndexFor(portfolio, panels.length);
     let visible = true;
     const syncVideos = () => panels.forEach((panel, index) => {
       const video = panel.querySelector<HTMLVideoElement>("video");
@@ -3935,6 +5028,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       else video.pause();
     });
     const show = (next: number, focus = false) => {
+      if (!panels.length) return;
       selected = (next + panels.length) % panels.length;
       buttons.forEach((button, index) => {
         button.setAttribute("aria-current", String(index === selected));
@@ -3944,22 +5038,30 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         const active = index === selected;
         panel.classList.toggle("active", active);
         panel.setAttribute("aria-hidden", String(!active));
+        panel.inert = !active;
       });
       syncVideos();
       if (focus) buttons[selected]?.focus({ preventScroll: true });
     };
-    buttons.forEach((button, index) => button.addEventListener("click", () => show(index)));
+    buttons.forEach((button, index) => button.addEventListener("click", () => {
+      show(index);
+      selectEditorAnimationScene(portfolio, selected);
+    }));
     portfolio.addEventListener("keydown", (event) => {
       if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
       event.preventDefault();
       show(selected + (["ArrowUp", "ArrowLeft"].includes(event.key) ? -1 : 1), true);
+      selectEditorAnimationScene(portfolio, selected);
     });
     const observer = typeof IntersectionObserver === "function"
       ? new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; syncVideos(); }, { threshold: .2 })
       : null;
     observer?.observe(portfolio);
-    show(0);
-    const priorCleanup = activeStoreExperienceCleanup;
+    portfolio.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
+      show(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
+    });
+    show(selected);
+    const priorCleanup = activeStoreExperienceCleanup as (() => void) | null;
     activeStoreExperienceCleanup = () => {
       priorCleanup?.();
       observer?.disconnect();
@@ -3970,9 +5072,10 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   app.querySelectorAll<HTMLElement>("[data-space-gallery]").forEach((gallery) => {
     const cards = Array.from(gallery.querySelectorAll<HTMLElement>("[data-space-card]"));
     const status = gallery.querySelector<HTMLElement>("[data-space-status]");
-    let selected = 0;
+    let selected = editorSceneIndexFor(gallery, cards.length);
     let pointerStart: number | null = null;
     const show = (next: number) => {
+      if (!cards.length) return;
       selected = (next + cards.length) % cards.length;
       cards.forEach((card, index) => {
         let offset = index - selected;
@@ -3983,34 +5086,54 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         card.style.zIndex = String(20 - Math.abs(offset));
         card.style.opacity = String(Math.max(.18, 1 - Math.abs(offset) * .22));
         card.setAttribute("aria-hidden", String(index !== selected));
+        card.querySelectorAll<HTMLElement>("a, button, input, select, textarea, [tabindex]").forEach((control) => {
+          control.tabIndex = index === selected ? 0 : -1;
+        });
       });
       if (status) status.textContent = `${selected + 1} / ${cards.length}`;
     };
     gallery.querySelectorAll<HTMLButtonElement>("[data-space-step]").forEach((button) =>
-      button.addEventListener("click", () => show(selected + Number(button.dataset.spaceStep))),
+      button.addEventListener("click", () => {
+        show(selected + Number(button.dataset.spaceStep));
+        selectEditorAnimationScene(gallery, selected);
+      }),
     );
     gallery.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       show(selected + (event.key === "ArrowLeft" ? -1 : 1));
+      selectEditorAnimationScene(gallery, selected);
     });
     gallery.addEventListener("wheel", (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-animation-copy]")) return;
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
       event.preventDefault();
       show(selected + (event.deltaX > 0 ? 1 : -1));
+      selectEditorAnimationScene(gallery, selected);
     }, { passive: false });
     gallery.addEventListener("pointerdown", (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-animation-copy]")) return;
       pointerStart = event.clientX;
-      gallery.setPointerCapture(event.pointerId);
+      try {
+        gallery.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Synthetic events and older embedded browsers may not own the pointer.
+      }
     });
     gallery.addEventListener("pointerup", (event) => {
       if (pointerStart === null) return;
       const distance = event.clientX - pointerStart;
       pointerStart = null;
-      if (Math.abs(distance) >= 48) show(selected + (distance < 0 ? 1 : -1));
+      if (Math.abs(distance) >= 48) {
+        show(selected + (distance < 0 ? 1 : -1));
+        selectEditorAnimationScene(gallery, selected);
+      }
     });
     gallery.addEventListener("pointercancel", () => { pointerStart = null; });
-    show(0);
+    gallery.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
+      show(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
+    });
+    show(selected);
   });
 
   app.querySelectorAll<HTMLElement>("[data-magnetic-target]").forEach((magnetic) => {
@@ -4043,55 +5166,113 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     };
   });
 
-  const videoPills = Array.from(app.querySelectorAll<HTMLElement>("[data-video-pill]"));
+  const textEffectCleanups: Array<() => void> = [];
+  const reduceTextMotion = typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  app.querySelectorAll<HTMLElement>("[data-text-rotate]").forEach((container) => {
+    const current = container.querySelector<HTMLElement>("[data-text-rotate-current]");
+    const values = (container.dataset.textRotateValues || "").split("\u001f").map((value) => value.trim()).filter(Boolean);
+    if (!current || values.length < 2 || reduceTextMotion || storePreviewEditorEnabled) return;
+    let index = 0;
+    let timer = 0;
+    let visible = false;
+    const stop = () => { if (timer) window.clearInterval(timer); timer = 0; };
+    const start = () => {
+      stop();
+      if (!visible || document.hidden) return;
+      timer = window.setInterval(() => {
+        index = (index + 1) % values.length;
+        current.textContent = values[index];
+        current.animate(
+          [{ opacity: 0, transform: "translateY(100%)" }, { opacity: 1, transform: "translateY(0)" }],
+          { duration: 500, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+        );
+      }, 2400);
+    };
+    const observer = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; start(); }, { threshold: .2 })
+      : null;
+    if (observer) observer.observe(container);
+    else { visible = true; start(); }
+    const onVisibility = () => start();
+    document.addEventListener("visibilitychange", onVisibility);
+    textEffectCleanups.push(() => { stop(); observer?.disconnect(); document.removeEventListener("visibilitychange", onVisibility); });
+  });
+
+  app.querySelectorAll<HTMLElement>("[data-text-glitch]").forEach((container) => {
+    const hover = container.querySelector<HTMLElement>("[data-text-glitch-hover]");
+    const target = container.dataset.hoverText || hover?.textContent || "";
+    if (!hover || !target || reduceTextMotion) return;
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let timer = 0;
+    const stop = () => { if (timer) window.clearInterval(timer); timer = 0; };
+    const reveal = () => {
+      stop();
+      let progress = 0;
+      timer = window.setInterval(() => {
+        hover.textContent = Array.from(target).map((letter, index) => {
+          if (/\s/.test(letter) || index < progress) return letter;
+          return letters[Math.floor(Math.random() * letters.length)];
+        }).join("");
+        progress += .5;
+        if (progress >= Array.from(target).length) { stop(); hover.textContent = target; }
+      }, 32);
+    };
+    const reset = () => { stop(); hover.textContent = target; };
+    container.addEventListener("pointerenter", reveal);
+    container.addEventListener("focus", reveal);
+    container.addEventListener("pointerleave", reset);
+    container.addEventListener("blur", reset);
+    textEffectCleanups.push(() => {
+      stop();
+      container.removeEventListener("pointerenter", reveal);
+      container.removeEventListener("focus", reveal);
+      container.removeEventListener("pointerleave", reset);
+      container.removeEventListener("blur", reset);
+    });
+  });
+
+  app.querySelectorAll<HTMLElement>("[data-text-reveal]").forEach((container) => {
+    if (reduceTextMotion || storePreviewEditorEnabled || typeof IntersectionObserver !== "function") {
+      container.classList.add("is-revealed");
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      container.classList.add("is-revealed");
+      observer.disconnect();
+    }, { threshold: .25 });
+    observer.observe(container);
+    textEffectCleanups.push(() => observer.disconnect());
+  });
+
+  app.querySelectorAll<SVGSVGElement>("[data-text-along-path] svg").forEach((svg) => {
+    const pause = () => { try { svg.pauseAnimations(); } catch {} };
+    const play = () => { if (!reduceTextMotion && !storePreviewEditorEnabled && !document.hidden) try { svg.unpauseAnimations(); } catch {} };
+    if (reduceTextMotion || storePreviewEditorEnabled) { pause(); return; }
+    const observer = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(([entry]) => entry.isIntersecting ? play() : pause(), { threshold: .05 })
+      : null;
+    observer?.observe(svg);
+    const onVisibility = () => document.hidden ? pause() : play();
+    document.addEventListener("visibilitychange", onVisibility);
+    textEffectCleanups.push(() => { pause(); observer?.disconnect(); document.removeEventListener("visibilitychange", onVisibility); });
+  });
+
+  if (textEffectCleanups.length) {
+    const priorCleanup = activeStoreExperienceCleanup as (() => void) | null;
+    activeStoreExperienceCleanup = () => {
+      priorCleanup?.();
+      textEffectCleanups.forEach((cleanup) => cleanup());
+    };
+  }
+
   const circleReveals = Array.from(app.querySelectorAll<HTMLElement>("[data-circle-reveal]"));
   const frameSequences = Array.from(app.querySelectorAll<HTMLElement>("[data-frame-sequence]"));
   const fullChapters = Array.from(app.querySelectorAll<HTMLElement>("[data-full-chapters]"));
-  if (videoPills.length || circleReveals.length || frameSequences.length || fullChapters.length) {
+  if (circleReveals.length || frameSequences.length || fullChapters.length) {
     const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-    const videoPillClockFormatters = Array.from(
-      app.querySelectorAll<HTMLTimeElement>("[data-video-pill-clock]"),
-    ).map((clock) => {
-      try {
-        return {
-          clock,
-          formatter: new Intl.DateTimeFormat("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            timeZone: clock.dataset.videoPillClock || "UTC",
-            hour12: false,
-          }),
-        };
-      } catch {
-        return { clock, formatter: null };
-      }
-    });
-    const updateVideoPillClocks = () => {
-      const now = new Date();
-      videoPillClockFormatters.forEach(({ clock, formatter }) => {
-        clock.textContent = formatter?.format(now) || "--:--:--";
-      });
-    };
-    updateVideoPillClocks();
-    const videoPillClockTimer = videoPillClockFormatters.length
-      ? window.setInterval(updateVideoPillClocks, 1000)
-      : 0;
-    const videoPillPlaybackListeners = videoPills.flatMap((pill) => {
-      const video = pill.querySelector<HTMLVideoElement>("video");
-      const media = pill.querySelector<HTMLElement>(".store-video-pill-media");
-      if (!video || !media) return [];
-      const showVideo = () => media.classList.add("is-video-playing");
-      const showPoster = () => media.classList.remove("is-video-playing");
-      const showReadyVideo = () => media.classList.add("is-video-ready");
-      video.addEventListener("playing", showVideo);
-      video.addEventListener("loadeddata", showReadyVideo);
-      video.addEventListener("canplay", showReadyVideo);
-      video.addEventListener("error", showPoster);
-      video.addEventListener("emptied", showPoster);
-      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) showReadyVideo();
-      return [{ video, media, showVideo, showPoster, showReadyVideo }];
-    });
     let frame = 0;
     const progressFor = (element: HTMLElement) => {
       const travel = Math.max(element.offsetHeight - window.innerHeight, 1);
@@ -4100,43 +5281,19 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const syncVideo = (container: HTMLElement, shouldPlay: boolean) => {
       const video = container.querySelector<HTMLVideoElement>("video");
       if (!video) return;
-      const media = video.closest<HTMLElement>(".store-video-pill-media");
       const nextPlaybackState = shouldPlay && !reduceMotion?.matches ? "playing" : "paused";
       if (video.dataset.motionPlayback === nextPlaybackState) return;
       video.dataset.motionPlayback = nextPlaybackState;
       if (nextPlaybackState === "playing") {
-        void video.play().then(() => {
-          if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) media?.classList.add("is-video-playing");
-        }).catch(() => {
+        void video.play().catch(() => {
           video.dataset.motionPlayback = "paused";
-          media?.classList.remove("is-video-playing");
         });
       } else {
         if (!video.paused) video.pause();
-        media?.classList.remove("is-video-playing");
       }
     };
     const paint = () => {
       frame = 0;
-      videoPills.forEach((pill) => {
-        const reduced = Boolean(reduceMotion?.matches);
-        const progress = reduced ? 0 : progressFor(pill);
-        const media = pill.querySelector<HTMLElement>(".store-video-pill-media");
-        const kinetic = pill.querySelector<HTMLElement>(".store-video-pill-kinetic");
-        if (media) {
-          const remaining = 1 - progress;
-          media.style.clipPath = reduced
-            ? "inset(8% 5% 8% 5% round 12px)"
-            : `inset(${18 * remaining}% ${18 * remaining}% ${18 * remaining}% ${22 * remaining}% round ${12 * remaining}px)`;
-          media.style.transform = "";
-          media.style.borderRadius = "";
-        }
-        if (kinetic) {
-          kinetic.style.opacity = String(1 - progress);
-          kinetic.style.transform = reduced ? "none" : `scale(${1 + progress * .15})`;
-        }
-        syncVideo(pill, !reduced && progress > .08 && progress < .98);
-      });
       circleReveals.forEach((reveal) => {
         const progress = reduceMotion?.matches ? 1 : progressFor(reveal);
         const media = reveal.querySelector<HTMLElement>(".store-circle-reveal-media");
@@ -4151,21 +5308,37 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       frameSequences.forEach((sequence) => {
         const frames = Array.from(sequence.querySelectorAll<HTMLElement>("[data-frame]"));
         const progress = reduceMotion?.matches ? 0 : progressFor(sequence);
-        const index = Math.min(frames.length - 1, Math.round(progress * (frames.length - 1)));
+        const selectedEditorIndex = editorSceneIndexFor(sequence, frames.length);
+        const hasEditorScene = storePreviewEditorEnabled
+          && storePreviewEditorSelection?.animationId === sequence.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
+          && Number.isInteger(storePreviewEditorSelection?.itemIndex);
+        const index = hasEditorScene ? selectedEditorIndex : Math.min(frames.length - 1, Math.round(progress * (frames.length - 1)));
         frames.forEach((item, itemIndex) => item.classList.toggle("active", itemIndex === index));
         const image = frames[index];
         const status = sequence.querySelector<HTMLElement>("[data-frame-status]");
         const title = sequence.querySelector<HTMLElement>("[data-frame-title]");
         const body = sequence.querySelector<HTMLElement>("[data-frame-body]");
+        const animationCopy = sequence.querySelector<HTMLElement>("[data-animation-copy]");
+        if (animationCopy && image) applyAnimationCopySceneLayout(animationCopy, image);
         if (status) status.textContent = `${String(index + 1).padStart(2, "0")} / ${String(frames.length).padStart(2, "0")}`;
-        if (title) title.textContent = image?.dataset.frameTitleValue || `Escena ${index + 1}`;
-        if (body) body.textContent = image?.dataset.frameBodyValue || "";
+        if (title) {
+          title.textContent = image?.dataset.frameTitleValue || "";
+          title.hidden = !title.textContent;
+        }
+        if (body) {
+          body.textContent = image?.dataset.frameBodyValue || "";
+          body.hidden = !body.textContent;
+        }
       });
       fullChapters.forEach((chapters) => {
         const backgrounds = Array.from(chapters.querySelectorAll<HTMLElement>("[data-full-chapter-bg]"));
         const copies = Array.from(chapters.querySelectorAll<HTMLElement>("[data-full-chapter-copy]"));
         const progress = reduceMotion?.matches ? 0 : progressFor(chapters);
-        const index = Math.min(backgrounds.length - 1, Math.round(progress * (backgrounds.length - 1)));
+        const selectedEditorIndex = editorSceneIndexFor(chapters, backgrounds.length);
+        const hasEditorScene = storePreviewEditorEnabled
+          && storePreviewEditorSelection?.animationId === chapters.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
+          && Number.isInteger(storePreviewEditorSelection?.itemIndex);
+        const index = hasEditorScene ? selectedEditorIndex : Math.min(backgrounds.length - 1, Math.round(progress * (backgrounds.length - 1)));
         backgrounds.forEach((background, itemIndex) => {
           background.classList.toggle("active", itemIndex === index);
           syncVideo(background, itemIndex === index && progress < .99);
@@ -4180,6 +5353,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       });
     };
     const requestPaint = () => { if (!frame) frame = window.requestAnimationFrame(paint); };
+    [...frameSequences, ...fullChapters].forEach((container) => {
+      container.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", requestPaint);
+    });
     window.addEventListener("scroll", requestPaint, { passive: true });
     window.addEventListener("resize", requestPaint);
     reduceMotion?.addEventListener("change", requestPaint);
@@ -4188,22 +5364,12 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     activeStoreExperienceCleanup = () => {
       (priorCleanup as (() => void) | null)?.();
       if (frame) window.cancelAnimationFrame(frame);
-      if (videoPillClockTimer) window.clearInterval(videoPillClockTimer);
       window.removeEventListener("scroll", requestPaint);
       window.removeEventListener("resize", requestPaint);
       reduceMotion?.removeEventListener("change", requestPaint);
-      [...videoPills, ...circleReveals, ...fullChapters].forEach((container) =>
+      [...circleReveals, ...fullChapters].forEach((container) =>
         container.querySelectorAll<HTMLVideoElement>("video").forEach((video) => video.pause()),
       );
-      videoPillPlaybackListeners.forEach(({ video, media, showVideo, showPoster, showReadyVideo }) => {
-        video.removeEventListener("playing", showVideo);
-        video.removeEventListener("loadeddata", showReadyVideo);
-        video.removeEventListener("canplay", showReadyVideo);
-        video.removeEventListener("error", showPoster);
-        video.removeEventListener("emptied", showPoster);
-        media.classList.remove("is-video-playing");
-        media.classList.remove("is-video-ready");
-      });
     };
   }
 
@@ -4378,7 +5544,16 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         const section = inner.closest<HTMLElement>(".store-flow-section");
         if (!section) return;
         const progress = clampProgress((viewportHeight - section.getBoundingClientRect().top) / (viewportHeight * .75));
-        inner.style.transform = `rotate(${(1 - progress) * 30}deg)`;
+        const isGeneratedStory = Boolean(inner.closest(".bespoke-story-flow"));
+        const isCompactViewport = window.matchMedia?.("(max-width: 720px)").matches;
+        if (isGeneratedStory) {
+          const remaining = 1 - progress;
+          inner.style.transform = isCompactViewport
+            ? "none"
+            : `translateY(${remaining * 18}px) rotate(${remaining * 5}deg) scale(${.985 + progress * .015})`;
+        } else {
+          inner.style.transform = `rotate(${(1 - progress) * 30}deg)`;
+        }
       });
       motionZooms.forEach((motionZoom) => {
         const zoomRect = motionZoom.getBoundingClientRect();
@@ -4483,28 +5658,153 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   }
 }
 
+function updateStorePreviewAnimationText(selection: StorePreviewEditorSelection, value: string): void {
+  if (!selection.animationId) return;
+  const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
+    .find((candidate) => candidate.dataset.animationId === selection.animationId);
+  if (!section) return;
+  const normalizedValue = value.replace(/\u00a0/g, " ").slice(0, 360);
+  const targets = Array.from(section.querySelectorAll<HTMLElement>("[data-store-editor-target]")).filter((target) => {
+    if (target.dataset.storeEditorField !== selection.field) return false;
+    if (target.dataset.storeEditorAnimationId !== selection.animationId) return false;
+    if (Number.isInteger(selection.itemIndex)) return Number(target.dataset.storeEditorItemIndex) === selection.itemIndex;
+    return !target.hasAttribute("data-store-editor-item-index");
+  });
+  targets.forEach((target) => {
+    if (target.matches(".store-testimonial-copy blockquote")) target.textContent = normalizedValue ? `“${normalizedValue}”` : "";
+    else if (target.matches('.store-testimonial-copy [data-animation-copy-field="caption"]')) target.textContent = normalizedValue ? `— ${normalizedValue}` : "";
+    else target.textContent = normalizedValue;
+    target.hidden = !normalizedValue;
+  });
+  if (selection.field === "buttonLabel") {
+    const button = section.querySelector<HTMLElement>(".store-animation-cta");
+    if (button) button.hidden = !normalizedValue;
+  }
+  new Set(targets.map((target) => target.closest<HTMLElement>("[data-animation-copy]")).filter(Boolean)).forEach((copy) => {
+    if (!copy) return;
+    const hasVisibleText = Array.from(copy.querySelectorAll<HTMLElement>("[data-animation-copy-field]"))
+      .some((target) => !target.hidden && !!target.textContent?.trim());
+    copy.hidden = !hasVisibleText;
+  });
+  if (!Number.isInteger(selection.itemIndex)) return;
+  const itemIndex = selection.itemIndex!;
+  const heroButton = section.querySelector<HTMLElement>(`[data-motion-hero-to="${itemIndex}"]`);
+  if (heroButton && selection.field === "title") heroButton.dataset.motionTitle = normalizedValue;
+  if (heroButton && selection.field === "caption") heroButton.dataset.motionCaption = normalizedValue;
+  const frame = section.querySelector<HTMLElement>(`[data-frame="${itemIndex}"]`);
+  if (frame && selection.field === "title") frame.dataset.frameTitleValue = normalizedValue;
+  if (frame && selection.field === "body") frame.dataset.frameBodyValue = normalizedValue;
+}
+
+function updateStorePreviewAnimationStyle(animationId: string, key: string, value: unknown): void {
+  const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
+    .find((candidate) => candidate.dataset.animationId === animationId);
+  if (!section) return;
+  if (key === "textAlign" && ["left", "center", "right"].includes(String(value))) {
+    const align = String(value);
+    section.dataset.animationTextAlign = align;
+    section.setAttribute("data-animation-custom-layout", "");
+    section.style.setProperty("--animation-copy-align", align);
+    section.style.setProperty("--animation-copy-translate", `${align === "right" ? "-100%" : align === "center" ? "-50%" : "0"} -50%`);
+    return;
+  }
+  if (key === "textScale") {
+    const textScale = Math.min(200, Math.max(50, Math.round(Number(value))));
+    if (!Number.isFinite(textScale)) return;
+    section.dataset.animationTextScale = String(textScale);
+    section.setAttribute("data-animation-custom-layout", "");
+    animationTextScaleVariables(section, textScale);
+    return;
+  }
+  if (key === "textWidthPercent") {
+    const textWidthPercent = Math.min(100, Math.max(20, Math.round(Number(value))));
+    if (!Number.isFinite(textWidthPercent)) return;
+    section.dataset.animationTextWidthPercent = String(textWidthPercent);
+    section.setAttribute("data-animation-custom-layout", "");
+    section.style.setProperty("--animation-copy-width", `${textWidthPercent}%`);
+    return;
+  }
+  if (key === "textColor" && /^#[0-9a-f]{6}$/i.test(String(value))) {
+    section.toggleAttribute("data-animation-has-text-color", true);
+    section.style.setProperty("--animation-text-color", String(value));
+    return;
+  }
+  if (key === "backgroundColor" && /^#[0-9a-f]{6}$/i.test(String(value))) {
+    section.toggleAttribute("data-animation-has-background", true);
+    section.style.setProperty("--animation-background", String(value));
+  }
+}
+
 // The editor iframe is opt-in and visual-only: a normal customer storefront
 // never listens for parent-window customization. Checking event.source keeps
 // unrelated tabs/windows from driving the preview even when they know its URL.
-if (storePreviewMode) {
+if (storeEditorMode) {
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent || !activePreviewStore) return;
-    if (!event.data || event.data.type !== "PAGOSYA_STORE_PREVIEW") return;
+    if (!event.data || typeof event.data !== "object") return;
+    try {
+    if (event.data.type === "PAGOSYA_STORE_EDITOR_TEXT_UPDATE") {
+      storePreviewEditorEnabled = event.data.editorMode !== false;
+      const selection = sanitizeStorePreviewEditorSelection(event.data.selection);
+      if (!selection || typeof event.data.value !== "string") return;
+      const sceneChanged = selection.animationId
+        && Number.isInteger(selection.itemIndex)
+        && (storePreviewEditorSelection?.animationId !== selection.animationId || storePreviewEditorSelection.itemIndex !== selection.itemIndex);
+      storePreviewEditorSelection = selection;
+      syncStorePreviewEditorMode();
+      if (sceneChanged) {
+        const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
+          .find((candidate) => candidate.dataset.animationId === selection.animationId);
+        section?.dispatchEvent(new CustomEvent("pagosya:editor-scene", { detail: { index: selection.itemIndex } }));
+      }
+      updateStorePreviewAnimationText(selection, event.data.value);
+      syncStorePreviewEditorSelection();
+      return;
+    }
+    if (event.data.type === "PAGOSYA_STORE_EDITOR_STYLE_UPDATE") {
+      storePreviewEditorEnabled = event.data.editorMode !== false;
+      if (typeof event.data.animationId !== "string" || typeof event.data.key !== "string") return;
+      syncStorePreviewEditorMode();
+      updateStorePreviewAnimationStyle(event.data.animationId.slice(0, 64), event.data.key.slice(0, 64), event.data.value);
+      syncStorePreviewEditorSelection();
+      return;
+    }
+    if (event.data.type === "PAGOSYA_STORE_EDITOR_SELECTION") {
+      storePreviewEditorEnabled = event.data.editorMode !== false;
+      storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
+      syncStorePreviewEditorMode();
+      if (storePreviewEditorSelection?.animationId && Number.isInteger(storePreviewEditorSelection.itemIndex)) {
+        const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
+          .find((candidate) => candidate.dataset.animationId === storePreviewEditorSelection?.animationId);
+        section?.dispatchEvent(new CustomEvent("pagosya:editor-scene", { detail: { index: storePreviewEditorSelection.itemIndex } }));
+      }
+      syncStorePreviewEditorSelection();
+      if (event.data.reveal === true && storePreviewEditorSelection) {
+        const selection = storePreviewEditorSelection;
+        const animationSection = selection.animationId
+          ? Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
+              .find((candidate) => candidate.dataset.animationId === selection.animationId)
+          : null;
+        const storyScene = animationSection?.querySelector<HTMLElement>(`[data-motion-flow] [data-animation-media-index="${selection.itemIndex}"]`)?.closest<HTMLElement>(".store-flow-section");
+        if (storyScene && Number.isInteger(selection.itemIndex)) scrollStorePreviewToElement(storyScene);
+        else scrollStorePreviewToSection(selection.section);
+      }
+      return;
+    }
+    if (event.data.type !== "PAGOSYA_STORE_PREVIEW") return;
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
     storePreviewEditorEnabled = event.data.editorMode !== false;
-    const requestedSelection = event.data.editorSelection;
-    storePreviewEditorSelection = requestedSelection && typeof requestedSelection === "object" && typeof requestedSelection.section === "string" && typeof requestedSelection.field === "string"
-      ? {
-          section: requestedSelection.section.slice(0, 64) as StorePreviewEditorSelection["section"],
-          field: requestedSelection.field.slice(0, 64),
-          label: typeof requestedSelection.label === "string" ? requestedSelection.label.slice(0, 120) : "parte seleccionada",
-          ...(typeof requestedSelection.itemId === "string" ? { itemId: requestedSelection.itemId.slice(0, 200) } : {}),
-          ...(Number.isInteger(requestedSelection.itemIndex) ? { itemIndex: Math.max(0, requestedSelection.itemIndex) } : {}),
-          ...(typeof requestedSelection.animationId === "string" ? { animationId: requestedSelection.animationId.slice(0, 64) } : {}),
-        }
-      : null;
+    storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
     let previewStore = { ...activePreviewStore.store, ...patch };
+    const currentDocument = sanitizeSiteDocument(activePreviewStore.store.siteDocument);
+    if (currentDocument) {
+      previewStore.siteDocument = synchronizeSiteDocument(currentDocument, patch, {
+        banner: patch.bannerUrl !== undefined && patch.bannerUrl !== activePreviewStore.store.bannerUrl,
+        about: patch.aboutImageUrl !== undefined && patch.aboutImageUrl !== activePreviewStore.store.aboutImageUrl,
+        gallery: patch.editorialGallery !== undefined && JSON.stringify(patch.editorialGallery) !== JSON.stringify(activePreviewStore.store.editorialGallery),
+      });
+    }
     const previewProduct = sanitizeStorePreviewProduct(event.data.previewProduct, previewStore);
     if (previewProduct) {
       previewStore = {
@@ -4526,7 +5826,9 @@ if (storePreviewMode) {
       ? event.data.previewSection as StorePreviewSection
       : typeof event.data.previewSection === "string" && /^animation-[a-z0-9][a-z0-9_-]{0,47}$/.test(event.data.previewSection)
         ? event.data.previewSection as `animation-${string}`
-        : null;
+        : typeof event.data.previewSection === "string" && /^site-[a-z][a-z0-9-]{1,47}$/.test(event.data.previewSection)
+          ? event.data.previewSection as `site-${string}`
+          : null;
     if (previewAction === "cart") {
       if (existingCart?.isConnected) renderCartReviewDialog(existingCart, activePreviewStore.slug, previewStore);
       else openCartReview(activePreviewStore.slug, previewStore, { preview: true, allowEmpty: true });
@@ -4538,6 +5840,11 @@ if (storePreviewMode) {
     } else if (previewAction === "editorial-item" && Number.isInteger(event.data.previewTargetIndex)) {
       scrollStorePreviewToEditorialItem(Math.max(0, event.data.previewTargetIndex), event.data.previewTargetKind === "media" ? "media" : "text");
     } else if (previewSection) scrollStorePreviewToSection(previewSection);
+    } catch (error) {
+      // Invalid or stale editor messages should leave the last good preview
+      // running instead of breaking every later edit in the iframe.
+      console.error("Ignored invalid store editor update", error);
+    }
   });
 }
 
@@ -4559,6 +5866,9 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
   }
 
   const query = searchQuery.trim().toLowerCase();
+  const siteDocument = sanitizeSiteDocument(store.siteDocument);
+  const featuredProducts = new Set(siteDocument?.merchandising.featuredProductIds ?? []);
+  const showDescriptions = siteDocument?.merchandising.showDescriptions !== false;
   const sections = (
     store.categories.length === 0
       ? [{ id: "ALL", name: null as string | null, items: store.items }]
@@ -4585,7 +5895,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string): void {
       .map(
         (section) => `
           ${section.name && selectedCategoryId === "ALL" ? `<div class="category-section-title">${escapeHtml(section.name)}</div>` : ""}
-          <div class="store-items">${section.items.map((item) => renderProductCard(slug, item, cardIndex++, store.showLowStockToCustomers === true)).join("")}</div>`,
+          <div class="store-items">${section.items.map((item) => renderProductCard(slug, item, cardIndex++, store.showLowStockToCustomers === true, { featured: featuredProducts.has(item.id), showDescription: showDescriptions })).join("")}</div>`,
       )
       .join("");
   }

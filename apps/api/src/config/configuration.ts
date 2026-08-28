@@ -29,6 +29,7 @@ export interface AppConfig {
   environment: string;
   port: number;
   databaseUrl: string;
+  redisUrl: string;
   internalRailCallbackSecret: string;
   internalOpsSecret: string;
   checkoutOrigin: string;
@@ -76,6 +77,30 @@ function parseTrustProxy(value: string | undefined): false | number | string {
   throw new Error("TRUST_PROXY must be false, a hop count from 1-99, loopback, linklocal, or uniquelocal");
 }
 
+function parseBoundedInteger(name: string, value: string | undefined, fallback: number, minimum: number, maximum: number): number {
+  const parsed = Number.parseInt(value ?? String(fallback), 10);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new Error(`${name} must be an integer from ${minimum} to ${maximum}`);
+  }
+  return parsed;
+}
+
+function databaseUrlWithPoolSettings(value: string): string {
+  if (!value) return value;
+  try {
+    const url = new URL(value);
+    if (!url.searchParams.has("connection_limit")) {
+      url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, 1, 100)));
+    }
+    if (!url.searchParams.has("pool_timeout")) {
+      url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
+    }
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 export function assertProductionSecurityConfig(app: AppConfig): void {
   if (app.environment !== "production") return;
   const failures: string[] = [];
@@ -90,7 +115,21 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
     }
   };
 
-  if (!app.databaseUrl) failures.push("DATABASE_URL is required");
+  try {
+    const database = new URL(app.databaseUrl);
+    if (!["postgres:", "postgresql:"].includes(database.protocol)) failures.push("DATABASE_URL must be a PostgreSQL URL");
+  } catch {
+    failures.push("DATABASE_URL must be a valid PostgreSQL URL");
+  }
+  try {
+    const redis = new URL(app.redisUrl);
+    if (!["redis:", "rediss:"].includes(redis.protocol)) failures.push("REDIS_URL must use redis:// or rediss://");
+  } catch {
+    failures.push("REDIS_URL is required for shared production rate limiting");
+  }
+  if (!app.objectStorage.bucket || !app.objectStorage.accessKeyId || !app.objectStorage.secretAccessKey) {
+    failures.push("durable object storage credentials are required for multi-instance production uploads");
+  }
   requireSecret("INTERNAL_RAIL_CALLBACK_SECRET", app.internalRailCallbackSecret);
   requireSecret("INTERNAL_OPS_SECRET", app.internalOpsSecret);
   requireSecret("ORDER_TRACKING_SECRET", app.orderTrackingSecret);
@@ -143,7 +182,8 @@ export default (): { app: AppConfig } => {
   const app: AppConfig = {
     environment,
     port: parseInt(process.env.PORT ?? "3000", 10),
-    databaseUrl: process.env.DATABASE_URL ?? "",
+    databaseUrl: databaseUrlWithPoolSettings(process.env.DATABASE_URL ?? ""),
+    redisUrl: process.env.REDIS_URL ?? "",
     internalRailCallbackSecret: process.env.INTERNAL_RAIL_CALLBACK_SECRET ?? "",
     internalOpsSecret: process.env.INTERNAL_OPS_SECRET ?? "",
     checkoutOrigin: process.env.CHECKOUT_ORIGIN ?? "http://localhost:5174",
@@ -193,8 +233,8 @@ export default (): { app: AppConfig } => {
     },
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",
-      designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-luna",
-      inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-luna",
+      designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-sol",
+      inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-sol",
       imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2",
       enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
     },

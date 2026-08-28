@@ -87,6 +87,16 @@ export class MerchantSessionService {
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
     const issuedSession = await this.prisma.$transaction(async (tx) => {
+      // Serialize session issuance per user across API replicas. Without this,
+      // simultaneous logins can both decide they are the primary session or
+      // briefly exceed the three-session cap.
+      if (typeof tx.$executeRawUnsafe === "function") {
+        await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", user.id);
+      }
+      await tx.merchantSession.updateMany({
+        where: { merchantUserId: user.id, isPrimary: true, expiresAt: { lte: new Date() } },
+        data: { isPrimary: false },
+      });
       const activePrimary = await tx.merchantSession.findFirst({
         where: { merchantUserId: user.id, isPrimary: true, revokedAt: null, expiresAt: { gt: new Date() } },
         select: { id: true },
@@ -231,22 +241,6 @@ export class MerchantSessionService {
       return { merchantId: session.merchantId, merchantUserId: session.merchantUserId, email: session.merchantUser.email };
     }
 
-    // Compatibility path for sessions issued before deterministic digests were
-    // introduced. A successful legacy verification upgrades that row, so each
-    // old session pays the Argon2 cost at most once.
-    const legacyCandidates = await this.prisma.merchantSession.findMany({
-      where: { revokedAt: null, expiresAt: { gt: new Date() } },
-      include: { merchantUser: true },
-    });
-
-    for (const candidate of legacyCandidates) {
-      if (candidate.hashedToken.startsWith(SESSION_DIGEST_PREFIX)) continue;
-      if (candidate.merchantUser.deletedAt) continue;
-      if (await argon2.verify(candidate.hashedToken, presentedToken)) {
-        await this.prisma.merchantSession.update({ where: { id: candidate.id }, data: { hashedToken: digest } });
-        return { merchantId: candidate.merchantId, merchantUserId: candidate.merchantUserId, email: candidate.merchantUser.email };
-      }
-    }
     return null;
   }
 
@@ -258,19 +252,11 @@ export class MerchantSessionService {
       return;
     }
 
-    const legacyCandidates = await this.prisma.merchantSession.findMany({ where: { revokedAt: null } });
-    for (const candidate of legacyCandidates) {
-      if (candidate.hashedToken.startsWith(SESSION_DIGEST_PREFIX)) continue;
-      if (await argon2.verify(candidate.hashedToken, presentedToken)) {
-        await this.revokeStoredSession(candidate);
-        return;
-      }
-    }
   }
 
   private async revokeStoredSession(session: { id: string; merchantUserId?: string; isPrimary?: boolean }) {
     await this.prisma.$transaction(async (tx) => {
-      await tx.merchantSession.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+      await tx.merchantSession.update({ where: { id: session.id }, data: { revokedAt: new Date(), isPrimary: false } });
       if (!session.isPrimary || !session.merchantUserId) return;
       const nextPrimary = await tx.merchantSession.findFirst({
         where: { merchantUserId: session.merchantUserId, revokedAt: null, expiresAt: { gt: new Date() } },

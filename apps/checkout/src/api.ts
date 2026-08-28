@@ -1,4 +1,5 @@
 import { PaymentIntent, PaymentMethodType } from "@pagosya/shared-types";
+import type { StoreSiteDocument } from "./site-document";
 
 const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/v1";
 const API_ROOT_URL = API_BASE_URL.replace(/\/v1\/?$/, "");
@@ -103,18 +104,26 @@ export interface StoreHeroSlide {
 export const STORE_MOTION_EXPERIENCES = [
   "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
   "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
-  "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
 ] as const;
 export type StoreMotionExperience = (typeof STORE_MOTION_EXPERIENCES)[number];
-export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "location" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}`;
+export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "location" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}` | `site-${string}`;
 
 export interface StoreEditorialImage {
   imageUrl: string;
+  productId?: string;
   title?: string;
   caption?: string;
   body?: string;
   boxColor?: string;
+  textPositionX?: number;
+  textPositionY?: number;
+  textScale?: number;
+  textWidthPercent?: number;
+  textAlign?: "left" | "center" | "right";
+  textColor?: string;
 }
 
 export interface StoreAnimation {
@@ -123,10 +132,19 @@ export interface StoreAnimation {
   type: StoreMotionExperience;
   title?: string;
   subtitle?: string;
-  topWord?: string;
-  rightWord?: string;
-  bottomWord?: string;
   productId?: string;
+  buttonLabel?: string;
+  buttonPositionX?: number;
+  buttonPositionY?: number;
+  textPositionX?: number;
+  textPositionY?: number;
+  textScale?: number;
+  textWidthPercent?: number;
+  textAlign?: "left" | "center" | "right";
+  textSize?: "small" | "medium" | "large";
+  textWidth?: "narrow" | "medium" | "wide";
+  textColor?: string;
+  backgroundColor?: string;
   media: StoreEditorialImage[];
 }
 
@@ -201,6 +219,8 @@ export interface Store {
   announcementSpeed: number;
   announcementSize: "small" | "medium" | "large";
   announcementColor: string;
+  announcementFont?: "store" | "modern" | "editorial" | "friendly" | "classic" | "geometric";
+  announcementEffect?: "none" | "wave" | "pulse" | "sparkle";
   promotionEnabled: boolean;
   promotionImageUrl: string | null;
   promotionTitle: string | null;
@@ -222,6 +242,7 @@ export interface Store {
   buttonVariant: "solid" | "outline" | "soft";
   buttonMotion: "none" | "lift" | "pulse";
   cartButtonLabel: string;
+  siteDocument?: StoreSiteDocument | null;
   checkoutMode: "payment" | "whatsapp" | "external";
   // Used only by external lead mode; no PaymentIntent is created.
   leadCaptureUrl: string | null;

@@ -51,6 +51,15 @@ function start(name, args, extraEnv = {}) {
   });
 }
 
+async function startOrReuse(name, port, args, extraEnv = {}) {
+  if (await portIsOpen(port)) {
+    console.log(`${name} already available on http://localhost:${port}; reusing it.`);
+    return false;
+  }
+  start(name, args, extraEnv);
+  return true;
+}
+
 function stopChild(child) {
   if (!child.pid || child.exitCode !== null) return;
   try {
@@ -81,19 +90,19 @@ runOnce(["--filter", "@pagosya/api", "exec", "prisma", "migrate", "deploy"]);
 runOnce(["--filter", "@pagosya/shared-types", "run", "build"]);
 
 start("shared types", ["--filter", "@pagosya/shared-types", "run", "dev"]);
-start("API", ["--filter", "@pagosya/api", "run", "start:dev"], {
+await startOrReuse("API", 3001, ["--filter", "@pagosya/api", "run", "start:dev"], {
   PORT: "3001",
   CHECKOUT_ORIGIN: "http://localhost:5175",
 });
-start("checkout", ["--filter", "@pagosya/checkout", "exec", "vite", "--host", "127.0.0.1", "--port", "5175"], {
+await startOrReuse("checkout", 5175, ["--filter", "@pagosya/checkout", "exec", "vite", "--host", "127.0.0.1", "--port", "5175"], {
   VITE_API_BASE_URL: "http://localhost:3001/v1",
   VITE_CONSUMER_APP_ORIGIN: "http://localhost:4324",
 });
-start("dashboard", ["--filter", "@pagosya/merchant-dashboard", "run", "dev"], {
+await startOrReuse("dashboard", 4323, ["--filter", "@pagosya/merchant-dashboard", "run", "dev"], {
   DASHBOARD_LIVE_RELOAD: "0",
 });
-start("consumer", ["--filter", "@pagosya/consumer-dashboard", "run", "dev"]);
-start("ops", ["--filter", "@pagosya/ops", "run", "start"]);
+await startOrReuse("consumer", 4324, ["--filter", "@pagosya/consumer-dashboard", "run", "dev"]);
+await startOrReuse("ops", 4322, ["--filter", "@pagosya/ops", "run", "start"]);
 
 console.log("\npagosYa development stack is starting:");
 console.log("  API        http://localhost:3001");

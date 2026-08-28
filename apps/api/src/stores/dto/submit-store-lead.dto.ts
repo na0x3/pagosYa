@@ -1,9 +1,29 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, MaxLength } from "class-validator";
+import { Type } from "class-transformer";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from "class-validator";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
-import { CartCheckoutDto } from "../../payment-links/dto/cart-checkout.dto";
+import { CartItemDto } from "../../payment-links/dto/cart-checkout.dto";
 
-export class SubmitStoreLeadDto extends CartCheckoutDto {
+export class SubmitStoreLeadDto {
+  @ApiProperty({
+    type: [CartItemDto],
+    description: "Selected products, or an empty array for a general storefront contact message.",
+  })
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CartItemDto)
+  items!: CartItemDto[];
+
   @ApiPropertyOptional({ example: "María Pérez" })
   @IsOptional()
   @IsString()
@@ -29,4 +49,15 @@ export class SubmitStoreLeadDto extends CartCheckoutDto {
   @IsSafeText()
   @MaxLength(600)
   message?: string;
+
+  @ApiPropertyOptional({ description: "Selected store branch for a product enquiry." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(48)
+  locationId?: string;
+
+  @ApiPropertyOptional({ enum: ["pickup", "delivery"] })
+  @IsOptional()
+  @IsIn(["pickup", "delivery"])
+  fulfillmentMethod?: "pickup" | "delivery";
 }

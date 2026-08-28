@@ -33,6 +33,7 @@ function jsonIsTooComplex(value: unknown): boolean {
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.enableShutdownHooks(["SIGINT", "SIGTERM"]);
   const config = app.get(ConfigService);
   const isProduction = config.get<string>("app.environment") === "production";
   const trustProxy = config.get<false | number | string>("app.trustProxy") ?? false;
@@ -124,9 +125,20 @@ async function bootstrap() {
   }
 
   const port = config.get<number>("app.port") ?? 3000;
-  await app.listen(port);
+  const server = await app.listen(port);
+  // Bound slow/abandoned clients so a traffic spike cannot retain sockets and
+  // memory indefinitely. Long-running provider calls still have two minutes;
+  // uploads use multipart streaming rather than oversized JSON bodies.
+  server.requestTimeout = 120_000;
+  server.headersTimeout = 65_000;
+  server.keepAliveTimeout = 5_000;
+  server.maxHeadersCount = 100;
   // eslint-disable-next-line no-console
   console.log(`pagosYa API listening on http://localhost:${port}`);
 }
 
-bootstrap();
+void bootstrap().catch((error: unknown) => {
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  Logger.error(message, "Bootstrap");
+  process.exitCode = 1;
+});

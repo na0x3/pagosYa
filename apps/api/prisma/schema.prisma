@@ -315,7 +315,7 @@ model MerchantSession {
   merchantUserId String
   merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
   merchantId     String
-  hashedToken    String
+  hashedToken    String       @unique
   profileName    String       @default("Propietario")
   profileAvatarId Int         @default(1)
   isPrimary      Boolean      @default(false)
@@ -324,6 +324,8 @@ model MerchantSession {
   createdAt      DateTime     @default(now())
 
   @@index([expiresAt])
+  @@index([merchantUserId, revokedAt, expiresAt])
+  @@index([merchantId, revokedAt, expiresAt])
 }
 
 // Buyer identity is deliberately separate from MerchantUser: a person may
@@ -664,6 +666,11 @@ model Store {
   // background; storefront code derives a contrasting ink color automatically.
   announcementSize             String                           @default("medium")
   announcementColor            String                           @default("#ffffff")
+  // Independent lettering for the announcement strip. The font is selected
+  // from the same curated storefront families; the effect is a bounded CSS
+  // treatment with an accessible reduced-motion fallback.
+  announcementFont             String                           @default("store")
+  announcementEffect           String                           @default("none")
   // Merchant-authored promotion dialog. The customer can dismiss it for the
   // current browser session; preview mode always renders it for editing.
   promotionEnabled             Boolean                          @default(false)
@@ -709,6 +716,10 @@ model Store {
   buttonVariant                String                           @default("solid")
   buttonMotion                 String                           @default("lift")
   cartButtonLabel              String                           @default("Ir a pagar")
+  // Versioned, bounded document produced by the AI site director. It controls
+  // composition and art direction while catalog, cart, contact and checkout
+  // remain trusted pagosYa components. Null keeps legacy stores unchanged.
+  siteDocument                Json?
   // "payment" opens pagosYa checkout; "whatsapp" sends the composed cart
   // to contactPhone; "external" sends the interested customer to a merchant
   // URL. The latter two never create a PaymentIntent and do not require NIT.

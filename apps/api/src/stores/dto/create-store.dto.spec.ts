@@ -7,7 +7,7 @@ describe("CreateStoreDto storefront layout", () => {
     const dto = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
       contentOrder: ["motion", "gallery", "products", "hero", "about", "links", "contact", "location"],
-      editorialGallery: [{ imageUrl: "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp", caption: "Nuestro taller", boxColor: "#f4ead7" }],
+      editorialGallery: [{ imageUrl: "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp", productId: "product_123", caption: "Nuestro taller", boxColor: "#f4ead7" }],
     });
 
     await expect(validate(dto)).resolves.toHaveLength(0);
@@ -25,6 +25,16 @@ describe("CreateStoreDto storefront layout", () => {
 
     await expect(validate(valid)).resolves.toHaveLength(0);
     expect(await validate(invalid)).not.toHaveLength(0);
+  });
+
+  it("accepts exact AI section ids for ordering and isolated backgrounds", async () => {
+    const dto = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      contentOrder: ["site-opening", "animation-window", "site-shop", "site-information"],
+      sectionBackgrounds: { "site-shop": "#224466", "animation-window": "#102030" },
+    });
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
   });
 
   it("accepts independently positioned animation sections including Zoom Parallax", async () => {
@@ -64,6 +74,20 @@ describe("CreateStoreDto storefront layout", () => {
     expect(await validate(dto)).not.toHaveLength(0);
   });
 
+  it("rejects oversized or unsafe product references on editorial photos", async () => {
+    const oversized = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      editorialGallery: [{ imageUrl: "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp", productId: "p".repeat(81) }],
+    });
+    const unsafe = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      editorialGallery: [{ imageUrl: "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp", productId: "producto\u202Eoculto" }],
+    });
+
+    expect(await validate(oversized)).not.toHaveLength(0);
+    expect(await validate(unsafe)).not.toHaveLength(0);
+  });
+
   it("rejects duplicated/missing sections and invisible caption controls", async () => {
     const dto = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
@@ -79,11 +103,15 @@ describe("CreateStoreDto storefront layout", () => {
       name: "Taller Norte",
       announcementSize: "large",
       announcementColor: "#f5d90a",
+      announcementFont: "editorial",
+      announcementEffect: "wave",
     });
     const invalid = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
       announcementSize: "enormous",
       announcementColor: "red; background:url(https://invalid.test)",
+      announcementFont: "url(https://invalid.test)",
+      announcementEffect: "spin-forever",
     });
 
     await expect(validate(valid)).resolves.toHaveLength(0);
@@ -220,7 +248,7 @@ describe("CreateStoreDto storefront layout", () => {
   it("accepts multiple unique animation templates and rejects duplicates", async () => {
     const valid = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
-      motionExperiences: ["coverflow-carousel", "hero-carousel", "stagger-testimonials", "zoom-parallax", "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee", "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery"],
+      motionExperiences: ["coverflow-carousel", "hero-carousel", "stagger-testimonials", "zoom-parallax", "portfolio-scroller", "circle-reveal", "clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path", "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery"],
     });
     const duplicated = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
@@ -236,7 +264,7 @@ describe("CreateStoreDto storefront layout", () => {
     const valid = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
       animations: [
-        { id: "invierno", name: "Colección invierno", type: "hero-carousel", title: "Abrigos", productId: "product_1", media: [{ imageUrl, title: "Lana" }] },
+        { id: "invierno", name: "Colección invierno", type: "hero-carousel", title: "Abrigos", productId: "product_1", textPositionX: 72, textPositionY: 28, textScale: 143, textWidthPercent: 74, textAlign: "right", textSize: "large", textWidth: "wide", textColor: "#fff4d6", backgroundColor: "#26170d", media: [{ imageUrl, title: "Lana", textPositionX: 24, textPositionY: 70, textScale: 110, textWidthPercent: 58, textAlign: "left", textColor: "#ffffff" }] },
         { id: "clientes", name: "Reseñas favoritas", type: "stagger-testimonials", media: [{ imageUrl, caption: "Ana", body: "Me encantó." }] },
       ],
       contentOrder: ["animation-invierno", "hero", "products", "about", "gallery", "animation-clientes", "links"],
@@ -253,10 +281,48 @@ describe("CreateStoreDto storefront layout", () => {
     expect(await validate(duplicateId)).not.toHaveLength(0);
   });
 
+  it("rejects animation layout values outside the supported position, shape, and color ranges", async () => {
+    const dto = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      animations: [{
+        id: "invalida",
+        name: "Inválida",
+        type: "hero-carousel",
+        textPositionX: 101,
+        textPositionY: -1,
+        textScale: 201,
+        textWidthPercent: 19,
+        textAlign: "justify",
+        textSize: "gigantic",
+        textWidth: "edge-to-edge",
+        textColor: "white",
+        backgroundColor: "#12345",
+        media: [],
+      }],
+    });
+
+    expect(await validate(dto)).not.toHaveLength(0);
+  });
+
+  it("rejects invalid per-scene text box layout values", async () => {
+    const imageUrl = "/v1/uploads/123e4567-e89b-12d3-a456-426614174000.webp";
+    const dto = plainToInstance(CreateStoreDto, {
+      name: "Taller Norte",
+      animations: [{
+        id: "escenas",
+        name: "Escenas",
+        type: "hero-carousel",
+        media: [{ imageUrl, title: "Texto", textPositionX: 104, textScale: 20, textAlign: "justify", textColor: "white" }],
+      }],
+    });
+
+    expect(await validate(dto)).not.toHaveLength(0);
+  });
+
   it("rejects an animation product reference longer than the product id limit", async () => {
     const dto = plainToInstance(CreateStoreDto, {
       name: "Taller Norte",
-      animations: [{ id: "destacada", name: "Destacada", type: "video-pill", productId: "p".repeat(81), media: [] }],
+      animations: [{ id: "destacada", name: "Destacada", type: "circle-reveal", productId: "p".repeat(81), media: [] }],
     });
 
     expect(await validate(dto)).not.toHaveLength(0);

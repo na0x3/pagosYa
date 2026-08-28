@@ -67,7 +67,7 @@ export class PaymentLinksController {
     @Param("storeId") storeId: string,
     @Body() dto: NormalizeInventoryCsvDto,
   ) {
-    return this.paymentLinks.normalizeInventoryCsv(merchant.id, storeId, dto.csv);
+    return this.paymentLinks.normalizeInventoryCsv(merchant.id, storeId, dto.csv, dto.imageFileNames ?? []);
   }
 
   @Post(":id/archive")

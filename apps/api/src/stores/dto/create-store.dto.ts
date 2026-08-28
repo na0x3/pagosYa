@@ -67,19 +67,29 @@ export const STORE_MOTION_EXPERIENCES = [
   "hero-gallery-scroll",
   "stagger-testimonials",
   "zoom-parallax",
-  "video-pill",
   "portfolio-scroller",
   "circle-reveal",
   "clarity-marquee",
+  "layered-text",
+  "text-rotate",
+  "text-glitch",
+  "text-reveal-block",
+  "text-along-path",
   "full-screen-chapters",
   "magnetic-target",
   "frame-sequence",
   "3d-gallery",
 ] as const;
+export const STORE_ANIMATION_TEXT_ALIGNS = ["left", "center", "right"] as const;
+export const STORE_ANIMATION_TEXT_SIZES = ["small", "medium", "large"] as const;
+export const STORE_ANIMATION_TEXT_WIDTHS = ["narrow", "medium", "wide"] as const;
 export const STORE_FONT_STYLES = ["modern", "editorial", "friendly", "classic", "geometric"] as const;
 export type StoreFontStyle = (typeof STORE_FONT_STYLES)[number];
+export const STORE_ANNOUNCEMENT_FONTS = ["store", ...STORE_FONT_STYLES] as const;
+export const STORE_ANNOUNCEMENT_EFFECTS = ["none", "wave", "pulse", "sparkle"] as const;
 export const STORE_ANIMATION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 export const STORE_ANIMATION_SECTION_PATTERN = /^animation-[a-z0-9][a-z0-9_-]{0,47}$/;
+export const STORE_SITE_SECTION_PATTERN = /^site-[a-z][a-z0-9-]{1,47}$/;
 export const STORE_BASE_CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "links", "contact", "location"] as const;
 const STORE_LEGACY_REQUIRED_CONTENT_SECTIONS = STORE_BASE_CONTENT_SECTIONS.filter((section) => !["contact", "location"].includes(section));
 export const STORE_MOTION_CONTENT_SECTIONS = [
@@ -91,10 +101,14 @@ export const STORE_MOTION_CONTENT_SECTIONS = [
   "motion-hero-gallery-scroll",
   "motion-stagger-testimonials",
   "motion-zoom-parallax",
-  "motion-video-pill",
   "motion-portfolio-scroller",
   "motion-circle-reveal",
   "motion-clarity-marquee",
+  "motion-layered-text",
+  "motion-text-rotate",
+  "motion-text-glitch",
+  "motion-text-reveal-block",
+  "motion-text-along-path",
   "motion-full-screen-chapters",
   "motion-magnetic-target",
   "motion-frame-sequence",
@@ -124,9 +138,10 @@ function IsStoreContentOrder(validationOptions?: ValidationOptions) {
             value.some(
               (section) =>
                 typeof section !== "string" ||
-                (!(STORE_CONTENT_SECTIONS as readonly string[]).includes(section) && !STORE_ANIMATION_SECTION_PATTERN.test(section)),
+                (!(STORE_CONTENT_SECTIONS as readonly string[]).includes(section) && !STORE_ANIMATION_SECTION_PATTERN.test(section) && !STORE_SITE_SECTION_PATTERN.test(section)),
             )
           ) return false;
+          if (value.some((section) => typeof section === "string" && STORE_SITE_SECTION_PATTERN.test(section))) return true;
           return STORE_LEGACY_REQUIRED_CONTENT_SECTIONS.every((section) => unique.has(section));
         },
         defaultMessage(args: ValidationArguments) {
@@ -150,7 +165,7 @@ function IsStoreSectionBackgrounds(validationOptions?: ValidationOptions) {
           const entries = Object.entries(value);
           if (entries.length > 32) return false;
           return entries.every(([section, color]) =>
-            ((STORE_CONTENT_SECTIONS as readonly string[]).includes(section) || STORE_ANIMATION_SECTION_PATTERN.test(section))
+            ((STORE_CONTENT_SECTIONS as readonly string[]).includes(section) || STORE_ANIMATION_SECTION_PATTERN.test(section) || STORE_SITE_SECTION_PATTERN.test(section))
             && typeof color === "string"
             && /^#[0-9a-f]{6}$/i.test(color),
           );
@@ -207,6 +222,13 @@ export class StoreEditorialImageDto {
   @Matches(UPLOADED_FILE_URL_PATTERN, { message: "editorial imageUrl must be a path returned by POST /v1/uploads" })
   imageUrl!: string;
 
+  @ApiPropertyOptional({ example: "product_123", description: "Optional product opened when a customer taps this image." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(80)
+  productId?: string;
+
   @ApiPropertyOptional({ example: "Una pausa hecha con intención" })
   @IsOptional()
   @IsString()
@@ -233,6 +255,45 @@ export class StoreEditorialImageDto {
   @IsString()
   @Matches(/^#[0-9a-f]{6}$/i, { message: "editorial boxColor must be a 6-digit hex color" })
   boxColor?: string;
+
+  @ApiPropertyOptional({ example: 24, minimum: 0, maximum: 100, description: "Horizontal position of this scene's text box." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  textPositionX?: number;
+
+  @ApiPropertyOptional({ example: 72, minimum: 0, maximum: 100, description: "Vertical position of this scene's text box." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  textPositionY?: number;
+
+  @ApiPropertyOptional({ example: 100, minimum: 50, maximum: 200, description: "Scale of this scene's text box." })
+  @IsOptional()
+  @IsInt()
+  @Min(50)
+  @Max(200)
+  textScale?: number;
+
+  @ApiPropertyOptional({ example: 62, minimum: 20, maximum: 100, description: "Width of this scene's text box." })
+  @IsOptional()
+  @IsInt()
+  @Min(20)
+  @Max(100)
+  textWidthPercent?: number;
+
+  @ApiPropertyOptional({ enum: STORE_ANIMATION_TEXT_ALIGNS, example: "left" })
+  @IsOptional()
+  @IsIn(STORE_ANIMATION_TEXT_ALIGNS)
+  textAlign?: string;
+
+  @ApiPropertyOptional({ example: "#ffffff", description: "Optional text color for this scene's text box." })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-f]{6}$/i, { message: "editorial textColor must be a 6-digit hex color" })
+  textColor?: string;
 }
 
 export class StoreAnimationDto {
@@ -266,32 +327,87 @@ export class StoreAnimationDto {
   @MaxLength(220)
   subtitle?: string;
 
-  @ApiPropertyOptional({ example: "creando", description: "Top kinetic word used by Video que se abre." })
-  @IsOptional()
-  @IsString()
-  @IsSafeText()
-  @MaxLength(48)
-  topWord?: string;
-
-  @ApiPropertyOptional({ example: "tu", description: "Right kinetic word used by Video que se abre." })
-  @IsOptional()
-  @IsString()
-  @IsSafeText()
-  @MaxLength(48)
-  rightWord?: string;
-
-  @ApiPropertyOptional({ example: "historia", description: "Bottom kinetic word used by Video que se abre." })
-  @IsOptional()
-  @IsString()
-  @IsSafeText()
-  @MaxLength(48)
-  bottomWord?: string;
-
   @ApiPropertyOptional({ example: "product_123", description: "Optional product featured by this animation." })
   @IsOptional()
   @IsString()
   @MaxLength(80)
   productId?: string;
+
+  @ApiPropertyOptional({ example: "Ver colección", description: "Optional movable call-to-action shown over the animation." })
+  @IsOptional()
+  @IsString()
+  @IsSafeText()
+  @MaxLength(36)
+  buttonLabel?: string;
+
+  @ApiPropertyOptional({ example: 18, minimum: 0, maximum: 100, description: "Horizontal button anchor inside the animation canvas." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  buttonPositionX?: number;
+
+  @ApiPropertyOptional({ example: 88, minimum: 0, maximum: 100, description: "Vertical button anchor inside the animation canvas." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  buttonPositionY?: number;
+
+  @ApiPropertyOptional({ example: 20, minimum: 0, maximum: 100, description: "Horizontal text anchor inside the animation canvas." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  textPositionX?: number;
+
+  @ApiPropertyOptional({ example: 75, minimum: 0, maximum: 100, description: "Vertical text anchor inside the animation canvas." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  textPositionY?: number;
+
+  @ApiPropertyOptional({ example: 100, minimum: 50, maximum: 200, description: "Precise text scale selected by direct canvas resizing." })
+  @IsOptional()
+  @IsInt()
+  @Min(50)
+  @Max(200)
+  textScale?: number;
+
+  @ApiPropertyOptional({ example: 60, minimum: 20, maximum: 100, description: "Precise text-block width selected by direct canvas resizing." })
+  @IsOptional()
+  @IsInt()
+  @Min(20)
+  @Max(100)
+  textWidthPercent?: number;
+
+  @ApiPropertyOptional({ enum: STORE_ANIMATION_TEXT_ALIGNS, example: "left" })
+  @IsOptional()
+  @IsIn(STORE_ANIMATION_TEXT_ALIGNS)
+  textAlign?: string;
+
+  @ApiPropertyOptional({ enum: STORE_ANIMATION_TEXT_SIZES, example: "medium" })
+  @IsOptional()
+  @IsIn(STORE_ANIMATION_TEXT_SIZES)
+  textSize?: string;
+
+  @ApiPropertyOptional({ enum: STORE_ANIMATION_TEXT_WIDTHS, example: "medium" })
+  @IsOptional()
+  @IsIn(STORE_ANIMATION_TEXT_WIDTHS)
+  textWidth?: string;
+
+  @ApiPropertyOptional({ example: "#ffffff", description: "Text color used by this animation." })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-f]{6}$/i, { message: "animation textColor must be a 6-digit hex color" })
+  textColor?: string;
+
+  @ApiPropertyOptional({ example: "#111827", description: "Background color used by this animation." })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-f]{6}$/i, { message: "animation backgroundColor must be a 6-digit hex color" })
+  backgroundColor?: string;
 
   @ApiProperty({ description: "Ordered pictures and copy owned by this animation.", type: [StoreEditorialImageDto] })
   @IsArray()
@@ -601,6 +717,22 @@ export class CreateStoreDto {
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: "announcementColor must be a 6-digit hex color, e.g. #ffffff" })
   announcementColor?: string;
 
+  @ApiPropertyOptional({
+    description: "Curated font used only by the announcement strip. 'store' inherits the storefront font.",
+    enum: STORE_ANNOUNCEMENT_FONTS,
+  })
+  @IsOptional()
+  @IsIn(STORE_ANNOUNCEMENT_FONTS)
+  announcementFont?: string;
+
+  @ApiPropertyOptional({
+    description: "Optional per-letter announcement effect. Reduced-motion visitors always receive static lettering.",
+    enum: STORE_ANNOUNCEMENT_EFFECTS,
+  })
+  @IsOptional()
+  @IsIn(STORE_ANNOUNCEMENT_EFFECTS)
+  announcementEffect?: string;
+
   @ApiPropertyOptional({ description: "Whether the storefront promotion dialog is active." })
   @IsOptional()
   @IsBoolean()
@@ -667,7 +799,7 @@ export class CreateStoreDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(STORE_LEGACY_REQUIRED_CONTENT_SECTIONS.length)
+  @ArrayMinSize(3)
   @ArrayUnique()
   @IsStoreContentOrder()
   contentOrder?: string[];

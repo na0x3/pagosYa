@@ -7,6 +7,7 @@ import { WebhookHttpClient } from "./webhook-http.client";
 
 const MAX_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 5_000;
+const PROCESSING_LEASE_MS = 5 * 60_000;
 
 /** Polls due WebhookEvent rows and delivers them with HMAC signatures + exponential backoff. */
 @Injectable()
@@ -37,7 +38,11 @@ export class WebhookDeliveryWorker {
       // future multi-instance workers) delivering the same event twice.
       const claim = await this.prisma.webhookEvent.updateMany({
         where: { id: event.id, status: event.status, attempts: event.attempts },
-        data: { attempts: { increment: 1 }, lastAttemptAt: new Date() },
+        data: {
+          attempts: { increment: 1 },
+          lastAttemptAt: new Date(),
+          nextRetryAt: new Date(Date.now() + PROCESSING_LEASE_MS),
+        },
       });
       if (claim.count === 0) continue;
 
@@ -70,7 +75,7 @@ export class WebhookDeliveryWorker {
       if (response.ok) {
         await this.prisma.webhookEvent.update({
           where: { id: event.id },
-          data: { status: WebhookEventStatus.DELIVERED, lastResponseStatus: response.status },
+          data: { status: WebhookEventStatus.DELIVERED, lastResponseStatus: response.status, nextRetryAt: null },
         });
         return;
       }

@@ -748,6 +748,8 @@ describe("storefront routes", () => {
         announcementSpeed: 12,
         announcementSize: "large",
         announcementColor: "#f5d90a",
+        announcementFont: "editorial",
+        announcementEffect: "wave",
         promotionEnabled: true,
         promotionImageUrl: "/v1/uploads/promo.webp",
         promotionTitle: "20% de descuento",
@@ -770,6 +772,9 @@ describe("storefront routes", () => {
     // Legacy/proposal values cannot enlarge the top band: storefront
     // announcements are intentionally compact everywhere.
     expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-small")).toBe(true);
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-font-editorial")).toBe(true);
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-effect-wave")).toBe(true);
+    expect(document.querySelectorAll(".store-announcement-letter").length).toBeGreaterThan(0);
     expect(document.querySelectorAll(".store-announcement-sequence")).toHaveLength(2);
     expect(document.querySelectorAll(".store-announcement-phrase")).toHaveLength(4);
     expect(document.querySelector(".store-announcement-a11y")?.textContent).toBe("Envío gratis hoy • Compra local");
@@ -800,7 +805,7 @@ describe("storefront routes", () => {
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=preview-store&preview=1");
+    await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
       new MessageEvent("message", {
         source: window,
@@ -812,6 +817,8 @@ describe("storefront routes", () => {
             announcementSpeed: 14,
             announcementSize: "small",
             announcementColor: "#123456",
+            announcementFont: "geometric",
+            announcementEffect: "sparkle",
             promotionEnabled: true,
             promotionTitle: "Solo hoy",
             promotionBody: "Aprovecha antes de que termine.",
@@ -828,6 +835,8 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-announcement.marquee")?.textContent).toContain("Oferta de fin de semana");
     expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-small")).toBe(true);
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("--announcement-bg:#123456");
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-font-geometric")).toBe(true);
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-effect-sparkle")).toBe(true);
     expect(document.querySelector(".promotion-dialog")?.textContent).toContain("Solo hoy");
     expect(document.activeElement).not.toBe(document.querySelector(".promotion-close"));
     expect(document.body.dataset.buttonVariant).toBe("soft");
@@ -848,7 +857,7 @@ describe("storefront routes", () => {
     const previewScrollTo = vi.fn();
     Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
 
-    await loadCheckout("/?link=preview-store&preview=1");
+    await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
       new MessageEvent("message", {
         source: window,
@@ -881,7 +890,7 @@ describe("storefront routes", () => {
     const previewScrollTo = vi.fn();
     Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
 
-    await loadCheckout("/?link=preview-store&preview=1");
+    await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
       new MessageEvent("message", {
         source: window,
@@ -943,7 +952,7 @@ describe("storefront routes", () => {
     const previewScrollTo = vi.fn();
     Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
 
-    await loadCheckout("/?link=preview-store&preview=1");
+    await loadCheckout("/?link=preview-store&preview=1&editor=1");
     previewScrollTo.mockClear();
     window.dispatchEvent(
       new MessageEvent("message", {
@@ -995,7 +1004,7 @@ describe("storefront routes", () => {
     Object.defineProperty(window, "scrollTo", { configurable: true, value: previewScrollTo });
     Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, value: 3200 });
 
-    await loadCheckout("/?link=preview-store&preview=1");
+    await loadCheckout("/?link=preview-store&preview=1&editor=1");
     previewScrollTo.mockClear();
     window.dispatchEvent(
       new MessageEvent("message", {
@@ -1049,6 +1058,22 @@ describe("storefront routes", () => {
         tagline: "Propuesta sin publicar",
         accentColor: "#b4532a",
         cartButtonLabel: "Probar esta dirección",
+        contactFormEnabled: true,
+        contentOrder: ["site-information", "site-opening", "site-shop"],
+        sectionBackgrounds: { "site-shop": "#224466" },
+        siteDocument: {
+          version: 1,
+          direction: "Publicación cultural",
+          theme: { pageBackground: "#f4efe5", textColor: "#171717", accentColor: "#315c49", secondaryColor: "#c9a86a", surfaceColor: "#ffffff", mutedColor: "#626262", borderColor: "#c9c9c4", headingFont: "editorial", bodyFont: "grotesk", radius: 8, shadow: "soft", productLayout: "editorial" },
+          navigation: { layout: "centered", sticky: true, transparent: false },
+          experience: { type: "scroll-expansion", placement: "after-catalog", title: "La ventana se abre", body: "Una transición visual hacia la colección.", mediaUrls: ["/v1/uploads/hero.webp", "/v1/uploads/detail.webp"] },
+          sections: [
+            { id: "opening", kind: "hero", layout: "full-bleed", width: "full", align: "left", motion: "none", title: "Un matcha con mundo propio", body: "Una portada hecha para esta marca.", ctaLabel: "Ver selección", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls: ["/v1/uploads/hero.webp"], items: [] },
+            { id: "reasons", kind: "benefits", layout: "grid", width: "wide", align: "left", motion: "none", title: "Elige con intención", body: "Una lectura breve antes de comprar.", ctaLabel: "", backgroundColor: "#ffffff", textColor: "#171717", mediaUrls: [], items: [{ title: "Explora", body: "Mira el catálogo.", mediaUrl: null }] },
+            { id: "shop", kind: "catalog", layout: "offset", width: "wide", align: "left", motion: "none", title: "La selección", body: "Productos reales, integrados por pagosYa.", ctaLabel: "", backgroundColor: "#ffffff", textColor: "#171717", mediaUrls: [], items: [] },
+            { id: "information", kind: "contact", layout: "split", width: "wide", align: "left", motion: "none", title: "Conversemos", body: "Escribe tu pregunta.", ctaLabel: "Enviar", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls: [], items: [] },
+          ],
+        },
       }),
     });
 
@@ -1056,7 +1081,143 @@ describe("storefront routes", () => {
 
     expect(document.querySelector(".store-tagline")?.textContent).toBe("Propuesta sin publicar");
     expect(document.querySelector("#cart-pay")?.textContent).toBe("Probar esta dirección");
-    expect(document.documentElement.style.getPropertyValue("--pg-accent")).toBe("#b4532a");
+    expect(document.documentElement.style.getPropertyValue("--site-accent")).toBe("#315c49");
+    expect(document.documentElement.style.getPropertyValue("--pg-accent")).toBe("#3e745c");
+    expect(document.body.classList.contains("has-bespoke-site")).toBe(true);
+    expect(Array.from(document.querySelectorAll("[data-site-kind]")).map((section) => section.getAttribute("data-site-kind"))).toEqual(["contact", "hero", "catalog"]);
+    expect(document.querySelector(".bespoke-benefits")).toBeNull();
+    expect(document.querySelector<HTMLElement>('[data-site-section="shop"]')?.style.getPropertyValue("--zone-bg")).toBe("#224466");
+    expect(document.querySelector<HTMLElement>('[data-site-section="opening"]')?.style.getPropertyValue("--zone-bg")).toBe("#f4efe5");
+    expect(document.querySelector(".bespoke-catalog #store-grid")).not.toBeNull();
+    expect(document.querySelector(".bespoke-contact #store-contact-form")).not.toBeNull();
+    expect(document.querySelector(".store-scroll-expansion[data-scroll-expansion]")).not.toBeNull();
+    expect(document.body.dataset.siteSticky).toBe("true");
+    expect(document.body.dataset.siteTransparent).toBe("false");
+    expect(document.querySelector(".bespoke-hero .hero-catalog-cta")?.tagName).toBe("BUTTON");
+    expect(document.querySelector<HTMLAnchorElement>(".product-page-link")?.href).toContain("#proposal=");
+    expect(document.querySelector<HTMLAnchorElement>('.store-site-nav [data-store-scroll-target="#store-products"]')?.href).toContain("#proposal=");
+    expect(document.body.classList.contains("store-preview-editor-enabled")).toBe(false);
+    expect(document.querySelector("[data-store-editor-target]")).toBeNull();
+  });
+
+  it("renders AI storefronts as a hero slider, a bounded Story Scroll, and then the store", async () => {
+    const section = (overrides: Record<string, unknown>) => ({
+      id: "section",
+      kind: "gallery",
+      layout: "grid",
+      width: "wide",
+      align: "left",
+      motion: "none",
+      title: "",
+      body: "",
+      ctaLabel: "",
+      backgroundColor: "#f4efe6",
+      textColor: "#152b2f",
+      mediaUrls: [],
+      items: [],
+      ...overrides,
+    });
+    const heroMedia = ["/v1/uploads/bikano-hero-1.webp", "/v1/uploads/bikano-hero-2.webp", "/v1/uploads/bikano-hero-3.webp"];
+    const storyMedia = ["/v1/uploads/bikano-story-1.webp", "/v1/uploads/bikano-story-2.webp", "/v1/uploads/bikano-story-3.webp"];
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Bikano",
+        layoutStyle: "catalog-first",
+        contactFormEnabled: true,
+        siteDocument: {
+          version: 1,
+          direction: "Costa gráfica",
+          theme: {
+            pageBackground: "#f4efe6", textColor: "#152b2f", accentColor: "#cf4f35", secondaryColor: "#e8b9a0",
+            surfaceColor: "#fffaf2", mutedColor: "#66736f", borderColor: "#b9beb3", headingFont: "geometric", bodyFont: "humanist",
+            radius: 4, shadow: "none", productLayout: "editorial", displayScale: "dramatic", density: "airy", imageTreatment: "cinematic",
+          },
+          navigation: { layout: "centered", sticky: false, transparent: false, logoTreatment: "wordmark" },
+          motion: { intensity: "cinematic" },
+          merchandising: { featuredProductIds: [], productOrderIds: [], spotlightLayout: "lookbook", showDescriptions: true },
+          experience: { type: "text-reveal-block", placement: "after-catalog", title: "Bikano en movimiento", body: "Color con intención.", mediaUrls: [] },
+          sections: [
+            section({
+              id: "opening", kind: "hero", layout: "full-bleed", width: "full", title: "Hecho para el verano", body: "Tres escenas, una sola entrada clara.",
+              ctaLabel: "Ver la tienda", mediaUrls: heroMedia,
+              items: heroMedia.map((mediaUrl, index) => ({ mediaUrl, title: ["Una colección extensa para descubrir piezas, colores y formas con una presentación clara y ordenada", "Color en movimiento", "Diseñado para elegir"][index], body: `Escena ${index + 1}` })),
+            }),
+            section({
+              id: "brand-story", kind: "story", layout: "stacked", width: "full", motion: "story-scroll", title: "La historia de Bikano",
+              body: "Una secuencia breve antes de comprar.", mediaUrls: storyMedia,
+              items: storyMedia.map((mediaUrl, index) => ({ mediaUrl, title: ["La forma", "El color", "La colección"][index], body: `Capítulo ${index + 1}` })),
+            }),
+            section({ id: "shop", kind: "catalog", layout: "offset", title: "La tienda", body: "Elige tu pieza." }),
+            section({ id: "information", kind: "contact", layout: "split", title: "Conversemos", body: "Escríbenos." }),
+          ],
+        },
+        items: [{ ...baseItem, imageUrls: ["/bikano-product.webp"] }],
+      } as Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/s/bikano");
+
+    expect([...document.querySelectorAll("[data-site-kind]")].map((node) => node.getAttribute("data-site-kind"))).toEqual(["hero", "story", "catalog", "contact"]);
+    expect(document.querySelectorAll(".bespoke-hero .store-slide")).toHaveLength(3);
+    expect(document.body.dataset.layoutStyle).toBe("cinematic");
+    expect(document.querySelector(".bespoke-hero .store-slide-title")?.classList.contains("is-very-long")).toBe(true);
+    expect(document.querySelector(".bespoke-hero .store-carousel-toggle")?.textContent).toBe("Pausar");
+    expect(document.querySelectorAll(".bespoke-story .store-flow-section")).toHaveLength(3);
+    expect(document.querySelector("[data-text-reveal]")).not.toBeNull();
+    expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-background")).toBe("#fffaf2");
+    expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-text-color")).toBe("#152b2f");
+    expect(document.querySelector(".bespoke-story > .bespoke-media")).toBeNull();
+    document.querySelector<HTMLButtonElement>(".bespoke-hero .store-carousel-arrow.next")!.click();
+    expect(document.querySelector('.bespoke-hero .store-slide[data-slide-index="1"]')?.classList.contains("active")).toBe(true);
+  });
+
+  it("makes every image in an AI-authored gallery directly selectable in editor mode", async () => {
+    const section = (id: string, kind: string, mediaUrls: string[] = []) => ({
+      id, kind, layout: "grid", width: "wide", align: "left", motion: "none",
+      title: kind === "gallery" ? "La marca en imágenes" : `${kind} title`,
+      body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls, items: [],
+    });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Galería editable",
+        contentOrder: ["site-opening", "site-story", "site-shop", "site-visual-world", "site-information"],
+        editorialGallery: [],
+        siteDocument: {
+          version: 1,
+          direction: "Galería táctil",
+          theme: { pageBackground: "#f4efe5", textColor: "#171717", accentColor: "#8b4513", secondaryColor: "#ffbd59", surfaceColor: "#ffffff", mutedColor: "#666666", borderColor: "#c9c9c4", headingFont: "editorial", bodyFont: "grotesk", radius: 2, shadow: "none", productLayout: "gallery" },
+          navigation: { layout: "brand-left", sticky: true, transparent: false },
+          sections: [
+            section("opening", "hero", ["/v1/uploads/hero.webp"]),
+            section("story", "story", ["/v1/uploads/story.webp"]),
+            section("shop", "catalog"),
+            section("visual-world", "gallery", ["/v1/uploads/gallery-one.webp", "/v1/uploads/gallery-two.webp"]),
+            section("information", "contact"),
+          ],
+        },
+        items: [baseItem],
+      } as Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=editable-gallery&preview=1&editor=1");
+
+    const targets = [...document.querySelectorAll<HTMLElement>('.bespoke-gallery > .bespoke-media > [data-store-editor-inline="image"]')];
+    expect(targets).toHaveLength(2);
+    expect(targets.map((target) => ({
+      section: target.dataset.storeEditorSection,
+      field: target.dataset.storeEditorField,
+      itemIndex: target.dataset.storeEditorItemIndex,
+      role: target.getAttribute("role"),
+      tabIndex: target.tabIndex,
+    }))).toEqual([
+      { section: "site-visual-world", field: "editorialMedia", itemIndex: "0", role: "button", tabIndex: 0 },
+      { section: "site-visual-world", field: "editorialMedia", itemIndex: "1", role: "button", tabIndex: 0 },
+    ]);
+    expect(targets[0].getAttribute("aria-label")).toBe("Cambiar imagen 1 de La marca en imágenes");
   });
 
   it("moves into the payment form after checking out the cart", async () => {
@@ -1447,6 +1608,45 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-toolbar")).toBeTruthy();
     expect(document.body.textContent).toContain("Corte de cabello");
     expect(document.body.textContent).not.toContain("Manicure sin categoría");
+  });
+
+  it("keeps category entry cards and focused banner pages inside an AI-authored site", async () => {
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe6", textColor: "#152b2f", mediaUrls: [], items: [],
+    });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Bikano",
+        contactFormEnabled: true,
+        siteDocument: {
+          version: 1,
+          direction: "Costa gráfica",
+          theme: { pageBackground: "#f4efe6", textColor: "#152b2f", accentColor: "#cf4f35", secondaryColor: "#e8b9a0", surfaceColor: "#fffaf2", mutedColor: "#66736f", borderColor: "#b9beb3", headingFont: "geometric", bodyFont: "humanist", radius: 4, shadow: "none", productLayout: "editorial" },
+          navigation: { layout: "centered", sticky: true, transparent: false },
+          sections: [section("opening", "hero"), section("shop", "catalog"), section("story", "story"), section("information", "contact")],
+        },
+        categories: [{ id: "cat_bikini", name: "Bikinis" }, { id: "cat_enterizo", name: "Enterizos" }],
+        items: [
+          { ...baseItem, id: "bikini_1", name: "Bikini coral", categoryId: "cat_bikini", imageUrls: ["/bikini.webp"] },
+          { ...baseItem, id: "enterizo_1", name: "Enterizo azul", categoryId: "cat_enterizo", imageUrls: ["/enterizo.webp"] },
+        ],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/bikano");
+
+    expect([...document.querySelectorAll(".catalog-section-card strong")].map((node) => node.textContent)).toEqual(["Bikinis", "Enterizos"]);
+    expect(document.querySelectorAll(".store-item")).toHaveLength(0);
+
+    document.querySelector<HTMLAnchorElement>('[data-catalog-section="cat_enterizo"]')!.click();
+
+    expect(window.location.pathname).toBe("/s/bikano/c/cat_enterizo");
+    expect(document.querySelector(".catalog-section-banner h3")?.textContent).toBe("Enterizos");
+    expect([...document.querySelectorAll(".store-item-name")].map((node) => node.textContent)).toEqual(["Enterizo azul"]);
+    expect(document.querySelector(".catalog-section-back")?.textContent).toContain("Ver secciones");
   });
 
   it("opens a category as a focused, directly addressable catalog page", async () => {
@@ -1934,6 +2134,33 @@ describe("storefront routes", () => {
     }
   });
 
+  it("opens a selected product when the shopper taps a linked editorial photo", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Galería comprable",
+        experienceStyle: "coverflow",
+        editorialGallery: [
+          { imageUrl: "/v1/uploads/producto.webp", productId: baseItem.id, title: "El favorito" },
+          { imageUrl: "/v1/uploads/editorial.webp", productId: "missing_product", title: "Solo inspiración" },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/galeria-comprable");
+
+    const productLinks = document.querySelectorAll<HTMLAnchorElement>(".store-editorial-product-link");
+    expect(productLinks).toHaveLength(1);
+    expect(productLinks[0].getAttribute("href")).toContain(`/p/${baseItem.id}`);
+    expect(productLinks[0].textContent).toContain(baseItem.name);
+    expect(document.querySelectorAll(".store-editorial-item")[1]?.querySelector("a")).toBeNull();
+
+    productLinks[0].click();
+    expect(document.querySelector(".product-detail-content h1")?.textContent).toContain(baseItem.name);
+  });
+
   it("renders the default opt-in coverflow animation as its own ordered section", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
@@ -1965,10 +2192,14 @@ describe("storefront routes", () => {
     ["hero-gallery-scroll", "[data-gallery-scroll]"],
     ["stagger-testimonials", "[data-testimonials]"],
     ["zoom-parallax", "[data-motion-zoom]"],
-    ["video-pill", "[data-video-pill]"],
     ["portfolio-scroller", "[data-portfolio-scroller]"],
     ["circle-reveal", "[data-circle-reveal]"],
     ["clarity-marquee", "[data-clarity-marquee]"],
+    ["layered-text", "[data-layered-text]"],
+    ["text-rotate", "[data-text-rotate]"],
+    ["text-glitch", "[data-text-glitch]"],
+    ["text-reveal-block", "[data-text-reveal]"],
+    ["text-along-path", "[data-text-along-path]"],
     ["full-screen-chapters", "[data-full-chapters]"],
     ["magnetic-target", "[data-magnetic-target]"],
     ["frame-sequence", "[data-frame-sequence]"],
@@ -1999,28 +2230,58 @@ describe("storefront routes", () => {
       expect(document.querySelectorAll(".store-image-stream-grid")).toHaveLength(1);
       expect(document.querySelectorAll(".store-image-stream-grid figure")).toHaveLength(3);
       expect(document.querySelector("[data-image-stream], .store-image-stream-rail")).toBeNull();
+    } else if (motionExperience === "3d-gallery") {
+      const firstCaption = document.querySelector("[data-space-card='0'] figcaption");
+      expect(firstCaption?.querySelector("strong")?.textContent).toBe("Origen");
+      expect(firstCaption?.querySelector("span")?.textContent).toBe("Primer plano");
+      expect(firstCaption?.querySelector("p")?.textContent).toBe("La primera parte del relato real de la tienda.");
     }
   });
 
-  it("uses only the video media in a scroll-driven video pill", async () => {
-    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+  it("ignores retired video-pill animations saved by older stores", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
-        storeName: "Tienda con video",
+        storeName: "Tienda con animación retirada",
         contentOrder: ["animation-video-opening", "products"],
         animations: [{
           id: "video-opening",
           name: "Video de apertura",
           type: "video-pill",
-          title: "Una escena que se abre",
-          subtitle: "Una lectura de clarity-marquee y zoom-parallax, interrumpida por un video-pill de producto.",
-          topWord: "creando",
-          rightWord: "tu",
-          bottomWord: "historia",
+          media: [{ imageUrl: "/v1/uploads/apertura.webp" }],
+        }],
+        items: [baseItem],
+      } as unknown as Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=retired-animation");
+
+    expect(document.querySelector("[data-video-pill]")).toBeNull();
+    expect(document.querySelector("[data-animation-id='video-opening']")).toBeNull();
+    expect(document.querySelector(".store-products")).not.toBeNull();
+  });
+
+  it("marks storefront sections for direct editing only in explicit editor mode", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda editable",
+        announcement: "Envíos hoy • Pedidos hasta las 18:00",
+        announcementMode: "static",
+        contentOrder: ["animation-video-opening", "products"],
+        animations: [{
+          id: "video-opening",
+          name: "Apertura",
+          type: "full-screen-chapters",
           media: [
-            { imageUrl: "/v1/uploads/apertura.mp4", title: "La colección en movimiento" },
-            { imageUrl: "/v1/uploads/apertura-poster.webp", title: "Fotograma de apertura" },
+            { imageUrl: "/v1/uploads/apertura.webp" },
+            { imageUrl: "/v1/uploads/continuacion.webp" },
+            { imageUrl: "/v1/uploads/escena-3.webp" },
+            { imageUrl: "/v1/uploads/escena-4.webp" },
+            { imageUrl: "/v1/uploads/escena-5.webp" },
+            { imageUrl: "/v1/uploads/escena-6.webp" },
           ],
         }],
         items: [baseItem],
@@ -2028,49 +2289,135 @@ describe("storefront routes", () => {
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=video-with-poster");
+    await loadCheckout("/?link=editable&preview=1&editor=1");
 
-    const video = document.querySelector<HTMLVideoElement>("[data-video-pill] video")!;
-    expect(video.getAttribute("poster")).toBeNull();
-    expect(video.getAttribute("preload")).toBe("auto");
-    expect(document.querySelector(".store-video-poster")).toBeNull();
-    expect(document.querySelector(".store-video-pill-word-top")?.textContent).toBe("creando");
-    expect(document.querySelector(".store-video-pill-word-right")?.textContent).toBe("tu");
-    expect(document.querySelector(".store-video-pill-word-bottom")?.textContent).toBe("historia");
-    expect(document.querySelector(".store-motion-description")).toBeNull();
-    expect(document.body.textContent).not.toContain("Una escena que se abre");
-    expect(document.body.textContent).not.toContain("clarity-marquee");
-    expect(document.querySelectorAll("[data-video-pill-clock]")).toHaveLength(3);
+    expect(document.body.classList.contains("store-preview-editor-enabled")).toBe(true);
+    expect(document.querySelector(".store-title")?.getAttribute("data-store-editor-field")).toBe("storeName");
+    const announcement = document.querySelector<HTMLElement>(".store-announcement")!;
+    expect(announcement.dataset.storeEditorSection).toBe("announcement");
+    expect(announcement.dataset.storeEditorField).toBe("announcementText");
+    expect(announcement.dataset.storeEditorInline).toBeUndefined();
+    expect(announcement.getAttribute("role")).toBe("button");
+    expect(announcement.tabIndex).toBe(0);
+    expect(announcement.getAttribute("aria-label")).toBe("Editar marquesina superior");
+    expect(document.querySelector(".store-item")?.getAttribute("data-store-editor-item-id")).toBe(baseItem.id);
+    const animationImages = [...document.querySelectorAll(".store-full-chapter-backgrounds .store-fidelity-media-source")];
+    expect(animationImages.map((image) => image.getAttribute("data-store-editor-field"))).toEqual(["media", "media", "media", "media", "media", "media"]);
+    expect(animationImages.map((image) => image.getAttribute("data-store-editor-animation-id"))).toEqual(["video-opening", "video-opening", "video-opening", "video-opening", "video-opening", "video-opening"]);
+    expect(animationImages.map((image) => image.getAttribute("data-store-editor-item-index"))).toEqual(["0", "1", "2", "3", "4", "5"]);
+    const animationPanels = [...document.querySelectorAll("[data-full-chapter-copy]")];
+    expect(animationPanels.map((panel) => panel.getAttribute("data-store-editor-field"))).toEqual(["media", "media", "media", "media", "media", "media"]);
+    expect(animationPanels.map((panel) => panel.getAttribute("data-store-editor-item-index"))).toEqual(["0", "1", "2", "3", "4", "5"]);
   });
 
-  it("marks storefront sections for direct editing only in merchant preview mode", async () => {
-    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+  it("keeps an incomplete animation visible while the merchant is choosing its pictures", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
-        storeName: "Tienda editable",
-        contentOrder: ["animation-video-opening", "products"],
+        storeName: "Animación en progreso",
+        contentOrder: ["animation-in-progress", "products"],
         animations: [{
-          id: "video-opening",
-          name: "Apertura",
-          type: "video-pill",
-          topWord: "creando",
-          rightWord: "tu",
-          bottomWord: "historia",
-          media: [{ imageUrl: "/v1/uploads/apertura.mp4" }],
+          id: "in-progress",
+          name: "Hero Gallery incompleta",
+          type: "hero-gallery-scroll",
+          media: [
+            { imageUrl: "/v1/uploads/uno.webp" },
+            { imageUrl: "/v1/uploads/dos.webp" },
+          ],
         }],
         items: [baseItem],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=editable&preview=1");
+    await loadCheckout("/?link=incomplete-animation&preview=1&editor=1");
 
-    expect(document.body.classList.contains("store-preview-editor-enabled")).toBe(true);
-    expect(document.querySelector(".store-title")?.getAttribute("data-store-editor-field")).toBe("storeName");
-    expect(document.querySelector(".store-item")?.getAttribute("data-store-editor-item-id")).toBe(baseItem.id);
-    expect(document.querySelector(".store-video-pill-word-top")?.getAttribute("data-store-editor-field")).toBe("topWord");
-    expect(document.querySelector(".store-video-pill-word-top")?.getAttribute("data-store-editor-animation-id")).toBe("video-opening");
+    expect(document.querySelector('[data-animation-id="in-progress"]')).not.toBeNull();
+    expect(document.querySelectorAll("[data-gallery-scroll-cell]")).toHaveLength(2);
+  });
+
+  it("lets merchants double-click storefront text and images for inline editing", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda editable",
+        logoUrl: "/v1/uploads/logo.webp",
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=inline-edit&preview=1&editor=1");
+
+    const title = document.querySelector<HTMLElement>(".store-title")!;
+    expect(title.dataset.storeEditorInline).toBe("text");
+    title.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    expect(title.getAttribute("contenteditable")).toBe("plaintext-only");
+    expect(title.classList.contains("store-preview-inline-editing")).toBe(true);
+    title.textContent = "Cambio cancelado";
+    title.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(title.textContent).toBe("Tienda editable");
+    expect(title.hasAttribute("contenteditable")).toBe(false);
+
+    title.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    title.textContent = "Tienda desde la página";
+    title.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(title.textContent).toBe("Tienda desde la página");
+    expect(title.hasAttribute("contenteditable")).toBe(false);
+
+    title.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    title.textContent = "Tienda guardada al salir";
+    window.dispatchEvent(new Event("blur"));
+    expect(title.textContent).toBe("Tienda guardada al salir");
+    expect(title.hasAttribute("contenteditable")).toBe(false);
+
+    const logo = document.querySelector<HTMLElement>(".merchant-header-logo")!;
+    expect(logo.dataset.storeEditorInline).toBe("image");
+    logo.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    expect(document.querySelector<HTMLInputElement>(".store-preview-inline-file-input")?.accept).toBe("image/png,image/jpeg,image/webp");
+  });
+
+  it("keeps animation copy empty when the merchant clears every optional text field", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda visual",
+        contentOrder: ["animation-chapters", "animation-frames", "products"],
+        animations: [
+          {
+            id: "chapters",
+            name: "Capítulos sin texto",
+            type: "full-screen-chapters",
+            subtitle: "",
+            media: [
+              { imageUrl: "/v1/uploads/capitulo-1.webp", title: "", caption: "", body: "" },
+              { imageUrl: "/v1/uploads/capitulo-2.webp", title: "", caption: "", body: "" },
+            ],
+          },
+          {
+            id: "frames",
+            name: "Fotogramas sin texto",
+            type: "frame-sequence",
+            media: [
+              { imageUrl: "/v1/uploads/frame-1.webp" },
+              { imageUrl: "/v1/uploads/frame-2.webp" },
+            ],
+          },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=animations-without-copy");
+
+    expect(document.querySelector("[data-animation-id='chapters'] .store-motion-description")).toBeNull();
+    expect(document.querySelectorAll("[data-animation-id='chapters'] .store-full-chapter-copy h3, [data-animation-id='chapters'] .store-full-chapter-copy p")).toHaveLength(0);
+    expect(document.querySelector<HTMLElement>("[data-animation-id='frames'] [data-frame-title]")?.hidden).toBe(true);
+    expect(document.querySelector<HTMLElement>("[data-animation-id='frames'] [data-frame-body]")?.hidden).toBe(true);
+    expect(document.querySelector("[data-animation-id='frames']")?.textContent).not.toContain("Escena 1");
+    expect(document.body.textContent).not.toContain("Una escena de la marca");
+    expect(document.body.textContent).not.toContain("Una mirada más cercana a la historia de la marca.");
   });
 
   it("renders saved section backgrounds and merchant-editable section headings", async () => {
@@ -2113,7 +2460,7 @@ describe("storefront routes", () => {
           productId: baseItem.id,
           media: [],
         }],
-        items: [{ ...baseItem, name: "Amarillo tropical", tags: ["Frutal", "Temporada"] }],
+        items: [{ ...baseItem, name: "Amarillo tropical", imageUrls: ["/amarillo.webp"], tags: ["Frutal", "Temporada"] }],
       } satisfies Store),
       assetUrl: (p: string | null) => p,
     }));
@@ -2125,8 +2472,15 @@ describe("storefront routes", () => {
     expect(section?.querySelector("img, video")).toBeNull();
     expect(section?.textContent).toContain("Amarillo tropical");
     const productLink = document.querySelector<HTMLAnchorElement>(".store-motion-product-link");
+    expect(productLink?.classList.contains("store-motion-product-card")).toBe(true);
+    expect(productLink?.querySelector<HTMLImageElement>(".store-motion-product-media img")?.src).toContain("amarillo.webp");
     expect(productLink?.textContent).toContain("Amarillo tropical");
+    expect(productLink?.textContent).toContain("50.00 BOB");
+    expect(productLink?.textContent).toContain("Ver producto");
     expect(productLink?.getAttribute("href")).toContain(`/p/${baseItem.id}`);
+    productLink?.click();
+    expect(document.body.classList.contains("product-detail-page")).toBe(true);
+    expect(document.querySelector(".product-detail-content h1")?.textContent).toBe("Amarillo tropical");
   });
 
   it("renders every selected animation in the merchant's saved order", async () => {
@@ -2186,6 +2540,15 @@ describe("storefront routes", () => {
             type: "coverflow-carousel",
             title: "Últimos detalles",
             subtitle: "Una selección distinta para cerrar la tienda.",
+            textPositionX: 72,
+            textPositionY: 28,
+            textScale: 143,
+            textWidthPercent: 74,
+            textAlign: "right",
+            textSize: "large",
+            textWidth: "wide",
+            textColor: "#fff4d6",
+            backgroundColor: "#26170d",
             media: [
               { imageUrl: "/v1/uploads/end-1.webp", title: "Textura final", caption: "Cierre" },
               { imageUrl: "/v1/uploads/end-2.webp", title: "Empaque", caption: "Entrega" },
@@ -2203,12 +2566,301 @@ describe("storefront routes", () => {
     expect(sections.map((section) => section.dataset.animationId)).toEqual(["finale", "opening"]);
     expect(sections[0].querySelector("h2")).toBeNull();
     expect(sections[1].querySelector("h2")).toBeNull();
-    expect(sections[0].querySelector(".store-motion-description")?.textContent).toBe("Una selección distinta para cerrar la tienda.");
-    expect(sections[1].querySelector(".store-motion-description")?.textContent).toBe("Piezas para empezar el recorrido.");
+    expect(sections[0].querySelector(".store-motion-description")?.textContent).toBe("Últimos detallesUna selección distinta para cerrar la tienda.");
+    expect(sections[1].querySelector(".store-motion-description")?.textContent).toBe("Nueva temporadaPiezas para empezar el recorrido.");
+    expect(sections[0].querySelector("[data-animation-general-copy] h3")?.textContent).toBe("Últimos detalles");
     expect(sections[0].querySelector<HTMLImageElement>("img")?.src).toContain("end-1.webp");
     expect(sections[1].querySelector<HTMLImageElement>("img")?.src).toContain("open-1.webp");
+    expect(sections[0].hasAttribute("data-animation-custom-layout")).toBe(true);
+    expect(sections[0].dataset.animationTextAlign).toBe("right");
+    expect(sections[0].dataset.animationTextSize).toBe("large");
+    expect(sections[0].dataset.animationTextWidth).toBe("wide");
+    expect(sections[0].getAttribute("style")).toContain("--animation-text-x:72%");
+    expect(sections[0].getAttribute("style")).toContain("--animation-text-y:28%");
+    expect(sections[0].dataset.animationTextScale).toBe("143");
+    expect(sections[0].dataset.animationTextWidthPercent).toBe("74");
+    expect(sections[0].getAttribute("style")).toContain("--animation-copy-width:74%");
+    expect(sections[0].getAttribute("style")).toContain("--animation-text-color:#fff4d6");
+    expect(sections[0].getAttribute("style")).toContain("--animation-background:#26170d");
+    expect(sections[0].querySelector("[data-animation-copy]")).not.toBeNull();
+    expect(sections[1].hasAttribute("data-animation-custom-layout")).toBe(false);
     expect(sections[0].textContent).not.toContain("Organizador · cierre");
     expect(sections[1].textContent).not.toContain("Organizador · apertura");
+  });
+
+  it("changes the selected animation scene without rebuilding the preview", async () => {
+    const media = Array.from({ length: 4 }, (_, index) => ({
+      imageUrl: `/scene-${index + 1}.webp`,
+      title: `Escena ${index + 1}`,
+      caption: `Texto ${index + 1}`,
+      textPositionX: index === 3 ? 74 : 20,
+      textPositionY: index === 3 ? 32 : 70,
+      textScale: index === 3 ? 126 : 100,
+      textWidthPercent: index === 3 ? 54 : 62,
+      textAlign: index === 3 ? "right" as const : "left" as const,
+    }));
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Escenas estables",
+        contentOrder: ["hero", "animation-scenes", "products", "about", "gallery", "links"],
+        animations: [{ id: "scenes", name: "Escenas", type: "hero-carousel", media }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=stable-scenes&preview=1&editor=1");
+    const originalSection = document.querySelector<HTMLElement>('[data-animation-id="scenes"]')!;
+    const originalHero = originalSection.querySelector<HTMLElement>("[data-motion-hero]")!;
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "animation-scenes", field: "title", label: "texto de la escena 4", animationId: "scenes", itemIndex: 3 },
+      },
+    }));
+
+    expect(document.querySelector('[data-animation-id="scenes"]')).toBe(originalSection);
+    expect(document.querySelector("[data-motion-hero]")).toBe(originalHero);
+    expect(originalHero.querySelector('[data-motion-hero-background="3"]')?.classList.contains("active")).toBe(true);
+    const copy = originalHero.querySelector<HTMLElement>("[data-animation-copy]")!;
+    expect(copy.dataset.animationMediaIndex).toBe("3");
+    expect(copy.style.getPropertyValue("--animation-text-x")).toBe("74%");
+    expect(copy.style.getPropertyValue("--animation-text-y")).toBe("32%");
+    expect(copy.querySelector("h3")?.dataset.storeEditorItemIndex).toBe("3");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_TEXT_UPDATE",
+        editorMode: true,
+        selection: { section: "animation-scenes", field: "title", label: "título de la escena 1", animationId: "scenes", itemIndex: 0 },
+        value: "Escena 1 actualizada",
+      },
+    }));
+    expect(originalHero.querySelector('[data-motion-hero-background="0"]')?.classList.contains("active")).toBe(true);
+    expect(originalHero.querySelector("[data-motion-hero-title]")?.textContent).toBe("Escena 1 actualizada");
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_STYLE_UPDATE",
+        editorMode: true,
+        animationId: "scenes",
+        key: "textScale",
+        value: 132,
+      },
+    }));
+    expect(document.querySelector('[data-animation-id="scenes"]')).toBe(originalSection);
+    expect(originalSection.dataset.animationTextScale).toBe("132");
+    expect(originalSection.style.getPropertyValue("--animation-heading-size")).toContain("53px");
+    originalHero.querySelector<HTMLButtonElement>('[data-motion-hero-to="1"]')!.click();
+    expect(originalHero.querySelector('[data-motion-hero-background="1"]')?.classList.contains("active")).toBe(true);
+    expect(copy.dataset.animationMediaIndex).toBe("1");
+    expect(copy.classList.contains("store-animation-layout-selected")).toBe(true);
+    originalHero.querySelector<HTMLButtonElement>('[data-motion-hero-to="0"]')!.click();
+    expect(originalHero.querySelector("[data-motion-hero-title]")?.textContent).toBe("Escena 1 actualizada");
+  });
+
+  it("opens the exact picture editor when the merchant touches scenes in different animations", async () => {
+    const scene = (prefix: string, index: number) => ({
+      imageUrl: `/${prefix}-${index}.webp`,
+      title: `${prefix} ${index}`,
+      caption: `Texto ${index}`,
+    });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Dos animaciones",
+        contentOrder: ["hero", "animation-first", "animation-second", "products", "links"],
+        animations: [
+          { id: "first", name: "Primera", type: "hero-carousel", media: [scene("primera", 1), scene("primera", 2)] },
+          { id: "second", name: "Segunda", type: "coverflow-carousel", media: [scene("segunda", 1), scene("segunda", 2)] },
+        ],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=two-animations&preview=1&editor=1");
+    const firstSection = document.querySelector<HTMLElement>('[data-animation-id="first"]')!;
+    const secondSection = document.querySelector<HTMLElement>('[data-animation-id="second"]')!;
+
+    firstSection.querySelector<HTMLButtonElement>('[data-motion-hero-to="1"]')!.click();
+    expect(firstSection.querySelector('[data-motion-hero-background="1"]')?.classList.contains("active")).toBe(true);
+    expect(firstSection.querySelector('[data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
+
+    secondSection.querySelector<HTMLImageElement>('[data-coverflow-index="0"] img')!.click();
+    expect(secondSection.querySelector('[data-coverflow-index="0"] [data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
+    expect(firstSection.querySelector('[data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(false);
+    expect(secondSection.querySelector('[data-coverflow-index="0"]')?.classList.contains("store-preview-editor-selected")).toBe(true);
+  });
+
+  it("lets the store editor drag, widen, and scale animation text directly on the canvas", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda manipulable",
+        contentOrder: ["hero", "animation-opening", "products", "about", "gallery", "links"],
+        animations: [{
+          id: "opening",
+          name: "Apertura",
+          type: "clarity-marquee",
+          title: "Texto que se mueve",
+          textPositionX: 20,
+          textPositionY: 60,
+          textScale: 100,
+          textWidthPercent: 60,
+          textAlign: "left",
+          buttonLabel: "Ver colección",
+          buttonPositionX: 18,
+          buttonPositionY: 86,
+          media: [],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=direct-layout&preview=1&editor=1");
+    const section = document.querySelector<HTMLElement>('[data-animation-id="opening"]')!;
+    const copy = section.querySelector<HTMLElement>("[data-animation-copy]")!;
+    expect(copy.querySelector('[data-animation-layout-handle="move"]')).not.toBeNull();
+    expect(copy.querySelector('[data-animation-layout-handle="width"]')).not.toBeNull();
+    expect(copy.querySelector('[data-animation-layout-handle="scale"]')).not.toBeNull();
+
+    const bounds = { x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500, toJSON: () => ({}) } as DOMRect;
+    const copyBounds = { x: 200, y: 200, left: 200, top: 200, right: 500, bottom: 300, width: 300, height: 100, toJSON: () => ({}) } as DOMRect;
+    Object.defineProperty(copy, "offsetParent", { configurable: true, value: section });
+    vi.spyOn(section, "getBoundingClientRect").mockReturnValue(bounds);
+    vi.spyOn(copy, "getBoundingClientRect").mockReturnValue(copyBounds);
+    const pointer = (target: EventTarget, type: string, pointerId: number, clientX: number, clientY: number, buttons: number) => {
+      const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX, clientY });
+      Object.defineProperty(event, "pointerId", { value: pointerId });
+      Object.defineProperty(event, "pointerType", { value: "touch" });
+      target.dispatchEvent(event);
+    };
+
+    pointer(copy, "pointerdown", 11, 300, 250, 1);
+    pointer(window, "pointermove", 11, 650, 200, 1);
+    pointer(window, "pointerup", 11, 650, 200, 0);
+    expect(copy.style.getPropertyValue("--animation-text-x")).toBe("55%");
+    expect(copy.style.getPropertyValue("--animation-text-y")).toBe("50%");
+    expect(copy.dataset.animationTextX).toBe("55");
+    expect(copy.dataset.animationTextY).toBe("50");
+
+    const widthHandle = copy.querySelector<HTMLElement>('[data-animation-layout-handle="width"]')!;
+    pointer(widthHandle, "pointerdown", 12, 500, 250, 1);
+    pointer(window, "pointermove", 12, 700, 250, 1);
+    pointer(window, "pointerup", 12, 700, 250, 0);
+    expect(copy.style.getPropertyValue("--animation-copy-width")).toBe("80%");
+    expect(copy.dataset.animationTextWidthPercent).toBe("80");
+
+    const scaleHandle = copy.querySelector<HTMLElement>('[data-animation-layout-handle="scale"]')!;
+    pointer(scaleHandle, "pointerdown", 13, 500, 300, 1);
+    pointer(window, "pointermove", 13, 600, 400, 1);
+    pointer(window, "pointerup", 13, 600, 400, 0);
+    expect(copy.dataset.animationTextScale).toBe("120");
+    expect(copy.style.getPropertyValue("--animation-heading-size")).toContain("48px");
+
+    const heading = copy.querySelector<HTMLElement>('[data-store-editor-inline="text"]')!;
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    heading.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 }));
+    expect(heading.getAttribute("contenteditable")).toBe("plaintext-only");
+    heading.textContent = "Todavía puedo editar";
+    heading.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
+    expect(heading.hasAttribute("contenteditable")).toBe(false);
+
+    const button = section.querySelector<HTMLElement>(".store-animation-cta")!;
+    const buttonLabel = button.querySelector<HTMLElement>(".store-animation-cta-label")!;
+    pointer(buttonLabel, "pointerdown", 14, 180, 430, 1);
+    pointer(window, "pointermove", 14, 280, 380, 1);
+    pointer(window, "pointerup", 14, 280, 380, 0);
+    expect(button.dataset.animationButtonX).toBe("28");
+    expect(button.dataset.animationButtonY).toBe("76");
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    buttonLabel.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 }));
+    expect(buttonLabel.getAttribute("contenteditable")).toBe("plaintext-only");
+    buttonLabel.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
+  });
+
+  it("lets the store editor move and edit every text layer in the 3D gallery", async () => {
+    const media = ["uno", "dos", "tres"].map((name, index) => ({
+      imageUrl: `/v1/uploads/${name}.webp`,
+      title: index === 2 ? "" : `Título ${index + 1}`,
+      caption: index === 2 ? "" : `Subtítulo ${index + 1}`,
+      body: index === 2 ? "" : `Texto adicional ${index + 1}`,
+    }));
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Galería editable",
+        contentOrder: ["hero", "animation-space", "products", "about", "gallery", "links"],
+        animations: [{ id: "space", name: "Profundidad", type: "3d-gallery", media }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=editable-space&preview=1&editor=1");
+    const section = document.querySelector<HTMLElement>('[data-animation-id="space"]')!;
+    const figure = section.querySelector<HTMLElement>('[data-space-card="0"]')!;
+    const copy = figure.querySelector<HTMLElement>("figcaption[data-animation-copy]")!;
+    const title = copy.querySelector<HTMLElement>('[data-animation-copy-field="title"]')!;
+    const subtitle = copy.querySelector<HTMLElement>('[data-animation-copy-field="caption"]')!;
+    const body = copy.querySelector<HTMLElement>('[data-animation-copy-field="body"]')!;
+    expect(title.dataset.storeEditorField).toBe("title");
+    expect(subtitle.dataset.storeEditorField).toBe("caption");
+    expect(body.dataset.storeEditorField).toBe("body");
+
+    const bounds = { x: 0, y: 0, left: 0, top: 0, right: 400, bottom: 500, width: 400, height: 500, toJSON: () => ({}) } as DOMRect;
+    const copyBounds = { x: 20, y: 330, left: 20, top: 330, right: 380, bottom: 480, width: 360, height: 150, toJSON: () => ({}) } as DOMRect;
+    Object.defineProperty(copy, "offsetParent", { configurable: true, value: figure });
+    vi.spyOn(figure, "getBoundingClientRect").mockReturnValue(bounds);
+    vi.spyOn(copy, "getBoundingClientRect").mockReturnValue(copyBounds);
+    const pointer = (target: EventTarget, type: string, clientX: number, clientY: number, buttons: number) => {
+      const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX, clientY });
+      Object.defineProperty(event, "pointerId", { value: 51 });
+      target.dispatchEvent(event);
+    };
+    pointer(copy, "pointerdown", 40, 400, 1);
+    pointer(window, "pointermove", 280, 180, 1);
+    pointer(window, "pointerup", 280, 180, 0);
+    expect(copy.dataset.animationTextX).toBe("65");
+    expect(copy.dataset.animationTextY).toBe("37");
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    subtitle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 }));
+    expect(subtitle.getAttribute("contenteditable")).toBe("plaintext-only");
+    subtitle.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
+
+    const gallery = section.querySelector<HTMLElement>("[data-space-gallery]")!;
+    gallery.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaX: 120 }));
+    expect(section.querySelector('[data-space-card="1"]')?.getAttribute("aria-hidden")).toBe("false");
+    expect(section.querySelector('[data-space-card="1"] [data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
+    pointer(gallery, "pointerdown", 320, 250, 1);
+    pointer(gallery, "pointerup", 40, 250, 0);
+    expect(section.querySelector('[data-space-card="2"]')?.getAttribute("aria-hidden")).toBe("false");
+
+    section.querySelector<HTMLButtonElement>('[data-space-step="1"]')!.click();
+    expect(section.querySelector('[data-space-card="0"]')?.getAttribute("aria-hidden")).toBe("false");
+
+    const emptyCopy = section.querySelector<HTMLElement>('[data-space-card="2"] figcaption[data-animation-copy]')!;
+    expect(emptyCopy.hidden).toBe(true);
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_TEXT_UPDATE",
+        editorMode: true,
+        selection: { section: "animation-space", field: "title", label: "título de la escena 3", animationId: "space", itemIndex: 2 },
+        value: "Título agregado sin refrescar",
+      },
+    }));
+    expect(emptyCopy.hidden).toBe(false);
+    expect(emptyCopy.querySelector('[data-animation-copy-field="title"]')?.textContent).toBe("Título agregado sin refrescar");
   });
 
   it("applies the merchant's selected font to the entire storefront", async () => {
@@ -2264,7 +2916,7 @@ describe("storefront routes", () => {
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=contrast-boundary&preview=1");
+    await loadCheckout("/?link=contrast-boundary&preview=1&editor=1");
     expect(document.documentElement.style.getPropertyValue("--pg-accent-contrast")).toBe("#ffffff");
     expect(contrastRatio("#ffffff", "#757575")).toBeGreaterThanOrEqual(4.5);
 
@@ -2298,7 +2950,7 @@ describe("storefront routes", () => {
     expect(document.body.dataset.buttonStyle).toBe("pill");
   });
 
-  it("applies visual editor messages only when the storefront is in preview mode", async () => {
+  it("applies visual editor messages only when the storefront explicitly enables editor mode", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -2308,7 +2960,7 @@ describe("storefront routes", () => {
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=preview-store&preview=1");
+    await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
       new MessageEvent("message", {
         source: window,

@@ -17,6 +17,7 @@ function makeFakePrisma() {
     webhookEndpoint: { updateMany: jest.fn() },
     auditLogEntry: { create: jest.fn() },
   };
+  prisma.$executeRawUnsafe = jest.fn().mockResolvedValue(1);
   prisma.$transaction = jest.fn((callback: any) => callback(prisma));
   return prisma;
 }
@@ -43,6 +44,10 @@ describe("MerchantSessionService.login", () => {
     expect(prisma.merchantSession.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ hashedToken: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) }),
     });
+    expect(prisma.$executeRawUnsafe).toHaveBeenCalledWith(
+      "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+      "user_1",
+    );
   });
 
   it("revokes the oldest sessions when a fourth active session is issued", async () => {
@@ -244,46 +249,28 @@ describe("MerchantSessionService.verify", () => {
     await expect(service.verify("dash_nonexistent")).resolves.toBeNull();
   });
 
-  it("upgrades a matching legacy Argon2 session after one verification", async () => {
+  it("never scans legacy Argon2 sessions when a digest lookup misses", async () => {
     const prisma = makeFakePrisma();
     prisma.merchantSession.findFirst.mockResolvedValue(null);
-    const hashedToken = await argon2.hash("dash_legacy");
-    prisma.merchantSession.findMany.mockResolvedValue([
-      {
-        id: "sess_legacy",
-        merchantId: "m_1",
-        merchantUserId: "user_1",
-        hashedToken,
-        merchantUser: { email: "owner@tienda.bo" },
-      },
-    ]);
 
     const service = new MerchantSessionService(prisma as any);
-    await expect(service.verify("dash_legacy")).resolves.toEqual({
-      merchantId: "m_1",
-      merchantUserId: "user_1",
-      email: "owner@tienda.bo",
-    });
-    expect(prisma.merchantSession.update).toHaveBeenCalledWith({
-      where: { id: "sess_legacy" },
-      data: { hashedToken: expect.stringMatching(/^sha256:/) },
-    });
+    await expect(service.verify("dash_invalid")).resolves.toBeNull();
+    expect(prisma.merchantSession.findMany).not.toHaveBeenCalled();
+    expect(prisma.merchantSession.update).not.toHaveBeenCalled();
   });
 });
 
 describe("MerchantSessionService.revoke", () => {
   it("marks the matching session revoked", async () => {
     const prisma = makeFakePrisma();
-    const hashedToken = await argon2.hash("dash_abc123");
-    prisma.merchantSession.findFirst.mockResolvedValue(null);
-    prisma.merchantSession.findMany.mockResolvedValue([{ id: "sess_1", hashedToken }]);
+    prisma.merchantSession.findFirst.mockResolvedValue({ id: "sess_1", isPrimary: false });
 
     const service = new MerchantSessionService(prisma as any);
     await service.revoke("dash_abc123");
 
     expect(prisma.merchantSession.update).toHaveBeenCalledWith({
       where: { id: "sess_1" },
-      data: { revokedAt: expect.any(Date) },
+      data: { revokedAt: expect.any(Date), isPrimary: false },
     });
   });
 
@@ -297,7 +284,7 @@ describe("MerchantSessionService.revoke", () => {
     expect(prisma.merchantSession.findMany).not.toHaveBeenCalled();
     expect(prisma.merchantSession.update).toHaveBeenCalledWith({
       where: { id: "sess_fast" },
-      data: { revokedAt: expect.any(Date) },
+      data: { revokedAt: expect.any(Date), isPrimary: false },
     });
   });
 
@@ -311,7 +298,7 @@ describe("MerchantSessionService.revoke", () => {
 
     expect(prisma.merchantSession.update).toHaveBeenNthCalledWith(1, {
       where: { id: "session_main" },
-      data: { revokedAt: expect.any(Date) },
+      data: { revokedAt: expect.any(Date), isPrimary: false },
     });
     expect(prisma.merchantSession.update).toHaveBeenNthCalledWith(2, {
       where: { id: "session_next" },
@@ -376,7 +363,7 @@ describe("MerchantSessionService active-session management", () => {
     });
     expect(prisma.merchantSession.update).toHaveBeenCalledWith({
       where: { id: "session_other" },
-      data: { revokedAt: expect.any(Date) },
+      data: { revokedAt: expect.any(Date), isPrimary: false },
     });
   });
 
