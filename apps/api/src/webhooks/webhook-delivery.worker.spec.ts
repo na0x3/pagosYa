@@ -50,6 +50,10 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
     const worker = new WebhookDeliveryWorker(prisma as any, httpMock as any);
     await worker.deliverDueEvents();
 
+    expect(prisma.webhookEvent.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ nextRetryAt: expect.any(Date) }),
+    }));
+
     const [, body, headers] = httpMock.post.mock.calls[0];
     const signature = headers["pagosya-signature"] as string;
     const timestamp = signature.match(/t=(\d+)/)?.[1];
@@ -65,7 +69,7 @@ describe("WebhookDeliveryWorker.deliverDueEvents", () => {
 
     expect(prisma.webhookEvent.update).toHaveBeenCalledWith({
       where: { id: "evt_1" },
-      data: { status: WebhookEventStatus.DELIVERED, lastResponseStatus: 200 },
+      data: { status: WebhookEventStatus.DELIVERED, lastResponseStatus: 200, nextRetryAt: null },
     });
   });
 

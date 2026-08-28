@@ -9,6 +9,7 @@ import { PayoutProvider } from "./interfaces/payout-provider.interface";
 
 const MAX_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 5_000;
+const PROCESSING_LEASE_MS = 5 * 60_000;
 
 /** Runs the payout batch and delivers due Payout rows. Mirrors WebhookDeliveryWorker/InvoiceEmissionWorker's claim/backoff shape. */
 @Injectable()
@@ -39,7 +40,7 @@ export class PayoutDeliveryWorker {
       // Optimistic-concurrency claim, same reasoning as the webhook/invoice workers.
       const claim = await this.prisma.payout.updateMany({
         where: { id: payout.id, status: payout.status, attempts: payout.attempts },
-        data: { attempts: { increment: 1 } },
+        data: { attempts: { increment: 1 }, nextRetryAt: new Date(Date.now() + PROCESSING_LEASE_MS) },
       });
       if (claim.count === 0) continue;
 

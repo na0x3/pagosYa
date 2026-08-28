@@ -8,6 +8,7 @@ import { InvoicingProvider } from "./interfaces/invoicing-provider.interface";
 
 const MAX_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 5_000;
+const PROCESSING_LEASE_MS = 5 * 60_000;
 
 /** Polls due Invoice rows and emits them via SIN (or the mock). Mirrors WebhookDeliveryWorker's claim/backoff shape. */
 @Injectable()
@@ -37,7 +38,7 @@ export class InvoiceEmissionWorker {
       // guards against two overlapping ticks emitting the same invoice twice.
       const claim = await this.prisma.invoice.updateMany({
         where: { id: invoice.id, status: invoice.status, attempts: invoice.attempts },
-        data: { attempts: { increment: 1 } },
+        data: { attempts: { increment: 1 }, nextRetryAt: new Date(Date.now() + PROCESSING_LEASE_MS) },
       });
       if (claim.count === 0) continue;
 

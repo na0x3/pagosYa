@@ -6,6 +6,7 @@ build/
 *.log
 .pgdata/
 apps/api/uploads/
+apps/edge/data/
 /uploads/
 .turbo/
 .pnpm-store/

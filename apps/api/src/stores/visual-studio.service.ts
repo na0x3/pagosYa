@@ -5,19 +5,20 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
 import { STORE_FONT_STYLES, type StoreFontStyle } from "./dto/create-store.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
+import { AI_SITE_DOCUMENT_SCHEMA, materializeSiteDocument, siteDocumentJson, type AiSiteDocument, type StoreSiteDocument } from "./site-document";
 
 const VISUAL_FIELDS = [
   "tagline", "bannerUrl", "backgroundColor", "backgroundMode", "backgroundGradientStart", "backgroundGradientEnd", "backgroundGradientAngle", "backgroundImageUrl", "aboutText", "aboutTitle", "aboutSubtitle", "aboutImageUrl",
   "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle", "linksTitle", "contactTitle", "contactSubtitle", "locationTitle", "locationSubtitle", "sectionBackgrounds",
   "accentColor", "fontStyle", "buttonStyle", "boardTexture", "announcement", "announcementMode",
-  "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled", "promotionImageUrl", "promotionTitle",
+  "announcementSpeed", "announcementSize", "announcementColor", "announcementFont", "announcementEffect", "promotionEnabled", "promotionImageUrl", "promotionTitle",
   "promotionBody", "promotionCtaLabel", "promotionCtaUrl", "heroSlides", "contentOrder", "layoutStyle", "experienceStyle", "motionDuoEnabled", "motionExperience", "motionExperiences", "animations", "editorialGallery",
-  "buttonVariant", "buttonMotion", "cartButtonLabel", "checkoutMode", "leadCaptureUrl", "contactPhone",
+  "buttonVariant", "buttonMotion", "cartButtonLabel", "siteDocument", "checkoutMode", "leadCaptureUrl", "contactPhone", "contactFormEnabled",
 ] as const;
 
 type VisualField = (typeof VISUAL_FIELDS)[number];
 type VisualConfig = Partial<Record<VisualField, unknown>>;
-type StoreProductContext = { name: string; description: string | null; imageUrls: string[]; tags: string[] };
+type StoreProductContext = { id: string; name: string; description: string | null; imageUrls: string[]; tags: string[] };
 type StoreLinkContext = { label: string; url: string };
 
 type ProposalPreset = {
@@ -26,46 +27,42 @@ type ProposalPreset = {
   config: VisualConfig;
 };
 
-type AiDirection = {
-  title: string;
-  rationale: string;
-  tagline: string;
-  aboutText: string;
-  aboutTitle: string;
-  aboutSubtitle: string;
-  catalogTitle: string;
-  catalogSubtitle: string;
-  galleryTitle: string;
-  gallerySubtitle: string;
-  backgroundColor: string;
-  accentColor: string;
-  fontStyle: StoreFontStyle;
-  buttonStyle: "rounded" | "pill" | "square";
-  buttonVariant: "solid" | "outline" | "soft";
-  buttonMotion: "lift" | "pulse" | "none";
-  cartButtonLabel: string;
-  contentOrder: Array<"hero" | "products" | "about" | "gallery" | "motion" | "links">;
-  layoutStyle: "cinematic" | "editorial" | "collage" | "catalog-first";
-  experienceStyle: "coverflow" | "diagonal-marquee" | "story-scroller";
-  motionExperiences: string[];
-  announcement: string;
-  announcementMode: "static" | "marquee";
-  announcementSpeed: number;
-  announcementSize: "small" | "medium" | "large";
-  announcementColor: string;
-  promotionEnabled: boolean;
-  promotionTitle: string;
-  promotionBody: string;
-  promotionCtaLabel: string;
-  heroSlides: Array<{ assetIndex: number; title: string; body: string; ctaLabel: string }>;
-  editorialGallery: Array<{ assetIndex: number; title: string; caption: string; body: string; boxColor: string }>;
+type AiDirection = { title: string; rationale: string; siteDocument: AiSiteDocument };
+type MaterializedAiDirection = Omit<AiDirection, "siteDocument"> & { siteDocument: StoreSiteDocument };
+type BrandAnalysis = {
+  brandEssence: string;
+  audienceScene: string;
+  logoStrategy: string;
+  colorStrategy: string;
+  typographyStrategy: string;
+  compositionStrategy: string;
+  motionStrategy: string;
+  assetRoles: Array<{
+    assetIndex: number;
+    role: "logo" | "product" | "editorial" | "lifestyle" | "background" | "detail" | "avoid";
+    productIndex: number;
+    reasoning: string;
+  }>;
+  merchandisingPlan: Array<{
+    productIndex: number;
+    role: "lead" | "support" | "catalog";
+    placement: string;
+    imageAssetIndices: number[];
+  }>;
+  sectionPlan: Array<{
+    kind: "hero" | "story" | "catalog" | "gallery" | "contact" | "location" | "links";
+    purpose: string;
+    backgroundRole: string;
+  }>;
+  riskChecks: string[];
 };
 
 const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "motion", "links"] as const;
 const MOTION_EXPERIENCES = [
   "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
-  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials", "zoom-parallax",
-  "video-pill", "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
+  "portfolio-scroller", "circle-reveal", "clarity-marquee",
+  "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
 ] as const;
 const SAFE_GENERATED_BACKGROUNDS = ["#eef1f5", "#e8f2ef", "#eeebf5"] as const;
@@ -105,9 +102,9 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
 }
 
 function animationMediaRequirement(type: string): { min: number; max: number } {
-  if (type === "clarity-marquee") return { min: 0, max: 0 };
-  if (["video-pill", "circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
-  return { min: ["hero-gallery-scroll", "zoom-parallax", "3d-gallery"].includes(type) ? 3 : 2, max: 8 };
+  if (["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"].includes(type)) return { min: 0, max: 0 };
+  if (["circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
+  return { min: ["hero-gallery-scroll", "3d-gallery"].includes(type) ? 3 : 2, max: 8 };
 }
 
 function distributedAnimationMedia(
@@ -167,23 +164,65 @@ function safeGeneratedBackground(candidate: unknown, index: number): string {
     : candidate.toLowerCase();
 }
 
+function generatedCopy(value: string): string {
+  return value.replace(/[—–]/g, "-").trim();
+}
+
+function hexSaturation(value: string): number {
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16) / 255);
+  const maximum = Math.max(...channels);
+  const minimum = Math.min(...channels);
+  const lightness = (maximum + minimum) / 2;
+  const delta = maximum - minimum;
+  return delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+}
+
+function passesPremiumDirectionGuardrails(document: StoreSiteDocument): boolean {
+  const colors = [
+    document.theme.pageBackground,
+    document.theme.textColor,
+    document.theme.accentColor,
+    document.theme.secondaryColor,
+    document.theme.surfaceColor,
+    document.theme.mutedColor,
+    document.theme.borderColor,
+    ...document.sections.flatMap((section) => [section.backgroundColor, section.textColor]),
+  ];
+  if (colors.some((color) => color.toLowerCase() === "#000000")) return false;
+  if (hexSaturation(document.theme.accentColor) >= 0.8) return false;
+  const [hero, story, catalog] = document.sections;
+  if (!hero || hero.layout === "centered" || hero.align === "center") return false;
+  if (hero.kind !== "hero" || story?.kind !== "story" || catalog?.kind !== "catalog") return false;
+  if (story.motion !== "story-scroll") return false;
+  if (document.navigation.sticky) return false;
+  const copy = [
+    document.direction,
+    document.experience.title,
+    document.experience.body,
+    ...document.sections.flatMap((section) => [section.title, section.body, section.ctaLabel, ...section.items.flatMap((item) => [item.title, item.body])]),
+  ].join(" ");
+  if (/\b(?:elevate|seamless|unleash|next[- ]gen|eleva|revoluciona|sin límites)\b/i.test(copy)) return false;
+  if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(copy)) return false;
+  return true;
+}
+
 function defaultMotionSuite(index: number, assetCount: number): string[] {
   if (assetCount <= 1) {
     return [
-      ["clarity-marquee", "magnetic-target"],
-      ["circle-reveal", "clarity-marquee"],
-      ["magnetic-target", "circle-reveal"],
+      ["text-reveal-block", "magnetic-target"],
+      ["circle-reveal", "text-rotate"],
+      ["text-glitch", "circle-reveal"],
     ][index % 3];
   }
   if (assetCount === 2) {
     return [
-      ["story-scroll", "clarity-marquee"],
+      ["story-scroll", "layered-text"],
       ["coverflow-carousel", "circle-reveal"],
       ["image-stream", "magnetic-target"],
     ][index % 3];
   }
   return [
-    ["hero-gallery-scroll", "zoom-parallax", "clarity-marquee"],
+    ["hero-gallery-scroll", "frame-sequence", "text-along-path"],
     ["coverflow-carousel", "frame-sequence", "circle-reveal"],
     ["image-stream", "full-screen-chapters", "magnetic-target"],
   ][index % 3];
@@ -201,86 +240,409 @@ const AI_DIRECTIONS_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: [
-          "title", "rationale", "tagline", "aboutText", "aboutTitle", "aboutSubtitle", "catalogTitle", "catalogSubtitle", "galleryTitle", "gallerySubtitle", "backgroundColor", "accentColor", "fontStyle", "buttonStyle",
-          "buttonVariant", "buttonMotion", "cartButtonLabel", "contentOrder", "layoutStyle", "experienceStyle", "motionExperiences", "announcement",
-          "announcementMode", "announcementSpeed", "announcementSize", "announcementColor", "promotionEnabled",
-          "promotionTitle", "promotionBody", "promotionCtaLabel", "heroSlides", "editorialGallery",
-        ],
+        required: ["title", "rationale", "siteDocument"],
         properties: {
           title: { type: "string", minLength: 3, maxLength: 48 },
           rationale: { type: "string", minLength: 20, maxLength: 240 },
-          tagline: { type: "string", minLength: 3, maxLength: 160 },
-          aboutText: { type: "string", minLength: 40, maxLength: 600 },
-          aboutTitle: { type: "string", minLength: 3, maxLength: 100 },
-          aboutSubtitle: { type: "string", minLength: 3, maxLength: 220 },
-          catalogTitle: { type: "string", minLength: 3, maxLength: 100 },
-          catalogSubtitle: { type: "string", minLength: 3, maxLength: 220 },
-          galleryTitle: { type: "string", minLength: 3, maxLength: 100 },
-          gallerySubtitle: { type: "string", minLength: 3, maxLength: 220 },
-          backgroundColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          accentColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          fontStyle: { type: "string", enum: STORE_FONT_STYLES },
-          buttonStyle: { type: "string", enum: ["rounded", "pill", "square"] },
-          buttonVariant: { type: "string", enum: ["solid", "outline", "soft"] },
-          buttonMotion: { type: "string", enum: ["lift", "pulse", "none"] },
-          cartButtonLabel: { type: "string", minLength: 2, maxLength: 36 },
-          contentOrder: {
-            type: "array",
-            minItems: 6,
-            maxItems: 6,
-            items: { type: "string", enum: CONTENT_SECTIONS },
-          },
-          layoutStyle: { type: "string", enum: ["cinematic", "editorial", "collage", "catalog-first"] },
-          experienceStyle: { type: "string", enum: ["coverflow", "diagonal-marquee", "story-scroller"] },
-          motionExperiences: {
-            type: "array",
-            minItems: 2,
-            maxItems: 4,
-            uniqueItems: true,
-            items: { type: "string", enum: MOTION_EXPERIENCES },
-          },
-          announcement: { type: "string", minLength: 5, maxLength: 180 },
-          announcementMode: { type: "string", enum: ["static", "marquee"] },
-          announcementSpeed: { type: "integer", minimum: 8, maximum: 40 },
-          announcementSize: { type: "string", enum: ["small", "medium", "large"] },
-          announcementColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          promotionEnabled: { type: "boolean" },
-          promotionTitle: { type: "string", maxLength: 80 },
-          promotionBody: { type: "string", maxLength: 240 },
-          promotionCtaLabel: { type: "string", maxLength: 36 },
-          heroSlides: {
-            type: "array", minItems: 4, maxItems: 5,
-            items: {
-              type: "object", additionalProperties: false,
-              required: ["assetIndex", "title", "body", "ctaLabel"],
-              properties: {
-                assetIndex: { type: "integer", minimum: 0, maximum: 7 },
-                title: { type: "string", minLength: 3, maxLength: 80 },
-                body: { type: "string", minLength: 10, maxLength: 180 },
-                ctaLabel: { type: "string", minLength: 2, maxLength: 36 },
-              },
-            },
-          },
-          editorialGallery: {
-            type: "array", minItems: 0, maxItems: 6,
-            items: {
-              type: "object", additionalProperties: false,
-              required: ["assetIndex", "title", "caption", "body", "boxColor"],
-              properties: {
-                assetIndex: { type: "integer", minimum: 0, maximum: 7 },
-                title: { type: "string", minLength: 3, maxLength: 100 },
-                caption: { type: "string", minLength: 3, maxLength: 180 },
-                body: { type: "string", minLength: 20, maxLength: 360 },
-                boxColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-              },
-            },
-          },
+          siteDocument: AI_SITE_DOCUMENT_SCHEMA,
         },
       },
     },
   },
 } as const;
+
+const BRAND_ANALYSIS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["analysis"],
+  properties: {
+    analysis: {
+      type: "object",
+      additionalProperties: false,
+      required: ["brandEssence", "audienceScene", "logoStrategy", "colorStrategy", "typographyStrategy", "compositionStrategy", "motionStrategy", "assetRoles", "merchandisingPlan", "sectionPlan", "riskChecks"],
+      properties: {
+        brandEssence: { type: "string", minLength: 20, maxLength: 500 },
+        audienceScene: { type: "string", minLength: 20, maxLength: 400 },
+        logoStrategy: { type: "string", minLength: 20, maxLength: 500 },
+        colorStrategy: { type: "string", minLength: 20, maxLength: 500 },
+        typographyStrategy: { type: "string", minLength: 20, maxLength: 500 },
+        compositionStrategy: { type: "string", minLength: 20, maxLength: 700 },
+        motionStrategy: { type: "string", minLength: 20, maxLength: 500 },
+        assetRoles: {
+          type: "array", minItems: 1, maxItems: 24,
+          items: {
+            type: "object", additionalProperties: false,
+            required: ["assetIndex", "role", "productIndex", "reasoning"],
+            properties: {
+              assetIndex: { type: "integer", minimum: 0, maximum: 23 },
+              role: { type: "string", enum: ["logo", "product", "editorial", "lifestyle", "background", "detail", "avoid"] },
+              productIndex: { type: "integer", minimum: -1, maximum: 23 },
+              reasoning: { type: "string", minLength: 10, maxLength: 300 },
+            },
+          },
+        },
+        merchandisingPlan: {
+          type: "array", minItems: 0, maxItems: 24,
+          items: {
+            type: "object", additionalProperties: false,
+            required: ["productIndex", "role", "placement", "imageAssetIndices"],
+            properties: {
+              productIndex: { type: "integer", minimum: 0, maximum: 23 },
+              role: { type: "string", enum: ["lead", "support", "catalog"] },
+              placement: { type: "string", minLength: 3, maxLength: 160 },
+              imageAssetIndices: { type: "array", minItems: 0, maxItems: 8, uniqueItems: true, items: { type: "integer", minimum: 0, maximum: 23 } },
+            },
+          },
+        },
+        sectionPlan: {
+          type: "array", minItems: 4, maxItems: 9,
+          items: {
+            type: "object", additionalProperties: false,
+            required: ["kind", "purpose", "backgroundRole"],
+            properties: {
+              kind: { type: "string", enum: ["hero", "story", "catalog", "gallery", "contact", "location", "links"] },
+              purpose: { type: "string", minLength: 10, maxLength: 240 },
+              backgroundRole: { type: "string", minLength: 3, maxLength: 160 },
+            },
+          },
+        },
+        riskChecks: { type: "array", minItems: 3, maxItems: 12, items: { type: "string", minLength: 5, maxLength: 220 } },
+      },
+    },
+  },
+} as const;
+
+function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAsset[], products: StoreProductContext[], index: number): StoreSiteDocument {
+  const config = preset.config as Record<string, unknown>;
+  const color = (value: unknown, fallback: string) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
+  const copy = (value: unknown, fallback: string) => typeof value === "string" && value.trim() ? value.trim() : fallback;
+  const pageBackground = color(config.backgroundColor, ["#eef1f5", "#e8f2ef", "#eeebf5"][index % 3]);
+  const accentColor = color(config.accentColor, ["#315c49", "#31527a", "#713f67"][index % 3]);
+  const surfaceColor = ["#ffffff", "#f8fff9", "#fff9fe"][index % 3];
+  const layouts = [
+    { hero: "split", story: "offset", catalog: "gallery" },
+    { hero: "full-bleed", story: "split", catalog: "editorial" },
+    { hero: "offset", story: "rail", catalog: "showcase" },
+  ] as const;
+  const selected = layouts[index % layouts.length];
+  const mediaUrls = assets.map((asset) => asset.url);
+  const narrativeMediaUrls = assets
+    .filter((asset) => asset.url !== store.logoUrl)
+    .map((asset) => asset.url);
+  const usableMediaUrls = narrativeMediaUrls.length ? narrativeMediaUrls : mediaUrls;
+  const rotatedMediaUrls = usableMediaUrls.length
+    ? [...usableMediaUrls.slice(index % usableMediaUrls.length), ...usableMediaUrls.slice(0, index % usableMediaUrls.length)]
+    : [];
+  const heroMediaUrls = rotatedMediaUrls.slice(0, Math.min(3, rotatedMediaUrls.length));
+  const storyMediaUrls = rotatedMediaUrls.length > 1
+    ? [...rotatedMediaUrls.slice(1), rotatedMediaUrls[0]].slice(0, Math.min(3, rotatedMediaUrls.length))
+    : rotatedMediaUrls;
+  const productForMedia = (url: string) => products.find((product) => product.imageUrls.includes(url));
+  const narrativeItems = (
+    urls: string[],
+    fallbackTitle: string,
+    fallbackBody: string,
+  ): StoreSiteDocument["sections"][number]["items"] => urls.map((url, mediaIndex) => {
+    const product = productForMedia(url);
+    return {
+      mediaUrl: url,
+      title: product?.name || (mediaIndex === 0 ? fallbackTitle : ""),
+      body: product?.description || (mediaIndex === 0 ? fallbackBody : ""),
+    };
+  });
+  const document: StoreSiteDocument = {
+    version: 1,
+    direction: preset.title,
+    theme: {
+      pageBackground,
+      textColor: "#171717",
+      accentColor,
+      secondaryColor: ["#d9d7d2", "#e2e0dc", "#d4d6d8"][index % 3],
+      surfaceColor,
+      mutedColor: "#626262",
+      borderColor: "#c9c9c4",
+      headingFont: index === 0 ? "humanist" : index === 1 ? "editorial" : "geometric",
+      bodyFont: index === 2 ? "grotesk" : "humanist",
+      radius: [4, 22, 0][index % 3],
+      shadow: index === 1 ? "soft" : "none",
+      productLayout: selected.catalog,
+      displayScale: index === 2 ? "monumental" : index === 1 ? "dramatic" : "balanced",
+      density: index === 0 ? "balanced" : index === 1 ? "airy" : "balanced",
+      imageTreatment: index === 0 ? "cinematic" : index === 1 ? "editorial" : "cutout",
+    },
+    navigation: {
+      layout: index === 0 ? "brand-left" : index === 1 ? "centered" : "split",
+      sticky: false,
+      transparent: index === 1,
+      logoTreatment: index === 0 ? "wordmark" : index === 1 ? "oversized" : "seal",
+    },
+    motion: { intensity: index === 0 ? "expressive" : index === 1 ? "cinematic" : "expressive" },
+    merchandising: {
+      featuredProductIds: products.slice(index, index + 2).map((product) => product.id).filter(Boolean),
+      productOrderIds: [...products.slice(index), ...products.slice(0, index)].map((product) => product.id).filter(Boolean),
+      spotlightLayout: index === 0 ? "feature-first" : index === 1 ? "lookbook" : "alternating",
+      showDescriptions: index !== 2,
+    },
+    experience: {
+      type: index === 0 ? "text-reveal-block" : index === 1 ? "text-rotate" : "text-along-path",
+      placement: "after-catalog",
+      title: index === 0 ? copy(config.aboutTitle, `Conoce ${store.name}`) : index === 1 ? copy(config.catalogTitle, "La tienda") : store.name,
+      body: index === 0
+        ? copy(config.aboutSubtitle, "Una frase editorial que continúa la historia de la marca.")
+        : copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
+      mediaUrls: [],
+    },
+    sections: [
+      {
+        id: "opening",
+        kind: "hero",
+        layout: selected.hero,
+        width: selected.hero === "full-bleed" ? "full" : "wide",
+        align: "left",
+        motion: "none",
+        title: copy(config.tagline, store.name),
+        body: copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
+        ctaLabel: copy(config.cartButtonLabel, "Ver la tienda"),
+        backgroundColor: pageBackground,
+        textColor: "#171717",
+        mediaUrls: heroMediaUrls,
+        items: narrativeItems(
+          heroMediaUrls,
+          copy(config.tagline, store.name),
+          copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
+        ),
+      },
+      {
+        id: "brand-story",
+        kind: "story",
+        layout: "stacked",
+        width: "full",
+        align: index === 1 ? "right" : "left",
+        motion: "story-scroll",
+        title: copy(config.aboutTitle, `Conoce ${store.name}`),
+        body: copy(config.aboutText, `Descubre la intención y la selección detrás de ${store.name}.`),
+        ctaLabel: "",
+        backgroundColor: pageBackground,
+        textColor: "#171717",
+        mediaUrls: storyMediaUrls,
+        items: narrativeItems(
+          storyMediaUrls,
+          copy(config.aboutTitle, `Conoce ${store.name}`),
+          copy(config.aboutText, `Descubre la intención y la selección detrás de ${store.name}.`),
+        ),
+      },
+      {
+        id: "shop",
+        kind: "catalog",
+        layout: selected.catalog === "editorial" ? "offset" : selected.catalog === "showcase" ? "grid" : "stacked",
+        width: "wide",
+        align: "left",
+        motion: "none",
+        title: copy(config.catalogTitle, "La tienda"),
+        body: copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
+        ctaLabel: "",
+        backgroundColor: surfaceColor,
+        textColor: "#171717",
+        mediaUrls: [],
+        items: [],
+      },
+      {
+        id: "visual-world",
+        kind: "gallery",
+        layout: index === 0 ? "grid" : index === 1 ? "rail" : "offset",
+        width: "full",
+        align: "left",
+        motion: index === 2 ? "coverflow" : "none",
+        title: copy(config.galleryTitle, "La marca en imágenes"),
+        body: copy(config.gallerySubtitle, "Una mirada más cercana a su universo visual."),
+        ctaLabel: "",
+        backgroundColor: accentColor,
+        textColor: "#ffffff",
+        mediaUrls: rotatedMediaUrls.slice(0, 4),
+        items: [],
+      },
+      {
+        id: "information",
+        kind: "contact",
+        layout: "split",
+        width: "wide",
+        align: "left",
+        motion: "none",
+        title: "¿Tienes una pregunta?",
+        body: `Escríbele directamente al equipo de ${store.name}.`,
+        ctaLabel: "Enviar pregunta",
+        backgroundColor: surfaceColor,
+        textColor: "#171717",
+        mediaUrls: [],
+        items: [],
+      },
+      {
+        id: "follow",
+        kind: "links",
+        layout: "minimal",
+        width: "wide",
+        align: "center",
+        motion: "none",
+        title: "Sigue la marca",
+        body: "",
+        ctaLabel: "",
+        backgroundColor: pageBackground,
+        textColor: "#171717",
+        mediaUrls: [],
+        items: [],
+      },
+    ],
+  };
+  const sectionOrders = [
+    ["hero", "story", "catalog", "gallery", "contact", "links"],
+    ["hero", "story", "catalog", "contact", "gallery", "links"],
+    ["hero", "story", "catalog", "gallery", "links", "contact"],
+  ];
+  const order = sectionOrders[index % sectionOrders.length];
+  return { ...document, sections: [...document.sections].sort((first, second) => order.indexOf(first.kind) - order.indexOf(second.kind)) };
+}
+
+function enforceGeneratedNarrative(
+  document: StoreSiteDocument,
+  store: Store,
+  assets: MediaAsset[],
+  products: StoreProductContext[],
+): StoreSiteDocument {
+  const hero = document.sections.find((section) => section.kind === "hero");
+  const catalog = document.sections.find((section) => section.kind === "catalog");
+  if (!hero || !catalog) return document;
+
+  const visualAssetUrls = assets
+    .filter((asset) => asset.url !== store.logoUrl)
+    .map((asset) => asset.url);
+  const usableAssetUrls = visualAssetUrls.length ? visualAssetUrls : assets.map((asset) => asset.url);
+  const knownAssetUrls = new Set(usableAssetUrls);
+  const uniqueMedia = (preferred: string[], fallbackOffset: number, limit: number) => {
+    const fallback = usableAssetUrls.length
+      ? [...usableAssetUrls.slice(fallbackOffset % usableAssetUrls.length), ...usableAssetUrls.slice(0, fallbackOffset % usableAssetUrls.length)]
+      : [];
+    return [...new Set([...preferred.filter((url) => knownAssetUrls.has(url)), ...fallback])].slice(0, limit);
+  };
+  const productForMedia = (url: string) => products.find((product) => product.imageUrls.includes(url));
+  const pairNarrativeItems = (
+    section: StoreSiteDocument["sections"][number],
+    mediaUrls: string[],
+  ): StoreSiteDocument["sections"][number]["items"] => mediaUrls.map((mediaUrl, index) => {
+    const authored = section.items.find((item) => item.mediaUrl === mediaUrl) ?? section.items[index];
+    const product = productForMedia(mediaUrl);
+    return {
+      mediaUrl,
+      title: authored?.title || product?.name || (index === 0 ? section.title : ""),
+      body: authored?.body || product?.description || (index === 0 ? section.body : ""),
+    };
+  });
+
+  const heroMediaUrls = uniqueMedia(hero.mediaUrls, 0, 3);
+  const normalizedHero = {
+    ...hero,
+    motion: "none" as const,
+    mediaUrls: heroMediaUrls,
+    items: pairNarrativeItems(hero, heroMediaUrls),
+  };
+  const existingStory = document.sections.find((section) => section.kind === "story");
+  const story = existingStory ?? {
+    id: "brand-story",
+    kind: "story" as const,
+    layout: "stacked" as const,
+    width: "full" as const,
+    align: "left" as const,
+    motion: "story-scroll" as const,
+    title: `Conoce ${store.name}`,
+    body: `Una mirada a la selección y al universo visual de ${store.name}.`,
+    ctaLabel: "",
+    backgroundColor: document.theme.pageBackground,
+    textColor: document.theme.textColor,
+    mediaUrls: [],
+    items: [],
+  };
+  const storyMediaUrls = uniqueMedia(story.mediaUrls, 1, 3);
+  const normalizedStory = {
+    ...story,
+    layout: "stacked" as const,
+    width: "full" as const,
+    motion: "story-scroll" as const,
+    mediaUrls: storyMediaUrls,
+    items: pairNarrativeItems(story, storyMediaUrls),
+  };
+  const supportingSections = document.sections.filter((section) => !["hero", "story", "catalog"].includes(section.kind));
+  const experienceMediaUrls = uniqueMedia(document.experience.mediaUrls, 2, 5);
+  const avoidsUnstructuredImagePile = document.experience.type === "hero-gallery-scroll"
+    ? "scroll-expansion"
+    : document.experience.type === "image-stream"
+      ? "coverflow-carousel"
+      : document.experience.type;
+
+  return {
+    ...document,
+    experience: {
+      ...document.experience,
+      type: experienceMediaUrls.length >= 2 ? avoidsUnstructuredImagePile : "none",
+      placement: "after-catalog",
+      mediaUrls: experienceMediaUrls.length >= 2 ? experienceMediaUrls : [],
+    },
+    sections: [normalizedHero, normalizedStory, catalog, ...supportingSections],
+  };
+}
+
+function legacyConfigFromSiteDocument(document: StoreSiteDocument): VisualConfig {
+  const hero = document.sections.find((section) => section.kind === "hero");
+  const story = document.sections.find((section) => section.kind === "story");
+  const catalog = document.sections.find((section) => section.kind === "catalog");
+  const gallery = document.sections.find((section) => section.kind === "gallery");
+  const contact = document.sections.find((section) => section.kind === "contact");
+  const location = document.sections.find((section) => section.kind === "location");
+  const links = document.sections.find((section) => section.kind === "links");
+  const legacyOrder = document.sections.flatMap((section) => {
+    if (section.kind === "catalog") return ["products"];
+    if (section.kind === "story") return ["about"];
+    if (section.kind === "hero" || section.kind === "gallery" || section.kind === "links") return [section.kind];
+    return [];
+  });
+  const contentOrder = [...new Set(legacyOrder)].filter((section) => CONTENT_SECTIONS.includes(section as (typeof CONTENT_SECTIONS)[number]));
+  for (const section of CONTENT_SECTIONS) if (!contentOrder.includes(section)) contentOrder.push(section);
+  const fontStyle: StoreFontStyle = document.theme.headingFont === "editorial" || document.theme.headingFont === "classic"
+    ? "editorial"
+    : document.theme.headingFont === "humanist"
+      ? "friendly"
+      : "modern";
+  return {
+    siteDocument: siteDocumentJson(document),
+    tagline: hero?.title ?? document.direction,
+    aboutTitle: story?.title ?? "",
+    aboutSubtitle: story?.body ?? "",
+    aboutText: story?.body ?? "",
+    catalogTitle: catalog?.title ?? "La tienda",
+    catalogSubtitle: catalog?.body ?? "",
+    galleryTitle: gallery?.title ?? "",
+    gallerySubtitle: gallery?.body ?? "",
+    contactFormEnabled: true,
+    contactTitle: contact?.title ?? "¿Tienes una pregunta?",
+    contactSubtitle: contact?.body ?? "",
+    locationTitle: location?.title ?? "Visítanos",
+    locationSubtitle: location?.body ?? "",
+    linksTitle: links?.title ?? "Síguenos",
+    backgroundColor: document.theme.pageBackground,
+    backgroundMode: "solid",
+    backgroundGradientStart: document.theme.pageBackground,
+    backgroundGradientEnd: document.theme.pageBackground,
+    backgroundGradientAngle: 0,
+    backgroundImageUrl: null,
+    accentColor: document.theme.accentColor,
+    announcementColor: document.theme.secondaryColor,
+    fontStyle,
+    contentOrder,
+    heroSlides: [],
+    editorialGallery: [],
+    motionDuoEnabled: false,
+    motionExperiences: [],
+    animations: [],
+  };
+}
 
 function snapshot(store: Store): Prisma.InputJsonObject {
   return Object.fromEntries(VISUAL_FIELDS.map((field) => [field, store[field] ?? null])) as Prisma.InputJsonObject;
@@ -341,7 +703,7 @@ export class VisualStudioService {
     const [products, links] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId, status: "ACTIVE" },
-        select: { name: true, description: true, imageUrls: true, tags: true },
+        select: { id: true, name: true, description: true, imageUrls: true, tags: true },
         orderBy: { createdAt: "asc" },
         take: 24,
       }),
@@ -352,6 +714,7 @@ export class VisualStudioService {
       ? value.flatMap((entry) => entry && typeof entry === "object" && !Array.isArray(entry) && typeof entry.imageUrl === "string" ? [entry.imageUrl] : [])
       : [];
     const assetUrls = [...new Set([
+      store.logoUrl,
       ...uploadedAssetUrls,
       store.bannerUrl,
       store.aboutImageUrl,
@@ -381,76 +744,33 @@ export class VisualStudioService {
       const aiPresets = await this.generateDirections(store, proposalInput, orderedAssets, products, links);
       if (aiPresets) {
         presets = aiPresets;
-        provider = `openai:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-luna"}`;
+        provider = `openai:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol"}`;
       }
     }
 
-    const requestedMotionExperiences = [...new Set(
-      (dto.motionExperiences?.length ? dto.motionExperiences : dto.motionExperience ? [dto.motionExperience] : [])
-        .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
-    )];
     presets = presets.map((preset, index) => {
-      const proposedMotionExperiences = Array.isArray(preset.config.motionExperiences)
-        ? preset.config.motionExperiences.filter((experience): experience is string => typeof experience === "string" && MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number]))
+      const existingDocument = preset.config.siteDocument as StoreSiteDocument | undefined;
+      const siteDocument = existingDocument ?? localSiteDocument(store, preset, orderedAssets, products, index);
+      const preservedAnimations = Array.isArray(store.animations) ? store.animations : [];
+      const preservedMotionExperiences = Array.isArray(store.motionExperiences)
+        ? store.motionExperiences.filter((experience): experience is string => typeof experience === "string" && MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number]))
         : [];
-      const motionExperiences = requestedMotionExperiences.length
-        ? requestedMotionExperiences
-        : proposedMotionExperiences.length
-          ? [...new Set(proposedMotionExperiences)]
-          : defaultMotionSuite(index, orderedAssets.length);
-      const backgroundColor = safeGeneratedBackground(preset.config.backgroundColor, index);
-      const authoredMedia = [
-        ...(Array.isArray(preset.config.editorialGallery) ? preset.config.editorialGallery : []),
-        ...(Array.isArray(preset.config.heroSlides) ? preset.config.heroSlides : []),
-      ].filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item));
-      const animationNames: Record<string, string> = {
-        "story-scroll": "Story Scroll",
-        "coverflow-carousel": "Coverflow",
-        "hero-carousel": "Slider principal",
-        "image-stream": "Image Stream",
-        "scroll-expansion": "Scroll Expansion",
-        "hero-gallery-scroll": "Hero Gallery",
-        "stagger-testimonials": "Reseñas",
-        "zoom-parallax": "Zoom Parallax",
-        "video-pill": "Video que se abre",
-        "portfolio-scroller": "Menú de momentos",
-        "circle-reveal": "Revelado circular",
-        "clarity-marquee": "Preguntas en movimiento",
-        "full-screen-chapters": "Capítulos a pantalla completa",
-        "magnetic-target": "Llamado magnético",
-        "frame-sequence": "Secuencia por fotogramas",
-        "3d-gallery": "Galería tridimensional",
-      };
-      const animations = motionExperiences.map((type, animationIndex) => ({
-        id: `ai-${index + 1}-${animationIndex + 1}-${type}`,
-        name: animationNames[type] ?? `Animación ${animationIndex + 1}`,
-        type,
-        media: distributedAnimationMedia(orderedAssets, authoredMedia, animationIndex, motionExperiences.length, type),
-      }));
       return {
         ...preset,
         config: {
           ...preset.config,
-          backgroundColor,
-          backgroundMode: "solid",
-          backgroundGradientStart: backgroundColor,
-          backgroundGradientEnd: backgroundColor,
-          backgroundGradientAngle: 0,
-          backgroundImageUrl: null,
-          announcementMode: dto.announcementMarqueeEnabled === undefined
-            ? preset.config.announcementMode
-            : dto.announcementMarqueeEnabled ? "marquee" : "static",
-          heroSlides: [],
-          editorialGallery: [],
-          motionDuoEnabled: animations.length > 0,
-          motionExperience: motionExperiences[0] || "coverflow-carousel",
-          motionExperiences,
-          animations,
-          contentOrder: expandMotionSections(preset.config.contentOrder, animations.map((animation) => animation.id)),
-        checkoutMode,
-        ...(checkoutMode === "whatsapp" && { cartButtonLabel: "Pedir por WhatsApp" }),
-        ...(checkoutMode === "whatsapp" && { contactPhone: whatsappPhone }),
-        ...(checkoutMode === "external" && { cartButtonLabel: "Continuar al enlace", leadCaptureUrl }),
+          ...legacyConfigFromSiteDocument(siteDocument),
+          motionDuoEnabled: preservedAnimations.length > 0 || store.motionDuoEnabled === true,
+          motionExperience: typeof store.motionExperience === "string" && MOTION_EXPERIENCES.includes(store.motionExperience as (typeof MOTION_EXPERIENCES)[number]) ? store.motionExperience : "coverflow-carousel",
+          motionExperiences: preservedMotionExperiences,
+          animations: preservedAnimations,
+          // Continuous ribbons are an obvious generated-store tell. Keep the
+          // default calm and only animate the announcement when an older,
+          // explicit client still asks for that behavior.
+          announcementMode: dto.announcementMarqueeEnabled === true ? "marquee" : "static",
+          checkoutMode,
+          ...(checkoutMode === "whatsapp" && { cartButtonLabel: "Pedir por WhatsApp", contactPhone: whatsappPhone }),
+          ...(checkoutMode === "external" && { cartButtonLabel: "Continuar al enlace", leadCaptureUrl }),
         },
       };
     });
@@ -590,124 +910,133 @@ export class VisualStudioService {
 
   private async generateDirections(store: Store, dto: GenerateVisualProposalsDto, assets: MediaAsset[], products: StoreProductContext[], links: StoreLinkContext[]): Promise<ProposalPreset[] | null> {
     try {
-      const imageInputs = await Promise.all(assets.filter((asset) => asset.mimeType.startsWith("image/")).slice(0, 4).map(async (asset) => {
+      const imageInputs = await Promise.all(assets.filter((asset) => asset.mimeType.startsWith("image/")).slice(0, 8).map(async (asset) => {
         const filename = asset.url.split("/").pop();
         const bytes = filename ? await this.uploads.getBuffer(filename) : null;
         return bytes ? {
           type: "input_image" as const,
           image_url: `data:${asset.mimeType};base64,${bytes.toString("base64")}`,
-          detail: "low" as const,
+          detail: "high" as const,
         } : null;
       }));
       const usableImages = imageInputs.filter((input): input is NonNullable<typeof input> => Boolean(input));
       const category = dto.businessCategory?.trim() || products.map((product) => product.name).slice(0, 6).join(", ") || "productos de la marca";
       const personality = dto.personality?.trim() || "sin una personalidad prefijada; infiérela de las fotos y del catálogo";
       const creativeBrief = dto.creativeBrief?.trim() || "Sin instrucciones adicionales. Sorprende con una dirección propia del rubro y del material visual disponible.";
-      const catalog = products.slice(0, 12).map((product, index) => `${index + 1}. ${product.name}${product.description ? ` — ${product.description}` : ""}`).join("\n") || "Catálogo todavía vacío";
+      const productAssetIndices = (product: StoreProductContext) => product.imageUrls.flatMap((url) => {
+        const assetIndex = assets.findIndex((asset) => asset.url === url);
+        return assetIndex >= 0 ? [assetIndex] : [];
+      });
+      const catalog = products.map((product, index) => [
+        `${index}. ${product.name}`,
+        product.description ? `Descripción: ${product.description}` : "Descripción: no configurada",
+        product.tags.length ? `Etiquetas: ${product.tags.join(", ")}` : "Etiquetas: ninguna",
+        `Fotos: ${productAssetIndices(product).join(", ") || "ninguna"}`,
+      ].join(" · ")).join("\n") || "Catálogo todavía vacío";
       const socialLinks = links.map((link) => `${link.label}: ${link.url}`).join("\n") || "Sin enlaces sociales configurados";
-      const assetLegend = assets.map((asset, index) => `${index}: ${asset.mimeType} · ${asset.url}`).join("\n") || "Sin medios disponibles";
+      const assetLegend = assets.map((asset, index) => {
+        const productOwners = products.flatMap((product, productIndex) => product.imageUrls.includes(asset.url) ? [`producto ${productIndex} (${product.name})`] : []);
+        const role = asset.url === store.logoUrl
+          ? "LOGO / IDENTIDAD (solo marca o navegación; nunca usar como foto de fondo)"
+          : productOwners.length
+            ? `FOTO DE ${productOwners.join(" y ")}`
+            : asset.url === store.bannerUrl
+              ? "ARTE PRINCIPAL / BANNER"
+              : asset.url === store.aboutImageUrl
+                ? "IMAGEN DE HISTORIA DE MARCA"
+                : "ARTE O REFERENCIA VISUAL SUBIDA POR EL COMERCIO";
+        return `${index}: ${role} · ${asset.mimeType}`;
+      }).join("\n") || "Sin medios disponibles";
       const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
-      const requestedFontStyle = dto.fontStyle ? normalizeStoreFontStyle(dto.fontStyle) : null;
-      const requestedMotionExperiences = [...new Set(
-        (dto.motionExperiences?.length ? dto.motionExperiences : dto.motionExperience ? [dto.motionExperience] : [])
-          .filter((experience): experience is string => MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number])),
-      )];
-      const motionInstruction = requestedMotionExperiences.length
-        ? `Incluye únicamente estas animaciones como secciones independientes: ${requestedMotionExperiences.join(", ")}. Distribúyelas en el recorrido; nunca las agrupes todas. Usa medios diferentes para cada una siempre que haya suficientes.`
-        : "Elige de dos a cuatro motionExperiences que sirvan a esta dirección. Trátalas como coreografía editorial, no como efectos sueltos; combina ritmos distintos y usa medios diferentes cuando haya suficientes.";
+      const conversion = dto.checkoutMode === "whatsapp"
+        ? "pedido por WhatsApp, sin pago integrado"
+        : dto.checkoutMode === "external"
+          ? "captación de interesados hacia un enlace externo, sin pago integrado"
+          : "pago integrado con pagosYa";
+      const requestStructuredOutput = async (
+        name: string,
+        schema: object,
+        requestPrompt: string,
+        maxOutputTokens: number,
+      ) => {
+        const response = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.config.get<string>("app.openAi.apiKey")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol",
+            input: [{ role: "user", content: [{ type: "input_text", text: requestPrompt }, ...usableImages] }],
+            text: { format: { type: "json_schema", name, strict: true, schema } },
+            reasoning: { effort: "high" },
+            max_output_tokens: maxOutputTokens,
+          }),
+          signal: AbortSignal.timeout(120_000),
+        });
+        const body = await response.json() as {
+          output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string; refusal?: string }> }>;
+          error?: { message?: string };
+        };
+        if (!response.ok) throw new BadGatewayException(body.error?.message || "OpenAI design generation failed");
+        const outputText = body.output
+          ?.flatMap((item) => item.content ?? [])
+          .find((item) => item.type === "output_text")?.text;
+        if (!outputText) throw new BadGatewayException("OpenAI design generation returned no structured output");
+        return outputText;
+      };
+
+      const analysisPrompt = [
+        "Eres la fase de estrategia de un estudio digital senior. No diseñes el sitio todavía. Haz una lectura profunda y concreta de la marca, sus activos y su catálogo para que otro director pueda construir una web completa sin adivinar.",
+        `Tienda: ${store.name}. Categoría: ${category}. Personalidad solicitada: ${personality}.`,
+        `Brief creativo:\n${creativeBrief}`,
+        `Conversión real: ${conversion}.`,
+        `Catálogo actual:\n${catalog}`,
+        `Enlaces actuales:\n${socialLinks}`,
+        `Índices y restricciones de activos:\n${assetLegend}`,
+        "Examina visualmente cada imagen. Distingue con seguridad logo, arte editorial, imagen de ambiente, detalle y foto de producto. Mantén cada foto de producto unida al producto que indica la leyenda. Si un activo es débil, redundante o imposible de usar sin deformarlo, márcalo como avoid.",
+        "Define el papel del logo, la escena real del público, una estrategia de color derivada de la identidad con un solo acento de saturación menor a 80%, una estrategia tipográfica con carácter, una lógica de composición asimétrica, un plan de merchandising producto por producto y una sola idea de movimiento con propósito.",
+        "El plan debe seguir una narrativa reconocible inspirada en la tienda Bikano: primero una portada deslizante, después una historia por escenas al hacer scroll y luego el catálogo real. Galería, contacto, ubicación y enlaces son secciones posteriores y solo aparecen cuando aportan algo. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
+        "No inventes datos, origen, materiales, descuentos, testimonios ni promesas. Escribe el análisis en español y devuelve solo el esquema.",
+      ].join("\n");
+      const analysisText = await requestStructuredOutput("store_brand_analysis", BRAND_ANALYSIS_SCHEMA, analysisPrompt, 5_000);
+      const brandAnalysis = (JSON.parse(analysisText) as { analysis?: BrandAnalysis }).analysis;
+      if (!brandAnalysis) throw new BadGatewayException("OpenAI brand analysis returned no usable plan");
+
       const prompt = [
-        "Actúa como director de arte y arquitecto de ecommerce. Devuelve exactamente tres sitios completos cuya estructura, ritmo y jerarquía sean inequívocamente distintos; no aceptes la misma plantilla con otra paleta. Usa únicamente las imágenes ya existentes y no generes ni solicites imágenes nuevas.",
+        "Actúa como el director de diseño y desarrollo de un estudio digital senior. El estándar es una web de agencia de alta gama que se siente construida para una marca real, nunca una plantilla embellecida. Recibes un análisis de marca ya realizado. Úsalo como evidencia y devuelve exactamente tres documentos de sitio completos, personalizados y estructuralmente distintos. No son variaciones de una plantilla ni configuraciones del editor existente. Usa solamente los medios indicados y no solicites imágenes nuevas.",
         `Clave creativa de esta generación: ${creativeRun}. Úsala para evitar repetir decisiones de generaciones anteriores sin mencionarla en el resultado.`,
         `Tienda: ${store.name}. Categoría: ${category}. Personalidad: ${personality}.`,
         `Brief creativo del comercio:\n${creativeBrief}`,
-        `Conversión elegida por el comercio: ${dto.checkoutMode === "whatsapp" ? "pedido por WhatsApp, sin pago integrado" : dto.checkoutMode === "external" ? "captación de interesados hacia un enlace externo, sin pago integrado" : "pago integrado con pagosYa"}. Respeta esta decisión en el tono de los llamados a la acción.`,
+        `Conversión elegida por el comercio: ${conversion}. Respeta esta decisión en el tono de los llamados a la acción.`,
         `Catálogo actual:\n${catalog}`,
-        `Enlaces actuales (se renderizan automáticamente como botones sociales):\n${socialLinks}`,
+        `Enlaces actuales (la plataforma los inyecta de forma segura):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
-        "Asigna a cada dirección un layoutStyle diferente. cinematic usa una portada inmersiva y relato gradual; editorial alterna imagen y texto con lectura pausada; collage superpone escalas y bloques visuales; catalog-first empieza por producto y usa la historia como prueba posterior.",
-        `Asigna también un experienceStyle distinto a cada dirección como lenguaje interno de composición. ${motionInstruction} Usa solamente medios reales de la tienda.`,
-        "Cada dirección debe tener un contentOrder diferente y válido, con hero, products, about, gallery, motion y links exactamente una vez. La primera animación siempre abre el recorrido; links, el formulario de contacto y la ubicación cierran la estructura. Después el comercio podrá mover cada sección por separado.",
-        "Aplica criterio de producto tipo Impeccable: primero identifica qué necesita sentir y decidir un comprador de este rubro. Haz que las tres propuestas cambien de verdad en jerarquía, densidad, escala, secuencia, copy, geometría y tratamiento de botones; no presentes la misma plantilla con color distinto.",
-        "Los botones deben ser específicos al rubro y a su acción inmediata, con etiquetas breves y concretas. Varía buttonStyle, buttonVariant y buttonMotion entre propuestas cuando sea coherente. Evita textos genéricos como Más información, Saber más o Click aquí.",
-        "Cada propuesta necesita una idea rectora distinta y evidente: una puede vender por emoción, otra por criterio editorial y otra por decisión rápida. La estructura debe apoyar esa idea sin tarjetas decorativas innecesarias, sin exceso de contenedores y con una sola acción primaria clara por zona.",
-        "Crea entre cuatro y cinco slides por dirección. Cada slide cumple un rol distinto (promesa, producto, punto de vista, detalle, transición o acción), con título, texto sustancioso y botón breve. Cuando haya suficientes imágenes, no repitas assetIndex dentro del mismo slider.",
-        "La editorialGallery no es una tira de pies de foto: genera para cada imagen un título, un caption breve y un body diferente de 2–3 frases. Ese contenido alimenta la animación seleccionada y, para stagger-testimonials, body funciona como reseña y caption como autor. Debe sentirse variado y específico al catálogo sin inventar hechos.",
-        `Las tres direcciones también deben variar densidad, escala de imagen y relación entre historia y catálogo. El anuncio superior debe ser ${dto.announcementMarqueeEnabled === false ? "estático" : dto.announcementMarqueeEnabled === true ? "una marquesina en movimiento" : "estático o móvil según la dirección"}.`,
-        `${requestedFontStyle ? `Usa fontStyle=${requestedFontStyle} en las tres direcciones por compatibilidad con una preferencia guardada.` : "Elige un fontStyle distinto y coherente para cada dirección; la tipografía forma parte de la propuesta, no es una pregunta para el comercio."} El fondo debe ser un único backgroundColor plano, sin degradados, franjas, fotografías de fondo ni texturas. Nunca uses rojo ni amarillo como color de fondo; resérvalos, si hacen falta, para acentos pequeños.`,
-        "heroSlides y editorialGallery deben referenciar solamente índices disponibles.",
-        "Escribe textos borrador atractivos en español, sin inventar descuentos, envíos, certificaciones, origen, materiales ni promesas verificables. No devuelvas HTML, CSS ni texto fuera del esquema.",
+        `Análisis de marca obligatorio, realizado en la fase anterior:\n${JSON.stringify(brandAnalysis, null, 2)}`,
+        "Contrato narrativo obligatorio de cada siteDocument: las tres primeras secciones son exactamente hero, story y catalog, en ese orden. También debe existir exactamente una contact después del catálogo. Hero es la portada deslizante: asígnale 2 o 3 medios cuando estén disponibles, nunca el logo, y crea items con copy breve asociado a cada escena; con un solo medio úsalo una sola vez y no lo dupliques. Story es la experiencia Story Scroll existente: usa motion=story-scroll, layout=stacked, width=full y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Catalog es la primera zona estable y transaccional: la plataforma inserta ahí productos, carrito y checkout reales. Gallery, contact, location y links van después. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
+        "Antes de componer, elige para cada propuesta una combinación distinta y pertinente entre atmósferas de lujo editorial, estructuralismo suave o tecnología sobria, y layouts de split editorial, bento asimétrico o cascada espacial sin solapamientos. Da a cada propuesta un concepto rector visible de principio a fin: una idea de marca que conecte paleta, escala, ritmo, recortes de imagen, navegación, catálogo, formulario y cierre. Haz que cambien de verdad en jerarquía, densidad, orden, tipografía, geometría, composición de producto y relación entre imagen y texto.",
+        "Distingue logo, arte editorial y foto de producto por su función. El logo pertenece a la identidad o navegación: no lo estires, no lo recortes como fotografía y no lo uses como fondo. Sitúa cada foto de producto con su producto correcto y usa merchandising para decidir qué productos abren la colección, cuáles se destacan y en qué orden se cuentan.",
+        "Aplica este protocolo anti-genérico obligatorio: densidad visual cercana a 4/10, varianza 8/10 y movimiento 6/10; una sola familia cromática, un solo acento con saturación menor a 80% y un solo sistema de radios; nunca #000000, morado o azul neón, glow exterior, degradado de texto ni mezcla de grises cálidos y fríos. La portada debe caber en el primer viewport, ser asimétrica, estar alineada a la izquierda o dividida y tener como máximo un CTA. No uses hero centrado. La navegación debe tener sticky=false para evitar una barra pegada de borde a borde. Mantén cada elemento en una zona espacial limpia, sin texto superpuesto sobre otro contenido.",
+        "La tipografía debe sentirse elegida: usa roles grotesk, humanist o geometric para una voz tipo Geist, Satoshi o Cabinet Grotesk; editorial solo cuando el rubro justifique una serif moderna tipo Instrument Serif o Editorial New. No uses una estética equivalente a Inter, Roboto, Arial, Helvetica, Times, Georgia, Garamond o Palatino. Controla el tamaño con jerarquía y peso; cuerpo mínimo 16px, interlineado relajado y líneas de máximo 65 caracteres.",
+        "En páginas largas usa al menos cuatro familias de composición. Prohíbe tres tarjetas iguales, la repetición constante de texto a la izquierda e imagen a la derecha, etiquetas decorativas, números de sección, scroll cues, tiras de hora o clima e interfaz falsa hecha con rectángulos. No apiles muchas fotografías una debajo de otra ni conviertas el descenso de la página en un collage sin relato: una imagen solo entra si cumple una función clara dentro de la portada, un capítulo Story Scroll, un producto o una galería posterior acotada. Usa tarjetas solo cuando la elevación comunique jerarquía; cuando existan, deben sentirse como una pieza dentro de un marco concéntrico y no como un rectángulo con borde gris. No uses guiones largos Unicode. Cada sección debe tener una función real y una composición propia dentro del mismo mundo.",
+        "Compón páginas con ritmo real y espacio generoso: alterna escala y densidad, crea uno o dos momentos visuales memorables y evita que todas las secciones tengan la misma grilla. El catálogo, el carrito y el formulario deben sentirse parte del mismo mundo visual, no widgets pegados al final. El formulario debe tener etiquetas visibles, campos y placeholder con contraste AA, foco claro y un CTA que no se parta en dos líneas. Los controles táctiles deben medir al menos 44px y las secciones de varias columnas deben colapsar a una sola columna sin scroll horizontal debajo de 768px.",
+        "Usa motion como dirección artística coordinada, no decoración. La portada deslizante y Story Scroll forman el dúo principal; fuera de ellas elige como máximo uno o dos momentos entre reveal, clip, drift, scale, parallax y coverflow. El resto debe ser none. Reserva parallax/story-scroll para narrativa y coverflow para exploración horizontal. No generes cintas visuales continuas, galerías marquee ni el mismo reveal en cada sección. Todo movimiento debe poder realizarse con transform y opacity, usar easing personalizado, respetar reduced motion y mantener catálogo y formulario legibles y estables.",
+        "Elige además una sola experience distintiva para después del catálogo. Puedes usar layered-text, text-rotate, text-glitch, text-reveal-block o text-along-path cuando una frase breve de la marca sea más coherente que repetir fotografías; estas experiencias tipográficas llevan mediaIndices vacío y deben usar el título y body como copy real, breve y verificable. También puedes elegir scroll-expansion, full-screen-chapters, frame-sequence, 3d-gallery o coverflow-carousel cuando los medios añadan relato. No elijas image-stream ni hero-gallery-scroll: juntar varias fotos en un corredor o mosaico de scroll compite con la historia principal y suele producir una página incoherente. Usa entre 2 y 5 medios solo en experiencias visuales, o type=none cuando no añada significado. Su placement siempre es after-catalog. La plataforma aplica automáticamente los colores de theme a cualquier experiencia tipográfica.",
+        "Usa full-bleed, offset, split, centered, grid, stacked, rail y minimal como herramientas libres, no como una receta. Evita una secuencia repetida de tarjetas genéricas y evita el patrón constante texto a la izquierda e imagen a la derecha.",
+        "Los CTA deben ser breves, específicos al rubro y conducir al catálogo o contacto. Evita emojis, nombres genéricos, porcentajes redondos falsos y clichés como Elevate, Seamless, Unleash, Next-Gen, Eleva, Revoluciona o Sin límites. Nunca inventes descuentos, envíos, certificaciones, origen, materiales, testimonios ni promesas verificables.",
+        "mediaIndices y assetIndex solo pueden referenciar los índices disponibles. Usa assetIndex=-1 cuando un item no necesite medio. No incluyas URLs externas.",
+        "Escribe copy borrador atractivo en español. No devuelvas HTML, CSS, JavaScript ni texto fuera del esquema estructurado.",
       ].join("\n");
 
-      const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.config.get<string>("app.openAi.apiKey")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-luna",
-          input: [{ role: "user", content: [{ type: "input_text", text: prompt }, ...usableImages] }],
-          text: { format: { type: "json_schema", name: "store_visual_directions", strict: true, schema: AI_DIRECTIONS_SCHEMA } },
-          max_output_tokens: 5200,
-        }),
-        signal: AbortSignal.timeout(60_000),
-      });
-      const body = await response.json() as {
-        output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string; refusal?: string }> }>;
-        error?: { message?: string };
-      };
-      if (!response.ok) throw new BadGatewayException(body.error?.message || "OpenAI design generation failed");
-      const outputText = body.output
-        ?.flatMap((item) => item.content ?? [])
-        .find((item) => item.type === "output_text")?.text;
-      if (!outputText) throw new BadGatewayException("OpenAI design generation returned no structured output");
+      const outputText = await requestStructuredOutput("store_visual_directions", AI_DIRECTIONS_SCHEMA, prompt, 14_000);
       const parsed = JSON.parse(outputText) as { directions?: unknown };
-      const directions = this.validDirections(parsed.directions, assets);
+      const directions = this.validDirections(parsed.directions, store, assets, products);
       if (!directions) throw new BadGatewayException("OpenAI design generation returned an unsafe theme configuration");
 
       return directions.map((direction) => ({
         title: direction.title,
         rationale: direction.rationale,
-        config: {
-          tagline: direction.tagline,
-          aboutTitle: direction.aboutTitle,
-          aboutSubtitle: direction.aboutSubtitle,
-          aboutText: direction.aboutText,
-          catalogTitle: direction.catalogTitle,
-          catalogSubtitle: direction.catalogSubtitle,
-          galleryTitle: direction.galleryTitle,
-          gallerySubtitle: direction.gallerySubtitle,
-          backgroundColor: direction.backgroundColor.toLowerCase(),
-          backgroundMode: "solid",
-          backgroundGradientStart: direction.backgroundColor.toLowerCase(),
-          backgroundGradientEnd: direction.backgroundColor.toLowerCase(),
-          backgroundGradientAngle: 0,
-          backgroundImageUrl: null,
-          accentColor: direction.accentColor.toLowerCase(),
-          fontStyle: requestedFontStyle || direction.fontStyle,
-          buttonStyle: direction.buttonStyle,
-          boardTexture: "painted",
-          buttonVariant: direction.buttonVariant,
-          buttonMotion: direction.buttonMotion,
-          cartButtonLabel: direction.cartButtonLabel,
-          contentOrder: direction.contentOrder,
-          layoutStyle: direction.layoutStyle,
-          experienceStyle: direction.experienceStyle,
-          motionExperiences: direction.motionExperiences,
-          motionDuoEnabled: true,
-          announcement: direction.announcement,
-          announcementMode: direction.announcementMode,
-          announcementSpeed: direction.announcementSpeed,
-          announcementSize: direction.announcementSize,
-          announcementColor: direction.announcementColor.toLowerCase(),
-          promotionEnabled: direction.promotionEnabled,
-          promotionTitle: direction.promotionTitle,
-          promotionBody: direction.promotionBody,
-          promotionCtaLabel: direction.promotionCtaLabel,
-          promotionCtaUrl: null,
-          heroSlides: direction.heroSlides.flatMap((slide) => assets[slide.assetIndex] ? [{ imageUrl: assets[slide.assetIndex].url, title: slide.title, body: slide.body, ctaLabel: slide.ctaLabel, ctaUrl: "" }] : []),
-          editorialGallery: direction.editorialGallery.flatMap((image) => assets[image.assetIndex] ? [{ imageUrl: assets[image.assetIndex].url, title: image.title, caption: image.caption, body: image.body, boxColor: image.boxColor.toLowerCase() }] : []),
-        },
+        config: legacyConfigFromSiteDocument(direction.siteDocument),
       }));
     } catch (error) {
       this.logger.warn(`AI theme generation fell back to curated directions: ${(error as Error).message}`);
@@ -715,71 +1044,25 @@ export class VisualStudioService {
     }
   }
 
-  private validDirections(value: unknown, assets: MediaAsset[]): AiDirection[] | null {
-    const assetCount = assets.length;
+  private validDirections(value: unknown, store: Store, assets: MediaAsset[], products: StoreProductContext[]): MaterializedAiDirection[] | null {
     if (!Array.isArray(value) || value.length !== 3) return null;
-    const enumValue = (candidate: unknown, values: readonly string[]) => typeof candidate === "string" && values.includes(candidate);
-    const validOrder = (candidate: unknown) => Array.isArray(candidate)
-      && candidate.length === CONTENT_SECTIONS.length
-      && new Set(candidate).size === CONTENT_SECTIONS.length
-      && candidate.every((section) => enumValue(section, CONTENT_SECTIONS));
-    const validColor = (candidate: unknown) => typeof candidate === "string" && /^#[0-9a-f]{6}$/i.test(candidate);
-    const validInteger = (candidate: unknown, minimum: number, maximum: number) => typeof candidate === "number" && Number.isInteger(candidate) && candidate >= minimum && candidate <= maximum;
     if (!value.every((direction) => direction && typeof direction === "object" && !Array.isArray(direction))) return null;
     const directions = value as Array<Record<string, unknown>>;
     const titles = new Set(directions.map((direction) => direction.title));
     if (titles.size !== 3) return null;
-    const layoutStyles = new Set(directions.map((direction) => direction.layoutStyle));
-    const experienceStyles = new Set(directions.map((direction) => direction.experienceStyle));
-    const contentOrders = new Set(directions.map((direction) => JSON.stringify(direction.contentOrder)));
-    if (layoutStyles.size !== 3 || experienceStyles.size !== 3 || contentOrders.size !== 3) return null;
-    if (!directions.every((direction) =>
-      typeof direction.title === "string" && direction.title.length >= 3 && direction.title.length <= 48
-      && typeof direction.rationale === "string" && direction.rationale.length >= 20 && direction.rationale.length <= 240
-      && typeof direction.tagline === "string" && direction.tagline.length >= 3 && direction.tagline.length <= 160
-      && typeof direction.aboutText === "string" && direction.aboutText.length >= 40 && direction.aboutText.length <= 600
-      && typeof direction.aboutTitle === "string" && direction.aboutTitle.length >= 3 && direction.aboutTitle.length <= 100
-      && typeof direction.aboutSubtitle === "string" && direction.aboutSubtitle.length >= 3 && direction.aboutSubtitle.length <= 220
-      && typeof direction.catalogTitle === "string" && direction.catalogTitle.length >= 3 && direction.catalogTitle.length <= 100
-      && typeof direction.catalogSubtitle === "string" && direction.catalogSubtitle.length >= 3 && direction.catalogSubtitle.length <= 220
-      && typeof direction.galleryTitle === "string" && direction.galleryTitle.length >= 3 && direction.galleryTitle.length <= 100
-      && typeof direction.gallerySubtitle === "string" && direction.gallerySubtitle.length >= 3 && direction.gallerySubtitle.length <= 220
-      && validColor(direction.backgroundColor)
-      && validColor(direction.accentColor)
-      && enumValue(direction.fontStyle, STORE_FONT_STYLES)
-      && enumValue(direction.buttonStyle, ["rounded", "pill", "square"])
-      && enumValue(direction.buttonVariant, ["solid", "outline", "soft"])
-      && enumValue(direction.buttonMotion, ["lift", "pulse", "none"])
-      && typeof direction.cartButtonLabel === "string" && direction.cartButtonLabel.length >= 2 && direction.cartButtonLabel.length <= 36 && !/[<>\u0000-\u001f]/.test(direction.cartButtonLabel)
-      && validOrder(direction.contentOrder)
-      && enumValue(direction.layoutStyle, ["cinematic", "editorial", "collage", "catalog-first"])
-      && enumValue(direction.experienceStyle, ["coverflow", "diagonal-marquee", "story-scroller"])
-      && Array.isArray(direction.motionExperiences) && direction.motionExperiences.length >= 2 && direction.motionExperiences.length <= 4
-      && new Set(direction.motionExperiences).size === direction.motionExperiences.length
-      && direction.motionExperiences.every((experience) => enumValue(experience, MOTION_EXPERIENCES))
-      && typeof direction.announcement === "string" && direction.announcement.length >= 5 && direction.announcement.length <= 180
-      && enumValue(direction.announcementMode, ["static", "marquee"])
-      && validInteger(direction.announcementSpeed, 8, 40)
-      && enumValue(direction.announcementSize, ["small", "medium", "large"])
-      && validColor(direction.announcementColor)
-      && typeof direction.promotionEnabled === "boolean"
-      && typeof direction.promotionTitle === "string" && direction.promotionTitle.length <= 80
-      && typeof direction.promotionBody === "string" && direction.promotionBody.length <= 240
-      && typeof direction.promotionCtaLabel === "string" && direction.promotionCtaLabel.length <= 36
-      && Array.isArray(direction.heroSlides) && direction.heroSlides.length >= 4 && direction.heroSlides.length <= 5
-      && (assetCount < direction.heroSlides.length || new Set(direction.heroSlides.map((slide) => (slide as Record<string, unknown>).assetIndex)).size === direction.heroSlides.length)
-      && direction.heroSlides.every((slide) => slide && typeof slide === "object" && validInteger(slide.assetIndex, 0, assetCount - 1)
-        && typeof slide.title === "string" && slide.title.length >= 3 && slide.title.length <= 80
-        && typeof slide.body === "string" && slide.body.length >= 10 && slide.body.length <= 180
-        && typeof slide.ctaLabel === "string" && slide.ctaLabel.length >= 2 && slide.ctaLabel.length <= 36)
-      && Array.isArray(direction.editorialGallery) && direction.editorialGallery.length <= 6
-      && direction.editorialGallery.every((image) => image && typeof image === "object" && validInteger(image.assetIndex, 0, assetCount - 1)
-        && assets[image.assetIndex]?.mimeType.startsWith("image/")
-        && typeof image.title === "string" && image.title.length >= 3 && image.title.length <= 100
-        && typeof image.caption === "string" && image.caption.length >= 3 && image.caption.length <= 180
-        && typeof image.body === "string" && image.body.length >= 20 && image.body.length <= 360
-        && validColor(image.boxColor))
-    )) return null;
-    return directions as AiDirection[];
+    const materialized = directions.flatMap((direction) => {
+      if (typeof direction.title !== "string" || direction.title.length < 3 || direction.title.length > 48) return [];
+      if (typeof direction.rationale !== "string" || direction.rationale.length < 20 || direction.rationale.length > 240) return [];
+      const materializedSiteDocument = materializeSiteDocument(direction.siteDocument, assets, products);
+      const siteDocument = materializedSiteDocument
+        ? enforceGeneratedNarrative(materializedSiteDocument, store, assets, products)
+        : null;
+      return siteDocument && passesPremiumDirectionGuardrails(siteDocument)
+        ? [{ title: generatedCopy(direction.title), rationale: generatedCopy(direction.rationale), siteDocument }]
+        : [];
+    });
+    if (materialized.length !== 3) return null;
+    const structures = new Set(materialized.map((direction) => JSON.stringify(direction.siteDocument.sections.map((section) => [section.kind, section.layout, section.width]))));
+    return structures.size === 3 ? materialized : null;
   }
 }

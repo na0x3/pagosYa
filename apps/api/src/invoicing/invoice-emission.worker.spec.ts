@@ -61,6 +61,10 @@ describe("InvoiceEmissionWorker.emitDueInvoices", () => {
     const worker = new InvoiceEmissionWorker(prisma as any, invoicing as any, provider as any);
     await worker.emitDueInvoices();
 
+    expect(prisma.invoice.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ nextRetryAt: expect.any(Date) }),
+    }));
+
     expect(prisma.invoice.update).toHaveBeenCalledWith({
       where: { id: "inv_1" },
       data: expect.objectContaining({

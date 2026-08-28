@@ -1,8 +1,9 @@
 import { Module } from "@nestjs/common";
 import * as path from "path";
 import { APP_GUARD } from "@nestjs/core";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import configuration from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
@@ -26,6 +27,7 @@ import { DebtCollectionsModule } from "./debt-collections/debt-collections.modul
 import { ConsumerModule } from "./consumer/consumer.module";
 // Store-level CRM, inventory, appointments, delivery, POS, and integrations.
 import { OperationsModule } from "./operations/operations.module";
+import { EventsModule } from "./events/events.module";
 
 @Module({
   imports: [
@@ -41,7 +43,17 @@ import { OperationsModule } from "./operations/operations.module";
     // products, payments, compliance, and visual-studio state. Keep enough
     // headroom for normal navigation and store switching while auth-adjacent
     // endpoints retain their tighter 5–10 req/min route overrides below.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const redisUrl = config.get<string>("app.redisUrl");
+        return {
+          throttlers: [{ ttl: 60_000, limit: 120 }],
+          ...(redisUrl ? { storage: new ThrottlerStorageRedisService(redisUrl) } : {}),
+        };
+      },
+    }),
     PrismaModule,
     AuthModule,
     MerchantsModule,
@@ -63,6 +75,7 @@ import { OperationsModule } from "./operations/operations.module";
     DebtCollectionsModule,
     ConsumerModule,
     OperationsModule,
+    EventsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

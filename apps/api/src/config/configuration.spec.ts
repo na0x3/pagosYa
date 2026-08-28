@@ -3,6 +3,10 @@ import configuration from "./configuration";
 const SECURITY_ENV_KEYS = [
   "NODE_ENV",
   "DATABASE_URL",
+  "REDIS_URL",
+  "OBJECT_STORAGE_BUCKET",
+  "OBJECT_STORAGE_ACCESS_KEY_ID",
+  "OBJECT_STORAGE_SECRET_ACCESS_KEY",
   "INTERNAL_RAIL_CALLBACK_SECRET",
   "INTERNAL_OPS_SECRET",
   "CHECKOUT_ORIGIN",
@@ -30,6 +34,10 @@ describe("production security configuration", () => {
   it("fails closed when production secrets and HTTPS origins are unsafe", () => {
     process.env.NODE_ENV = "production";
     process.env.DATABASE_URL = "";
+    process.env.REDIS_URL = "";
+    process.env.OBJECT_STORAGE_BUCKET = "";
+    process.env.OBJECT_STORAGE_ACCESS_KEY_ID = "";
+    process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY = "";
     process.env.INTERNAL_RAIL_CALLBACK_SECRET = "dev-change-me";
     process.env.INTERNAL_OPS_SECRET = "short";
     process.env.CHECKOUT_ORIGIN = "http://checkout.example";
@@ -47,6 +55,10 @@ describe("production security configuration", () => {
   it("accepts explicit strong production settings and a bounded proxy hop count", () => {
     process.env.NODE_ENV = "production";
     process.env.DATABASE_URL = "postgresql://database.example/pagosya";
+    process.env.REDIS_URL = "rediss://default:strong-password@redis.example:6379/0";
+    process.env.OBJECT_STORAGE_BUCKET = "pagosya-production";
+    process.env.OBJECT_STORAGE_ACCESS_KEY_ID = "production-access-key";
+    process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY = "production-secret-key";
     process.env.INTERNAL_RAIL_CALLBACK_SECRET = "rail_" + "a".repeat(48);
     process.env.INTERNAL_OPS_SECRET = "ops_" + "b".repeat(48);
     process.env.CHECKOUT_ORIGIN = "https://checkout.pagosya.bo";
@@ -63,5 +75,6 @@ describe("production security configuration", () => {
     expect(result.app.environment).toBe("production");
     expect(result.app.trustProxy).toBe(1);
     expect(result.app.exposeDocs).toBe(false);
+    expect(result.app.databaseUrl).toContain("connection_limit=10");
   });
 });

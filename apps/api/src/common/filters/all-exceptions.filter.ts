@@ -49,6 +49,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(`${request.method} ${requestPath(request)} -> ${status}: ${message}`, stack);
     }
 
+    // A streaming/download response may already have committed its headers.
+    // Attempting to write Nest's JSON error at that point throws a second
+    // ERR_HTTP_HEADERS_SENT exception and can destabilize the worker.
+    if (response.headersSent) return;
+
     const body = typeof payload === "string" ? { statusCode: status, message: payload } : payload;
     response.status(status).json(body);
   }

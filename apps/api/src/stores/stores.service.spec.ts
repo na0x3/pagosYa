@@ -693,7 +693,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       contentOrder: ["hero", "motion", "about", "products", "gallery", "links"],
       motionDuoEnabled: true,
       motionExperience: "hero-carousel",
-      motionExperiences: ["hero-carousel", "zoom-parallax"],
+      motionExperiences: ["hero-carousel", "frame-sequence"],
     });
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
@@ -703,7 +703,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     expect(result.contentOrder).toEqual([
       "hero",
       "animation-legacy-1-hero-carousel",
-      "animation-legacy-2-zoom-parallax",
+      "animation-legacy-2-frame-sequence",
       "about",
       "products",
       "gallery",
@@ -722,10 +722,19 @@ describe("StoresService.getStorePublic — sold counts", () => {
         type: "hero-carousel",
         title: "Nueva colección",
         subtitle: "Piezas seleccionadas",
-        topWord: "creando",
-        rightWord: "tu",
-        bottomWord: "historia",
         productId: "product_1",
+        buttonLabel: "Ver colección",
+        buttonPositionX: 42,
+        buttonPositionY: 78,
+        textPositionX: 72,
+        textPositionY: 28,
+        textScale: 143,
+        textWidthPercent: 74,
+        textAlign: "right",
+        textSize: "large",
+        textWidth: "wide",
+        textColor: "#fff4d6",
+        backgroundColor: "#26170d",
         media: [{ imageUrl: "/v1/uploads/open.webp", title: "Lana" }],
       },
       {
@@ -803,10 +812,29 @@ describe("StoresService.getStorePublic — sold counts", () => {
 
     const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.getStorePublic("abc123");
+    await service.flushPendingStoreViews();
 
     expect(prisma.store.update).toHaveBeenCalledWith({
       where: { id: "store_1" },
       data: { viewCount: { increment: 1 } },
+    });
+  });
+
+  it("coalesces concurrent storefront views into one database increment", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+    prisma.store.update.mockResolvedValue(store);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await Promise.all(Array.from({ length: 25 }, () => service.getStorePublic("abc123")));
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    await service.flushPendingStoreViews();
+
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "store_1" },
+      data: { viewCount: { increment: 25 } },
     });
   });
 
@@ -815,17 +843,19 @@ describe("StoresService.getStorePublic — sold counts", () => {
     prisma.store.findUnique.mockResolvedValue({
       ...store,
       editorialGallery: [
-        { imageUrl: "/v1/uploads/workshop.png", caption: "Nuestro taller", boxColor: "#f4ead7" },
-        { imageUrl: "/v1/uploads/team.png", caption: "El equipo", boxColor: "not-a-color" },
+        { imageUrl: "/v1/uploads/workshop.png", productId: "link_1", caption: "Nuestro taller", boxColor: "#f4ead7" },
+        { imageUrl: "/v1/uploads/team.png", productId: "missing_product", caption: "El equipo", boxColor: "not-a-color" },
       ],
     });
-    prisma.paymentLink.findMany.mockResolvedValue([]);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { id: "link_1", name: "Pieza", imageUrls: [], tags: [], stock: null, color: null, amount: 5000, currency: "BOB", categoryId: null, description: null },
+    ]);
 
     const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.editorialGallery).toEqual([
-      { imageUrl: "/v1/uploads/workshop.png", caption: "Nuestro taller", boxColor: "#f4ead7" },
+      { imageUrl: "/v1/uploads/workshop.png", productId: "link_1", caption: "Nuestro taller", boxColor: "#f4ead7" },
       { imageUrl: "/v1/uploads/team.png", caption: "El equipo" },
     ]);
   });
@@ -892,6 +922,43 @@ describe("StoresService.update — accentColor clearing", () => {
 
     const call = prisma.store.update.mock.calls[0][0];
     expect(call.data).not.toHaveProperty("accentColor");
+  });
+});
+
+describe("StoresService.update — authored AI site", () => {
+  it("keeps the bespoke structure while projecting compatible editor changes", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: kind === "hero" ? ["/v1/uploads/hero.webp"] : [], items: [],
+    });
+    const siteDocument = {
+      version: 1,
+      theme: { pageBackground: "#f5f2ea", accentColor: "#315c49", headingFont: "editorial", bodyFont: "grotesk" },
+      experience: { type: "text-rotate", placement: "after-catalog", title: "Vestidos|Abrigos", body: "Favoritos", mediaUrls: [] },
+      sections: [section("opening", "hero"), section("shop", "catalog"), section("story", "story"), section("information", "contact")],
+    };
+    prisma.store.findFirst.mockResolvedValue({ ...store, bannerUrl: null, aboutImageUrl: null, editorialGallery: [], siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      tagline: "Una portada nueva",
+      catalogTitle: "Compra la colección",
+      contactSubtitle: "Cuéntanos qué necesitas",
+      accentColor: "#aa2244",
+      sectionBackgrounds: { "site-shop": "#eee8dd" },
+      bannerUrl: null,
+      animations: [{ id: "ai-signature-experience", name: "IA · Texto", type: "text-rotate", media: [] }],
+    } as any);
+
+    const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.sections.map((entry: any) => entry.kind)).toEqual(["hero", "catalog", "story", "contact"]);
+    expect(saved.sections.find((entry: any) => entry.kind === "hero")).toMatchObject({ title: "Una portada nueva", mediaUrls: ["/v1/uploads/hero.webp"] });
+    expect(saved.sections.find((entry: any) => entry.kind === "catalog")).toMatchObject({ title: "Compra la colección", backgroundColor: "#eee8dd" });
+    expect(saved.sections.find((entry: any) => entry.kind === "story").backgroundColor).toBe("#f5f2ea");
+    expect(saved.sections.find((entry: any) => entry.kind === "contact").body).toBe("Cuéntanos qué necesitas");
+    expect(saved.theme.accentColor).toBe("#aa2244");
+    expect(saved.experience.type).toBe("none");
   });
 });
 

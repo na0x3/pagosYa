@@ -17,6 +17,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) infinite linear;
 }
@@ -68,6 +70,8 @@
   --border: rgba(24, 53, 36, 0.24);
   --input: rgba(24, 53, 36, 0.24);
   --ring: #ad8a49;
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
 }
 
 * { box-sizing: border-box; }
