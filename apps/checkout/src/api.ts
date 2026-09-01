@@ -82,6 +82,8 @@ export interface StoreItem {
 export interface StoreCategory {
   id: string;
   name: string;
+  bannerUrl?: string | null;
+  highlights?: string[];
 }
 
 /** Merchant-defined link button (social profile, catalog, map, ...) shown under the store header. */
@@ -99,14 +101,16 @@ export interface StoreHeroSlide {
   body?: string;
   ctaLabel?: string;
   ctaUrl?: string;
+  titleStyle?: import("./site-document").StoreCanvasTextStyle;
+  bodyStyle?: import("./site-document").StoreCanvasTextStyle;
 }
 
 export const STORE_MOTION_EXPERIENCES = [
-  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "story-scroll", "hero-carousel", "image-stream",
   "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
-  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+  "full-screen-chapters", "magnetic-target", "frame-sequence",
 ] as const;
 export type StoreMotionExperience = (typeof STORE_MOTION_EXPERIENCES)[number];
 export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "location" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}` | `site-${string}`;
@@ -124,6 +128,20 @@ export interface StoreEditorialImage {
   textWidthPercent?: number;
   textAlign?: "left" | "center" | "right";
   textColor?: string;
+  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
+}
+
+export interface StoreAnimationTextBlock {
+  id: string;
+  role: "title" | "subtitle";
+  text: string;
+  textPositionX?: number;
+  textPositionY?: number;
+  textScale?: number;
+  textWidthPercent?: number;
+  textAlign?: "left" | "center" | "right";
+  textColor?: string;
+  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
 }
 
 export interface StoreAnimation {
@@ -145,6 +163,8 @@ export interface StoreAnimation {
   textWidth?: "narrow" | "medium" | "wide";
   textColor?: string;
   backgroundColor?: string;
+  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
+  textBlocks?: StoreAnimationTextBlock[];
   media: StoreEditorialImage[];
 }
 
@@ -208,7 +228,7 @@ export interface Store {
   // "#RRGGBB" brand accent; null = default palette accent.
   accentColor: string | null;
   // Curated merchant storefront font family.
-  fontStyle: "modern" | "editorial" | "friendly" | "classic" | "geometric";
+  fontStyle: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
   // "rounded" | "pill" | "square"
   buttonStyle: string;
   // "chalkboard" | "kraft" | "painted" — storefront ground material.
@@ -219,7 +239,7 @@ export interface Store {
   announcementSpeed: number;
   announcementSize: "small" | "medium" | "large";
   announcementColor: string;
-  announcementFont?: "store" | "modern" | "editorial" | "friendly" | "classic" | "geometric";
+  announcementFont?: "store" | "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
   announcementEffect?: "none" | "wave" | "pulse" | "sparkle";
   promotionEnabled: boolean;
   promotionImageUrl: string | null;
@@ -233,7 +253,7 @@ export interface Store {
   contentOrder?: StoreContentSection[];
   sectionBackgrounds?: Record<string, string>;
   layoutStyle?: "cinematic" | "editorial" | "collage" | "catalog-first";
-  experienceStyle?: "coverflow" | "diagonal-marquee" | "story-scroller";
+  experienceStyle?: "editorial-grid" | "story-scroller";
   motionDuoEnabled?: boolean;
   motionExperience?: StoreMotionExperience;
   motionExperiences?: StoreMotionExperience[];
@@ -250,9 +270,30 @@ export interface Store {
   cartRecommendationProductIds: string[];
   showLowStockToCustomers: boolean;
   appointmentOfferings?: AppointmentOffering[];
+  events?: PublicStoreEvent[];
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];
+}
+
+export interface PublicStoreEvent {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  publicityImageUrl: string;
+  startsAt: string;
+  endsAt: string | null;
+  doorsOpenAt: string | null;
+  timezone: string;
+  venue: { name: string; city: string } | null;
+  ticketTypes: Array<{
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    available: number;
+  }>;
 }
 
 export interface PublishedStore {
@@ -287,6 +328,23 @@ export async function fetchStore(slug: string, options: { preview?: boolean } = 
   const previewQuery = options.preview ? "?preview=1" : "";
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/store${previewQuery}`);
   return parseOrThrow<Store>(response);
+}
+
+export async function createEventReservation(
+  eventSlug: string,
+  input: {
+    items: Array<{ ticketTypeId: string; quantity: number }>;
+    buyerName?: string;
+    buyerEmail?: string;
+    buyerPhone?: string;
+  },
+): Promise<{ reservationId: string; amount: number; currency: string; expiresAt: string; clientSecret: string; managementToken: string }> {
+  const response = await fetch(`${API_BASE_URL}/events/public/${encodeURIComponent(eventSlug)}/reservations`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseOrThrow(response);
 }
 
 export interface AppointmentAvailability {
@@ -417,6 +475,15 @@ export async function submitStoreLead(
     body: JSON.stringify({ ...contact, items, ...fulfillment }),
   });
   return parseOrThrow<{ submitted: true }>(response);
+}
+
+export async function subscribeStoreNewsletter(slug: string, email: string): Promise<{ subscribed: true }> {
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/newsletter`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return parseOrThrow<{ subscribed: true }>(response);
 }
 
 export interface CustomerContact {

@@ -21,6 +21,9 @@ type MerchantRequest = { merchantUser?: { id: string }; ip?: string };
 export class EventsPublicController {
   constructor(private readonly events: EventsService, private readonly faceEntry: FaceEntryService) {}
 
+  @Get()
+  list() { return this.events.listPublicEvents(); }
+
   @Get("id/:eventId")
   getById(@Param("eventId") eventId: string) { return this.events.publicEventById(eventId); }
 

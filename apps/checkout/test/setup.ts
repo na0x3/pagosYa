@@ -47,3 +47,17 @@ Object.defineProperty(window, "localStorage", { writable: true, value: memorySto
 // routes deliberately control scroll restoration, so provide the browser API
 // surface and let individual tests spy on it when the exact destination matters.
 Object.defineProperty(window, "scrollTo", { writable: true, value: () => {} });
+
+// jsdom exposes HTMLMediaElement.play/pause but routes them through its
+// not-implemented reporter. The storefront carousel owns that lifecycle in a
+// real browser; keep the test surface quiet and promise-compatible here.
+Object.defineProperty(window.HTMLMediaElement.prototype, "play", {
+  configurable: true,
+  writable: true,
+  value: () => Promise.resolve(),
+});
+Object.defineProperty(window.HTMLMediaElement.prototype, "pause", {
+  configurable: true,
+  writable: true,
+  value: () => {},
+});

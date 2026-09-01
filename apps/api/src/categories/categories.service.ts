@@ -7,6 +7,17 @@ import { UpdateCategoryDto } from "./dto/update-category.dto";
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private normalizedHighlights(highlights: string[] | undefined): string[] | undefined {
+    if (highlights === undefined) return undefined;
+    return [...new Set(highlights.map((highlight) => highlight.trim()).filter(Boolean))].slice(0, 4);
+  }
+
+  private async assertOwnedBanner(merchantId: string, bannerUrl: string | null | undefined) {
+    if (!bannerUrl) return;
+    const owned = await this.prisma.mediaAsset.findFirst({ where: { merchantId, url: bannerUrl }, select: { id: true } });
+    if (!owned) throw new BadRequestException("La imagen de la categoría no pertenece a tu cuenta");
+  }
+
   /** Every mutation here is scoped to a store the caller owns — never trust a bare storeId. */
   private async ownedStoreOrThrow(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
@@ -16,6 +27,7 @@ export class CategoriesService {
 
   async create(merchantId: string, storeId: string, dto: CreateCategoryDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
+    await this.assertOwnedBanner(merchantId, dto.bannerUrl);
     let sortOrder = dto.sortOrder;
     if (sortOrder === undefined) {
       // Default to the end of the list, not 0 — otherwise every new category
@@ -23,7 +35,15 @@ export class CategoriesService {
       const count = await this.prisma.category.count({ where: { storeId } });
       sortOrder = count;
     }
-    return this.prisma.category.create({ data: { storeId, name: dto.name, sortOrder } });
+    return this.prisma.category.create({
+      data: {
+        storeId,
+        name: dto.name,
+        sortOrder,
+        bannerUrl: dto.bannerUrl ?? null,
+        highlights: this.normalizedHighlights(dto.highlights) ?? [],
+      },
+    });
   }
 
   async listForStore(merchantId: string, storeId: string) {
@@ -35,11 +55,14 @@ export class CategoriesService {
     await this.ownedStoreOrThrow(merchantId, storeId);
     const category = await this.prisma.category.findFirst({ where: { id, storeId } });
     if (!category) throw new NotFoundException("Category not found");
+    await this.assertOwnedBanner(merchantId, dto.bannerUrl);
     return this.prisma.category.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        ...(dto.bannerUrl !== undefined && { bannerUrl: dto.bannerUrl }),
+        ...(dto.highlights !== undefined && { highlights: this.normalizedHighlights(dto.highlights) }),
       },
     });
   }

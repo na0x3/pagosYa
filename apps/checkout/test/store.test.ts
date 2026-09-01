@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Store, CartCheckoutResult } from "../src/api";
+import type { Store, StoreMotionExperience, CartCheckoutResult } from "../src/api";
 
 // main.ts has top-level module state (cart, selectedType, linkHeader) and
 // calls main() itself on import — vi.resetModules() + a fresh dynamic
@@ -186,6 +186,47 @@ describe("storefront routes", () => {
     })));
   });
 
+  it("renders connected Paya events and creates a ticket reservation through the shared checkout", async () => {
+    const createEventReservation = vi.fn().mockRejectedValue(new Error("Prueba de reserva detenida"));
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Casa Norte",
+        items: [baseItem],
+        events: [{
+          id: "event_1",
+          slug: "noche-norte",
+          name: "Noche Norte",
+          description: "Música en vivo",
+          publicityImageUrl: "",
+          startsAt: "2099-10-10T00:00:00.000Z",
+          endsAt: "2099-10-10T04:00:00.000Z",
+          doorsOpenAt: "2099-10-09T23:00:00.000Z",
+          timezone: "America/La_Paz",
+          venue: { name: "Patio Norte", city: "La Paz" },
+          ticketTypes: [{ id: "ticket_1", name: "General", price: 8000, currency: "BOB", available: 50 }],
+        }],
+      } satisfies Store),
+      createEventReservation,
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=casa-norte#event-event_1");
+
+    expect(document.querySelector("#event-event_1")?.textContent).toContain("Noche Norte");
+    const form = document.querySelector<HTMLFormElement>("[data-event-reservation]")!;
+    form.querySelector<HTMLInputElement>("[data-ticket-type]")!.value = "2";
+    (form.elements.namedItem("buyerName") as HTMLInputElement).value = "Ana";
+    form.requestSubmit();
+
+    await vi.waitFor(() => expect(createEventReservation).toHaveBeenCalledWith("noche-norte", expect.objectContaining({
+      items: [{ ticketTypeId: "ticket_1", quantity: 2 }],
+      buyerName: "Ana",
+    })));
+    await vi.waitFor(() => expect(form.textContent).toContain("Prueba de reserva detenida"));
+  });
+
   it("renders a flat solid canvas even for legacy stores that saved a gradient", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
@@ -358,6 +399,85 @@ describe("storefront routes", () => {
     expect(document.querySelector(".qty-value")?.textContent).toBe("1");
     expect(document.querySelector(".cart-summary")?.textContent).toContain("65.00 BOB");
     expect(document.querySelector<HTMLButtonElement>("#cart-pay")?.disabled).toBe(false);
+  });
+
+  it("continues a product page into related collection discovery", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Norte",
+        categories: [{ id: "cat_1", name: "Serie Uno" }, { id: "cat_2", name: "Serie Dos" }],
+        items: [
+          { ...baseItem, id: "piece_1", name: "Pieza principal", categoryId: "cat_1", imageUrls: ["/principal.webp"] },
+          { ...baseItem, id: "piece_2", name: "Otra categoría", categoryId: "cat_2", imageUrls: ["/otra.webp"] },
+          { ...baseItem, id: "piece_3", name: "Pieza relacionada", categoryId: "cat_1", imageUrls: ["/relacionada.webp"] },
+        ],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/taller-norte/p/piece_1");
+
+    expect(document.querySelector(".product-detail-related-heading h2")?.textContent).toBe("Más de Serie Uno");
+    const related = [...document.querySelectorAll<HTMLAnchorElement>(".product-detail-related-item")];
+    expect(related.map((link) => link.querySelector("strong")?.textContent)).toEqual(["Pieza relacionada", "Otra categoría"]);
+    expect(related[0].querySelector<HTMLImageElement>("img")?.getAttribute("src")).toBe("/relacionada.webp");
+
+    related[0].click();
+    expect(window.location.pathname).toBe("/s/taller-norte/p/piece_3");
+    expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Pieza relacionada");
+  });
+
+  it("inherits the saved site recipe and authored footer across product routes", async () => {
+    const section = (id: string, kind: "hero" | "catalog" | "contact") => ({
+      id, kind, family: kind === "catalog" ? "product-led" : "editorial", layout: kind === "catalog" ? "rail" : "split",
+      width: "wide", align: "left", motion: "none", title: kind, body: "", ctaLabel: "",
+      backgroundColor: "#f6f0e4", textColor: "#171717", mediaUrls: [], items: [],
+    });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Norte",
+        items: [{ ...baseItem, id: "piece_1", imageUrls: ["/piece.webp"] }],
+        siteDocument: {
+          version: 1,
+          direction: "Colección de taller",
+          artDirection: "editorial-house",
+          designGenome: {
+            composition: "collection-rail", rhythm: "editorial", geometry: "framed", colorStrategy: "surface-led",
+            mediaStrategy: "framed", typeScale: "editorial", motionLanguage: "reveal",
+          },
+          theme: {
+            pageBackground: "#f6f0e4", textColor: "#171717", accentColor: "#8a3f2b", secondaryColor: "#315c49",
+            surfaceColor: "#fffaf2", mutedColor: "#5f5a52", borderColor: "#b9b0a3", headingFont: "editorial",
+            bodyFont: "humanist", radius: 2, shadow: "none", productLayout: "showcase", displayScale: "dramatic",
+            density: "airy", imageTreatment: "editorial",
+          },
+          navigation: { layout: "split", sticky: true, transparent: false, logoTreatment: "wordmark" },
+          motion: { intensity: "restrained" },
+          merchandising: { featuredProductIds: [], productOrderIds: [], spotlightLayout: "collection", showDescriptions: true },
+          experience: { type: "none", placement: "after-catalog", title: "", body: "", mediaUrls: [] },
+          sections: [section("opening", "hero"), section("shop", "catalog"), section("contact", "contact")],
+          footer: {
+            enabled: true,
+            brandDescription: "Objetos hechos en La Paz.",
+            columns: [{ id: "visit", title: "Visita", items: [{ id: "catalog", label: "Catálogo", href: "https://example.com/catalogo" }] }],
+            copyright: "Taller Norte 2026",
+            badge: "Hecho localmente",
+          },
+        },
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/taller-norte/p/piece_1");
+
+    expect(document.body.dataset.siteComposition).toBe("collection-rail");
+    expect(document.body.dataset.siteProducts).toBe("showcase");
+    expect(document.body.dataset.siteArtDirection).toBe("editorial-house");
+    expect(document.documentElement.style.getPropertyValue("--site-page")).toBe("#f6f0e4");
+    expect(document.querySelector(".store-site-footer-brand p")?.textContent).toBe("Objetos hechos en La Paz.");
+    expect(document.querySelector(".store-site-footer-bottom")?.textContent).toContain("Hecho localmente");
   });
 
   it("renders merchant hero slides and lets the shopper move between them", async () => {
@@ -770,8 +890,7 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("12s");
     expect(document.querySelector(".store-announcement.marquee")?.getAttribute("style")).toContain("--announcement-bg:#f5d90a");
     // Legacy/proposal values cannot enlarge the top band: storefront
-    // announcements are intentionally compact everywhere.
-    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-small")).toBe(true);
+    expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-size-large")).toBe(true);
     expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-font-editorial")).toBe(true);
     expect(document.querySelector(".store-announcement.marquee")?.classList.contains("announcement-effect-wave")).toBe(true);
     expect(document.querySelectorAll(".store-announcement-letter").length).toBeGreaterThan(0);
@@ -1095,6 +1214,7 @@ describe("storefront routes", () => {
         siteDocument: {
           version: 1,
           direction: "Publicación cultural",
+          designGenome: { composition: "gallery-axis", rhythm: "cinematic", geometry: "framed", colorStrategy: "contrast-blocks", mediaStrategy: "collage", typeScale: "poster", motionLanguage: "cinematic" },
           theme: { pageBackground: "#f4efe5", textColor: "#171717", accentColor: "#315c49", secondaryColor: "#c9a86a", surfaceColor: "#ffffff", mutedColor: "#626262", borderColor: "#c9c9c4", headingFont: "editorial", bodyFont: "grotesk", radius: 8, shadow: "soft", productLayout: "editorial" },
           navigation: { layout: "centered", sticky: true, transparent: false },
           experience: { type: "scroll-expansion", placement: "after-catalog", title: "La ventana se abre", body: "Una transición visual hacia la colección.", mediaUrls: ["/v1/uploads/hero.webp", "/v1/uploads/detail.webp"] },
@@ -1124,6 +1244,14 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-scroll-expansion[data-scroll-expansion]")).not.toBeNull();
     expect(document.body.dataset.siteSticky).toBe("true");
     expect(document.body.dataset.siteTransparent).toBe("false");
+    expect(document.body.dataset.siteComposition).toBe("gallery-axis");
+    expect(document.body.dataset.siteRhythm).toBe("cinematic");
+    expect(document.body.dataset.siteGeometry).toBe("framed");
+    expect(document.body.dataset.siteMediaStrategy).toBe("collage");
+    expect(document.body.dataset.siteTypeScale).toBe("poster");
+    expect(document.body.dataset.siteMotionLanguage).toBe("cinematic");
+    expect(document.querySelector('.bespoke-hero.has-site-carousel')).toBeNull();
+    expect(document.querySelector('.bespoke-hero .bespoke-media img')).not.toBeNull();
     expect(document.querySelector(".bespoke-hero .hero-catalog-cta")?.tagName).toBe("BUTTON");
     expect(document.querySelector<HTMLAnchorElement>(".product-page-link")?.href).toContain("#proposal=");
     expect(document.querySelector<HTMLAnchorElement>('.store-site-nav [data-store-scroll-target="#store-products"]')?.href).toContain("#proposal=");
@@ -1131,7 +1259,78 @@ describe("storefront routes", () => {
     expect(document.querySelector("[data-store-editor-target]")).toBeNull();
   });
 
-  it("renders AI storefronts as a hero slider, a bounded Story Scroll, and then the store", async () => {
+  it("renders stable page URLs, an editorial image duo, and a working newsletter form", async () => {
+    const section = (overrides: Record<string, unknown>) => ({
+      id: "section", kind: "story", layout: "split", width: "wide", align: "left", motion: "none",
+      title: "", body: "", ctaLabel: "", backgroundColor: "#f4efe6", textColor: "#152b2f", mediaUrls: [], items: [],
+      ...overrides,
+    });
+    const subscribeStoreNewsletter = vi.fn().mockResolvedValue({ subscribed: true });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller Norte",
+        contactFormEnabled: true,
+        siteDocument: {
+          version: 1,
+          pages: [{ id: "story-page", label: "Historia", slug: "historia" }],
+          theme: {
+            pageBackground: "#f4efe6", textColor: "#152b2f", accentColor: "#9b3527", secondaryColor: "#dfb7a8",
+            surfaceColor: "#fffaf2", mutedColor: "#66736f", borderColor: "#b9beb3", headingFont: "luxury", bodyFont: "artisan",
+            radius: 4, shadow: "none", productLayout: "editorial",
+          },
+          navigation: {
+            layout: "centered", sticky: true, transparent: false, logoTreatment: "wordmark",
+            items: [
+              { id: "home", label: "Inicio", target: "home" },
+              { id: "story-nav", label: "Historia", target: "page", pageId: "story-page" },
+            ],
+          },
+          footer: {
+            enabled: true,
+            brandDescription: "Hecho con paciencia.",
+            columns: [],
+            copyright: "© Taller Norte",
+            badge: "Hecho en Bolivia",
+            newsletter: {
+              enabled: true,
+              title: "Cartas desde el taller",
+              body: "Historias y lanzamientos sin ruido.",
+              buttonLabel: "Suscribirme",
+              successMessage: "Ya estás dentro.",
+            },
+          },
+          sections: [
+            section({ id: "opening", kind: "hero", width: "full", motion: "clip", title: "Dos miradas", mediaUrls: ["/v1/uploads/left.webp", "/v1/uploads/right.webp"] }),
+            section({ id: "story", pageId: "story-page", title: "Nuestra historia" }),
+            section({ id: "shop", kind: "catalog", title: "Colección" }),
+            section({ id: "information", kind: "contact", pageId: "story-page", title: "Conversemos" }),
+          ],
+        },
+        items: [baseItem],
+      } satisfies Store),
+      subscribeStoreNewsletter,
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/s/taller-norte?page=historia");
+
+    expect([...document.querySelectorAll("[data-site-kind]")].map((node) => node.getAttribute("data-site-kind"))).toEqual(["story", "contact"]);
+    expect(document.querySelector<HTMLAnchorElement>('[data-site-navigation-item="story-nav"]')?.getAttribute("href")).toContain("?page=historia");
+    expect(document.querySelector('[data-site-navigation-item="story-nav"]')?.getAttribute("aria-current")).toBe("page");
+    const form = document.querySelector<HTMLFormElement>("#store-newsletter-form")!;
+    (form.elements.namedItem("email") as HTMLInputElement).value = "cliente@example.com";
+    form.requestSubmit();
+    await vi.waitFor(() => expect(subscribeStoreNewsletter).toHaveBeenCalledWith("taller-norte", "cliente@example.com"));
+    await vi.waitFor(() => expect(document.querySelector(".store-newsletter-status")?.textContent).toBe("Ya estás dentro."));
+
+    await loadCheckout("/s/taller-norte");
+    expect([...document.querySelectorAll("[data-site-kind]")].map((node) => node.getAttribute("data-site-kind"))).toEqual(["hero", "catalog"]);
+    expect(document.querySelector('.bespoke-hero[data-site-layout="split"][data-site-motion="clip"] .bespoke-media[data-count="2"]')).not.toBeNull();
+    expect(document.querySelector(".bespoke-hero.has-site-carousel")).toBeNull();
+  });
+
+  it("renders a catalog-first AI topology without losing its hero or Story Scroll", async () => {
     const section = (overrides: Record<string, unknown>) => ({
       id: "section",
       kind: "gallery",
@@ -1169,17 +1368,22 @@ describe("storefront routes", () => {
           merchandising: { featuredProductIds: [], productOrderIds: [], spotlightLayout: "lookbook", showDescriptions: true },
           experience: { type: "text-reveal-block", placement: "after-catalog", title: "Bikano en movimiento", body: "Color con intención.", mediaUrls: [] },
           sections: [
+            section({ id: "shop", kind: "catalog", layout: "offset", title: "La tienda", body: "Elige tu pieza." }),
             section({
               id: "opening", kind: "hero", layout: "full-bleed", width: "full", title: "Hecho para el verano", body: "Tres escenas, una sola entrada clara.",
-              ctaLabel: "Ver la tienda", mediaUrls: heroMedia,
-              items: heroMedia.map((mediaUrl, index) => ({ mediaUrl, title: ["Una colección extensa para descubrir piezas, colores y formas con una presentación clara y ordenada", "Color en movimiento", "Diseñado para elegir"][index], body: `Escena ${index + 1}` })),
+              ctaLabel: "Ver la tienda", motion: "scale", mediaUrls: heroMedia,
+              items: heroMedia.map((mediaUrl, index) => ({
+                mediaUrl,
+                title: index === 0 ? "Una colección extensa para descubrir piezas, colores y formas con una presentación clara y ordenada" : "",
+                body: index === 0 ? "Escena 1" : "",
+                ...(index === 0 ? { titleStyle: { textScale: 120, textAlign: "center", textColor: "#fef4df", fontStyle: "editorial" } } : {}),
+              })),
             }),
             section({
               id: "brand-story", kind: "story", layout: "stacked", width: "full", motion: "story-scroll", title: "La historia de Bikano",
               body: "Una secuencia breve antes de comprar.", mediaUrls: storyMedia,
-              items: storyMedia.map((mediaUrl, index) => ({ mediaUrl, title: ["La forma", "El color", "La colección"][index], body: `Capítulo ${index + 1}` })),
+              items: storyMedia.map((mediaUrl, index) => ({ mediaUrl, title: index === 0 ? "La forma" : "", body: index === 0 ? "Capítulo 1" : "" })),
             }),
-            section({ id: "shop", kind: "catalog", layout: "offset", title: "La tienda", body: "Elige tu pieza." }),
             section({ id: "information", kind: "contact", layout: "split", title: "Conversemos", body: "Escríbenos." }),
           ],
         },
@@ -1188,14 +1392,74 @@ describe("storefront routes", () => {
       assetUrl: (path: string | null) => path,
     }));
 
-    await loadCheckout("/s/bikano");
+    await loadCheckout("/s/bikano?preview=1&editor=1");
 
-    expect([...document.querySelectorAll("[data-site-kind]")].map((node) => node.getAttribute("data-site-kind"))).toEqual(["hero", "story", "catalog", "contact"]);
+    expect([...document.querySelectorAll("[data-site-kind]")].map((node) => node.getAttribute("data-site-kind"))).toEqual(["catalog", "hero", "story", "contact"]);
+    expect(document.querySelector('.bespoke-catalog.is-site-opening')?.getAttribute("data-site-position")).toBe("0");
+    expect(document.querySelector('.bespoke-hero')?.getAttribute("data-site-position")).toBe("1");
     expect(document.querySelectorAll(".bespoke-hero .store-slide")).toHaveLength(3);
+    expect(document.querySelectorAll(".bespoke-hero .store-slide-overlay")).toHaveLength(3);
+    expect(document.querySelectorAll(".bespoke-hero .store-slide-overlay h2")).toHaveLength(3);
+    expect(document.querySelectorAll(".bespoke-hero .store-slide-overlay p")).toHaveLength(3);
+    expect(document.querySelectorAll(".bespoke-hero .store-slide-cta")).toHaveLength(3);
+    const editableHeroTitle = document.querySelector<HTMLElement>(".bespoke-hero .store-slide h2")!;
+    expect(editableHeroTitle.dataset.storeEditorSection).toBe("site-opening");
+    expect(editableHeroTitle.dataset.storeEditorField).toBe("siteItemTitle");
+    expect(editableHeroTitle.dataset.canvasTextScale).toBe("120");
+    expect(editableHeroTitle.dataset.canvasTextAlign).toBe("center");
+    expect(editableHeroTitle.dataset.canvasTextColor).toBe("#fef4df");
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "site-opening", field: "siteItemTitle", label: "título de portada", itemIndex: 0 },
+      },
+    }));
+    const siteToolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")!;
+    expect(siteToolbar.hidden).toBe(false);
+    expect(siteToolbar.querySelector<HTMLInputElement>("[data-canvas-color]")?.value).toBe("#fef4df");
+    const textPalette = [...siteToolbar.querySelectorAll<HTMLButtonElement>('[data-canvas-palette="text"]')];
+    expect(textPalette).toHaveLength(8);
+    expect(textPalette.find((swatch) => swatch.dataset.paletteColor === "#fef4df")?.getAttribute("aria-pressed")).toBe("true");
+    const accentSwatch = textPalette.find((swatch) => swatch.dataset.paletteColor === "#cf4f35")!;
+    accentSwatch.click();
+    expect(siteToolbar.querySelector<HTMLInputElement>("[data-canvas-color]")?.value).toBe("#cf4f35");
+    expect(editableHeroTitle.style.getPropertyValue("--canvas-text-color")).toBe("#cf4f35");
+    expect(accentSwatch.getAttribute("aria-pressed")).toBe("true");
+    expect(siteToolbar.querySelector("[data-canvas-site-settings]")?.textContent).toContain("Sección");
+    siteToolbar.querySelector<HTMLButtonElement>("[data-canvas-site-settings]")!.click();
+    expect(siteToolbar.classList.contains("is-animation-popover")).toBe(true);
+    expect(siteToolbar.querySelector<HTMLInputElement>('[data-canvas-site-field="title"]')?.value).toBe("Hecho para el verano");
+    expect(siteToolbar.querySelector<HTMLSelectElement>('[data-canvas-site-field="motion"]')?.value).toBe("scale");
+    expect(siteToolbar.querySelector('[data-canvas-site-field="motion"] option[value="story-scroll"]')).toBeNull();
+    expect(siteToolbar.querySelector<HTMLSelectElement>('[data-canvas-site-field="layout"]')?.value).toBe("full-bleed");
+    expect(siteToolbar.querySelector('[data-canvas-site-field="layout"] option[value="rail"]')).toBeNull();
+    expect(siteToolbar.querySelector('[data-canvas-site-media="0"]')).not.toBeNull();
+    expect(siteToolbar.querySelector('[data-canvas-section-lock]')?.textContent).toContain("Conservar");
+    expect(siteToolbar.querySelector('[data-canvas-delete-site-animation]')).not.toBeNull();
+    const sectionAccentSwatch = siteToolbar.querySelector<HTMLButtonElement>('[data-canvas-palette="site-background"][data-palette-color="#cf4f35"]')!;
+    sectionAccentSwatch.click();
+    expect(siteToolbar.querySelector<HTMLInputElement>("[data-canvas-site-background]")?.value).toBe("#cf4f35");
+    expect(document.querySelector<HTMLElement>('.bespoke-zone[data-site-section="opening"]')?.style.getPropertyValue("--zone-bg")).toBe("#cf4f35");
+    siteToolbar.querySelector<HTMLButtonElement>("[data-canvas-close]")!.click();
+    expect(siteToolbar.hidden).toBe(true);
+    expect(siteToolbar.classList.contains("is-animation-popover")).toBe(false);
+    expect(siteToolbar.childElementCount).toBe(0);
     expect(document.body.dataset.layoutStyle).toBe("cinematic");
     expect(document.querySelector(".bespoke-hero .store-slide-title")?.classList.contains("is-very-long")).toBe(true);
     expect(document.querySelector(".bespoke-hero .store-carousel-toggle")?.textContent).toBe("Pausar");
     expect(document.querySelectorAll(".bespoke-story .store-flow-section")).toHaveLength(3);
+    expect(document.querySelectorAll(".bespoke-story .store-flow-copy h3")).toHaveLength(3);
+    expect(document.querySelectorAll(".bespoke-story .store-flow-copy p")).toHaveLength(3);
+    const editableStoryTitle = document.querySelector<HTMLElement>(".bespoke-story .store-flow-section h3");
+    expect(editableStoryTitle?.dataset.storeEditorSection).toBe("site-brand-story");
+    expect(editableStoryTitle?.dataset.storeEditorField).toBe("siteBlockText");
+    expect(editableStoryTitle?.dataset.storeEditorItemId).toBe("chapter-1-heading");
+    expect(editableStoryTitle?.dataset.storeEditorItemIndex).toBe("0");
+    expect(editableStoryTitle?.dataset.storeEditorInline).toBe("text");
+    expect(document.querySelector<HTMLElement>('.bespoke-story[data-store-editor-field="section"]')?.dataset.storeEditorLabel).toBe("La historia de Bikano");
     expect(document.querySelector("[data-text-reveal]")).not.toBeNull();
     expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-background")).toBe("#171612");
     expect(document.querySelector<HTMLElement>('[data-animation-id="ai-signature-experience"]')?.style.getPropertyValue("--animation-text-color")).toBe("#f4ead7");
@@ -1205,8 +1469,9 @@ describe("storefront routes", () => {
   });
 
   it("makes every image in an AI-authored gallery directly selectable in editor mode", async () => {
-    const section = (id: string, kind: string, mediaUrls: string[] = []) => ({
+    const section = (id: string, kind: string, mediaUrls: string[] = [], family = "editorial") => ({
       id, kind, layout: "grid", width: "wide", align: "left", motion: "none",
+      family,
       title: kind === "gallery" ? "La marca en imágenes" : `${kind} title`,
       body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls, items: [],
     });
@@ -1223,10 +1488,10 @@ describe("storefront routes", () => {
           navigation: { layout: "brand-left", sticky: true, transparent: false },
           sections: [
             section("opening", "hero", ["/v1/uploads/hero.webp"]),
-            section("story", "story", ["/v1/uploads/story.webp"]),
-            section("shop", "catalog"),
-            section("visual-world", "gallery", ["/v1/uploads/gallery-one.webp", "/v1/uploads/gallery-two.webp"]),
-            section("information", "contact"),
+            { ...section("story", "story", ["/v1/uploads/story.webp"], "minimal"), backgroundColor: "#26362f", textColor: "#fff9ec" },
+            section("shop", "catalog", [], "product-led"),
+            { ...section("visual-world", "gallery", ["/v1/uploads/gallery-one.webp", "/v1/uploads/gallery-two.webp"], "cinematic"), layout: "rail" },
+            section("information", "contact", [], "minimal"),
           ],
         },
         items: [baseItem],
@@ -1236,17 +1501,36 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=editable-gallery&preview=1&editor=1");
 
+    const familySequence = [...document.querySelectorAll<HTMLElement>("[data-site-family]")].map((section) => section.dataset.siteFamily);
+    expect(familySequence).toEqual(["editorial", "minimal", "product-led", "cinematic"]);
+    const galleryRail = document.querySelector<HTMLElement>('.bespoke-gallery[data-site-family="cinematic"] > .bespoke-media');
+    expect(galleryRail?.getAttribute("role")).toBe("region");
+    expect(galleryRail?.getAttribute("aria-label")).toBe("Galería desplazable: La marca en imágenes");
+    expect(galleryRail?.tabIndex).toBe(0);
+
+    const storyTitle = document.querySelector<HTMLElement>(".bespoke-story > .bespoke-copy h2")!;
+    const storySection = document.querySelector<HTMLElement>('.bespoke-story[data-site-family="minimal"]')!;
+    expect(storySection.style.getPropertyValue("--store-section-background")).toBe("#26362f");
+    expect(storySection.style.getPropertyValue("--store-section-text")).toBe("#fff9ec");
+    expect(storyTitle.dataset.storeEditorSection).toBe("site-story");
+    expect(storyTitle.dataset.storeEditorField).toBe("siteBlockText");
+    expect(storyTitle.dataset.storeEditorItemId).toBe("heading");
+    const galleryTitle = document.querySelector<HTMLElement>(".bespoke-gallery > .bespoke-copy h2")!;
+    expect(galleryTitle.dataset.storeEditorSection).toBe("site-visual-world");
+    expect(galleryTitle.dataset.storeEditorField).toBe("siteBlockText");
+    expect(galleryTitle.dataset.storeEditorItemId).toBe("heading");
     const targets = [...document.querySelectorAll<HTMLElement>('.bespoke-gallery > .bespoke-media > [data-store-editor-inline="image"]')];
     expect(targets).toHaveLength(2);
     expect(targets.map((target) => ({
       section: target.dataset.storeEditorSection,
       field: target.dataset.storeEditorField,
       itemIndex: target.dataset.storeEditorItemIndex,
+      itemId: target.dataset.storeEditorItemId,
       role: target.getAttribute("role"),
       tabIndex: target.tabIndex,
     }))).toEqual([
-      { section: "site-visual-world", field: "editorialMedia", itemIndex: "0", role: "button", tabIndex: 0 },
-      { section: "site-visual-world", field: "editorialMedia", itemIndex: "1", role: "button", tabIndex: 0 },
+      { section: "site-visual-world", field: "siteBlockMedia", itemIndex: "0", itemId: "media-1", role: "button", tabIndex: 0 },
+      { section: "site-visual-world", field: "siteBlockMedia", itemIndex: "1", itemId: "media-2", role: "button", tabIndex: 0 },
     ]);
     expect(targets[0].getAttribute("aria-label")).toBe("Cambiar imagen 1 de La marca en imágenes");
   });
@@ -1420,6 +1704,7 @@ describe("storefront routes", () => {
     expect(location.querySelector("img")).toBeNull();
     expect(iframe.getAttribute("src")).toContain("openstreetmap.org/export/embed.html");
     expect(iframe.getAttribute("sandbox")).toContain("allow-scripts");
+    expect(location.querySelector("[data-store-location-inline-editor]")).toBeNull();
     expect(document.querySelector<HTMLAnchorElement>('.store-site-nav a[href="#store-location"]')?.textContent).toBe("Ubicación");
     expect(location.compareDocumentPosition(document.querySelector(".secure-note")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
@@ -1460,6 +1745,49 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-location-section")).toBeTruthy();
     expect(document.querySelector(".store-location-map")).toBeNull();
     expect(document.querySelector(".store-location-link")).toBeNull();
+  });
+
+  it("lets the merchant insert, validate, clear, and delete a location directly in editor mode", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller editable",
+        locations: [{
+          id: "centro",
+          name: "Sucursal Centro",
+          address: "Av. Arce 123",
+          mapEmbedUrl: "https://www.google.com/maps/embed?pb=trusted",
+          pickupEnabled: true,
+          deliveryEnabled: false,
+          openingHours: [],
+          inventory: [],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?link=taller-editable&preview=1&editor=1");
+
+    const form = document.querySelector<HTMLFormElement>("[data-store-location-inline-editor]")!;
+    const input = form.querySelector<HTMLTextAreaElement>("[data-store-location-map-input]")!;
+    expect(form).toBeTruthy();
+    expect(form.textContent).toContain("Actualizar mapa");
+    expect(form.textContent).toContain("Quitar mapa");
+    expect(form.textContent).toContain("Eliminar ubicación");
+
+    input.value = "https://tracking.invalid/embed";
+    form.requestSubmit();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(form.querySelector(".store-location-inline-status")?.textContent).toContain("Google Maps u OpenStreetMap");
+
+    input.value = '<iframe src="https://www.google.com/maps/embed?pb=normalized&amp;z=16"></iframe>';
+    form.requestSubmit();
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
+    expect(input.value).toContain("https://www.google.com/maps/embed?pb=normalized&z=16");
+    form.querySelector<HTMLButtonElement>("[data-store-location-map-clear]")!.click();
+    expect(input.value).toBe("");
+    expect(form.querySelector(".store-location-inline-status")?.textContent).toContain("Mapa quitado");
   });
 
   it("reveals multiple locations and checks branch stock before checkout", async () => {
@@ -1678,6 +2006,68 @@ describe("storefront routes", () => {
     expect(document.querySelector(".catalog-section-banner h3")?.textContent).toBe("Enterizos");
     expect([...document.querySelectorAll(".store-item-name")].map((node) => node.textContent)).toEqual(["Enterizo azul"]);
     expect(document.querySelector(".catalog-section-back")?.textContent).toContain("Ver secciones");
+  });
+
+  it("shows products directly after the opening for editorial-maker sites", async () => {
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "grid", width: "full", align: "left", motion: "none",
+      title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe6", textColor: "#152b2f", mediaUrls: [], items: [],
+    });
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Taller editorial",
+        siteDocument: {
+          version: 1,
+          direction: "Diario de taller",
+          designGenome: { composition: "editorial-maker" },
+          theme: { pageBackground: "#f4efe6", textColor: "#152b2f", accentColor: "#cf4f35", secondaryColor: "#e8b9a0", surfaceColor: "#fffaf2", mutedColor: "#66736f", borderColor: "#b9beb3", headingFont: "geometric", bodyFont: "humanist", radius: 0, shadow: "none", productLayout: "editorial" },
+          navigation: { layout: "centered", sticky: true, transparent: false },
+          sections: [section("opening", "hero"), section("shop", "catalog"), section("information", "contact")],
+        },
+        categories: [{ id: "cat_one", name: "Primera serie" }, { id: "cat_two", name: "Segunda serie" }],
+        items: [
+          { ...baseItem, id: "piece_1", name: "Pieza uno", categoryId: "cat_one", imageUrls: ["/piece-one.webp"] },
+          { ...baseItem, id: "piece_2", name: "Pieza dos", categoryId: "cat_two", imageUrls: ["/piece-two.webp"] },
+        ],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/taller-editorial");
+
+    expect(document.querySelectorAll(".catalog-section-card")).toHaveLength(0);
+    expect([...document.querySelectorAll(".store-item-name")].map((node) => node.textContent)).toEqual(["Pieza uno", "Pieza dos"]);
+    expect([...document.querySelectorAll(".category-section-title")].map((node) => node.textContent)).toEqual(["Primera serie", "Segunda serie"]);
+  });
+
+  it("lets merchants replace a product-section cover directly from the preview", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Portadas editables",
+        categories: [{ id: "cat_front", name: "Colección", bannerUrl: "/front.webp", highlights: [] }],
+        items: [{ ...baseItem, categoryId: "cat_front" }],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=cover-editor&preview=1&editor=1");
+    const cover = document.querySelector<HTMLElement>('[data-catalog-section="cat_front"] .catalog-section-media')!;
+    expect(cover.dataset.storeEditorField).toBe("categoryBanner");
+    expect(cover.dataset.storeEditorItemId).toBe("cat_front");
+    expect(cover.dataset.storeEditorInline).toBe("image");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "products", field: "categoryBanner", label: "portada de Colección", itemId: "cat_front" },
+      },
+    }));
+    expect(document.querySelector("[data-canvas-category-cover]")?.textContent).toContain("Cambiar portada");
   });
 
   it("opens a category as a focused, directly addressable catalog page", async () => {
@@ -1998,7 +2388,12 @@ describe("storefront routes", () => {
         storeName: "Catálogo con categorías",
         categories: [
           { id: "cat_1", name: "Cortes" },
-          { id: "cat_2", name: "Manicure" },
+          {
+            id: "cat_2",
+            name: "Manicure",
+            bannerUrl: "/manicure-banner.webp",
+            highlights: ["Atención rápida", "Compra segura"],
+          },
         ],
         items: [
           { ...baseItem, id: "link_1", name: "Corte clásico", categoryId: "cat_1", imageUrls: ["/cortes.webp"] },
@@ -2018,7 +2413,8 @@ describe("storefront routes", () => {
     expect(document.querySelector(".store-search")).toBeTruthy();
     expect(document.querySelector(".store-sort")).toBeTruthy();
     expect(document.querySelector(".catalog-section-banner h3")?.textContent).toBe("Manicure");
-    expect(document.querySelector<HTMLImageElement>(".catalog-section-banner > img")?.getAttribute("src")).toBe("/manicure.webp");
+    expect(document.querySelector<HTMLImageElement>(".catalog-section-banner > img")?.getAttribute("src")).toBe("/manicure-banner.webp");
+    expect([...document.querySelectorAll(".catalog-section-highlights li")].map((item) => item.textContent)).toEqual(["Atención rápida", "Compra segura"]);
     expect(document.querySelector(".store-catalog-browser")?.firstElementChild?.classList.contains("catalog-section-banner")).toBe(true);
     const names = [...document.querySelectorAll(".store-item-name")].map((el) => el.textContent);
     expect(names).toEqual(["Manicure básico"]);
@@ -2095,7 +2491,7 @@ describe("storefront routes", () => {
         aboutText: "Nuestra historia va después de las fotos.",
         contentOrder: ["motion", "gallery", "hero", "links", "products", "about"],
         motionDuoEnabled: true,
-        motionExperience: "coverflow-carousel",
+        motionExperience: "hero-carousel",
         editorialGallery: [
           {
             imageUrl: "/v1/uploads/taller.webp",
@@ -2130,8 +2526,7 @@ describe("storefront routes", () => {
   });
 
   it.each([
-    ["coverflow", ".store-coverflow"],
-    ["diagonal-marquee", ".store-diagonal-marquee"],
+    ["editorial-grid", ".store-editorial-grid"],
     ["story-scroller", ".store-story-scroller"],
   ] as const)("renders the AI-selected %s experience after the catalog", async (experienceStyle, selector) => {
     vi.doMock("../src/api", () => ({
@@ -2153,16 +2548,33 @@ describe("storefront routes", () => {
     const experience = document.querySelector(selector)!;
     const products = document.querySelector(".store-products")!;
     expect(products.compareDocumentPosition(experience) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    if (experienceStyle === "coverflow") {
-      expect(document.querySelectorAll(".store-coverflow-card")).toHaveLength(2);
-      document.querySelector<HTMLButtonElement>('[data-coverflow-step="1"]')!.click();
-      expect(document.querySelector<HTMLElement>('[data-coverflow-index="1"]')?.getAttribute("aria-hidden")).toBe("false");
-    } else if (experienceStyle === "diagonal-marquee") {
-      expect(document.querySelectorAll(".store-diagonal-set")).toHaveLength(2);
-    } else {
+    if (experienceStyle === "story-scroller") {
       document.querySelector<HTMLButtonElement>('[data-story-to="1"]')!.click();
       expect(document.querySelector("#store-story-1")?.classList.contains("active")).toBe(true);
+    } else {
+      expect(document.querySelectorAll(".store-editorial-grid .store-editorial-item")).toHaveLength(2);
     }
+  });
+
+  it.each(["coverflow", "diagonal-marquee"] as const)("retires legacy %s galleries into the static editorial grid", async (experienceStyle) => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Galería migrada",
+        experienceStyle,
+        editorialGallery: [
+          { imageUrl: "/v1/uploads/uno.webp", title: "Primera imagen" },
+          { imageUrl: "/v1/uploads/dos.webp", title: "Segunda imagen" },
+        ],
+        items: [baseItem],
+      } as unknown as Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout(`/?link=retired-${experienceStyle}`);
+
+    expect(document.querySelectorAll(".store-editorial-grid .store-editorial-item")).toHaveLength(2);
+    expect(document.querySelector(".store-coverflow, .store-diagonal-marquee")).toBeNull();
   });
 
   it("opens a selected product when the shopper taps a linked editorial photo", async () => {
@@ -2170,7 +2582,7 @@ describe("storefront routes", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Galería comprable",
-        experienceStyle: "coverflow",
+        experienceStyle: "editorial-grid",
         editorialGallery: [
           { imageUrl: "/v1/uploads/producto.webp", productId: baseItem.id, title: "El favorito" },
           { imageUrl: "/v1/uploads/editorial.webp", productId: "missing_product", title: "Solo inspiración" },
@@ -2192,7 +2604,7 @@ describe("storefront routes", () => {
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain(baseItem.name);
   });
 
-  it("renders the default opt-in coverflow animation as its own ordered section", async () => {
+  it("renders the default opt-in hero animation as its own ordered section", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
@@ -2210,13 +2622,12 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=motion-duo");
 
-    expect(document.querySelector(".store-motion-section[data-motion-experience='coverflow-carousel']")).not.toBeNull();
-    expect(document.querySelectorAll(".store-motion-coverflow [data-coverflow-index]")).toHaveLength(3);
+    expect(document.querySelector(".store-motion-section[data-motion-experience='hero-carousel']")).not.toBeNull();
+    expect(document.querySelectorAll("[data-motion-hero-to]")).toHaveLength(3);
   });
 
   it.each([
     ["story-scroll", "[data-motion-flow]"],
-    ["coverflow-carousel", ".store-motion-coverflow"],
     ["hero-carousel", "[data-motion-hero]"],
     ["image-stream", ".store-image-stream"],
     ["scroll-expansion", "[data-scroll-expansion]"],
@@ -2233,7 +2644,6 @@ describe("storefront routes", () => {
     ["full-screen-chapters", "[data-full-chapters]"],
     ["magnetic-target", "[data-magnetic-target]"],
     ["frame-sequence", "[data-frame-sequence]"],
-    ["3d-gallery", "[data-space-gallery]"],
   ] as const)("renders only the selected %s motion experience", async (motionExperience, selector) => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
@@ -2260,11 +2670,6 @@ describe("storefront routes", () => {
       expect(document.querySelectorAll(".store-image-stream-grid")).toHaveLength(1);
       expect(document.querySelectorAll(".store-image-stream-grid figure")).toHaveLength(3);
       expect(document.querySelector("[data-image-stream], .store-image-stream-rail")).toBeNull();
-    } else if (motionExperience === "3d-gallery") {
-      const firstCaption = document.querySelector("[data-space-card='0'] figcaption");
-      expect(firstCaption?.querySelector("strong")?.textContent).toBe("Origen");
-      expect(firstCaption?.querySelector("span")?.textContent).toBe("Primer plano");
-      expect(firstCaption?.querySelector("p")?.textContent).toBe("La primera parte del relato real de la tienda.");
     }
   });
 
@@ -2326,10 +2731,24 @@ describe("storefront routes", () => {
     const announcement = document.querySelector<HTMLElement>(".store-announcement")!;
     expect(announcement.dataset.storeEditorSection).toBe("announcement");
     expect(announcement.dataset.storeEditorField).toBe("announcementText");
-    expect(announcement.dataset.storeEditorInline).toBeUndefined();
+    expect(announcement.dataset.storeEditorInline).toBe("text");
     expect(announcement.getAttribute("role")).toBe("button");
     expect(announcement.tabIndex).toBe(0);
     expect(announcement.getAttribute("aria-label")).toBe("Editar marquesina superior");
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "announcement", field: "announcementText", label: "marquesina superior" },
+      },
+    }));
+    const announcementToolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")!;
+    expect(announcementToolbar.hidden).toBe(false);
+    expect(announcementToolbar.querySelector<HTMLSelectElement>('[data-canvas-announcement="announcementMode"]')?.value).toBe("static");
+    expect(announcementToolbar.querySelector<HTMLSelectElement>('[data-canvas-announcement="announcementSize"]')?.value).toBe("medium");
+    expect(announcementToolbar.querySelector<HTMLInputElement>('[data-canvas-announcement="announcementColor"]')?.value).toBe("#ffffff");
     expect(document.querySelector(".store-item")?.getAttribute("data-store-editor-item-id")).toBe(baseItem.id);
     const animationImages = [...document.querySelectorAll(".store-full-chapter-backgrounds .store-fidelity-media-source")];
     expect(animationImages.map((image) => image.getAttribute("data-store-editor-field"))).toEqual(["media", "media", "media", "media", "media", "media"]);
@@ -2338,6 +2757,188 @@ describe("storefront routes", () => {
     const animationPanels = [...document.querySelectorAll("[data-full-chapter-copy]")];
     expect(animationPanels.map((panel) => panel.getAttribute("data-store-editor-field"))).toEqual(["media", "media", "media", "media", "media", "media"]);
     expect(animationPanels.map((panel) => panel.getAttribute("data-store-editor-item-index"))).toEqual(["0", "1", "2", "3", "4", "5"]);
+    const sectionInsertionControls = [...document.querySelectorAll<HTMLSelectElement>("[data-store-section-insert-select]")];
+    expect(sectionInsertionControls.length).toBeGreaterThan(2);
+    expect(sectionInsertionControls[0].closest(".store-section-insert-boundary")?.getAttribute("data-insert-after")).toBe("__start__");
+    expect(document.querySelector('[data-insert-after="animation-video-opening"] [data-store-section-insert-select]')).not.toBeNull();
+    expect(sectionInsertionControls[0].querySelector('optgroup[label="Animaciones visuales"]')).not.toBeNull();
+    expect(sectionInsertionControls[0].querySelector('optgroup[label="Animaciones de texto"]')).not.toBeNull();
+    expect(sectionInsertionControls[0].querySelector('option[value="footer"]')?.textContent).toBe("Pie de página");
+    const animationDelete = document.querySelector<HTMLButtonElement>('.store-animation-delete-control[data-animation-id="video-opening"]')!;
+    expect(animationDelete).toBeTruthy();
+    expect(animationDelete.getAttribute("aria-label")).toContain("Eliminar Apertura");
+    expect(animationDelete.textContent).toContain("Eliminar animación");
+  });
+
+  it("binds editable header links and footer copy to their dedicated editor sections", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda con navegación editable",
+        contentOrder: ["site-opening", "site-story", "site-shop"],
+        siteDocument: {
+          version: 1,
+          direction: "Editorial cálida",
+          designGenome: { composition: "gallery-axis", rhythm: "cinematic", geometry: "framed", colorStrategy: "contrast-blocks", mediaStrategy: "collage", typeScale: "poster", motionLanguage: "cinematic" },
+          theme: { pageBackground: "#f4efe5", textColor: "#171717", accentColor: "#315c49", secondaryColor: "#c9a86a", surfaceColor: "#ffffff", mutedColor: "#626262", borderColor: "#c9c9c4", headingFont: "editorial", bodyFont: "grotesk", radius: 8, shadow: "soft", productLayout: "editorial" },
+          navigation: {
+            layout: "split",
+            sticky: true,
+            transparent: false,
+            items: [
+              { id: "home", label: "Inicio", target: "home" },
+              { id: "catalog", label: "Catálogo", target: "catalog" },
+              { id: "story", label: "Our Story", target: "section", sectionId: "story" },
+            ],
+          },
+          footer: {
+            enabled: true,
+            brandDescription: "Recetas honestas.",
+            columns: [{ id: "company", title: "Company", items: [{ id: "story", label: "Our Story", href: "#site-section-story" }] }],
+            copyright: "© 2026 Tienda",
+            badge: "Hecho en Bolivia",
+          },
+          motion: { intensity: "restrained" },
+          merchandising: { featuredProductIds: [], productOrderIds: [], spotlightLayout: "collection", showDescriptions: true },
+          experience: { type: "none", placement: "after-catalog", title: "", body: "", mediaUrls: [] },
+          sections: [
+            { id: "opening", kind: "hero", layout: "full-bleed", width: "full", align: "left", motion: "none", title: "Portada", body: "Una bienvenida.", ctaLabel: "Ver colección", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls: [], items: [] },
+            { id: "story", kind: "story", layout: "split", width: "wide", align: "left", motion: "none", title: "Nuestra historia", body: "El origen de la marca.", ctaLabel: "", backgroundColor: "#ffffff", textColor: "#171717", mediaUrls: [], items: [] },
+            { id: "shop", kind: "catalog", layout: "grid", width: "wide", align: "left", motion: "none", title: "Colección", body: "Nuestros productos.", ctaLabel: "", backgroundColor: "#ffffff", textColor: "#171717", mediaUrls: [], items: [] },
+            { id: "contact", kind: "contact", layout: "split", width: "wide", align: "left", motion: "none", title: "Contacto", body: "Conversemos.", ctaLabel: "Enviar", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls: [], items: [] },
+          ],
+        },
+        items: [baseItem],
+      } as unknown as Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=editable-chrome&preview=1&editor=1");
+
+    const navigation = document.querySelector<HTMLElement>(".store-site-nav")!;
+    const storyLink = document.querySelector<HTMLElement>('[data-site-navigation-item="story"]')!;
+    const footer = document.querySelector<HTMLElement>(".store-site-footer")!;
+    const description = footer.querySelector<HTMLElement>(".store-site-footer-brand p")!;
+    expect(navigation.dataset.storeEditorSection).toBe("navigation");
+    expect(storyLink.dataset.storeEditorField).toBe("navigationLabel");
+    expect(storyLink.dataset.storeEditorItemIndex).toBe("2");
+    expect(footer.dataset.storeEditorSection).toBe("footer");
+    expect(description.dataset.storeEditorField).toBe("footerBrandDescription");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "navigation", field: "section", label: "navegación superior" },
+      },
+    }));
+    const toolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")!;
+    expect(toolbar.hidden).toBe(false);
+    expect(toolbar.querySelectorAll("[data-canvas-navigation-row]")).toHaveLength(3);
+    expect(toolbar.querySelector<HTMLSelectElement>('[data-canvas-navigation-target="2"]')?.value).toBe("section:story");
+    expect(toolbar.querySelector('[data-canvas-navigation-target="2"] option[value="section:contact"]')?.textContent).toBe("Contacto");
+    expect(toolbar.querySelector("[data-canvas-navigation-add]")?.textContent).toContain("Agregar enlace");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "footer", field: "section", label: "pie de página" },
+      },
+    }));
+    expect(toolbar.hidden).toBe(false);
+    expect(toolbar.classList.contains("is-animation-popover")).toBe(true);
+    expect(toolbar.querySelector<HTMLTextAreaElement>('[data-canvas-footer-field="brandDescription"]')?.value).toBe("Recetas honestas.");
+    expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-field="copyright"]')?.value).toBe("© 2026 Tienda");
+    expect(toolbar.querySelector("[data-canvas-hide-footer]")?.textContent).toContain("Quitar pie");
+    expect(toolbar.querySelector("[data-canvas-footer-add-column]")?.textContent).toContain("Agregar columna");
+    expect(toolbar.querySelector("[data-canvas-footer-add-item=\"0\"]")?.textContent).toContain("Agregar enlace");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "footer", field: "footerItemLabel", label: "Our Story", itemId: "0:0" },
+      },
+    }));
+    expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-field="itemLabel"]')?.value).toBe("Our Story");
+    expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-field="itemHref"]')?.value).toBe("#site-section-story");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "navigation", field: "section", label: "navegación superior" },
+      },
+    }));
+    const destination = toolbar.querySelector<HTMLSelectElement>('[data-canvas-navigation-target="2"]')!;
+    destination.value = "section:contact";
+    destination.dispatchEvent(new Event("change", { bubbles: true }));
+    // Reopening immediately models an outside touch that lands before the
+    // dashboard's zero-delay preview refresh has returned to the iframe.
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "navigation", field: "section", label: "navegación superior" },
+      },
+    }));
+    expect(toolbar.querySelector<HTMLSelectElement>('[data-canvas-navigation-target="2"]')?.value).toBe("section:contact");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "footer", field: "section", label: "pie de página" },
+      },
+    }));
+    const footerHref = toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-item-href="0:0"]')!;
+    footerHref.value = "https://example.com/nueva-historia";
+    footerHref.dispatchEvent(new Event("input", { bubbles: true }));
+    footerHref.dispatchEvent(new Event("change", { bubbles: true }));
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "footer", field: "section", label: "pie de página" },
+      },
+    }));
+    expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-item-href="0:0"]')?.value).toBe("https://example.com/nueva-historia");
+
+    const catalogTarget = document.querySelector<HTMLElement>(".catalog-section-picker")
+      ?? document.querySelector<HTMLElement>("#store-grid")
+      ?? document.querySelector<HTMLElement>(".store-products");
+    expect(catalogTarget).not.toBeNull();
+    const scrollIntoView = vi.spyOn(catalogTarget!, "scrollIntoView");
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: false,
+        reveal: false,
+        editorSelection: null,
+      },
+    }));
+    expect(document.body.classList.contains("store-preview-editor-enabled")).toBe(false);
+    const catalogButton = document.querySelector<HTMLButtonElement>(".hero-catalog-cta");
+    expect(catalogButton).not.toBeNull();
+    catalogButton?.click();
+    expect(scrollIntoView).toHaveBeenCalled();
+
   });
 
   it("keeps an incomplete animation visible while the merchant is choosing its pictures", async () => {
@@ -2345,7 +2946,7 @@ describe("storefront routes", () => {
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Animación en progreso",
-        contentOrder: ["animation-in-progress", "products"],
+        contentOrder: ["animation-new", "animation-in-progress", "products"],
         animations: [{
           id: "in-progress",
           name: "Hero Gallery incompleta",
@@ -2354,6 +2955,11 @@ describe("storefront routes", () => {
             { imageUrl: "/v1/uploads/uno.webp" },
             { imageUrl: "/v1/uploads/dos.webp" },
           ],
+        }, {
+          id: "new",
+          name: "Slider nuevo",
+          type: "hero-carousel",
+          media: [],
         }],
         items: [baseItem],
       } satisfies Store),
@@ -2364,6 +2970,66 @@ describe("storefront routes", () => {
 
     expect(document.querySelector('[data-animation-id="in-progress"]')).not.toBeNull();
     expect(document.querySelectorAll("[data-gallery-scroll-cell]")).toHaveLength(2);
+    const newAnimation = document.querySelector<HTMLElement>('[data-animation-id="new"]')!;
+    expect(newAnimation.dataset.animationIsIncomplete).toBe("");
+    expect(newAnimation.textContent).toContain("Completa Slider nuevo");
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "animation-new", field: "section", label: "Slider nuevo", animationId: "new" },
+      },
+    }));
+    const toolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")!;
+    expect(toolbar.hidden).toBe(false);
+    expect(toolbar.textContent).toContain("Completa esta animación");
+    expect(toolbar.querySelectorAll("[data-canvas-add-media]")).toHaveLength(2);
+  });
+
+  it("dismisses the canvas editor when the merchant touches non-editable space", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Lienzo descartable",
+        contentOrder: ["animation-copy", "products", "links"],
+        animations: [{
+          id: "copy",
+          name: "Texto principal",
+          type: "text-reveal-block",
+          title: "Texto editable",
+          subtitle: "Toca fuera para terminar",
+          media: [],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=dismiss-editor&preview=1&editor=1");
+    const selectText = () => window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "animation-copy", field: "animationStyle", label: "texto principal", animationId: "copy" },
+      },
+    }));
+    const toolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")!;
+
+    selectText();
+    expect(toolbar.hidden).toBe(false);
+    document.getElementById("app")!.click();
+    expect(toolbar.hidden).toBe(true);
+    expect(document.querySelector(".store-preview-editor-selected")).toBeNull();
+
+    selectText();
+    expect(toolbar.hidden).toBe(false);
+    document.querySelector<HTMLElement>('[data-animation-id="copy"]')!.click();
+    expect(toolbar.hidden).toBe(true);
+    expect(document.querySelector(".store-preview-editor-selected")).toBeNull();
   });
 
   it("lets merchants double-click storefront text and images for inline editing", async () => {
@@ -2499,8 +3165,10 @@ describe("storefront routes", () => {
 
     const section = document.querySelector<HTMLElement>("[data-clarity-marquee]");
     expect(section).not.toBeNull();
+    expect(section?.querySelectorAll(".store-clarity-rail")).toHaveLength(1);
     expect(section?.querySelector("img, video")).toBeNull();
     expect(section?.textContent).toContain("Amarillo tropical");
+    expect(document.querySelector(".store-motion-description h3")?.textContent).toBe("Todo sobre nuestros sabores");
     const productLink = document.querySelector<HTMLAnchorElement>(".store-motion-product-link");
     expect(productLink?.classList.contains("store-motion-product-card")).toBe(true);
     expect(productLink?.querySelector<HTMLImageElement>(".store-motion-product-media img")?.src).toContain("amarillo.webp");
@@ -2511,6 +3179,31 @@ describe("storefront routes", () => {
     productLink?.click();
     expect(document.body.classList.contains("product-detail-page")).toBe(true);
     expect(document.querySelector(".product-detail-content h1")?.textContent).toBe("Amarillo tropical");
+  });
+
+  it("keeps internal animation names accessible without showing them as section titles", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Pastelería clara",
+        contentOrder: ["hero", "animation-questions", "products", "links"],
+        animations: [{
+          id: "questions",
+          name: "Preguntas en movimiento",
+          type: "clarity-marquee",
+          title: "Preguntas en movimiento",
+          media: [],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=hidden-technical-title");
+
+    expect(document.querySelector('[data-animation-id="questions"]')?.getAttribute("aria-label")).toBe("Preguntas en movimiento");
+    expect(document.querySelector(".store-motion-description h3")).toBeNull();
+    expect(document.querySelector('[data-animation-id="questions"]')?.textContent).not.toContain("Preguntas en movimiento");
   });
 
   it("renders rotating text as an editorial typewriter with an authored prefix", async () => {
@@ -2547,9 +3240,9 @@ describe("storefront routes", () => {
         ...baseStoreFields,
         storeName: "Tienda con varias animaciones",
         motionDuoEnabled: true,
-        motionExperience: "coverflow-carousel",
-        motionExperiences: ["hero-carousel", "coverflow-carousel", "stagger-testimonials"],
-        contentOrder: ["motion-stagger-testimonials", "hero", "about", "products", "motion-hero-carousel", "gallery", "links", "motion-coverflow-carousel"],
+        motionExperience: "frame-sequence",
+        motionExperiences: ["hero-carousel", "frame-sequence", "stagger-testimonials"],
+        contentOrder: ["motion-stagger-testimonials", "hero", "about", "products", "motion-hero-carousel", "gallery", "links", "motion-frame-sequence"],
         editorialGallery: [
           { imageUrl: "/v1/uploads/uno.webp", title: "Origen", caption: "Ana", body: "Una experiencia excelente." },
           { imageUrl: "/v1/uploads/dos.webp", title: "Proceso", caption: "María", body: "Volvería a comprar." },
@@ -2566,11 +3259,11 @@ describe("storefront routes", () => {
     expect(sections.map((section) => section.dataset.motionExperience)).toEqual([
       "stagger-testimonials",
       "hero-carousel",
-      "coverflow-carousel",
+      "frame-sequence",
     ]);
     expect(sections).toHaveLength(3);
     expect(document.querySelector("[data-motion-hero]")).not.toBeNull();
-    expect(document.querySelector(".store-motion-coverflow")).not.toBeNull();
+    expect(document.querySelector("[data-frame-sequence]")).not.toBeNull();
     expect(document.querySelector("[data-testimonials]")).not.toBeNull();
   });
 
@@ -2584,7 +3277,7 @@ describe("storefront routes", () => {
           {
             id: "opening",
             name: "Organizador · apertura",
-            type: "coverflow-carousel",
+            type: "hero-carousel",
             title: "Nueva temporada",
             subtitle: "Piezas para empezar el recorrido.",
             media: [
@@ -2595,7 +3288,7 @@ describe("storefront routes", () => {
           {
             id: "finale",
             name: "Organizador · cierre",
-            type: "coverflow-carousel",
+            type: "hero-carousel",
             title: "Últimos detalles",
             subtitle: "Una selección distinta para cerrar la tienda.",
             textPositionX: 72,
@@ -2644,6 +3337,169 @@ describe("storefront routes", () => {
     expect(sections[1].hasAttribute("data-animation-custom-layout")).toBe(false);
     expect(sections[0].textContent).not.toContain("Organizador · cierre");
     expect(sections[1].textContent).not.toContain("Organizador · apertura");
+  });
+
+  it("renders independent text objects and opens typography controls directly on the preview canvas", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Lienzo tipográfico",
+        contentOrder: ["hero", "animation-opening", "products", "links"],
+        animations: [{
+          id: "opening",
+          name: "Apertura",
+          type: "hero-carousel",
+          title: "Título principal",
+          backgroundColor: "#26170d",
+          media: [{ imageUrl: "/v1/uploads/open.webp", title: "Escena" }],
+          textBlocks: [
+            { id: "title-1", role: "title", text: "Segundo título", textPositionX: 18, textPositionY: 30, textScale: 130, textColor: "#fff4d6", fontStyle: "editorial" },
+            { id: "subtitle-1", role: "subtitle", text: "Segundo subtítulo", textPositionX: 24, textPositionY: 62, textScale: 82, textColor: "#ffffff", fontStyle: "modern" },
+          ],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=canvas-type&preview=1&editor=1");
+    expect([...document.querySelectorAll(".store-animation-free-text [data-animation-copy-field='textBlock']")].map((node) => node.textContent?.trim())).toEqual(["Segundo título", "Segundo subtítulo"]);
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "animation-opening", field: "textBlock", label: "título adicional", animationId: "opening", itemId: "title-1" },
+      },
+    }));
+    const toolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")!;
+    expect(toolbar.hidden).toBe(false);
+    expect(toolbar.querySelector<HTMLSelectElement>("[data-canvas-font]")?.value).toBe("editorial");
+    expect(toolbar.querySelector<HTMLInputElement>("[data-canvas-color]")?.value).toBe("#fff4d6");
+    expect(toolbar.querySelector("[data-canvas-delete-text]")).not.toBeNull();
+    expect(toolbar.querySelector("[data-canvas-duplicate]")).not.toBeNull();
+    expect(toolbar.querySelector("[data-canvas-animation-settings]")?.textContent).toContain("Animación");
+    const directColor = toolbar.querySelector<HTMLInputElement>("[data-canvas-color]")!;
+    directColor.value = "#ff3366";
+    directColor.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.querySelector<HTMLElement>('[data-animation-text-block="title-1"]')?.style.getPropertyValue("--animation-scene-text-color")).toBe("#ff3366");
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "animation-opening", field: "section", label: "Apertura", animationId: "opening" },
+      },
+    }));
+    expect(toolbar.querySelector('[data-canvas-add-text="title"]')?.textContent).toContain("Título");
+    expect(toolbar.querySelector('[data-canvas-add-text="subtitle"]')?.textContent).toContain("Subtítulo");
+    expect(toolbar.querySelector<HTMLInputElement>("[data-canvas-background]")?.value).toBe("#26170d");
+    expect(toolbar.classList.contains("is-animation-popover")).toBe(true);
+    expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-animation-field="title"]')?.value).toBe("Título principal");
+    expect(toolbar.querySelector('[data-canvas-media="0"]')).not.toBeNull();
+    expect(toolbar.querySelector(".store-preview-animation-style [data-canvas-color]")).not.toBeNull();
+    expect(toolbar.querySelector("[data-canvas-delete-animation]")).not.toBeNull();
+
+    const selectedCopy = document.querySelector<HTMLElement>('[data-animation-text-block="title-1"]')!;
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_STYLE_UPDATE",
+        editorMode: true,
+        animationId: "opening",
+        key: "textColor",
+        value: "#ff3366",
+        selection: { section: "animation-opening", field: "textBlock", label: "título adicional", animationId: "opening", itemId: "title-1" },
+      },
+    }));
+    expect(selectedCopy.dataset.animationTextColor).toBe("#ff3366");
+    expect(selectedCopy.style.getPropertyValue("--animation-scene-text-color")).toBe("#ff3366");
+  });
+
+  it("exposes direct text styling targets in every text animation", async () => {
+    const textTypes: StoreMotionExperience[] = ["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"];
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Texto por todas partes",
+        contentOrder: [...textTypes.map((_, index) => `animation-text-${index}`), "products", "links"],
+        animations: textTypes.map((type, index) => ({
+          id: `text-${index}`,
+          name: `Texto ${index + 1}`,
+          type,
+          title: `Título ${index + 1}|Alternativa ${index + 1}`,
+          subtitle: `Subtítulo ${index + 1}`,
+          media: [],
+        })),
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=all-text&preview=1&editor=1");
+    const sections = [...document.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]")];
+    expect(sections).toHaveLength(textTypes.length);
+    sections.forEach((section) => {
+      expect(section.querySelector("[data-animation-copy]")).not.toBeNull();
+      expect(section.querySelector('[data-store-editor-field="animationTitle"], [data-store-editor-field="animationSubtitle"], [data-store-editor-field="animationStyle"]')).not.toBeNull();
+    });
+
+    window.dispatchEvent(new MessageEvent("message", {
+      source: window,
+      data: {
+        type: "PAGOSYA_STORE_EDITOR_SELECTION",
+        editorMode: true,
+        reveal: false,
+        editorSelection: { section: "animation-text-5", field: "animationStyle", label: "texto de la animación", animationId: "text-5" },
+      },
+    }));
+    expect(document.querySelector<HTMLElement>(".store-preview-canvas-toolbar")?.hidden).toBe(false);
+    expect(document.querySelector("[data-canvas-color]")).not.toBeNull();
+  });
+
+  it("renders MP4 media as video in every visual animation that accepts uploads", async () => {
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    const pauseSpy = vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    const animation = (id: string, type: StoreMotionExperience, count: number) => ({
+      id,
+      name: id,
+      type,
+      media: Array.from({ length: count }, (_, index) => ({ imageUrl: `/v1/uploads/${id}-${index + 1}.mp4`, title: `${id} ${index + 1}` })),
+    });
+    const animations = [
+      animation("hero-video", "hero-carousel", 2),
+      animation("stream-video", "image-stream", 2),
+      animation("expansion-video", "scroll-expansion", 2),
+      animation("gallery-video", "hero-gallery-scroll", 3),
+      animation("reviews-video", "stagger-testimonials", 2),
+      animation("magnetic-video", "magnetic-target", 1),
+      animation("frames-video", "frame-sequence", 2),
+    ];
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Videos por animación",
+        animations,
+        contentOrder: [...animations.map((entry) => `animation-${entry.id}`), "hero", "products", "about", "gallery", "contact", "links"],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=animation-videos");
+    expect([...document.querySelectorAll<HTMLElement>("section[data-animation-id]")].map((section) => section.dataset.animationId)).toEqual(animations.map((entry) => entry.id));
+    for (const entry of animations) {
+      const section = document.querySelector<HTMLElement>(`section[data-animation-id="${entry.id}"]`)!;
+      expect(section).not.toBeNull();
+      expect(section.querySelectorAll("video").length).toBeGreaterThanOrEqual(entry.media.length);
+      expect([...section.querySelectorAll<HTMLImageElement>("img")].some((image) => /\.mp4(?:$|[?#])/.test(image.src))).toBe(false);
+    }
+    playSpy.mockRestore();
+    pauseSpy.mockRestore();
   });
 
   it("changes the selected animation scene without rebuilding the preview", async () => {
@@ -2736,7 +3592,7 @@ describe("storefront routes", () => {
         contentOrder: ["hero", "animation-first", "animation-second", "products", "links"],
         animations: [
           { id: "first", name: "Primera", type: "hero-carousel", media: [scene("primera", 1), scene("primera", 2)] },
-          { id: "second", name: "Segunda", type: "coverflow-carousel", media: [scene("segunda", 1), scene("segunda", 2)] },
+          { id: "second", name: "Segunda", type: "stagger-testimonials", media: [scene("segunda", 1), scene("segunda", 2)] },
         ],
         items: [baseItem],
       } satisfies Store),
@@ -2751,10 +3607,10 @@ describe("storefront routes", () => {
     expect(firstSection.querySelector('[data-motion-hero-background="1"]')?.classList.contains("active")).toBe(true);
     expect(firstSection.querySelector('[data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
 
-    secondSection.querySelector<HTMLImageElement>('[data-coverflow-index="0"] img')!.click();
-    expect(secondSection.querySelector('[data-coverflow-index="0"] [data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
+    secondSection.querySelector<HTMLImageElement>('[data-testimonial-index="0"] img')!.click();
+    expect(secondSection.querySelector('[data-testimonial-index="0"] [data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
     expect(firstSection.querySelector('[data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(false);
-    expect(secondSection.querySelector('[data-coverflow-index="0"]')?.classList.contains("store-preview-editor-selected")).toBe(true);
+    expect(secondSection.querySelector('[data-testimonial-index="0"]')?.classList.contains("store-preview-editor-selected")).toBe(true);
   });
 
   it("lets the store editor move and rewrite animation text with one clean canvas grabber", async () => {
@@ -2805,6 +3661,11 @@ describe("storefront routes", () => {
     pointer(copy, "pointerdown", 11, 300, 250, 1);
     pointer(window, "pointermove", 11, 650, 200, 1);
     pointer(window, "pointerup", 11, 650, 200, 0);
+    expect(copy.style.getPropertyValue("--animation-text-x")).toBe("");
+    const moveHandle = copy.querySelector<HTMLElement>('[data-animation-layout-handle="move"]')!;
+    pointer(moveHandle, "pointerdown", 12, 300, 250, 1);
+    pointer(window, "pointermove", 12, 650, 200, 1);
+    pointer(window, "pointerup", 12, 650, 200, 0);
     expect(copy.style.getPropertyValue("--animation-text-x")).toBe("55%");
     expect(copy.style.getPropertyValue("--animation-text-y")).toBe("50%");
     expect(copy.dataset.animationTextX).toBe("55");
@@ -2814,13 +3675,23 @@ describe("storefront routes", () => {
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     heading.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 }));
     expect(heading.getAttribute("contenteditable")).toBe("plaintext-only");
+    const spaceKey = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: " " });
+    heading.dispatchEvent(spaceKey);
+    expect(spaceKey.defaultPrevented).toBe(false);
     heading.textContent = "Todavía puedo editar";
     heading.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
     expect(heading.hasAttribute("contenteditable")).toBe(false);
 
     const button = section.querySelector<HTMLElement>(".store-animation-cta")!;
     const buttonLabel = button.querySelector<HTMLElement>(".store-animation-cta-label")!;
-    pointer(buttonLabel, "pointerdown", 14, 180, 430, 1);
+    expect(button.dataset.storeEditorTarget).toBe("true");
+    expect(button.querySelector(".store-animation-button-handle")).not.toBeNull();
+    const buttonArrow = button.querySelector<SVGElement>(":scope > svg")!;
+    const navigationClick = new MouseEvent("click", { bubbles: true, cancelable: true });
+    buttonArrow.dispatchEvent(navigationClick);
+    expect(navigationClick.defaultPrevented).toBe(true);
+    const buttonHandle = button.querySelector<HTMLElement>(".store-animation-button-handle")!;
+    pointer(buttonHandle, "pointerdown", 14, 180, 430, 1);
     pointer(window, "pointermove", 14, 280, 380, 1);
     pointer(window, "pointerup", 14, 280, 380, 0);
     expect(button.dataset.animationButtonX).toBe("28");
@@ -2831,80 +3702,32 @@ describe("storefront routes", () => {
     buttonLabel.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
   });
 
-  it("lets the store editor move and edit every text layer in the 3D gallery", async () => {
-    const media = ["uno", "dos", "tres"].map((name, index) => ({
-      imageUrl: `/v1/uploads/${name}.webp`,
-      title: index === 2 ? "" : `Título ${index + 1}`,
-      caption: index === 2 ? "" : `Subtítulo ${index + 1}`,
-      body: index === 2 ? "" : `Texto adicional ${index + 1}`,
-    }));
+  it("does not render a retired 3D gallery saved by an older store", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
-        storeName: "Galería editable",
+        storeName: "Galería retirada",
         contentOrder: ["hero", "animation-space", "products", "about", "gallery", "links"],
-        animations: [{ id: "space", name: "Profundidad", type: "3d-gallery", media }],
+        animations: [{
+          id: "space",
+          name: "Galería tridimensional",
+          type: "3d-gallery",
+          media: [
+            { imageUrl: "/v1/uploads/uno.webp" },
+            { imageUrl: "/v1/uploads/dos.webp" },
+            { imageUrl: "/v1/uploads/tres.webp" },
+          ],
+        }],
         items: [baseItem],
-      } satisfies Store),
+      } as unknown as Store),
       assetUrl: (p: string | null) => p,
     }));
 
-    await loadCheckout("/?link=editable-space&preview=1&editor=1");
-    const section = document.querySelector<HTMLElement>('[data-animation-id="space"]')!;
-    const figure = section.querySelector<HTMLElement>('[data-space-card="0"]')!;
-    const copy = figure.querySelector<HTMLElement>("figcaption[data-animation-copy]")!;
-    const title = copy.querySelector<HTMLElement>('[data-animation-copy-field="title"]')!;
-    const subtitle = copy.querySelector<HTMLElement>('[data-animation-copy-field="caption"]')!;
-    const body = copy.querySelector<HTMLElement>('[data-animation-copy-field="body"]')!;
-    expect(title.dataset.storeEditorField).toBe("title");
-    expect(subtitle.dataset.storeEditorField).toBe("caption");
-    expect(body.dataset.storeEditorField).toBe("body");
+    await loadCheckout("/?link=retired-space");
 
-    const bounds = { x: 0, y: 0, left: 0, top: 0, right: 400, bottom: 500, width: 400, height: 500, toJSON: () => ({}) } as DOMRect;
-    const copyBounds = { x: 20, y: 330, left: 20, top: 330, right: 380, bottom: 480, width: 360, height: 150, toJSON: () => ({}) } as DOMRect;
-    Object.defineProperty(copy, "offsetParent", { configurable: true, value: figure });
-    vi.spyOn(figure, "getBoundingClientRect").mockReturnValue(bounds);
-    vi.spyOn(copy, "getBoundingClientRect").mockReturnValue(copyBounds);
-    const pointer = (target: EventTarget, type: string, clientX: number, clientY: number, buttons: number) => {
-      const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX, clientY });
-      Object.defineProperty(event, "pointerId", { value: 51 });
-      target.dispatchEvent(event);
-    };
-    pointer(copy, "pointerdown", 40, 400, 1);
-    pointer(window, "pointermove", 280, 180, 1);
-    pointer(window, "pointerup", 280, 180, 0);
-    expect(copy.dataset.animationTextX).toBe("65");
-    expect(copy.dataset.animationTextY).toBe("37");
-
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    subtitle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 }));
-    expect(subtitle.getAttribute("contenteditable")).toBe("plaintext-only");
-    subtitle.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
-
-    const gallery = section.querySelector<HTMLElement>("[data-space-gallery]")!;
-    gallery.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaX: 120 }));
-    expect(section.querySelector('[data-space-card="1"]')?.getAttribute("aria-hidden")).toBe("false");
-    expect(section.querySelector('[data-space-card="1"] [data-animation-copy]')?.classList.contains("store-animation-layout-selected")).toBe(true);
-    pointer(gallery, "pointerdown", 320, 250, 1);
-    pointer(gallery, "pointerup", 40, 250, 0);
-    expect(section.querySelector('[data-space-card="2"]')?.getAttribute("aria-hidden")).toBe("false");
-
-    section.querySelector<HTMLButtonElement>('[data-space-step="1"]')!.click();
-    expect(section.querySelector('[data-space-card="0"]')?.getAttribute("aria-hidden")).toBe("false");
-
-    const emptyCopy = section.querySelector<HTMLElement>('[data-space-card="2"] figcaption[data-animation-copy]')!;
-    expect(emptyCopy.hidden).toBe(true);
-    window.dispatchEvent(new MessageEvent("message", {
-      source: window,
-      data: {
-        type: "PAGOSYA_STORE_EDITOR_TEXT_UPDATE",
-        editorMode: true,
-        selection: { section: "animation-space", field: "title", label: "título de la escena 3", animationId: "space", itemIndex: 2 },
-        value: "Título agregado sin refrescar",
-      },
-    }));
-    expect(emptyCopy.hidden).toBe(false);
-    expect(emptyCopy.querySelector('[data-animation-copy-field="title"]')?.textContent).toBe("Título agregado sin refrescar");
+    expect(document.querySelector('[data-animation-id="space"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("Galería tridimensional");
+    expect(document.querySelector(".store-products")).not.toBeNull();
   });
 
   it("applies the merchant's selected font to the entire storefront", async () => {

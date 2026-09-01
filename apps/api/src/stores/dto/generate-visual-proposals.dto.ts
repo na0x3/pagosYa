@@ -3,8 +3,29 @@ import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsStri
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "./create-store.dto";
+import { SITE_ART_DIRECTIONS } from "@pagosya/shared-types";
 
 export class GenerateVisualProposalsDto {
+  @ApiPropertyOptional({ description: "Merchant-owned creative recipe to materialize against this store's own content." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  templateId?: string;
+
+  @ApiPropertyOptional({ description: "Stable section ids to preserve exactly while the rest of the creative canvas is regenerated.", type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @Matches(/^[a-z][a-z0-9-]{1,47}$/, { each: true, message: "Every locked section must use a stable section id" })
+  lockedSectionIds?: string[];
+
+  @ApiPropertyOptional({ description: "Preferred coherent visual world. The first proposal follows it and the alternatives deliberately contrast it.", enum: SITE_ART_DIRECTIONS })
+  @IsOptional()
+  @IsIn(SITE_ART_DIRECTIONS)
+  artDirection?: string;
+
   @ApiPropertyOptional({
     description: "Free-form art direction, references, mood, and constraints for the generated storefront.",
     example: "Que se sienta como una revista de arte joven: mucho espacio, fotos grandes y movimiento suave.",

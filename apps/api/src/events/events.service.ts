@@ -69,7 +69,45 @@ export class EventsService {
   }
 
   listEvents(merchantId: string) {
-    return this.prisma.event.findMany({ where: { merchantId }, include: { venue: true, ticketTypes: true }, orderBy: { startsAt: "desc" } });
+    return this.prisma.event.findMany({ where: { merchantId }, include: { venue: true, ticketTypes: true, store: { select: { id: true, slug: true, name: true, status: true } } }, orderBy: { startsAt: "desc" } });
+  }
+
+  async listPublicEvents() {
+    const events = await this.prisma.event.findMany({
+      where: {
+        status: { in: [EventStatus.PUBLISHED, EventStatus.ACTIVE] },
+        onlineSalesEnabled: true,
+        startsAt: { gte: new Date() },
+        store: { is: { status: "ACTIVE", merchant: { status: "ACTIVE" } } },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        publicityImageUrl: true,
+        startsAt: true,
+        endsAt: true,
+        timezone: true,
+        venue: { select: { name: true, city: true } },
+        store: { select: { slug: true, name: true, logoUrl: true, bannerUrl: true, accentColor: true } },
+        ticketTypes: {
+          where: { active: true },
+          orderBy: { price: "asc" },
+          select: { price: true, currency: true, inventory: true, reservedQuantity: true, soldQuantity: true },
+        },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 60,
+    });
+    return {
+      events: events.map((event) => ({
+        ...event,
+        availableTickets: event.ticketTypes.reduce((total, ticket) => total + Math.max(0, (ticket.inventory ?? 0) - ticket.reservedQuantity - ticket.soldQuantity), 0),
+        minimumAmount: event.ticketTypes.length ? Math.min(...event.ticketTypes.map((ticket) => ticket.price)) : null,
+        currency: event.ticketTypes[0]?.currency ?? "BOB",
+      })),
+    };
   }
 
   async addTicketType(merchantId: string, eventId: string, userId: string | undefined, dto: CreateTicketTypeDto) {
@@ -82,7 +120,7 @@ export class EventsService {
   async publicEvent(slug: string) {
     const event = await this.prisma.event.findFirst({
       where: { slug, status: { in: [EventStatus.PUBLISHED, EventStatus.ACTIVE] }, onlineSalesEnabled: true },
-      include: { venue: { select: { name: true, city: true } }, ticketTypes: { where: { active: true }, orderBy: { price: "asc" } } },
+      include: { store: { select: { slug: true, name: true, logoUrl: true } }, venue: { select: { name: true, city: true } }, ticketTypes: { where: { active: true }, orderBy: { price: "asc" } } },
     });
     if (!event) throw new NotFoundException("Event not found");
     return { ...event, ticketTypes: event.ticketTypes.map((ticket) => ({ ...ticket, available: Math.max(0, (ticket.inventory ?? 0) - ticket.reservedQuantity - ticket.soldQuantity) })) };
@@ -91,7 +129,7 @@ export class EventsService {
   async publicEventById(eventId: string) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, status: { in: [EventStatus.PUBLISHED, EventStatus.ACTIVE] }, onlineSalesEnabled: true },
-      include: { venue: { select: { name: true, city: true } }, ticketTypes: { where: { active: true }, orderBy: { price: "asc" } } },
+      include: { store: { select: { slug: true, name: true, logoUrl: true } }, venue: { select: { name: true, city: true } }, ticketTypes: { where: { active: true }, orderBy: { price: "asc" } } },
     });
     if (!event) throw new NotFoundException("Event not found");
     return { ...event, ticketTypes: event.ticketTypes.map((ticket) => ({ ...ticket, available: Math.max(0, (ticket.inventory ?? 0) - ticket.reservedQuantity - ticket.soldQuantity) })) };
@@ -124,10 +162,10 @@ export class EventsService {
           ],
         };
       if (!Array.isArray(current.sections)) throw new BadRequestException("Landing page document is invalid");
-      const sectionId = `event-${event.id.slice(-12).replace(/[^a-z0-9-]/gi, "").toLowerCase()}`;
-      current.sections = current.sections.filter((section: any) => !(section?.kind === "event-tickets" && section?.eventId === event.id));
+      const sectionId = "paya-events";
+      current.sections = current.sections.filter((section: any) => section?.kind !== "event-tickets");
       const contactIndex = current.sections.findIndex((section: any) => section?.kind === "contact");
-      const block = { id: sectionId, kind: "event-tickets", eventId: event.id, layout: "stacked", width: "wide", align: "left", motion: "reveal", title: "Entradas", body: `Reserva tu lugar para ${event.name}. El pago se procesa de forma segura con PagosYa.`, ctaLabel: "Comprar entradas", backgroundColor: current.theme?.surfaceColor || "#ffffff", textColor: current.theme?.textColor || "#111111", mediaUrls: [], items: [] };
+      const block = { id: sectionId, kind: "event-tickets", layout: "stacked", width: "wide", align: "left", motion: "reveal", title: "Próximos eventos", body: "Reserva tus entradas sin salir de esta página. El pago se procesa de forma segura con pagosYa.", ctaLabel: "Comprar entradas", backgroundColor: current.theme?.surfaceColor || "#ffffff", textColor: current.theme?.textColor || "#111111", mediaUrls: [], items: [] };
       current.sections.splice(contactIndex < 0 ? current.sections.length : contactIndex, 0, block);
       const updated = await tx.store.update({ where: { id: store.id }, data: { siteDocument: current as Prisma.InputJsonObject } });
       await tx.event.update({ where: { id: event.id }, data: { storeId: store.id } });

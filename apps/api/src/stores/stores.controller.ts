@@ -13,6 +13,8 @@ import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { Throttle } from "@nestjs/throttler";
 import { CustomDomainsService } from "./custom-domains.service";
 import { CreateCustomDomainDto } from "./dto/create-custom-domain.dto";
+import { SaveVisualTemplateDto } from "./dto/save-visual-template.dto";
+import { SetVisualSectionLocksDto } from "./dto/set-visual-section-locks.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -109,9 +111,28 @@ export class StoresController {
     return this.visualStudio.generate(merchant.id, id, dto);
   }
 
+  @Put(":id/visual-section-locks")
+  setVisualSectionLocks(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Body() dto: SetVisualSectionLocksDto,
+  ) {
+    return this.visualStudio.setSectionLocks(merchant.id, id, dto.sectionIds);
+  }
+
   @Post(":id/visual-proposals/:proposalId/apply")
   applyVisualProposal(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("proposalId") proposalId: string) {
     return this.visualStudio.apply(merchant.id, id, proposalId);
+  }
+
+  @Post(":id/visual-proposals/:proposalId/template")
+  saveVisualTemplate(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Param("proposalId") proposalId: string,
+    @Body() dto: SaveVisualTemplateDto,
+  ) {
+    return this.visualStudio.saveTemplate(merchant.id, id, proposalId, dto.name);
   }
 
   @Post(":id/visual-proposals/:proposalId/dismiss")

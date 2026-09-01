@@ -1,4 +1,4 @@
-import { PaymentMethodType } from "@pagosya/shared-types";
+import { PaymentMethodType, resolveSiteSectionFamily } from "@pagosya/shared-types";
 import {
   assetUrl,
   cancelPaymentIntent,
@@ -6,6 +6,7 @@ import {
   checkoutDebt,
   confirmPaymentIntent,
   createAppointmentPayment,
+  createEventReservation,
   fetchDebtCollection,
   fetchAppointmentAvailability,
   fetchSession,
@@ -16,6 +17,7 @@ import {
   lookupDebt,
   simulateRailCallback,
   submitStoreLead,
+  subscribeStoreNewsletter,
   CheckoutSession,
   CustomerContact,
   Store,
@@ -28,15 +30,52 @@ import {
   TrackedOrder,
 } from "./api";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
-import { sanitizeSiteDocument, synchronizeSiteDocument, type StoreSiteDocument } from "./site-document";
+import { sanitizeSiteDocument, synchronizeSiteDocument, type StoreCanvasTextStyle, type StoreSiteDocument } from "./site-document";
 
 const STORE_MOTION_EXPERIENCES: readonly StoreMotionExperience[] = [
-  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "story-scroll", "hero-carousel", "image-stream",
   "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
-  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+  "full-screen-chapters", "magnetic-target", "frame-sequence",
 ];
+const STORE_TEXT_ANIMATION_EXPERIENCES = new Set<StoreMotionExperience>([
+  "clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
+]);
+const STORE_MOTION_EXPERIENCE_LABELS: Record<StoreMotionExperience, string> = {
+  "story-scroll": "Story Scroll",
+  "hero-carousel": "Slider principal",
+  "image-stream": "Image Stream",
+  "scroll-expansion": "Scroll Expansion",
+  "hero-gallery-scroll": "Hero Gallery",
+  "stagger-testimonials": "Reseñas",
+  "portfolio-scroller": "Menú de momentos",
+  "circle-reveal": "Revelado circular",
+  "clarity-marquee": "Preguntas en movimiento",
+  "layered-text": "Texto en capas",
+  "text-rotate": "Texto mecanografiado",
+  "text-glitch": "Texto revelado",
+  "text-reveal-block": "Revelado por bloques",
+  "text-along-path": "Texto en recorrido",
+  "full-screen-chapters": "Capítulos completos",
+  "magnetic-target": "Llamado magnético",
+  "frame-sequence": "Secuencia de cuadros",
+};
+
+function storeAnimationMediaRequirement(type: StoreMotionExperience): { min: number; max: number } {
+  if (STORE_TEXT_ANIMATION_EXPERIENCES.has(type)) return { min: 0, max: 0 };
+  if (["circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
+  if (type === "scroll-expansion") return { min: 2, max: 2 };
+  return { min: type === "hero-gallery-scroll" ? 3 : 2, max: 8 };
+}
+
+function canvasTextStyleAttributes(style?: StoreCanvasTextStyle): string {
+  const scale = Number.isInteger(style?.textScale) ? style!.textScale! : 100;
+  const align = style?.textAlign || "";
+  const color = style?.textColor && /^#[0-9a-f]{6}$/i.test(style.textColor) ? style.textColor : "";
+  const font = style?.fontStyle || "";
+  return ` data-canvas-text-style data-canvas-text-scale="${scale}"${align ? ` data-canvas-text-align="${align}"` : ""}${color ? ` data-canvas-text-color="${color}"` : ""}${font ? ` data-animation-font-style="${font}"` : ""} style="--canvas-text-scale:${scale / 100};${align ? `--canvas-text-align:${align};` : ""}${color ? `--canvas-text-color:${color};` : ""}"`;
+}
 
 interface LinkHeader {
   storeName: string;
@@ -167,6 +206,13 @@ function safeStoreMapEmbedUrl(value: string | null | undefined): string | null {
   }
 }
 
+function normalizeStoreMapEmbedInput(value: string | null | undefined): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const iframeSource = raw.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
+  return String(iframeSource || raw).replace(/&amp;/gi, "&").trim();
+}
+
 function publicStoreLocations(store: Store): StoreLocation[] {
   const configured = (store.locations || []).map((location) => ({
     ...location,
@@ -176,7 +222,7 @@ function publicStoreLocations(store: Store): StoreLocation[] {
   if (configured.length) return configured;
   if (!(store.locationMapUrl || store.locationDescription || store.locationHighlight)) return [];
   return [{
-    id: "legacy-location",
+    id: "location-principal",
     name: "Ubicación principal",
     mapEmbedUrl: safeStoreMapEmbedUrl(store.locationMapUrl) || undefined,
     description: store.locationDescription || undefined,
@@ -223,6 +269,15 @@ function locationCanFulfillCart(location: StoreLocation, lines: ReturnType<typeo
 
 function isVideoMediaUrl(url: string): boolean {
   return /\.(mp4|webm)(?:$|[?#])/i.test(url);
+}
+
+function playStoreVideo(video: HTMLVideoElement, onBlocked?: () => void): void {
+  try {
+    const attempt = video.play();
+    void attempt?.catch(() => onBlocked?.());
+  } catch {
+    onBlocked?.();
+  }
 }
 
 // A stray "." or "-" left in the announcement field is still a truthy string,
@@ -1074,7 +1129,7 @@ let activeCatalogStoreId: string | null = null;
 // re-sort within each category section, never across section boundaries.
 let sortMode: "featured" | "price-asc" | "price-desc" | "popular" = "featured";
 
-type CatalogSection = { id: string; name: string; items: StoreItem[] };
+type CatalogSection = { id: string; name: string; bannerUrl: string | null; highlights: string[]; items: StoreItem[] };
 
 function catalogSectionsForStore(store: Store): CatalogSection[] {
   const byCategory = new Map<string | null, StoreItem[]>();
@@ -1085,8 +1140,14 @@ function catalogSectionsForStore(store: Store): CatalogSection[] {
   }
 
   return [
-    ...store.categories.map((category) => ({ id: category.id, name: category.name, items: byCategory.get(category.id) ?? [] })),
-    ...(byCategory.get(null)?.length ? [{ id: "null", name: "Otros", items: byCategory.get(null)! }] : []),
+    ...store.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      bannerUrl: category.bannerUrl || null,
+      highlights: Array.isArray(category.highlights) ? category.highlights.slice(0, 4) : [],
+      items: byCategory.get(category.id) ?? [],
+    })),
+    ...(byCategory.get(null)?.length ? [{ id: "null", name: "Otros", bannerUrl: null, highlights: [], items: byCategory.get(null)! }] : []),
   ].filter((section) => section.items.length > 0);
 }
 
@@ -1200,6 +1261,16 @@ function storeCatalogUrl(slug: string): string {
   return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
 }
 
+function storePageUrl(slug: string, pageSlug: string): string {
+  const params = new URLSearchParams();
+  params.set("page", pageSlug);
+  if (storePreviewMode) params.set("preview", "1");
+  if (storeEditorMode) params.set("editor", "1");
+  if (storeOwnerMode) params.set("owner", "1");
+  const pathname = activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
+  return `${pathname}?${params.toString()}${storePreviewFragment()}`;
+}
+
 function categoryPageUrl(slug: string, categoryId: string): string {
   const params = new URLSearchParams();
   if (storePreviewMode) params.set("preview", "1");
@@ -1294,8 +1365,8 @@ function storeAnnouncementHtml(store: Store): string {
   if (!store.announcement || !hasReadableContent(store.announcement)) return "";
   const mode = store.announcementMode === "marquee" ? "marquee" : "static";
   const duration = Math.min(40, Math.max(8, Number(store.announcementSpeed) || 18));
-  const size = "small";
-  const font = ["store", "modern", "editorial", "friendly", "classic", "geometric"].includes(store.announcementFont || "")
+  const size = ["small", "medium", "large"].includes(store.announcementSize || "") ? store.announcementSize! : "small";
+  const font = ["store", "modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(store.announcementFont || "")
     ? store.announcementFont!
     : "store";
   const effect: NonNullable<Store["announcementEffect"]> = ["wave", "pulse", "sparkle"].includes(store.announcementEffect || "")
@@ -1308,8 +1379,9 @@ function storeAnnouncementHtml(store: Store): string {
   // explicitly selected colors remain available.
   const color = configuredColor && configuredColor !== "#c58b3c" ? configuredColor : "#ffffff";
   const style = `--announcement-bg:${color};--announcement-ink:${accentContrastColor(color)};--marquee-duration:${duration}s`;
+  const editorAttributes = ` data-announcement-mode="${mode}" data-announcement-speed="${duration}" data-announcement-size="${size}" data-announcement-color="${color}" data-announcement-font="${font}" data-announcement-effect="${effect}"`;
   if (mode === "static") {
-    return `<aside class="store-announcement ${presentationClasses}" style="${style}" aria-label="${escapeHtml(store.announcement)}"><span class="store-announcement-copy" aria-hidden="true">${announcementLetteringHtml(store.announcement, effect)}</span></aside>`;
+    return `<aside class="store-announcement ${presentationClasses}" style="${style}" aria-label="${escapeHtml(store.announcement)}"${editorAttributes}><span class="store-announcement-copy" aria-hidden="true">${announcementLetteringHtml(store.announcement, effect)}</span></aside>`;
   }
   const sequence = store.announcement
     .split(/\s*(?:[•·|]|\r?\n)\s*/u)
@@ -1317,7 +1389,7 @@ function storeAnnouncementHtml(store: Store): string {
     .filter(Boolean)
     .map((phrase) => `<span class="store-announcement-phrase">${announcementLetteringHtml(phrase, effect)}</span><span class="store-announcement-separator">•</span>`)
     .join("");
-  return `<aside class="store-announcement marquee ${presentationClasses}" style="${style}" aria-label="Anuncio">
+  return `<aside class="store-announcement marquee ${presentationClasses}" style="${style}" aria-label="Anuncio"${editorAttributes}>
     <span class="store-announcement-a11y">${escapeHtml(store.announcement)}</span>
     <div class="store-announcement-track" aria-hidden="true">
       <span class="store-announcement-sequence">${sequence}</span>
@@ -1329,8 +1401,9 @@ function storeAnnouncementHtml(store: Store): string {
 function storefrontHeaderHtml(
   slug: string,
   store: Store,
-  options: { current: "home" | "catalog"; catalogUrl?: string } = { current: "home" },
+  options: { current: "home" | "catalog" | "page"; catalogUrl?: string; pageId?: string } = { current: "home" },
 ): string {
+  const siteDocument = sanitizeSiteDocument(store.siteDocument);
   const logoUrl = assetUrl(store.logoUrl);
   const visibleStoreName = store.storeName.trim();
   const storeUrl = storeCatalogUrl(slug);
@@ -1341,9 +1414,53 @@ function storefrontHeaderHtml(
   const catalogHref = onStorePage || document.body.classList.contains("category-page")
     ? (preservePreview ? storeUrl : "#store-products")
     : (preservePreview ? catalogUrl : `${catalogUrl}#store-products`);
-  const sectionHref = (section: string) => onStorePage ? (preservePreview ? storeUrl : `#${section}`) : storeUrl;
+  const sectionHref = (sectionId: string) => {
+    const authoredSection = siteDocument?.sections.find((section) => section.id === sectionId);
+    const ownerPage = authoredSection?.pageId ? siteDocument?.pages?.find((page) => page.id === authoredSection.pageId) : null;
+    const base = ownerPage ? storePageUrl(slug, ownerPage.slug) : storeUrl;
+    const anchor = `site-section-${sectionId}`;
+    return onStorePage && !ownerPage && !preservePreview ? `#${anchor}` : `${base}#${anchor}`;
+  };
   const scrollTarget = (section: string) => onStorePage && preservePreview ? ` data-store-scroll-target="#${section}"` : "";
   const cartItems = cartCount();
+  const navigationItems = siteDocument?.navigation.items?.length
+    ? siteDocument.navigation.items
+    : [
+        { id: "home", label: "Inicio", target: "home" as const },
+        { id: "catalog", label: "Catálogo", target: "catalog" as const },
+        ...(store.locations?.length || store.locationMapUrl ? [{ id: "location", label: "Ubicación", target: "section" as const, sectionId: siteDocument?.sections.find((section) => section.kind === "location")?.id }] : []),
+        ...(store.contactFormEnabled === true ? [{ id: "contact", label: "Contacto", target: "section" as const, sectionId: siteDocument?.sections.find((section) => section.kind === "contact")?.id }] : []),
+      ];
+  const navigationItemHtml = navigationItems.flatMap((item, index) => {
+    const targetId = item.target === "home"
+      ? "store-top"
+      : item.target === "catalog"
+        ? "store-products"
+        : item.target === "page"
+          ? ""
+        : item.sectionId
+          ? `site-section-${item.sectionId}`
+          : item.id === "location"
+            ? "store-location"
+            : item.id === "contact"
+              ? "store-contact"
+              : "";
+    const page = item.target === "page" ? siteDocument?.pages?.find((candidate) => candidate.id === item.pageId) : null;
+    if (!targetId && !page) return [];
+    const href = item.target === "home"
+      ? homeHref
+      : item.target === "catalog"
+        ? catalogHref
+        : page
+          ? storePageUrl(slug, page.slug)
+          : item.sectionId
+            ? sectionHref(item.sectionId)
+            : onStorePage && !preservePreview
+              ? `#${targetId}`
+              : `${storeUrl}#${targetId}`;
+    const current = item.target === "home" ? options.current === "home" : item.target === "catalog" ? options.current === "catalog" : item.target === "page" ? options.current === "page" && options.pageId === item.pageId : false;
+    return [`<a href="${escapeHtml(href)}"${scrollTarget(targetId)} data-site-navigation-item="${escapeHtml(item.id)}" data-site-navigation-index="${index}"${current ? ' aria-current="page"' : ""}><span>${escapeHtml(item.label)}</span>${item.target === "catalog" ? ICON_CHEVRON_DOWN : ""}</a>`];
+  }).join("");
   return `<header class="merchant-header store-site-header${!visibleStoreName && logoUrl ? " has-prominent-logo" : ""}${!visibleStoreName && logoUrl && !store.tagline ? " is-logo-only" : ""}" id="store-top">
     <a class="store-site-brand" href="${escapeHtml(homeHref)}"${scrollTarget("store-top")} aria-label="${escapeHtml(visibleStoreName ? `Ir al inicio de ${visibleStoreName}` : "Ir al inicio de la tienda")}">
       ${logoUrl ? `<img class="merchant-header-logo" src="${escapeHtml(logoUrl)}" alt="${visibleStoreName ? "" : "Logo de la tienda"}">` : ""}
@@ -1353,10 +1470,7 @@ function storefrontHeaderHtml(
       </span>` : ""}
     </a>
     <nav class="store-site-nav" aria-label="Secciones de la tienda">
-      <a href="${escapeHtml(homeHref)}"${scrollTarget("store-top")}${options.current === "home" ? ' aria-current="page"' : ""}>Inicio</a>
-      <a href="${escapeHtml(catalogHref)}"${scrollTarget("store-products")}${options.current === "catalog" ? ' aria-current="page"' : ""}><span>Catálogo</span>${ICON_CHEVRON_DOWN}</a>
-      ${store.locations?.length || store.locationMapUrl ? `<a href="${escapeHtml(sectionHref("store-location"))}"${scrollTarget("store-location")}>Ubicación</a>` : ""}
-      ${store.contactFormEnabled === true ? `<a href="${escapeHtml(sectionHref("store-contact"))}"${scrollTarget("store-contact")}>Contacto</a>` : ""}
+      ${navigationItemHtml}
     </nav>
     <div class="store-site-utility" aria-label="Acciones de la tienda">
       <a class="store-header-action store-header-search" href="${escapeHtml(catalogHref)}"${scrollTarget("store-products")} aria-label="Buscar en el catálogo">${ICON_SEARCH}</a>
@@ -1364,6 +1478,39 @@ function storefrontHeaderHtml(
       <button class="store-header-action store-header-cart" type="button" aria-label="Abrir carrito, ${cartItems} ${cartItems === 1 ? "producto" : "productos"}" ${cartItems === 0 ? "disabled" : ""}>${ICON_BAG}<span class="store-header-cart-count"${cartItems === 0 ? " hidden" : ""}>${cartItems}</span></button>
     </div>
   </header>`;
+}
+
+function storefrontFooterHtml(store: Store): string {
+  const footer = sanitizeSiteDocument(store.siteDocument)?.footer;
+  if (!footer?.enabled) return "";
+  const columns = footer.columns.map((column, columnIndex) => `<section class="store-site-footer-column" data-site-footer-column="${columnIndex}" aria-labelledby="store-site-footer-column-${columnIndex}">
+    <h2 id="store-site-footer-column-${columnIndex}">${escapeHtml(column.title)}</h2>
+    <div>${column.items.map((item, itemIndex) => item.href
+      ? `<a href="${escapeHtml(item.href)}" data-site-footer-item="${itemIndex}">${escapeHtml(item.label)}</a>`
+      : `<span data-site-footer-item="${itemIndex}">${escapeHtml(item.label)}</span>`).join("")}</div>
+  </section>`).join("");
+  const newsletter = footer.newsletter?.enabled ? `<section class="store-site-newsletter" aria-labelledby="store-newsletter-title">
+    <div><h2 id="store-newsletter-title">${escapeHtml(footer.newsletter.title || "Noticias de la tienda")}</h2>${footer.newsletter.body ? `<p>${escapeHtml(footer.newsletter.body)}</p>` : ""}</div>
+    <form class="store-newsletter-form" id="store-newsletter-form">
+      <label class="visually-hidden" for="store-newsletter-email">Correo electrónico</label>
+      <div><input id="store-newsletter-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="tu@correo.com" required><button type="submit">${escapeHtml(footer.newsletter.buttonLabel || "Suscribirme")}</button></div>
+      <span class="store-newsletter-status" role="status" aria-live="polite" data-success-message="${escapeHtml(footer.newsletter.successMessage || "Listo. Ya estás en la lista.")}"></span>
+    </form>
+  </section>` : "";
+  return `<footer class="store-site-footer" data-site-footer>
+    ${newsletter}
+    <div class="store-site-footer-main">
+      <section class="store-site-footer-brand" aria-labelledby="store-site-footer-brand">
+        <h2 id="store-site-footer-brand">${escapeHtml(store.storeName)}</h2>
+        ${footer.brandDescription ? `<p>${escapeHtml(footer.brandDescription)}</p>` : ""}
+      </section>
+      ${columns}
+    </div>
+    <div class="store-site-footer-bottom">
+      <span data-site-footer-copyright>${escapeHtml(footer.copyright)}</span>
+      ${footer.badge ? `<span class="store-site-footer-badge" data-site-footer-badge>${escapeHtml(footer.badge)}</span>` : ""}
+    </div>
+  </footer>`;
 }
 
 function bindStoreAnnouncementPlayback(): void {
@@ -1648,25 +1795,29 @@ let activePreviewRenderedStore: Store | null = null;
 let activePreviewRenderSignature = "";
 let activePreviewRenderedView = "store";
 let storePreviewEditorEnabled = storeEditorMode;
+let storePreviewLockedSectionIds = new Set<string>();
 let storePreviewEditorHover: HTMLElement | null = null;
 let storePreviewEditorSelection: StorePreviewEditorSelection | null = null;
 let storePreviewInlineEditorTarget: HTMLElement | null = null;
 let storePreviewInlineEditorFinish: ((commit: boolean) => void) | null = null;
 let storePreviewEditorClickTimer: number | null = null;
 let storePreviewEditorSuppressNextClick = false;
-const STORE_PREVIEW_SECTIONS = ["brand", "announcement", "hero", "products", "about", "gallery", "motion", "contact", "links", "location", "promotion"] as const;
+const STORE_PREVIEW_SECTIONS = ["brand", "navigation", "announcement", "hero", "products", "about", "gallery", "motion", "contact", "links", "location", "footer", "promotion"] as const;
 type StorePreviewSection = (typeof STORE_PREVIEW_SECTIONS)[number];
 
 const STORE_PREVIEW_INLINE_TEXT_FIELDS = new Set([
   "storeName", "storeTagline", "title", "caption", "body", "ctaLabel",
-  "animationTitle", "animationSubtitle", "buttonLabel",
+  "announcementText",
+  "animationTitle", "animationSubtitle", "textBlock", "buttonLabel",
+  "siteTitle", "siteBody", "siteCtaLabel", "siteItemTitle", "siteItemBody", "siteBlockText",
   "catalogTitle", "catalogSubtitle", "aboutTitle", "aboutSubtitle", "aboutBody",
   "galleryTitle", "gallerySubtitle", "editorialTitle", "editorialCaption", "editorialBody",
   "linksTitle", "linkLabel", "contactTitle", "contactSubtitle", "locationTitle",
   "locationSubtitle", "promotionTitle", "promotionBody", "promotionAction", "cartButton",
+  "navigationLabel", "footerBrandDescription", "footerColumnTitle", "footerItemLabel", "footerCopyright", "footerBadge",
 ]);
 const STORE_PREVIEW_INLINE_IMAGE_FIELDS = new Set([
-  "storeLogo", "storeBanner", "aboutImage", "editorialMedia", "media", "promotionImage",
+  "storeLogo", "storeBanner", "aboutImage", "editorialMedia", "media", "siteMedia", "siteBlockMedia", "promotionImage", "categoryBanner",
 ]);
 
 interface StorePreviewEditorSelection {
@@ -1703,6 +1854,646 @@ function storePreviewEditorLabel(): HTMLElement {
   return label;
 }
 
+function storePreviewCanvasToolbar(): HTMLElement {
+  let toolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar");
+  if (!toolbar) {
+    toolbar = document.createElement("div");
+    toolbar.className = "store-preview-canvas-toolbar";
+    toolbar.setAttribute("role", "toolbar");
+    toolbar.setAttribute("aria-label", "Controles directos de la selección");
+    document.body.appendChild(toolbar);
+  }
+  return toolbar;
+}
+
+function positionStorePreviewCanvasToolbar(toolbar: HTMLElement, target: HTMLElement): void {
+  const rect = target.getBoundingClientRect();
+  const toolbarRect = toolbar.getBoundingClientRect();
+  const maxLeft = Math.max(10, window.innerWidth - toolbarRect.width - 10);
+  const preferredLeft = toolbar.classList.contains("is-animation-popover")
+    ? rect.right - toolbarRect.width - 10
+    : rect.left + (rect.width - toolbarRect.width) / 2;
+  const left = Math.max(10, Math.min(preferredLeft, maxLeft));
+  const above = rect.top - toolbarRect.height - 10;
+  const maxTop = Math.max(10, window.innerHeight - toolbarRect.height - 10);
+  // A tall popover placed below a selected section can cover the next section
+  // completely, making it look like a blank white bar and preventing clicks.
+  // When there is no room above, keep it inside the selected target instead.
+  const insideSelectedTarget = Math.max(10, Math.min(rect.top + 10, maxTop));
+  const top = above >= 10 ? Math.min(above, maxTop) : insideSelectedTarget;
+  toolbar.style.left = `${Math.round(left)}px`;
+  toolbar.style.top = `${Math.max(10, Math.round(top))}px`;
+}
+
+function storePreviewUsedColors(store: Store | null | undefined): string[] {
+  const colors = new Map<string, { color: string; score: number; order: number }>();
+  let order = 0;
+  const add = (value: unknown, score = 1) => {
+    if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) return;
+    const color = value.toLowerCase();
+    const existing = colors.get(color);
+    if (existing) existing.score += score;
+    else colors.set(color, { color, score, order: order++ });
+  };
+  if (!store) return [];
+
+  const theme = store.siteDocument?.theme;
+  add(theme?.pageBackground, 6);
+  add(theme?.textColor, 6);
+  add(theme?.accentColor, 5);
+  add(theme?.surfaceColor, 4);
+  add(theme?.secondaryColor, 3);
+  add(theme?.mutedColor, 2);
+  add(theme?.borderColor);
+  add(store.backgroundColor, 2);
+  add(store.backgroundGradientStart, 2);
+  add(store.backgroundGradientEnd, 2);
+  add(store.accentColor, 3);
+  add(store.announcementColor, 2);
+  Object.values(store.sectionBackgrounds ?? {}).forEach((color) => add(color, 3));
+
+  store.siteDocument?.sections.forEach((section) => {
+    add(section.backgroundColor, 3);
+    add(section.textColor, 3);
+    add(section.titleStyle?.textColor);
+    add(section.bodyStyle?.textColor);
+    section.items.forEach((item) => {
+      add(item.titleStyle?.textColor);
+      add(item.bodyStyle?.textColor);
+    });
+    const addBlockColors = (blocks = section.blocks ?? []) => blocks.forEach((block) => {
+      add(block.style?.textColor);
+      addBlockColors(block.children ?? []);
+    });
+    addBlockColors();
+  });
+  store.animations?.forEach((animation) => {
+    add(animation.backgroundColor, 2);
+    add(animation.textColor, 2);
+    animation.textBlocks?.forEach((block) => add(block.textColor));
+    animation.media.forEach((media) => {
+      add(media.boxColor);
+      add(media.textColor);
+    });
+  });
+
+  return [...colors.values()]
+    .sort((a, b) => b.score - a.score || a.order - b.order)
+    .slice(0, 8)
+    .map(({ color }) => color);
+}
+
+function storePreviewPaletteHtml(colors: string[], target: string, current: string, label: string): string {
+  const normalizedCurrent = current.toLowerCase();
+  const palette = /^#[0-9a-f]{6}$/i.test(normalizedCurrent) && !colors.includes(normalizedCurrent)
+    ? [normalizedCurrent, ...colors].slice(0, 8)
+    : colors;
+  if (!palette.length) return "";
+  return `<div class="store-preview-site-palette" role="group" aria-label="Colores más usados en este sitio para ${label.toLowerCase()}">
+    <span class="store-preview-site-palette-label">${escapeHtml(label)}</span>
+    ${palette.map((color) => `<button type="button" class="store-preview-palette-swatch" data-canvas-palette="${target}" data-palette-color="${color}" style="--palette-color:${color}" aria-label="Usar ${color}" aria-pressed="${color === normalizedCurrent}" title="Usar ${color}"></button>`).join("")}
+  </div>`;
+}
+
+function bindStorePreviewPalette(toolbar: HTMLElement, controls: Record<string, HTMLInputElement | null>): void {
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-palette]").forEach((button) => button.addEventListener("click", () => {
+    const target = button.dataset.canvasPalette;
+    const color = button.dataset.paletteColor;
+    const control = target ? controls[target] : null;
+    if (!control || !color || !/^#[0-9a-f]{6}$/i.test(color)) return;
+    control.value = color;
+    toolbar.querySelectorAll<HTMLButtonElement>(`[data-canvas-palette="${target}"]`).forEach((swatch) => {
+      swatch.setAttribute("aria-pressed", String(swatch.dataset.paletteColor === color));
+    });
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  }));
+}
+
+function storePreviewRenderedSiteDocument(): Store["siteDocument"] | null {
+  const renderedStore = activePreviewRenderedStore ?? activePreviewStore?.store ?? activeStoreRoute?.store;
+  return renderedStore?.siteDocument ?? null;
+}
+
+function updateStorePreviewNavigationDraft(index: number, key: "label" | "target", value: string): void {
+  const document = storePreviewRenderedSiteDocument();
+  const item = document?.navigation?.items?.[index];
+  if (!item) return;
+  if (key === "label") {
+    item.label = value.slice(0, 40);
+    return;
+  }
+  if (value === "home" || value === "catalog") {
+    item.target = value;
+    delete item.sectionId;
+    delete item.pageId;
+    return;
+  }
+  if (value.startsWith("page:")) {
+    const pageId = value.slice("page:".length);
+    if (!document?.pages?.some((page) => page.id === pageId)) return;
+    item.target = "page";
+    item.pageId = pageId;
+    delete item.sectionId;
+    return;
+  }
+  if (!value.startsWith("section:")) return;
+  const sectionId = value.slice("section:".length);
+  if (!document?.sections.some((section) => section.id === sectionId)) return;
+  item.target = "section";
+  item.sectionId = sectionId;
+  delete item.pageId;
+}
+
+function updateStorePreviewFooterDraft(
+  selection: StorePreviewEditorSelection,
+  key: "brandDescription" | "copyright" | "badge" | "columnTitle" | "itemLabel" | "itemHref",
+  value: string,
+): void {
+  const footer = storePreviewRenderedSiteDocument()?.footer;
+  if (!footer) return;
+  if (key === "brandDescription" || key === "copyright" || key === "badge") {
+    footer[key] = value;
+    return;
+  }
+  if (key === "columnTitle" && Number.isInteger(selection.itemIndex)) {
+    const column = footer.columns[selection.itemIndex!];
+    if (column) column.title = value;
+    return;
+  }
+  if (!selection.itemId) return;
+  const [columnIndex, itemIndex] = selection.itemId.split(":").map(Number);
+  const item = footer.columns[columnIndex]?.items[itemIndex];
+  if (!item) return;
+  if (key === "itemLabel") item.label = value;
+  else item.href = value;
+}
+
+function renderStorePreviewCanvasToolbar(target: HTMLElement | null, selection: StorePreviewEditorSelection | null): void {
+  const toolbar = storePreviewCanvasToolbar();
+  toolbar.className = "store-preview-canvas-toolbar";
+  if (!target || !selection || !storePreviewEditorEnabled) {
+    toolbar.hidden = true;
+    toolbar.replaceChildren();
+    return;
+  }
+  const renderedStore = activePreviewRenderedStore ?? activePreviewStore?.store ?? activeStoreRoute?.store;
+  const paletteColors = storePreviewUsedColors(renderedStore);
+  if (selection.section === "announcement") {
+    const mode = target.dataset.announcementMode === "marquee" ? "marquee" : "static";
+    const speed = Math.min(40, Math.max(8, Number(target.dataset.announcementSpeed || 18)));
+    const size = ["small", "medium", "large"].includes(target.dataset.announcementSize || "") ? target.dataset.announcementSize! : "small";
+    const font = ["store", "modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(target.dataset.announcementFont || "") ? target.dataset.announcementFont! : "store";
+    const effect = ["none", "wave", "pulse", "sparkle"].includes(target.dataset.announcementEffect || "") ? target.dataset.announcementEffect! : "none";
+    const color = /^#[0-9a-f]{6}$/i.test(target.dataset.announcementColor || "") ? target.dataset.announcementColor! : "#ffffff";
+    toolbar.innerHTML = `<label><span class="sr-only">Movimiento</span><select data-canvas-announcement="announcementMode" aria-label="Movimiento de la marquesina"><option value="static"${mode === "static" ? " selected" : ""}>Texto fijo</option><option value="marquee"${mode === "marquee" ? " selected" : ""}>Cinta continua</option></select></label>
+      <label><span class="sr-only">Altura</span><select data-canvas-announcement="announcementSize" aria-label="Altura de la marquesina"><option value="small"${size === "small" ? " selected" : ""}>Compacta</option><option value="medium"${size === "medium" ? " selected" : ""}>Mediana</option><option value="large"${size === "large" ? " selected" : ""}>Grande</option></select></label>
+      <label><span class="sr-only">Tipografía</span><select data-canvas-announcement="announcementFont" aria-label="Tipografía de la marquesina"><option value="store"${font === "store" ? " selected" : ""}>Fuente de tienda</option><option value="modern"${font === "modern" ? " selected" : ""}>Moderna</option><option value="editorial"${font === "editorial" ? " selected" : ""}>Editorial</option><option value="friendly"${font === "friendly" ? " selected" : ""}>Cercana</option><option value="classic"${font === "classic" ? " selected" : ""}>Clásica</option><option value="geometric"${font === "geometric" ? " selected" : ""}>Geométrica</option></select></label>
+      <label><span class="sr-only">Efecto de letras</span><select data-canvas-announcement="announcementEffect" aria-label="Efecto de letras"><option value="none"${effect === "none" ? " selected" : ""}>Sin efecto</option><option value="wave"${effect === "wave" ? " selected" : ""}>Onda</option><option value="pulse"${effect === "pulse" ? " selected" : ""}>Pulso</option><option value="sparkle"${effect === "sparkle" ? " selected" : ""}>Destello</option></select></label>
+      ${mode === "marquee" ? `<label class="store-preview-toolbar-speed"><span>Vuelta</span><input type="range" min="8" max="40" step="1" value="${speed}" data-canvas-announcement="announcementSpeed" aria-label="Segundos por vuelta"><output>${speed}s</output></label>` : ""}
+      <label class="store-preview-toolbar-color" title="Color de fondo"><span class="sr-only">Color de fondo</span><input type="color" data-canvas-announcement="announcementColor" value="${color}" aria-label="Color de fondo de la marquesina"></label>
+      ${storePreviewPaletteHtml(paletteColors, "announcement", color, "Fondo")}`;
+    toolbar.hidden = false;
+    positionStorePreviewCanvasToolbar(toolbar, target);
+    toolbar.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-canvas-announcement]").forEach((control) => {
+      const preview = () => {
+        const key = control.dataset.canvasAnnouncement;
+        if (key === "announcementColor" && /^#[0-9a-f]{6}$/i.test(control.value)) {
+          target.dataset.announcementColor = control.value;
+          target.style.setProperty("--announcement-bg", control.value);
+          target.style.setProperty("--announcement-ink", accentContrastColor(control.value));
+        }
+        if (key === "announcementSpeed") {
+          target.dataset.announcementSpeed = control.value;
+          target.style.setProperty("--marquee-duration", `${control.value}s`);
+          control.nextElementSibling?.replaceChildren(`${control.value}s`);
+        }
+      };
+      const send = () => {
+        const key = control.dataset.canvasAnnouncement;
+        const value = control instanceof HTMLInputElement && control.type === "range" ? Number(control.value) : control.value;
+        preview();
+        postToParent("STORE_EDITOR_ANNOUNCEMENT_STYLE", { selection, key, value });
+      };
+      if (control instanceof HTMLInputElement && ["color", "range"].includes(control.type)) control.addEventListener("input", preview);
+      control.addEventListener("change", send);
+    });
+    bindStorePreviewPalette(toolbar, {
+      announcement: toolbar.querySelector<HTMLInputElement>('[data-canvas-announcement="announcementColor"]'),
+    });
+    return;
+  }
+  if (selection.section === "products" && selection.field === "categoryBanner" && selection.itemId) {
+    toolbar.innerHTML = `<button type="button" data-canvas-category-cover><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v12H3zM3 13l4-4 3 3 2-2 5 5M13.5 7.5h.01"/></svg><span>Cambiar portada</span></button>`;
+    toolbar.hidden = false;
+    positionStorePreviewCanvasToolbar(toolbar, target);
+    toolbar.querySelector("[data-canvas-category-cover]")?.addEventListener("click", () => beginStorePreviewInlineImageEdit(selection));
+    return;
+  }
+  if (selection.section === "navigation") {
+    const siteDocument = renderedStore?.siteDocument;
+    const siteSections = siteDocument?.sections ?? [];
+    const sitePages = siteDocument?.pages ?? [];
+    const navigationItems = siteDocument?.navigation?.items?.length
+      ? siteDocument.navigation.items
+      : [
+          { id: "home", label: "Inicio", target: "home" as const },
+          { id: "catalog", label: "Catálogo", target: "catalog" as const },
+          ...siteSections
+            .filter((section) => !["hero", "catalog", "links"].includes(section.kind))
+            .slice(0, 6)
+            .map((section) => ({ id: `section-${section.id}`.slice(0, 48), label: section.title || "Sección", target: "section" as const, sectionId: section.id })),
+        ];
+    const destinationOptions = (item: { target: "home" | "catalog" | "section" | "page"; sectionId?: string; pageId?: string }) => {
+      const selected = item.target === "section" ? `section:${item.sectionId || ""}` : item.target === "page" ? `page:${item.pageId || ""}` : item.target;
+      return `<option value="home"${selected === "home" ? " selected" : ""}>Inicio de la tienda</option>
+        <option value="catalog"${selected === "catalog" ? " selected" : ""}>Catálogo</option>
+        ${sitePages.map((page) => `<option value="page:${escapeHtml(page.id)}"${selected === `page:${page.id}` ? " selected" : ""}>Página: ${escapeHtml(page.label)}</option>`).join("")}
+        ${siteSections.map((section) => `<option value="section:${escapeHtml(section.id)}"${selected === `section:${section.id}` ? " selected" : ""}>${escapeHtml(section.title || "Sección")}</option>`).join("")}`;
+    };
+    toolbar.innerHTML = `<div class="store-preview-animation-popover store-preview-structure-popover">
+      <header><strong>Navegación superior</strong><span>Enlaces del encabezado</span><button type="button" data-canvas-close aria-label="Cerrar opciones"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
+      <div class="store-preview-structure-list">${navigationItems.map((item, index) => `<section class="store-preview-structure-row" data-canvas-navigation-row="${index}">
+        <label class="store-preview-animation-field"><span>Texto del enlace ${index + 1}</span><input data-canvas-navigation-label="${index}" maxlength="40" value="${escapeHtml(item.label)}"></label>
+        <label class="store-preview-animation-field"><span>Destino</span><select data-canvas-navigation-target="${index}">${destinationOptions(item)}</select></label>
+        <button type="button" class="danger store-preview-structure-remove" data-canvas-navigation-remove="${index}" aria-label="Quitar ${escapeHtml(item.label)}">Quitar</button>
+      </section>`).join("")}</div>
+      <footer><button type="button" data-canvas-navigation-add${navigationItems.length >= 8 ? " disabled" : ""}>+ Agregar enlace</button><span class="store-preview-animation-spacer"></span></footer>
+    </div>`;
+    toolbar.classList.add("is-animation-popover");
+    toolbar.hidden = false;
+    positionStorePreviewCanvasToolbar(toolbar, target);
+    toolbar.querySelectorAll<HTMLInputElement>("[data-canvas-navigation-label]").forEach((control) => {
+      const updateDraft = () => updateStorePreviewNavigationDraft(Number(control.dataset.canvasNavigationLabel), "label", control.value);
+      control.addEventListener("input", updateDraft);
+      control.addEventListener("change", () => {
+        updateDraft();
+        postToParent("STORE_EDITOR_NAVIGATION_FIELD", { action: "update", index: Number(control.dataset.canvasNavigationLabel), key: "label", value: control.value });
+      });
+    });
+    toolbar.querySelectorAll<HTMLSelectElement>("[data-canvas-navigation-target]").forEach((control) => control.addEventListener("change", () => {
+      updateStorePreviewNavigationDraft(Number(control.dataset.canvasNavigationTarget), "target", control.value);
+      postToParent("STORE_EDITOR_NAVIGATION_FIELD", { action: "update", index: Number(control.dataset.canvasNavigationTarget), key: "target", value: control.value });
+    }));
+    toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-navigation-remove]").forEach((button) => button.addEventListener("click", () => {
+      postToParent("STORE_EDITOR_NAVIGATION_FIELD", { action: "remove", index: Number(button.dataset.canvasNavigationRemove) });
+    }));
+    toolbar.querySelector("[data-canvas-navigation-add]")?.addEventListener("click", () => postToParent("STORE_EDITOR_NAVIGATION_FIELD", { action: "add" }));
+    toolbar.querySelector("[data-canvas-close]")?.addEventListener("click", () => {
+      toolbar.className = "store-preview-canvas-toolbar";
+      toolbar.hidden = true;
+      toolbar.replaceChildren();
+    });
+    return;
+  }
+  if (selection.section === "footer") {
+    const footer = renderedStore?.siteDocument?.footer;
+    if (!footer) {
+      toolbar.hidden = true;
+      return;
+    }
+    const footerField = (key: string, label: string, value: string, maxlength: number, multiline = false) => `<label class="store-preview-animation-field"><span>${label}</span>${multiline
+      ? `<textarea data-canvas-footer-field="${key}" maxlength="${maxlength}" rows="2">${escapeHtml(value)}</textarea>`
+      : `<input data-canvas-footer-field="${key}" maxlength="${maxlength}" value="${escapeHtml(value)}">`}</label>`;
+    const fieldMap: Record<string, { key: string; label: string; value: string; maxlength: number; multiline?: boolean }> = {
+      footerBrandDescription: { key: "brandDescription", label: "Descripción de la marca", value: footer.brandDescription || "", maxlength: 320, multiline: true },
+      footerCopyright: { key: "copyright", label: "Texto inferior", value: footer.copyright || "", maxlength: 160 },
+      footerBadge: { key: "badge", label: "Sello", value: footer.badge || "", maxlength: 80 },
+    };
+    if (selection.field === "footerColumnTitle" && Number.isInteger(selection.itemIndex)) {
+      fieldMap.footerColumnTitle = { key: "columnTitle", label: "Título de la columna", value: footer.columns?.[selection.itemIndex!]?.title || "", maxlength: 60 };
+    }
+    if (selection.field === "footerItemLabel" && selection.itemId) {
+      const [columnIndex, itemIndex] = selection.itemId.split(":").map(Number);
+      const item = footer.columns?.[columnIndex]?.items?.[itemIndex];
+      fieldMap.footerItemLabel = { key: "itemLabel", label: "Texto del enlace", value: item?.label || "", maxlength: 100 };
+      fieldMap.footerItemHref = { key: "itemHref", label: "Destino del enlace", value: item?.href || "", maxlength: 500 };
+    }
+    const selectedFields: Array<{ key: string; label: string; value: string; maxlength: number; multiline?: boolean }> = [];
+    if (selection.field === "section") {
+      selectedFields.push(
+        { key: "brandDescription", label: "Descripción de la marca", value: footer.brandDescription || "", maxlength: 320, multiline: true },
+        { key: "copyright", label: "Texto inferior", value: footer.copyright || "", maxlength: 160 },
+        { key: "badge", label: "Sello", value: footer.badge || "", maxlength: 80 },
+      );
+    } else {
+      if (fieldMap[selection.field]) selectedFields.push(fieldMap[selection.field]);
+      if (selection.field === "footerItemLabel" && fieldMap.footerItemHref) selectedFields.push(fieldMap.footerItemHref);
+    }
+    const footerStructure = footer.columns.map((column, columnIndex) => `<section class="store-preview-structure-group">
+      <header><label class="store-preview-animation-field"><span>Columna ${columnIndex + 1}</span><input data-canvas-footer-column-title="${columnIndex}" maxlength="60" value="${escapeHtml(column.title)}"></label><button type="button" class="danger" data-canvas-footer-remove-column="${columnIndex}" aria-label="Quitar columna ${columnIndex + 1}">Quitar columna</button></header>
+      <div class="store-preview-structure-items">${column.items.map((item, itemIndex) => `<div class="store-preview-structure-item">
+        <label class="store-preview-animation-field"><span>Texto ${itemIndex + 1}</span><input data-canvas-footer-item-label="${columnIndex}:${itemIndex}" maxlength="100" value="${escapeHtml(item.label)}"></label>
+        <label class="store-preview-animation-field"><span>Destino</span><input data-canvas-footer-item-href="${columnIndex}:${itemIndex}" maxlength="500" value="${escapeHtml(item.href)}" placeholder="#sección o https://"></label>
+        <button type="button" class="danger store-preview-structure-remove" data-canvas-footer-remove-item="${columnIndex}:${itemIndex}" aria-label="Quitar ${escapeHtml(item.label)}">Quitar</button>
+      </div>`).join("")}</div>
+      <footer><button type="button" data-canvas-footer-add-item="${columnIndex}"${column.items.length >= 8 ? " disabled" : ""}>+ Agregar enlace</button></footer>
+    </section>`).join("");
+    toolbar.innerHTML = `<div class="store-preview-animation-popover store-preview-footer-popover store-preview-structure-popover">
+      <header><strong>Pie de página</strong><span>Edita aquí mismo</span><button type="button" data-canvas-close aria-label="Cerrar opciones"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
+      <div class="store-preview-animation-fields">${selectedFields.map((field) => footerField(field.key, field.label, field.value, field.maxlength, field.multiline)).join("")}</div>
+      <p class="store-preview-footer-help">Agrega columnas y enlaces aquí. Cada destino puede ser una sección (#), una página (https://), un correo (mailto:) o un teléfono (tel:).</p>
+      <div class="store-preview-structure-list">${footerStructure}</div>
+      <footer><button type="button" data-canvas-footer-add-column${footer.columns.length >= 4 ? " disabled" : ""}>+ Agregar columna</button><span class="store-preview-animation-spacer"></span><button type="button" class="danger" data-canvas-hide-footer>Quitar pie de página</button></footer>
+    </div>`;
+    toolbar.classList.add("is-animation-popover");
+    toolbar.hidden = false;
+    positionStorePreviewCanvasToolbar(toolbar, target);
+    toolbar.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-canvas-footer-field]").forEach((control) => {
+      const key = control.dataset.canvasFooterField as "brandDescription" | "copyright" | "badge" | "columnTitle" | "itemLabel" | "itemHref";
+      const updateDraft = () => updateStorePreviewFooterDraft(selection, key, control.value);
+      control.addEventListener("input", updateDraft);
+      control.addEventListener("change", () => {
+        updateDraft();
+        postToParent("STORE_EDITOR_FOOTER_FIELD", { selection, key, value: control.value });
+      });
+    });
+    toolbar.querySelectorAll<HTMLInputElement>("[data-canvas-footer-column-title]").forEach((control) => {
+      const itemIndex = Number(control.dataset.canvasFooterColumnTitle);
+      const fieldSelection = { section: "footer", field: "footerColumnTitle", label: `Columna ${itemIndex + 1}`, itemIndex } as StorePreviewEditorSelection;
+      const updateDraft = () => updateStorePreviewFooterDraft(fieldSelection, "columnTitle", control.value);
+      control.addEventListener("input", updateDraft);
+      control.addEventListener("change", () => {
+        updateDraft();
+        postToParent("STORE_EDITOR_FOOTER_FIELD", { selection: fieldSelection, key: "columnTitle", value: control.value });
+      });
+    });
+    toolbar.querySelectorAll<HTMLInputElement>("[data-canvas-footer-item-label]").forEach((control) => {
+      const itemId = control.dataset.canvasFooterItemLabel;
+      const fieldSelection = { section: "footer", field: "footerItemLabel", label: "Enlace del pie", itemId } as StorePreviewEditorSelection;
+      const updateDraft = () => updateStorePreviewFooterDraft(fieldSelection, "itemLabel", control.value);
+      control.addEventListener("input", updateDraft);
+      control.addEventListener("change", () => {
+        updateDraft();
+        postToParent("STORE_EDITOR_FOOTER_FIELD", { selection: fieldSelection, key: "itemLabel", value: control.value });
+      });
+    });
+    toolbar.querySelectorAll<HTMLInputElement>("[data-canvas-footer-item-href]").forEach((control) => {
+      const itemId = control.dataset.canvasFooterItemHref;
+      const fieldSelection = { section: "footer", field: "footerItemLabel", label: "Enlace del pie", itemId } as StorePreviewEditorSelection;
+      const updateDraft = () => updateStorePreviewFooterDraft(fieldSelection, "itemHref", control.value);
+      control.addEventListener("input", updateDraft);
+      control.addEventListener("change", () => {
+        updateDraft();
+        postToParent("STORE_EDITOR_FOOTER_FIELD", { selection: fieldSelection, key: "itemHref", value: control.value });
+      });
+    });
+    toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-footer-add-item]").forEach((button) => button.addEventListener("click", () => {
+      postToParent("STORE_EDITOR_FOOTER_STRUCTURE", { action: "add-item", columnIndex: Number(button.dataset.canvasFooterAddItem) });
+    }));
+    toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-footer-remove-item]").forEach((button) => button.addEventListener("click", () => {
+      const [columnIndex, itemIndex] = String(button.dataset.canvasFooterRemoveItem).split(":").map(Number);
+      postToParent("STORE_EDITOR_FOOTER_STRUCTURE", { action: "remove-item", columnIndex, itemIndex });
+    }));
+    toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-footer-remove-column]").forEach((button) => button.addEventListener("click", () => {
+      postToParent("STORE_EDITOR_FOOTER_STRUCTURE", { action: "remove-column", columnIndex: Number(button.dataset.canvasFooterRemoveColumn) });
+    }));
+    toolbar.querySelector("[data-canvas-footer-add-column]")?.addEventListener("click", () => postToParent("STORE_EDITOR_FOOTER_STRUCTURE", { action: "add-column" }));
+    toolbar.querySelector("[data-canvas-hide-footer]")?.addEventListener("click", () => postToParent("STORE_EDITOR_FOOTER_FIELD", { selection, key: "enabled", value: false }));
+    toolbar.querySelector("[data-canvas-close]")?.addEventListener("click", () => {
+      toolbar.className = "store-preview-canvas-toolbar";
+      toolbar.hidden = true;
+      toolbar.replaceChildren();
+    });
+    return;
+  }
+  const siteId = selection.section.startsWith("site-") ? selection.section.slice("site-".length) : "";
+  const section = selection.animationId
+    ? target.closest<HTMLElement>(".store-motion-section[data-animation-id]")
+      ?? Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]")).find((candidate) => candidate.dataset.animationId === selection.animationId)
+      ?? null
+    : siteId
+      ? target.closest<HTMLElement>(".bespoke-zone[data-site-section]")
+        ?? Array.from(app.querySelectorAll<HTMLElement>(".bespoke-zone[data-site-section]")).find((candidate) => candidate.dataset.siteSection === siteId)
+        ?? null
+      : null;
+  if (!section) {
+    toolbar.hidden = true;
+    return;
+  }
+  const textFields = new Set(["animationTitle", "animationSubtitle", "animationStyle", "title", "caption", "body", "textBlock", "siteTitle", "siteBody", "siteItemTitle", "siteItemBody", "siteBlockText"]);
+  const isText = textFields.has(selection.field);
+  const animation = renderedStore?.animations?.find((candidate) => candidate.id === selection.animationId);
+  const siteSection = siteId ? renderedStore?.siteDocument?.sections?.find((candidate) => candidate.id === siteId) : undefined;
+  const siteSectionLocked = Boolean(siteId && storePreviewLockedSectionIds.has(siteId));
+  const siteHasAnimation = Boolean(siteSection && siteSection.motion !== "none");
+  if (!animation && !siteSection) {
+    toolbar.hidden = true;
+    return;
+  }
+  const siteItem = siteSection && Number.isInteger(selection.itemIndex) ? siteSection.items?.[selection.itemIndex!] : undefined;
+  const findSiteBlock = (blocks: NonNullable<typeof siteSection>["blocks"] = []): NonNullable<NonNullable<typeof siteSection>["blocks"]>[number] | undefined => {
+    for (const block of blocks ?? []) {
+      if (block.id === selection.itemId) return block;
+      const nested = findSiteBlock(block.children);
+      if (nested) return nested;
+    }
+    return undefined;
+  };
+  const selectedSiteBlock = siteSection && selection.itemId ? findSiteBlock(siteSection.blocks) : undefined;
+  const siteStyle = siteSection
+    ? selectedSiteBlock?.style || (["siteBody", "siteItemBody"].includes(selection.field)
+      ? (siteItem?.bodyStyle || siteSection.bodyStyle)
+      : (siteItem?.titleStyle || siteSection.titleStyle))
+    : undefined;
+  const copy = animation ? target.closest<HTMLElement>("[data-animation-copy]") ?? section : target;
+  const scale = Math.min(200, Math.max(50, Number(copy.dataset.animationTextScale || copy.dataset.canvasTextScale || section.dataset.animationTextScale || siteStyle?.textScale || 100)));
+  const align = copy.dataset.animationTextAlign || copy.dataset.canvasTextAlign || section.dataset.animationTextAlign || siteStyle?.textAlign || siteSection?.align || "left";
+  const fontStyle = copy.dataset.animationFontStyle || section.dataset.animationFontStyle || siteStyle?.fontStyle || document.body.dataset.fontStyle || "modern";
+  const color = copy.dataset.animationTextColor || copy.dataset.canvasTextColor || section.dataset.animationTextColor || siteStyle?.textColor || siteSection?.textColor || "#171717";
+  const background = section.dataset.animationBackground || "#ffffff";
+  const fontOptions = [
+    ["modern", "Moderna"], ["editorial", "Editorial"], ["friendly", "Cercana"], ["classic", "Clásica"], ["geometric", "Geométrica"], ["artisan", "Artesanal"], ["condensed", "Condensada"], ["luxury", "Alta moda"],
+  ].map(([value, label]) => `<option value="${value}"${fontStyle === value ? " selected" : ""}>${label}</option>`).join("");
+  const alignButton = (value: string, label: string, path: string) => `<button type="button" data-canvas-align="${value}" aria-label="${label}" aria-pressed="${align === value}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="${path}"/></svg></button>`;
+  const styleControls = `<div class="store-preview-animation-style" aria-label="Estilo del texto">
+      <label class="store-preview-toolbar-font"><span class="sr-only">Tipografía</span><select data-canvas-font aria-label="Tipografía del texto">${fontOptions}</select></label>
+      <span class="store-preview-toolbar-size"><button type="button" data-canvas-size-step="-10" aria-label="Reducir texto">−</button><output data-canvas-size>${scale}%</output><button type="button" data-canvas-size-step="10" aria-label="Aumentar texto">+</button></span>
+      <label class="store-preview-toolbar-color" title="Color del texto"><span class="sr-only">Color del texto</span><input type="color" data-canvas-color value="${color}" aria-label="Color del texto"></label>
+      <span class="store-preview-toolbar-align" aria-label="Alineación">${alignButton("left", "Alinear a la izquierda", "M3 4h14M3 8h10M3 12h14M3 16h8")}${alignButton("center", "Centrar", "M3 4h14M5 8h10M3 12h14M6 16h8")}${alignButton("right", "Alinear a la derecha", "M3 4h14M7 8h10M3 12h14M9 16h8")}</span>
+      ${storePreviewPaletteHtml(paletteColors, "text", color, "Paleta")}
+    </div>`;
+  const selectedMedia = animation && Number.isInteger(selection.itemIndex) ? animation.media[selection.itemIndex!] : undefined;
+  const fieldInput = (key: string, label: string, value: string, maxlength: number, multiline = false) => `<label class="store-preview-animation-field"><span>${label}</span>${multiline
+    ? `<textarea data-canvas-animation-field="${key}" maxlength="${maxlength}" rows="2">${escapeHtml(value)}</textarea>`
+    : `<input data-canvas-animation-field="${key}" maxlength="${maxlength}" value="${escapeHtml(value)}">`}</label>`;
+  const siteFieldInput = (key: string, label: string, value: string, maxlength: number, multiline = false) => `<label class="store-preview-animation-field"><span>${label}</span>${multiline
+    ? `<textarea data-canvas-site-field="${key}" maxlength="${maxlength}" rows="2">${escapeHtml(value)}</textarea>`
+    : `<input data-canvas-site-field="${key}" maxlength="${maxlength}" value="${escapeHtml(value)}">`}</label>`;
+  const productOptions = [`<option value="">Sin producto</option>`, ...(renderedStore?.items ?? []).map((item) => `<option value="${escapeHtml(item.id)}"${animation?.productId === item.id ? " selected" : ""}>${escapeHtml(item.name)}</option>`)].join("");
+  const animationMediaRequirement = animation ? storeAnimationMediaRequirement(animation.type) : { min: 0, max: 0 };
+  const missingAnimationMedia = animation ? Math.max(0, animationMediaRequirement.min - animation.media.length) : 0;
+  const mediaActions = animation && animationMediaRequirement.max > 0
+    ? `<div class="store-preview-animation-media" aria-label="Medios de la animación">${animation.media.map((media, index) => `<button type="button" data-canvas-media="${index}"${selection.itemIndex === index ? ` aria-pressed="true"` : ""} aria-label="Cambiar medio ${index + 1}"><span>${isVideoMediaUrl(media.imageUrl) ? "MP4" : "IMG"}</span>${index + 1}</button>`).join("")}${Array.from({ length: missingAnimationMedia }, (_, missingIndex) => {
+        const index = animation.media.length + missingIndex;
+        return `<button type="button" class="is-empty" data-canvas-add-media="${index}" aria-label="Agregar medio ${index + 1}"><span>+</span>${index + 1}</button>`;
+      }).join("")}</div>`
+    : "";
+  const siteMediaActions = siteSection?.mediaUrls?.length
+    ? `<div class="store-preview-animation-media" aria-label="Medios de la sección">${siteSection.mediaUrls.map((mediaUrl, index) => `<button type="button" data-canvas-site-media="${index}"${selection.itemIndex === index ? ` aria-pressed="true"` : ""} aria-label="Cambiar medio ${index + 1}"><span>${isVideoMediaUrl(mediaUrl) ? "MP4" : "IMG"}</span>${index + 1}</button>`).join("")}</div>`
+    : "";
+  const compatibleSiteMotions: Record<string, string[]> = {
+    hero: ["none", "reveal", "clip", "drift", "scale", "parallax"],
+    story: ["none", "reveal", "clip", "drift", "scale", "parallax", "story-scroll"],
+    gallery: ["none", "reveal", "clip", "drift", "scale", "parallax"],
+    catalog: ["none", "reveal"], contact: ["none", "reveal"], location: ["none", "reveal"], links: ["none", "reveal"],
+  };
+  const compatibleSiteLayouts: Record<string, string[]> = {
+    hero: ["split", "full-bleed", "centered", "offset"],
+    story: ["split", "offset", "stacked", "rail"],
+    gallery: ["grid", "offset", "stacked", "rail"],
+    catalog: ["grid", "stacked", "minimal"],
+    contact: ["split", "stacked", "minimal"], location: ["split", "stacked", "minimal"], links: ["centered", "minimal"],
+  };
+  const siteMotionOptions = [["none", "Sin movimiento"], ["reveal", "Revelar"], ["clip", "Recorte"], ["drift", "Desplazar"], ["scale", "Escalar"], ["parallax", "Parallax"], ["story-scroll", "Historia al scroll"]]
+    .filter(([value]) => compatibleSiteMotions[siteSection?.kind || ""]?.includes(value) || siteSection?.motion === value)
+    .map(([value, label]) => `<option value="${value}"${siteSection?.motion === value ? " selected" : ""}>${label}</option>`).join("");
+  const siteLayoutOptions = [["split", "Dividida"], ["full-bleed", "Pantalla completa"], ["centered", "Centrada"], ["offset", "Desplazada"], ["grid", "Cuadrícula"], ["stacked", "Apilada"], ["rail", "Carril"], ["minimal", "Mínima"]]
+    .filter(([value]) => compatibleSiteLayouts[siteSection?.kind || ""]?.includes(value) || siteSection?.layout === value)
+    .map(([value, label]) => `<option value="${value}"${siteSection?.layout === value ? " selected" : ""}>${label}</option>`).join("");
+  toolbar.innerHTML = isText
+    ? `${styleControls}
+      <span class="store-preview-toolbar-divider" aria-hidden="true"></span>
+      ${animation ? `<button type="button" data-canvas-animation-settings aria-label="Abrir opciones de esta animación" title="Opciones de la animación"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h8M15 5h2M3 10h2M9 10h8M3 15h7M14 15h3"/><circle cx="13" cy="5" r="2"/><circle cx="7" cy="10" r="2"/><circle cx="12" cy="15" r="2"/></svg><span>Animación</span></button>
+        <button type="button" data-canvas-copy aria-label="Copiar texto" title="Copiar · Ctrl/Cmd+C"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="1"/><path d="M4 13V4h9"/></svg></button>
+        <button type="button" data-canvas-duplicate aria-label="Duplicar texto" title="Duplicar · Ctrl/Cmd+V"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="6" width="10" height="10" rx="1"/><path d="M3 12V3h9M11 8v6M8 11h6"/></svg></button>
+        ${selection.field === "textBlock" ? `<button type="button" class="danger" data-canvas-delete-text aria-label="Eliminar este texto" title="Eliminar texto"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V3h4v3m3 0-1 11H6L5 6m3 3v5m4-5v5"/></svg></button>` : ""}` : `<button type="button" data-canvas-site-settings aria-label="Abrir opciones de esta sección animada" title="Opciones de la sección"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h8M15 5h2M3 10h2M9 10h8M3 15h7M14 15h3"/><circle cx="13" cy="5" r="2"/><circle cx="7" cy="10" r="2"/><circle cx="12" cy="15" r="2"/></svg><span>Sección</span></button>`}`
+    : animation ? `<div class="store-preview-animation-popover">
+        <header><strong>${escapeHtml(animation.name || STORE_MOTION_EXPERIENCE_LABELS[animation.type])}</strong><span>${escapeHtml(STORE_MOTION_EXPERIENCE_LABELS[animation.type])}${selectedMedia ? ` · escena ${selection.itemIndex! + 1}` : ""}</span><button type="button" data-canvas-close aria-label="Cerrar opciones"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
+        ${styleControls}
+        ${missingAnimationMedia ? `<div class="store-preview-animation-incomplete" role="status"><strong>Completa esta animación</strong><span>Agrega ${missingAnimationMedia} ${missingAnimationMedia === 1 ? "archivo" : "archivos"} para verla terminada. Acepta imágenes, GIF, MP4 y WebM.</span></div>` : ""}
+        <div class="store-preview-animation-fields">${selectedMedia
+          ? `${fieldInput("title", "Título de escena", selectedMedia.title || "", 100)}${fieldInput("caption", "Subtítulo", selectedMedia.caption || "", 180)}${fieldInput("body", "Texto", selectedMedia.body || "", 360, true)}`
+          : `${fieldInput("title", "Título", animation.title || "", 100)}${fieldInput("subtitle", "Subtítulo", animation.subtitle || "", 220)}`}</div>
+        ${mediaActions}
+        ${!selectedMedia ? `<div class="store-preview-animation-fields is-secondary"><label class="store-preview-animation-field"><span>Producto</span><select data-canvas-animation-field="productId">${productOptions}</select></label>${fieldInput("buttonLabel", "Texto del botón", animation.buttonLabel || "", 36)}</div>` : ""}
+        ${storePreviewPaletteHtml(paletteColors, "animation-background", background, "Fondo")}
+        <footer>
+          <button type="button" data-canvas-add-text="title">+ Título</button><button type="button" data-canvas-add-text="subtitle">+ Subtítulo</button>
+          <label class="store-preview-toolbar-color" title="Fondo de la sección"><span class="sr-only">Fondo de la sección</span><input type="color" data-canvas-background value="${background}" aria-label="Fondo de la sección"></label>
+          <span class="store-preview-animation-spacer"></span>
+          <button type="button" data-canvas-move="-1" aria-label="Mover sección arriba" title="Mover arriba"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 12 5-5 5 5"/></svg></button>
+          <button type="button" data-canvas-move="1" aria-label="Mover sección abajo" title="Mover abajo"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></button>
+          <button type="button" class="danger" data-canvas-delete-animation aria-label="Eliminar esta animación" title="Eliminar animación"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V3h4v3m3 0-1 11H6L5 6m3 3v5m4-5v5"/></svg></button>
+        </footer>
+      </div>` : `<div class="store-preview-animation-popover">
+        <header><strong>${escapeHtml(siteSection?.title || "Sección")}</strong><span>${escapeHtml(siteHasAnimation ? (siteSection?.kind === "hero" ? "Portada animada" : siteSection?.kind === "story" ? "Historia animada" : "Sección animada") : (siteSection?.kind === "hero" ? "Portada" : siteSection?.kind === "story" ? "Historia" : "Sección"))}${siteItem ? ` · escena ${selection.itemIndex! + 1}` : ""}</span><button type="button" data-canvas-close aria-label="Cerrar opciones"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
+        ${styleControls}
+        <div class="store-preview-animation-fields">${selectedSiteBlock
+          ? `${siteFieldInput("text", selectedSiteBlock.kind === "heading" ? "Título" : selectedSiteBlock.kind === "action" ? "Botón" : "Texto", selectedSiteBlock.text || "", selectedSiteBlock.kind === "action" ? 40 : selectedSiteBlock.kind === "heading" ? 120 : 600, selectedSiteBlock.kind === "text")}`
+          : siteItem
+          ? `${siteFieldInput("title", "Título de escena", siteItem.title || "", 100)}${siteFieldInput("body", "Texto de escena", siteItem.body || "", 320, true)}`
+          : `${siteFieldInput("title", "Título", siteSection?.title || "", 120)}${siteFieldInput("body", "Texto", siteSection?.body || "", 600, true)}`}</div>
+        ${siteMediaActions}
+        ${!siteItem ? `<div class="store-preview-animation-fields is-secondary"><label class="store-preview-animation-field"><span>Movimiento</span><select data-canvas-site-field="motion">${siteMotionOptions}</select></label><label class="store-preview-animation-field"><span>Composición</span><select data-canvas-site-field="layout">${siteLayoutOptions}</select></label></div>` : ""}
+        ${storePreviewPaletteHtml(paletteColors, "site-background", siteSection?.backgroundColor || "#ffffff", "Fondo")}
+        <footer><label class="store-preview-toolbar-color" title="Fondo de la sección"><span class="sr-only">Fondo de la sección</span><input type="color" data-canvas-site-background value="${siteSection?.backgroundColor || "#ffffff"}" aria-label="Fondo de la sección"></label><button type="button" data-canvas-section-lock aria-pressed="${siteSectionLocked}" title="${siteSectionLocked ? "Permitir que la IA cambie esta sección" : "Conservar esta sección al regenerar"}">${siteSectionLocked ? "Se conserva" : "Conservar"}</button><span class="store-preview-animation-spacer"></span><button type="button" data-canvas-move="-1" aria-label="Mover sección arriba" title="Mover arriba"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 12 5-5 5 5"/></svg></button><button type="button" data-canvas-move="1" aria-label="Mover sección abajo" title="Mover abajo"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></button>${siteHasAnimation ? `<button type="button" class="danger" data-canvas-delete-site-animation aria-label="Eliminar la animación de esta sección" title="Eliminar animación"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V3h4v3m3 0-1 11H6L5 6m3 3v5m4-5v5"/></svg></button>` : ""}</footer>
+      </div>`;
+  toolbar.classList.toggle("is-animation-popover", !isText);
+  toolbar.hidden = false;
+  positionStorePreviewCanvasToolbar(toolbar, target);
+  const styleSelection = isText
+    ? selection
+    : animation
+      ? { ...selection, field: selectedMedia ? "title" : "animationStyle" }
+      : { ...selection, field: siteItem ? "siteItemTitle" : "siteTitle" };
+  const sendStyle = (key: string, value: unknown) => postToParent("STORE_EDITOR_TEXT_STYLE", { selection: styleSelection, key, value });
+  toolbar.querySelector<HTMLSelectElement>("[data-canvas-font]")?.addEventListener("change", (event) => sendStyle("fontStyle", (event.currentTarget as HTMLSelectElement).value));
+  const colorControl = toolbar.querySelector<HTMLInputElement>("[data-canvas-color]");
+  colorControl?.addEventListener("input", () => {
+    if (animation) {
+      const stylesExactCopy = isText || !!selectedMedia;
+      const styleTarget = stylesExactCopy ? copy : section;
+      styleTarget.dataset.animationTextColor = colorControl.value;
+      styleTarget.style.setProperty(stylesExactCopy ? "--animation-scene-text-color" : "--animation-text-color", colorControl.value);
+    } else {
+      copy.dataset.canvasTextColor = colorControl.value;
+      copy.style.setProperty("--canvas-text-color", colorControl.value);
+    }
+  });
+  colorControl?.addEventListener("change", () => sendStyle("textColor", colorControl.value));
+  const backgroundControl = toolbar.querySelector<HTMLInputElement>("[data-canvas-background]");
+  backgroundControl?.addEventListener("input", () => section.style.setProperty("--animation-background", backgroundControl.value));
+  backgroundControl?.addEventListener("change", () => postToParent("STORE_EDITOR_SECTION_STYLE", { selection, key: "backgroundColor", value: backgroundControl.value }));
+  const siteBackgroundControl = toolbar.querySelector<HTMLInputElement>("[data-canvas-site-background]");
+  siteBackgroundControl?.addEventListener("input", () => section.style.setProperty("--zone-bg", siteBackgroundControl.value));
+  siteBackgroundControl?.addEventListener("change", () => postToParent("STORE_EDITOR_SITE_FIELD", { selection, key: "backgroundColor", value: siteBackgroundControl.value }));
+  bindStorePreviewPalette(toolbar, {
+    text: colorControl,
+    "animation-background": backgroundControl,
+    "site-background": siteBackgroundControl,
+  });
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-align]").forEach((button) => button.addEventListener("click", () => sendStyle("textAlign", button.dataset.canvasAlign)));
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-size-step]").forEach((button) => button.addEventListener("click", () => sendStyle("textScale", Math.min(200, Math.max(50, scale + Number(button.dataset.canvasSizeStep))))));
+  toolbar.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("[data-canvas-animation-field]").forEach((control) => {
+    control.addEventListener("change", () => postToParent("STORE_EDITOR_ANIMATION_FIELD", {
+      selection,
+      key: control.dataset.canvasAnimationField,
+      value: control.value,
+    }));
+  });
+  toolbar.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("[data-canvas-site-field]").forEach((control) => {
+    control.addEventListener("change", () => postToParent("STORE_EDITOR_SITE_FIELD", {
+      selection,
+      key: control.dataset.canvasSiteField,
+      value: control.value,
+    }));
+  });
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-media]").forEach((button) => button.addEventListener("click", () => beginStorePreviewInlineImageEdit({
+    section: selection.section,
+    field: "media",
+    label: `medio ${Number(button.dataset.canvasMedia) + 1} de la animación`,
+    animationId: selection.animationId,
+    itemIndex: Number(button.dataset.canvasMedia),
+  })));
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-add-media]").forEach((button) => button.addEventListener("click", () => beginStorePreviewInlineImageEdit({
+    section: selection.section,
+    field: "mediaAdd",
+    label: `medio ${Number(button.dataset.canvasAddMedia) + 1} de la animación`,
+    animationId: selection.animationId,
+    itemIndex: Number(button.dataset.canvasAddMedia),
+  })));
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-site-media]").forEach((button) => button.addEventListener("click", () => beginStorePreviewInlineImageEdit({
+    section: selection.section,
+    field: "siteMedia",
+    label: `medio ${Number(button.dataset.canvasSiteMedia) + 1} de la sección`,
+    itemIndex: Number(button.dataset.canvasSiteMedia),
+  })));
+  toolbar.querySelector("[data-canvas-animation-settings]")?.addEventListener("click", () => renderStorePreviewCanvasToolbar(section, {
+    section: selection.section,
+    field: "section",
+    label: animation?.name || "sección animada",
+    animationId: selection.animationId,
+  }));
+  toolbar.querySelector("[data-canvas-site-settings]")?.addEventListener("click", () => renderStorePreviewCanvasToolbar(section, {
+    section: selection.section,
+    field: "section",
+    label: siteSection?.title || "sección animada",
+  }));
+  toolbar.querySelector("[data-canvas-close]")?.addEventListener("click", () => {
+    // Reset the popover variant before emptying it. Otherwise the later
+    // `.is-animation-popover { display: block }` rule can override `[hidden]`
+    // and leave an empty white toolbar behind after the close button is used.
+    toolbar.className = "store-preview-canvas-toolbar";
+    toolbar.hidden = true;
+    toolbar.replaceChildren();
+  });
+  toolbar.querySelector("[data-canvas-copy]")?.addEventListener("click", () => postToParent("STORE_EDITOR_COPY_TEXT", { selection }));
+  toolbar.querySelector("[data-canvas-duplicate]")?.addEventListener("click", () => postToParent("STORE_EDITOR_DUPLICATE_TEXT", { selection }));
+  toolbar.querySelector("[data-canvas-delete-text]")?.addEventListener("click", () => postToParent("STORE_EDITOR_DELETE_TEXT", { selection }));
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-add-text]").forEach((button) => button.addEventListener("click", () => postToParent("STORE_EDITOR_ADD_TEXT", { selection, role: button.dataset.canvasAddText })));
+  toolbar.querySelectorAll<HTMLButtonElement>("[data-canvas-move]").forEach((button) => button.addEventListener("click", () => postToParent("STORE_EDITOR_MOVE_SECTION", { selection, direction: Number(button.dataset.canvasMove) })));
+  toolbar.querySelector<HTMLButtonElement>("[data-canvas-section-lock]")?.addEventListener("click", (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    const locked = button.getAttribute("aria-pressed") !== "true";
+    button.setAttribute("aria-pressed", String(locked));
+    button.textContent = locked ? "Se conserva" : "Conservar";
+    postToParent("STORE_EDITOR_SECTION_LOCK", { selection, locked });
+  });
+  toolbar.querySelector("[data-canvas-delete-animation]")?.addEventListener("click", () => postToParent("STORE_EDITOR_DELETE_ANIMATION", { animationId: selection.animationId }));
+  toolbar.querySelector("[data-canvas-delete-site-animation]")?.addEventListener("click", () => postToParent("STORE_EDITOR_SITE_FIELD", { selection, key: "motion", value: "none" }));
+}
+
 function markStorePreviewEditorTarget(element: Element | null, selection: StorePreviewEditorSelection): void {
   if (!(element instanceof HTMLElement)) return;
   element.dataset.storeEditorTarget = "true";
@@ -1734,22 +2525,34 @@ function syncStorePreviewEditorMode(): void {
   document.documentElement.classList.toggle("store-preview-mode", storePreviewMode);
   document.documentElement.classList.toggle("store-editor-mode", storeEditorMode);
   document.body.classList.toggle("store-preview-editor-enabled", storeEditorMode && storePreviewEditorEnabled);
+  if (!storePreviewEditorEnabled) {
+    storePreviewInlineEditorFinish?.(true);
+    if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
+    storePreviewEditorClickTimer = null;
+    storePreviewEditorSuppressNextClick = false;
+  }
   if (!storePreviewEditorEnabled && storePreviewEditorHover) {
     storePreviewEditorHover.classList.remove("store-preview-editor-hover");
     storePreviewEditorHover = null;
   }
+  if (!storePreviewEditorEnabled) renderStorePreviewCanvasToolbar(null, null);
 }
 
 function syncStorePreviewEditorSelection(): void {
   app.querySelectorAll<HTMLElement>(".store-preview-editor-selected").forEach((element) => element.classList.remove("store-preview-editor-selected"));
   app.querySelectorAll<HTMLElement>(".store-animation-layout-selected").forEach((element) => element.classList.remove("store-animation-layout-selected"));
   const selection = storePreviewEditorSelection;
-  if (!selection || !storePreviewEditorEnabled) return;
+  if (!selection || !storePreviewEditorEnabled) {
+    renderStorePreviewCanvasToolbar(null, null);
+    return;
+  }
   if (selection.animationId) {
     const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
       .find((candidate) => candidate.dataset.animationId === selection.animationId);
     const copies = Array.from(section?.querySelectorAll<HTMLElement>("[data-animation-copy]") ?? []);
-    const selectedCopy = Number.isInteger(selection.itemIndex)
+    const selectedCopy = selection.itemId
+      ? copies.find((copy) => copy.dataset.animationTextBlock === selection.itemId)
+      : Number.isInteger(selection.itemIndex)
       ? copies.find((copy) => Number(copy.dataset.animationMediaIndex) === selection.itemIndex)
       : copies.find((copy) => !copy.hasAttribute("data-animation-media-index")) || copies[0];
     selectedCopy?.classList.add("store-animation-layout-selected");
@@ -1764,6 +2567,7 @@ function syncStorePreviewEditorSelection(): void {
   const target = candidates[0] || Array.from(app.querySelectorAll<HTMLElement>("[data-store-editor-section]"))
     .find((candidate) => candidate.dataset.storeEditorSection === selection.section);
   target?.classList.add("store-preview-editor-selected");
+  renderStorePreviewCanvasToolbar(target ?? null, selection);
 }
 
 function applyStoreSectionBackgrounds(store: Store): void {
@@ -1809,9 +2613,12 @@ function applyStoreSectionBackgrounds(store: Store): void {
     if (!siteId) return;
     const section = `site-${siteId}`;
     element.dataset.storeSectionKey = section;
-    const color = configured[section];
-    if (!/^#[0-9a-f]{6}$/i.test(color || "")) return;
-    const text = backgroundTheme(color).textColor;
+    const authoredSection = store.siteDocument?.sections?.find((candidate) => candidate.id === siteId);
+    const configuredColor = configured[section];
+    const hasConfiguredColor = /^#[0-9a-f]{6}$/i.test(configuredColor || "");
+    const color = hasConfiguredColor ? configuredColor : authoredSection?.backgroundColor;
+    if (!color) return;
+    const text = hasConfiguredColor ? backgroundTheme(color).textColor : authoredSection?.textColor || backgroundTheme(color).textColor;
     element.style.setProperty("--zone-bg", color);
     element.style.setProperty("--zone-ink", text);
     element.style.setProperty("--store-section-background", color);
@@ -1822,48 +2629,144 @@ function applyStoreSectionBackgrounds(store: Store): void {
   });
 }
 
+function storePreviewSectionInsertionOptions(): string {
+  const optionsFor = (text: boolean) => STORE_MOTION_EXPERIENCES
+    .filter((type) => STORE_TEXT_ANIMATION_EXPERIENCES.has(type) === text)
+    .map((type) => `<option value="animation:${type}">${escapeHtml(STORE_MOTION_EXPERIENCE_LABELS[type])}</option>`)
+    .join("");
+  return `<option value="">Elige qué insertar…</option>
+    <optgroup label="Secciones">
+      <option value="about">Texto e historia</option>
+      <option value="gallery">Galería visual</option>
+      <option value="links">Redes sociales</option>
+      <option value="contact">Contacto</option>
+      <option value="location">Ubicación</option>
+      <option value="footer">Pie de página</option>
+    </optgroup>
+    <optgroup label="Animaciones visuales">${optionsFor(false)}</optgroup>
+    <optgroup label="Animaciones de texto">${optionsFor(true)}</optgroup>`;
+}
+
+function renderStorePreviewSectionInsertions(): void {
+  app.querySelectorAll(".store-section-insert-boundary").forEach((element) => element.remove());
+  const sections = Array.from(app.children).filter((element): element is HTMLElement =>
+    element instanceof HTMLElement && !!element.dataset.storeSectionKey,
+  );
+  if (!sections.length) return;
+  const sectionLabels: Record<string, string> = {
+    hero: "Portada", products: "Productos", about: "Nuestra historia", gallery: "Fotos editoriales",
+    links: "Redes y enlaces", contact: "Contáctanos", location: "Ubicación",
+  };
+  const readableSection = (section: HTMLElement) => {
+    const key = section.dataset.storeSectionKey || "";
+    if (key.startsWith("animation-")) return "la animación";
+    if (key.startsWith("site-")) return section.getAttribute("aria-label")?.trim() || "la sección";
+    return sectionLabels[key] || "la sección";
+  };
+  const addBoundary = (reference: HTMLElement, position: "before" | "after", insertAfter: string, label: string) => {
+    const boundary = document.createElement("div");
+    boundary.className = "store-section-insert-boundary";
+    boundary.dataset.insertAfter = insertAfter;
+    boundary.innerHTML = `<label class="store-section-insert-trigger" title="${escapeHtml(label)}">
+      <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <select aria-label="${escapeHtml(label)}" data-store-section-insert-select>${storePreviewSectionInsertionOptions()}</select>
+    </label>`;
+    const select = boundary.querySelector<HTMLSelectElement>("select")!;
+    select.addEventListener("change", () => {
+      const choice = select.value;
+      select.value = "";
+      if (choice) postToParent("STORE_EDITOR_INSERT_SECTION", { choice, insertAfter });
+    });
+    if (position === "before") reference.before(boundary);
+    else reference.after(boundary);
+  };
+  addBoundary(sections[0], "before", "__start__", "Insertar una sección al inicio");
+  sections.forEach((section, index) => {
+    const next = sections[index + 1];
+    const label = next
+      ? `Insertar una sección entre ${readableSection(section)} y ${readableSection(next)}`
+      : "Insertar una sección al final";
+    addBoundary(section, "after", section.dataset.storeSectionKey || "__start__", label);
+  });
+}
+
 function annotateStorePreviewEditor(store: Store): void {
   if (!storeEditorMode) return;
+  const siteKindLabels: Record<string, string> = { hero: "portada", story: "historia con scroll", catalog: "catálogo", gallery: "galería", contact: "contacto", location: "ubicación", links: "redes" };
   app.querySelectorAll<HTMLElement>(".bespoke-zone[data-site-kind]").forEach((element) => {
     const kind = element.dataset.siteKind;
     const id = element.dataset.siteSection;
     const section = id ? `site-${id}` : kind === "catalog" ? "products" : kind === "story" ? "about" : kind;
     if (!section) return;
-    markStorePreviewEditorTarget(element, { section: section as StorePreviewSection, field: "section", label: `sección ${kind}` });
+    const title = element.getAttribute("aria-label")?.trim();
+    markStorePreviewEditorTarget(element, { section: section as StorePreviewSection, field: "section", label: title || siteKindLabels[kind || ""] || "sección de marca" });
+    if (!id) return;
+    const markBlockText = (target: HTMLElement, fallbackField: string, label: string) => markStorePreviewEditorTarget(target, {
+      section: `site-${id}`,
+      field: target.dataset.siteBlock ? "siteBlockText" : fallbackField,
+      label,
+      ...(target.dataset.siteBlock ? { itemId: target.dataset.siteBlock } : {}),
+    });
+    element.querySelectorAll<HTMLElement>(":scope > .bespoke-copy h2").forEach((target) => markBlockText(target, "siteTitle", `título de ${siteKindLabels[kind || ""] || "la sección"}`));
+    element.querySelectorAll<HTMLElement>(":scope > .bespoke-copy p").forEach((target) => markBlockText(target, "siteBody", `texto de ${siteKindLabels[kind || ""] || "la sección"}`));
+    element.querySelectorAll<HTMLElement>(":scope > .bespoke-copy .bespoke-cta").forEach((target) => markBlockText(target, "siteCtaLabel", "botón de la sección"));
+    element.querySelectorAll<HTMLElement>(":scope > .bespoke-media [data-site-block-kind='media']").forEach((target) => {
+      markStorePreviewEditorTarget(target, { section: `site-${id}`, field: "siteBlockMedia", label: "imagen de la sección", itemId: target.dataset.siteBlock });
+    });
+    element.querySelectorAll<HTMLElement>(".bespoke-story-flow .store-flow-section").forEach((scene, itemIndex) => {
+      const heading = scene.querySelector<HTMLElement>(".store-flow-copy h3");
+      const body = scene.querySelector<HTMLElement>(".store-flow-copy p");
+      const media = scene.querySelector<HTMLElement>("figure");
+      if (heading) markStorePreviewEditorTarget(heading, { section: `site-${id}`, field: heading.dataset.siteBlock ? "siteBlockText" : "siteItemTitle", label: `título de escena ${itemIndex + 1}`, itemIndex, ...(heading.dataset.siteBlock ? { itemId: heading.dataset.siteBlock } : {}) });
+      if (body) markStorePreviewEditorTarget(body, { section: `site-${id}`, field: body.dataset.siteBlock ? "siteBlockText" : "siteItemBody", label: `texto de escena ${itemIndex + 1}`, itemIndex, ...(body.dataset.siteBlock ? { itemId: body.dataset.siteBlock } : {}) });
+      if (media) markStorePreviewEditorTarget(media, { section: `site-${id}`, field: media.dataset.siteBlock ? "siteBlockMedia" : "siteMedia", label: `imagen de escena ${itemIndex + 1}`, itemIndex, ...(media.dataset.siteBlock ? { itemId: media.dataset.siteBlock } : {}) });
+    });
   });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-hero .bespoke-copy h2'), { section: "hero", field: "storeTagline", label: "título de portada" });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-hero .bespoke-media'), { section: "hero", field: "storeBanner", label: "imagen de portada" });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-story .bespoke-copy h2'), { section: "about", field: "aboutTitle", label: "título de la historia" });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-story .bespoke-copy p'), { section: "about", field: "aboutBody", label: "historia de la marca" });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-story .bespoke-media'), { section: "about", field: "aboutImage", label: "imagen de la historia" });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-gallery .bespoke-copy h2'), { section: "gallery", field: "galleryTitle", label: "título de la galería" });
-  markStorePreviewEditorTarget(app.querySelector('.bespoke-gallery .bespoke-copy p'), { section: "gallery", field: "gallerySubtitle", label: "subtítulo de la galería" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-hero:not([data-site-section]) .bespoke-copy h2'), { section: "hero", field: "storeTagline", label: "título de portada" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-hero:not([data-site-section]) .bespoke-media'), { section: "hero", field: "storeBanner", label: "imagen de portada" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-story:not([data-site-section]) .bespoke-copy h2'), { section: "about", field: "aboutTitle", label: "título de la historia" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-story:not([data-site-section]) .bespoke-copy p'), { section: "about", field: "aboutBody", label: "historia de la marca" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-story:not([data-site-section]) .bespoke-media'), { section: "about", field: "aboutImage", label: "imagen de la historia" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-gallery:not([data-site-section]) .bespoke-copy h2'), { section: "gallery", field: "galleryTitle", label: "título de la galería" });
+  markStorePreviewEditorTarget(app.querySelector('.bespoke-gallery:not([data-site-section]) .bespoke-copy p'), { section: "gallery", field: "gallerySubtitle", label: "subtítulo de la galería" });
   app.querySelectorAll<HTMLElement>(".bespoke-gallery[data-site-section]").forEach((gallery) => {
     const siteSectionId = gallery.dataset.siteSection;
     if (!siteSectionId) return;
-    const mediaTargets = gallery.querySelectorAll<HTMLElement>(":scope > .bespoke-media > .store-fidelity-media, :scope > .bespoke-media > video");
+    const mediaTargets = gallery.querySelectorAll<HTMLElement>(":scope > .bespoke-media > [data-site-block-kind='media'], :scope > .bespoke-media > .store-fidelity-media, :scope > .bespoke-media > video");
     mediaTargets.forEach((media, itemIndex) => {
       markStorePreviewEditorTarget(media, {
         section: `site-${siteSectionId}`,
-        field: "editorialMedia",
+        field: media.dataset.siteBlock ? "siteBlockMedia" : "editorialMedia",
         label: `imagen ${itemIndex + 1} de ${gallery.getAttribute("aria-label") || "la galería"}`,
         itemIndex,
+        ...(media.dataset.siteBlock ? { itemId: media.dataset.siteBlock } : {}),
       });
     });
   });
   app.querySelectorAll<HTMLElement>("[data-store-section-key]").forEach((element) => {
     const section = element.dataset.storeSectionKey!;
     const animationId = section.startsWith("animation-") ? section.slice("animation-".length) : undefined;
+    const siteId = section.startsWith("site-") ? section.slice("site-".length) : undefined;
+    const authoredSection = siteId ? store.siteDocument?.sections?.find((candidate) => candidate.id === siteId) : undefined;
     markStorePreviewEditorTarget(element, {
       section: section as StorePreviewEditorSelection["section"],
       field: "section",
-      label: animationId ? "sección animada" : `sección ${section}`,
+      label: animationId
+        ? "sección animada"
+        : authoredSection?.title || (authoredSection ? siteKindLabels[authoredSection.kind] : undefined) || `sección ${section}`,
       ...(animationId ? { animationId } : {}),
     });
   });
   markStorePreviewEditorTarget(app.querySelector(".store-title"), { section: "brand", field: "storeName", label: "nombre de la tienda" });
   markStorePreviewEditorTarget(app.querySelector(".store-tagline"), { section: "brand", field: "storeTagline", label: "descripción corta" });
   markStorePreviewEditorTarget(app.querySelector(".merchant-header-logo"), { section: "brand", field: "storeLogo", label: "logo" });
+  markStorePreviewEditorTarget(app.querySelector(".store-site-nav"), { section: "navigation", field: "section", label: "navegación superior" });
+  markAllStorePreviewEditorTargets(".store-site-nav [data-site-navigation-item]", (element, index) => ({
+    section: "navigation",
+    field: "navigationLabel",
+    label: `enlace superior ${index + 1}`,
+    itemIndex: Number(element.dataset.siteNavigationIndex || index),
+  }));
   const announcement = app.querySelector<HTMLElement>(".store-announcement");
   markStorePreviewEditorTarget(announcement, { section: "announcement", field: "announcementText", label: "marquesina superior" });
   if (announcement) {
@@ -1873,17 +2776,29 @@ function annotateStorePreviewEditor(store: Store): void {
     announcement.setAttribute("aria-description", "Cambia el texto, movimiento, velocidad y color de la marquesina.");
   }
   markStorePreviewEditorTarget(app.querySelector(".store-hero.has-banner img"), { section: "hero", field: "storeBanner", label: "imagen de portada" });
+  const authoredHeroId = app.querySelector<HTMLElement>(".bespoke-hero[data-site-section]")?.dataset.siteSection;
   markAllStorePreviewEditorTargets(".store-slide", (element) => ({
-    section: "hero",
-    field: "media",
+    section: authoredHeroId ? `site-${authoredHeroId}` : "hero",
+    field: authoredHeroId ? "siteMedia" : "media",
     label: `escena ${Number(element.dataset.slideIndex || 0) + 1} de la portada`,
     itemIndex: Number(element.dataset.slideIndex || 0),
   }));
-  markAllStorePreviewEditorTargets(".store-slide h2", (element) => ({ section: "hero", field: "title", label: "título de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
-  markAllStorePreviewEditorTargets(".store-slide p", (element) => ({ section: "hero", field: "body", label: "texto de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
+  markAllStorePreviewEditorTargets(".store-slide h2", (element) => ({ section: authoredHeroId ? `site-${authoredHeroId}` : "hero", field: authoredHeroId ? "siteItemTitle" : "title", label: "título de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
+  markAllStorePreviewEditorTargets(".store-slide p", (element) => ({ section: authoredHeroId ? `site-${authoredHeroId}` : "hero", field: authoredHeroId ? "siteItemBody" : "body", label: "texto de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
   markAllStorePreviewEditorTargets(".store-slide-cta", (element) => ({ section: "hero", field: "ctaLabel", label: "botón de portada", itemIndex: Number(element.closest<HTMLElement>(".store-slide")?.dataset.slideIndex || 0) }));
   markStorePreviewEditorTarget(app.querySelector("#store-products-title"), { section: "products", field: "catalogTitle", label: "título del catálogo" });
   markStorePreviewEditorTarget(app.querySelector(".store-catalog-heading p"), { section: "products", field: "catalogSubtitle", label: "subtítulo del catálogo" });
+  app.querySelectorAll<HTMLElement>(".catalog-section-card[data-catalog-section]").forEach((card) => {
+    const categoryId = card.dataset.catalogSection;
+    if (!categoryId || categoryId === "null") return;
+    const category = store.categories.find((candidate) => candidate.id === categoryId);
+    markStorePreviewEditorTarget(card.querySelector(".catalog-section-media"), {
+      section: "products",
+      field: "categoryBanner",
+      label: `portada de ${category?.name || "la sección de productos"}`,
+      itemId: categoryId,
+    });
+  });
   markAllStorePreviewEditorTargets(".store-item", (element) => {
     const item = store.items.find((candidate) => candidate.id === element.dataset.id);
     return { section: "products", field: "product", label: item ? `producto ${item.name}` : "producto", itemId: element.dataset.id };
@@ -1903,13 +2818,22 @@ function annotateStorePreviewEditor(store: Store): void {
     const animationId = section.dataset.animationId!;
     const animation = store.animations?.find((candidate) => candidate.id === animationId);
     markStorePreviewEditorTarget(section, { section: `animation-${animationId}`, field: "section", label: animation?.name || "sección animada", animationId });
+    if (!section.querySelector(".store-animation-delete-control")) {
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "store-animation-delete-control";
+      deleteButton.dataset.animationId = animationId;
+      deleteButton.setAttribute("aria-label", `Eliminar ${animation?.name || "animación"}`);
+      deleteButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg><span>Eliminar animación</span>`;
+      section.prepend(deleteButton);
+    }
     const animationMediaUrls = (animation?.media ?? []).map((entry) => assetUrl(entry.imageUrl));
     const markAnimationMediaTarget = (element: HTMLElement | null, itemIndex: number) => {
       if (!element || itemIndex < 0 || itemIndex >= animationMediaUrls.length) return;
       markStorePreviewEditorTarget(element, {
         section: `animation-${animationId}`,
         field: "media",
-        label: `imagen ${itemIndex + 1} de la animación`,
+        label: `medio ${itemIndex + 1} de la animación`,
         animationId,
         itemIndex,
       });
@@ -1921,7 +2845,6 @@ function annotateStorePreviewEditor(store: Store): void {
     });
     const indexedTargets = [
       [".store-flow-section", null],
-      ["[data-coverflow-index]", "data-coverflow-index"],
       ["[data-motion-hero-to]", "data-motion-hero-to"],
       ["[data-gallery-scroll-cell]", "data-gallery-scroll-cell"],
       ["[data-testimonial-index]", "data-testimonial-index"],
@@ -1929,7 +2852,6 @@ function annotateStorePreviewEditor(store: Store): void {
       ["[data-portfolio-panel]", "data-portfolio-panel"],
       ["[data-full-chapter-copy]", "data-full-chapter-copy"],
       ["[data-frame]", "data-frame"],
-      ["[data-space-card]", "data-space-card"],
     ] as const;
     indexedTargets.forEach(([selector, attribute]) => {
       section.querySelectorAll<HTMLElement>(selector).forEach((element, fallbackIndex) => {
@@ -1943,8 +2865,21 @@ function annotateStorePreviewEditor(store: Store): void {
     const magneticTarget = section.querySelector<HTMLElement>("[data-magnetic-target]");
     markAnimationMediaTarget(magneticTarget, 0);
     section.querySelectorAll<HTMLElement>(
-      "[data-animation-general-copy] > h3, [data-animation-general-copy] > p, [data-animation-copy] > h3, [data-animation-copy] > strong, [data-animation-copy] > p, [data-animation-copy] > blockquote, [data-animation-copy] > [data-animation-copy-field]",
+      "[data-animation-general-copy] > h3, [data-animation-general-copy] > p, [data-animation-copy] [data-animation-copy-field]",
     ).forEach((text) => {
+      const textBlock = text.closest<HTMLElement>("[data-animation-text-block]");
+      if (textBlock) {
+        const blockId = textBlock.dataset.animationTextBlock;
+        const block = animation?.textBlocks?.find((candidate) => candidate.id === blockId);
+        if (blockId) markStorePreviewEditorTarget(text, {
+          section: `animation-${animationId}`,
+          field: "textBlock",
+          label: block?.role === "subtitle" ? "subtítulo adicional" : "título adicional",
+          animationId,
+          itemId: blockId,
+        });
+        return;
+      }
       const general = !!text.closest("[data-animation-general-copy]");
       const copy = text.closest<HTMLElement>("[data-animation-copy]");
       const itemIndex = Number(copy?.dataset.animationMediaIndex);
@@ -1952,7 +2887,9 @@ function annotateStorePreviewEditor(store: Store): void {
       const inferredField = text.matches("h3, strong") ? "title" : text.matches("blockquote") ? "body" : "body";
       const field = general
         ? text.matches("h3") ? "animationTitle" : "animationSubtitle"
-        : explicitField || inferredField;
+        : Number.isInteger(itemIndex)
+          ? explicitField || inferredField
+          : ["body", "caption"].includes(explicitField || inferredField) ? "animationSubtitle" : "animationTitle";
       const labels: Record<string, string> = {
         title: "título de la escena",
         caption: "subtítulo de la escena",
@@ -1966,6 +2903,14 @@ function annotateStorePreviewEditor(store: Store): void {
         label: labels[field] || "texto de la animación",
         animationId,
         ...(!general && Number.isInteger(itemIndex) ? { itemIndex } : {}),
+      });
+    });
+    section.querySelectorAll<HTMLElement>("[data-animation-style-target]").forEach((text) => {
+      markStorePreviewEditorTarget(text, {
+        section: `animation-${animationId}`,
+        field: "animationStyle",
+        label: "texto de la animación",
+        animationId,
       });
     });
     section.querySelectorAll<HTMLElement>("[data-animation-copy]").forEach((copy, copyIndex) => {
@@ -1983,15 +2928,46 @@ function annotateStorePreviewEditor(store: Store): void {
         <button type="button" data-animation-layout-handle="move" aria-label="Mover texto" title="Arrastrar para mover el texto"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7" cy="5" r="1.35"/><circle cx="13" cy="5" r="1.35"/><circle cx="7" cy="10" r="1.35"/><circle cx="13" cy="10" r="1.35"/><circle cx="7" cy="15" r="1.35"/><circle cx="13" cy="15" r="1.35"/></svg></button>`;
       copy.appendChild(controls);
     });
-    markStorePreviewEditorTarget(section.querySelector<HTMLElement>(".store-animation-cta-label"), {
+    const animationButtonSelection: StorePreviewEditorSelection = {
       section: `animation-${animationId}`,
       field: "buttonLabel",
       label: "botón de la animación",
       animationId,
-    });
+    };
+    const animationButton = section.querySelector<HTMLElement>(".store-animation-cta[data-animation-button-layout-target]");
+    const animationButtonLabel = animationButton?.querySelector<HTMLElement>(".store-animation-cta-label") ?? null;
+    markStorePreviewEditorTarget(animationButtonLabel, animationButtonSelection);
+    // The whole CTA belongs to the editor while preview editing is active.
+    // Marking only its text allowed clicks on the arrow/padding to follow the
+    // storefront link and made the button feel much harder to grab.
+    markStorePreviewEditorTarget(animationButton, animationButtonSelection);
+    if (animationButton) {
+      delete animationButton.dataset.storeEditorInline;
+      animationButton.setAttribute("aria-description", "Arrastra desde cualquier parte del botón para moverlo. Tócalo para editar su texto.");
+      if (!animationButton.querySelector(".store-animation-button-handle")) {
+        const handle = document.createElement("span");
+        handle.className = "store-animation-button-handle";
+        handle.setAttribute("aria-hidden", "true");
+        handle.innerHTML = `<svg viewBox="0 0 20 20"><circle cx="7" cy="5" r="1.35"/><circle cx="13" cy="5" r="1.35"/><circle cx="7" cy="10" r="1.35"/><circle cx="13" cy="10" r="1.35"/><circle cx="7" cy="15" r="1.35"/><circle cx="13" cy="15" r="1.35"/></svg>`;
+        animationButton.appendChild(handle);
+      }
+    }
   });
   markAllStorePreviewEditorTargets(".store-link-btn", (_element, index) => ({ section: "links", field: "linkLabel", label: `enlace social ${index + 1}`, itemIndex: index }));
   markStorePreviewEditorTarget(app.querySelector("#store-links-title"), { section: "links", field: "linksTitle", label: "título de redes sociales" });
+  markStorePreviewEditorTarget(app.querySelector(".store-site-footer"), { section: "footer", field: "section", label: "pie de página" });
+  markStorePreviewEditorTarget(app.querySelector(".store-site-footer-brand p"), { section: "footer", field: "footerBrandDescription", label: "descripción del pie" });
+  markAllStorePreviewEditorTargets(".store-site-footer-column h2", (_element, index) => ({ section: "footer", field: "footerColumnTitle", label: `título de columna ${index + 1}`, itemIndex: index }));
+  app.querySelectorAll<HTMLElement>(".store-site-footer-column").forEach((column, columnIndex) => {
+    column.querySelectorAll<HTMLElement>("[data-site-footer-item]").forEach((item, itemIndex) => markStorePreviewEditorTarget(item, {
+      section: "footer",
+      field: "footerItemLabel",
+      label: `elemento ${itemIndex + 1} de la columna ${columnIndex + 1}`,
+      itemId: `${columnIndex}:${itemIndex}`,
+    }));
+  });
+  markStorePreviewEditorTarget(app.querySelector("[data-site-footer-copyright]"), { section: "footer", field: "footerCopyright", label: "texto legal del pie" });
+  markStorePreviewEditorTarget(app.querySelector("[data-site-footer-badge]"), { section: "footer", field: "footerBadge", label: "sello del pie" });
   markStorePreviewEditorTarget(app.querySelector(".store-contact-section"), { section: "contact", field: "contact", label: "formulario de contacto" });
   markStorePreviewEditorTarget(app.querySelector("#store-contact-title"), { section: "contact", field: "contactTitle", label: "título de contacto" });
   markStorePreviewEditorTarget(app.querySelector(".store-contact-copy p"), { section: "contact", field: "contactSubtitle", label: "texto de contacto" });
@@ -2003,6 +2979,7 @@ function annotateStorePreviewEditor(store: Store): void {
   markStorePreviewEditorTarget(app.querySelector(".promotion-dialog p"), { section: "promotion", field: "promotionBody", label: "texto de promoción" });
   markStorePreviewEditorTarget(app.querySelector(".promotion-action"), { section: "promotion", field: "promotionAction", label: "botón de promoción" });
   markStorePreviewEditorTarget(app.querySelector("#cart-pay"), { section: "products", field: "cartButton", label: "botón del carrito" });
+  renderStorePreviewSectionInsertions();
   syncStorePreviewEditorMode();
   syncStorePreviewEditorSelection();
 }
@@ -2055,6 +3032,10 @@ function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePr
   if (storePreviewInlineEditorTarget) return;
   const originalText = target.textContent || "";
   storePreviewInlineEditorTarget = target;
+  // Selecting inline copy must also move the dashboard to its dedicated tab.
+  // The dashboard deliberately avoids focusing its mirrored field for
+  // preview-originated selections, so the contenteditable node keeps focus.
+  postToParent("STORE_EDITOR_SELECT", { selection });
   target.classList.add("store-preview-inline-editing");
   target.setAttribute("contenteditable", "plaintext-only");
   target.setAttribute("role", "textbox");
@@ -2100,7 +3081,9 @@ function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePr
 function beginStorePreviewInlineImageEdit(selection: StorePreviewEditorSelection): void {
   const input = document.createElement("input");
   input.type = "file";
-  input.accept = "image/png,image/jpeg,image/webp";
+  input.accept = selection.animationId && ["media", "mediaAdd"].includes(selection.field)
+    ? "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"
+    : "image/png,image/jpeg,image/webp";
   input.className = "store-preview-inline-file-input";
   input.setAttribute("aria-label", `Cambiar ${selection.label}`);
   input.addEventListener("change", () => {
@@ -2175,12 +3158,14 @@ function beginAnimationTextGesture(event: PointerEvent, copy: HTMLElement, actio
   const sectionHasCustomLayout = section.hasAttribute("data-animation-custom-layout");
   const alreadyCustom = copyHasCustomLayout || sectionHasCustomLayout;
   const mediaIndex = Number(copy.dataset.animationMediaIndex);
+  const textBlockId = copy.dataset.animationTextBlock;
   const selection: StorePreviewEditorSelection = {
     section: `animation-${animationId}`,
-    field: "layout",
-    label: "posición y tamaño del texto",
+    field: textBlockId ? "textBlock" : "layout",
+    label: textBlockId ? "texto adicional" : "posición y tamaño del texto",
     animationId,
     ...(Number.isInteger(mediaIndex) ? { itemIndex: mediaIndex } : {}),
+    ...(textBlockId ? { itemId: textBlockId } : {}),
   };
   const startX = event.clientX;
   const startY = event.clientY;
@@ -2313,6 +3298,7 @@ function beginAnimationButtonGesture(event: PointerEvent, button: HTMLElement): 
   if (!section || !animationId) return;
   const bounds = section.getBoundingClientRect();
   if (bounds.width < 1 || bounds.height < 1) return;
+  event.preventDefault();
   const startX = event.clientX;
   const startY = event.clientY;
   const startPositionX = Number(button.dataset.animationButtonX || 18);
@@ -2374,9 +3360,81 @@ function beginAnimationButtonGesture(event: PointerEvent, button: HTMLElement): 
   window.addEventListener("pointercancel", cancel, true);
 }
 
+function isStorePreviewTextEditingTarget(target: EventTarget | null): boolean {
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLInputElement && ["text", "search", "email", "url", "tel", "number"].includes(target.type)) return true;
+  return target instanceof HTMLElement
+    && (target.isContentEditable || !!target.closest('[contenteditable]:not([contenteditable="false"])'));
+}
+
+function clearStorePreviewEditorSelection(): void {
+  const hadSelection = storePreviewEditorSelection !== null;
+  storePreviewInlineEditorFinish?.(true);
+  if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
+  storePreviewEditorClickTimer = null;
+  storePreviewEditorSelection = null;
+  syncStorePreviewEditorSelection();
+  showStorePreviewEditorHover(null);
+  if (hadSelection) postToParent("STORE_EDITOR_SELECT", { selection: null });
+}
+
 if (storeEditorMode) {
+  app.addEventListener("submit", (event) => {
+    const form = event.target instanceof Element
+      ? event.target.closest<HTMLFormElement>("[data-store-location-inline-editor]")
+      : null;
+    if (!form) return;
+    event.preventDefault();
+    const input = form.querySelector<HTMLTextAreaElement>("[data-store-location-map-input]");
+    const status = form.querySelector<HTMLElement>(".store-location-inline-status");
+    if (!input) return;
+    const normalized = normalizeStoreMapEmbedInput(input.value);
+    const safeUrl = normalized ? safeStoreMapEmbedUrl(normalized) : null;
+    if (normalized && !safeUrl) {
+      input.setAttribute("aria-invalid", "true");
+      if (status) {
+        status.dataset.state = "error";
+        status.textContent = "Usa el código de inserción de Google Maps u OpenStreetMap.";
+      }
+      input.focus();
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    input.value = safeUrl || "";
+    if (status) {
+      status.dataset.state = "success";
+      status.textContent = safeUrl ? "Mapa listo para guardar." : "Mapa quitado.";
+    }
+    postToParent("STORE_EDITOR_LOCATION_MAP", {
+      locationId: form.dataset.locationId,
+      mapEmbedUrl: safeUrl || "",
+    });
+  });
+  app.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const clearMapButton = event.target.closest<HTMLButtonElement>("[data-store-location-map-clear]");
+    if (clearMapButton) {
+      const form = clearMapButton.closest<HTMLFormElement>("[data-store-location-inline-editor]");
+      const input = form?.querySelector<HTMLTextAreaElement>("[data-store-location-map-input]");
+      if (form && input) {
+        input.value = "";
+        form.requestSubmit();
+      }
+      return;
+    }
+    const deleteLocationButton = event.target.closest<HTMLButtonElement>("[data-store-location-delete]");
+    if (deleteLocationButton) {
+      postToParent("STORE_EDITOR_DELETE_LOCATION", { locationId: deleteLocationButton.dataset.locationId });
+      return;
+    }
+    const deleteAnimationButton = event.target.closest<HTMLButtonElement>(".store-animation-delete-control[data-animation-id]");
+    if (deleteAnimationButton) {
+      postToParent("STORE_EDITOR_DELETE_ANIMATION", { animationId: deleteAnimationButton.dataset.animationId });
+    }
+  });
   document.addEventListener("keydown", (event) => {
-    if ((event.key === "Enter" || event.key === " ") && event.target instanceof HTMLElement) {
+    const textEditing = isStorePreviewTextEditingTarget(event.target);
+    if (!textEditing && (event.key === "Enter" || event.key === " ") && event.target instanceof HTMLElement) {
       const target = event.target.closest<HTMLElement>('[data-store-editor-target][role="button"]');
       const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
       if (target && selection) {
@@ -2389,11 +3447,7 @@ if (storeEditorMode) {
       }
     }
     if (!(event.ctrlKey || event.metaKey)) return;
-    const target = event.target;
-    const nativeTextUndo = target instanceof HTMLTextAreaElement
-      || (target instanceof HTMLInputElement && ["text", "search", "email", "url", "tel", "number"].includes(target.type))
-      || (target instanceof HTMLElement && target.isContentEditable);
-    if (nativeTextUndo) return;
+    if (textEditing) return;
     const key = event.key.toLowerCase();
     if (key === "z" && !event.shiftKey) {
       event.preventDefault();
@@ -2420,6 +3474,8 @@ if (storeEditorMode) {
     const button = event.target.closest<HTMLElement>(".store-animation-cta[data-animation-button-layout-target]");
     if (button) {
       event.stopPropagation();
+      const handle = event.target.closest<HTMLElement>(".store-animation-button-handle");
+      if (event.pointerType === "touch" && !handle) return;
       if (event.detail <= 1) beginAnimationButtonGesture(event, button);
       return;
     }
@@ -2429,6 +3485,7 @@ if (storeEditorMode) {
     // swipe controller interpret the same press as scene navigation.
     event.stopPropagation();
     const handle = event.target.closest<HTMLElement>("[data-animation-layout-handle]");
+    if (event.pointerType === "touch" && !handle) return;
     // The first press remains available for dragging. The second press of a
     // double-click must remain untouched so the inline text editor can open.
     if (!handle && event.detail > 1) return;
@@ -2446,10 +3503,24 @@ if (storeEditorMode) {
     }
     if (storePreviewInlineEditorTarget && event.target.closest("[contenteditable]")) return;
     const interactive = event.target.closest("button, a, input, select, textarea, [role='button']");
-    if (interactive && !interactive.hasAttribute("data-store-editor-target")) return;
+    if (interactive && !interactive.hasAttribute("data-store-editor-target")) {
+      clearStorePreviewEditorSelection();
+      return;
+    }
     const target = event.target.closest<HTMLElement>("[data-store-editor-target]");
     const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
-    if (!target || !selection) return;
+    if (!target || !selection) {
+      clearStorePreviewEditorSelection();
+      return;
+    }
+    // Section wrappers are intentionally large so their background can be
+    // edited. When another element is already selected, however, a tap on that
+    // visually empty canvas should dismiss the editor first instead of merely
+    // replacing it with the section-level toolbar.
+    if (selection.field === "section" && storePreviewEditorSelection) {
+      clearStorePreviewEditorSelection();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
@@ -2496,6 +3567,19 @@ if (storeEditorMode) {
     if (target.dataset.storeEditorInline === "text") beginStorePreviewInlineTextEdit(target, selection);
     else beginStorePreviewInlineImageEdit(selection);
   }, true);
+
+  let toolbarPositionFrame = 0;
+  const refreshCanvasToolbarPosition = () => {
+    if (toolbarPositionFrame) return;
+    toolbarPositionFrame = window.requestAnimationFrame(() => {
+      toolbarPositionFrame = 0;
+      const toolbar = document.querySelector<HTMLElement>(".store-preview-canvas-toolbar:not([hidden])");
+      const target = app.querySelector<HTMLElement>(".store-preview-editor-selected");
+      if (toolbar && target) positionStorePreviewCanvasToolbar(toolbar, target);
+    });
+  };
+  window.addEventListener("scroll", refreshCanvasToolbarPosition, { passive: true });
+  window.addEventListener("resize", refreshCanvasToolbarPosition, { passive: true });
 }
 
 function scrollStorePreviewToSection(section: StorePreviewSection | `animation-${string}` | `site-${string}`): void {
@@ -2519,6 +3603,7 @@ function scrollStorePreviewToSection(section: StorePreviewSection | `animation-$
   }
   const selectors: Record<StorePreviewSection, string> = {
     brand: ".merchant-header",
+    navigation: ".store-site-nav, .merchant-header",
     announcement: ".store-announcement, .merchant-header",
     hero: ".store-carousel, .store-hero, .merchant-header",
     products: ".store-products",
@@ -2528,6 +3613,7 @@ function scrollStorePreviewToSection(section: StorePreviewSection | `animation-$
     contact: ".store-contact-section, .store-footer, .secure-note",
     links: ".store-footer, .secure-note",
     location: ".store-location-section, .secure-note",
+    footer: ".store-site-footer, .secure-note",
     promotion: ".promotion-dialog, .merchant-header",
   };
   window.requestAnimationFrame(() => {
@@ -2700,7 +3786,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (typeof source.backgroundGradientStart === "string" && /^#[0-9a-f]{6}$/i.test(source.backgroundGradientStart)) clean.backgroundGradientStart = source.backgroundGradientStart.toLowerCase();
   if (typeof source.backgroundGradientEnd === "string" && /^#[0-9a-f]{6}$/i.test(source.backgroundGradientEnd)) clean.backgroundGradientEnd = source.backgroundGradientEnd.toLowerCase();
   if (Number.isInteger(source.backgroundGradientAngle)) clean.backgroundGradientAngle = Math.min(360, Math.max(0, source.backgroundGradientAngle as number));
-  if (["modern", "editorial", "friendly", "classic", "geometric"].includes(String(source.fontStyle))) clean.fontStyle = source.fontStyle;
+  if (["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(String(source.fontStyle))) clean.fontStyle = source.fontStyle;
   if (["solid", "outline", "soft"].includes(String(source.buttonVariant))) clean.buttonVariant = source.buttonVariant;
   if (["lift", "pulse", "none"].includes(String(source.buttonMotion))) clean.buttonMotion = source.buttonMotion;
   if (typeof source.cartButtonLabel === "string") clean.cartButtonLabel = source.cartButtonLabel.slice(0, 36);
@@ -2717,14 +3803,13 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   if (Number.isInteger(source.announcementSpeed)) {
     clean.announcementSpeed = Math.min(40, Math.max(8, source.announcementSpeed as number));
   }
-  // Announcement bands are deliberately compact in every storefront. Older
-  // saved proposals may still carry medium/large, but previews must match the
-  // canonical customer experience.
-  clean.announcementSize = "small";
+  clean.announcementSize = ["small", "medium", "large"].includes(String(source.announcementSize))
+    ? source.announcementSize as Store["announcementSize"]
+    : "small";
   if (typeof source.announcementColor === "string" && /^#[0-9a-f]{6}$/i.test(source.announcementColor)) {
     clean.announcementColor = source.announcementColor.toLowerCase();
   }
-  if (["store", "modern", "editorial", "friendly", "classic", "geometric"].includes(String(source.announcementFont))) {
+  if (["store", "modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(String(source.announcementFont))) {
     clean.announcementFont = source.announcementFont as Store["announcementFont"];
   }
   if (["none", "wave", "pulse", "sparkle"].includes(String(source.announcementEffect))) {
@@ -2755,7 +3840,8 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
     if ((authoredOrder || requiredSections.every((section) => order.includes(section))) && new Set(order).size === order.length) clean.contentOrder = order;
   }
   if (["cinematic", "editorial", "collage", "catalog-first"].includes(String(source.layoutStyle))) clean.layoutStyle = source.layoutStyle;
-  if (["coverflow", "diagonal-marquee", "story-scroller"].includes(String(source.experienceStyle))) clean.experienceStyle = source.experienceStyle;
+  if (["editorial-grid", "story-scroller"].includes(String(source.experienceStyle))) clean.experienceStyle = source.experienceStyle;
+  else if (["coverflow", "diagonal-marquee"].includes(String(source.experienceStyle))) clean.experienceStyle = "editorial-grid";
   if (typeof source.motionDuoEnabled === "boolean") clean.motionDuoEnabled = source.motionDuoEnabled;
   if ((STORE_MOTION_EXPERIENCES as readonly string[]).includes(String(source.motionExperience))) clean.motionExperience = source.motionExperience;
   if (Array.isArray(source.motionExperiences)) {
@@ -2786,6 +3872,28 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
         ...(typeof animation.textWidth === "string" && ["narrow", "medium", "wide"].includes(animation.textWidth) ? { textWidth: animation.textWidth as StoreAnimation["textWidth"] } : {}),
         ...(typeof animation.textColor === "string" && /^#[0-9a-f]{6}$/i.test(animation.textColor) ? { textColor: animation.textColor } : {}),
         ...(typeof animation.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(animation.backgroundColor) ? { backgroundColor: animation.backgroundColor } : {}),
+        ...(typeof animation.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(animation.fontStyle) ? { fontStyle: animation.fontStyle as StoreAnimation["fontStyle"] } : {}),
+        textBlocks: Array.isArray(animation.textBlocks)
+          ? animation.textBlocks.flatMap((entry) => {
+              if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+              const block = entry as Record<string, unknown>;
+              if (typeof block.id !== "string" || !/^[a-z0-9][a-z0-9_-]{0,47}$/.test(block.id)) return [];
+              if (block.role !== "title" && block.role !== "subtitle") return [];
+              if (typeof block.text !== "string" || !block.text.trim()) return [];
+              return [{
+                id: block.id,
+                role: block.role,
+                text: block.text.slice(0, 220),
+                ...(typeof block.textPositionX === "number" && Number.isInteger(block.textPositionX) && block.textPositionX >= 0 && block.textPositionX <= 100 ? { textPositionX: block.textPositionX } : {}),
+                ...(typeof block.textPositionY === "number" && Number.isInteger(block.textPositionY) && block.textPositionY >= 0 && block.textPositionY <= 100 ? { textPositionY: block.textPositionY } : {}),
+                ...(typeof block.textScale === "number" && Number.isInteger(block.textScale) && block.textScale >= 50 && block.textScale <= 200 ? { textScale: block.textScale } : {}),
+                ...(typeof block.textWidthPercent === "number" && Number.isInteger(block.textWidthPercent) && block.textWidthPercent >= 20 && block.textWidthPercent <= 100 ? { textWidthPercent: block.textWidthPercent } : {}),
+                ...(typeof block.textAlign === "string" && ["left", "center", "right"].includes(block.textAlign) ? { textAlign: block.textAlign as "left" | "center" | "right" } : {}),
+                ...(typeof block.textColor === "string" && /^#[0-9a-f]{6}$/i.test(block.textColor) ? { textColor: block.textColor } : {}),
+                ...(typeof block.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(block.fontStyle) ? { fontStyle: block.fontStyle as StoreAnimation["fontStyle"] } : {}),
+              }];
+            }).slice(0, 24)
+          : [],
         media: Array.isArray(animation.media)
           ? animation.media
               .filter((image): image is Record<string, unknown> => !!image && typeof image === "object" && !Array.isArray(image))
@@ -2802,6 +3910,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
                 ...(typeof image.textWidthPercent === "number" && Number.isInteger(image.textWidthPercent) && image.textWidthPercent >= 20 && image.textWidthPercent <= 100 ? { textWidthPercent: image.textWidthPercent } : {}),
                 ...(typeof image.textAlign === "string" && ["left", "center", "right"].includes(image.textAlign) ? { textAlign: image.textAlign as "left" | "center" | "right" } : {}),
                 ...(typeof image.textColor === "string" && /^#[0-9a-f]{6}$/i.test(image.textColor) ? { textColor: image.textColor } : {}),
+                ...(typeof image.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(image.fontStyle) ? { fontStyle: image.fontStyle as StoreAnimation["fontStyle"] } : {}),
               }))
               .filter((image) => image.imageUrl)
               .slice(0, 8)
@@ -2857,6 +3966,7 @@ function applyStoreTheme(slug: string, store: Store): void {
   document.body.classList.toggle("has-bespoke-site", Boolean(siteDocument));
   if (siteDocument) {
     store.siteDocument = siteDocument;
+    document.body.dataset.siteArtDirection = siteDocument.artDirection || "custom";
     document.body.dataset.siteHeadingFont = siteDocument.theme.headingFont;
     document.body.dataset.siteBodyFont = siteDocument.theme.bodyFont;
     document.body.dataset.siteNav = siteDocument.navigation.layout;
@@ -2870,6 +3980,13 @@ function applyStoreTheme(slug: string, store: Store): void {
     document.body.dataset.siteLogoTreatment = siteDocument.navigation.logoTreatment;
     document.body.dataset.siteMotionIntensity = siteDocument.motion.intensity;
     document.body.dataset.siteSpotlight = siteDocument.merchandising.spotlightLayout;
+    document.body.dataset.siteComposition = siteDocument.designGenome.composition;
+    document.body.dataset.siteRhythm = siteDocument.designGenome.rhythm;
+    document.body.dataset.siteGeometry = siteDocument.designGenome.geometry;
+    document.body.dataset.siteColorStrategy = siteDocument.designGenome.colorStrategy;
+    document.body.dataset.siteMediaStrategy = siteDocument.designGenome.mediaStrategy;
+    document.body.dataset.siteTypeScale = siteDocument.designGenome.typeScale;
+    document.body.dataset.siteMotionLanguage = siteDocument.designGenome.motionLanguage;
     document.documentElement.style.setProperty("--site-page", siteDocument.theme.pageBackground);
     document.documentElement.style.setProperty("--site-ink", siteDocument.theme.textColor);
     document.documentElement.style.setProperty("--site-accent", siteDocument.theme.accentColor);
@@ -2879,6 +3996,7 @@ function applyStoreTheme(slug: string, store: Store): void {
     document.documentElement.style.setProperty("--site-border", siteDocument.theme.borderColor);
     document.documentElement.style.setProperty("--site-radius", `${siteDocument.theme.radius}px`);
   } else {
+    delete document.body.dataset.siteArtDirection;
     delete document.body.dataset.siteHeadingFont;
     delete document.body.dataset.siteBodyFont;
     delete document.body.dataset.siteNav;
@@ -2892,6 +4010,13 @@ function applyStoreTheme(slug: string, store: Store): void {
     delete document.body.dataset.siteLogoTreatment;
     delete document.body.dataset.siteMotionIntensity;
     delete document.body.dataset.siteSpotlight;
+    delete document.body.dataset.siteComposition;
+    delete document.body.dataset.siteRhythm;
+    delete document.body.dataset.siteGeometry;
+    delete document.body.dataset.siteColorStrategy;
+    delete document.body.dataset.siteMediaStrategy;
+    delete document.body.dataset.siteTypeScale;
+    delete document.body.dataset.siteMotionLanguage;
   }
 
   // Storefront branding is per-store, not per-page. Set it for both the
@@ -3489,8 +4614,8 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       : "Volver al catálogo";
   if (!item) {
     app.innerHTML = `
-      ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
       ${storeAnnouncementHtml(store)}
+      ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
       <div class="product-page-return">
         <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>${escapeHtml(backToStoreLabel)}</span></a>
       </div>
@@ -3499,7 +4624,8 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         <h1>Este producto ya no está disponible</h1>
         <p>Puede que haya sido retirado o que el enlace haya cambiado.</p>
         <a class="primary store-catalog-link" href="${escapeHtml(catalogUrl)}">Ver todos los productos</a>
-      </main>`;
+      </main>
+      ${storefrontFooterHtml(store)}`;
     bindStoreAnnouncementPlayback();
     bindInternalStoreLinks(slug, store);
     updateCartBar(store, store.items[0]?.currency || "BOB");
@@ -3527,6 +4653,30 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   const visibleStock = stockStatus(remainingStock(item, selectedVariant), store.showLowStockToCustomers === true);
   const discountPercent = activeProductDiscount(item);
   const detailSaleBanner = discountPercent === null ? "" : `<aside class="product-detail-sale" aria-label="Oferta por tiempo limitado"><strong>${discountPercent}% de descuento</strong><span data-discount-ends-at="${escapeHtml(item.discountEndsAt || "")}">${escapeHtml(discountRemainingLabel(item))}</span></aside>`;
+
+  const relatedItems = store.items
+    .filter((candidate) => candidate.id !== item.id)
+    .sort((first, second) => Number(second.categoryId === item.categoryId) - Number(first.categoryId === item.categoryId))
+    .slice(0, 4);
+  const relatedProductsHtml = relatedItems.length
+    ? `<section class="product-detail-related" aria-labelledby="product-detail-related-title">
+        <div class="product-detail-related-heading">
+          <h2 id="product-detail-related-title">${escapeHtml(itemCategory ? `Más de ${itemCategory.name}` : "Sigue explorando")}</h2>
+          <a class="store-catalog-link" href="${escapeHtml(catalogUrl)}">Ver la colección${ICON_ARROW_RIGHT}</a>
+        </div>
+        <div class="product-detail-related-grid">
+          ${relatedItems.map((relatedItem) => {
+            const relatedImageUrl = relatedItem.imageUrls.map(assetUrl).find((url): url is string => Boolean(url));
+            return `<a class="product-detail-related-item product-page-link" href="${escapeHtml(productPageUrl(slug, relatedItem.id))}" aria-label="Ver ${escapeHtml(relatedItem.name)}">
+              <span class="product-detail-related-media">${relatedImageUrl
+                ? `<img src="${escapeHtml(relatedImageUrl)}" alt="" loading="lazy" decoding="async" style="object-position:${productImagePosition(relatedItem, 0)}">`
+                : `<span aria-hidden="true">${escapeHtml(initials(relatedItem.name))}</span>`}</span>
+              <span class="product-detail-related-copy"><strong>${escapeHtml(relatedItem.name)}</strong><span>${formatAmount(discountedProductAmount(relatedItem, relatedItem.amount), relatedItem.currency)}</span></span>
+            </a>`;
+          }).join("")}
+        </div>
+      </section>`
+    : "";
 
   const galleryHtml = images.length
     ? `<div class="product-detail-main-image-wrap">
@@ -3579,8 +4729,8 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
     : "";
 
   app.innerHTML = `
-    ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
     ${storeAnnouncementHtml(store)}
+    ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
     <div class="product-page-return">
       <a class="product-back-link store-catalog-link" href="${escapeHtml(catalogUrl)}">${ICON_ARROW_LEFT}<span>${escapeHtml(backToStoreLabel)}</span></a>
     </div>
@@ -3614,12 +4764,14 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         </div>
       </section>
     </main>
+    ${relatedProductsHtml}
     <div class="cart-bar product-detail-cart-bar">
       <span class="cart-summary" aria-live="polite"></span>
       <button type="button" class="primary" id="cart-pay">Ver carrito</button>
       <span class="cart-checkout-error" role="alert" hidden></span>
     </div>
-    <div class="secure-note product-detail-secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>`;
+    <div class="secure-note product-detail-secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>
+    ${storefrontFooterHtml(store)}`;
 
   bindStoreAnnouncementPlayback();
   bindTimedDiscountSchedule(slug, store);
@@ -3698,6 +4850,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
   const siteDocument = sanitizeSiteDocument(store.siteDocument);
+  const requestedPageSlug = new URLSearchParams(window.location.search).get("page");
+  const activeSitePage = requestedPageSlug ? siteDocument?.pages?.find((page) => page.slug === requestedPageSlug) ?? null : null;
+  const siteSectionsForPage: StoreSiteDocument["sections"] = (siteDocument?.sections ?? []).filter((section) => activeSitePage ? section.pageId === activeSitePage.id : !section.pageId);
   if (siteDocument?.merchandising.productOrderIds.length) {
     const productRank = new Map(siteDocument.merchandising.productOrderIds.map((id, index) => [id, index]));
     store = {
@@ -3705,7 +4860,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       items: [...store.items].sort((first, second) => (productRank.get(first.id) ?? Number.MAX_SAFE_INTEGER) - (productRank.get(second.id) ?? Number.MAX_SAFE_INTEGER)),
     };
   }
-  const siteSection = (kind: StoreSiteDocument["sections"][number]["kind"]) => siteDocument?.sections.find((section) => section.kind === kind);
+  const siteSection = (kind: StoreSiteDocument["sections"][number]["kind"]) => siteSectionsForPage.find((section) => section.kind === kind);
   const currency = store.items[0]?.currency ?? "BOB";
   const visibleStoreName = store.storeName.trim();
   const bannerUrl = assetUrl(store.bannerUrl);
@@ -3720,10 +4875,12 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const item = siteHeroSection?.items.find((candidate) => candidate.mediaUrl === imageUrl) ?? siteHeroSection?.items[index];
     return {
       imageUrl,
-      title: item?.title || (index === 0 ? siteHeroSection?.title : ""),
-      body: item?.body || (index === 0 ? siteHeroSection?.body : ""),
-      ctaLabel: index === 0 ? siteHeroSection?.ctaLabel : "",
+      title: item?.title || siteHeroSection?.title || visibleStoreName,
+      body: item?.body || siteHeroSection?.body || "",
+      ctaLabel: siteHeroSection?.ctaLabel || "",
       ctaUrl: "",
+      titleStyle: item?.titleStyle || siteHeroSection?.titleStyle,
+      bodyStyle: item?.bodyStyle || siteHeroSection?.bodyStyle,
     };
   });
   const heroSlides = (siteDocument ? siteHeroSlides : store.heroSlides ?? [])
@@ -3732,7 +4889,13 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     .slice(0, 5);
 
   const catalogSections = catalogSectionsForStore(store);
-  const hasCatalogSectionPicker = store.categories.length > 0 && catalogSections.length > 0;
+  // The editorial-maker grammar is a shop-first journal: after the animated
+  // campaign opening, shoppers should meet actual products rather than a
+  // second navigation layer made of category cards. Category headings still
+  // organize the product grid and the normal catalog URL behavior is preserved
+  // for every other composition grammar.
+  const usesDirectEditorialCatalog = siteDocument?.designGenome.composition === "editorial-maker";
+  const hasCatalogSectionPicker = !usesDirectEditorialCatalog && store.categories.length > 0 && catalogSections.length > 0;
   if (hasCatalogSectionPicker && selectedCategoryId !== "ALL" && !catalogSections.some((section) => section.id === selectedCategoryId)) {
     selectedCategoryId = "ALL";
   }
@@ -3854,8 +5017,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
                 ${
                   hasCopy
                     ? `<div class="store-slide-overlay">
-                        ${slide.title ? `<h2 class="store-slide-title${titleClass}">${escapeHtml(slide.title)}</h2>` : ""}
-                        ${slide.body ? `<p>${escapeHtml(slide.body)}</p>` : ""}
+                        ${slide.title ? `<h2 class="store-slide-title${titleClass}"${canvasTextStyleAttributes(slide.titleStyle)}>${escapeHtml(slide.title)}</h2>` : ""}
+                        ${slide.body ? `<p${canvasTextStyleAttributes(slide.bodyStyle)}>${escapeHtml(slide.body)}</p>` : ""}
                         ${
                           slide.ctaLabel
                             ? safeCtaUrl
@@ -3909,6 +5072,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const catalogTitle = siteSection("catalog")?.title || store.catalogTitle?.trim() || "La tienda";
   const catalogSubtitle = siteSection("catalog")?.body || store.catalogSubtitle?.trim() || (visibleStoreName ? `Explora la selección de ${visibleStoreName}.` : "Explora nuestra selección.");
   const sectionCover = (section: CatalogSection): { url: string | null; position: string } => {
+    if (section.bannerUrl) return { url: assetUrl(section.bannerUrl), position: "50% 50%" };
     for (const item of section.items) {
       const imageIndex = item.imageUrls.findIndex((imageUrl) => !!imageUrl);
       if (imageIndex >= 0) {
@@ -3950,6 +5114,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
               <div class="catalog-section-banner-copy">
                 <h3 id="catalog-section-banner-title">${escapeHtml(selectedCatalogSection.name)}</h3>
                 <p>${selectedCatalogSection.items.length} ${selectedCatalogSection.items.length === 1 ? "producto" : "productos"} en esta sección</p>
+                ${selectedCatalogSection.highlights.length ? `<ul class="catalog-section-highlights" aria-label="Información de esta sección">${selectedCatalogSection.highlights.map((highlight) => `<li>${escapeHtml(highlight)}</li>`).join("")}</ul>` : ""}
               </div>
             </div>`
           : ""}
@@ -3983,9 +5148,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </section>`
     : "";
 
-  const experienceStyle = ["coverflow", "diagonal-marquee", "story-scroller"].includes(store.experienceStyle || "")
-    ? store.experienceStyle
-    : "coverflow";
+  const experienceStyle = store.experienceStyle === "story-scroller" ? "story-scroller" : "editorial-grid";
   const storyVideoEntries = heroSlides
     .filter((slide) => isVideoMediaUrl(slide.resolvedMediaUrl))
     .map((slide) => ({
@@ -4018,14 +5181,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       ${(image.title || image.caption || image.body) ? `<figcaption>${image.title ? `<strong>${escapeHtml(image.title)}</strong>` : ""}${image.caption ? `<span>${escapeHtml(image.caption)}</span>` : ""}${image.body ? `<p>${escapeHtml(image.body)}</p>` : ""}</figcaption>` : ""}
     </figure>`;
   };
-  const galleryExperienceHtml = experienceStyle === "diagonal-marquee"
-    ? `<div class="store-diagonal-marquee" aria-label="Galería diagonal en movimiento">
-        <div class="store-diagonal-rail">
-          <div class="store-diagonal-set">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item")).join("")}</div>
-          <div class="store-diagonal-set" aria-hidden="true">${editorialImages.map((image, index) => editorialFigure(image, index, "store-diagonal-item", false)).join("")}</div>
-        </div>
-      </div>`
-    : experienceStyle === "story-scroller"
+  const galleryExperienceHtml = experienceStyle === "story-scroller"
       ? `<div class="store-story-scroller">
           <div class="store-story-nav" role="tablist" aria-label="Capítulos de la marca">
             ${storyEntries.map((entry, index) => `<button type="button" role="tab" data-story-to="${index}" aria-selected="${index === 0}" aria-controls="store-story-${index}"><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(entry.title || `Capítulo ${index + 1}`)}</button>`).join("")}
@@ -4041,12 +5197,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
             </div>`).join("")}
           </div>
         </div>`
-      : `<div class="store-coverflow" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Carrusel visual de la marca">
-          <div class="store-coverflow-stage">
-            ${editorialImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}">${editorialFigure(image, index, "store-coverflow-item")}</div>`).join("")}
-          </div>
-          ${editorialImages.length > 1 ? `<div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${editorialImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div>` : ""}
-        </div>`;
+      : `<div class="store-editorial-grid">${editorialImages.map((image, index) => editorialFigure(image, index)).join("")}</div>`;
   const hasGalleryExperience = experienceStyle === "story-scroller" ? storyEntries.length > 0 : editorialImages.length > 0;
   const allowedMotionExperiences = STORE_MOTION_EXPERIENCES;
   const savedMotionExperiences = Array.isArray(store.motionExperiences)
@@ -4054,7 +5205,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     : [];
   const legacyMotionExperience = allowedMotionExperiences.includes(store.motionExperience as (typeof allowedMotionExperiences)[number])
     ? store.motionExperience as (typeof allowedMotionExperiences)[number]
-    : "coverflow-carousel";
+    : "hero-carousel";
   const motionExperiences = [...new Set(savedMotionExperiences.length ? savedMotionExperiences : [legacyMotionExperience])];
   const savedAnimations = Array.isArray(store.animations)
     ? store.animations.filter((animation) =>
@@ -4157,6 +5308,13 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     "Cada movimiento descubre un nuevo momento.",
     "Explora las imágenes con rueda, teclado o gesto.",
   ]);
+  const technicalAnimationTitles = new Set([
+    "story scroll", "hero editorial", "image stream", "scroll expansion", "hero gallery",
+    "reseñas", "menú de momentos", "revelado circular", "preguntas en movimiento", "texto en capas",
+    "texto mecanografiado", "texto revelado", "revelado por bloques", "texto en recorrido",
+    "capítulos a pantalla completa", "capítulos completos", "llamado magnético", "secuencia por fotogramas",
+    "secuencia de cuadros", "galería tridimensional",
+  ]);
   const motionSectionHtmlByKey = Object.fromEntries(animationInstances.map((animation) => {
     const rawDescription = animation.subtitle?.trim() || "";
     const publicDescription = generatedAnimationDescriptions.has(rawDescription)
@@ -4179,7 +5337,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         textScale: image.textScale,
         textWidthPercent: image.textWidthPercent,
         textAlign: image.textAlign,
-        textColor: image.textColor,
+	        textColor: image.textColor,
+	        fontStyle: image.fontStyle,
       }))
       .filter((image): image is typeof image & { mediaUrl: string } => !!image.mediaUrl)
       .slice(0, 8);
@@ -4198,6 +5357,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           textWidthPercent: undefined,
           textAlign: undefined,
           textColor: undefined,
+          fontStyle: undefined,
         }
       : null;
     const mediaLimit = animation.type === "clarity-marquee"
@@ -4210,6 +5370,10 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     ].slice(0, mediaLimit);
     const motionStories = motionImages.map((image) => ({ ...image, isVideo: isVideoMediaUrl(image.mediaUrl) }));
     const motionMediaLabel = (image: (typeof motionImages)[number], index: number) => image.title || image.caption || `Imagen ${index + 1}`;
+    const motionAutoplay = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "" : " autoplay";
+    const motionMediaHtml = (image: (typeof motionImages)[number], index: number, { controls = false, decorative = false } = {}) => isVideoMediaUrl(image.mediaUrl)
+      ? `<video class="store-motion-video" src="${escapeHtml(image.mediaUrl)}"${decorative ? " aria-hidden=\"true\"" : ` aria-label="${escapeHtml(motionMediaLabel(image, index))}"`} muted loop playsinline preload="metadata"${motionAutoplay}${controls ? " controls" : ""}></video>`
+      : fidelityImageHtml(image.mediaUrl, image.sourceUrl, decorative ? "" : image.caption);
     const motionHeadingHtml = (value: string, attributes = "") => value ? `<h3 data-animation-copy-field="title"${attributes}>${escapeHtml(value)}</h3>` : "";
     const motionParagraphHtml = (value: string, attributes = "") => value ? `<p data-animation-copy-field="body"${attributes}>${escapeHtml(value)}</p>` : "";
     const motionCaptionHtml = (value: string) => value ? `<span data-animation-copy-field="caption">${escapeHtml(value)}</span>` : "";
@@ -4227,7 +5391,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         + ` data-animation-text-scale="${sceneScale}"`
         + ` data-animation-text-width-percent="${Number.isInteger(image.textWidthPercent) ? image.textWidthPercent : 62}"`
         + ` data-animation-text-align="${image.textAlign || "left"}"`
-        + `${image.textColor ? ` data-animation-text-color="${image.textColor}"` : ""}`;
+	        + `${image.textColor ? ` data-animation-text-color="${image.textColor}"` : ""}`
+	        + `${image.fontStyle ? ` data-animation-font-style="${image.fontStyle}"` : ""}`;
     };
     const motionCopyAttributes = (image: (typeof motionImages)[number], index: number) => `data-animation-copy${motionSceneDataAttributes(image, index)}`;
     const motionFigureCaptionHtml = (image: (typeof motionImages)[number], index: number) => {
@@ -4253,7 +5418,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       ? animation.textWidthPercent!
       : ({ narrow: 42, medium: 62, wide: 86 } as const)[textWidth];
     const scale = textScale / 100;
-    const animationStyle = [
+	    const animationStyle = [
       `--animation-text-x:${textPositionX}%`,
       `--animation-text-y:${textPositionY}%`,
       `--animation-copy-width:${textWidthPercent}%`,
@@ -4261,10 +5426,21 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       `--animation-card-copy-size:clamp(${Math.round(20 * scale)}px,${(2.6 * scale).toFixed(2)}vw,${Math.round(26 * scale)}px)`,
       `--animation-body-size:clamp(${Math.round(15 * scale)}px,${(1.7 * scale).toFixed(2)}vw,${Math.round(20 * scale)}px)`,
       ...(animation.textColor ? [`--animation-text-color:${animation.textColor}`] : []),
-      ...(animation.backgroundColor ? [`--animation-background:${animation.backgroundColor}`] : []),
-    ].join(";");
-    const animationAttributes = `${hasCustomTextLayout ? " data-animation-custom-layout" : ""} data-animation-text-x="${textPositionX}" data-animation-text-y="${textPositionY}" data-animation-text-align="${textAlign}" data-animation-text-size="${textSize}" data-animation-text-width="${textWidth}" data-animation-text-scale="${textScale}" data-animation-text-width-percent="${textWidthPercent}"${animation.textColor ? " data-animation-has-text-color" : ""}${animation.backgroundColor ? " data-animation-has-background" : ""} style="${animationStyle}"`;
-    const sectionKey = `animation-${animation.id}`;
+	      ...(animation.backgroundColor ? [`--animation-background:${animation.backgroundColor}`] : []),
+	    ].join(";");
+	    const animationAttributes = `${hasCustomTextLayout ? " data-animation-custom-layout" : ""} data-animation-text-x="${textPositionX}" data-animation-text-y="${textPositionY}" data-animation-text-align="${textAlign}" data-animation-text-size="${textSize}" data-animation-text-width="${textWidth}" data-animation-text-scale="${textScale}" data-animation-text-width-percent="${textWidthPercent}" data-animation-text-color="${animation.textColor || "#171717"}" data-animation-background="${animation.backgroundColor || "#ffffff"}"${animation.fontStyle ? ` data-animation-font-style="${animation.fontStyle}"` : ""}${animation.textColor ? " data-animation-has-text-color" : ""}${animation.backgroundColor ? " data-animation-has-background" : ""} style="${animationStyle}"`;
+	    const sectionKey = `animation-${animation.id}`;
+	    const extraTextHtml = (animation.textBlocks ?? []).map((block) => {
+	      const blockScale = Number.isInteger(block.textScale) ? block.textScale! : block.role === "title" ? 100 : 82;
+	      const blockX = Number.isInteger(block.textPositionX) ? block.textPositionX! : 18;
+	      const blockY = Number.isInteger(block.textPositionY) ? block.textPositionY! : block.role === "title" ? 30 : 48;
+	      const blockWidth = Number.isInteger(block.textWidthPercent) ? block.textWidthPercent! : 62;
+	      const blockAlign = block.textAlign || "left";
+	      const blockColor = block.textColor || animation.textColor || "#ffffff";
+	      const tag = block.role === "title" ? "h3" : "p";
+	      const blockRatio = blockScale / 100;
+	      return `<div class="store-animation-free-text" data-animation-copy data-animation-copy-custom-layout data-animation-text-block="${escapeHtml(block.id)}" data-animation-text-x="${blockX}" data-animation-text-y="${blockY}" data-animation-text-scale="${blockScale}" data-animation-text-width-percent="${blockWidth}" data-animation-text-align="${blockAlign}" data-animation-text-color="${blockColor}"${block.fontStyle ? ` data-animation-font-style="${block.fontStyle}"` : ""} style="--animation-text-x:${blockX}%;--animation-text-y:${blockY}%;--animation-copy-width:${blockWidth}%;--animation-copy-align:${blockAlign};--animation-copy-translate:${blockAlign === "right" ? "-100%" : blockAlign === "center" ? "-50%" : "0"} -50%;--animation-scene-text-color:${blockColor};--animation-heading-size:clamp(${Math.round(40 * blockRatio)}px,${(6.5 * blockRatio).toFixed(2)}vw,${Math.round(88 * blockRatio)}px);--animation-body-size:clamp(${Math.round(15 * blockRatio)}px,${(1.7 * blockRatio).toFixed(2)}vw,${Math.round(20 * blockRatio)}px)"><${tag} data-animation-copy-field="textBlock">${escapeHtml(block.text)}</${tag}></div>`;
+	    }).join("");
     const hasMotionImages = (minimum: number) => motionImages.length >= minimum || (storeEditorMode && motionImages.length > 0);
     const hasMotionStories = (minimum: number) => motionStories.length >= minimum || (storeEditorMode && motionStories.length > 0);
     const textAnimationTypes = ["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"];
@@ -4283,21 +5459,19 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     let blockHtml = "";
     if (animation.type === "story-scroll" && hasMotionStories(2)) {
       blockHtml = `<div class="store-flow-art" data-motion-flow aria-label="Story Scroll">${motionStories.map((entry, index) => `<article class="store-flow-section" style="--flow-index:${index}"><div class="store-flow-inner"><div class="store-flow-copy" ${motionCopyAttributes(entry, index)}><span>${String(index + 1).padStart(2, "0")}</span>${motionHeadingHtml(entry.title)}${motionParagraphHtml(entry.body)}</div><figure>${entry.isVideo ? `<video src="${escapeHtml(entry.mediaUrl)}" aria-label="${escapeHtml(motionMediaLabel(entry, index))}" muted loop playsinline preload="metadata" controls></video>` : fidelityImageHtml(entry.mediaUrl, entry.sourceUrl, entry.caption)}</figure></div></article>`).join("")}</div>`;
-    } else if (animation.type === "coverflow-carousel" && hasMotionImages(2)) {
-      blockHtml = `<div class="store-coverflow store-motion-coverflow" data-coverflow tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-coverflow-stage">${motionImages.map((image, index) => `<div class="store-coverflow-card" data-coverflow-index="${index}" style="--coverflow-offset:${index};--coverflow-distance:${index}" aria-hidden="${index !== 0}"><figure class="store-editorial-item store-coverflow-item">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}${motionFigureCaptionHtml(image, index)}</figure></div>`).join("")}</div><div class="store-experience-controls"><button type="button" data-coverflow-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span class="store-coverflow-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-coverflow-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     } else if (animation.type === "hero-carousel" && hasMotionImages(2)) {
-      blockHtml = `<div class="store-motion-hero" data-motion-hero role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}" tabindex="0"><div class="store-motion-hero-backgrounds" aria-hidden="true">${motionImages.map((image, index) => `<img src="${escapeHtml(image.mediaUrl)}" alt="" data-motion-hero-background="${index}" class="${index === 0 ? "active" : ""}">`).join("")}</div><div class="store-motion-hero-copy" ${motionCopyAttributes(motionImages[0], 0)}><h3 data-animation-copy-field="title" data-motion-hero-title ${motionImages[0].title ? "" : "hidden"}>${escapeHtml(motionImages[0].title)}</h3><p data-animation-copy-field="caption" data-motion-hero-caption ${motionImages[0].caption ? "" : "hidden"}>${escapeHtml(motionImages[0].caption)}</p></div><div class="store-motion-filmstrip">${motionImages.map((image, index) => `<button type="button" data-motion-hero-to="${index}" data-motion-title="${escapeHtml(image.title)}" data-motion-caption="${escapeHtml(image.caption)}"${motionSceneDataAttributes(image, index)} aria-label="Ver ${escapeHtml(motionMediaLabel(image, index))}" aria-current="${index === 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</button>`).join("")}</div><div class="store-motion-hero-rail"><span data-motion-hero-status>01</span><span>${String(motionImages.length).padStart(2, "0")}</span></div></div>`;
+      blockHtml = `<div class="store-motion-hero" data-motion-hero role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}" tabindex="0"><div class="store-motion-hero-backgrounds" aria-hidden="true">${motionImages.map((image, index) => isVideoMediaUrl(image.mediaUrl) ? `<video class="store-motion-video ${index === 0 ? "active" : ""}" src="${escapeHtml(image.mediaUrl)}" data-motion-hero-background="${index}" muted loop playsinline preload="metadata"${motionAutoplay}></video>` : `<img src="${escapeHtml(image.mediaUrl)}" alt="" data-motion-hero-background="${index}" class="${index === 0 ? "active" : ""}">`).join("")}</div><div class="store-motion-hero-copy" ${motionCopyAttributes(motionImages[0], 0)}><h3 data-animation-copy-field="title" data-motion-hero-title ${motionImages[0].title ? "" : "hidden"}>${escapeHtml(motionImages[0].title)}</h3><p data-animation-copy-field="caption" data-motion-hero-caption ${motionImages[0].caption ? "" : "hidden"}>${escapeHtml(motionImages[0].caption)}</p></div><div class="store-motion-filmstrip">${motionImages.map((image, index) => `<button type="button" data-motion-hero-to="${index}" data-motion-title="${escapeHtml(image.title)}" data-motion-caption="${escapeHtml(image.caption)}"${motionSceneDataAttributes(image, index)} aria-label="Ver ${escapeHtml(motionMediaLabel(image, index))}" aria-current="${index === 0}">${motionMediaHtml(image, index)}</button>`).join("")}</div><div class="store-motion-hero-rail"><span data-motion-hero-status>01</span><span>${String(motionImages.length).padStart(2, "0")}</span></div></div>`;
     } else if (animation.type === "image-stream" && hasMotionImages(2)) {
-      blockHtml = `<div class="store-image-stream" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-image-stream-grid">${motionImages.map((image) => `<figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, "")}</figure>`).join("")}</div></div>`;
+      blockHtml = `<div class="store-image-stream" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-image-stream-grid">${motionImages.map((image, index) => `<figure>${motionMediaHtml(image, index)}</figure>`).join("")}</div></div>`;
     } else if (animation.type === "scroll-expansion" && hasMotionImages(2)) {
       const image = motionImages[0];
       const background = motionImages[1] ?? image;
       const copy = image.title || image.body ? `<div class="store-scroll-expansion-copy" ${motionCopyAttributes(image, 0)}>${motionHeadingHtml(image.title)}${motionParagraphHtml(image.body)}</div>` : "";
-      blockHtml = `<div class="store-scroll-expansion" data-scroll-expansion style="--expansion-progress:0" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-scroll-expansion-sticky"><div class="store-scroll-expansion-background" aria-hidden="true">${fidelityImageHtml(background.mediaUrl, background.sourceUrl, "")}</div><figure>${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure>${copy}</div></div>`;
+      blockHtml = `<div class="store-scroll-expansion" data-scroll-expansion style="--expansion-progress:0" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-scroll-expansion-sticky"><div class="store-scroll-expansion-background" aria-hidden="true">${motionMediaHtml(background, 1, { decorative: true })}</div><figure>${motionMediaHtml(image, 0)}</figure>${copy}</div></div>`;
     } else if (animation.type === "hero-gallery-scroll" && hasMotionImages(3)) {
-      blockHtml = `<div class="store-gallery-scroll" data-gallery-scroll aria-label="${escapeHtml(accessibleLabel)}"><div class="store-gallery-scroll-sticky"><div class="store-gallery-scroll-grid">${motionImages.slice(0, 5).map((image, index) => `<figure data-gallery-scroll-cell="${index}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</figure>`).join("")}</div></div></div>`;
+      blockHtml = `<div class="store-gallery-scroll" data-gallery-scroll aria-label="${escapeHtml(accessibleLabel)}"><div class="store-gallery-scroll-sticky"><div class="store-gallery-scroll-grid">${motionImages.slice(0, 5).map((image, index) => `<figure data-gallery-scroll-cell="${index}">${motionMediaHtml(image, index)}</figure>`).join("")}</div></div></div>`;
     } else if (animation.type === "stagger-testimonials" && hasMotionImages(2)) {
-      blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}<div class="store-testimonial-copy" ${motionCopyAttributes(image, index)}>${image.body ? `<blockquote data-animation-copy-field="body">“${escapeHtml(image.body)}”</blockquote>` : ""}${image.caption ? `<p data-animation-copy-field="caption">— ${escapeHtml(image.caption)}</p>` : ""}</div></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+      blockHtml = `<div class="store-testimonials" data-testimonials tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-testimonials-stage">${motionImages.map((image, index) => `<article class="store-testimonial-card" data-testimonial-index="${index}" style="--testimonial-offset:${index}" aria-hidden="${index !== 0}">${motionMediaHtml(image, index)}<div class="store-testimonial-copy" ${motionCopyAttributes(image, index)}>${image.body ? `<blockquote data-animation-copy-field="body">“${escapeHtml(image.body)}”</blockquote>` : ""}${image.caption ? `<p data-animation-copy-field="caption">— ${escapeHtml(image.caption)}</p>` : ""}</div></article>`).join("")}</div><div class="store-experience-controls"><button type="button" data-testimonial-step="-1" aria-label="Ver reseña anterior">${ICON_ARROW_LEFT}</button><span class="store-testimonial-status" aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-testimonial-step="1" aria-label="Ver reseña siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
     } else if (animation.type === "portfolio-scroller" && hasMotionStories(2)) {
       blockHtml = `<div class="store-portfolio" data-portfolio-scroller tabindex="0" role="region" aria-label="${escapeHtml(accessibleLabel)}"><nav aria-label="Escenas de ${escapeHtml(accessibleLabel)}">${motionStories.map((scene, index) => `<button type="button" data-portfolio-to="${index}" aria-label="Ver ${escapeHtml(motionMediaLabel(scene, index))}" aria-current="${index === 0}"><span>${String(index + 1).padStart(2, "0")}</span>${scene.title ? `<strong>${escapeHtml(scene.title)}</strong>` : ""}</button>`).join("")}</nav><div class="store-portfolio-stage">${motionStories.map((scene, index) => `<article data-portfolio-panel="${index}" class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><div class="store-portfolio-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(motionMediaLabel(scene, index))}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div>${scene.title || scene.body ? `<div class="store-portfolio-copy" ${motionCopyAttributes(scene, index)}>${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</div>` : ""}</article>`).join("")}</div></div>`;
     } else if (animation.type === "circle-reveal" && motionStories.length >= 1) {
@@ -4305,14 +5479,22 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       const copy = scene.title || scene.body ? `<div class="store-circle-reveal-copy" ${motionCopyAttributes(scene, 0)}>${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</div>` : "";
       blockHtml = `<div class="store-circle-reveal" data-circle-reveal aria-label="${escapeHtml(accessibleLabel)}"><div class="store-circle-reveal-sticky"><div class="store-circle-reveal-media">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" aria-label="${escapeHtml(motionMediaLabel(scene, 0))}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, scene.caption)}</div>${copy}</div></div>`;
     } else if (animation.type === "clarity-marquee") {
+      const authoredPhrases = (animation.title?.split("|") ?? [])
+        .map((phrase) => phrase.trim())
+        .filter((phrase) => {
+          const normalized = phrase.toLocaleLowerCase();
+          return !!phrase && normalized !== accessibleLabel.toLocaleLowerCase() && !technicalAnimationTitles.has(normalized);
+        });
       const phrases = [...new Set([
+        ...authoredPhrases,
+        animation.subtitle?.trim(),
         selectedProduct?.name,
         ...(selectedProduct?.tags ?? []),
         ...store.items.map((item) => item.name),
         store.storeName,
       ].map((phrase) => phrase?.trim()).filter((phrase): phrase is string => !!phrase))].slice(0, 8);
-      const phraseHtml = phrases.map((phrase, index) => `<span><b>${String(index + 1).padStart(2, "0")}</b>${escapeHtml(phrase)}</span>`).join("");
-      blockHtml = `<div class="store-clarity-marquee" data-clarity-marquee aria-label="${escapeHtml(accessibleLabel)}"><div class="store-clarity-rail"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div><div class="store-clarity-rail reverse"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div></div>`;
+      const phraseHtml = phrases.map((phrase, index) => `<span data-animation-copy-field="${index === 0 ? "title" : "body"}"><b>${String(index + 1).padStart(2, "0")}</b>${escapeHtml(phrase)}</span>`).join("");
+      blockHtml = `<div class="store-clarity-marquee" data-clarity-marquee data-animation-copy aria-label="${escapeHtml(accessibleLabel)}"><div class="store-clarity-rail"><div>${phraseHtml}</div><div aria-hidden="true">${phraseHtml}</div></div></div>`;
     } else if (animation.type === "layered-text") {
       const authoredLayeredPhrases = (animation.title?.split("|") ?? []).map((phrase) => phrase.trim()).filter(Boolean);
       const layeredPhrases = [...new Set([
@@ -4322,9 +5504,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       const layeredLines = Array.from({ length: Math.min(7, Math.max(4, layeredPhrases.length + 1)) }, (_, index) => {
         const top = index === 0 ? "\u00a0" : layeredPhrases[(index - 1) % layeredPhrases.length];
         const bottom = index === Math.min(7, Math.max(4, layeredPhrases.length + 1)) - 1 ? "\u00a0" : layeredPhrases[index % layeredPhrases.length];
-        return `<li style="--layer-index:${index}"><span>${escapeHtml(top)}</span><span>${escapeHtml(bottom)}</span></li>`;
+        return `<li style="--layer-index:${index}"><span data-animation-copy-field="title">${escapeHtml(top)}</span><span data-animation-copy-field="body">${escapeHtml(bottom)}</span></li>`;
       }).join("");
-      blockHtml = `<div class="store-layered-text" data-layered-text tabindex="0" aria-label="${escapeHtml(accessibleLabel)}"><ul>${layeredLines}</ul><span class="sr-only" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
+      blockHtml = `<div class="store-layered-text" data-layered-text data-animation-copy tabindex="0" aria-label="${escapeHtml(accessibleLabel)}"><ul>${layeredLines}</ul></div>`;
     } else if (animation.type === "text-rotate") {
       const authoredRotatingValues = (animation.title?.split("|") ?? []).map((phrase) => phrase.trim()).filter(Boolean);
       const typewriterPrefix = animation.subtitle?.trim() || "Descubre";
@@ -4336,13 +5518,13 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       ])].filter((phrase) => phrase.toLocaleLowerCase() !== normalizedPrefix).slice(0, 8);
       blockHtml = `<div class="store-text-rotate" data-text-rotate data-text-rotate-values="${escapeHtml(rotatingValues.join("\u001f"))}" aria-label="${escapeHtml(accessibleLabel)}"><p data-animation-copy><span class="store-text-rotate-prefix" data-animation-copy-field="body">${escapeHtml(typewriterPrefix)}</span><span class="store-text-rotate-window"><span data-text-rotate-current data-animation-copy-field="title">${escapeHtml(rotatingValues[0] || "")}</span><span class="store-text-typewriter-cursor" aria-hidden="true">_</span></span></p></div>`;
     } else if (animation.type === "text-glitch") {
-      blockHtml = `<div class="store-text-glitch" data-text-glitch tabindex="0" data-hover-text="${escapeHtml(secondaryText)}" aria-label="${escapeHtml(accessibleLabel)}"><span class="store-text-glitch-base" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="store-text-glitch-hover" data-text-glitch-hover aria-hidden="true">${escapeHtml(secondaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
+      blockHtml = `<div class="store-text-glitch" data-text-glitch data-animation-copy tabindex="0" data-hover-text="${escapeHtml(secondaryText)}" aria-label="${escapeHtml(accessibleLabel)}"><span class="store-text-glitch-base" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="store-text-glitch-hover" data-text-glitch-hover data-animation-copy-field="body" aria-hidden="true">${escapeHtml(secondaryText)}</span></div>`;
     } else if (animation.type === "text-reveal-block") {
-      blockHtml = `<div class="store-text-reveal" data-text-reveal aria-label="${escapeHtml(accessibleLabel)}"><span class="store-text-reveal-line"><strong data-animation-copy-field="title">${escapeHtml(primaryText)}</strong></span><span class="store-text-reveal-line"><span data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></span></div>`;
+      blockHtml = `<div class="store-text-reveal" data-text-reveal data-animation-copy aria-label="${escapeHtml(accessibleLabel)}"><span class="store-text-reveal-line"><strong data-animation-copy-field="title">${escapeHtml(primaryText)}</strong></span><span class="store-text-reveal-line"><span data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></span></div>`;
     } else if (animation.type === "text-along-path") {
       const pathId = `store-text-path-${animation.id.replace(/[^a-z0-9_-]/gi, "")}`;
       const pathText = `${primaryText} · ${secondaryText} · ${primaryText} · ${secondaryText} · `;
-      blockHtml = `<div class="store-text-path" data-text-along-path aria-label="${escapeHtml(accessibleLabel)}"><svg viewBox="0 0 1000 360" role="img" aria-labelledby="${pathId}-title" preserveAspectRatio="xMidYMid meet"><title id="${pathId}-title">${escapeHtml(primaryText)}</title><path id="${pathId}" d="M70 180 C180 20 360 20 500 180 S820 340 930 180" fill="none"/><text><textPath href="#${pathId}" startOffset="0%"><animate attributeName="startOffset" from="-100%" to="100%" dur="18s" repeatCount="indefinite"/>${escapeHtml(pathText)}</textPath></text></svg><span class="sr-only" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
+      blockHtml = `<div class="store-text-path" data-text-along-path data-animation-copy data-animation-style-target aria-label="${escapeHtml(accessibleLabel)}"><svg viewBox="0 0 1000 360" role="img" aria-labelledby="${pathId}-title" preserveAspectRatio="xMidYMid meet"><title id="${pathId}-title">${escapeHtml(primaryText)}</title><path id="${pathId}" d="M70 180 C180 20 360 20 500 180 S820 340 930 180" fill="none"/><text><textPath href="#${pathId}" startOffset="0%"><animate attributeName="startOffset" from="-100%" to="100%" dur="18s" repeatCount="indefinite"/>${escapeHtml(pathText)}</textPath></text></svg><span class="sr-only" data-animation-copy-field="title">${escapeHtml(primaryText)}</span><span class="sr-only" data-animation-copy-field="body">${escapeHtml(secondaryText)}</span></div>`;
     } else if (animation.type === "full-screen-chapters" && hasMotionStories(2)) {
       blockHtml = `<div class="store-full-chapters" data-full-chapters role="region" aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(220, motionStories.length * 90)}svh"><div class="store-full-chapters-sticky"><div class="store-full-chapter-backgrounds" aria-hidden="true">${motionStories.map((scene, index) => `<div data-full-chapter-bg="${index}" class="${index === 0 ? "active" : ""}">${scene.isVideo ? `<video src="${escapeHtml(scene.mediaUrl)}" muted loop playsinline preload="metadata"></video>` : fidelityImageHtml(scene.mediaUrl, scene.sourceUrl, "")}</div>`).join("")}</div><div class="store-full-chapter-copy">${motionStories.map((scene, index) => `<article data-full-chapter-copy="${index}" ${motionCopyAttributes(scene, index)} class="${index === 0 ? "active" : ""}" aria-hidden="${index !== 0}"><span>${String(index + 1).padStart(2, "0")} / ${String(motionStories.length).padStart(2, "0")}</span>${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</article>`).join("")}</div><div class="store-full-chapter-progress" aria-hidden="true"><span></span></div></div></div>`;
     } else if (animation.type === "magnetic-target" && motionImages.length >= 1) {
@@ -4350,11 +5532,17 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       const magneticHref = selectedProduct ? productPageUrl(slug, selectedProduct.id) : "#store-grid";
       const magneticLabel = selectedProduct ? `Ver ${selectedProduct.name}` : "Explorar colección";
       const copy = scene.caption || scene.title || scene.body ? `<div class="store-magnetic-copy" ${motionCopyAttributes(scene, 0)}>${motionCaptionHtml(scene.caption)}${motionHeadingHtml(scene.title)}${motionParagraphHtml(scene.body)}</div>` : "";
-      blockHtml = `<div class="store-magnetic" data-magnetic-target style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)">${copy}<a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
+      blockHtml = `<div class="store-magnetic" data-magnetic-target${isVideoMediaUrl(scene.mediaUrl) ? "" : ` style="--magnetic-image:url(&quot;${escapeHtml(scene.mediaUrl)}&quot;)"`}>${isVideoMediaUrl(scene.mediaUrl) ? motionMediaHtml(scene, 0, { decorative: true }) : ""}${copy}<a href="${escapeHtml(magneticHref)}" data-magnetic-link><span>${escapeHtml(magneticLabel)}</span>${ICON_ARROW_RIGHT}</a></div>`;
     } else if (animation.type === "frame-sequence" && hasMotionImages(2)) {
-      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}"${motionSceneDataAttributes(image, index)} class="${index === 0 ? "active" : ""}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}</div>`).join("")}</div><div class="store-frame-copy" ${motionCopyAttributes(motionImages[0], 0)}><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-animation-copy-field="title" data-frame-title ${motionImages[0].title ? "" : "hidden"}>${escapeHtml(motionImages[0].title)}</h3><p data-animation-copy-field="body" data-frame-body ${motionImages[0].body ? "" : "hidden"}>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
-    } else if (animation.type === "3d-gallery" && hasMotionImages(3)) {
-      blockHtml = `<div class="store-space-gallery" data-space-gallery tabindex="0" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(accessibleLabel)}"><div class="store-space-gallery-stage">${motionImages.map((image, index) => `<figure data-space-card="${index}" style="--space-offset:${index}" aria-hidden="${index !== 0}">${fidelityImageHtml(image.mediaUrl, image.sourceUrl, image.caption)}${motionFigureCaptionHtml(image, index)}</figure>`).join("")}</div><div class="store-experience-controls"><button type="button" data-space-step="-1" aria-label="Ver imagen anterior">${ICON_ARROW_LEFT}</button><span data-space-status aria-live="polite">1 / ${motionImages.length}</span><button type="button" data-space-step="1" aria-label="Ver imagen siguiente">${ICON_ARROW_RIGHT}</button></div></div>`;
+      blockHtml = `<div class="store-frame-sequence" data-frame-sequence aria-label="${escapeHtml(accessibleLabel)}" style="height:${Math.max(200, motionImages.length * 55)}svh"><div class="store-frame-sticky"><div class="store-frame-media">${motionImages.map((image, index) => `<div data-frame="${index}" data-frame-title-value="${escapeHtml(image.title)}" data-frame-body-value="${escapeHtml(image.body)}"${motionSceneDataAttributes(image, index)} class="${index === 0 ? "active" : ""}">${motionMediaHtml(image, index)}</div>`).join("")}</div><div class="store-frame-copy" ${motionCopyAttributes(motionImages[0], 0)}><span data-frame-status>01 / ${String(motionImages.length).padStart(2, "0")}</span><h3 data-animation-copy-field="title" data-frame-title ${motionImages[0].title ? "" : "hidden"}>${escapeHtml(motionImages[0].title)}</h3><p data-animation-copy-field="body" data-frame-body ${motionImages[0].body ? "" : "hidden"}>${escapeHtml(motionImages[0].body)}</p></div></div></div>`;
+    }
+    if (!blockHtml && storeEditorMode) {
+      const requirement = storeAnimationMediaRequirement(animation.type);
+      const missing = Math.max(0, requirement.min - motionImages.length);
+      blockHtml = `<div class="store-animation-incomplete" data-animation-incomplete role="status">
+        <span class="store-animation-incomplete-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15.5 9h.01"/></svg></span>
+        <div><strong>Completa ${escapeHtml(accessibleLabel)}</strong><p>${missing ? `Agrega ${missing} ${missing === 1 ? "archivo" : "archivos"} para activar esta animación.` : "Agrega contenido para activar esta animación."}</p><small>Tócala para abrir sus opciones. Puedes usar imágenes, GIF, MP4 o WebM.</small></div>
+      </div>`;
     }
     const productCardImageUrl = selectedProduct?.imageUrls?.[0] ? assetUrl(selectedProduct.imageUrls[0]) : null;
     const productActionHtml = selectedProduct
@@ -4380,11 +5568,17 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       : "";
     const hasSceneCopy = !["image-stream", "hero-gallery-scroll", ...textAnimationTypes].includes(animation.type);
     const generalTitle = animation.title?.trim() || "";
-    const descriptionHtml = !isTextAnimation && (generalTitle || publicDescription)
-      ? `<div class="store-motion-description" data-animation-general-copy${hasSceneCopy ? "" : " data-animation-copy"}>${generalTitle ? `<h3>${escapeHtml(generalTitle)}</h3>` : ""}${publicDescription ? `<p>${escapeHtml(publicDescription)}</p>` : ""}</div>`
+    const normalizedGeneralTitle = generalTitle.toLocaleLowerCase();
+    const publicTitle = normalizedGeneralTitle === accessibleLabel.toLocaleLowerCase()
+      || technicalAnimationTitles.has(normalizedGeneralTitle)
+      || technicalAnimationTerms.some((term) => normalizedGeneralTitle === term)
+      ? ""
+      : generalTitle;
+    const descriptionHtml = !isTextAnimation && (publicTitle || publicDescription)
+      ? `<div class="store-motion-description" data-animation-general-copy${hasSceneCopy ? "" : " data-animation-copy"}>${publicTitle ? `<h3>${escapeHtml(publicTitle)}</h3>` : ""}${publicDescription ? `<p>${escapeHtml(publicDescription)}</p>` : ""}</div>`
       : "";
     const html = blockHtml
-      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}" aria-label="${escapeHtml(accessibleLabel)}"${animationAttributes}>${descriptionHtml}${blockHtml}${buttonActionHtml}${productActionHtml}</section>`
+	      ? `<section class="store-motion-section" data-animation-id="${escapeHtml(animation.id)}" data-motion-experience="${animation.type}"${blockHtml.includes("data-animation-incomplete") ? " data-animation-is-incomplete" : ""} aria-label="${escapeHtml(accessibleLabel)}"${animationAttributes}>${descriptionHtml}${blockHtml}${extraTextHtml}${buttonActionHtml}${productActionHtml}</section>`
       : "";
     return [sectionKey, html];
   }));
@@ -4441,11 +5635,44 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </section>`
     : "";
 
+  const eventDate = (value: string) => new Intl.DateTimeFormat("es-BO", {
+    timeZone: "America/La_Paz",
+    dateStyle: "full",
+    timeStyle: "short",
+  }).format(new Date(value));
+  const eventTicketsHtml = (eventId: string, section?: StoreSiteDocument["sections"][number]) => {
+    const event = (store.events ?? []).find((candidate) => candidate.id === eventId);
+    if (!event) return "";
+    const availableTypes = event.ticketTypes.filter((ticket) => ticket.available > 0);
+    const image = assetUrl(event.publicityImageUrl || null);
+    return `<section class="store-event" id="event-${escapeHtml(event.id)}" aria-labelledby="event-title-${escapeHtml(event.id)}">
+      <div class="store-event-intro">
+        ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(event.name)}" loading="lazy">` : `<div class="store-event-date" aria-hidden="true"><strong>${escapeHtml(new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", day: "2-digit" }).format(new Date(event.startsAt)))}</strong><span>${escapeHtml(new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", month: "short" }).format(new Date(event.startsAt)))}</span></div>`}
+        <div><h2 id="event-title-${escapeHtml(event.id)}">${escapeHtml(section?.eventId ? section.title || event.name : event.name)}</h2><p class="store-event-when">${escapeHtml(eventDate(event.startsAt))}${event.venue ? ` · ${escapeHtml(event.venue.name)}, ${escapeHtml(event.venue.city)}` : ""}</p>${event.description || section?.body ? `<p>${escapeHtml(event.description || section?.body || "")}</p>` : ""}<span class="store-event-by">Un evento de ${escapeHtml(store.storeName)}, con entradas y pago en pagosYa.</span></div>
+      </div>
+      <form class="store-event-form" data-event-reservation data-event-slug="${escapeHtml(event.slug)}">
+        <fieldset><legend>Elige tus entradas</legend><div class="store-event-ticket-list">${availableTypes.map((ticket) => `<label class="store-event-ticket"><span><strong>${escapeHtml(ticket.name)}</strong><small>${ticket.available} disponibles</small></span><span class="store-event-ticket-price">${escapeHtml(formatAmount(ticket.price, ticket.currency))}</span><input type="number" name="ticket-${escapeHtml(ticket.id)}" data-ticket-type="${escapeHtml(ticket.id)}" min="0" max="${Math.min(20, ticket.available)}" value="0" inputmode="numeric" aria-label="Cantidad de entradas ${escapeHtml(ticket.name)}"></label>`).join("") || '<p class="store-event-sold-out">Las entradas en línea están agotadas.</p>'}</div></fieldset>
+        ${availableTypes.length ? `<div class="store-event-buyer"><div class="field"><label>Nombre<input name="buyerName" autocomplete="name" maxlength="120"></label></div><div class="field"><label>Correo<input name="buyerEmail" type="email" autocomplete="email" maxlength="254"></label></div><div class="field"><label>Teléfono<input name="buyerPhone" autocomplete="tel" inputmode="tel" maxlength="40"></label></div></div><div class="store-event-actions"><button class="primary" type="submit">${escapeHtml(section?.ctaLabel || "Comprar entradas")}</button><span role="status" aria-live="polite"></span></div>` : ""}
+      </form>
+    </section>`;
+  };
+
   const locationCardHtml = (location: StoreLocation, index: number) => {
     const mapUrl = safeStoreMapEmbedUrl(location.mapEmbedUrl);
     const fulfillment = [location.pickupEnabled ? "Retiro" : "", location.deliveryEnabled ? "Entrega" : ""].filter(Boolean).join(" · ");
     const opening = locationOpeningState(location);
-    return `<article class="store-location-card${mapUrl ? " has-map" : ""}" tabindex="-1">
+    const inlineMapEditor = storeEditorMode ? `<form class="store-location-inline-editor" data-store-location-inline-editor data-location-id="${escapeHtml(location.id)}">
+        <label for="store-location-map-${escapeHtml(location.id)}">Insertar mapa aquí</label>
+        <textarea id="store-location-map-${escapeHtml(location.id)}" data-store-location-map-input rows="3" spellcheck="false" aria-describedby="store-location-map-help-${escapeHtml(location.id)} store-location-map-status-${escapeHtml(location.id)}" placeholder="Pega el código &lt;iframe&gt; de Google Maps o su URL de inserción">${escapeHtml(mapUrl || "")}</textarea>
+        <p id="store-location-map-help-${escapeHtml(location.id)}" class="store-location-inline-help">Google Maps: Compartir → Insertar un mapa → Copiar HTML.</p>
+        <div class="store-location-inline-actions">
+          <button class="primary" type="submit">${mapUrl ? "Actualizar mapa" : "Insertar mapa"}</button>
+          ${mapUrl ? `<button type="button" data-store-location-map-clear>Quitar mapa</button>` : ""}
+          <button class="store-location-delete-control" type="button" data-store-location-delete data-location-id="${escapeHtml(location.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg><span>Eliminar ubicación</span></button>
+        </div>
+        <p id="store-location-map-status-${escapeHtml(location.id)}" class="store-location-inline-status" role="status" aria-live="polite"></p>
+      </form>` : "";
+    return `<article class="store-location-card${mapUrl ? " has-map" : ""}${storeEditorMode ? " has-editor" : ""}" tabindex="-1">
       <div class="store-location-copy">
         <span class="store-location-number">${String(index + 1).padStart(2, "0")}</span>
         <h3>${escapeHtml(location.name)}</h3>
@@ -4456,7 +5683,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         <p class="store-location-hours${opening.isOpen ? " is-open" : ""}">${escapeHtml(opening.label)}</p>
         ${mapUrl ? `<a class="store-location-link" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">${ICON_MAP_PIN}<span>Abrir mapa</span></a>` : ""}
       </div>
-      ${mapUrl ? `<div class="store-location-map"><iframe src="${escapeHtml(mapUrl)}" title="${escapeHtml(location.name)} de ${escapeHtml(store.storeName)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allowfullscreen></iframe></div>` : ""}
+      ${mapUrl || storeEditorMode ? `<div class="store-location-map-column">${inlineMapEditor}<div class="store-location-map${mapUrl ? "" : " is-empty"}">${mapUrl ? `<iframe src="${escapeHtml(mapUrl)}" title="${escapeHtml(location.name)} de ${escapeHtml(store.storeName)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allowfullscreen></iframe>` : `<p>El mapa aparecerá aquí.</p>`}</div></div>` : ""}
     </article>`;
   };
   const locationHtml = locations.length
@@ -4471,36 +5698,62 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </section>`
     : "";
 
+  const siteBlockAttribute = (block: NonNullable<StoreSiteDocument["sections"][number]["blocks"]>[number]) => ` data-site-block="${escapeHtml(block.id)}" data-site-slot="${escapeHtml(block.slot)}" data-site-block-kind="${block.kind}" data-site-block-role="${block.role}"`;
+  const siteBlocks = (section: StoreSiteDocument["sections"][number]) => section.blocks ?? [];
+  const siteBlockMedia = (section: StoreSiteDocument["sections"][number]) => siteBlocks(section).filter((block) => block.kind === "media" && block.mediaUrl);
   const bespokeMediaHtml = (section: StoreSiteDocument["sections"][number]) => {
-    const media = section.mediaUrls.flatMap((source, index) => {
+    const blocks = siteBlockMedia(section);
+    const sources = blocks.length ? blocks.map((block) => block.mediaUrl!).filter(Boolean) : section.mediaUrls;
+    const media = sources.flatMap((source, index) => {
       const resolved = assetUrl(source);
       if (!resolved) return [];
       const label = section.title || `${visibleStoreName || "La tienda"}, imagen ${index + 1}`;
+      const attribute = blocks[index] ? siteBlockAttribute(blocks[index]) : "";
       return [isVideoMediaUrl(resolved)
-        ? `<video src="${escapeHtml(resolved)}" aria-label="${escapeHtml(label)}" muted loop playsinline preload="metadata" ${index === 0 ? "autoplay" : ""}></video>`
-        : fidelityImageHtml(resolved, source, label, { eager: section.kind === "hero" && index === 0 })];
+        ? `<video${attribute} src="${escapeHtml(resolved)}" aria-label="${escapeHtml(label)}" muted loop playsinline preload="metadata" ${index === 0 ? "autoplay" : ""}></video>`
+        : `<div class="site-block-media"${attribute}>${fidelityImageHtml(resolved, source, label, { eager: section.kind === "hero" && index === 0 })}</div>`];
     }).join("");
     if (!media) return "";
-    return `<div class="bespoke-media" data-count="${section.mediaUrls.length}">${media}</div>`;
+    const scrollRegion = section.layout === "rail"
+      ? ` role="region" aria-label="${escapeHtml(section.title ? `Galería desplazable: ${section.title}` : "Galería desplazable")}" tabindex="0"`
+      : "";
+    return `<div class="bespoke-media" data-count="${sources.length}"${scrollRegion}>${media}</div>`;
   };
   const bespokeStoryFlowHtml = (section: StoreSiteDocument["sections"][number]) => {
-    const scenes = section.mediaUrls.slice(0, 3).flatMap((source, index) => {
+    const chapterBlocks = siteBlocks(section).filter((block) => block.kind === "group" && block.slot === "chapters").slice(0, 3);
+    const scenes = chapterBlocks.length >= 2 ? chapterBlocks.flatMap((block) => {
+      const heading = block.children.find((child) => child.kind === "heading");
+      const body = block.children.find((child) => child.kind === "text");
+      const media = block.children.find((child) => child.kind === "media" && child.mediaUrl);
+      const resolved = media?.mediaUrl ? assetUrl(media.mediaUrl) : null;
+      return resolved ? [{
+        source: media!.mediaUrl!, resolved, title: heading?.text || section.title, body: body?.text || section.body,
+        titleStyle: heading?.style || section.titleStyle, bodyStyle: body?.style || section.bodyStyle,
+        block, headingBlock: heading, bodyBlock: body, mediaBlock: media,
+      }] : [];
+    }) : section.mediaUrls.slice(0, 3).flatMap((source, index) => {
       const resolved = assetUrl(source);
       if (!resolved) return [];
       const item = section.items.find((candidate) => candidate.mediaUrl === source) ?? section.items[index];
       return [{
         source,
         resolved,
-        title: item?.title || (index === 0 ? section.title : ""),
-        body: item?.body || (index === 0 ? section.body : ""),
+        title: item?.title || section.title,
+        body: item?.body || section.body,
+        titleStyle: item?.titleStyle || section.titleStyle,
+        bodyStyle: item?.bodyStyle || section.bodyStyle,
+        block: null,
+        headingBlock: null,
+        bodyBlock: null,
+        mediaBlock: null,
       }];
     });
     if (scenes.length < 2) return "";
     return `<div class="store-flow-art bespoke-story-flow" data-motion-flow aria-label="${escapeHtml(section.title || "Historia de la marca")}">
-      ${scenes.map((scene, index) => `<article class="store-flow-section" style="--flow-index:${index}">
+      ${scenes.map((scene, index) => `<article class="store-flow-section" style="--flow-index:${index}"${scene.block ? siteBlockAttribute(scene.block) : ""}>
         <div class="store-flow-inner">
-          <div class="store-flow-copy"><span>${String(index + 1).padStart(2, "0")}</span>${scene.title ? `<h3>${escapeHtml(scene.title)}</h3>` : ""}${scene.body ? `<p>${escapeHtml(scene.body)}</p>` : ""}</div>
-          <figure>${isVideoMediaUrl(scene.resolved)
+          <div class="store-flow-copy"><span>${String(index + 1).padStart(2, "0")}</span>${scene.title ? `<h3${scene.headingBlock ? siteBlockAttribute(scene.headingBlock) : ""}${canvasTextStyleAttributes(scene.titleStyle)}>${escapeHtml(scene.title)}</h3>` : ""}${scene.body ? `<p${scene.bodyBlock ? siteBlockAttribute(scene.bodyBlock) : ""}${canvasTextStyleAttributes(scene.bodyStyle)}>${escapeHtml(scene.body)}</p>` : ""}</div>
+          <figure${scene.mediaBlock ? siteBlockAttribute(scene.mediaBlock) : ""}>${isVideoMediaUrl(scene.resolved)
             ? `<video src="${escapeHtml(scene.resolved)}" aria-label="${escapeHtml(scene.title || `Escena ${index + 1}`)}" muted loop playsinline preload="metadata" controls></video>`
             : fidelityImageHtml(scene.resolved, scene.source, scene.title || `Escena ${index + 1}`)}</figure>
         </div>
@@ -4515,31 +5768,67 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   ) => {
     if (!content) return "";
     const label = section.title ? ` aria-label="${escapeHtml(section.title)}"` : "";
-    return `<${element} class="bespoke-zone bespoke-${section.kind}${modifier ? ` ${modifier}` : ""}" data-site-section="${escapeHtml(section.id)}" data-site-kind="${section.kind}" data-site-layout="${section.layout}" data-site-width="${section.width}" data-site-align="${section.align}" data-site-motion="${section.motion}" style="--zone-bg:${section.backgroundColor};--zone-ink:${section.textColor}"${label}>${content}</${element}>`;
+    const family = resolveSiteSectionFamily(section.kind, section.family, siteDocument!.designGenome);
+    const position = siteSectionsForPage.findIndex((candidate) => candidate.id === section.id);
+    const opening = position === 0 ? " is-site-opening" : "";
+    return `<${element} id="site-section-${escapeHtml(section.id)}" class="bespoke-zone bespoke-${section.kind}${opening}${modifier ? ` ${modifier}` : ""}" data-site-section="${escapeHtml(section.id)}" data-site-kind="${section.kind}" data-site-position="${position}" data-site-family="${family}" data-site-layout="${section.layout}" data-site-width="${section.width}" data-site-align="${section.align}" data-site-motion="${section.motion}" style="--zone-bg:${section.backgroundColor};--zone-ink:${section.textColor}"${label}>${content}</${element}>`;
   };
-  const bespokeCopy = (section: StoreSiteDocument["sections"][number], showCta = false) => `<div class="bespoke-copy">
-    ${section.title ? `<h2>${escapeHtml(section.title)}</h2>` : ""}
-    ${section.body ? `<p>${escapeHtml(section.body)}</p>` : ""}
-    ${showCta && section.ctaLabel ? `<button type="button" class="bespoke-cta hero-catalog-cta">${escapeHtml(section.ctaLabel)}${ICON_ARROW_RIGHT}</button>` : ""}
-  </div>`;
+  const bespokeCopy = (section: StoreSiteDocument["sections"][number], showCta = false) => {
+    const copyBlocks = siteBlocks(section).filter((block) => ["heading", "text", "action"].includes(block.kind));
+    if (!copyBlocks.length) return `<div class="bespoke-copy">
+      ${section.title ? `<h2${canvasTextStyleAttributes(section.titleStyle)}>${escapeHtml(section.title)}</h2>` : ""}
+      ${section.body ? `<p${canvasTextStyleAttributes(section.bodyStyle)}>${escapeHtml(section.body)}</p>` : ""}
+      ${showCta && section.ctaLabel ? `<button type="button" class="bespoke-cta hero-catalog-cta">${escapeHtml(section.ctaLabel)}${ICON_ARROW_RIGHT}</button>` : ""}
+    </div>`;
+    return `<div class="bespoke-copy">${copyBlocks.map((block) => {
+      const attributes = siteBlockAttribute(block);
+      if (block.kind === "heading") return block.text ? `<h2${attributes}${canvasTextStyleAttributes(block.style)}>${escapeHtml(block.text)}</h2>` : "";
+      if (block.kind === "text") return block.text ? `<p${attributes}${canvasTextStyleAttributes(block.style)}>${escapeHtml(block.text)}</p>` : "";
+      return block.text ? `<button type="button" class="bespoke-cta hero-catalog-cta"${attributes}>${escapeHtml(block.text)}${ICON_ARROW_RIGHT}</button>` : "";
+    }).join("")}</div>`;
+  };
+  const bespokeAdditionalCopy = (section: StoreSiteDocument["sections"][number]) => {
+    const additionalBlocks = siteBlocks(section).filter((block) =>
+      ["heading", "text", "action"].includes(block.kind) && !["heading", "body", "action"].includes(block.id));
+    if (!additionalBlocks.length) return "";
+    return `<div class="bespoke-copy bespoke-copy-additional">${additionalBlocks.map((block) => {
+      const attributes = siteBlockAttribute(block);
+      if (block.kind === "heading") return block.text ? `<h2${attributes}${canvasTextStyleAttributes(block.style)}>${escapeHtml(block.text)}</h2>` : "";
+      if (block.kind === "text") return block.text ? `<p${attributes}${canvasTextStyleAttributes(block.style)}>${escapeHtml(block.text)}</p>` : "";
+      return block.text ? `<button type="button" class="bespoke-cta hero-catalog-cta"${attributes}>${escapeHtml(block.text)}${ICON_ARROW_RIGHT}</button>` : "";
+    }).join("")}</div>`;
+  };
+  const visualFamilyContent = (section: StoreSiteDocument["sections"][number], copy: string, media: string) => {
+    const family = resolveSiteSectionFamily(section.kind, section.family, siteDocument!.designGenome);
+    return family === "cinematic" || family === "product-led" ? `${media}${copy}` : `${copy}${media}`;
+  };
+  const trustedFamilyContent = (section: StoreSiteDocument["sections"][number], trusted: string) => {
+    const additional = bespokeAdditionalCopy(section);
+    const family = resolveSiteSectionFamily(section.kind, section.family, siteDocument!.designGenome);
+    return family === "product-led" || family === "cinematic" ? `${trusted}${additional}` : `${additional}${trusted}`;
+  };
   const renderBespokeSection = (section: StoreSiteDocument["sections"][number]): string => {
-    if (section.kind === "hero") return carouselHtml
+    if (section.kind === "hero") return carouselHtml && section.motion !== "none" && !(section.layout === "split" && section.motion === "clip" && section.mediaUrls.length >= 2)
       ? bespokeFrame(section, carouselHtml, "div", "has-site-carousel")
-      : bespokeFrame(section, `${bespokeCopy(section, true)}${bespokeMediaHtml(section)}`);
+      : bespokeFrame(section, visualFamilyContent(section, bespokeCopy(section, true), bespokeMediaHtml(section)));
     if (section.kind === "story") {
       const storyFlow = section.motion === "story-scroll" ? bespokeStoryFlowHtml(section) : "";
       return storyFlow
         ? bespokeFrame(section, storyFlow, "section", "has-story-flow")
-        : bespokeFrame(section, `${bespokeCopy(section)}${bespokeMediaHtml(section)}`);
+        : bespokeFrame(section, visualFamilyContent(section, bespokeCopy(section), bespokeMediaHtml(section)));
     }
     if (section.kind === "gallery") {
       const authoredGallery = bespokeMediaHtml(section);
-      return authoredGallery || editorialGalleryHtml ? bespokeFrame(section, `${bespokeCopy(section)}${authoredGallery || editorialGalleryHtml}`) : "";
+      return bespokeFrame(section, visualFamilyContent(section, bespokeCopy(section), authoredGallery || editorialGalleryHtml));
     }
-    if (section.kind === "catalog") return bespokeFrame(section, productsHtml + appointmentsHtml, "div");
-    if (section.kind === "contact") return bespokeFrame(section, contactHtml, "div");
-    if (section.kind === "location") return bespokeFrame(section, locationHtml, "div");
-    if (section.kind === "links") return bespokeFrame(section, linksHtml, "div");
+    if (section.kind === "catalog") return bespokeFrame(section, trustedFamilyContent(section, productsHtml + appointmentsHtml), "div");
+    if (section.kind === "event-tickets") {
+      const selectedEvents = section.eventId ? (store.events ?? []).filter((event) => event.id === section.eventId) : (store.events ?? []);
+      return bespokeFrame(section, trustedFamilyContent(section, selectedEvents.map((event) => eventTicketsHtml(event.id, section)).join("")), "div");
+    }
+    if (section.kind === "contact") return bespokeFrame(section, trustedFamilyContent(section, contactHtml), "div");
+    if (section.kind === "location") return bespokeFrame(section, trustedFamilyContent(section, locationHtml), "div");
+    if (section.kind === "links") return bespokeFrame(section, trustedFamilyContent(section, linksHtml), "div");
     return "";
   };
 
@@ -4561,12 +5850,12 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     .filter((section) => section !== signatureSectionKey)
     .map((section) => motionSectionHtmlByKey[section] || "")
     .join("");
-  const bespokeSectionHtmlByKey = Object.fromEntries((siteDocument?.sections ?? []).map((section) => [`site-${section.id}`, renderBespokeSection(section)]));
-  const defaultBespokeOrder: string[] = siteDocument?.sections.map((section) => `site-${section.id}`) ?? [];
-  const legacyBespokeSectionsHtml = siteDocument?.sections.map((section) => {
+  const bespokeSectionHtmlByKey = Object.fromEntries(siteSectionsForPage.map((section) => [`site-${section.id}`, renderBespokeSection(section)]));
+  const defaultBespokeOrder: string[] = siteSectionsForPage.map((section) => `site-${section.id}`);
+  const legacyBespokeSectionsHtml = siteSectionsForPage.map((section) => {
     const base = renderBespokeSection(section);
     const placement = `after-${section.kind}`;
-    const signatureHtml = signatureSectionKey && siteDocument.experience.placement === placement
+    const signatureHtml = signatureSectionKey && siteDocument?.experience.placement === placement
       ? motionSectionHtmlByKey[signatureSectionKey] || ""
       : "";
     const legacyHtml = section.kind === "catalog" ? preservedAnimationHtml : "";
@@ -4590,10 +5879,18 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         ? authoredBespokeOrder.map((section) => bespokeSectionHtmlByKey[section] || motionSectionHtmlByKey[section] || "").join("")
         : legacyBespokeSectionsHtml
       : contentOrder.map((section) => sectionHtml[section] || "").join("");
+  const eventSections = siteSectionsForPage.filter((section) => section.kind === "event-tickets");
+  const placedEventIds = new Set(eventSections.some((section) => !section.eventId)
+    ? (store.events ?? []).map((event) => event.id)
+    : eventSections.map((section) => section.eventId).filter(Boolean));
+  const connectedEventsHtml = selectedCatalogSection || activeSitePage
+    ? ""
+    : (store.events ?? []).filter((event) => !placedEventIds.has(event.id)).map((event) => eventTicketsHtml(event.id)).join("");
   app.innerHTML = `
     ${announcementHtml}
-    ${storefrontHeaderHtml(slug, store, { current: selectedCatalogSection ? "catalog" : "home", catalogUrl: selectedCatalogSection ? categoryPageUrl(slug, selectedCatalogSection.id) : storeCatalogUrl(slug) })}
-    ${orderedSectionsHtml}
+    ${storefrontHeaderHtml(slug, store, { current: selectedCatalogSection ? "catalog" : activeSitePage ? "page" : "home", pageId: activeSitePage?.id, catalogUrl: selectedCatalogSection ? categoryPageUrl(slug, selectedCatalogSection.id) : storeCatalogUrl(slug) })}
+    ${orderedSectionsHtml}${connectedEventsHtml}
+    ${selectedCatalogSection ? "" : storefrontFooterHtml(store)}
     <div class="secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>
     ${selectedCatalogSection ? "" : promotionHtml}
   `;
@@ -4629,6 +5926,32 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     button.firstChild!.textContent = expanded ? "Ver ubicaciones " : "Ocultar ubicaciones ";
     list.hidden = expanded;
     if (!expanded) requestAnimationFrame(() => list.querySelector<HTMLElement>(".store-location-card")?.focus?.());
+  });
+
+  app.querySelector<HTMLFormElement>("#store-newsletter-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    const status = form.querySelector<HTMLElement>(".store-newsletter-status")!;
+    const email = String(new FormData(form).get("email") || "").trim().toLowerCase();
+    status.textContent = "";
+    status.setAttribute("role", "status");
+    submit.disabled = true;
+    submit.setAttribute("aria-busy", "true");
+    const originalLabel = submit.textContent || "Suscribirme";
+    submit.textContent = "Guardando…";
+    try {
+      await subscribeStoreNewsletter(slug, email);
+      form.reset();
+      status.textContent = status.dataset.successMessage || "Listo. Ya estás en la lista.";
+    } catch (error) {
+      status.setAttribute("role", "alert");
+      status.textContent = `No pudimos guardar tu correo: ${(error as Error).message}`;
+    } finally {
+      submit.disabled = false;
+      submit.removeAttribute("aria-busy");
+      submit.textContent = originalLabel;
+    }
   });
 
   app.querySelector<HTMLFormElement>("#store-contact-form")?.addEventListener("submit", async (event) => {
@@ -4739,8 +6062,53 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     void loadSlots();
   }
 
+  app.querySelectorAll<HTMLFormElement>("[data-event-reservation]").forEach((eventForm) => {
+    eventForm.addEventListener("submit", async (formEvent) => {
+      formEvent.preventDefault();
+      const submit = eventForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      const status = eventForm.querySelector<HTMLElement>(".store-event-actions span")!;
+      const data = new FormData(eventForm);
+      const items = Array.from(eventForm.querySelectorAll<HTMLInputElement>("[data-ticket-type]")).flatMap((input) => {
+        const quantity = Number.parseInt(input.value, 10) || 0;
+        return quantity > 0 ? [{ ticketTypeId: input.dataset.ticketType!, quantity }] : [];
+      });
+      if (!items.length) {
+        status.setAttribute("role", "alert");
+        status.textContent = "Elige al menos una entrada.";
+        eventForm.querySelector<HTMLInputElement>("[data-ticket-type]")?.focus();
+        return;
+      }
+      submit.disabled = true;
+      submit.setAttribute("aria-busy", "true");
+      submit.textContent = "Apartando entradas…";
+      status.setAttribute("role", "status");
+      status.textContent = "";
+      try {
+        const result = await createEventReservation(eventForm.dataset.eventSlug!, {
+          items,
+          buyerName: String(data.get("buyerName") || "").trim() || undefined,
+          buyerEmail: String(data.get("buyerEmail") || "").trim().toLowerCase() || undefined,
+          buyerPhone: String(data.get("buyerPhone") || "").trim() || undefined,
+        });
+        sessionStorage.setItem(`pagosya_event_${result.reservationId}`, JSON.stringify({ managementToken: result.managementToken, expiresAt: result.expiresAt }));
+        window.location.assign(`${storeCatalogUrl(slug)}#client_secret=${encodeURIComponent(result.clientSecret)}`);
+      } catch (error) {
+        status.setAttribute("role", "alert");
+        status.textContent = (error as Error).message;
+        submit.disabled = false;
+        submit.removeAttribute("aria-busy");
+        submit.textContent = "Comprar entradas";
+      }
+    });
+  });
+
   bindStoreAnnouncementPlayback();
   bindTimedDiscountSchedule(slug, store);
+
+  if (/^#event-[a-z0-9_-]+$/i.test(window.location.hash)) {
+    const eventAnchorId = window.location.hash.slice(1);
+    requestAnimationFrame(() => document.getElementById(eventAnchorId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 
   activePromotionCleanup?.();
   activePromotionCleanup = null;
@@ -4924,41 +6292,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     postToParent("STORE_EDITOR_SELECT", { selection });
   };
 
-  app.querySelectorAll<HTMLElement>(".store-coverflow").forEach((coverflow) => {
-    const cards = Array.from(coverflow.querySelectorAll<HTMLElement>("[data-coverflow-index]"));
-    const status = coverflow.querySelector<HTMLElement>(".store-coverflow-status");
-    let selected = editorSceneIndexFor(coverflow, cards.length);
-    const showCard = (next: number) => {
-      if (!cards.length) return;
-      selected = (next + cards.length) % cards.length;
-      cards.forEach((card, index) => {
-        let offset = index - selected;
-        if (offset > cards.length / 2) offset -= cards.length;
-        if (offset < -cards.length / 2) offset += cards.length;
-        card.style.setProperty("--coverflow-offset", String(offset));
-        card.style.setProperty("--coverflow-distance", String(Math.abs(offset)));
-        card.setAttribute("aria-hidden", String(index !== selected));
-      });
-      if (status) status.textContent = `${selected + 1} / ${cards.length}`;
-    };
-    coverflow.querySelectorAll<HTMLButtonElement>("[data-coverflow-step]").forEach((button) =>
-      button.addEventListener("click", () => {
-        showCard(selected + Number(button.dataset.coverflowStep));
-        selectEditorAnimationScene(coverflow, selected);
-      }),
-    );
-    coverflow.addEventListener("keydown", (event) => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      event.preventDefault();
-      showCard(selected + (event.key === "ArrowLeft" ? -1 : 1));
-      selectEditorAnimationScene(coverflow, selected);
-    });
-    coverflow.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
-      showCard(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
-    });
-    showCard(selected);
-  });
-
   app.querySelectorAll<HTMLElement>("[data-motion-hero]").forEach((motionHero) => {
     const backgrounds = Array.from(motionHero.querySelectorAll<HTMLElement>("[data-motion-hero-background]"));
     const buttons = Array.from(motionHero.querySelectorAll<HTMLButtonElement>("[data-motion-hero-to]"));
@@ -4966,11 +6299,19 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const caption = motionHero.querySelector<HTMLElement>("[data-motion-hero-caption]");
     const status = motionHero.querySelector<HTMLElement>("[data-motion-hero-status]");
     const animationCopy = motionHero.querySelector<HTMLElement>("[data-animation-copy]");
+    const reduceMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let selected = editorSceneIndexFor(motionHero, buttons.length);
     const show = (next: number, focus = false) => {
       if (!buttons.length) return;
       selected = (next + buttons.length) % buttons.length;
-      backgrounds.forEach((background, index) => background.classList.toggle("active", index === selected));
+      backgrounds.forEach((background, index) => {
+        const active = index === selected;
+        background.classList.toggle("active", active);
+        if (background instanceof HTMLVideoElement) {
+          if (active && !reduceMotion) playStoreVideo(background);
+          else background.pause();
+        }
+      });
       buttons.forEach((button, index) => button.setAttribute("aria-current", String(index === selected)));
       if (title) {
         title.textContent = buttons[selected]?.dataset.motionTitle ?? "";
@@ -5003,6 +6344,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   app.querySelectorAll<HTMLElement>("[data-testimonials]").forEach((testimonials) => {
     const cards = Array.from(testimonials.querySelectorAll<HTMLElement>("[data-testimonial-index]"));
     const status = testimonials.querySelector<HTMLElement>(".store-testimonial-status");
+    const reduceMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let selected = editorSceneIndexFor(testimonials, cards.length);
     const show = (next: number) => {
       if (!cards.length) return;
@@ -5015,6 +6357,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         card.style.zIndex = String(30 - Math.abs(offset));
         card.style.opacity = String(Math.max(.2, 1 - Math.abs(offset) * .16));
         card.setAttribute("aria-hidden", String(index !== selected));
+        const video = card.querySelector<HTMLVideoElement>("video");
+        if (video) {
+          if (index === selected && !reduceMotion) playStoreVideo(video);
+          else video.pause();
+        }
       });
       if (status) status.textContent = `${selected + 1} / ${cards.length}`;
     };
@@ -5045,7 +6392,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const syncVideos = () => panels.forEach((panel, index) => {
       const video = panel.querySelector<HTMLVideoElement>("video");
       if (!video) return;
-      if (index === selected && visible && !reduceMotion) void video.play().catch(() => undefined);
+      if (index === selected && visible && !reduceMotion) playStoreVideo(video);
       else video.pause();
     });
     const show = (next: number, focus = false) => {
@@ -5088,73 +6435,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       observer?.disconnect();
       panels.forEach((panel) => panel.querySelector<HTMLVideoElement>("video")?.pause());
     };
-  });
-
-  app.querySelectorAll<HTMLElement>("[data-space-gallery]").forEach((gallery) => {
-    const cards = Array.from(gallery.querySelectorAll<HTMLElement>("[data-space-card]"));
-    const status = gallery.querySelector<HTMLElement>("[data-space-status]");
-    let selected = editorSceneIndexFor(gallery, cards.length);
-    let pointerStart: number | null = null;
-    const show = (next: number) => {
-      if (!cards.length) return;
-      selected = (next + cards.length) % cards.length;
-      cards.forEach((card, index) => {
-        let offset = index - selected;
-        if (offset > cards.length / 2) offset -= cards.length;
-        if (offset < -cards.length / 2) offset += cards.length;
-        card.style.setProperty("--space-offset", String(offset));
-        card.style.setProperty("--space-depth", String(Math.abs(offset)));
-        card.style.zIndex = String(20 - Math.abs(offset));
-        card.style.opacity = String(Math.max(.18, 1 - Math.abs(offset) * .22));
-        card.setAttribute("aria-hidden", String(index !== selected));
-        card.querySelectorAll<HTMLElement>("a, button, input, select, textarea, [tabindex]").forEach((control) => {
-          control.tabIndex = index === selected ? 0 : -1;
-        });
-      });
-      if (status) status.textContent = `${selected + 1} / ${cards.length}`;
-    };
-    gallery.querySelectorAll<HTMLButtonElement>("[data-space-step]").forEach((button) =>
-      button.addEventListener("click", () => {
-        show(selected + Number(button.dataset.spaceStep));
-        selectEditorAnimationScene(gallery, selected);
-      }),
-    );
-    gallery.addEventListener("keydown", (event) => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      event.preventDefault();
-      show(selected + (event.key === "ArrowLeft" ? -1 : 1));
-      selectEditorAnimationScene(gallery, selected);
-    });
-    gallery.addEventListener("wheel", (event) => {
-      if (event.target instanceof Element && event.target.closest("[data-animation-copy]")) return;
-      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
-      event.preventDefault();
-      show(selected + (event.deltaX > 0 ? 1 : -1));
-      selectEditorAnimationScene(gallery, selected);
-    }, { passive: false });
-    gallery.addEventListener("pointerdown", (event) => {
-      if (event.target instanceof Element && event.target.closest("[data-animation-copy]")) return;
-      pointerStart = event.clientX;
-      try {
-        gallery.setPointerCapture?.(event.pointerId);
-      } catch {
-        // Synthetic events and older embedded browsers may not own the pointer.
-      }
-    });
-    gallery.addEventListener("pointerup", (event) => {
-      if (pointerStart === null) return;
-      const distance = event.clientX - pointerStart;
-      pointerStart = null;
-      if (Math.abs(distance) >= 48) {
-        show(selected + (distance < 0 ? 1 : -1));
-        selectEditorAnimationScene(gallery, selected);
-      }
-    });
-    gallery.addEventListener("pointercancel", () => { pointerStart = null; });
-    gallery.closest(".store-motion-section")?.addEventListener("pagosya:editor-scene", (event) => {
-      show(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
-    });
-    show(selected);
   });
 
   app.querySelectorAll<HTMLElement>("[data-magnetic-target]").forEach((magnetic) => {
@@ -5207,7 +6487,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       timer = window.setTimeout(tick, delay);
     };
     const tick = () => {
-      if (!visible || document.hidden) return;
+      if (!visible || typeof document === "undefined" || document.hidden) return;
       if (phase === "hold") {
         phase = "erase";
         schedule(1400);
@@ -5335,7 +6615,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       if (video.dataset.motionPlayback === nextPlaybackState) return;
       video.dataset.motionPlayback = nextPlaybackState;
       if (nextPlaybackState === "playing") {
-        void video.play().catch(() => {
+        playStoreVideo(video, () => {
           video.dataset.motionPlayback = "paused";
         });
       } else {
@@ -5363,7 +6643,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
           && storePreviewEditorSelection?.animationId === sequence.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
           && Number.isInteger(storePreviewEditorSelection?.itemIndex);
         const index = hasEditorScene ? selectedEditorIndex : Math.min(frames.length - 1, Math.round(progress * (frames.length - 1)));
-        frames.forEach((item, itemIndex) => item.classList.toggle("active", itemIndex === index));
+        frames.forEach((item, itemIndex) => {
+          const active = itemIndex === index;
+          item.classList.toggle("active", active);
+          syncVideo(item, active && progress < .99);
+        });
         const image = frames[index];
         const status = sequence.querySelector<HTMLElement>("[data-frame-status]");
         const title = sequence.querySelector<HTMLElement>("[data-frame-title]");
@@ -5510,7 +6794,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       const video = panel.querySelector<HTMLVideoElement>("video");
       if (!video) return;
       if (index !== selectedStory || !storyVisible || reduceStoryMotion) video.pause();
-      else void video.play().catch(() => undefined);
+      else playStoreVideo(video);
     });
     const showStory = (next: number, focus = false) => {
       const selected = (next + tabs.length) % tabs.length;
@@ -5551,7 +6835,10 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   const motionFlows = Array.from(app.querySelectorAll<HTMLElement>("[data-motion-flow]"));
   if (motionFlows.length) {
-    const flowInners = motionFlows.flatMap((motionFlow) => Array.from(motionFlow.querySelectorAll<HTMLElement>(".store-flow-inner")));
+    const flowEntries = motionFlows.flatMap((motionFlow) =>
+      Array.from(motionFlow.querySelectorAll<HTMLElement>(".store-flow-inner"))
+        .map((inner, flowIndex) => ({ inner, flowIndex })),
+    );
     const motionQuery = typeof window.matchMedia === "function"
       ? window.matchMedia("(prefers-reduced-motion: reduce)")
       : null;
@@ -5559,19 +6846,22 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     let settleTimer = 0;
     const clampProgress = (value: number) => Math.max(0, Math.min(1, value));
     const releaseMotionLayers = () => {
-      flowInners.forEach((inner) => (inner.style.willChange = "auto"));
+      flowEntries.forEach(({ inner }) => (inner.style.willChange = "auto"));
       settleTimer = 0;
     };
     const paintMotionDuo = () => {
       frame = 0;
       if (motionQuery?.matches) {
-        flowInners.forEach((inner) => (inner.style.transform = "none"));
+        flowEntries.forEach(({ inner }) => (inner.style.transform = "none"));
         releaseMotionLayers();
         return;
       }
       const viewportHeight = Math.max(window.innerHeight, 1);
-      flowInners.forEach((inner, index) => {
-        if (index === 0) return;
+      flowEntries.forEach(({ inner, flowIndex }) => {
+        if (flowIndex === 0) {
+          inner.style.transform = "none";
+          return;
+        }
         const section = inner.closest<HTMLElement>(".store-flow-section");
         if (!section) return;
         const progress = clampProgress((viewportHeight - section.getBoundingClientRect().top) / (viewportHeight * .75));
@@ -5588,7 +6878,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       });
     };
     const requestMotionPaint = () => {
-      flowInners.forEach((inner) => (inner.style.willChange = "transform"));
+      flowEntries.forEach(({ inner }) => (inner.style.willChange = "transform"));
       if (settleTimer) window.clearTimeout(settleTimer);
       settleTimer = window.setTimeout(releaseMotionLayers, 180);
       if (!frame) frame = window.requestAnimationFrame(paintMotionDuo);
@@ -5681,6 +6971,7 @@ function updateStorePreviewAnimationText(selection: StorePreviewEditorSelection,
   const targets = Array.from(section.querySelectorAll<HTMLElement>("[data-store-editor-target]")).filter((target) => {
     if (target.dataset.storeEditorField !== selection.field) return false;
     if (target.dataset.storeEditorAnimationId !== selection.animationId) return false;
+    if (selection.itemId) return target.dataset.storeEditorItemId === selection.itemId;
     if (Number.isInteger(selection.itemIndex)) return Number(target.dataset.storeEditorItemIndex) === selection.itemIndex;
     return !target.hasAttribute("data-store-editor-item-index");
   });
@@ -5710,24 +7001,34 @@ function updateStorePreviewAnimationText(selection: StorePreviewEditorSelection,
   if (frame && selection.field === "body") frame.dataset.frameBodyValue = normalizedValue;
 }
 
-function updateStorePreviewAnimationStyle(animationId: string, key: string, value: unknown): void {
+function updateStorePreviewAnimationStyle(animationId: string, key: string, value: unknown, selection: StorePreviewEditorSelection | null = null): void {
   const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
     .find((candidate) => candidate.dataset.animationId === animationId);
   if (!section) return;
+  const selectedTargets = selection
+    ? Array.from(section.querySelectorAll<HTMLElement>("[data-store-editor-target]")).filter((target) => {
+        if (target.dataset.storeEditorField !== selection.field) return false;
+        if (selection.itemId) return target.dataset.storeEditorItemId === selection.itemId;
+        if (Number.isInteger(selection.itemIndex)) return Number(target.dataset.storeEditorItemIndex) === selection.itemIndex;
+        return !target.hasAttribute("data-store-editor-item-index");
+      })
+    : [];
+  const copy = selectedTargets.map((target) => target.closest<HTMLElement>("[data-animation-copy]")).find(Boolean) ?? null;
+  const styleTarget = copy ?? section;
   if (key === "textAlign" && ["left", "center", "right"].includes(String(value))) {
     const align = String(value);
-    section.dataset.animationTextAlign = align;
-    section.setAttribute("data-animation-custom-layout", "");
-    section.style.setProperty("--animation-copy-align", align);
-    section.style.setProperty("--animation-copy-translate", `${align === "right" ? "-100%" : align === "center" ? "-50%" : "0"} -50%`);
+    styleTarget.dataset.animationTextAlign = align;
+    styleTarget.setAttribute(styleTarget === section ? "data-animation-custom-layout" : "data-animation-copy-custom-layout", "");
+    styleTarget.style.setProperty("--animation-copy-align", align);
+    styleTarget.style.setProperty("--animation-copy-translate", `${align === "right" ? "-100%" : align === "center" ? "-50%" : "0"} -50%`);
     return;
   }
   if (key === "textScale") {
     const textScale = Math.min(200, Math.max(50, Math.round(Number(value))));
     if (!Number.isFinite(textScale)) return;
-    section.dataset.animationTextScale = String(textScale);
-    section.setAttribute("data-animation-custom-layout", "");
-    animationTextScaleVariables(section, textScale);
+    styleTarget.dataset.animationTextScale = String(textScale);
+    styleTarget.setAttribute(styleTarget === section ? "data-animation-custom-layout" : "data-animation-copy-custom-layout", "");
+    animationTextScaleVariables(styleTarget, textScale);
     return;
   }
   if (key === "textWidthPercent") {
@@ -5739,8 +7040,18 @@ function updateStorePreviewAnimationStyle(animationId: string, key: string, valu
     return;
   }
   if (key === "textColor" && /^#[0-9a-f]{6}$/i.test(String(value))) {
-    section.toggleAttribute("data-animation-has-text-color", true);
-    section.style.setProperty("--animation-text-color", String(value));
+    if (styleTarget === section) {
+      section.toggleAttribute("data-animation-has-text-color", true);
+      section.dataset.animationTextColor = String(value);
+      section.style.setProperty("--animation-text-color", String(value));
+    } else {
+      styleTarget.dataset.animationTextColor = String(value);
+      styleTarget.style.setProperty("--animation-scene-text-color", String(value));
+    }
+    return;
+  }
+  if (key === "fontStyle" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(String(value))) {
+    styleTarget.dataset.animationFontStyle = String(value);
     return;
   }
   if (key === "backgroundColor" && /^#[0-9a-f]{6}$/i.test(String(value))) {
@@ -5779,7 +7090,8 @@ if (storeEditorMode) {
       storePreviewEditorEnabled = event.data.editorMode !== false;
       if (typeof event.data.animationId !== "string" || typeof event.data.key !== "string") return;
       syncStorePreviewEditorMode();
-      updateStorePreviewAnimationStyle(event.data.animationId.slice(0, 64), event.data.key.slice(0, 64), event.data.value);
+      const selection = sanitizeStorePreviewEditorSelection(event.data.selection);
+      updateStorePreviewAnimationStyle(event.data.animationId.slice(0, 64), event.data.key.slice(0, 64), event.data.value, selection);
       syncStorePreviewEditorSelection();
       return;
     }
@@ -5834,10 +7146,17 @@ if (storeEditorMode) {
     if (event.data.type !== "PAGOSYA_STORE_PREVIEW") return;
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
+    storePreviewLockedSectionIds = new Set(Array.isArray(event.data.lockedSectionIds)
+      ? event.data.lockedSectionIds.filter((id: unknown): id is string => typeof id === "string" && /^[a-z][a-z0-9-]{1,47}$/.test(id)).slice(0, 64)
+      : []);
     storePreviewEditorEnabled = event.data.editorMode !== false;
     storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
     let previewStore = { ...activePreviewStore.store, ...patch };
-    const currentDocument = sanitizeSiteDocument(activePreviewStore.store.siteDocument);
+    // A generated section can now be edited as its own structured document in
+    // the dashboard. Prefer that safe draft over the last persisted document;
+    // legacy controls are projected onto the draft below so both editor paths
+    // stay compatible without flattening scene copy, layout, or motion.
+    const currentDocument = sanitizeSiteDocument(patch.siteDocument) ?? sanitizeSiteDocument(activePreviewStore.store.siteDocument);
     if (currentDocument) {
       previewStore.siteDocument = synchronizeSiteDocument(currentDocument, patch, {
         banner: patch.bannerUrl !== undefined && patch.bannerUrl !== activePreviewStore.store.bannerUrl,

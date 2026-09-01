@@ -1,11 +1,39 @@
 import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { MediaAsset, Prisma, Store } from "@prisma/client";
+import { MediaAsset, Prisma, Store, StoreVisualProposal } from "@prisma/client";
+import {
+  SITE_ART_DIRECTIONS,
+  applySiteArtDirection,
+  deriveLegacySiteSectionBlocks,
+  isSiteArtDirection,
+  type SiteArtDirection,
+  type SiteCreativeRecipe,
+} from "@pagosya/shared-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
 import { STORE_FONT_STYLES, type StoreFontStyle } from "./dto/create-store.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
 import { AI_SITE_DOCUMENT_SCHEMA, materializeSiteDocument, siteDocumentJson, type AiSiteDocument, type StoreSiteDocument } from "./site-document";
+import {
+  TtlLruCache,
+  applyStorefrontCreativeRecipe,
+  applyStorefrontTopology,
+  beginStorefrontGeneration,
+  evaluateStorefrontDiversity,
+  storefrontBrandFingerprint,
+  storefrontCreativeRecipe,
+  storefrontDirectionsAreDiverse,
+  storefrontOriginalityGate,
+  storefrontStructuralSignature,
+  storedStorefrontStructuralSignature,
+  storefrontTopologyPlan,
+  preserveLockedStorefrontSections,
+  varyStorefrontStructure,
+  withStorefrontEngineMetadata,
+  type StorefrontEngineContext,
+  type StorefrontSemanticMediaCandidate,
+  type StorefrontStructuralSignature,
+} from "./storefront-engine";
 
 const VISUAL_FIELDS = [
   "tagline", "bannerUrl", "backgroundColor", "backgroundMode", "backgroundGradientStart", "backgroundGradientEnd", "backgroundGradientAngle", "backgroundImageUrl", "aboutText", "aboutTitle", "aboutSubtitle", "aboutImageUrl",
@@ -29,6 +57,20 @@ type ProposalPreset = {
 
 type AiDirection = { title: string; rationale: string; siteDocument: AiSiteDocument };
 type MaterializedAiDirection = Omit<AiDirection, "siteDocument"> & { siteDocument: StoreSiteDocument };
+
+function advancesGeneratedBatch(
+  candidate: StoreSiteDocument,
+  accepted: readonly StoreSiteDocument[],
+  requireMultipleOpenings: boolean,
+): boolean {
+  const order = candidate.sections.map((section) => section.kind).join("/");
+  const grammar = candidate.designGenome.composition;
+  if (accepted.some((document) => document.sections.map((section) => section.kind).join("/") === order)) return false;
+  if (accepted.some((document) => document.designGenome.composition === grammar)) return false;
+  if (!requireMultipleOpenings) return true;
+  return new Set([...accepted, candidate].map((document) => document.sections[0]?.kind ?? "none")).size >= 2;
+}
+
 type BrandAnalysis = {
   brandEssence: string;
   audienceScene: string;
@@ -54,18 +96,139 @@ type BrandAnalysis = {
     purpose: string;
     backgroundRole: string;
   }>;
+  pagePlan: Array<{
+    id: string;
+    label: string;
+    slug: string;
+    purpose: string;
+    sectionKinds: Array<"story" | "gallery" | "contact" | "location" | "links">;
+  }>;
   riskChecks: string[];
 };
 
+const brandAnalysisCache = new TtlLruCache<BrandAnalysis>(64, 30 * 60_000);
+
 const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "motion", "links"] as const;
 const MOTION_EXPERIENCES = [
-  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "story-scroll", "hero-carousel", "image-stream",
   "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
-  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+  "full-screen-chapters", "magnetic-target", "frame-sequence",
 ] as const;
+const RETIRED_MOTION_EXPERIENCES = new Set(["3d-gallery", "coverflow-carousel", "zoom-parallax", "video-pill"]);
 const SAFE_GENERATED_BACKGROUNDS = ["#eef1f5", "#e8f2ef", "#eeebf5"] as const;
+const GENERATED_SIGNATURE_PROFILES = [
+  { visual: "scroll-expansion", text: "text-reveal-block", section: "clip" },
+  { visual: "full-screen-chapters", text: "text-rotate", section: "drift" },
+  { visual: "frame-sequence", text: "text-along-path", section: "scale" },
+] as const;
+
+function proposalArtDirections(preferred: unknown, generation: number): SiteArtDirection[] {
+  const start = isSiteArtDirection(preferred)
+    ? preferred
+    : SITE_ART_DIRECTIONS[generation % SITE_ART_DIRECTIONS.length];
+  const ordered = [start, ...SITE_ART_DIRECTIONS.filter((direction) => direction !== start)];
+  return ordered.slice(0, 3);
+}
+
+function generatedMotionProfile(index: number, assetCount: number) {
+  const profile = GENERATED_SIGNATURE_PROFILES[index % GENERATED_SIGNATURE_PROFILES.length];
+  return { ...profile, signature: assetCount >= 2 ? profile.visual : profile.text };
+}
+
+function enforceUniqueGeneratedAnimationTypes(
+  document: StoreSiteDocument,
+  animationCandidates: unknown,
+  motionExperienceCandidates: unknown,
+): { siteDocument: StoreSiteDocument; animations: unknown[]; motionExperiences: string[] } {
+  const generatedTypes = new Set<string>();
+  const sections: StoreSiteDocument["sections"] = document.sections.map((section) => {
+    // A generated multi-scene hero is already the page's hero-carousel. It is
+    // stored as the hero primitive rather than a named animation, but must count
+    // toward the same one-per-type rule.
+    if (section.kind === "hero" && Array.isArray(section.mediaUrls) && section.mediaUrls.length >= 2) generatedTypes.add("hero-carousel");
+    if (section.motion === "none") return section;
+    if (generatedTypes.has(section.motion)) return { ...section, motion: "none" as const };
+    generatedTypes.add(section.motion);
+    return section;
+  });
+
+  const animationTypes = new Set<string>();
+  const animations = (Array.isArray(animationCandidates) ? animationCandidates : []).filter((candidate) => {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return false;
+    const type = (candidate as Record<string, unknown>).type;
+    if (typeof type !== "string" || !MOTION_EXPERIENCES.includes(type as (typeof MOTION_EXPERIENCES)[number])) return false;
+    if (generatedTypes.has(type) || animationTypes.has(type)) return false;
+    animationTypes.add(type);
+    return true;
+  });
+
+  const motionExperienceTypes = new Set<string>();
+  const motionExperiences = (Array.isArray(motionExperienceCandidates) ? motionExperienceCandidates : []).filter((candidate): candidate is string => {
+    if (typeof candidate !== "string" || !MOTION_EXPERIENCES.includes(candidate as (typeof MOTION_EXPERIENCES)[number])) return false;
+    if (generatedTypes.has(candidate) || motionExperienceTypes.has(candidate)) return false;
+    motionExperienceTypes.add(candidate);
+    return true;
+  });
+
+  const renderedTypes = new Set([
+    ...generatedTypes,
+    ...animationTypes,
+    ...(animations.length ? [] : motionExperienceTypes),
+  ]);
+  const experienceType = document.experience.type;
+  const experience = experienceType !== "none" && renderedTypes.has(experienceType)
+    ? { ...document.experience, type: "none" as const, mediaUrls: [] }
+    : document.experience;
+
+  return { siteDocument: { ...document, sections, experience }, animations, motionExperiences };
+}
+
+function enforceUniqueGeneratedProposalConfig(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const config = value as Record<string, unknown>;
+  const document = config.siteDocument;
+  if (!document || typeof document !== "object" || Array.isArray(document)) return value;
+  const siteDocument = document as unknown as StoreSiteDocument;
+  if (!Array.isArray(siteDocument.sections) || !siteDocument.experience || typeof siteDocument.experience !== "object") return value;
+  const uniqueInventory = enforceUniqueGeneratedAnimationTypes(
+    siteDocument,
+    [],
+    [],
+  );
+  const generatedDocument = {
+    ...uniqueInventory.siteDocument,
+    sections: uniqueInventory.siteDocument.sections.map((section) =>
+      section.kind === "gallery" && section.layout === "rail"
+        ? { ...section, layout: "grid" as const }
+        : section,
+    ),
+  };
+  return {
+    ...freshGeneratedVisualReset(),
+    ...config,
+    siteDocument: generatedDocument,
+    contentOrder: cleanGeneratedContentOrder(config.contentOrder),
+    animations: [],
+    motionExperiences: [],
+    motionExperience: "hero-carousel",
+    motionDuoEnabled: false,
+  };
+}
+
+function cleanGeneratedContentOrder(value: unknown): string[] {
+  const order: string[] = [];
+  if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      if (typeof entry === "string" && CONTENT_SECTIONS.includes(entry as (typeof CONTENT_SECTIONS)[number]) && !order.includes(entry)) order.push(entry);
+    });
+  }
+  for (const section of ["hero", "about", "products", "gallery", "links"] as const) {
+    if (!order.includes(section)) order.push(section);
+  }
+  return order;
+}
 
 function expandMotionSections(value: unknown, animationIds: string[]): string[] {
   const baseSections = ["hero", "products", "about", "gallery"];
@@ -104,7 +267,8 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
 function animationMediaRequirement(type: string): { min: number; max: number } {
   if (["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"].includes(type)) return { min: 0, max: 0 };
   if (["circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
-  return { min: ["hero-gallery-scroll", "3d-gallery"].includes(type) ? 3 : 2, max: 8 };
+  if (type === "scroll-expansion") return { min: 2, max: 2 };
+  return { min: type === "hero-gallery-scroll" ? 3 : 2, max: 8 };
 }
 
 function distributedAnimationMedia(
@@ -177,6 +341,14 @@ function hexSaturation(value: string): number {
   return delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
 }
 
+function readableInk(background: string): "#171717" | "#ffffff" {
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(background.slice(offset, offset + 2), 16) / 255);
+  const luminance = channels
+    .map((channel) => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  return luminance > 0.36 ? "#171717" : "#ffffff";
+}
+
 function passesPremiumDirectionGuardrails(document: StoreSiteDocument): boolean {
   const colors = [
     document.theme.pageBackground,
@@ -190,11 +362,17 @@ function passesPremiumDirectionGuardrails(document: StoreSiteDocument): boolean 
   ];
   if (colors.some((color) => color.toLowerCase() === "#000000")) return false;
   if (hexSaturation(document.theme.accentColor) >= 0.8) return false;
-  const [hero, story, catalog] = document.sections;
-  if (!hero || hero.layout === "centered" || hero.align === "center") return false;
-  if (hero.kind !== "hero" || story?.kind !== "story" || catalog?.kind !== "catalog") return false;
+  const chromaticColors = new Set(colors.filter((color) => hexSaturation(color) >= 0.24).map((color) => color.toLowerCase()));
+  if (chromaticColors.size < 3) return false;
+  const hero = document.sections.find((section) => section.kind === "hero");
+  const story = document.sections.find((section) => section.kind === "story");
+  const catalog = document.sections.find((section) => section.kind === "catalog");
+  const opening = document.sections[0];
+  const quietDirection = document.artDirection === "quiet-gallery";
+  if (!hero || !story || !catalog) return false;
+  if (opening?.kind === "hero" && !quietDirection && (hero.layout === "centered" || hero.align === "center")) return false;
   if (story.motion !== "story-scroll") return false;
-  if (document.navigation.sticky) return false;
+  if (document.navigation.sticky && !["product-studio", "graphic-market"].includes(document.artDirection || "")) return false;
   const copy = [
     document.direction,
     document.experience.title,
@@ -217,13 +395,13 @@ function defaultMotionSuite(index: number, assetCount: number): string[] {
   if (assetCount === 2) {
     return [
       ["story-scroll", "layered-text"],
-      ["coverflow-carousel", "circle-reveal"],
+      ["hero-carousel", "circle-reveal"],
       ["image-stream", "magnetic-target"],
     ][index % 3];
   }
   return [
     ["hero-gallery-scroll", "frame-sequence", "text-along-path"],
-    ["coverflow-carousel", "frame-sequence", "circle-reveal"],
+    ["portfolio-scroller", "frame-sequence", "circle-reveal"],
     ["image-stream", "full-screen-chapters", "magnetic-target"],
   ][index % 3];
 }
@@ -259,7 +437,7 @@ const BRAND_ANALYSIS_SCHEMA = {
     analysis: {
       type: "object",
       additionalProperties: false,
-      required: ["brandEssence", "audienceScene", "logoStrategy", "colorStrategy", "typographyStrategy", "compositionStrategy", "motionStrategy", "assetRoles", "merchandisingPlan", "sectionPlan", "riskChecks"],
+      required: ["brandEssence", "audienceScene", "logoStrategy", "colorStrategy", "typographyStrategy", "compositionStrategy", "motionStrategy", "assetRoles", "merchandisingPlan", "sectionPlan", "pagePlan", "riskChecks"],
       properties: {
         brandEssence: { type: "string", minLength: 20, maxLength: 500 },
         audienceScene: { type: "string", minLength: 20, maxLength: 400 },
@@ -306,19 +484,42 @@ const BRAND_ANALYSIS_SCHEMA = {
             },
           },
         },
+        pagePlan: {
+          type: "array", minItems: 0, maxItems: 3,
+          items: {
+            type: "object", additionalProperties: false,
+            required: ["id", "label", "slug", "purpose", "sectionKinds"],
+            properties: {
+              id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-z][a-z0-9-]*$" },
+              label: { type: "string", minLength: 2, maxLength: 40 },
+              slug: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+              purpose: { type: "string", minLength: 10, maxLength: 240 },
+              sectionKinds: {
+                type: "array", minItems: 1, maxItems: 5, uniqueItems: true,
+                items: { type: "string", enum: ["story", "gallery", "contact", "location", "links"] },
+              },
+            },
+          },
+        },
         riskChecks: { type: "array", minItems: 3, maxItems: 12, items: { type: "string", minLength: 5, maxLength: 220 } },
       },
     },
   },
 } as const;
 
-function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAsset[], products: StoreProductContext[], index: number): StoreSiteDocument {
+function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAsset[], products: StoreProductContext[], links: StoreLinkContext[], index: number): StoreSiteDocument {
   const config = preset.config as Record<string, unknown>;
   const color = (value: unknown, fallback: string) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
   const copy = (value: unknown, fallback: string) => typeof value === "string" && value.trim() ? value.trim() : fallback;
-  const pageBackground = color(config.backgroundColor, ["#eef1f5", "#e8f2ef", "#eeebf5"][index % 3]);
-  const accentColor = color(config.accentColor, ["#315c49", "#31527a", "#713f67"][index % 3]);
-  const surfaceColor = ["#ffffff", "#f8fff9", "#fff9fe"][index % 3];
+  const palettes = [
+    { page: "#fff2df", text: "#261814", accent: "#c94b3c", secondary: "#2d766d", surface: "#fffaf2", story: "#f4c767", muted: "#72554c", border: "#dfb2a0" },
+    { page: "#f3efff", text: "#211a32", accent: "#6950b8", secondary: "#d97835", surface: "#fff7e8", story: "#d9ccff", muted: "#665b78", border: "#c8bce2" },
+    { page: "#eaf8f1", text: "#142321", accent: "#b6365f", secondary: "#146c73", surface: "#fff2d8", story: "#bfe6d4", muted: "#516a64", border: "#afd2c5" },
+  ] as const;
+  const palette = palettes[index % palettes.length];
+  const pageBackground = color(config.backgroundColor, palette.page);
+  const accentColor = color(config.accentColor, palette.accent);
+  const surfaceColor = palette.surface;
   const layouts = [
     { hero: "split", story: "offset", catalog: "gallery" },
     { hero: "full-bleed", story: "split", catalog: "editorial" },
@@ -333,6 +534,12 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
   const rotatedMediaUrls = usableMediaUrls.length
     ? [...usableMediaUrls.slice(index % usableMediaUrls.length), ...usableMediaUrls.slice(0, index % usableMediaUrls.length)]
     : [];
+  const motionProfile = generatedMotionProfile(index, rotatedMediaUrls.length);
+  const pages: NonNullable<StoreSiteDocument["pages"]> = [];
+  const storyPageId = (Boolean(store.aboutText?.trim() || store.aboutTitle?.trim()) || usableMediaUrls.length >= 2) ? "story-page" : "";
+  const contactPageId = (links.length > 0 || Boolean(store.contactEmail?.trim() || store.contactPhone?.trim())) ? "contact-page" : "";
+  if (storyPageId) pages.push({ id: storyPageId, label: "Nuestra historia", slug: "nuestra-historia" });
+  if (contactPageId) pages.push({ id: contactPageId, label: "Contacto", slug: "contacto" });
   const heroMediaUrls = rotatedMediaUrls.slice(0, Math.min(3, rotatedMediaUrls.length));
   const storyMediaUrls = rotatedMediaUrls.length > 1
     ? [...rotatedMediaUrls.slice(1), rotatedMediaUrls[0]].slice(0, Math.min(3, rotatedMediaUrls.length))
@@ -342,25 +549,54 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
     urls: string[],
     fallbackTitle: string,
     fallbackBody: string,
-  ): StoreSiteDocument["sections"][number]["items"] => urls.map((url, mediaIndex) => {
+  ): StoreSiteDocument["sections"][number]["items"] => urls.map((url) => {
     const product = productForMedia(url);
     return {
       mediaUrl: url,
-      title: product?.name || (mediaIndex === 0 ? fallbackTitle : ""),
-      body: product?.description || (mediaIndex === 0 ? fallbackBody : ""),
+      title: product?.name || fallbackTitle,
+      body: product?.description || fallbackBody,
     };
   });
   const document: StoreSiteDocument = {
     version: 1,
     direction: preset.title,
+    designGenome: index === 0
+      ? {
+          composition: "editorial-split",
+          rhythm: "editorial",
+          geometry: "soft",
+          colorStrategy: "accent-led",
+          mediaStrategy: "framed",
+          typeScale: "editorial",
+          motionLanguage: "reveal",
+        }
+      : index === 1
+        ? {
+            composition: "quiet-monument",
+            rhythm: "cinematic",
+            geometry: "framed",
+            colorStrategy: "surface-led",
+            mediaStrategy: "full-bleed",
+            typeScale: "cinematic",
+            motionLanguage: "cinematic",
+          }
+        : {
+            composition: "spatial-cascade",
+            rhythm: "compact",
+            geometry: "structured",
+            colorStrategy: "contrast-blocks",
+            mediaStrategy: "collage",
+            typeScale: "poster",
+            motionLanguage: "tactile",
+          },
     theme: {
       pageBackground,
-      textColor: "#171717",
+      textColor: palette.text,
       accentColor,
-      secondaryColor: ["#d9d7d2", "#e2e0dc", "#d4d6d8"][index % 3],
+      secondaryColor: palette.secondary,
       surfaceColor,
-      mutedColor: "#626262",
-      borderColor: "#c9c9c4",
+      mutedColor: palette.muted,
+      borderColor: palette.border,
       headingFont: index === 0 ? "humanist" : index === 1 ? "editorial" : "geometric",
       bodyFont: index === 2 ? "grotesk" : "humanist",
       radius: [4, 22, 0][index % 3],
@@ -375,7 +611,13 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       sticky: false,
       transparent: index === 1,
       logoTreatment: index === 0 ? "wordmark" : index === 1 ? "oversized" : "seal",
+      items: [
+        { id: "home", label: "Inicio", target: "home" },
+        { id: "catalog", label: "Tienda", target: "catalog" },
+        ...pages.map((page) => ({ id: `nav-${page.id}`, label: page.label, target: "page" as const, pageId: page.id })),
+      ],
     },
+    ...(pages.length ? { pages } : {}),
     motion: { intensity: index === 0 ? "expressive" : index === 1 ? "cinematic" : "expressive" },
     merchandising: {
       featuredProductIds: products.slice(index, index + 2).map((product) => product.id).filter(Boolean),
@@ -384,13 +626,17 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       showDescriptions: index !== 2,
     },
     experience: {
-      type: index === 0 ? "text-reveal-block" : index === 1 ? "text-rotate" : "text-along-path",
+      type: motionProfile.signature,
       placement: "after-catalog",
       title: index === 0 ? copy(config.aboutTitle, `Conoce ${store.name}`) : index === 1 ? copy(config.catalogTitle, "La tienda") : store.name,
       body: index === 0
         ? copy(config.aboutSubtitle, "Una frase editorial que continúa la historia de la marca.")
         : copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
-      mediaUrls: [],
+      mediaUrls: motionProfile.signature === "scroll-expansion"
+        ? rotatedMediaUrls.slice(0, 2)
+        : motionProfile.signature === motionProfile.visual
+          ? rotatedMediaUrls.slice(0, 5)
+          : [],
     },
     sections: [
       {
@@ -404,7 +650,7 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
         body: copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
         ctaLabel: copy(config.cartButtonLabel, "Ver la tienda"),
         backgroundColor: pageBackground,
-        textColor: "#171717",
+        textColor: palette.text,
         mediaUrls: heroMediaUrls,
         items: narrativeItems(
           heroMediaUrls,
@@ -414,6 +660,7 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       },
       {
         id: "brand-story",
+        ...(storyPageId ? { pageId: storyPageId } : {}),
         kind: "story",
         layout: "stacked",
         width: "full",
@@ -422,8 +669,8 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
         title: copy(config.aboutTitle, `Conoce ${store.name}`),
         body: copy(config.aboutText, `Descubre la intención y la selección detrás de ${store.name}.`),
         ctaLabel: "",
-        backgroundColor: pageBackground,
-        textColor: "#171717",
+        backgroundColor: palette.story,
+        textColor: palette.text,
         mediaUrls: storyMediaUrls,
         items: narrativeItems(
           storyMediaUrls,
@@ -442,27 +689,29 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
         body: copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
         ctaLabel: "",
         backgroundColor: surfaceColor,
-        textColor: "#171717",
+        textColor: palette.text,
         mediaUrls: [],
         items: [],
       },
       {
         id: "visual-world",
+        ...(storyPageId ? { pageId: storyPageId } : {}),
         kind: "gallery",
-        layout: index === 0 ? "grid" : index === 1 ? "rail" : "offset",
+        layout: index === 0 ? "grid" : index === 1 ? "split" : "offset",
         width: "full",
         align: "left",
-        motion: index === 2 ? "coverflow" : "none",
+        motion: motionProfile.section,
         title: copy(config.galleryTitle, "La marca en imágenes"),
         body: copy(config.gallerySubtitle, "Una mirada más cercana a su universo visual."),
         ctaLabel: "",
         backgroundColor: accentColor,
-        textColor: "#ffffff",
+        textColor: readableInk(accentColor),
         mediaUrls: rotatedMediaUrls.slice(0, 4),
         items: [],
       },
       {
         id: "information",
+        ...(contactPageId ? { pageId: contactPageId } : {}),
         kind: "contact",
         layout: "split",
         width: "wide",
@@ -471,13 +720,14 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
         title: "¿Tienes una pregunta?",
         body: `Escríbele directamente al equipo de ${store.name}.`,
         ctaLabel: "Enviar pregunta",
-        backgroundColor: surfaceColor,
-        textColor: "#171717",
+        backgroundColor: palette.secondary,
+        textColor: readableInk(palette.secondary),
         mediaUrls: [],
         items: [],
       },
       {
         id: "follow",
+        ...(contactPageId ? { pageId: contactPageId } : {}),
         kind: "links",
         layout: "minimal",
         width: "wide",
@@ -486,20 +736,20 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
         title: "Sigue la marca",
         body: "",
         ctaLabel: "",
-        backgroundColor: pageBackground,
-        textColor: "#171717",
+        backgroundColor: palette.story,
+        textColor: palette.text,
         mediaUrls: [],
         items: [],
       },
     ],
   };
-  const sectionOrders = [
-    ["hero", "story", "catalog", "gallery", "contact", "links"],
-    ["hero", "story", "catalog", "contact", "gallery", "links"],
-    ["hero", "story", "catalog", "gallery", "links", "contact"],
-  ];
-  const order = sectionOrders[index % sectionOrders.length];
-  return { ...document, sections: [...document.sections].sort((first, second) => order.indexOf(first.kind) - order.indexOf(second.kind)) };
+  return {
+    ...document,
+    sections: document.sections.map((section) => ({
+      ...section,
+      blocks: section.blocks?.length ? section.blocks : deriveLegacySiteSectionBlocks(section),
+    })),
+  };
 }
 
 function enforceGeneratedNarrative(
@@ -507,6 +757,7 @@ function enforceGeneratedNarrative(
   store: Store,
   assets: MediaAsset[],
   products: StoreProductContext[],
+  directionIndex: number,
 ): StoreSiteDocument {
   const hero = document.sections.find((section) => section.kind === "hero");
   const catalog = document.sections.find((section) => section.kind === "catalog");
@@ -532,8 +783,8 @@ function enforceGeneratedNarrative(
     const product = productForMedia(mediaUrl);
     return {
       mediaUrl,
-      title: authored?.title || product?.name || (index === 0 ? section.title : ""),
-      body: authored?.body || product?.description || (index === 0 ? section.body : ""),
+      title: authored?.title || product?.name || section.title,
+      body: authored?.body || product?.description || section.body,
     };
   });
 
@@ -569,23 +820,82 @@ function enforceGeneratedNarrative(
     mediaUrls: storyMediaUrls,
     items: pairNarrativeItems(story, storyMediaUrls),
   };
-  const supportingSections = document.sections.filter((section) => !["hero", "story", "catalog"].includes(section.kind));
-  const experienceMediaUrls = uniqueMedia(document.experience.mediaUrls, 2, 5);
-  const avoidsUnstructuredImagePile = document.experience.type === "hero-gallery-scroll"
-    ? "scroll-expansion"
-    : document.experience.type === "image-stream"
-      ? "coverflow-carousel"
-      : document.experience.type;
+  const motionProfile = generatedMotionProfile(directionIndex, usableAssetUrls.length);
+  const normalizedSections = document.sections.map((section) => {
+    if (section.kind === "hero") return normalizedHero;
+    if (section.kind === "story") return normalizedStory;
+    if (section.kind === "catalog") return catalog;
+    if (section.kind === "gallery") {
+      return {
+        ...section,
+        // Generated galleries avoid the thin peeking-image treatment, while
+        // their position remains owned by the selected page topology.
+        layout: section.layout === "rail" ? (directionIndex % 2 === 0 ? "grid" as const : "split" as const) : section.layout,
+        motion: motionProfile.section,
+      };
+    }
+    return { ...section, motion: "none" as const };
+  });
+  if (!existingStory) {
+    const catalogIndex = normalizedSections.findIndex((section) => section.kind === "catalog");
+    normalizedSections.splice(catalogIndex < 0 ? normalizedSections.length : catalogIndex, 0, normalizedStory);
+  }
+  const experienceMediaUrls = motionProfile.signature === "scroll-expansion"
+    ? uniqueMedia(document.experience.mediaUrls, 2, 2)
+    : motionProfile.signature === motionProfile.visual
+      ? uniqueMedia(document.experience.mediaUrls, 2, 5)
+      : [];
 
   return {
     ...document,
     experience: {
       ...document.experience,
-      type: experienceMediaUrls.length >= 2 ? avoidsUnstructuredImagePile : "none",
+      type: motionProfile.signature,
       placement: "after-catalog",
-      mediaUrls: experienceMediaUrls.length >= 2 ? experienceMediaUrls : [],
+      mediaUrls: experienceMediaUrls,
     },
-    sections: [normalizedHero, normalizedStory, catalog, ...supportingSections],
+    sections: normalizedSections,
+  };
+}
+
+function finalizeGeneratedPages(
+  document: StoreSiteDocument,
+  liveDocument: StoreSiteDocument | null,
+  lockedSectionIds: readonly string[],
+): StoreSiteDocument {
+  const pageById = new Map((document.pages ?? []).map((page) => [page.id, page]));
+  const lockedPageIds = new Set(document.sections
+    .filter((section) => lockedSectionIds.includes(section.id) && section.pageId)
+    .map((section) => section.pageId!));
+  for (const page of liveDocument?.pages ?? []) {
+    if (lockedPageIds.has(page.id) && !pageById.has(page.id)) pageById.set(page.id, structuredClone(page));
+  }
+  const sections: StoreSiteDocument["sections"] = document.sections.map((section) => {
+    if (!section.pageId || pageById.has(section.pageId)) return section;
+    const { pageId: _orphanedPageId, ...sectionWithoutPage } = section;
+    return sectionWithoutPage;
+  });
+  const usedPageIds = new Set(sections.flatMap((section) => section.pageId ? [section.pageId] : []));
+  const pages = [...pageById.values()].filter((page) => usedPageIds.has(page.id)).slice(0, 6);
+  if (pages.length) {
+    const homeIndexes = sections.flatMap((section, index) => section.pageId ? [] : [index]);
+    if (sections[homeIndexes[0]]?.kind === "catalog" && sections[homeIndexes[1]]?.kind === "hero") {
+      [sections[homeIndexes[0]], sections[homeIndexes[1]]] = [sections[homeIndexes[1]], sections[homeIndexes[0]]];
+    }
+  }
+  const { pages: _previousPages, ...documentWithoutPages } = document;
+  return {
+    ...documentWithoutPages,
+    ...(pages.length ? { pages } : {}),
+    navigation: {
+      ...document.navigation,
+      items: [
+        { id: "home", label: "Inicio", target: "home" },
+        { id: "catalog", label: "Tienda", target: "catalog" },
+        ...pages.map((page) => ({ id: `nav-${page.id}`.slice(0, 48), label: page.label, target: "page" as const, pageId: page.id })),
+      ],
+    },
+    sections,
   };
 }
 
@@ -605,11 +915,17 @@ function legacyConfigFromSiteDocument(document: StoreSiteDocument): VisualConfig
   });
   const contentOrder = [...new Set(legacyOrder)].filter((section) => CONTENT_SECTIONS.includes(section as (typeof CONTENT_SECTIONS)[number]));
   for (const section of CONTENT_SECTIONS) if (!contentOrder.includes(section)) contentOrder.push(section);
-  const fontStyle: StoreFontStyle = document.theme.headingFont === "editorial" || document.theme.headingFont === "classic"
-    ? "editorial"
-    : document.theme.headingFont === "humanist"
-      ? "friendly"
-      : "modern";
+  const fontStyle: StoreFontStyle = document.theme.headingFont === "artisan"
+    ? "artisan"
+    : document.theme.headingFont === "condensed"
+      ? "condensed"
+      : document.theme.headingFont === "luxury"
+        ? "luxury"
+        : document.theme.headingFont === "editorial" || document.theme.headingFont === "classic"
+          ? "editorial"
+          : document.theme.headingFont === "humanist"
+            ? "friendly"
+            : "modern";
   return {
     siteDocument: siteDocumentJson(document),
     tagline: hero?.title ?? document.direction,
@@ -644,6 +960,49 @@ function legacyConfigFromSiteDocument(document: StoreSiteDocument): VisualConfig
   };
 }
 
+/**
+ * A generated direction is a replacement creative canvas, not a patch over the
+ * merchant's previous layout. These explicit values make proposal previews and
+ * applies deterministic even though the dashboard preview starts from the live
+ * store object. Commerce records (products, links, locations, checkout routing,
+ * logo and store identity) live outside this reset and remain untouched.
+ */
+function freshGeneratedVisualReset(): VisualConfig {
+  return {
+    bannerUrl: null,
+    backgroundImageUrl: null,
+    aboutImageUrl: null,
+    sectionBackgrounds: {},
+    announcement: null,
+    announcementMode: "static",
+    announcementSpeed: 18,
+    announcementSize: "medium",
+    announcementColor: "#111827",
+    announcementFont: "store",
+    announcementEffect: "none",
+    promotionEnabled: false,
+    promotionImageUrl: null,
+    promotionTitle: null,
+    promotionBody: null,
+    promotionCtaLabel: null,
+    promotionCtaUrl: null,
+    heroSlides: [],
+    editorialGallery: [],
+    contentOrder: ["motion", "products", "hero", "about", "gallery", "links"],
+    buttonStyle: "rounded",
+    boardTexture: "painted",
+    layoutStyle: "cinematic",
+    experienceStyle: "editorial-grid",
+    buttonVariant: "solid",
+    buttonMotion: "none",
+    cartButtonLabel: "Ir a pagar",
+    motionDuoEnabled: false,
+    motionExperience: "hero-carousel",
+    motionExperiences: [],
+    animations: [],
+  };
+}
+
 function snapshot(store: Store): Prisma.InputJsonObject {
   return Object.fromEntries(VISUAL_FIELDS.map((field) => [field, store[field] ?? null])) as Prisma.InputJsonObject;
 }
@@ -652,10 +1011,99 @@ function normalizeStoreFontStyle(value: unknown): StoreFontStyle {
   return STORE_FONT_STYLES.includes(value as StoreFontStyle) ? value as StoreFontStyle : "modern";
 }
 
+function storedSiteDocument(value: unknown): StoreSiteDocument | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const document = value as Partial<StoreSiteDocument>;
+  return document.version === 1 && Array.isArray(document.sections) && document.theme && document.navigation
+    ? document as StoreSiteDocument
+    : null;
+}
+
+function storedSectionLocks(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((id): id is string => typeof id === "string" && /^[a-z][a-z0-9-]{1,47}$/.test(id)).slice(0, 12)
+    : [];
+}
+
+function storefrontMediaCandidates(
+  store: Store,
+  uploadedAssetUrls: readonly string[],
+  assets: readonly MediaAsset[],
+  products: readonly StoreProductContext[],
+): StorefrontSemanticMediaCandidate[] {
+  const uploaded = new Set(uploadedAssetUrls);
+  const productImagePosition = new Map<string, number>();
+  products.forEach((product) => product.imageUrls.forEach((url, index) => {
+    if (!productImagePosition.has(url)) productImagePosition.set(url, index);
+  }));
+  return assets.map((asset, index) => {
+    const productPosition = productImagePosition.get(asset.url);
+    const roles = new Set<StorefrontSemanticMediaCandidate["roles"][number]>();
+    if (asset.url === store.logoUrl) roles.add("logo");
+    if (productPosition === 0) {
+      roles.add("featured-product");
+      roles.add("collection-cover");
+      roles.add("campaign-image");
+    } else if (typeof productPosition === "number") {
+      roles.add("product-detail");
+      roles.add("process-image");
+      roles.add("ambient-detail");
+    }
+    if (uploaded.has(asset.url) && typeof productPosition !== "number" && asset.url !== store.logoUrl) {
+      roles.add("brand-texture");
+      roles.add("process-image");
+      roles.add("founder-or-story");
+      roles.add("campaign-image");
+      roles.add("lifestyle");
+      roles.add("editorial");
+      roles.add("ambient-detail");
+    }
+    if (!roles.size) {
+      roles.add("editorial");
+      roles.add("lifestyle");
+      roles.add("ambient-detail");
+    }
+    return { url: asset.url, roles: [...roles], priority: index };
+  });
+}
+
 function toStoreUpdate(config: unknown): Prisma.StoreUpdateInput {
   const value = config && typeof config === "object" && !Array.isArray(config) ? config as Record<string, unknown> : {};
   const allowed = Object.fromEntries(VISUAL_FIELDS.filter((field) => field in value).map((field) => [field, value[field]]));
   if ("fontStyle" in allowed) allowed.fontStyle = normalizeStoreFontStyle(allowed.fontStyle);
+  if (typeof allowed.experienceStyle === "string") {
+    allowed.experienceStyle = allowed.experienceStyle === "story-scroller" ? "story-scroller" : "editorial-grid";
+  }
+  if (Array.isArray(allowed.motionExperiences)) {
+    allowed.motionExperiences = allowed.motionExperiences.filter((entry) =>
+      typeof entry === "string" && MOTION_EXPERIENCES.includes(entry as (typeof MOTION_EXPERIENCES)[number]),
+    );
+  }
+  if (typeof allowed.motionExperience === "string" && !MOTION_EXPERIENCES.includes(allowed.motionExperience as (typeof MOTION_EXPERIENCES)[number])) {
+    allowed.motionExperience = "hero-carousel";
+  }
+  if (Array.isArray(allowed.animations)) {
+    allowed.animations = allowed.animations.filter((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+      return MOTION_EXPERIENCES.includes((entry as Record<string, unknown>).type as (typeof MOTION_EXPERIENCES)[number]);
+    });
+  }
+  if (allowed.siteDocument && typeof allowed.siteDocument === "object" && !Array.isArray(allowed.siteDocument)) {
+    const document = structuredClone(allowed.siteDocument) as Record<string, any>;
+    if (Array.isArray(document.sections)) {
+      document.sections = document.sections.map((section: unknown) => {
+        if (!section || typeof section !== "object" || Array.isArray(section)) return section;
+        const normalized = { ...(section as Record<string, unknown>) };
+        if (normalized.motion === "coverflow") normalized.motion = "none";
+        if (normalized.kind === "gallery" && normalized.layout === "rail") normalized.layout = "grid";
+        return normalized;
+      });
+    }
+    if (document.experience && typeof document.experience === "object" && RETIRED_MOTION_EXPERIENCES.has(document.experience.type)) {
+      document.experience = { ...document.experience, type: "none", mediaUrls: [] };
+    }
+    allowed.siteDocument = document;
+  }
   return allowed as Prisma.StoreUpdateInput;
 }
 
@@ -670,16 +1118,36 @@ export class VisualStudioService {
   ) {}
 
   async list(merchantId: string, storeId: string) {
-    await this.ownedStore(merchantId, storeId);
-    const [proposals, versions] = await Promise.all([
+    const store = await this.ownedStore(merchantId, storeId);
+    const [proposals, versions, templates] = await Promise.all([
       this.prisma.storeVisualProposal.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 12 }),
       this.prisma.storeVisualVersion.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 12 }),
+      this.prisma.storeVisualTemplate.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" }, take: 24 }),
     ]);
-    return { proposals, versions };
+    return {
+      proposals: proposals.map((proposal) => ({ ...proposal, config: enforceUniqueGeneratedProposalConfig(proposal.config) })),
+      versions,
+      templates,
+      lockedSectionIds: storedSectionLocks(store.visualSectionLocks),
+    };
+  }
+
+  async setSectionLocks(merchantId: string, storeId: string, sectionIds: string[]) {
+    const store = await this.ownedStore(merchantId, storeId);
+    const document = storedSiteDocument(store.siteDocument);
+    if (sectionIds.length && (!document || sectionIds.some((id) => !document.sections.some((section) => section.id === id)))) {
+      throw new BadRequestException("Una o más secciones bloqueadas ya no existen en la versión actual de la tienda");
+    }
+    await this.prisma.store.update({ where: { id: storeId }, data: { visualSectionLocks: sectionIds } });
+    return { sectionIds };
   }
 
   async generate(merchantId: string, storeId: string, dto: GenerateVisualProposalsDto) {
     const store = await this.ownedStore(merchantId, storeId);
+    const selectedTemplate = dto.templateId
+      ? await this.prisma.storeVisualTemplate.findFirst({ where: { id: dto.templateId, merchantId } })
+      : null;
+    if (dto.templateId && !selectedTemplate) throw new BadRequestException("La receta visual seleccionada no existe o no pertenece a tu cuenta");
     const checkoutMode: "payment" | "whatsapp" | "external" = ["payment", "whatsapp", "external"].includes(dto.checkoutMode || "")
       ? dto.checkoutMode as "payment" | "whatsapp" | "external"
       : ["payment", "whatsapp", "external"].includes(store.checkoutMode)
@@ -700,7 +1168,7 @@ export class VisualStudioService {
       ...(checkoutMode === "whatsapp" && { whatsappPhone }),
       ...(checkoutMode === "external" && { leadCaptureUrl }),
     };
-    const [products, links] = await Promise.all([
+    const [products, links, previousProposals, previousVersions, merchantTemplates, recentSignatures] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId, status: "ACTIVE" },
         select: { id: true, name: true, description: true, imageUrls: true, tags: true },
@@ -708,19 +1176,25 @@ export class VisualStudioService {
         take: 24,
       }),
       this.prisma.storeLink.findMany({ where: { storeId }, select: { label: true, url: true }, orderBy: { sortOrder: "asc" } }),
+      this.prisma.storeVisualProposal.findMany({ where: { storeId }, select: { id: true, config: true }, orderBy: { createdAt: "desc" }, take: 24 }),
+      this.prisma.storeVisualVersion.findMany({ where: { storeId }, select: { source: true, snapshot: true }, orderBy: { createdAt: "desc" }, take: 24 }),
+      this.prisma.storeVisualTemplate.findMany({ where: { merchantId }, select: { id: true, recipe: true }, orderBy: { createdAt: "desc" }, take: 24 }),
+      this.prisma.storeVisualSignature.findMany({
+        where: selectedTemplate ? {
+          NOT: [
+            { sourceType: "TEMPLATE", sourceId: selectedTemplate.id },
+            ...(selectedTemplate.sourceProposalId ? [{ sourceType: "PROPOSAL", sourceId: selectedTemplate.sourceProposalId }] : []),
+          ],
+        } : undefined,
+        select: { signature: true },
+        orderBy: { createdAt: "desc" },
+        take: 160,
+      }),
     ]);
     const uploadedAssetUrls = dto.assetUrls ?? [];
-    const jsonImageUrls = (value: Prisma.JsonValue) => Array.isArray(value)
-      ? value.flatMap((entry) => entry && typeof entry === "object" && !Array.isArray(entry) && typeof entry.imageUrl === "string" ? [entry.imageUrl] : [])
-      : [];
     const assetUrls = [...new Set([
       store.logoUrl,
       ...uploadedAssetUrls,
-      store.bannerUrl,
-      store.aboutImageUrl,
-      store.promotionImageUrl,
-      ...jsonImageUrls(store.heroSlides),
-      ...jsonImageUrls(store.editorialGallery),
       ...products.flatMap((product) => product.imageUrls),
     ].filter((url): url is string => typeof url === "string" && /^\/v1\/uploads\//.test(url)))].slice(0, 24);
     const assets = await this.prisma.mediaAsset.findMany({
@@ -737,33 +1211,136 @@ export class VisualStudioService {
     if (orderedAssets.length === 0) {
       throw new BadRequestException("Agrega al menos una foto o video a la tienda o a un producto antes de crear el sitio con IA");
     }
+    const brandFingerprint = storefrontBrandFingerprint({
+      store: { id: store.id, name: store.name, logoUrl: store.logoUrl, accentColor: store.accentColor },
+      brief: { category: proposalInput.businessCategory || "", personality: proposalInput.personality || "", creativeBrief: proposalInput.creativeBrief || "", checkoutMode },
+      assets: orderedAssets.map((asset) => [asset.url, asset.mimeType, asset.byteSize]),
+      products: products.map((product) => [product.id, product.name, product.description, product.tags, product.imageUrls]),
+      links,
+    });
+    const engineContext = beginStorefrontGeneration(brandFingerprint);
+    const mediaCandidates = storefrontMediaCandidates(store, uploadedAssetUrls, orderedAssets, products);
+    const liveDocument = storedSiteDocument(store.siteDocument);
+    const lockedSectionIds = dto.lockedSectionIds ?? storedSectionLocks(store.visualSectionLocks);
+    if (lockedSectionIds.length && (!liveDocument || lockedSectionIds.some((id) => !liveDocument.sections.some((section) => section.id === id)))) {
+      throw new BadRequestException("Una o más secciones bloqueadas ya no existen en la versión actual de la tienda");
+    }
+    if (dto.lockedSectionIds) {
+      await this.prisma.store.update({ where: { id: storeId }, data: { visualSectionLocks: lockedSectionIds } });
+    }
+    const previousDocuments = (previousProposals ?? []).flatMap((proposal) => {
+      if (proposal.id === selectedTemplate?.sourceProposalId) return [];
+      const config = proposal.config && typeof proposal.config === "object" && !Array.isArray(proposal.config)
+        ? proposal.config as Record<string, unknown>
+        : {};
+      const document = storedSiteDocument(config.siteDocument);
+      return document ? [document] : [];
+    }).concat((previousVersions ?? []).flatMap((version) => {
+      if (selectedTemplate?.sourceProposalId && version.source === `proposal:${selectedTemplate.sourceProposalId}`) return [];
+      const snapshotValue = version.snapshot && typeof version.snapshot === "object" && !Array.isArray(version.snapshot)
+        ? version.snapshot as Record<string, unknown>
+        : {};
+      const document = storedSiteDocument(snapshotValue.siteDocument);
+      return document ? [document] : [];
+    }));
+    const previousSignatures = (recentSignatures ?? []).flatMap((entry) => {
+      const signature = storedStorefrontStructuralSignature(entry.signature);
+      return signature ? [signature] : [];
+    });
+    const assignedArtDirections = proposalArtDirections(proposalInput.artDirection, engineContext.generation);
     let presets = this.presets(store, proposalInput, orderedAssets, products, links);
     let provider = "local-curated";
+    let analysisCacheHit = false;
 
     if (this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey")) {
-      const aiPresets = await this.generateDirections(store, proposalInput, orderedAssets, products, links);
-      if (aiPresets) {
-        presets = aiPresets;
+      const aiResult = await this.generateDirections(store, proposalInput, orderedAssets, products, links, engineContext);
+      if (aiResult) {
+        presets = aiResult.presets;
+        analysisCacheHit = aiResult.analysisCacheHit;
         provider = `openai:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol"}`;
       }
     }
 
+    const acceptedDocuments: StoreSiteDocument[] = [];
+    const acceptedOriginality: number[] = [];
     presets = presets.map((preset, index) => {
       const existingDocument = preset.config.siteDocument as StoreSiteDocument | undefined;
-      const siteDocument = existingDocument ?? localSiteDocument(store, preset, orderedAssets, products, index);
-      const preservedAnimations = Array.isArray(store.animations) ? store.animations : [];
-      const preservedMotionExperiences = Array.isArray(store.motionExperiences)
-        ? store.motionExperiences.filter((experience): experience is string => typeof experience === "string" && MOTION_EXPERIENCES.includes(experience as (typeof MOTION_EXPERIENCES)[number]))
-        : [];
+      const baseDocument = existingDocument ?? localSiteDocument(store, preset, orderedAssets, products, links, index + engineContext.generation);
+      const directedDocument = applySiteArtDirection(baseDocument, assignedArtDirections[index]);
+      const narrativeDocument = enforceGeneratedNarrative(directedDocument, store, orderedAssets, products, index);
+      let recipeDocument = narrativeDocument;
+      if (selectedTemplate) {
+        try {
+          recipeDocument = applyStorefrontCreativeRecipe(narrativeDocument, selectedTemplate.recipe as unknown as SiteCreativeRecipe, engineContext, index, mediaCandidates);
+        } catch {
+          throw new BadRequestException("La receta guardada ya no es compatible con el compositor actual. Guarda una receta nueva desde una propuesta reciente.");
+        }
+      }
+      const topologyDocument = selectedTemplate
+        ? recipeDocument
+        : applyStorefrontTopology(recipeDocument, engineContext, index, 0, lockedSectionIds, mediaCandidates);
+      const templateDocuments = (merchantTemplates ?? []).flatMap((template) => {
+        if (template.id === selectedTemplate?.id) return [];
+        try {
+          return [applyStorefrontCreativeRecipe(narrativeDocument, template.recipe as unknown as SiteCreativeRecipe, engineContext, index, mediaCandidates)];
+        } catch {
+          return [];
+        }
+      });
+      const uniqueInventory = enforceUniqueGeneratedAnimationTypes(
+        withStorefrontEngineMetadata(topologyDocument, engineContext, index),
+        [],
+        [],
+      );
+      let siteDocument = finalizeGeneratedPages(
+        preserveLockedStorefrontSections(uniqueInventory.siteDocument, liveDocument, lockedSectionIds),
+        liveDocument,
+        lockedSectionIds,
+      );
+      let originality = storefrontOriginalityGate(siteDocument, [...previousDocuments, ...templateDocuments, ...acceptedDocuments], lockedSectionIds, 0.66, previousSignatures);
+      // A locked opening owns its position as well as its contents. Requiring
+      // a second opening kind in that case is impossible without violating the
+      // merchant's lock, so diversity is measured on the remaining axes.
+      const openingIsLocked = Boolean(liveDocument?.sections[0] && lockedSectionIds.includes(liveDocument.sections[0].id));
+      const requireMultipleOpenings = index === presets.length - 1 && !openingIsLocked;
+      let advancesBatch = advancesGeneratedBatch(siteDocument, acceptedDocuments, requireMultipleOpenings);
+      for (let attempt = 1; (!originality.accepted || !advancesBatch) && attempt <= 12; attempt += 1) {
+        let varied: StoreSiteDocument;
+        try {
+          varied = selectedTemplate
+            ? applyStorefrontCreativeRecipe(narrativeDocument, selectedTemplate.recipe as unknown as SiteCreativeRecipe, engineContext, index, mediaCandidates, attempt)
+            : varyStorefrontStructure(siteDocument, engineContext, index, attempt, lockedSectionIds, mediaCandidates);
+        } catch {
+          throw new BadRequestException("La receta guardada ya no es compatible con el compositor actual. Guarda una receta nueva desde una propuesta reciente.");
+        }
+        const uniqueVariation = enforceUniqueGeneratedAnimationTypes(
+          withStorefrontEngineMetadata(varied, engineContext, index),
+          [],
+          [],
+        );
+        siteDocument = finalizeGeneratedPages(
+          preserveLockedStorefrontSections(uniqueVariation.siteDocument, liveDocument, lockedSectionIds),
+          liveDocument,
+          lockedSectionIds,
+        );
+        originality = storefrontOriginalityGate(siteDocument, [...previousDocuments, ...templateDocuments, ...acceptedDocuments], lockedSectionIds, 0.66, previousSignatures);
+        advancesBatch = advancesGeneratedBatch(siteDocument, acceptedDocuments, requireMultipleOpenings);
+      }
+      if (!originality.accepted || !advancesBatch) {
+        throw new BadRequestException("No pudimos crear tres direcciones suficientemente originales y distintas sin tocar tus secciones bloqueadas. Desbloquea una sección, amplía la receta o cambia el brief e inténtalo otra vez.");
+      }
+      acceptedDocuments.push(siteDocument);
+      acceptedOriginality.push(originality.closestSimilarity);
       return {
         ...preset,
         config: {
+          ...freshGeneratedVisualReset(),
           ...preset.config,
           ...legacyConfigFromSiteDocument(siteDocument),
-          motionDuoEnabled: preservedAnimations.length > 0 || store.motionDuoEnabled === true,
-          motionExperience: typeof store.motionExperience === "string" && MOTION_EXPERIENCES.includes(store.motionExperience as (typeof MOTION_EXPERIENCES)[number]) ? store.motionExperience : "coverflow-carousel",
-          motionExperiences: preservedMotionExperiences,
-          animations: preservedAnimations,
+          motionDuoEnabled: false,
+          motionExperience: "hero-carousel",
+          motionExperiences: [],
+          animations: [],
           // Continuous ribbons are an obvious generated-store tell. Keep the
           // default calm and only animate the announcement when an older,
           // explicit client still asks for that behavior.
@@ -775,9 +1352,16 @@ export class VisualStudioService {
       };
     });
 
-    const proposals = await this.prisma.$transaction(
-      presets.map((preset) => {
-        return this.prisma.storeVisualProposal.create({
+    const lockedOpening = Boolean(liveDocument?.sections[0] && lockedSectionIds.includes(liveDocument.sections[0].id));
+    const diversity = evaluateStorefrontDiversity(acceptedDocuments, 0.66, lockedOpening ? 1 : 2);
+    if (!diversity.accepted) {
+      throw new BadRequestException("Las tres propuestas no alcanzaron la variedad estructural mínima. Cambia el brief o la receta e inténtalo otra vez.");
+    }
+
+    const proposals = await this.prisma.$transaction(async (transaction) => {
+      const created: StoreVisualProposal[] = [];
+      for (const preset of presets) {
+        created.push(await transaction.storeVisualProposal.create({
           data: {
             storeId,
             title: preset.title,
@@ -787,10 +1371,71 @@ export class VisualStudioService {
             sourceAssetUrls: assetUrls,
             generatedUrls: [],
           },
-        });
-      }),
-    );
-    return { proposals, mode: provider.startsWith("openai:") ? "ai" : "local", originalsPreserved: true };
+        }));
+      }
+      await transaction.storeVisualSignature.createMany({
+        data: acceptedDocuments.map((document, index) => {
+          const signature = storefrontStructuralSignature(document, lockedSectionIds);
+          return {
+            storeId,
+            sourceType: "PROPOSAL",
+            sourceId: created[index]?.id ?? null,
+            fingerprint: signature.fingerprint,
+            signature: signature as unknown as Prisma.InputJsonObject,
+          };
+        }),
+      });
+      return created;
+    });
+    return {
+      proposals,
+      mode: provider.startsWith("openai:") ? "ai" : "local",
+      originalsPreserved: true,
+      engine: {
+        version: "2.0",
+        brandFingerprint,
+        generation: engineContext.generation,
+        analysisCacheHit,
+        lockedSectionIds,
+        originalityGate: "passed",
+        closestSimilarities: acceptedOriginality.map((value) => Number(value.toFixed(3))),
+        comparedAgainst: previousDocuments.length + previousSignatures.length + (merchantTemplates?.length ?? 0),
+        diversity: {
+          ...diversity,
+          maximumPairSimilarity: Number(diversity.maximumPairSimilarity.toFixed(3)),
+          averagePairSimilarity: Number(diversity.averagePairSimilarity.toFixed(3)),
+        },
+        templateId: selectedTemplate?.id ?? null,
+      },
+    };
+  }
+
+  async saveTemplate(merchantId: string, storeId: string, proposalId: string, name: string) {
+    await this.ownedStore(merchantId, storeId);
+    const proposal = await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } });
+    if (!proposal) throw new NotFoundException("Visual proposal not found");
+    const config = proposal.config && typeof proposal.config === "object" && !Array.isArray(proposal.config)
+      ? proposal.config as Record<string, unknown>
+      : {};
+    const document = storedSiteDocument(config.siteDocument);
+    if (!document) throw new BadRequestException("La propuesta no contiene una receta visual reutilizable");
+    const recipe = storefrontCreativeRecipe(document, name);
+    const signature = storefrontStructuralSignature(document);
+    return this.prisma.$transaction(async (transaction) => {
+      const template = await transaction.storeVisualTemplate.create({
+        data: { merchantId, name: recipe.name, sourceProposalId: proposal.id, recipe: recipe as unknown as Prisma.InputJsonObject },
+      });
+      await transaction.storeVisualSignature.create({
+        data: {
+          storeId,
+          sourceType: "TEMPLATE",
+          sourceId: template.id,
+          fingerprint: signature.fingerprint,
+          signature: signature as unknown as Prisma.InputJsonObject,
+        },
+      });
+      return template;
+    });
   }
 
   async apply(merchantId: string, storeId: string, proposalId: string) {
@@ -798,7 +1443,7 @@ export class VisualStudioService {
     const proposal = await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } });
     if (!proposal) throw new NotFoundException("Visual proposal not found");
     const [updated] = await this.prisma.$transaction([
-      this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(proposal.config) }),
+      this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(enforceUniqueGeneratedProposalConfig(proposal.config)) }),
       this.prisma.storeVisualVersion.create({
         data: { storeId, label: `Antes de “${proposal.title}”`, source: `proposal:${proposal.id}`, snapshot: snapshot(store) },
       }),
@@ -872,23 +1517,23 @@ export class VisualStudioService {
       {
         title: "Taller cálido",
         rationale: `Una tienda cercana que convierte tus fotos y catálogo actuales en una historia visual completa. ${socialNote}`,
-        config: { tagline: `${subject}, presentados con calidez y detalle.`, aboutTitle: `La historia de ${store.name}`, aboutSubtitle: "Una marca se conoce mejor cuando entendemos lo que inspira cada elección.", aboutText: `Esta es una propuesta de texto para presentar ${store.name}. Revisa y adapta la historia antes de publicar para que refleje fielmente tu negocio.`, catalogTitle: "Descubre la tienda", catalogSubtitle: `Explora la selección actual de ${store.name} y encuentra lo que mejor encaja contigo.`, galleryTitle: "La marca en imágenes", gallerySubtitle: "Una mirada más cercana a su universo visual.", backgroundColor: "#f4ead7", backgroundImageUrl: null, accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "rounded", boardTexture: "kraft", announcement: `Descubre la selección de ${store.name} • Compra fácil y segura`, announcementMode: "marquee", announcementSpeed: 20, announcementSize: "medium", announcementColor: "#d8a25e", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "lift", cartButtonLabel: "Quiero comprar", layoutStyle: "cinematic", experienceStyle: "story-scroller", contentOrder: ["hero", "about", "products", "gallery", "motion", "links"], heroSlides: hero(0, `Hecho para disfrutar ${subject}`, "Explora una selección preparada para mostrar cada producto con claridad."), editorialGallery: gallery },
+        config: { tagline: `${subject}, presentados con calidez y detalle.`, aboutTitle: `La historia de ${store.name}`, aboutSubtitle: "Una marca se conoce mejor cuando entendemos lo que inspira cada elección.", aboutText: `Conoce la selección y los detalles visuales que dan forma a ${store.name}.`, catalogTitle: "Descubre la tienda", catalogSubtitle: `Explora la selección actual de ${store.name} y encuentra lo que mejor encaja contigo.`, galleryTitle: "La marca en imágenes", gallerySubtitle: "Una mirada más cercana a su universo visual.", backgroundColor: "#f4ead7", backgroundImageUrl: null, accentColor: "#7a351f", fontStyle: "friendly", buttonStyle: "square", boardTexture: "kraft", announcement: `Descubre la selección de ${store.name} • Compra fácil y segura`, announcementMode: "marquee", announcementSpeed: 20, announcementSize: "medium", announcementColor: "#d8a25e", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "none", cartButtonLabel: "Quiero comprar", layoutStyle: "cinematic", experienceStyle: "story-scroller", contentOrder: ["motion", "products", "about", "hero", "gallery", "links"], heroSlides: hero(0, `Hecho para disfrutar ${subject}`, "Explora una selección preparada para mostrar cada producto con claridad."), editorialGallery: gallery },
       },
       {
         title: "Editorial sereno",
         rationale: `Una composición con aire, lectura pausada y protagonismo absoluto del catálogo existente. ${socialNote}`,
-        config: { tagline: `Una mirada serena a ${subject}.`, aboutTitle: `Detrás de ${store.name}`, aboutSubtitle: "Una introducción pausada a la intención que guía la marca.", aboutText: `Borrador editorial para contar el origen y la intención de ${store.name}. Sustituye este texto con detalles reales de tu proceso, materiales y comunidad antes de publicarlo.`, catalogTitle: "La selección", catalogSubtitle: "Una colección clara, pensada para explorar sin prisa.", galleryTitle: "Notas visuales", gallerySubtitle: "Detalles, atmósferas y perspectivas de la marca.", backgroundColor: "#f7f5f0", backgroundImageUrl: null, accentColor: "#274c43", fontStyle: "editorial", buttonStyle: "square", boardTexture: "painted", announcement: `${store.name} • Colección actual • Explora el catálogo`, announcementMode: "static", announcementSpeed: 24, announcementSize: "small", announcementColor: "#274c43", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "outline", buttonMotion: "none", cartButtonLabel: "Completar pedido", layoutStyle: "editorial", experienceStyle: "coverflow", contentOrder: ["motion", "hero", "gallery", "about", "products", "links"], heroSlides: hero(1, `La selección de ${store.name}`, "Tus imágenes actuales, ordenadas como una portada editorial."), editorialGallery: gallery.slice().reverse() },
+        config: { tagline: `Una mirada serena a ${subject}.`, aboutTitle: `Detrás de ${store.name}`, aboutSubtitle: "Una introducción pausada a la intención que guía la marca.", aboutText: `Una mirada a la selección, las imágenes y la identidad visual de ${store.name}.`, catalogTitle: "La selección", catalogSubtitle: "Una colección clara, pensada para explorar sin prisa.", galleryTitle: "Notas visuales", gallerySubtitle: "Detalles, atmósferas y perspectivas de la marca.", backgroundColor: "#f7f5f0", backgroundImageUrl: null, accentColor: "#274c43", fontStyle: "editorial", buttonStyle: "square", boardTexture: "painted", announcement: `${store.name} • Colección actual • Explora el catálogo`, announcementMode: "static", announcementSpeed: 24, announcementSize: "small", announcementColor: "#274c43", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "outline", buttonMotion: "none", cartButtonLabel: "Completar pedido", layoutStyle: "editorial", experienceStyle: "editorial-grid", contentOrder: ["motion", "products", "hero", "gallery", "about", "links"], heroSlides: hero(1, `La selección de ${store.name}`, "Tus imágenes actuales, ordenadas como una portada editorial."), editorialGallery: gallery.slice().reverse() },
       },
       {
         title: "Mercado vibrante",
         rationale: `Una dirección rápida y expresiva, con cinta en movimiento, llamados claros y tus productos al frente. ${socialNote}`,
-        config: { tagline: `${subject} con energía propia.`, aboutTitle: `${store.name}, de cerca`, aboutSubtitle: "Personalidad, intención y una forma propia de presentar cada elección.", aboutText: `Texto de muestra para presentar la personalidad de ${store.name}. Revísalo antes de aplicar y agrega únicamente información real sobre tu marca.`, catalogTitle: "Entra a la tienda", catalogSubtitle: `Mira, elige y explora todo lo que ${store.name} tiene para mostrar.`, galleryTitle: "Más para descubrir", gallerySubtitle: "La energía de la marca continúa en cada imagen.", backgroundColor: "#e8f2ef", backgroundImageUrl: null, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", boardTexture: "painted", announcement: `Novedades en ${store.name} • Mira • Elige • Compra`, announcementMode: "marquee", announcementSpeed: 14, announcementSize: "large", announcementColor: "#7f1d1d", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "diagonal-marquee", contentOrder: ["products", "hero", "motion", "gallery", "about", "links"], heroSlides: hero(2, `Encuentra tu próximo favorito`, `Explora ${subject} y elige directamente desde el catálogo.`), editorialGallery: gallery },
+        config: { tagline: `${subject} con energía propia.`, aboutTitle: `${store.name}, de cerca`, aboutSubtitle: "Personalidad, intención y una forma propia de presentar cada elección.", aboutText: `Explora la selección y el universo visual que ${store.name} comparte en esta tienda.`, catalogTitle: "Entra a la tienda", catalogSubtitle: `Mira, elige y explora todo lo que ${store.name} tiene para mostrar.`, galleryTitle: "Más para descubrir", gallerySubtitle: "La energía de la marca continúa en cada imagen.", backgroundColor: "#e8f2ef", backgroundImageUrl: null, accentColor: "#7f1d1d", fontStyle: "modern", buttonStyle: "pill", boardTexture: "painted", announcement: `Novedades en ${store.name} • Mira • Elige • Compra`, announcementMode: "marquee", announcementSpeed: 14, announcementSize: "large", announcementColor: "#7f1d1d", promotionEnabled: false, promotionTitle: "", promotionBody: "", promotionCtaLabel: "", promotionCtaUrl: null, buttonVariant: "solid", buttonMotion: "pulse", cartButtonLabel: "Agregar y pagar", layoutStyle: "catalog-first", experienceStyle: "editorial-grid", contentOrder: ["motion", "products", "gallery", "hero", "about", "links"], heroSlides: hero(2, `Encuentra tu próximo favorito`, `Explora ${subject} y elige directamente desde el catálogo.`), editorialGallery: gallery },
       },
     ];
     const contentOrders = [
-      ["hero", "about", "products", "gallery", "motion", "links"],
-      ["motion", "about", "hero", "products", "links", "gallery"],
-      ["products", "hero", "motion", "about", "links", "gallery"],
+      ["motion", "products", "hero", "about", "gallery", "links"],
+      ["motion", "products", "about", "hero", "links", "gallery"],
+      ["motion", "products", "gallery", "about", "links", "hero"],
     ];
     return proposals.map((proposal, index) => ({
       ...proposal,
@@ -908,7 +1553,14 @@ export class VisualStudioService {
     }));
   }
 
-  private async generateDirections(store: Store, dto: GenerateVisualProposalsDto, assets: MediaAsset[], products: StoreProductContext[], links: StoreLinkContext[]): Promise<ProposalPreset[] | null> {
+  private async generateDirections(
+    store: Store,
+    dto: GenerateVisualProposalsDto,
+    assets: MediaAsset[],
+    products: StoreProductContext[],
+    links: StoreLinkContext[],
+    engineContext: StorefrontEngineContext,
+  ): Promise<{ presets: ProposalPreset[]; analysisCacheHit: boolean } | null> {
     try {
       const imageInputs = await Promise.all(assets.filter((asset) => asset.mimeType.startsWith("image/")).slice(0, 8).map(async (asset) => {
         const filename = asset.url.split("/").pop();
@@ -947,7 +1599,8 @@ export class VisualStudioService {
                 : "ARTE O REFERENCIA VISUAL SUBIDA POR EL COMERCIO";
         return `${index}: ${role} · ${asset.mimeType}`;
       }).join("\n") || "Sin medios disponibles";
-      const creativeRun = `${store.id.slice(-6)}-${Date.now().toString(36).slice(-6)}`;
+      const creativeRun = `${engineContext.brandFingerprint}-${engineContext.generation}-${engineContext.seed.toString(36)}`;
+      const topologyAssignments = [0, 1, 2].map((index) => storefrontTopologyPlan(engineContext, index).id);
       const conversion = dto.checkoutMode === "whatsapp"
         ? "pedido por WhatsApp, sin pago integrado"
         : dto.checkoutMode === "external"
@@ -995,17 +1648,28 @@ export class VisualStudioService {
         `Enlaces actuales:\n${socialLinks}`,
         `Índices y restricciones de activos:\n${assetLegend}`,
         "Examina visualmente cada imagen. Distingue con seguridad logo, arte editorial, imagen de ambiente, detalle y foto de producto. Mantén cada foto de producto unida al producto que indica la leyenda. Si un activo es débil, redundante o imposible de usar sin deformarlo, márcalo como avoid.",
-        "Define el papel del logo, la escena real del público, una estrategia de color derivada de la identidad con un solo acento de saturación menor a 80%, una estrategia tipográfica con carácter, una lógica de composición asimétrica, un plan de merchandising producto por producto y una sola idea de movimiento con propósito.",
-        "El plan debe seguir una narrativa reconocible inspirada en la tienda Bikano: primero una portada deslizante, después una historia por escenas al hacer scroll y luego el catálogo real. Galería, contacto, ubicación y enlaces son secciones posteriores y solo aparecen cuando aportan algo. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
+        "Define el papel del logo, la escena real del público y una estrategia de color derivada de la identidad con 3 a 5 colores coordinados: base, acento, apoyo y superficies. Indica dónde usar fondos cromáticos y palabras de color sin perder contraste. Añade una estrategia tipográfica con carácter, una lógica de composición asimétrica, un plan de merchandising producto por producto y una sola idea de movimiento con propósito.",
+        "La única regla fija de orden es abrir con una sección visual animada y colocar el catálogo inmediatamente después. La apertura puede ser hero, historia o galería según la evidencia de marca; todo lo posterior debe variar libremente y cambiar el ritmo. Hero, story y catalog deben existir. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
+        "Decide también la arquitectura de páginas en pagePlan. Inicio es implícita y siempre contiene hero y catalog. Devuelve [] cuando el contenido no justifica destinos distintos. Crea como máximo tres páginas solo si cada una tiene una función y contenido verificable: por ejemplo Historia para story/gallery, Contacto para contact/links o Visítanos para location. No crees páginas para acortar artificialmente el scroll, no repitas una sección en dos páginas y nunca declares una página vacía. Usa ids y slugs únicos, breves y seguros; labels y slugs deben ser naturales en español.",
         "No inventes datos, origen, materiales, descuentos, testimonios ni promesas. Escribe el análisis en español y devuelve solo el esquema.",
       ].join("\n");
-      const analysisText = await requestStructuredOutput("store_brand_analysis", BRAND_ANALYSIS_SCHEMA, analysisPrompt, 5_000);
-      const brandAnalysis = (JSON.parse(analysisText) as { analysis?: BrandAnalysis }).analysis;
+      let brandAnalysis = brandAnalysisCache.get(engineContext.brandFingerprint);
+      const analysisCacheHit = Boolean(brandAnalysis);
+      if (!brandAnalysis) {
+        const analysisText = await requestStructuredOutput("store_brand_analysis", BRAND_ANALYSIS_SCHEMA, analysisPrompt, 5_000);
+        brandAnalysis = (JSON.parse(analysisText) as { analysis?: BrandAnalysis }).analysis;
+        if (brandAnalysis) brandAnalysisCache.set(engineContext.brandFingerprint, brandAnalysis);
+      }
       if (!brandAnalysis) throw new BadGatewayException("OpenAI brand analysis returned no usable plan");
 
       const prompt = [
         "Actúa como el director de diseño y desarrollo de un estudio digital senior. El estándar es una web de agencia de alta gama que se siente construida para una marca real, nunca una plantilla embellecida. Recibes un análisis de marca ya realizado. Úsalo como evidencia y devuelve exactamente tres documentos de sitio completos, personalizados y estructuralmente distintos. No son variaciones de una plantilla ni configuraciones del editor existente. Usa solamente los medios indicados y no solicites imágenes nuevas.",
         `Clave creativa de esta generación: ${creativeRun}. Úsala para evitar repetir decisiones de generaciones anteriores sin mencionarla en el resultado.`,
+        `Direcciones de arte asignadas, en orden: ${proposalArtDirections(dto.artDirection, engineContext.generation).join(", ")}. Cada siteDocument.artDirection debe copiar exactamente la dirección correspondiente. Si el comercio eligió una, ocupa la primera propuesta; las otras dos deben contrastarla.`,
+        `Topologías de página asignadas, en orden: ${topologyAssignments.join(", ")}. Diseña el contenido para esas siluetas. La plataforma materializará la topología final de forma determinista: una apertura animada primero y el catálogo segundo; no fuerces hero como única apertura.`,
+        "designGenome es el contrato visual vinculante, no metadata decorativa. Debe obedecer la dirección de arte asignada y hacer que todas las decisiones de secciones, tipografía, medios, color y movimiento pertenezcan al mismo mundo. Las tres combinaciones deben diferir claramente.",
+        "family es la familia estructural de cada sección y debe ser exactamente editorial, cinematic, product-led o minimal. No es un sinónimo de layout: decide qué lidera la sección y cómo se leen los mismos blocks. Editorial prioriza copy y ritmo asimétrico; cinematic prioriza medios y escala; product-led pone catálogo, producto o acción antes que decoración; minimal reduce la composición a lo esencial. Usa al menos tres familias distintas dentro de cada página y cambia de familia entre propuestas para una misma sección importante.",
+        "blocks es la composición interna canónica de cada sección y los campos planos title, body, ctaLabel, mediaIndices e items siguen como proyección compatible. Usa group solo en el nivel superior y hojas heading, text, action, media o commerce dentro; children no puede contener otro group. Cada id debe ser único dentro de la sección. Usa únicamente las ranuras registradas para ese kind. Catalog, contact, location, links y event-tickets conservan un bloque commerce en su ranura funcional: ese bloque posiciona UI confiable de pagosYa y nunca contiene HTML.",
         `Tienda: ${store.name}. Categoría: ${category}. Personalidad: ${personality}.`,
         `Brief creativo del comercio:\n${creativeBrief}`,
         `Conversión elegida por el comercio: ${conversion}. Respeta esta decisión en el tono de los llamados a la acción.`,
@@ -1013,16 +1677,21 @@ export class VisualStudioService {
         `Enlaces actuales (la plataforma los inyecta de forma segura):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         `Análisis de marca obligatorio, realizado en la fase anterior:\n${JSON.stringify(brandAnalysis, null, 2)}`,
-        "Contrato narrativo obligatorio de cada siteDocument: las tres primeras secciones son exactamente hero, story y catalog, en ese orden. También debe existir exactamente una contact después del catálogo. Hero es la portada deslizante: asígnale 2 o 3 medios cuando estén disponibles, nunca el logo, y crea items con copy breve asociado a cada escena; con un solo medio úsalo una sola vez y no lo dupliques. Story es la experiencia Story Scroll existente: usa motion=story-scroll, layout=stacked, width=full y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Catalog es la primera zona estable y transaccional: la plataforma inserta ahí productos, carrito y checkout reales. Gallery, contact, location y links van después. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
+        "Contrato multipágina obligatorio: siteDocument.pages materializa el pagePlan del análisis y cada sección declara pageId. El string vacío significa Inicio. hero y catalog siempre usan pageId=\"\". Un pageId no vacío debe coincidir exactamente con un id de pages, y cada página declarada debe recibir al menos una sección real. Si pagePlan está vacío, devuelve pages=[] y pageId=\"\" en todas las secciones. No inventes una página sin contenido para que el menú parezca más grande. La plataforma deriva de forma segura los enlaces Inicio, Tienda y páginas; no intentes escribir items de navegación.",
+        "Distribuye solo secciones compatibles: story y gallery pueden vivir en Historia; contact y links pueden vivir en Contacto; location puede vivir en Visítanos. Mantén una narrativa coherente dentro de cada destino y conserva Inicio como portada comercial completa. Las tres propuestas pueden tomar decisiones de páginas distintas cuando la evidencia lo permita, pero cada decisión debe seguir el pagePlan y el brief del comercio.",
+        "Contrato narrativo obligatorio de cada siteDocument: deben existir exactamente un hero, un story, un catalog y un contact. La primera sección debe ser una apertura animada entre hero, historia o galería según la topología asignada; catalog debe ser exactamente la segunda sección. Después de ese par, el orden es libre. Hero conserva 2 o 3 medios cuando estén disponibles, nunca el logo, e items con copy breve asociado a cada escena; con un solo medio úsalo una sola vez y no lo dupliques. Story usa motion=story-scroll y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
         "Antes de componer, elige para cada propuesta una combinación distinta y pertinente entre atmósferas de lujo editorial, estructuralismo suave o tecnología sobria, y layouts de split editorial, bento asimétrico o cascada espacial sin solapamientos. Da a cada propuesta un concepto rector visible de principio a fin: una idea de marca que conecte paleta, escala, ritmo, recortes de imagen, navegación, catálogo, formulario y cierre. Haz que cambien de verdad en jerarquía, densidad, orden, tipografía, geometría, composición de producto y relación entre imagen y texto.",
+        "Contrato de diferenciación verificable: las tres propuestas deben usar tres hero.layout distintos, las tres navigation.layout disponibles exactamente una vez cada una y tres theme.productLayout distintos. No basta cambiar color o copy. Cada dirección debe seguir siendo reconocible en escala de grises por su silueta, proporciones, orden y composición del catálogo.",
         "Distingue logo, arte editorial y foto de producto por su función. El logo pertenece a la identidad o navegación: no lo estires, no lo recortes como fotografía y no lo uses como fondo. Sitúa cada foto de producto con su producto correcto y usa merchandising para decidir qué productos abren la colección, cuáles se destacan y en qué orden se cuentan.",
-        "Aplica este protocolo anti-genérico obligatorio: densidad visual cercana a 4/10, varianza 8/10 y movimiento 6/10; una sola familia cromática, un solo acento con saturación menor a 80% y un solo sistema de radios; nunca #000000, morado o azul neón, glow exterior, degradado de texto ni mezcla de grises cálidos y fríos. La portada debe caber en el primer viewport, ser asimétrica, estar alineada a la izquierda o dividida y tener como máximo un CTA. No uses hero centrado. La navegación debe tener sticky=false para evitar una barra pegada de borde a borde. Mantén cada elemento en una zona espacial limpia, sin texto superpuesto sobre otro contenido.",
+        "Aplica este protocolo anti-genérico obligatorio: densidad visual cercana a 4/10, varianza 8/10 y movimiento 6/10; una paleta coherente de 3 a 5 colores con un acento principal de saturación menor a 80%, uno o dos tonos de apoyo y un solo sistema de radios. Al menos dos secciones posteriores a la portada deben usar fondos cromáticos distintos y algunas palabras o frases breves pueden usar color cuando el contraste siga siendo AA. El color debe responder a la marca, no repartirse al azar. Nunca uses #000000, morado o azul neón, glow exterior, degradado de texto ni mezcla de grises cálidos y fríos. La portada debe caber en el primer viewport, ser asimétrica, estar alineada a la izquierda o dividida y tener como máximo un CTA. No uses hero centrado. La navegación debe tener sticky=false para evitar una barra pegada de borde a borde. Mantén cada elemento en una zona espacial limpia, sin texto superpuesto sobre otro contenido.",
         "La tipografía debe sentirse elegida: usa roles grotesk, humanist o geometric para una voz tipo Geist, Satoshi o Cabinet Grotesk; editorial solo cuando el rubro justifique una serif moderna tipo Instrument Serif o Editorial New. No uses una estética equivalente a Inter, Roboto, Arial, Helvetica, Times, Georgia, Garamond o Palatino. Controla el tamaño con jerarquía y peso; cuerpo mínimo 16px, interlineado relajado y líneas de máximo 65 caracteres.",
         "En páginas largas usa al menos cuatro familias de composición. Prohíbe tres tarjetas iguales, la repetición constante de texto a la izquierda e imagen a la derecha, etiquetas decorativas, números de sección, scroll cues, tiras de hora o clima e interfaz falsa hecha con rectángulos. No apiles muchas fotografías una debajo de otra ni conviertas el descenso de la página en un collage sin relato: una imagen solo entra si cumple una función clara dentro de la portada, un capítulo Story Scroll, un producto o una galería posterior acotada. Usa tarjetas solo cuando la elevación comunique jerarquía; cuando existan, deben sentirse como una pieza dentro de un marco concéntrico y no como un rectángulo con borde gris. No uses guiones largos Unicode. Cada sección debe tener una función real y una composición propia dentro del mismo mundo.",
-        "Compón páginas con ritmo real y espacio generoso: alterna escala y densidad, crea uno o dos momentos visuales memorables y evita que todas las secciones tengan la misma grilla. El catálogo, el carrito y el formulario deben sentirse parte del mismo mundo visual, no widgets pegados al final. El formulario debe tener etiquetas visibles, campos y placeholder con contraste AA, foco claro y un CTA que no se parta en dos líneas. Los controles táctiles deben medir al menos 44px y las secciones de varias columnas deben colapsar a una sola columna sin scroll horizontal debajo de 768px.",
-        "Usa motion como dirección artística coordinada, no decoración. La portada deslizante y Story Scroll forman el dúo principal; fuera de ellas elige como máximo uno o dos momentos entre reveal, clip, drift, scale, parallax y coverflow. El resto debe ser none. Reserva parallax/story-scroll para narrativa y coverflow para exploración horizontal. No generes cintas visuales continuas, galerías marquee ni el mismo reveal en cada sección. Todo movimiento debe poder realizarse con transform y opacity, usar easing personalizado, respetar reduced motion y mantener catálogo y formulario legibles y estables.",
-        "Elige además una sola experience distintiva para después del catálogo. Puedes usar layered-text, text-rotate, text-glitch, text-reveal-block o text-along-path cuando una frase breve de la marca sea más coherente que repetir fotografías; estas experiencias tipográficas llevan mediaIndices vacío y deben usar el título y body como copy real, breve y verificable. También puedes elegir scroll-expansion, full-screen-chapters, frame-sequence, 3d-gallery o coverflow-carousel cuando los medios añadan relato. No elijas image-stream ni hero-gallery-scroll: juntar varias fotos en un corredor o mosaico de scroll compite con la historia principal y suele producir una página incoherente. Usa entre 2 y 5 medios solo en experiencias visuales, o type=none cuando no añada significado. Su placement siempre es after-catalog. La plataforma aplica automáticamente los colores de theme a cualquier experiencia tipográfica.",
+        "Usa este sistema de calidad Impeccable como constitución, no como estilo visual: jerarquía inequívoca, contraste AA, texto corporal legible, controles táctiles de 44px, foco de teclado visible, composición responsive sin scroll horizontal, estados estables y copy que nombra una acción real. El catálogo, carrito y formulario deben sentirse parte del mismo mundo visual. Alterna escala y densidad y crea uno o dos momentos memorables, no una colección de efectos.",
+        "Usa motion como dirección artística coordinada, no decoración. Cada propuesta debe combinar cuatro momentos distintos: la portada hero-carousel, la historia story-scroll, exactamente una sección gallery con un motion propio entre reveal, clip, drift, scale o parallax, y una experience distintiva después del catálogo. Las tres propuestas deben elegir motions de gallery diferentes. El resto de las secciones debe usar none para mantener catálogo, contacto, ubicación y enlaces legibles y estables. Cada tipo distinto de none puede aparecer como máximo una vez en la misma página. Están prohibidos el layout rail en gallery, las filas de imágenes angostas que dejan ver solo tiras verticales, coverflow, carruseles en profundidad, abanicos de láminas y galerías marquee o diagonales. Todo movimiento debe poder realizarse con transform y opacity, usar easing personalizado, respetar reduced motion y mantener catálogo y formulario estables.",
+        "Elige además una sola experience distintiva para después del catálogo y no repitas su tipo entre las tres propuestas. Reparte la variedad entre scroll-expansion, full-screen-chapters y frame-sequence cuando haya al menos dos medios; con menos medios usa tipos distintos entre layered-text, text-rotate, text-glitch, text-reveal-block y text-along-path. Las experiencias tipográficas llevan mediaIndices vacío y copy real, breve y verificable. No uses 3d-gallery, coverflow-carousel, zoom-parallax, video-pill, portfolio-scroller, image-stream, hero-gallery-scroll ni ninguna galería continua, diagonal o de láminas asomadas. Usa exactamente 2 medios en scroll-expansion y entre 2 y 5 en full-screen-chapters o frame-sequence. Su placement siempre es after-catalog.",
         "Usa full-bleed, offset, split, centered, grid, stacked, rail y minimal como herramientas libres, no como una receta. Evita una secuencia repetida de tarjetas genéricas y evita el patrón constante texto a la izquierda e imagen a la derecha.",
+        "Respeta las capacidades del renderer: hero admite split, full-bleed, centered u offset; story admite split, offset, stacked, rail o centered; catalog admite grid, stacked, offset, rail o minimal; gallery admite grid, split, offset, stacked, full-bleed o rail; contact admite split, stacked, centered o minimal; location admite split, stacked, full-bleed u offset; links admite centered, stacked, minimal o rail. Mantén story-scroll solamente en story y usa motion compatible con la función real de cada sección.",
+        "Ranuras válidas por sección: hero = eyebrow, heading, body, actions, primary-media, secondary-media; story = heading, body, chapters, media-rail; catalog = heading, intro, filters, products, footer-action; gallery = heading, body, media-grid, caption; contact = heading, body, details, actions; location = heading, address, hours, map, media; links = heading, body, links. Todos los children heredan una ranura válida de su sección.",
         "Los CTA deben ser breves, específicos al rubro y conducir al catálogo o contacto. Evita emojis, nombres genéricos, porcentajes redondos falsos y clichés como Elevate, Seamless, Unleash, Next-Gen, Eleva, Revoluciona o Sin límites. Nunca inventes descuentos, envíos, certificaciones, origen, materiales, testimonios ni promesas verificables.",
         "mediaIndices y assetIndex solo pueden referenciar los índices disponibles. Usa assetIndex=-1 cuando un item no necesite medio. No incluyas URLs externas.",
         "Escribe copy borrador atractivo en español. No devuelvas HTML, CSS, JavaScript ni texto fuera del esquema estructurado.",
@@ -1033,11 +1702,14 @@ export class VisualStudioService {
       const directions = this.validDirections(parsed.directions, store, assets, products);
       if (!directions) throw new BadGatewayException("OpenAI design generation returned an unsafe theme configuration");
 
-      return directions.map((direction) => ({
-        title: direction.title,
-        rationale: direction.rationale,
-        config: legacyConfigFromSiteDocument(direction.siteDocument),
-      }));
+      return {
+        analysisCacheHit,
+        presets: directions.map((direction) => ({
+          title: direction.title,
+          rationale: direction.rationale,
+          config: legacyConfigFromSiteDocument(direction.siteDocument),
+        })),
+      };
     } catch (error) {
       this.logger.warn(`AI theme generation fell back to curated directions: ${(error as Error).message}`);
       return null;
@@ -1050,19 +1722,18 @@ export class VisualStudioService {
     const directions = value as Array<Record<string, unknown>>;
     const titles = new Set(directions.map((direction) => direction.title));
     if (titles.size !== 3) return null;
-    const materialized = directions.flatMap((direction) => {
+    const materialized = directions.flatMap((direction, directionIndex) => {
       if (typeof direction.title !== "string" || direction.title.length < 3 || direction.title.length > 48) return [];
       if (typeof direction.rationale !== "string" || direction.rationale.length < 20 || direction.rationale.length > 240) return [];
       const materializedSiteDocument = materializeSiteDocument(direction.siteDocument, assets, products);
       const siteDocument = materializedSiteDocument
-        ? enforceGeneratedNarrative(materializedSiteDocument, store, assets, products)
+        ? enforceGeneratedNarrative(materializedSiteDocument, store, assets, products, directionIndex)
         : null;
       return siteDocument && passesPremiumDirectionGuardrails(siteDocument)
         ? [{ title: generatedCopy(direction.title), rationale: generatedCopy(direction.rationale), siteDocument }]
         : [];
     });
     if (materialized.length !== 3) return null;
-    const structures = new Set(materialized.map((direction) => JSON.stringify(direction.siteDocument.sections.map((section) => [section.kind, section.layout, section.width]))));
-    return structures.size === 3 ? materialized : null;
+    return storefrontDirectionsAreDiverse(materialized.map((direction) => direction.siteDocument)) ? materialized : null;
   }
 }

@@ -271,3 +271,147 @@ but achieved 0 of 25 certification results. The sanitized machine-readable
 result is `tmp/siat/purchase-batch-last.json`. The retry runner now provides a
 `purchases-force` command that continues across reception failures and records
 which dependent cases SIAT leaves unreachable.
+
+### Retry on 2026-08-28 at 20:49 -04:00
+
+The safe Stage XII sequence was attempted again with a newly refreshed point-0
+CUFD:
+
+- `refresh-cufd 0` succeeded; the new CUFD is valid until
+  2026-08-29T20:49:23-04:00.
+- `verify-purchase` returned HTTP 500 with SOAP fault `Fault occurred while
+  processing`.
+- `query-purchases` returned transaction false, code `-1`, `Error inesperado`,
+  with no archive.
+- `self-purchase-smoke` emitted a new self-emitter/self-receptor factura 314 at
+  point 0. SIAT accepted and validated it with status 908. The immediate
+  one-document type-1 purchase submission for that exact factura returned
+  transaction false, code `-1`, `Error inesperado`.
+
+SIAT issued no purchase reception code. The full batch was therefore not
+started, because its ten validation and five cancellation cases would remain
+unreachable and it would only create additional source facturas. Stage XII
+remains at 0 of 25 with the same payload-independent backend failure signature.
+
+### Support-requested package resubmission on 2026-08-28 at 20:53 -04:00
+
+After SIAT support explicitly requested that the packages be sent again, the
+complete best-effort Stage XII batch was repeated despite the failed smoke
+gate:
+
+- A new preliminary self-emitter/self-receptor factura 315 was accepted and
+  validated with status 908; its immediate one-document purchase reception
+  returned transaction false, code `-1`, `Error inesperado`.
+- Fifty-five additional self-emitter/self-receptor source facturas (316-370)
+  were generated at point 0. SIAT accepted and validated all 55 with status
+  908.
+- All ten independent reception cases were resubmitted: purchase types 1-5,
+  each as both a one-document and a ten-document package.
+- Every `recepcionPaqueteCompras` request returned transaction false, code
+  `-1`, `Error inesperado`; SIAT issued no purchase reception code.
+- The ten dependent validations and five dependent cancellations could not be
+  formed because no reception was accepted.
+
+The regenerated source facturas therefore satisfy the support instruction,
+but the result remains 0 of 25. The sanitized batch result in
+`tmp/siat/purchase-batch-last.json` was replaced with this latest run.
+
+### Compression audit after SIAT support response
+
+SIAT support subsequently stated that it could not correctly recover the XML
+from the compressed file. The latest purchase package was audited again
+against the official procedure and artifacts:
+
+- The official service page requires individual `F*_RegistroCompra` XML files
+  inside a TAR container, followed by GZIP compression of the TAR.
+- Standard `gzip` and `tar` tools successfully decompressed and extracted every
+  locally generated package entry.
+- Every extracted XML was recognized as UTF-8 XML and validated against the
+  official `registroCompra.xsd`.
+- The TAR used the USTAR signature and the same extensionless entry names as
+  the official `F0_RegistroCompra` example.
+
+As an additional compatibility test, the GZIP operating-system header byte was
+normalized to 0, matching the Java `GZIPOutputStream` reference implementation
+published by SIAT. A new self-emitter/self-receptor factura 371 was accepted and
+validated with status 908, and its one-document purchase package again passed
+local GZIP, TAR, and XSD validation. `recepcionPaqueteCompras` nevertheless
+returned transaction false, code `-1`, `Error inesperado`.
+
+The compression claim also cannot account for the independent HTTP 500 from
+the parameterless `verificarComunicacion` operation or code `-1` from
+`consultaCompras`, neither of which carries a compressed purchase archive.
+
+### Alternative package variants and enablement hypothesis
+
+After SIAT confirmed that Computarizada en Línea is accepted for the purchase
+module, three additional one-document submissions were made with newly
+generated self-emitter/self-receptor source facturas. SIAT accepted and
+validated source facturas 372-374 with status 908. The purchase submissions
+tested:
+
+- USTAR and GZIP produced entirely by the operating system's native `tar` and
+  `gzip` executables, independently of the JavaScript archive builder.
+- The same native archive with an explicit `.xml` extension on the internal
+  `F0_RegistroCompra.xml` entry.
+- Direct GZIP compression of the XML without a TAR layer, to test support's
+  apparent expectation even though this contradicts the published service
+  procedure.
+
+All three variants returned transaction false, code `-1`, `Error inesperado`.
+This rules out the custom TAR builder, the missing `.xml` suffix, and the
+extra TAR extraction step as causes.
+
+### Fresh authorization attempt on 2026-08-28
+
+A completely new Computarizada en Línea authorization process was started on
+2026-08-28 at 21:25. It received its own system code and delegated token. The
+previous authorization attempt, its evidence, and its CAFC were left intact.
+The CAFC was deliberately retained and was successfully accepted in the new
+process for contingency package reasons 5, 6, and 7.
+
+The following stages were completed and confirmed in the portal:
+
+- Stage I: 2/2 CUIS (point of sale 1 and head office 0).
+- Stage II: 1800/1800 catalog synchronizations (18 operations, 50 calls for
+  each of the two points).
+- Stage III: 200/200 CUFD requests.
+- Stage IV: 250/250 individual electronic facturas, all accepted with status
+  908.
+- Stage V: 70/70 significant events after creating a distinct event CUFD and
+  current CUFD for each point.
+- Stage VI: 280/280 package cases. Every package was received as 901 and later
+  validated as 908, including the CAFC-backed contingency cases.
+- Stage IX: 80/80 massive-reception cases, covering quantities of exactly 1000
+  and less than 1000 for both points, with every validation reaching 908.
+
+The portal showed 70% overall after these seven stages. The isolated local
+state is `tmp/siat/pilot-state-2026-08-28.json`; it does not replace the state
+from the earlier attempt.
+
+Stage VII remained blocked by the invoice-cancellation backend. Normal and
+self-receptor facturas, from both point 1 and head office 0, were first verified
+as valid (status 690) but `anulacionFactura` consistently returned status 906,
+transaction false, message 999, `ERROR EN LA EJECUCION DEL SERVICIO (RCV)`.
+No cancellation was applied, so Stage XI could not yet be exercised.
+
+For Stage XII, 55 new electronic source facturas were generated with the same
+NIT as emitter and customer; all 55 were accepted with status 908. Ten official
+purchase receptions were then attempted (types 1-5, with quantities 1 and 10).
+All ten returned transaction false, code -1, `Error inesperado`, without a
+reception code. The parameterless `verificarComunicacion` operation still
+returned HTTP 500. Additional single-document variants with a nillable
+`codigoControl` and with the CUF-derived control code also returned code -1.
+The portal's `Registro de Compras` action was disabled because Stage XII was
+already present, ruling out an omitted portal action in this new process.
+
+These results reproduce the purchase-service failure under a fresh system,
+token, CUIS, CUFD, and authorization process while all other invoice and
+package services work. This further isolates the blocker to the SIN purchase
+backend rather than source factura modality, self-receptor data, CAFC,
+compression, TAR layout, XML schema, or stale credentials.
+
+The portal check was completed in the fresh authorization attempt. `Registro
+de Compras` was disabled because Stage XII was already part of the process, but
+the parameterless service still returned HTTP 500. No reset or additional
+portal action remains available to correct that backend state.

@@ -432,6 +432,7 @@ model Merchant {
   eventStaff       EventStaffMembership[]
   eventOrders      AdmissionOrder[]
   eventAuditLogs   EventAuditLog[]
+  visualTemplates  StoreVisualTemplate[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -516,17 +517,17 @@ model PasswordResetToken {
 // Short-lived, revocable dashboard session token (dash_...) — what
 // MerchantAuthGuard accepts alongside a secret API key.
 model MerchantSession {
-  id             String       @id @default(cuid())
-  merchantUserId String
-  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
-  merchantId     String
-  hashedToken    String       @unique
-  profileName    String       @default("Propietario")
-  profileAvatarId Int         @default(1)
-  isPrimary      Boolean      @default(false)
-  expiresAt      DateTime
-  revokedAt      DateTime?
-  createdAt      DateTime     @default(now())
+  id              String       @id @default(cuid())
+  merchantUserId  String
+  merchantUser    MerchantUser @relation(fields: [merchantUserId], references: [id])
+  merchantId      String
+  hashedToken     String       @unique
+  profileName     String       @default("Propietario")
+  profileAvatarId Int          @default(1)
+  isPrimary       Boolean      @default(false)
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdAt       DateTime     @default(now())
 
   @@index([expiresAt])
   @@index([merchantUserId, revokedAt, expiresAt])
@@ -1642,7 +1643,10 @@ model Store {
   // Versioned, bounded document produced by the AI site director. It controls
   // composition and art direction while catalog, cart, contact and checkout
   // remain trusted pagosYa components. Null keeps legacy stores unchanged.
-  siteDocument                Json?
+  siteDocument                 Json?
+  // Stable ids of sections the merchant wants preserved across AI runs.
+  // Kept outside siteDocument so renderer state stays purely presentational.
+  visualSectionLocks           Json                             @default("[]")
   // "payment" opens pagosYa checkout; "whatsapp" sends the composed cart
   // to contactPhone; "external" sends the interested customer to a merchant
   // URL. The latter two never create a PaymentIntent and do not require NIT.
@@ -1671,8 +1675,10 @@ model Store {
   mediaAssets                  MediaAsset[]
   visualProposals              StoreVisualProposal[]
   visualVersions               StoreVisualVersion[]
+  visualSignatures             StoreVisualSignature[]
   customDomains                CustomDomain[]
   leads                        StoreLead[]
+  newsletterSubscribers        StoreNewsletterSubscriber[]
   debtCollectionLinks          DebtCollectionLink[]
   consumerAffiliations         ConsumerInstitutionAffiliation[]
   promoCodes                   PromoCode[]
@@ -1805,6 +1811,21 @@ model StoreLead {
   @@index([storeId, createdAt])
 }
 
+// Consent is store-scoped and deduplicated by normalized email. This keeps
+// newsletter signups separate from sales leads and contact requests.
+model StoreNewsletterSubscriber {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, email])
+  @@index([storeId, createdAt])
+}
+
 enum MediaAssetKind {
   ORIGINAL
   AI_DERIVED
@@ -1872,6 +1893,41 @@ model StoreVisualVersion {
   @@index([storeId, createdAt])
 }
 
+// A reusable creative recipe. The JSON is deliberately content-free: it may
+// contain weighted visual axes, section structures, and semantic media roles,
+// but never product ids, merchant copy, or asset URLs.
+model StoreVisualTemplate {
+  id               String   @id @default(cuid())
+  merchantId       String
+  merchant         Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  name             String
+  sourceProposalId String?
+  recipe           Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([merchantId, createdAt])
+}
+
+// Content-free structural history used by the originality gate. Features
+// describe topology, type roles, geometry, rhythm, media placement and motion;
+// this table never contains merchant copy, product ids, or asset URLs.
+model StoreVisualSignature {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sourceType  String
+  sourceId    String?
+  fingerprint String
+  signature   Json
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([storeId, createdAt])
+  @@index([sourceType, sourceId])
+  @@index([fingerprint])
+}
+
 // Merchant-defined buttons rendered under the storefront header — social
 // profiles, a catalog PDF, a map pin, anything the merchant wants to link out
 // to. Replaced wholesale via PUT /v1/stores/:id/links (order = sortOrder), so
@@ -1924,6 +1980,8 @@ model Category {
   storeId      String
   store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name         String
+  bannerUrl    String?
+  highlights   String[]      @default([])
   sortOrder    Int           @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

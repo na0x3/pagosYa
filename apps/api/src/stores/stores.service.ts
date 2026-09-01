@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
-import { MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
+import { EventStatus, MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
 import * as QRCode from "qrcode";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
@@ -25,6 +25,7 @@ import { EmailProvider } from "../dashboard/interfaces/email-provider.interface"
 import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { PromoCodesService } from "../promo-codes/promo-codes.service";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
+import { applySiteArtDirection, resolveSiteSectionFamily, siteSectionBlockSlotIsSupported } from "@pagosya/shared-types";
 
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
@@ -62,6 +63,19 @@ type StoreEditorialImage = {
   textWidthPercent?: number;
   textAlign?: string;
   textColor?: string;
+  fontStyle?: string;
+};
+type StoreAnimationTextBlock = {
+  id: string;
+  role: "title" | "subtitle";
+  text: string;
+  textPositionX?: number;
+  textPositionY?: number;
+  textScale?: number;
+  textWidthPercent?: number;
+  textAlign?: string;
+  textColor?: string;
+  fontStyle?: string;
 };
 type StoreAnimation = {
   id: string;
@@ -82,6 +96,8 @@ type StoreAnimation = {
   textWidth?: string;
   textColor?: string;
   backgroundColor?: string;
+  fontStyle?: string;
+  textBlocks?: StoreAnimationTextBlock[];
   media: StoreEditorialImage[];
 };
 const DEFAULT_STORE_ANIMATION: StoreAnimation = {
@@ -337,7 +353,7 @@ function readStoreMotionExperiences(value: unknown, legacy: unknown): string[] {
   const unique = [...new Set(selected)];
   if (unique.length) return unique;
   if (typeof legacy === "string" && (STORE_MOTION_EXPERIENCES as readonly string[]).includes(legacy)) return [legacy];
-  return ["coverflow-carousel"];
+  return ["hero-carousel"];
 }
 
 function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
@@ -361,12 +377,43 @@ function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
       ...(typeof entry.textWidthPercent === "number" && Number.isInteger(entry.textWidthPercent) && entry.textWidthPercent >= 20 && entry.textWidthPercent <= 100 ? { textWidthPercent: entry.textWidthPercent } : {}),
       ...(typeof entry.textAlign === "string" && ["left", "center", "right"].includes(entry.textAlign) ? { textAlign: entry.textAlign } : {}),
       ...(typeof entry.textColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.textColor) ? { textColor: entry.textColor } : {}),
+      ...(typeof entry.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(entry.fontStyle) ? { fontStyle: entry.fontStyle } : {}),
     }));
+}
+
+function animationMediaLimit(type: string): number {
+  return type === "scroll-expansion" ? 2 : 8;
+}
+
+function readStoreAnimationTextBlocks(value: unknown): StoreAnimationTextBlock[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const block = entry as Prisma.JsonObject;
+    if (typeof block.id !== "string" || !/^[a-z0-9][a-z0-9_-]{0,47}$/.test(block.id)) return [];
+    if (block.role !== "title" && block.role !== "subtitle") return [];
+    if (typeof block.text !== "string" || !block.text.trim()) return [];
+    return [{
+      id: block.id,
+      role: block.role,
+      text: block.text.slice(0, 220),
+      ...(typeof block.textPositionX === "number" && Number.isInteger(block.textPositionX) && block.textPositionX >= 0 && block.textPositionX <= 100 ? { textPositionX: block.textPositionX } : {}),
+      ...(typeof block.textPositionY === "number" && Number.isInteger(block.textPositionY) && block.textPositionY >= 0 && block.textPositionY <= 100 ? { textPositionY: block.textPositionY } : {}),
+      ...(typeof block.textScale === "number" && Number.isInteger(block.textScale) && block.textScale >= 50 && block.textScale <= 200 ? { textScale: block.textScale } : {}),
+      ...(typeof block.textWidthPercent === "number" && Number.isInteger(block.textWidthPercent) && block.textWidthPercent >= 20 && block.textWidthPercent <= 100 ? { textWidthPercent: block.textWidthPercent } : {}),
+      ...(typeof block.textAlign === "string" && ["left", "center", "right"].includes(block.textAlign) ? { textAlign: block.textAlign } : {}),
+      ...(typeof block.textColor === "string" && /^#[0-9a-f]{6}$/i.test(block.textColor) ? { textColor: block.textColor } : {}),
+      ...(typeof block.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(block.fontStyle) ? { fontStyle: block.fontStyle } : {}),
+    } as StoreAnimationTextBlock];
+  }).slice(0, 24);
+}
+
+function normalizeAnimationMedia<T extends { type: string; media: unknown[] }>(animation: T): T {
+  return { ...animation, media: animation.media.slice(0, animationMediaLimit(animation.type)) };
 }
 
 const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "story-scroll": "Story Scroll",
-  "coverflow-carousel": "Coverflow",
   "hero-carousel": "Hero editorial",
   "image-stream": "Image Stream",
   "scroll-expansion": "Scroll Expansion",
@@ -378,7 +425,6 @@ const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "full-screen-chapters": "Capítulos a pantalla completa",
   "magnetic-target": "Llamado magnético",
   "frame-sequence": "Secuencia por fotogramas",
-  "3d-gallery": "Galería tridimensional",
 };
 
 function readStoreAnimations(
@@ -420,7 +466,9 @@ function readStoreAnimations(
           ...(typeof entry.textWidth === "string" && ["narrow", "medium", "wide"].includes(entry.textWidth) ? { textWidth: entry.textWidth } : {}),
           ...(typeof entry.textColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.textColor) ? { textColor: entry.textColor } : {}),
           ...(typeof entry.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.backgroundColor) ? { backgroundColor: entry.backgroundColor } : {}),
-          media: readStoreEditorialGallery(entry.media),
+          ...(typeof entry.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(entry.fontStyle) ? { fontStyle: entry.fontStyle } : {}),
+          ...(readStoreAnimationTextBlocks(entry.textBlocks).length ? { textBlocks: readStoreAnimationTextBlocks(entry.textBlocks) } : {}),
+          media: readStoreEditorialGallery(entry.media).slice(0, animationMediaLimit(entry.type as string)),
         }))
     : [];
   if (parsed.length || !enabled) return parsed;
@@ -429,7 +477,7 @@ function readStoreAnimations(
     name: LEGACY_ANIMATION_NAMES[type] ?? `Animación ${index + 1}`,
     type,
     title: LEGACY_ANIMATION_NAMES[type] ?? `Animación ${index + 1}`,
-    media: legacyGallery.map((image) => ({ ...image })),
+    media: legacyGallery.slice(0, animationMediaLimit(type)).map((image) => ({ ...image })),
   }));
 }
 
@@ -445,13 +493,24 @@ function synchronizedSiteDocument(
   currentStore?: SiteDocumentLegacyStore,
 ): Prisma.InputJsonValue | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  const document = JSON.parse(JSON.stringify(value)) as Record<string, any>;
+  let document = JSON.parse(JSON.stringify(value)) as Record<string, any>;
   if (document.version !== 1 || !document.theme || !Array.isArray(document.sections)) return undefined;
+  if (dto.siteArtDirection !== undefined) document = applySiteArtDirection(document as any, dto.siteArtDirection) as Record<string, any>;
+  if (dto.sitePages !== undefined) {
+    const slugs = new Set<string>();
+    document.pages = dto.sitePages.map((page) => {
+      const slug = page.slug.trim().toLowerCase();
+      if (slugs.has(slug)) throw new BadRequestException("Cada página necesita una URL distinta");
+      slugs.add(slug);
+      return { id: page.id, label: page.label.trim(), slug };
+    });
+  }
+  const pageIds = new Set((Array.isArray(document.pages) ? document.pages : []).map((page: Record<string, unknown>) => page.id));
   const theme = document.theme as Record<string, unknown>;
   if (dto.backgroundColor !== undefined && dto.backgroundColor) theme.pageBackground = dto.backgroundColor;
   if (dto.accentColor !== undefined && dto.accentColor) theme.accentColor = dto.accentColor;
   if (dto.fontStyle !== undefined) {
-    const fontRoles: Record<string, string> = { modern: "grotesk", editorial: "editorial", friendly: "humanist", classic: "classic", geometric: "geometric" };
+    const fontRoles: Record<string, string> = { modern: "grotesk", editorial: "editorial", friendly: "humanist", classic: "classic", geometric: "geometric", artisan: "artisan", condensed: "condensed", luxury: "luxury" };
     theme.headingFont = fontRoles[dto.fontStyle] ?? theme.headingFont;
     theme.bodyFont = fontRoles[dto.fontStyle] ?? theme.bodyFont;
   }
@@ -462,42 +521,204 @@ function synchronizedSiteDocument(
     document.experience = { ...document.experience, type: "none" };
   }
   const backgrounds = dto.sectionBackgrounds ?? {};
+  const canvasTextStyle = (style: Record<string, unknown> | undefined) => style ? {
+    ...(Number.isInteger(style.textScale) ? { textScale: style.textScale } : {}),
+    ...(["left", "center", "right"].includes(String(style.textAlign)) ? { textAlign: style.textAlign } : {}),
+    ...(typeof style.textColor === "string" ? { textColor: style.textColor.toLowerCase() } : {}),
+    ...(typeof style.fontStyle === "string" ? { fontStyle: style.fontStyle } : {}),
+  } : undefined;
+  const normalizedBlocks = (blocks: unknown, sectionKind: string) => {
+    if (!Array.isArray(blocks)) return undefined;
+    const ids = new Set<string>();
+    const visit = (block: any, depth: number): Record<string, unknown> => {
+      if (!block || typeof block !== "object" || Array.isArray(block) || depth > 1) throw new BadRequestException("La estructura de bloques de la sección no es válida");
+      if (ids.has(block.id) || !siteSectionBlockSlotIsSupported(sectionKind as any, block.slot)) throw new BadRequestException("Un bloque usa un id o una ranura no válida");
+      if (depth === 1 && (block.kind === "group" || block.children?.length)) throw new BadRequestException("Los bloques solo pueden tener un nivel de contenido anidado");
+      ids.add(block.id);
+      return {
+        id: block.id,
+        kind: block.kind,
+        slot: block.slot,
+        role: block.role,
+        text: block.text || "",
+        mediaUrl: block.mediaUrl || null,
+        ...(canvasTextStyle(block.style as Record<string, unknown> | undefined) ? { style: canvasTextStyle(block.style as Record<string, unknown>) } : {}),
+        children: (block.children || []).map((child: unknown) => visit(child, depth + 1)),
+      };
+    };
+    return blocks.map((block) => visit(block, 0));
+  };
   const backgroundKey: Record<string, string> = { hero: "hero", story: "about", catalog: "products", gallery: "gallery", contact: "contact", location: "location", links: "links" };
+  const projectedLegacyKinds = new Set<string>();
   document.sections = document.sections.filter((entry: unknown) => !(entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).kind === "benefits")).map((entry: unknown) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
     const section = { ...(entry as Record<string, any>) };
+    if (["hero", "story", "catalog", "gallery", "event-tickets", "contact", "location", "links"].includes(section.kind)) {
+      section.family = resolveSiteSectionFamily(section.kind, section.family, document.designGenome);
+    }
+    const projectLegacy = !projectedLegacyKinds.has(section.kind);
+    projectedLegacyKinds.add(section.kind);
     const setText = (field: "title" | "body", candidate: unknown) => {
       if (candidate === null || typeof candidate === "string") section[field] = candidate || "";
     };
-    if (section.kind === "hero") {
+    if (projectLegacy && section.kind === "hero") {
       setText("title", dto.tagline);
       if (dto.bannerUrl !== undefined && currentStore && dto.bannerUrl !== currentStore.bannerUrl) section.mediaUrls = dto.bannerUrl ? [dto.bannerUrl] : [];
-    } else if (section.kind === "story") {
+    } else if (projectLegacy && section.kind === "story") {
       setText("title", dto.aboutTitle);
       setText("body", dto.aboutText !== undefined ? dto.aboutText : dto.aboutSubtitle);
       if (dto.aboutImageUrl !== undefined && currentStore && dto.aboutImageUrl !== currentStore.aboutImageUrl) section.mediaUrls = dto.aboutImageUrl ? [dto.aboutImageUrl] : [];
-    } else if (section.kind === "catalog") {
+    } else if (projectLegacy && section.kind === "catalog") {
       setText("title", dto.catalogTitle);
       setText("body", dto.catalogSubtitle);
-    } else if (section.kind === "gallery") {
+    } else if (projectLegacy && section.kind === "gallery") {
       setText("title", dto.galleryTitle);
       setText("body", dto.gallerySubtitle);
       if (dto.editorialGallery !== undefined && currentStore && JSON.stringify(dto.editorialGallery) !== JSON.stringify(currentStore.editorialGallery)) {
         section.mediaUrls = dto.editorialGallery.map((image) => image.imageUrl).filter(Boolean);
       }
-    } else if (section.kind === "contact") {
+    } else if (projectLegacy && section.kind === "contact") {
       setText("title", dto.contactTitle);
       setText("body", dto.contactSubtitle);
-    } else if (section.kind === "location") {
+    } else if (projectLegacy && section.kind === "location") {
       setText("title", dto.locationTitle);
       setText("body", dto.locationSubtitle);
-    } else if (section.kind === "links") {
+    } else if (projectLegacy && section.kind === "links") {
       setText("title", dto.linksTitle);
     }
     const background = backgrounds[`site-${section.id}`] ?? backgrounds[backgroundKey[section.kind]];
     if (background) section.backgroundColor = background;
+    const authored = dto.siteSections?.find((candidate) => candidate.id === section.id);
+    if (authored) {
+      if (authored.pageId && !pageIds.has(authored.pageId)) throw new BadRequestException("Una sección apunta a una página que no existe");
+      if (authored.pageId) section.pageId = authored.pageId;
+      else delete section.pageId;
+      section.title = authored.title;
+      section.family = resolveSiteSectionFamily(section.kind, authored.family ?? section.family, document.designGenome);
+      section.body = authored.body;
+      section.ctaLabel = authored.ctaLabel;
+      section.layout = authored.layout;
+      section.width = authored.width;
+      section.align = authored.align;
+      section.motion = authored.motion;
+      section.backgroundColor = authored.backgroundColor.toLowerCase();
+      section.textColor = authored.textColor.toLowerCase();
+      section.titleStyle = canvasTextStyle(authored.titleStyle as Record<string, unknown> | undefined);
+      section.bodyStyle = canvasTextStyle(authored.bodyStyle as Record<string, unknown> | undefined);
+      section.mediaUrls = [...authored.mediaUrls];
+      section.items = Array.isArray(section.items)
+        ? section.items.map((item: unknown, index: number) => {
+            if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+            const copy = authored.items[index];
+            return copy ? {
+              ...(item as Record<string, unknown>),
+              title: copy.title || "",
+              body: copy.body || "",
+              mediaUrl: copy.mediaUrl || null,
+              titleStyle: canvasTextStyle(copy.titleStyle as Record<string, unknown> | undefined),
+              bodyStyle: canvasTextStyle(copy.bodyStyle as Record<string, unknown> | undefined),
+            } : item;
+          })
+        : [];
+      if (authored.blocks !== undefined) section.blocks = normalizedBlocks(authored.blocks, section.kind);
+    }
+    if (Array.isArray(section.blocks) && authored?.blocks === undefined) {
+      const standardBlocks = new Map(section.blocks.map((block: Record<string, any>) => [block.id, block]));
+      if (standardBlocks.has("heading")) standardBlocks.get("heading")!.text = section.title || "";
+      if (standardBlocks.has("body")) standardBlocks.get("body")!.text = section.body || "";
+      if (standardBlocks.has("action")) standardBlocks.get("action")!.text = section.ctaLabel || "";
+      (section.mediaUrls || []).forEach((mediaUrl: string, index: number) => {
+        const block = standardBlocks.get(`media-${index + 1}`);
+        if (block) block.mediaUrl = mediaUrl;
+      });
+    }
     return section;
   });
+  const existingSectionIds = new Set(document.sections.map((section: Record<string, unknown>) => section.id));
+  const singletonKinds = new Set(["contact", "location", "links"]);
+  for (const authored of dto.siteSections ?? []) {
+    if (existingSectionIds.has(authored.id) || ["hero", "catalog"].includes(authored.kind)) continue;
+    if (singletonKinds.has(authored.kind) && document.sections.some((section: Record<string, unknown>) => section.kind === authored.kind)) continue;
+    if (authored.pageId && !pageIds.has(authored.pageId)) throw new BadRequestException("Una sección apunta a una página que no existe");
+    document.sections.push({
+      id: authored.id,
+      ...(authored.pageId ? { pageId: authored.pageId } : {}),
+      kind: authored.kind,
+      family: resolveSiteSectionFamily(authored.kind as any, authored.family, document.designGenome),
+      title: authored.title,
+      body: authored.body,
+      ctaLabel: authored.ctaLabel,
+      layout: authored.layout,
+      width: authored.width,
+      align: authored.align,
+      motion: authored.motion,
+      backgroundColor: authored.backgroundColor.toLowerCase(),
+      textColor: authored.textColor.toLowerCase(),
+      titleStyle: canvasTextStyle(authored.titleStyle as Record<string, unknown> | undefined),
+      bodyStyle: canvasTextStyle(authored.bodyStyle as Record<string, unknown> | undefined),
+      mediaUrls: [...authored.mediaUrls],
+      items: authored.items.map((item) => ({
+        title: item.title || "",
+        body: item.body || "",
+        mediaUrl: item.mediaUrl || null,
+        titleStyle: canvasTextStyle(item.titleStyle as Record<string, unknown> | undefined),
+        bodyStyle: canvasTextStyle(item.bodyStyle as Record<string, unknown> | undefined),
+      })),
+      ...(authored.blocks !== undefined ? { blocks: normalizedBlocks(authored.blocks, authored.kind) } : {}),
+    });
+    existingSectionIds.add(authored.id);
+  }
+  if (dto.siteNavigation !== undefined) {
+    const navigation = document.navigation && typeof document.navigation === "object" && !Array.isArray(document.navigation)
+      ? document.navigation as Record<string, unknown>
+      : null;
+    if (!navigation) throw new BadRequestException("La navegación del sitio no es válida");
+    navigation.layout = dto.siteNavigation.layout;
+    navigation.sticky = dto.siteNavigation.sticky;
+    navigation.transparent = dto.siteNavigation.transparent;
+    navigation.logoTreatment = dto.siteNavigation.logoTreatment;
+  }
+  if (dto.siteNavigationItems !== undefined) {
+    const navigation = document.navigation && typeof document.navigation === "object" && !Array.isArray(document.navigation)
+      ? document.navigation as Record<string, unknown>
+      : null;
+    if (!navigation) throw new BadRequestException("La navegación del sitio no es válida");
+    for (const item of dto.siteNavigationItems) {
+      if (item.target === "section" && (!item.sectionId || !existingSectionIds.has(item.sectionId))) {
+        throw new BadRequestException("Un enlace de navegación apunta a una sección que no existe");
+      }
+      if (item.target === "page" && (!item.pageId || !pageIds.has(item.pageId))) {
+        throw new BadRequestException("Un enlace de navegación apunta a una página que no existe");
+      }
+    }
+    navigation.items = dto.siteNavigationItems.map((item) => ({
+      id: item.id,
+      label: item.label.trim(),
+      target: item.target,
+      ...(item.target === "section" ? { sectionId: item.sectionId } : {}),
+      ...(item.target === "page" ? { pageId: item.pageId } : {}),
+    }));
+  }
+  if (dto.siteFooter !== undefined) {
+    document.footer = {
+      enabled: dto.siteFooter.enabled,
+      brandDescription: dto.siteFooter.brandDescription.trim(),
+      columns: dto.siteFooter.columns.map((column) => ({
+        id: column.id,
+        title: column.title.trim(),
+        items: column.items.map((item) => ({ id: item.id, label: item.label.trim(), href: item.href.trim() })),
+      })),
+      copyright: dto.siteFooter.copyright.trim(),
+      badge: dto.siteFooter.badge.trim(),
+      ...(dto.siteFooter.newsletter ? { newsletter: {
+        enabled: dto.siteFooter.newsletter.enabled,
+        title: dto.siteFooter.newsletter.title.trim(),
+        body: dto.siteFooter.newsletter.body.trim(),
+        buttonLabel: dto.siteFooter.newsletter.buttonLabel.trim(),
+        successMessage: dto.siteFooter.newsletter.successMessage.trim(),
+      } } : {}),
+    };
+  }
   return document as Prisma.InputJsonValue;
 }
 
@@ -507,6 +728,7 @@ function storeUpdateData(
   currentStore?: SiteDocumentLegacyStore,
 ): Prisma.StoreUpdateInput {
   const siteDocument = synchronizedSiteDocument(currentSiteDocument, dto, currentStore);
+  const normalizedAnimations = dto.animations?.map(normalizeAnimationMedia);
   return {
     ...(dto.name !== undefined && { name: dto.name }),
     ...(dto.tagline !== undefined && { tagline: dto.tagline }),
@@ -562,11 +784,11 @@ function storeUpdateData(
       motionExperiences: dto.motionExperiences as unknown as Prisma.InputJsonValue,
       motionExperience: dto.motionExperiences[0],
     }),
-    ...(dto.animations !== undefined && {
-      animations: dto.animations as unknown as Prisma.InputJsonValue,
-      motionDuoEnabled: dto.animations.length > 0,
-      motionExperiences: [...new Set(dto.animations.map((animation) => animation.type))] as unknown as Prisma.InputJsonValue,
-      motionExperience: dto.animations[0]?.type ?? "coverflow-carousel",
+    ...(normalizedAnimations !== undefined && {
+      animations: normalizedAnimations as unknown as Prisma.InputJsonValue,
+      motionDuoEnabled: normalizedAnimations.length > 0,
+      motionExperiences: [...new Set(normalizedAnimations.map((animation) => animation.type))] as unknown as Prisma.InputJsonValue,
+      motionExperience: normalizedAnimations[0]?.type ?? "hero-carousel",
     }),
     ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
     ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
@@ -694,7 +916,7 @@ export class StoresService implements OnModuleDestroy {
   /** A merchant can run several independent stores under one account — each gets its own slug/branding/catalog. */
   async create(merchantId: string, dto: CreateStoreDto) {
     if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
-    const animations = dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }];
+    const animations = (dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }]).map(normalizeAnimationMedia);
     const contentOrder = dto.contentOrder
       ? [...(dto.animations === undefined ? [animationContentSection(DEFAULT_STORE_ANIMATION.id)] : []), ...dto.contentOrder]
       : dto.animations === undefined
@@ -771,7 +993,7 @@ export class StoresService implements OnModuleDestroy {
             animations: animations as unknown as Prisma.InputJsonValue,
             motionDuoEnabled: animations.length > 0,
             motionExperiences: [...new Set(animations.map((animation: StoreAnimationDto | StoreAnimation) => animation.type))] as unknown as Prisma.InputJsonValue,
-            motionExperience: animations[0]?.type ?? "coverflow-carousel",
+            motionExperience: animations[0]?.type ?? "hero-carousel",
             ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
             buttonVariant: dto.buttonVariant,
             buttonMotion: dto.buttonMotion,
@@ -814,6 +1036,7 @@ export class StoresService implements OnModuleDestroy {
   async update(merchantId: string, id: string, dto: UpdateStoreDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
+    await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
     if (dto.locations !== undefined) {
       assertValidStoreLocations(dto.locations);
       return this.prisma.$transaction(async (tx) => {
@@ -833,6 +1056,7 @@ export class StoresService implements OnModuleDestroy {
   async saveSettings(merchantId: string, id: string, dto: SaveStoreSettingsDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
+    await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
     const { links, locations, ...storeDto } = dto;
     if (locations !== undefined) assertValidStoreLocations(locations);
     return this.prisma.$transaction(async (tx) => {
@@ -851,6 +1075,36 @@ export class StoresService implements OnModuleDestroy {
       const savedLinks = await tx.storeLink.findMany({ where: { storeId: id }, orderBy: { sortOrder: "asc" } });
       return { ...updated, links: savedLinks };
     });
+  }
+
+  private async assertOwnedSiteSectionMedia(merchantId: string, dto: UpdateStoreDto, currentDocument: Prisma.JsonValue | null) {
+    if (!dto.siteSections?.length) return;
+    const blockMedia = (blocks: Array<{ mediaUrl?: string | null; children?: any[] }> = []): string[] => blocks.flatMap((block) => [
+      ...(block.mediaUrl ? [block.mediaUrl] : []),
+      ...blockMedia(block.children || []),
+    ]);
+    const requested = new Set(dto.siteSections.flatMap((section) => [
+      ...section.mediaUrls,
+      ...section.items.flatMap((item) => item.mediaUrl ? [item.mediaUrl] : []),
+      ...blockMedia(section.blocks || []),
+    ]));
+    const current = new Set<string>();
+    if (currentDocument && typeof currentDocument === "object" && !Array.isArray(currentDocument)) {
+      const sections = Array.isArray((currentDocument as Record<string, unknown>).sections)
+        ? (currentDocument as Record<string, unknown>).sections as Array<Record<string, unknown>>
+        : [];
+      sections.forEach((section) => {
+        if (Array.isArray(section.mediaUrls)) section.mediaUrls.forEach((url) => typeof url === "string" && current.add(url));
+        if (Array.isArray(section.items)) section.items.forEach((item) => {
+          if (item && typeof item === "object" && !Array.isArray(item) && typeof (item as Record<string, unknown>).mediaUrl === "string") current.add((item as Record<string, unknown>).mediaUrl as string);
+        });
+        if (Array.isArray(section.blocks)) blockMedia(section.blocks as any[]).forEach((url) => current.add(url));
+      });
+    }
+    const newUrls = [...requested].filter((url) => !current.has(url));
+    if (!newUrls.length) return;
+    const owned = await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: newUrls } }, select: { url: true } });
+    if (owned.length !== newUrls.length) throw new BadRequestException("Una o más imágenes de la sección no pertenecen a tu cuenta");
   }
 
   private async syncLocationInventory(tx: Prisma.TransactionClient, storeId: string, locations: StoreLocationDto[]) {
@@ -904,7 +1158,10 @@ export class StoresService implements OnModuleDestroy {
     // Cascade deletes the DB rows (Category, PaymentLink), but not the actual
     // photo files those rows pointed at — gather every url this store owns
     // before the rows disappear, then clean them off disk once they're gone.
-    const links = await this.prisma.paymentLink.findMany({ where: { storeId: id }, select: { imageUrls: true } });
+    const [links, categories] = await Promise.all([
+      this.prisma.paymentLink.findMany({ where: { storeId: id }, select: { imageUrls: true } }),
+      this.prisma.category.findMany({ where: { storeId: id }, select: { bannerUrl: true } }),
+    ]);
     const fileUrls = [
       store.logoUrl,
       store.bannerUrl,
@@ -912,6 +1169,7 @@ export class StoresService implements OnModuleDestroy {
       store.aboutImageUrl,
       ...readStoreHeroSlides(store.heroSlides).map((slide) => slide.imageUrl),
       ...readStoreEditorialGallery(store.editorialGallery).map((image) => image.imageUrl),
+      ...categories.map((category) => category.bannerUrl),
       ...links.flatMap((l) => l.imageUrls),
     ];
 
@@ -1026,7 +1284,7 @@ export class StoresService implements OnModuleDestroy {
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
     const trackView = options.trackView !== false;
-    const [items, categories, links, productStats, appointmentOfferings] = await Promise.all([
+    const [items, categories, links, productStats, appointmentOfferings, events] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
@@ -1038,6 +1296,33 @@ export class StoresService implements OnModuleDestroy {
         where: { storeId: store.id, isActive: true },
         select: { id: true, name: true, durationMinutes: true, bufferMinutes: true, price: true, currency: true, color: true },
         orderBy: { name: "asc" },
+      }),
+      this.prisma.event.findMany({
+        where: {
+          storeId: store.id,
+          status: { in: [EventStatus.PUBLISHED, EventStatus.ACTIVE] },
+          onlineSalesEnabled: true,
+          startsAt: { gte: new Date() },
+        },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          publicityImageUrl: true,
+          startsAt: true,
+          endsAt: true,
+          doorsOpenAt: true,
+          timezone: true,
+          venue: { select: { name: true, city: true } },
+          ticketTypes: {
+            where: { active: true },
+            orderBy: [{ sortOrder: "asc" }, { price: "asc" }],
+            select: { id: true, name: true, price: true, currency: true, inventory: true, reservedQuantity: true, soldQuantity: true },
+          },
+        },
+        orderBy: { startsAt: "asc" },
+        take: 12,
       }),
     ]);
     if (trackView) this.queueStoreView(store.id);
@@ -1138,8 +1423,20 @@ export class StoresService implements OnModuleDestroy {
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
       showLowStockToCustomers: store.showLowStockToCustomers,
       appointmentOfferings,
+      events: events.map((event) => ({
+        ...event,
+        ticketTypes: event.ticketTypes.map(({ inventory, reservedQuantity, soldQuantity, ...ticket }) => ({
+          ...ticket,
+          available: Math.max(0, (inventory ?? 0) - reservedQuantity - soldQuantity),
+        })),
+      })),
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
-      categories: categories.map((c) => ({ id: c.id, name: c.name })),
+      categories: categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        bannerUrl: c.bannerUrl,
+        highlights: c.highlights.slice(0, 4),
+      })),
       items: items.map((item) => ({
         id: item.id,
         categoryId: item.categoryId,
@@ -1562,5 +1859,16 @@ export class StoresService implements OnModuleDestroy {
       select: { id: true },
     });
     return { submitted: true, leadId: lead.id };
+  }
+
+  async subscribeNewsletter(slug: string, rawEmail: string) {
+    const store = await this.findActiveBySlugPublic(slug);
+    const email = rawEmail.trim().toLowerCase();
+    await this.prisma.storeNewsletterSubscriber.upsert({
+      where: { storeId_email: { storeId: store.id, email } },
+      create: { storeId: store.id, email },
+      update: { isActive: true },
+    });
+    return { subscribed: true };
   }
 }
