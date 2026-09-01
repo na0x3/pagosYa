@@ -127,20 +127,26 @@ test("agent workspace keeps a real goal, plan, and generated preview in one cock
     rationale: "Una dirección clara basada en el catálogo real.",
     provider: "local-curated",
     status: "READY",
-    config: { backgroundColor: "#f8fafc", accentColor: "#8f5d31", fontStyle: "editorial", checkoutMode: "payment" },
+    config: { backgroundColor: "#f8fafc", accentColor: "#8f5d31", fontStyle: "editorial", checkoutMode: "payment", siteDocument: { version: 1, sections: [] } },
   };
+  const conversationMessages = [];
   const requests = await openDashboard(page, [store("store_1", "Casa Arcilla")], ({ path, request }) => {
     if (path === "/stores/store_1/payment_links") return [product];
     if (path === "/stores/store_1/visual-studio") return { proposals: [proposal], versions: [], templates: [] };
-    if (path === "/stores/store_1/visual-proposals" && request.method() === "POST") return {
-      proposals: [
-        { ...proposal, id: "proposal_2", title: "Arcilla editorial" },
-        { ...proposal, id: "proposal_3", title: "Taller luminoso" },
-        { ...proposal, id: "proposal_4", title: "Colección gráfica" },
-      ],
-      mode: "local",
-      engine: { closestSimilarities: [0.31, 0.38, 0.29], comparedAgainst: 9 },
-    };
+    if (path === "/stores/store_1/agent-conversation" && request.method() === "GET") return { messages: conversationMessages };
+    if (path === "/stores/store_1/agent-conversation/messages" && request.method() === "POST") {
+      const revisedProposal = { ...proposal, id: "proposal_2", title: "Taller contemporáneo · ajuste" };
+      const userMessage = { id: "message_1", role: "USER", content: request.postDataJSON().instruction, proposalId: "proposal_1", metadata: {} };
+      const assistantMessage = {
+        id: "message_2",
+        role: "ASSISTANT",
+        content: "Preparé una variante privada. Cambié apertura. Conservé catálogo, productos, precios, inventario y checkout.",
+        proposalId: "proposal_2",
+        metadata: { changedAreas: ["apertura"], preservedAreas: ["catálogo", "productos", "precios", "inventario", "checkout"] },
+      };
+      conversationMessages.push(userMessage, assistantMessage);
+      return { userMessage, assistantMessage, proposal: revisedProposal, proposals: [revisedProposal] };
+    }
   });
 
   await page.goto("/");
@@ -161,13 +167,17 @@ test("agent workspace keeps a real goal, plan, and generated preview in one cock
     await page.setViewportSize({ width: 1440, height: 900 });
   }
 
-  const goal = "Crea una portada cálida para mi nueva colección de cerámica.";
+  const goal = "Mantén el catálogo, pero haz la apertura más cálida.";
   await page.locator("#agentWorkspaceInput").fill(goal);
   await page.locator("#agentWorkspaceSubmit").click();
   await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "overview");
-  await expect(page.locator("#visualCreativeBrief")).toHaveValue(goal);
   await expect(page.locator("#agentDesignStatus")).toHaveText("Vista privada");
-  await expect.poll(() => requests.find((entry) => entry.path === "/stores/store_1/visual-proposals" && entry.method === "POST")?.body?.creativeBrief).toBe(goal);
+  await expect.poll(() => requests.find((entry) => entry.path === "/stores/store_1/agent-conversation/messages" && entry.method === "POST")?.body).toEqual({ instruction: goal, proposalId: "proposal_1" });
+  await expect(page.locator("#agentMessageList")).toContainText("Conservé catálogo");
+  await expect(page.locator("#agentMessageList [data-agent-proposal=proposal_2]")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("#agentMessageList")).toContainText(goal);
+  await expect(page.locator("#agentMessageList")).toContainText("Conservé catálogo");
   await expect(page.locator("#onboardingDialog")).not.toBeVisible();
 });
 

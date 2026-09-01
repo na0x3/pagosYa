@@ -10,11 +10,12 @@ import { VisualStudioService } from "./visual-studio.service";
 import { CustomDomainsService } from "./custom-domains.service";
 import { PromoCodesController } from "../promo-codes/promo-codes.controller";
 import { PromoCodesService } from "../promo-codes/promo-codes.service";
+import { StoreAgentService } from "./store-agent.service";
 
 @Module({
   imports: [PaymentIntentsModule, DashboardModule, AuthModule, UploadsModule],
   controllers: [StoresController, StoresPublicController, PromoCodesController],
-  providers: [StoresService, VisualStudioService, CustomDomainsService, PromoCodesService],
+  providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService],
   exports: [StoresService],
 })
 export class StoresModule {}

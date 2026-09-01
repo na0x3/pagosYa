@@ -58,6 +58,13 @@ type ProposalPreset = {
 type AiDirection = { title: string; rationale: string; siteDocument: AiSiteDocument };
 type MaterializedAiDirection = Omit<AiDirection, "siteDocument"> & { siteDocument: StoreSiteDocument };
 
+export type StoreAgentRevisionPlan = {
+  target: "opening" | "catalog" | "story" | "gallery" | "contact" | "site";
+  tone: "warmer" | "cooler" | "bolder" | "quieter" | "minimal" | "editorial" | "unchanged";
+  preserveCatalog: boolean;
+  summary: string;
+};
+
 function advancesGeneratedBatch(
   candidate: StoreSiteDocument,
   accepted: readonly StoreSiteDocument[],
@@ -1025,6 +1032,104 @@ function storedSectionLocks(value: unknown): string[] {
     : [];
 }
 
+function normalizedAgentInstruction(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function localAgentRevisionPlan(instruction: string): StoreAgentRevisionPlan {
+  const normalized = normalizedAgentInstruction(instruction);
+  const preserveCatalog = /(manten|mantener|conserv|preserv|no (?:cambies|toques|modifiques)).{0,32}(catalog|producto|tienda)/.test(normalized);
+  const target: StoreAgentRevisionPlan["target"] = /(apertura|portada|inicio|hero|cabecera)/.test(normalized)
+    ? "opening"
+    : /(historia|story|relato)/.test(normalized)
+      ? "story"
+      : /(galeria|gallery|fotos)/.test(normalized)
+        ? "gallery"
+        : /(contacto|contact)/.test(normalized)
+          ? "contact"
+          : /(catalog|producto|tienda)/.test(normalized) && !preserveCatalog
+            ? "catalog"
+            : "site";
+  const tone: StoreAgentRevisionPlan["tone"] = /(calid|acogedor|cercan|humano)/.test(normalized)
+    ? "warmer"
+    : /(fresc|frio|sobrio azulado)/.test(normalized)
+      ? "cooler"
+      : /(atrevid|fuerte|impact|bold)/.test(normalized)
+        ? "bolder"
+        : /(seren|suave|sutil|tranquil)/.test(normalized)
+          ? "quieter"
+          : /(minimal|simple|limpi)/.test(normalized)
+            ? "minimal"
+            : /(editorial|revista)/.test(normalized)
+              ? "editorial"
+              : "unchanged";
+  const targetLabel = target === "opening" ? "la apertura" : target === "site" ? "el lenguaje visual" : `la sección ${target}`;
+  const toneLabel = tone === "unchanged" ? "siguiendo la instrucción" : `con un tono ${tone}`;
+  return { target, tone, preserveCatalog, summary: `Ajustar ${targetLabel} ${toneLabel}.` };
+}
+
+function hexChannels(value: string): [number, number, number] | null {
+  const match = /^#([0-9a-f]{6})$/i.exec(value);
+  if (!match) return null;
+  return [0, 2, 4].map((offset) => Number.parseInt(match[1].slice(offset, offset + 2), 16)) as [number, number, number];
+}
+
+function blendHex(base: string, tint: string, amount: number): string {
+  const from = hexChannels(base) ?? [245, 243, 238];
+  const to = hexChannels(tint) ?? [245, 243, 238];
+  return `#${from.map((channel, index) => Math.round(channel + (to[index] - channel) * amount).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function relativeLuminance(value: string): number {
+  const channels = hexChannels(value) ?? [255, 255, 255];
+  return channels.map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  }).reduce((total, channel, index) => total + channel * [0.2126, 0.7152, 0.0722][index], 0);
+}
+
+function contrastRatio(first: string, second: string): number {
+  const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)].sort((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readableText(background: string, preferred: string): string {
+  if (contrastRatio(background, preferred) >= 4.5) return preferred;
+  return contrastRatio(background, "#17120f") >= contrastRatio(background, "#fffaf2") ? "#17120f" : "#fffaf2";
+}
+
+function applyAgentRevisionPlan(document: StoreSiteDocument, plan: StoreAgentRevisionPlan): StoreSiteDocument {
+  const openingId = document.sections.find((section) => !section.pageId && (!plan.preserveCatalog || section.kind !== "catalog"))?.id
+    ?? document.sections[0]?.id;
+  const matchesTarget = (section: StoreSiteDocument["sections"][number]) => {
+    if (plan.target === "site") return plan.preserveCatalog ? section.kind !== "catalog" : true;
+    if (plan.target === "opening") return section.id === openingId;
+    return section.kind === plan.target;
+  };
+  const tint = plan.tone === "warmer" ? "#f1ad62"
+    : plan.tone === "cooler" ? "#9fc7d4"
+      : plan.tone === "bolder" ? "#e58a32"
+        : plan.tone === "editorial" ? "#cbb69a"
+          : "#eee9df";
+  const amount = plan.tone === "bolder" ? 0.42 : plan.tone === "unchanged" ? 0.12 : 0.28;
+  return {
+    ...document,
+    direction: `${document.direction || "Dirección propia"} · ${plan.summary}`.slice(0, 120),
+    sections: document.sections.map((section) => {
+      if (!matchesTarget(section)) return structuredClone(section);
+      const backgroundColor = plan.tone === "minimal"
+        ? document.theme.pageBackground
+        : blendHex(section.backgroundColor, tint, amount);
+      return {
+        ...section,
+        backgroundColor,
+        textColor: readableText(backgroundColor, section.textColor),
+        ...(plan.tone === "minimal" ? { motion: "none" as const } : {}),
+      };
+    }),
+  };
+}
+
 function storefrontMediaCandidates(
   store: Store,
   uploadedAssetUrls: readonly string[],
@@ -1130,6 +1235,130 @@ export class VisualStudioService {
       templates,
       lockedSectionIds: storedSectionLocks(store.visualSectionLocks),
     };
+  }
+
+  private async agentRevisionPlan(
+    instruction: string,
+    document: StoreSiteDocument,
+    conversationContext: string[],
+  ): Promise<StoreAgentRevisionPlan> {
+    const fallback = localAgentRevisionPlan(instruction);
+    if (!this.config.get<boolean>("app.openAi.enabled") || !this.config.get<string>("app.openAi.apiKey")) return fallback;
+    const schema = {
+      type: "object",
+      additionalProperties: false,
+      required: ["target", "tone", "preserveCatalog", "summary"],
+      properties: {
+        target: { type: "string", enum: ["opening", "catalog", "story", "gallery", "contact", "site"] },
+        tone: { type: "string", enum: ["warmer", "cooler", "bolder", "quieter", "minimal", "editorial", "unchanged"] },
+        preserveCatalog: { type: "boolean" },
+        summary: { type: "string", minLength: 1, maxLength: 160 },
+      },
+    };
+    const sections = document.sections.map((section, index) => `${index === 0 ? "opening " : ""}${section.id}:${section.kind}:${section.title}`).join("\n");
+    const prompt = [
+      "Interpreta una instrucción de edición para una tienda. Devuelve sólo un plan JSON acotado; no escribas HTML, CSS ni código.",
+      "El plan puede cambiar el tono visual de una zona, pero nunca precios, productos, inventario, pagos, checkout, formularios, KYC ni publicación.",
+      "preserveCatalog debe ser true cuando el comercio pida mantener, conservar o no tocar el catálogo o los productos.",
+      `Secciones disponibles:\n${sections}`,
+      conversationContext.length ? `Contexto reciente:\n${conversationContext.slice(-6).join("\n")}` : "Sin contexto anterior.",
+      `Instrucción actual:\n${instruction}`,
+    ].join("\n\n");
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.get<string>("app.openAi.apiKey")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol",
+          input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+          text: { format: { type: "json_schema", name: "store_agent_revision_plan", strict: true, schema } },
+          reasoning: { effort: "medium" },
+          max_output_tokens: 900,
+        }),
+        signal: AbortSignal.timeout(45_000),
+      });
+      const body = await response.json() as {
+        output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+        error?: { message?: string };
+      };
+      if (!response.ok) throw new Error(body.error?.message || "OpenAI revision planning failed");
+      const output = body.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
+      if (!output) return fallback;
+      const plan = JSON.parse(output) as StoreAgentRevisionPlan;
+      const guardedPlan: StoreAgentRevisionPlan = {
+        ...plan,
+        target: fallback.target !== "site" ? fallback.target : plan.target,
+        tone: fallback.tone !== "unchanged" ? fallback.tone : plan.tone,
+        preserveCatalog: fallback.preserveCatalog || plan.preserveCatalog,
+      };
+      const targetExists = guardedPlan.target === "site" || guardedPlan.target === "opening" || document.sections.some((section) => section.kind === guardedPlan.target);
+      return targetExists ? guardedPlan : fallback;
+    } catch (error) {
+      this.logger.warn(`Agent revision planning fell back to bounded local intent: ${(error as Error).message}`);
+      return fallback;
+    }
+  }
+
+  async revise(
+    merchantId: string,
+    storeId: string,
+    proposalId: string,
+    instruction: string,
+    conversationContext: string[] = [],
+  ) {
+    await this.ownedStore(merchantId, storeId);
+    const source = await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } });
+    if (!source) throw new NotFoundException("Visual proposal not found");
+    const sourceConfig = source.config && typeof source.config === "object" && !Array.isArray(source.config)
+      ? source.config as Record<string, unknown>
+      : {};
+    const sourceDocument = storedSiteDocument(sourceConfig.siteDocument);
+    if (!sourceDocument) throw new BadRequestException("La propuesta ya no contiene un documento visual editable");
+    const plan = await this.agentRevisionPlan(instruction, sourceDocument, conversationContext);
+    const nextDocument = applyAgentRevisionPlan(sourceDocument, plan);
+    const nextConfig = {
+      ...sourceConfig,
+      ...legacyConfigFromSiteDocument(nextDocument),
+    } as Prisma.InputJsonObject;
+    const signature = storefrontStructuralSignature(nextDocument);
+    const proposal = await this.prisma.$transaction(async (transaction) => {
+      const created = await transaction.storeVisualProposal.create({
+        data: {
+          storeId,
+          title: `${source.title} · ajuste`.slice(0, 120),
+          rationale: plan.summary,
+          provider: this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey")
+            ? `agent:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol"}`
+            : "agent:bounded-local",
+          config: nextConfig,
+          sourceAssetUrls: source.sourceAssetUrls as Prisma.InputJsonValue,
+          generatedUrls: source.generatedUrls as Prisma.InputJsonValue,
+        },
+      });
+      await transaction.storeVisualSignature.create({
+        data: {
+          storeId,
+          sourceType: "PROPOSAL",
+          sourceId: created.id,
+          fingerprint: signature.fingerprint,
+          signature: signature as unknown as Prisma.InputJsonObject,
+        },
+      });
+      return created;
+    });
+    const changedAreas = plan.target === "opening" ? ["apertura"] : plan.target === "site" ? ["lenguaje visual"] : [plan.target];
+    const preservedAreas = [
+      ...(plan.preserveCatalog || plan.target !== "catalog" ? ["catálogo"] : []),
+      "productos",
+      "precios",
+      "inventario",
+      "checkout",
+      "estado público",
+    ];
+    return { proposal, plan, changedAreas, preservedAreas };
   }
 
   async setSectionLocks(merchantId: string, storeId: string, sectionIds: string[]) {

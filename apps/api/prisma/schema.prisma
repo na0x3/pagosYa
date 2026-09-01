@@ -1676,6 +1676,7 @@ model Store {
   visualProposals              StoreVisualProposal[]
   visualVersions               StoreVisualVersion[]
   visualSignatures             StoreVisualSignature[]
+  agentThread                  StoreAgentThread?
   customDomains                CustomDomain[]
   leads                        StoreLead[]
   newsletterSubscribers        StoreNewsletterSubscriber[]
@@ -1860,6 +1861,37 @@ enum VisualProposalStatus {
   DISMISSED
 }
 
+enum StoreAgentMessageRole {
+  USER
+  ASSISTANT
+}
+
+// The thread is owned by the store rather than by an AI provider. This makes
+// the merchant's working conversation durable even when models change.
+model StoreAgentThread {
+  id        String              @id @default(cuid())
+  storeId   String              @unique
+  store     Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  messages  StoreAgentMessage[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model StoreAgentMessage {
+  id         String                @id @default(cuid())
+  threadId   String
+  thread     StoreAgentThread      @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role       StoreAgentMessageRole
+  content    String
+  proposalId String?
+  proposal   StoreVisualProposal?  @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  metadata   Json                  @default("{}")
+  createdAt  DateTime              @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([proposalId])
+}
+
 // A proposal stores only the bounded storefront configuration accepted by the
 // API. It never stores or executes model-generated HTML, CSS, or JavaScript.
 model StoreVisualProposal {
@@ -1875,6 +1907,7 @@ model StoreVisualProposal {
   generatedUrls   Json                 @default("[]")
   appliedAt       DateTime?
   createdAt       DateTime             @default(now())
+  agentMessages   StoreAgentMessage[]
 
   @@index([storeId, createdAt])
 }

@@ -28,6 +28,14 @@ A full generation replaces the creative canvas instead of patching the live desi
 11. Apply one proposal atomically and snapshot the previous visual state for rollback.
 12. Continue editing from the storefront preview by selecting text, media, colors, or whole sections.
 
+## Persistent agent conversations
+
+Each store owns one durable agent thread. Messages are stored by pagosYa, not delegated to a model provider's response history, and an editing turn may point to the exact private proposal it inherits. This makes the merchant's conversation portable across model changes and keeps the revision lineage auditable.
+
+The first instruction may create a full set of private directions. Follow-up instructions create one targeted proposal from the current private proposal instead of regenerating the whole site. A structured revision plan names the target, tone, and preservation intent; the server then applies only bounded visual transformations. Requests such as “keep the catalog, but make the opening warmer” preserve the catalog section exactly while producing a new private opening treatment.
+
+Agent turns never apply or publish proposals. Products, prices, inventory, checkout routing, payments, forms, KYC, and public availability remain outside the revision planner. The assistant response records changed and preserved areas so the UI can show evidence rather than imply that a broad autonomous action occurred.
+
 Color is a system, not a single accent. Every accepted AI direction must carry at least three distinct chromatic colors derived from the brand, place color across multiple later sections, preserve AA text contrast, and keep the palette coherent across typography, surfaces, navigation, catalog, and contact. Local fallbacks follow the same rule.
 
 ## Engine model

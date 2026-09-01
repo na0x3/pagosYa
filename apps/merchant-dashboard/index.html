@@ -3543,6 +3543,52 @@
     font-weight: 850;
   }
   .agent-suggestion:hover { background: var(--bento-yellow); color: #09090b; transform: none; box-shadow: none; }
+  .agent-conversation {
+    display: grid;
+    min-height: 0;
+    border: 2px solid var(--bento-keyline);
+    background: var(--pg-surface);
+  }
+  .agent-conversation-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 9px;
+    border-bottom: 1px solid var(--pg-border-strong);
+    font-size: .66rem;
+  }
+  .agent-conversation-head span { color: var(--pg-text-muted); font-size: .58rem; }
+  .agent-message-list { max-height: 164px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+  .agent-message {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px 9px;
+    border-bottom: 1px solid var(--pg-border);
+    font-size: .68rem;
+    line-height: 1.42;
+  }
+  .agent-message:last-child { border-bottom: 0; }
+  .agent-message[data-role="ASSISTANT"] { background: color-mix(in srgb, var(--bento-green) 18%, var(--pg-surface)); }
+  .agent-message-role { font-size: .58rem; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
+  .agent-message-copy { display: grid; gap: 4px; min-width: 0; }
+  .agent-message-copy p { margin: 0; }
+  .agent-message-meta { color: var(--pg-text-muted); font-size: .58rem; }
+  .agent-message-preview {
+    width: max-content;
+    min-height: 28px;
+    padding: 3px 6px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font-size: .58rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .agent-message-preview:hover { transform: none; box-shadow: none; }
+  .agent-conversation-empty { margin: 0; padding: 10px; color: var(--pg-text-muted); font-size: .65rem; line-height: 1.45; }
   .agent-timeline-wrap { display: grid; gap: 15px; padding: clamp(20px, 3vw, 32px); }
   .agent-timeline-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
   .agent-timeline-head h3 { margin: 0; font-size: 1rem; }
@@ -3797,6 +3843,8 @@
     font-size: .75rem;
   }
   body[data-dashboard-view="overview"] .agent-suggestion { min-height: 27px; padding: 4px 8px; font-size: .6rem; }
+  body[data-dashboard-view="overview"] .agent-message-list { max-height: 128px; }
+  body[data-dashboard-view="overview"] .agent-message { padding-block: 6px; font-size: .62rem; }
   body[data-dashboard-view="overview"] .agent-prompt-actions { gap: 8px; }
   body[data-dashboard-view="overview"] .agent-prompt-actions .faint { font-size: .59rem; }
   body[data-dashboard-view="overview"] .agent-prompt-actions .primary { min-height: 36px; padding: 6px 11px; font-size: .67rem; }
@@ -3825,7 +3873,7 @@
   .agent-step-evidence summary { width: max-content; cursor: pointer; color: var(--pg-text-muted); font-size: .56rem; font-weight: 850; text-decoration: underline; text-underline-offset: 2px; }
   .agent-step-evidence p { margin: 4px 0 0; padding: 6px 7px; border-left: 2px solid var(--bento-keyline); background: var(--pg-surface); color: var(--pg-text-muted); font-size: .58rem; line-height: 1.4; }
 
-  body[data-dashboard-view="overview"] .agent-result { min-height: 0; grid-template-rows: auto auto auto minmax(0, 1fr); }
+  body[data-dashboard-view="overview"] .agent-result { min-height: 0; grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
   body[data-dashboard-view="overview"] .agent-result-head { padding: 10px 14px; }
   body[data-dashboard-view="overview"] .agent-result-store span { font-size: .55rem; }
   body[data-dashboard-view="overview"] .agent-result-store strong { font-size: .82rem; }
@@ -3840,21 +3888,21 @@
   }
   body[data-dashboard-view="overview"] .agent-preview-mount :is(.preview-edit-toggle, .preview-ai-create, .preview-undo, #previewExpandToggle, #previewFullscreenToggle, .preview-save, .preview-art-direction, #previewStructureToggle) { display: none; }
   body[data-dashboard-view="overview"] .agent-approval-seam {
-    position: absolute;
+    position: static;
     z-index: 25;
-    top: 50%;
-    left: 38%;
-    display: grid;
-    width: 140px;
-    align-items: stretch;
+    display: flex;
+    width: auto;
+    align-items: center;
+    justify-content: space-between;
     gap: 7px;
-    padding: 11px;
-    border: 3px solid var(--bento-keyline);
-    box-shadow: 5px 5px 0 var(--bento-keyline);
-    transform: translate(-50%, -50%);
+    padding: 9px 14px;
+    border: 0;
+    border-top: 3px solid var(--bento-keyline);
+    box-shadow: none;
+    transform: none;
   }
-  body[data-dashboard-view="overview"] .agent-approval-seam > strong { font-size: .66rem; line-height: 1.2; text-align: center; }
-  body[data-dashboard-view="overview"] .agent-approval-seam button { width: 100%; min-height: 34px; padding: 6px 8px; font-size: .62rem; }
+  body[data-dashboard-view="overview"] .agent-approval-seam > strong { font-size: .66rem; line-height: 1.2; text-align: left; }
+  body[data-dashboard-view="overview"] .agent-approval-seam button { width: auto; min-height: 34px; padding: 6px 12px; font-size: .62rem; }
 
   @media (max-width: 820px) {
     body[data-dashboard-view="overview"] .topbar { min-height: 54px; margin-bottom: 8px; padding: 5px 0 7px; flex-wrap: nowrap; }
@@ -4140,12 +4188,16 @@
           <span class="agent-kicker">Yapi · agente de tu negocio</span>
           <h3 id="agentWorkspaceTitle">¿Qué quieres crear o mejorar?</h3>
           <p>Escribe el resultado que buscas. Yapi usa tu tienda y catálogo reales, prepara el siguiente paso y nunca cambia el sitio sin mostrarte qué ocurrirá.</p>
-          <label class="agent-prompt-label" for="agentWorkspaceInput">Tu objetivo</label>
-          <textarea id="agentWorkspaceInput" maxlength="1200" placeholder="Ej. Haz que mi tienda se sienta artesanal y prepara una portada para la nueva colección."></textarea>
+          <div class="agent-conversation" id="agentConversation" aria-live="polite">
+            <div class="agent-conversation-head"><strong>Conversación guardada</strong><span id="agentConversationStatus">Tienda por tienda</span></div>
+            <ol class="agent-message-list" id="agentMessageList"></ol>
+          </div>
+          <label class="agent-prompt-label" for="agentWorkspaceInput">Siguiente instrucción</label>
+          <textarea id="agentWorkspaceInput" maxlength="1200" placeholder="Ej. Mantén el catálogo, pero haz la apertura más cálida."></textarea>
           <div class="agent-suggestions" aria-label="Ideas rápidas">
-            <button class="agent-suggestion" type="button" data-agent-prompt="Diseña una portada nueva para mi colección más reciente.">Nueva portada</button>
-            <button class="agent-suggestion" type="button" data-agent-prompt="Ordena mi tienda para que los productos más importantes se entiendan primero.">Ordenar catálogo</button>
-            <button class="agent-suggestion" type="button" data-agent-prompt="Dale a mi sitio una identidad más propia sin perder claridad para comprar.">Mejorar identidad</button>
+            <button class="agent-suggestion" type="button" data-agent-prompt="Mantén el catálogo, pero haz la apertura más cálida.">Apertura más cálida</button>
+            <button class="agent-suggestion" type="button" data-agent-prompt="Conserva los productos y haz la historia más editorial.">Historia editorial</button>
+            <button class="agent-suggestion" type="button" data-agent-prompt="Haz el lenguaje visual más sereno sin tocar el catálogo.">Más sereno</button>
           </div>
           <div class="agent-prompt-actions">
             <span class="faint">Nada se publica sin una acción explícita.</span>
@@ -8648,8 +8700,63 @@
   let visualLoaderOffset = 0;
 
   const agentWorkspaceInputEl = document.getElementById("agentWorkspaceInput");
+  const agentMessageListEl = document.getElementById("agentMessageList");
+  const agentConversationStatusEl = document.getElementById("agentConversationStatus");
   const AGENT_PROMPT_KEY = "pagosya_agent_workspace_prompt";
   let agentGenerationRunning = false;
+  let agentMessages = [];
+  let agentConversationStoreId = null;
+  let agentConversationLoading = false;
+
+  function renderAgentConversation() {
+    const hasStore = Boolean(currentStoreId);
+    agentConversationStatusEl.textContent = !hasStore
+      ? "Selecciona una tienda"
+      : agentConversationLoading ? "Cargando…"
+      : agentMessages.length ? `${agentMessages.length} ${agentMessages.length === 1 ? "mensaje" : "mensajes"}` : "Empieza aquí";
+    if (!hasStore || !agentMessages.length) {
+      agentMessageListEl.innerHTML = `<li class="agent-conversation-empty">${hasStore ? "Tu primera instrucción abrirá una conversación que seguirá aquí cuando regreses." : "Cada tienda conserva su propia conversación y sus borradores."}</li>`;
+      return;
+    }
+    agentMessageListEl.innerHTML = agentMessages.map((message) => {
+      const metadata = message.metadata && typeof message.metadata === "object" ? message.metadata : {};
+      const changed = Array.isArray(metadata.changedAreas) ? metadata.changedAreas.filter((item) => typeof item === "string") : [];
+      const preserved = Array.isArray(metadata.preservedAreas) ? metadata.preservedAreas.filter((item) => typeof item === "string") : [];
+      const meta = message.role === "ASSISTANT" && (changed.length || preserved.length)
+        ? `<span class="agent-message-meta">${changed.length ? `Cambió: ${esc(changed.join(", "))}. ` : ""}${preserved.length ? `Conservó: ${esc(preserved.slice(0, 4).join(", "))}.` : ""}</span>`
+        : "";
+      const preview = message.role === "ASSISTANT" && message.proposalId
+        ? `<button class="agent-message-preview" type="button" data-agent-proposal="${esc(message.proposalId)}">Ver esta variante</button>`
+        : "";
+      return `<li class="agent-message" data-role="${esc(message.role)}">
+        <span class="agent-message-role">${message.role === "USER" ? "Tú" : "Yapi"}</span>
+        <div class="agent-message-copy"><p>${esc(message.content)}</p>${meta}${preview}</div>
+      </li>`;
+    }).join("");
+    agentMessageListEl.scrollTop = agentMessageListEl.scrollHeight;
+  }
+
+  async function loadAgentConversation(storeId = currentStoreId) {
+    agentConversationStoreId = storeId;
+    agentMessages = [];
+    agentConversationLoading = Boolean(storeId);
+    renderAgentConversation();
+    if (!storeId) return;
+    try {
+      const state = await api(`/stores/${storeId}/agent-conversation`);
+      if (storeId !== currentStoreId) return;
+      agentMessages = Array.isArray(state.messages) ? state.messages : [];
+    } catch (error) {
+      if (storeId !== currentStoreId) return;
+      agentConversationStatusEl.textContent = "No disponible";
+    } finally {
+      if (storeId === currentStoreId) {
+        agentConversationLoading = false;
+        renderAgentConversation();
+        renderAgentWorkspace();
+      }
+    }
+  }
 
   function setAgentStep(id, state, copy, status) {
     const step = document.getElementById(id);
@@ -8682,7 +8789,8 @@
     const hasProducts = products.length > 0;
     const hasProposal = proposals.length > 0;
     const publicStore = store?.status === "ACTIVE";
-    const prompt = agentWorkspaceInputEl?.value.trim() || "";
+    const latestSavedInstruction = [...agentMessages].reverse().find((message) => message.role === "USER")?.content || "";
+    const prompt = agentWorkspaceInputEl?.value.trim() || latestSavedInstruction;
 
     document.getElementById("agentStoreName").textContent = store?.name || "Selecciona una tienda";
     const storeOpen = document.getElementById("agentStoreOpen");
@@ -8796,7 +8904,18 @@
     renderAgentWorkspace();
   }));
   agentWorkspaceInputEl.addEventListener("input", renderAgentWorkspace);
-  document.getElementById("agentWorkspaceForm").addEventListener("submit", (event) => {
+  agentMessageListEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-agent-proposal]");
+    if (!button) return;
+    const proposal = visualProposals.find((candidate) => candidate.id === button.dataset.agentProposal);
+    if (!proposal) {
+      infoEl.textContent = "Esta variante ya no está disponible en los borradores recientes.";
+      return;
+    }
+    previewVisualProposal(proposal, { announce: false });
+    infoEl.textContent = `“${proposal.title}” está abierta en una vista privada.`;
+  });
+  document.getElementById("agentWorkspaceForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const prompt = agentWorkspaceInputEl.value.trim();
     if (!prompt) {
@@ -8816,11 +8935,40 @@
       openAgentDestination("products");
       return;
     }
-    document.getElementById("visualCreativeBrief").value = prompt;
     agentGenerationRunning = true;
-    infoEl.textContent = "Yapi está preparando tres direcciones. La vista se actualizará aquí y tu sitio público no cambiará.";
+    infoEl.textContent = "Yapi está preparando una variante privada y guardando esta conversación.";
     renderAgentWorkspace();
-    visualGenerateEl.click();
+    const activeSourceProposal = activeVisualProposalId
+      ? visualProposals.find((proposal) => proposal.id === activeVisualProposalId && proposal.config?.siteDocument)
+      : null;
+    const sourceProposal = activeSourceProposal
+      || visualProposals.find((proposal) => proposal.status !== "DISMISSED" && proposal.config?.siteDocument)
+      || null;
+    try {
+      const result = await api(`/stores/${currentStoreId}/agent-conversation/messages`, {
+        method: "POST",
+        body: JSON.stringify({ instruction: prompt, proposalId: sourceProposal?.id || undefined }),
+      });
+      const generatedProposals = Array.isArray(result.proposals) ? result.proposals : result.proposal ? [result.proposal] : [];
+      const generatedIds = new Set(generatedProposals.map((proposal) => proposal.id));
+      visualProposals = [...generatedProposals, ...visualProposals.filter((proposal) => !generatedIds.has(proposal.id))];
+      if (result.userMessage) agentMessages.push(result.userMessage);
+      if (result.assistantMessage) agentMessages.push(result.assistantMessage);
+      agentWorkspaceInputEl.value = "";
+      try { localStorage.removeItem(AGENT_PROMPT_KEY); } catch {}
+      renderVisualStudio();
+      renderAgentConversation();
+      if (generatedProposals[0]) previewVisualProposal(generatedProposals[0], { announce: false });
+      infoEl.textContent = sourceProposal
+        ? "La variante ya está en la vista privada. El catálogo y el sitio público permanecen intactos."
+        : "Las direcciones ya están en la vista privada. Ninguna fue aplicada ni publicada.";
+    } catch (err) {
+      errorEl.textContent = "No se pudo preparar la variante: " + err.message;
+      await loadAgentConversation(currentStoreId);
+    } finally {
+      agentGenerationRunning = false;
+      renderAgentWorkspace();
+    }
   });
   document.getElementById("agentReviewAction").addEventListener("click", () => {
     const visible = visualProposals.filter((proposal) => proposal.status !== "DISMISSED");
@@ -11380,6 +11528,7 @@
   }
 
   async function loadVisualStudioState(storeId = currentStoreId) {
+    void loadAgentConversation(storeId);
     if (visualStudioStoreId !== storeId) {
       activeVisualProposalId = null;
       previewLiveStatusEl.textContent = "En vivo";

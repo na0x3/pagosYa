@@ -167,6 +167,48 @@ describe("VisualStudioService", () => {
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.cartButtonLabel)).size).toBe(3);
   });
 
+  it("creates one targeted private revision while preserving catalog and commerce fields", async () => {
+    const { service, prisma } = setup();
+    await service.generate("merchant_1", "store_1", { businessCategory: "matcha" });
+    const sourceData = prisma.storeVisualProposal.create.mock.calls[0][0].data;
+    const sourceDocument = structuredClone(sourceData.config.siteDocument);
+    const sourceProposal = {
+      id: "proposal_source",
+      storeId: "store_1",
+      title: "Dirección inicial",
+      config: { ...sourceData.config, checkoutMode: "payment", siteDocument: sourceDocument },
+      sourceAssetUrls: sourceData.sourceAssetUrls,
+      generatedUrls: [],
+    };
+    prisma.storeVisualProposal.findFirst.mockResolvedValue(sourceProposal);
+    prisma.storeVisualProposal.create.mockClear();
+    prisma.storeVisualSignature.create.mockClear();
+
+    const result = await service.revise(
+      "merchant_1",
+      "store_1",
+      "proposal_source",
+      "Mantén el catálogo, pero haz la apertura más cálida.",
+    );
+
+    expect(result.plan).toEqual(expect.objectContaining({ target: "opening", tone: "warmer", preserveCatalog: true }));
+    expect(result.preservedAreas).toEqual(expect.arrayContaining(["catálogo", "productos", "precios", "inventario", "checkout", "estado público"]));
+    expect(prisma.storeVisualProposal.create).toHaveBeenCalledTimes(1);
+    const revision = prisma.storeVisualProposal.create.mock.calls[0][0].data.config;
+    const sourceOpening = sourceDocument.sections.find((section: { pageId?: string }) => !section.pageId);
+    const nextOpening = revision.siteDocument.sections.find((section: { pageId?: string }) => !section.pageId);
+    const sourceCatalog = sourceDocument.sections.find((section: { kind: string }) => section.kind === "catalog");
+    const nextCatalog = revision.siteDocument.sections.find((section: { kind: string }) => section.kind === "catalog");
+    expect(nextOpening.backgroundColor).not.toBe(sourceOpening.backgroundColor);
+    expect(nextCatalog).toEqual(sourceCatalog);
+    expect(revision.checkoutMode).toBe("payment");
+    expect(prisma.storeVisualSignature.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      storeId: "store_1",
+      sourceType: "PROPOSAL",
+      fingerprint: expect.stringMatching(/^[a-f0-9]{24}$/),
+    }) });
+  });
+
   it("stores a proposal as a content-free creative recipe", async () => {
     const { service, prisma } = setup();
     const document = {

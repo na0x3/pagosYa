@@ -15,6 +15,8 @@ import { CustomDomainsService } from "./custom-domains.service";
 import { CreateCustomDomainDto } from "./dto/create-custom-domain.dto";
 import { SaveVisualTemplateDto } from "./dto/save-visual-template.dto";
 import { SetVisualSectionLocksDto } from "./dto/set-visual-section-locks.dto";
+import { StoreAgentService } from "./store-agent.service";
+import { SendStoreAgentMessageDto } from "./dto/send-store-agent-message.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -29,6 +31,7 @@ export class StoresController {
   constructor(
     private readonly stores: StoresService,
     private readonly visualStudio: VisualStudioService,
+    private readonly storeAgent: StoreAgentService,
     private readonly customDomains: CustomDomainsService,
   ) {}
 
@@ -109,6 +112,21 @@ export class StoresController {
   @Post(":id/visual-proposals")
   generateVisualProposals(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: GenerateVisualProposalsDto) {
     return this.visualStudio.generate(merchant.id, id, dto);
+  }
+
+  @Get(":id/agent-conversation")
+  agentConversation(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string) {
+    return this.storeAgent.conversation(merchant.id, id);
+  }
+
+  @Post(":id/agent-conversation/messages")
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  sendAgentMessage(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("id") id: string,
+    @Body() dto: SendStoreAgentMessageDto,
+  ) {
+    return this.storeAgent.send(merchant.id, id, dto);
   }
 
   @Put(":id/visual-section-locks")
