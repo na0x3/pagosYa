@@ -3729,6 +3729,39 @@ test("switching stores clears the other store's AI output", async ({ page }) => 
   await expect(page.locator("#visualProposals .visual-proposal")).toHaveCount(0);
 });
 
+test("appearance toolbar keeps every action reachable at a laptop width", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const laptopStore = {
+    ...store("store_1", "Portátil"),
+    siteDocument: {
+      version: 1,
+      artDirection: "cinematic-atelier",
+      theme: { productLayout: "editorial" },
+      navigation: { layout: "split" },
+      sections: [
+        { id: "opening", kind: "hero", title: "Portada", mediaUrls: [] },
+        { id: "shop", kind: "catalog", title: "La colección", mediaUrls: [] },
+      ],
+    },
+  };
+  await openDashboard(page, [laptopStore]);
+  const toolbar = page.locator(".store-preview-toolbar");
+  const metrics = await toolbar.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const direction = document.getElementById("previewArtDirectionWrap")?.getBoundingClientRect();
+    const save = document.getElementById("previewSaveButton")?.getBoundingClientRect();
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      directionWidth: direction?.width || 0,
+      saveInside: Boolean(save && save.left >= bounds.left && save.right <= bounds.right + 1),
+    };
+  });
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  expect(metrics.directionWidth).toBeGreaterThanOrEqual(158);
+  expect(metrics.saveInside).toBe(true);
+});
+
 test("appearance editor remains usable at a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openDashboard(page, [store("store_1", "Móvil")]);

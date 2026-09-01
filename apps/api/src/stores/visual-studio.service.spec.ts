@@ -541,6 +541,9 @@ describe("VisualStudioService", () => {
       expect(config.animations).toEqual([]);
       expect(config.motionExperiences).toEqual([]);
       signatureTypes.push(config.siteDocument.experience.type);
+      const catalog = config.siteDocument.sections.find((section: { kind: string }) => section.kind === "catalog");
+      expect(config.siteDocument.experience.title).not.toBe(catalog.title);
+      expect(config.siteDocument.experience.body).not.toBe(catalog.body);
       const visibleTypes = [
         "hero-carousel",
         ...config.siteDocument.sections.map((section: { motion: string }) => section.motion).filter((motion: string) => motion !== "none"),

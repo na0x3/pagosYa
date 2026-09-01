@@ -1410,6 +1410,7 @@
     top: 16px;
     display: flex;
     flex-direction: column;
+    container: store-preview-panel / inline-size;
     min-width: 0;
     height: calc(100dvh - 32px);
     max-height: calc(100dvh - 32px);
@@ -1480,6 +1481,23 @@
   .preview-undo { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 8px; font-size: .68rem; white-space: nowrap; }
   .preview-undo svg { width: 14px; height: 14px; }
   .preview-edit-toggle[aria-pressed="true"] { border-color: var(--pg-brand); background: var(--pg-brand); color: var(--pg-brand-text); }
+  /* The preview often sits beside the dashboard rail, so viewport breakpoints
+     do not describe its real working width. Wrap against the panel itself and
+     keep every editing action reachable instead of collapsing the direction
+     selector or pushing Save outside the clipped canvas. */
+  @container store-preview-panel (max-width: 1100px) {
+    .store-preview-toolbar { flex-wrap: wrap; height: auto; }
+    .store-preview-toolbar > * { flex-shrink: 0; }
+    .store-preview-toolbar strong { margin-right: 0; }
+    .store-preview-toolbar .preview-art-direction {
+      flex: 1 1 180px;
+      max-width: 240px;
+    }
+    .store-preview-toolbar .preview-art-direction select {
+      width: 100%;
+      min-width: 0;
+    }
+  }
   .preview-editor-tools { display: grid; gap: 9px; margin-bottom: 10px; }
   .preview-section-inspector { display: grid; gap: 9px; padding: 10px; border: 1px solid var(--pg-border-strong); background: var(--pg-surface); }
   .preview-section-inspector-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

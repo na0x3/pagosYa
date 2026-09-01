@@ -861,6 +861,30 @@ function enforceGeneratedNarrative(
     : motionProfile.signature === motionProfile.visual
       ? uniqueMedia(document.experience.mediaUrls, 2, 5)
       : [];
+  const copyKey = (value: string) => value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const sectionTitleKeys = new Set(normalizedSections.map((section) => copyKey(section.title)).filter(Boolean));
+  const sectionBodyKeys = new Set(normalizedSections.map((section) => copyKey(section.body)).filter(Boolean));
+  const productNames = products.map((product) => product.name.trim()).filter(Boolean).slice(0, 3);
+  const evidence = productNames.length
+    ? `Un recorrido visual por ${productNames.join(", ")}.`
+    : `Una secuencia visual construida con las imágenes de ${store.name}.`;
+  const experienceFallbacks = [
+    { title: `${store.name}, en detalle`, body: evidence },
+    { title: `Otra mirada a ${store.name}`, body: evidence },
+    { title: `${store.name} en movimiento`, body: evidence },
+  ];
+  const experienceFallback = experienceFallbacks[directionIndex % experienceFallbacks.length];
+  const experienceTitle = sectionTitleKeys.has(copyKey(document.experience.title))
+    ? experienceFallback.title.slice(0, 100)
+    : document.experience.title;
+  const experienceBody = sectionBodyKeys.has(copyKey(document.experience.body))
+    ? experienceFallback.body.slice(0, 220)
+    : document.experience.body;
 
   return {
     ...document,
@@ -868,6 +892,8 @@ function enforceGeneratedNarrative(
       ...document.experience,
       type: motionProfile.signature,
       placement: "after-catalog",
+      title: experienceTitle,
+      body: experienceBody,
       mediaUrls: experienceMediaUrls,
     },
     sections: normalizedSections,

@@ -3620,24 +3620,31 @@ function scrollStorePreviewToSection(section: StorePreviewSection | `animation-$
     const target = app.querySelector<HTMLElement>(selectors[section as StorePreviewSection]);
     if (!target) return;
     const reduceMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const targetRect = target.getBoundingClientRect();
-    const documentHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    const centeredTop = window.scrollY + targetRect.top - (window.innerHeight - targetRect.height) / 2;
-    const top = Math.max(0, Math.min(centeredTop, Math.max(0, documentHeight - window.innerHeight)));
     // scrollIntoView can propagate through an iframe and move the merchant
     // dashboard. Scrolling this window directly keeps all movement inside the
     // storefront preview while preserving the editor's page position.
-    window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+    window.scrollTo({ top: storePreviewScrollTop(target), behavior: reduceMotion ? "auto" : "smooth" });
   });
+}
+
+function storePreviewScrollTop(target: HTMLElement): number {
+  const targetRect = target.getBoundingClientRect();
+  const documentHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+  const maxTop = Math.max(0, documentHeight - window.innerHeight);
+  const absoluteTop = window.scrollY + targetRect.top;
+  // Center compact controls, but align long storefront sections near their
+  // beginning. Centering a multi-viewport animation jumps thousands of pixels
+  // into its scroll track and makes the preview appear blank or broken.
+  const topInset = Math.min(96, Math.max(20, Math.round(window.innerHeight * .14)));
+  const proposedTop = targetRect.height >= window.innerHeight * .9
+    ? absoluteTop - topInset
+    : absoluteTop - (window.innerHeight - targetRect.height) / 2;
+  return Math.max(0, Math.min(proposedTop, maxTop));
 }
 
 function scrollStorePreviewToElement(target: HTMLElement): void {
   const reduceMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const targetRect = target.getBoundingClientRect();
-  const documentHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-  const centeredTop = window.scrollY + targetRect.top - (window.innerHeight - targetRect.height) / 2;
-  const top = Math.max(0, Math.min(centeredTop, Math.max(0, documentHeight - window.innerHeight)));
-  window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+  window.scrollTo({ top: storePreviewScrollTop(target), behavior: reduceMotion ? "auto" : "smooth" });
 }
 
 function scrollStorePreviewToMotion(): void {
@@ -5315,10 +5322,19 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     "capítulos a pantalla completa", "capítulos completos", "llamado magnético", "secuencia por fotogramas",
     "secuencia de cuadros", "galería tridimensional",
   ]);
+  const renderedCopyKey = (value: string) => value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const catalogTitleKey = renderedCopyKey(siteSection("catalog")?.title || store.catalogTitle?.trim() || "");
+  const catalogBodyKey = renderedCopyKey(siteSection("catalog")?.body || store.catalogSubtitle?.trim() || "");
   const motionSectionHtmlByKey = Object.fromEntries(animationInstances.map((animation) => {
     const rawDescription = animation.subtitle?.trim() || "";
     const publicDescription = generatedAnimationDescriptions.has(rawDescription)
       || technicalAnimationTerms.some((term) => rawDescription.toLowerCase().includes(term))
+      || (!!catalogBodyKey && renderedCopyKey(rawDescription) === catalogBodyKey)
       ? ""
       : rawDescription;
     const accessibleLabel = animation.name?.trim() || "Animación visual";
@@ -5572,6 +5588,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const publicTitle = normalizedGeneralTitle === accessibleLabel.toLocaleLowerCase()
       || technicalAnimationTitles.has(normalizedGeneralTitle)
       || technicalAnimationTerms.some((term) => normalizedGeneralTitle === term)
+      || (!!catalogTitleKey && renderedCopyKey(generalTitle) === catalogTitleKey)
       ? ""
       : generalTitle;
     const descriptionHtml = !isTextAnimation && (publicTitle || publicDescription)

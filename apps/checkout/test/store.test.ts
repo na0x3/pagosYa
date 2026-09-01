@@ -3339,6 +3339,38 @@ describe("storefront routes", () => {
     expect(sections[1].textContent).not.toContain("Organizador · apertura");
   });
 
+  it("does not repeat the catalog heading as an empty-looking motion preface", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchStore: vi.fn().mockResolvedValue({
+        ...baseStoreFields,
+        storeName: "Tienda sin repetición",
+        catalogTitle: "La selección",
+        catalogSubtitle: "Una colección clara, pensada para explorar sin prisa.",
+        contentOrder: ["products", "animation-signature", "links"],
+        animations: [{
+          id: "signature",
+          name: "Capítulos completos",
+          type: "full-screen-chapters",
+          title: "La selección",
+          subtitle: "Una colección clara, pensada para explorar sin prisa.",
+          media: [
+            { imageUrl: "/v1/uploads/scene-1.webp", title: "Primer detalle" },
+            { imageUrl: "/v1/uploads/scene-2.webp", title: "Segundo detalle" },
+          ],
+        }],
+        items: [baseItem],
+      } satisfies Store),
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/?link=motion-with-catalog-copy");
+
+    const section = document.querySelector<HTMLElement>('[data-animation-id="signature"]')!;
+    expect(section).not.toBeNull();
+    expect(section.querySelector(".store-motion-description")).toBeNull();
+    expect(section.querySelector("[data-full-chapters]")).not.toBeNull();
+  });
+
   it("renders independent text objects and opens typography controls directly on the preview canvas", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({
