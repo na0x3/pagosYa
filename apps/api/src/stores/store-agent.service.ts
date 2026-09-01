@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SendStoreAgentMessageDto } from "./dto/send-store-agent-message.dto";
-import { VisualStudioService } from "./visual-studio.service";
+import { storeAgentInstructionIsScoped, VisualStudioService } from "./visual-studio.service";
 
 @Injectable()
 export class StoreAgentService {
@@ -50,9 +50,12 @@ export class StoreAgentService {
     });
     const context = (existing?.messages ?? []).slice().reverse().map((message) => `${message.role === "USER" ? "Comercio" : "Yapi"}: ${message.content}`);
     try {
-      if (dto.proposalId) {
-        const revision = await this.visualStudio.revise(merchantId, storeId, dto.proposalId, instruction, context);
-        const assistantContent = `Preparé una variante privada. Cambié ${revision.changedAreas.join(", ")}. Conservé ${revision.preservedAreas.join(", ")}. Nada fue aplicado ni publicado.`;
+      if (dto.proposalId || storeAgentInstructionIsScoped(instruction)) {
+        const revision = await this.visualStudio.revise(merchantId, storeId, dto.proposalId ?? null, instruction, context);
+        const socialLinkNote = revision.plan.target === "footer" && revision.plan.socialHandle && revision.plan.socialPlatform === "unknown"
+          ? ` Mostré ${revision.plan.socialHandle} como texto; dime la plataforma o el enlace si quieres que sea clicable.`
+          : "";
+        const assistantContent = `Preparé una variante privada. Cambié ${revision.changedAreas.join(", ")}. Conservé ${revision.preservedAreas.join(", ")}.${socialLinkNote} Nada fue aplicado ni publicado.`;
         const assistantMessage = await this.prisma.storeAgentMessage.create({
           data: {
             threadId: thread.id,

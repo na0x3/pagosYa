@@ -13,7 +13,14 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
 import { STORE_FONT_STYLES, type StoreFontStyle } from "./dto/create-store.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
-import { AI_SITE_DOCUMENT_SCHEMA, materializeSiteDocument, siteDocumentJson, type AiSiteDocument, type StoreSiteDocument } from "./site-document";
+import {
+  AI_SITE_DOCUMENT_SCHEMA,
+  materializeSiteDocument,
+  siteDocumentJson,
+  type AiSiteDocument,
+  type StoreSiteDocument,
+  type StoreSiteFooter,
+} from "./site-document";
 import {
   TtlLruCache,
   applyStorefrontCreativeRecipe,
@@ -59,9 +66,11 @@ type AiDirection = { title: string; rationale: string; siteDocument: AiSiteDocum
 type MaterializedAiDirection = Omit<AiDirection, "siteDocument"> & { siteDocument: StoreSiteDocument };
 
 export type StoreAgentRevisionPlan = {
-  target: "opening" | "catalog" | "story" | "gallery" | "contact" | "site";
+  target: "opening" | "catalog" | "story" | "gallery" | "contact" | "footer" | "site" | "unsupported";
   tone: "warmer" | "cooler" | "bolder" | "quieter" | "minimal" | "editorial" | "unchanged";
   preserveCatalog: boolean;
+  socialHandle: string;
+  socialPlatform: "instagram" | "tiktok" | "facebook" | "x" | "youtube" | "unknown";
   summary: string;
 };
 
@@ -894,6 +903,7 @@ function finalizeGeneratedPages(
   return {
     ...documentWithoutPages,
     ...(pages.length ? { pages } : {}),
+    ...(liveDocument?.footer ? { footer: structuredClone(liveDocument.footer) } : {}),
     navigation: {
       ...document.navigation,
       items: [
@@ -1039,17 +1049,6 @@ function normalizedAgentInstruction(value: string): string {
 function localAgentRevisionPlan(instruction: string): StoreAgentRevisionPlan {
   const normalized = normalizedAgentInstruction(instruction);
   const preserveCatalog = /(manten|mantener|conserv|preserv|no (?:cambies|toques|modifiques)).{0,32}(catalog|producto|tienda)/.test(normalized);
-  const target: StoreAgentRevisionPlan["target"] = /(apertura|portada|inicio|hero|cabecera)/.test(normalized)
-    ? "opening"
-    : /(historia|story|relato)/.test(normalized)
-      ? "story"
-      : /(galeria|gallery|fotos)/.test(normalized)
-        ? "gallery"
-        : /(contacto|contact)/.test(normalized)
-          ? "contact"
-          : /(catalog|producto|tienda)/.test(normalized) && !preserveCatalog
-            ? "catalog"
-            : "site";
   const tone: StoreAgentRevisionPlan["tone"] = /(calid|acogedor|cercan|humano)/.test(normalized)
     ? "warmer"
     : /(fresc|frio|sobrio azulado)/.test(normalized)
@@ -1063,9 +1062,47 @@ function localAgentRevisionPlan(instruction: string): StoreAgentRevisionPlan {
             : /(editorial|revista)/.test(normalized)
               ? "editorial"
               : "unchanged";
-  const targetLabel = target === "opening" ? "la apertura" : target === "site" ? "el lenguaje visual" : `la sección ${target}`;
+  const target: StoreAgentRevisionPlan["target"] = /(footer|pie de pagina|\bred(?:es)?\b|\bsocial(?:es)?\b|sigueme|siguenos)/.test(normalized)
+    ? "footer"
+    : /(apertura|portada|inicio|hero|cabecera)/.test(normalized)
+    ? "opening"
+    : /(historia|story|relato)/.test(normalized)
+      ? "story"
+      : /(galeria|gallery|fotos)/.test(normalized)
+        ? "gallery"
+        : /(contacto|contact)/.test(normalized)
+          ? "contact"
+          : /(catalog|producto|tienda)/.test(normalized) && !preserveCatalog
+            ? "catalog"
+            : tone !== "unchanged"
+              ? "site"
+              : "unsupported";
+  const handleMatch = instruction.match(/(?:^|\s)@([a-z0-9._-]{1,30})\b/i);
+  const socialHandle = handleMatch ? `@${handleMatch[1]}` : "";
+  const socialPlatform: StoreAgentRevisionPlan["socialPlatform"] = /instagram/.test(normalized)
+    ? "instagram"
+    : /tiktok/.test(normalized)
+      ? "tiktok"
+      : /facebook/.test(normalized)
+        ? "facebook"
+        : /(?:^|\s)(?:twitter|x)(?:\s|$)/.test(normalized)
+          ? "x"
+          : /youtube/.test(normalized)
+            ? "youtube"
+            : "unknown";
+  const targetLabel = target === "opening" ? "la apertura" : target === "site" ? "el lenguaje visual" : target === "footer" ? "el pie de página" : `la sección ${target}`;
   const toneLabel = tone === "unchanged" ? "siguiendo la instrucción" : `con un tono ${tone}`;
-  return { target, tone, preserveCatalog, summary: `Ajustar ${targetLabel} ${toneLabel}.` };
+  const summary = target === "footer" && socialHandle
+    ? `Agregar ${socialHandle} al pie de página sin cambiar el resto de la tienda.`
+    : target === "unsupported"
+      ? "La instrucción no identifica una zona editable de forma segura."
+      : `Ajustar ${targetLabel} ${toneLabel}.`;
+  return { target, tone, preserveCatalog, socialHandle, socialPlatform, summary };
+}
+
+export function storeAgentInstructionIsScoped(instruction: string): boolean {
+  const target = localAgentRevisionPlan(instruction).target;
+  return target !== "site" && target !== "unsupported";
 }
 
 function hexChannels(value: string): [number, number, number] | null {
@@ -1098,7 +1135,61 @@ function readableText(background: string, preferred: string): string {
   return contrastRatio(background, "#17120f") >= contrastRatio(background, "#fffaf2") ? "#17120f" : "#fffaf2";
 }
 
+function socialHref(platform: StoreAgentRevisionPlan["socialPlatform"], handle: string): string {
+  const username = handle.replace(/^@/, "");
+  if (!username) return "";
+  if (platform === "instagram") return `https://instagram.com/${username}`;
+  if (platform === "tiktok") return `https://tiktok.com/@${username}`;
+  if (platform === "facebook") return `https://facebook.com/${username}`;
+  if (platform === "x") return `https://x.com/${username}`;
+  if (platform === "youtube") return `https://youtube.com/@${username}`;
+  return "";
+}
+
+function footerWithSocialHandle(document: StoreSiteDocument, plan: StoreAgentRevisionPlan): StoreSiteFooter {
+  const footer: StoreSiteFooter = document.footer
+    ? structuredClone(document.footer)
+    : {
+        enabled: true,
+        brandDescription: "",
+        columns: [],
+        copyright: "",
+        badge: "",
+      };
+  footer.enabled = true;
+  if (!plan.socialHandle) return footer;
+  let column = footer.columns.find((candidate) => /(redes|social|siguenos|síguenos)/i.test(`${candidate.id} ${candidate.title}`));
+  if (!column && footer.columns.length < 4) {
+    column = { id: "social", title: "Redes", items: [] };
+    footer.columns.push(column);
+  }
+  column ??= footer.columns.find((candidate) => candidate.items.length < 8);
+  if (!column) throw new BadRequestException("El pie de página ya alcanzó el máximo de enlaces. Quita uno antes de agregar otra red.");
+  const href = socialHref(plan.socialPlatform, plan.socialHandle);
+  const duplicate = column.items.find((item) => item.label.toLowerCase() === plan.socialHandle.toLowerCase());
+  if (duplicate) {
+    if (href) duplicate.href = href;
+    return footer;
+  }
+  const baseId = `social-${plan.socialHandle.replace(/^@/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`.slice(0, 48);
+  const existingIds = new Set(footer.columns.flatMap((candidate) => candidate.items.map((item) => item.id)));
+  let id = baseId || "social-handle";
+  for (let suffix = 2; existingIds.has(id); suffix += 1) id = `${baseId.slice(0, 44)}-${suffix}`;
+  column.items.push({ id, label: plan.socialHandle, href });
+  return footer;
+}
+
 function applyAgentRevisionPlan(document: StoreSiteDocument, plan: StoreAgentRevisionPlan): StoreSiteDocument {
+  if (plan.target === "unsupported") {
+    throw new BadRequestException("Dime qué zona quieres cambiar —por ejemplo apertura, catálogo, historia, galería, contacto o pie de página— para preparar una variante segura.");
+  }
+  if (plan.target === "footer") {
+    return {
+      ...structuredClone(document),
+      direction: `${document.direction || "Dirección propia"} · ${plan.summary}`.slice(0, 120),
+      footer: footerWithSocialHandle(document, plan),
+    };
+  }
   const openingId = document.sections.find((section) => !section.pageId && (!plan.preserveCatalog || section.kind !== "catalog"))?.id
     ?? document.sections[0]?.id;
   const matchesTarget = (section: StoreSiteDocument["sections"][number]) => {
@@ -1247,11 +1338,13 @@ export class VisualStudioService {
     const schema = {
       type: "object",
       additionalProperties: false,
-      required: ["target", "tone", "preserveCatalog", "summary"],
+      required: ["target", "tone", "preserveCatalog", "socialHandle", "socialPlatform", "summary"],
       properties: {
-        target: { type: "string", enum: ["opening", "catalog", "story", "gallery", "contact", "site"] },
+        target: { type: "string", enum: ["opening", "catalog", "story", "gallery", "contact", "footer", "site", "unsupported"] },
         tone: { type: "string", enum: ["warmer", "cooler", "bolder", "quieter", "minimal", "editorial", "unchanged"] },
         preserveCatalog: { type: "boolean" },
+        socialHandle: { type: "string", maxLength: 31, pattern: "^$|^@[A-Za-z0-9._-]{1,30}$" },
+        socialPlatform: { type: "string", enum: ["instagram", "tiktok", "facebook", "x", "youtube", "unknown"] },
         summary: { type: "string", minLength: 1, maxLength: 160 },
       },
     };
@@ -1259,6 +1352,8 @@ export class VisualStudioService {
     const prompt = [
       "Interpreta una instrucción de edición para una tienda. Devuelve sólo un plan JSON acotado; no escribas HTML, CSS ni código.",
       "El plan puede cambiar el tono visual de una zona, pero nunca precios, productos, inventario, pagos, checkout, formularios, KYC ni publicación.",
+      "Usa target footer para redes sociales o pie de página. Copia un @usuario en socialHandle. No inventes una plataforma: usa unknown cuando no esté nombrada.",
+      "Usa target unsupported cuando la instrucción no identifique una zona o un cambio visual seguro; nunca uses site como comodín.",
       "preserveCatalog debe ser true cuando el comercio pida mantener, conservar o no tocar el catálogo o los productos.",
       `Secciones disponibles:\n${sections}`,
       conversationContext.length ? `Contexto reciente:\n${conversationContext.slice(-6).join("\n")}` : "Sin contexto anterior.",
@@ -1290,11 +1385,18 @@ export class VisualStudioService {
       const plan = JSON.parse(output) as StoreAgentRevisionPlan;
       const guardedPlan: StoreAgentRevisionPlan = {
         ...plan,
-        target: fallback.target !== "site" ? fallback.target : plan.target,
+        target: fallback.target !== "site" && fallback.target !== "unsupported" ? fallback.target : plan.target,
         tone: fallback.tone !== "unchanged" ? fallback.tone : plan.tone,
         preserveCatalog: fallback.preserveCatalog || plan.preserveCatalog,
+        socialHandle: fallback.socialHandle || (/^@[A-Za-z0-9._-]{1,30}$/.test(plan.socialHandle) ? plan.socialHandle : ""),
+        socialPlatform: fallback.target === "footer"
+          ? fallback.socialPlatform
+          : fallback.socialPlatform !== "unknown"
+            ? fallback.socialPlatform
+            : plan.socialPlatform,
       };
-      const targetExists = guardedPlan.target === "site" || guardedPlan.target === "opening" || document.sections.some((section) => section.kind === guardedPlan.target);
+      const targetExists = ["site", "opening", "footer", "unsupported"].includes(guardedPlan.target)
+        || document.sections.some((section) => section.kind === guardedPlan.target);
       return targetExists ? guardedPlan : fallback;
     } catch (error) {
       this.logger.warn(`Agent revision planning fell back to bounded local intent: ${(error as Error).message}`);
@@ -1305,18 +1407,24 @@ export class VisualStudioService {
   async revise(
     merchantId: string,
     storeId: string,
-    proposalId: string,
+    proposalId: string | null,
     instruction: string,
     conversationContext: string[] = [],
   ) {
-    await this.ownedStore(merchantId, storeId);
-    const source = await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } });
-    if (!source) throw new NotFoundException("Visual proposal not found");
-    const sourceConfig = source.config && typeof source.config === "object" && !Array.isArray(source.config)
+    const store = await this.ownedStore(merchantId, storeId);
+    const source = proposalId
+      ? await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } })
+      : null;
+    if (proposalId && !source) throw new NotFoundException("Visual proposal not found");
+    const sourceConfig = source?.config && typeof source.config === "object" && !Array.isArray(source.config)
       ? source.config as Record<string, unknown>
-      : {};
+      : snapshot(store) as Record<string, unknown>;
     const sourceDocument = storedSiteDocument(sourceConfig.siteDocument);
-    if (!sourceDocument) throw new BadRequestException("La propuesta ya no contiene un documento visual editable");
+    if (!sourceDocument) {
+      throw new BadRequestException(proposalId
+        ? "La propuesta ya no contiene un documento visual editable"
+        : "La tienda actual todavía no tiene un sitio estructurado que el agente pueda editar sin regenerarlo. Crea una dirección visual primero.");
+    }
     const plan = await this.agentRevisionPlan(instruction, sourceDocument, conversationContext);
     const nextDocument = applyAgentRevisionPlan(sourceDocument, plan);
     const nextConfig = {
@@ -1328,14 +1436,14 @@ export class VisualStudioService {
       const created = await transaction.storeVisualProposal.create({
         data: {
           storeId,
-          title: `${source.title} · ajuste`.slice(0, 120),
+          title: `${source?.title ?? store.name} · ajuste`.slice(0, 120),
           rationale: plan.summary,
           provider: this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey")
             ? `agent:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol"}`
             : "agent:bounded-local",
           config: nextConfig,
-          sourceAssetUrls: source.sourceAssetUrls as Prisma.InputJsonValue,
-          generatedUrls: source.generatedUrls as Prisma.InputJsonValue,
+          sourceAssetUrls: (source?.sourceAssetUrls ?? []) as Prisma.InputJsonValue,
+          generatedUrls: (source?.generatedUrls ?? []) as Prisma.InputJsonValue,
         },
       });
       await transaction.storeVisualSignature.create({
@@ -1349,9 +1457,16 @@ export class VisualStudioService {
       });
       return created;
     });
-    const changedAreas = plan.target === "opening" ? ["apertura"] : plan.target === "site" ? ["lenguaje visual"] : [plan.target];
+    const changedAreas = plan.target === "opening"
+      ? ["apertura"]
+      : plan.target === "site"
+        ? ["lenguaje visual"]
+        : plan.target === "footer"
+          ? ["pie de página"]
+          : [plan.target];
     const preservedAreas = [
       ...(plan.preserveCatalog || plan.target !== "catalog" ? ["catálogo"] : []),
+      ...(plan.target === "footer" ? ["menú", "secciones", "colores y tipografía"] : []),
       "productos",
       "precios",
       "inventario",

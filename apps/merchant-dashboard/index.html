@@ -3814,10 +3814,11 @@
   body[data-dashboard-view="overview"] .agent-workspace {
     position: relative;
     grid-template-columns: minmax(330px, 38fr) minmax(0, 62fr);
-    height: calc(100dvh - 86px);
-    min-height: 680px;
+    height: auto;
+    min-height: max(720px, calc(100dvh - 86px));
+    align-items: stretch;
     margin: 0 7px 30px 0;
-    overflow: hidden;
+    overflow: visible;
   }
   body[data-dashboard-view="overview"] .agent-workbench {
     display: grid;
@@ -3852,7 +3853,7 @@
     min-height: 0;
     align-content: start;
     gap: 9px;
-    overflow-y: auto;
+    overflow: visible;
     padding: 14px 18px;
   }
   body[data-dashboard-view="overview"] .agent-timeline-head h3 { font-size: .82rem; }
@@ -3873,20 +3874,21 @@
   .agent-step-evidence summary { width: max-content; cursor: pointer; color: var(--pg-text-muted); font-size: .56rem; font-weight: 850; text-decoration: underline; text-underline-offset: 2px; }
   .agent-step-evidence p { margin: 4px 0 0; padding: 6px 7px; border-left: 2px solid var(--bento-keyline); background: var(--pg-surface); color: var(--pg-text-muted); font-size: .58rem; line-height: 1.4; }
 
-  body[data-dashboard-view="overview"] .agent-result { min-height: 0; grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+  body[data-dashboard-view="overview"] .agent-result { min-height: max(720px, calc(100dvh - 86px)); grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
   body[data-dashboard-view="overview"] .agent-result-head { padding: 10px 14px; }
   body[data-dashboard-view="overview"] .agent-result-store span { font-size: .55rem; }
   body[data-dashboard-view="overview"] .agent-result-store strong { font-size: .82rem; }
   body[data-dashboard-view="overview"] .agent-lifecycle-step { padding: 8px 10px; }
-  body[data-dashboard-view="overview"] .agent-preview-mount { min-height: 0; padding: 8px; }
+  body[data-dashboard-view="overview"] .agent-preview-mount { min-height: clamp(520px, 68dvh, 760px); padding: 8px; }
   body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-panel,
   body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-stage,
-  body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-frame { min-height: 0; height: 100%; }
+  body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-frame { min-height: clamp(520px, 68dvh, 760px); height: 100%; }
   body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-toolbar {
     min-height: 42px;
     padding: 6px 9px;
   }
   body[data-dashboard-view="overview"] .agent-preview-mount :is(.preview-edit-toggle, .preview-ai-create, .preview-undo, #previewExpandToggle, #previewFullscreenToggle, .preview-save, .preview-art-direction, #previewStructureToggle) { display: none; }
+  body[data-dashboard-view="overview"] .agent-preview-mount #previewFullscreenToggle { display: grid; }
   body[data-dashboard-view="overview"] .agent-approval-seam {
     position: static;
     z-index: 25;
@@ -3955,6 +3957,10 @@
     body[data-dashboard-view="overview"] .agent-step { min-height: 56px; }
     body[data-dashboard-view="overview"] .agent-step:not(:last-child)::after { display: block; }
     body[data-dashboard-view="overview"] .agent-result { min-height: 540px; grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+    body[data-dashboard-view="overview"] .agent-preview-mount,
+    body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-panel,
+    body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-stage,
+    body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-frame { min-height: 420px; }
     body[data-dashboard-view="overview"] .agent-approval-seam {
       position: sticky;
       bottom: 8px;
@@ -4232,8 +4238,8 @@
         </div>
       </div>
     </section>
-    <div class="overview-operations-heading" data-dashboard-page="overview"><span>Herramientas de control</span><h3>Resumen operativo</h3></div>
-    <div class="cards" data-dashboard-page="overview">
+    <div class="overview-operations-heading" data-dashboard-page="operations"><span>Herramientas de control</span><h3>Resumen operativo</h3></div>
+    <div class="cards" data-dashboard-page="operations">
       <div class="card">
         <div class="card-head">
           <span class="muted">Saldo por pagar</span>
@@ -4264,7 +4270,7 @@
       </div>
     </div>
 
-    <section class="gamification-summary" id="gamificationSummary" data-dashboard-page="overview" aria-labelledby="gamificationSummaryTitle">
+    <section class="gamification-summary" id="gamificationSummary" data-dashboard-page="progress" aria-labelledby="gamificationSummaryTitle">
       <div class="gamification-summary-character"><img id="gamificationSummaryImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
       <div class="gamification-summary-copy">
         <div class="gamification-summary-title"><h3 id="gamificationSummaryTitle">Tu negocio gana experiencia</h3><strong id="gamificationSummaryXp">0 XP</strong></div>
@@ -4275,7 +4281,7 @@
       </div>
     </section>
 
-    <section class="block" id="financesSection" data-dashboard-page="overview">
+    <section class="block" id="financesSection" data-dashboard-page="operations">
       <div class="panel finance-bento">
         <div class="section-head">
           <div>
@@ -5517,7 +5523,7 @@
               </section>
             </div>
             <div class="store-preview-stage is-empty" id="storePreviewStage">
-              <iframe class="store-preview-frame" id="storePreviewFrame" title="Vista previa editable de la tienda" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
+              <iframe class="store-preview-frame" id="storePreviewFrame" title="Vista previa editable de la tienda" scrolling="yes" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
               <div class="store-preview-status" id="storePreviewStatus" role="status" aria-live="polite">
                 <strong id="storePreviewStatusTitle">Preparando vista previa</strong>
                 <span id="storePreviewStatusMessage">Conectando con Checkout de pagosYa…</span>
@@ -7477,6 +7483,7 @@
   function initDashboardSidebarToggle() {
     const shell = document.querySelector(".dashboard-shell");
     const toggle = document.getElementById("dashboardSidebarToggle");
+    const toolDrawer = document.getElementById("dashboardToolDrawer");
     if (!shell || !toggle) return;
     const storageKey = "pagosya_dashboard_sidebar_collapsed";
     document.querySelectorAll(".dashboard-nav-button").forEach((link) => {
@@ -7491,6 +7498,12 @@
     };
     setCollapsed(savedExpandedState(storageKey, false), false);
     toggle.addEventListener("click", () => setCollapsed(!shell.classList.contains("is-sidebar-collapsed")));
+    window.addEventListener("scroll", () => {
+      if (document.body.dataset.dashboardView === "overview" && toolDrawer?.open) toolDrawer.open = false;
+    }, { passive: true });
+    document.addEventListener("pointerdown", (event) => {
+      if (document.body.dataset.dashboardView === "overview" && toolDrawer?.open && !toolDrawer.contains(event.target)) toolDrawer.open = false;
+    });
   }
 
   let storePreviewFullscreen = false;
@@ -8861,11 +8874,11 @@
       reviewButton.textContent = "Preparando…";
     } else if (activeProposal || (hasProposal && !appliedProposal)) {
       approvalTitle.textContent = activeProposal ? "Vista privada lista" : "Borrador listo";
-      approvalCopy.textContent = "La tienda pública no cambia hasta que uses una propuesta.";
+      approvalCopy.textContent = "Desplázate dentro de la vista o ábrela en pantalla completa. La tienda pública no cambia.";
       reviewButton.textContent = "Revisar";
     } else if (appliedProposal) {
       approvalTitle.textContent = "Sitio aplicado";
-      approvalCopy.textContent = "Puedes seguir editándolo o restaurar una versión anterior.";
+      approvalCopy.textContent = "Desplázate dentro de la vista para recorrer el sitio; también puedes restaurar una versión anterior.";
       reviewButton.textContent = "Revisar";
     } else {
       approvalTitle.textContent = "Sin borrador";

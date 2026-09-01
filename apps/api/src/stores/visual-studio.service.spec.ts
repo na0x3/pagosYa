@@ -209,6 +209,56 @@ describe("VisualStudioService", () => {
     }) });
   });
 
+  it("adds an unambiguous social handle to the footer without changing the menu or site", async () => {
+    const { service, prisma } = setup();
+    const sourceDocument = {
+      version: 1,
+      direction: "Editorial",
+      designGenome: { composition: "editorial-split", rhythm: "editorial", geometry: "framed", colorStrategy: "accent-led", mediaStrategy: "framed", typeScale: "editorial", motionLanguage: "reveal" },
+      theme: { pageBackground: "#ffffff", textColor: "#111111", accentColor: "#bb5500", secondaryColor: "#225566", surfaceColor: "#f5f5f5", mutedColor: "#666666", borderColor: "#dddddd", headingFont: "editorial", bodyFont: "grotesk", radius: 0, shadow: "none", productLayout: "editorial", displayScale: "dramatic", density: "airy", imageTreatment: "editorial" },
+      navigation: { layout: "split", sticky: false, transparent: false, logoTreatment: "wordmark", items: [{ id: "home", label: "Inicio", target: "home" }] },
+      motion: { intensity: "restrained" },
+      merchandising: { featuredProductIds: ["product_matcha"], productOrderIds: ["product_matcha"], spotlightLayout: "feature-first", showDescriptions: true },
+      experience: { type: "text-reveal-block", placement: "after-catalog", title: "Ritual", body: "Matcha", mediaUrls: [] },
+      sections: [{ id: "opening", kind: "hero", family: "editorial", layout: "split", width: "wide", align: "left", motion: "reveal", title: "MATCHO", body: "Matcha", ctaLabel: "Comprar", backgroundColor: "#ffffff", textColor: "#111111", mediaUrls: [], items: [] }],
+      footer: {
+        enabled: true,
+        brandDescription: "Matcha preparado con calma.",
+        columns: [{ id: "brand", title: "Sigue la marca", items: [] }],
+        copyright: "MATCHO",
+        badge: "Hecho en Bolivia",
+      },
+    };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument: sourceDocument });
+    prisma.storeVisualProposal.create.mockClear();
+
+    const result = await service.revise(
+      "merchant_1",
+      "store_1",
+      null,
+      "incluye mis redes en el footer @joaoreis",
+    );
+
+    expect(result.plan).toEqual(expect.objectContaining({
+      target: "footer",
+      tone: "unchanged",
+      socialHandle: "@joaoreis",
+      socialPlatform: "unknown",
+    }));
+    expect(result.changedAreas).toEqual(["pie de página"]);
+    expect(result.preservedAreas).toEqual(expect.arrayContaining(["menú", "secciones", "colores y tipografía", "catálogo", "checkout"]));
+    const nextDocument = prisma.storeVisualProposal.create.mock.calls[0][0].data.config.siteDocument;
+    const { direction: _sourceDirection, footer: _sourceFooter, ...sourceSite } = sourceDocument;
+    const { direction: _nextDirection, footer: nextFooter, ...nextSite } = nextDocument;
+    expect(nextSite).toEqual(sourceSite);
+    expect(nextFooter.enabled).toBe(true);
+    expect(nextFooter.columns.flatMap((column: { items: Array<{ label: string; href: string }> }) => column.items)).toContainEqual({
+      id: "social-joaoreis",
+      label: "@joaoreis",
+      href: "",
+    });
+  });
+
   it("stores a proposal as a content-free creative recipe", async () => {
     const { service, prisma } = setup();
     const document = {

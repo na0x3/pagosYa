@@ -18,7 +18,7 @@ describe("StoreAgentService", () => {
     const visualStudio = {
       revise: jest.fn().mockResolvedValue({
         proposal: { id: "proposal_2", title: "Ajuste" },
-        plan: { target: "opening", tone: "warmer", preserveCatalog: true, summary: "Apertura más cálida" },
+        plan: { target: "opening", tone: "warmer", preserveCatalog: true, socialHandle: "", socialPlatform: "unknown", summary: "Apertura más cálida" },
         changedAreas: ["apertura"],
         preservedAreas: ["catálogo", "productos", "precios", "inventario", "checkout", "estado público"],
       }),
@@ -53,6 +53,31 @@ describe("StoreAgentService", () => {
       metadata: expect.objectContaining({ sourceProposalId: "proposal_1" }),
     }) });
     expect(result.proposals).toEqual([{ id: "proposal_2", title: "Ajuste" }]);
+  });
+
+  it("routes a footer request without a selected proposal through one scoped revision", async () => {
+    const { service, prisma, visualStudio } = setup();
+    visualStudio.revise.mockResolvedValueOnce({
+      proposal: { id: "proposal_footer", title: "Footer ajustado" },
+      plan: { target: "footer", tone: "unchanged", preserveCatalog: false, socialHandle: "@joaoreis", socialPlatform: "unknown", summary: "Agregar la red" },
+      changedAreas: ["pie de página"],
+      preservedAreas: ["menú", "secciones", "catálogo", "productos", "precios", "inventario", "checkout", "estado público"],
+    });
+
+    const result = await service.send("merchant_1", "store_1", {
+      instruction: "incluye mis redes en el footer @joaoreis",
+    });
+
+    expect(visualStudio.revise).toHaveBeenCalledWith(
+      "merchant_1",
+      "store_1",
+      null,
+      "incluye mis redes en el footer @joaoreis",
+      [],
+    );
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(result.assistantMessage.content).toContain("Mostré @joaoreis como texto");
+    expect(prisma.storeAgentMessage.create).toHaveBeenCalledTimes(2);
   });
 
   it("rejects a proposal from another store before creating a conversation", async () => {

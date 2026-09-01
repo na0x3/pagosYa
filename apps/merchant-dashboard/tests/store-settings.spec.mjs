@@ -157,6 +157,15 @@ test("agent workspace keeps a real goal, plan, and generated preview in one cock
   await expect(page.locator("#agentDesignStatus")).toHaveText("Propuestas listas");
   await expect.poll(() => page.locator(".store-preview-panel").evaluate((panel) => panel.parentElement?.id)).toBe("agentPreviewMount");
   await expect(page.locator("#dashboardEntryLoader")).toBeHidden();
+  await expect(page.getByText("Resumen operativo", { exact: true })).toBeHidden();
+  await expect(page.locator("#financesSection")).toBeHidden();
+  await expect(page.locator("#previewFullscreenToggle")).toBeVisible();
+  await expect(page.locator("#storePreviewFrame")).toHaveAttribute("scrolling", "yes");
+  await expect.poll(() => page.locator("#agentWorkspace").evaluate((workspace) => getComputedStyle(workspace).overflow)).toBe("visible");
+  await page.locator("#dashboardToolDrawer > summary").click();
+  await expect(page.locator("#dashboardToolDrawer")).toHaveAttribute("open", "");
+  await page.mouse.wheel(0, 240);
+  await expect(page.locator("#dashboardToolDrawer")).not.toHaveAttribute("open", "");
   if (process.env.CAPTURE_AGENT_UI === "1") {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 0));
