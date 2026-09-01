@@ -69,6 +69,19 @@ export class GenerateVisualProposalsDto {
   @Matches(UPLOADED_FILE_URL_PATTERN, { each: true, message: "Every asset URL must come from POST /v1/uploads" })
   assetUrls?: string[];
 
+  @ApiPropertyOptional({
+    description: "Dominant colors sampled from the merchant's logo and store photography, ordered by visual importance.",
+    type: [String],
+    example: ["#6f7d51", "#d8c7a2", "#3b2d24"],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @Matches(/^#[0-9A-Fa-f]{6}$/, { each: true, message: "Every brand palette color must be a 6-digit hex value" })
+  brandPalette?: string[];
+
   @ApiPropertyOptional({ example: "Café y repostería" })
   @IsOptional()
   @IsString()

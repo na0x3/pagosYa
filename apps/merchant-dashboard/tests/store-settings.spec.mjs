@@ -4111,7 +4111,7 @@ test("AI creation hides technical design choices while advanced editing keeps cu
   await expect(page.locator("#previewAiCreate")).toHaveAttribute("aria-pressed", "true");
 
   await expect(page.locator("#visualCreativeBrief")).toBeVisible();
-  await expect(page.locator(".visual-creative-brief")).toContainText("Historia y Contacto como pestañas");
+  await expect(page.locator(".visual-creative-brief")).toContainText("página de Inicio completa");
   await expect(page.locator(".font-choice")).toHaveCount(0);
   await expect(page.locator('input[name="visualAnnouncementMarquee"]')).toHaveCount(0);
   await expect(page.locator('input[name="visualMotionExperience"]')).toHaveCount(0);
@@ -4241,6 +4241,7 @@ test("AI setup sends the chosen WhatsApp mode and uploaded inspiration photos", 
     creativeBrief: "Como una revista gastronómica contemporánea: fotos grandes, ritmo sereno y nada genérico.",
     artDirection: "cinematic-atelier",
     assetUrls: Array.from({ length: 9 }, (_, index) => `/v1/uploads/ai-${index + 1}.jpg`),
+    brandPalette: [],
   });
   expect(generation?.body).not.toHaveProperty("fontStyle");
   expect(generation?.body).not.toHaveProperty("announcementMarqueeEnabled");

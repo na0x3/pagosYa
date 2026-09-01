@@ -4372,7 +4372,7 @@
               <div class="visual-creative-brief">
                 <label for="visualCreativeBrief">Cuéntale a la IA cómo imaginas la marca</label>
                 <textarea id="visualCreativeBrief" rows="5" maxlength="1200" placeholder="Ej. Quiero que se sienta como una galería de arte joven: fotos enormes, mucho aire, textos directos y movimiento suave. No quiero que parezca una tienda genérica."></textarea>
-                <span class="faint">Puedes mencionar referencias, colores que evitar, energía, público o una idea visual. También puedes pedir páginas separadas, por ejemplo “Historia y Contacto como pestañas”. La IA decidirá la estructura, tipografía, composición y movimiento.</span>
+                <span class="faint">Puedes mencionar referencias, colores que evitar, energía, público o una idea visual. La IA mantendrá una página de Inicio completa y decidirá su estructura, tipografía, composición y movimiento.</span>
               </div>
               <fieldset class="visual-direction-picker">
                 <legend>Dirección de partida</legend>
@@ -8341,7 +8341,7 @@
       onboardingCopyEl.textContent = "Elige cómo recibirás pedidos y agrega las fotos que quieres que guíen las tres propuestas.";
       onboardingBodyEl.innerHTML = `<div class="onboarding-form-grid">
         <div><label for="onboardingCategory">¿Qué vendes?</label><input id="onboardingCategory" maxlength="80" placeholder="Ej. café, cerámica, ropa infantil"></div>
-        <div class="full"><label for="onboardingCreativeBrief">¿Cómo imaginas la marca?</label><textarea id="onboardingCreativeBrief" rows="4" maxlength="1200" placeholder="Ej. Como una galería de arte joven: fotos enormes, mucho aire, textos directos y movimiento suave."></textarea><span class="faint">No necesitas elegir tipografías ni animaciones. También puedes pedir páginas separadas como Historia y Contacto.</span></div>
+        <div class="full"><label for="onboardingCreativeBrief">¿Cómo imaginas la marca?</label><textarea id="onboardingCreativeBrief" rows="4" maxlength="1200" placeholder="Ej. Como una galería de arte joven: fotos enormes, mucho aire, textos directos y movimiento suave."></textarea><span class="faint">No necesitas elegir tipografías ni animaciones. La IA construirá un Inicio completo y podrás crear páginas adicionales después.</span></div>
         <fieldset class="visual-conversion full"><legend>¿Cómo terminarán el pedido tus clientes?</legend><div class="visual-conversion-options"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="payment" checked><span><strong>Pago integrado</strong><small>Carrito y pago con pagosYa. Requiere KYC y NIT.</small></span></label><div class="visual-conversion-choice"><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="whatsapp"><span><strong>WhatsApp</strong><small>El carrito llega como mensaje, sin pedir NIT.</small></span></label><div class="visual-whatsapp-phone" id="onboardingWhatsappWrap" hidden><label for="onboardingWhatsapp">Número que recibirá los pedidos</label><input id="onboardingWhatsapp" type="tel" maxlength="40" placeholder="+591 71234567"><span class="faint">Incluye el código de país.</span></div></div><label class="visual-conversion-option"><input type="radio" name="onboardingCheckoutMode" value="external"><span><strong>Captar interesados</strong><small>Formulario de contacto enviado a tu correo, sin pedir NIT.</small></span></label></div></fieldset>
         <div class="onboarding-file full" id="onboardingLeadUrlWrap" hidden><input id="onboardingLeadUrl" type="hidden" value=""><span class="faint">Al finalizar, pagosYa pedirá solo su Gmail o correo y te lo enviará con el carrito seleccionado.</span></div>
         <div class="onboarding-file full"><label for="onboardingAiImages">Fotos para la IA (opcional)</label><input id="onboardingAiImages" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="onboardingAiFileStatus"><span class="faint" id="onboardingAiFileStatus" role="status">Hasta 24 fotos de tu marca, local, productos o estilo.</span><div class="visual-ai-previews" id="onboardingAiPreviews" aria-live="polite"></div></div>
@@ -8650,6 +8650,7 @@
   let storePaletteTimer = null;
   let storePaletteRequest = 0;
   let storePaletteSourceSignature = "";
+  let storeImagePaletteColors = [];
   // Sliders and color controls should feel live. Text fields are handled
   // separately and only redraw the storefront when their value is committed.
   const STORE_PREVIEW_INPUT_DEBOUNCE_MS = 180;
@@ -12519,6 +12520,7 @@
   }
 
   function renderStoreImagePalette(colors) {
+    storeImagePaletteColors = colors.slice(0, 6);
     if (!colors.length) {
       storeImagePaletteSwatchesEl.innerHTML = `<span class="store-image-palette-empty">Agrega una foto para crear la paleta</span>`;
       storeImagePaletteStatusEl.textContent = "La paleta se actualizará al subir logo, productos o escenas.";
@@ -13327,6 +13329,17 @@
         assetUrls.push(...uploaded);
       }
       visualSourceStatusEl.textContent = "Leyendo la tienda y componiendo propuestas…";
+      let brandPalette = storeImagePaletteColors;
+      if (assetUrls.length) {
+        visualSourceStatusEl.textContent = "Leyendo los colores de tus fotos…";
+        const pixelSets = await Promise.all(assetUrls.slice(0, 8).map(palettePixelsForImage));
+        brandPalette = paletteFromPixelSets(pixelSets);
+      }
+      const selectedAccent = storeAccentToggleEl.checked ? storeAccentColorEl.value : "";
+      brandPalette = [...new Set([selectedAccent, ...brandPalette, ...storeImagePaletteColors]
+        .filter((value) => /^#[0-9a-f]{6}$/i.test(value)))]
+        .slice(0, 6);
+      visualSourceStatusEl.textContent = "Leyendo la tienda y componiendo propuestas…";
       setVisualGenerationPhase("composing");
       const result = await api(`/stores/${generationStoreId}/visual-proposals`, {
         method: "POST",
@@ -13339,6 +13352,7 @@
           whatsappPhone: checkoutMode === "whatsapp" ? whatsappPhone : undefined,
           leadCaptureUrl: undefined,
           assetUrls,
+          brandPalette,
           lockedSectionIds: [...lockedAiSectionIds].filter((id) => {
             const persistedDocument = lastStores.find((store) => store.id === generationStoreId)?.siteDocument;
             return Array.isArray(persistedDocument?.sections) && persistedDocument.sections.some((section) => section?.id === id);

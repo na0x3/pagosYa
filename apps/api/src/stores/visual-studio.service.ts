@@ -153,6 +153,95 @@ function generatedMotionProfile(index: number, assetCount: number) {
   return { ...profile, signature: assetCount >= 2 ? profile.visual : profile.text };
 }
 
+type GeneratedBrandPalette = {
+  page: string;
+  text: string;
+  accent: string;
+  secondary: string;
+  surface: string;
+  story: string;
+  muted: string;
+  border: string;
+};
+
+function normalizedBrandColors(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.flatMap((entry) =>
+    typeof entry === "string" && /^#[0-9a-f]{6}$/i.test(entry) ? [entry.toLowerCase()] : [],
+  ))].slice(0, 6);
+}
+
+function brandLedGeneratedPalette(
+  brandColors: readonly string[],
+  index: number,
+  fallback: GeneratedBrandPalette,
+): GeneratedBrandPalette {
+  const colors = normalizedBrandColors(brandColors);
+  if (!colors.length) return fallback;
+  const anchor = colors[index % colors.length];
+  const support = colors[(index + 1) % colors.length] || anchor;
+  const detail = colors[(index + 2) % colors.length] || support;
+  const page = blendHex(anchor, "#ffffff", index % 2 === 0 ? 0.88 : 0.93);
+  const surface = blendHex(detail, "#ffffff", 0.94);
+  const story = blendHex(support, "#ffffff", index % 2 === 0 ? 0.62 : 0.72);
+  const accent = blendHex(anchor, "#625b55", 0.16);
+  const secondary = blendHex(support, "#514c47", 0.22);
+  const text = readableInk(page);
+  return {
+    page,
+    text,
+    accent,
+    secondary,
+    surface,
+    story,
+    muted: blendHex(text, page, 0.42),
+    border: blendHex(detail, page, 0.66),
+  };
+}
+
+function applyGeneratedBrandPalette(
+  document: StoreSiteDocument,
+  brandColors: readonly string[],
+  index: number,
+): StoreSiteDocument {
+  if (!normalizedBrandColors(brandColors).length) return document;
+  const palette = brandLedGeneratedPalette(brandColors, index, {
+    page: document.theme.pageBackground,
+    text: document.theme.textColor,
+    accent: document.theme.accentColor,
+    secondary: document.theme.secondaryColor,
+    surface: document.theme.surfaceColor,
+    story: document.theme.surfaceColor,
+    muted: document.theme.mutedColor,
+    border: document.theme.borderColor,
+  });
+  const sectionBackground = (kind: StoreSiteDocument["sections"][number]["kind"]) => {
+    if (kind === "hero") return palette.page;
+    if (kind === "catalog") return palette.surface;
+    if (kind === "story" || kind === "links") return palette.story;
+    if (kind === "gallery") return index % 2 === 0 ? palette.accent : palette.secondary;
+    if (kind === "contact" || kind === "location") return index % 2 === 0 ? palette.secondary : palette.surface;
+    return palette.surface;
+  };
+  return {
+    ...document,
+    theme: {
+      ...document.theme,
+      pageBackground: palette.page,
+      textColor: palette.text,
+      accentColor: palette.accent,
+      secondaryColor: palette.secondary,
+      surfaceColor: palette.surface,
+      mutedColor: palette.muted,
+      borderColor: palette.border,
+    },
+    sections: document.sections.map((section) => {
+      const backgroundColor = sectionBackground(section.kind);
+      return { ...section, backgroundColor, textColor: readableInk(backgroundColor) };
+    }),
+  };
+}
+
 function enforceUniqueGeneratedAnimationTypes(
   document: StoreSiteDocument,
   animationCandidates: unknown,
@@ -523,7 +612,7 @@ const BRAND_ANALYSIS_SCHEMA = {
   },
 } as const;
 
-function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAsset[], products: StoreProductContext[], links: StoreLinkContext[], index: number): StoreSiteDocument {
+function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAsset[], products: StoreProductContext[], links: StoreLinkContext[], index: number, brandColors: readonly string[] = []): StoreSiteDocument {
   const config = preset.config as Record<string, unknown>;
   const color = (value: unknown, fallback: string) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
   const copy = (value: unknown, fallback: string) => typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -532,9 +621,10 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
     { page: "#f3efff", text: "#211a32", accent: "#6950b8", secondary: "#d97835", surface: "#fff7e8", story: "#d9ccff", muted: "#665b78", border: "#c8bce2" },
     { page: "#eaf8f1", text: "#142321", accent: "#b6365f", secondary: "#146c73", surface: "#fff2d8", story: "#bfe6d4", muted: "#516a64", border: "#afd2c5" },
   ] as const;
-  const palette = palettes[index % palettes.length];
-  const pageBackground = color(config.backgroundColor, palette.page);
-  const accentColor = color(config.accentColor, palette.accent);
+  const fallbackPalette = palettes[index % palettes.length];
+  const palette = brandLedGeneratedPalette(brandColors, index, fallbackPalette);
+  const pageBackground = brandColors.length ? palette.page : color(config.backgroundColor, palette.page);
+  const accentColor = brandColors.length ? palette.accent : color(config.accentColor, palette.accent);
   const surfaceColor = palette.surface;
   const layouts = [
     { hero: "split", story: "offset", catalog: "gallery" },
@@ -551,11 +641,6 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
     ? [...usableMediaUrls.slice(index % usableMediaUrls.length), ...usableMediaUrls.slice(0, index % usableMediaUrls.length)]
     : [];
   const motionProfile = generatedMotionProfile(index, rotatedMediaUrls.length);
-  const pages: NonNullable<StoreSiteDocument["pages"]> = [];
-  const storyPageId = (Boolean(store.aboutText?.trim() || store.aboutTitle?.trim()) || usableMediaUrls.length >= 2) ? "story-page" : "";
-  const contactPageId = (links.length > 0 || Boolean(store.contactEmail?.trim() || store.contactPhone?.trim())) ? "contact-page" : "";
-  if (storyPageId) pages.push({ id: storyPageId, label: "Nuestra historia", slug: "nuestra-historia" });
-  if (contactPageId) pages.push({ id: contactPageId, label: "Contacto", slug: "contacto" });
   const heroMediaUrls = rotatedMediaUrls.slice(0, Math.min(3, rotatedMediaUrls.length));
   const storyMediaUrls = rotatedMediaUrls.length > 1
     ? [...rotatedMediaUrls.slice(1), rotatedMediaUrls[0]].slice(0, Math.min(3, rotatedMediaUrls.length))
@@ -630,10 +715,8 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       items: [
         { id: "home", label: "Inicio", target: "home" },
         { id: "catalog", label: "Tienda", target: "catalog" },
-        ...pages.map((page) => ({ id: `nav-${page.id}`, label: page.label, target: "page" as const, pageId: page.id })),
       ],
     },
-    ...(pages.length ? { pages } : {}),
     motion: { intensity: index === 0 ? "expressive" : index === 1 ? "cinematic" : "expressive" },
     merchandising: {
       featuredProductIds: products.slice(index, index + 2).map((product) => product.id).filter(Boolean),
@@ -676,7 +759,6 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       },
       {
         id: "brand-story",
-        ...(storyPageId ? { pageId: storyPageId } : {}),
         kind: "story",
         layout: "stacked",
         width: "full",
@@ -711,7 +793,6 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       },
       {
         id: "visual-world",
-        ...(storyPageId ? { pageId: storyPageId } : {}),
         kind: "gallery",
         layout: index === 0 ? "grid" : index === 1 ? "split" : "offset",
         width: "full",
@@ -727,7 +808,6 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       },
       {
         id: "information",
-        ...(contactPageId ? { pageId: contactPageId } : {}),
         kind: "contact",
         layout: "split",
         width: "wide",
@@ -743,7 +823,6 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       },
       {
         id: "follow",
-        ...(contactPageId ? { pageId: contactPageId } : {}),
         kind: "links",
         layout: "minimal",
         width: "wide",
@@ -805,8 +884,9 @@ function enforceGeneratedNarrative(
   });
 
   const heroMediaUrls = uniqueMedia(hero.mediaUrls, 0, 3);
+  const { pageId: _heroPageId, ...heroOnHome } = hero;
   const normalizedHero = {
-    ...hero,
+    ...heroOnHome,
     motion: "none" as const,
     mediaUrls: heroMediaUrls,
     items: pairNarrativeItems(hero, heroMediaUrls),
@@ -828,8 +908,9 @@ function enforceGeneratedNarrative(
     items: [],
   };
   const storyMediaUrls = uniqueMedia(story.mediaUrls, 1, 3);
+  const { pageId: _storyPageId, ...storyOnHome } = story;
   const normalizedStory = {
-    ...story,
+    ...storyOnHome,
     layout: "stacked" as const,
     width: "full" as const,
     motion: "story-scroll" as const,
@@ -840,15 +921,23 @@ function enforceGeneratedNarrative(
   const normalizedSections = document.sections.map((section) => {
     if (section.kind === "hero") return normalizedHero;
     if (section.kind === "story") return normalizedStory;
-    if (section.kind === "catalog") return catalog;
+    if (section.kind === "catalog") {
+      const { pageId: _catalogPageId, ...catalogOnHome } = catalog;
+      return catalogOnHome;
+    }
     if (section.kind === "gallery") {
+      const { pageId: _galleryPageId, ...galleryOnHome } = section;
       return {
-        ...section,
+        ...galleryOnHome,
         // Generated galleries avoid the thin peeking-image treatment, while
         // their position remains owned by the selected page topology.
         layout: section.layout === "rail" ? (directionIndex % 2 === 0 ? "grid" as const : "split" as const) : section.layout,
         motion: motionProfile.section,
       };
+    }
+    if (section.kind === "contact") {
+      const { pageId: _contactPageId, ...contactOnHome } = section;
+      return { ...contactOnHome, motion: "none" as const };
     }
     return { ...section, motion: "none" as const };
   });
@@ -1583,7 +1672,7 @@ export class VisualStudioService {
     }
     const brandFingerprint = storefrontBrandFingerprint({
       store: { id: store.id, name: store.name, logoUrl: store.logoUrl, accentColor: store.accentColor },
-      brief: { category: proposalInput.businessCategory || "", personality: proposalInput.personality || "", creativeBrief: proposalInput.creativeBrief || "", checkoutMode },
+      brief: { category: proposalInput.businessCategory || "", personality: proposalInput.personality || "", creativeBrief: proposalInput.creativeBrief || "", checkoutMode, brandPalette: normalizedBrandColors(proposalInput.brandPalette) },
       assets: orderedAssets.map((asset) => [asset.url, asset.mimeType, asset.byteSize]),
       products: products.map((product) => [product.id, product.name, product.description, product.tags, product.imageUrls]),
       links,
@@ -1633,11 +1722,16 @@ export class VisualStudioService {
 
     const acceptedDocuments: StoreSiteDocument[] = [];
     const acceptedOriginality: number[] = [];
+    const measuredBrandColors = normalizedBrandColors([
+      ...(proposalInput.brandPalette ?? []),
+      store.accentColor,
+    ]);
     presets = presets.map((preset, index) => {
       const existingDocument = preset.config.siteDocument as StoreSiteDocument | undefined;
-      const baseDocument = existingDocument ?? localSiteDocument(store, preset, orderedAssets, products, links, index + engineContext.generation);
+      const baseDocument = existingDocument ?? localSiteDocument(store, preset, orderedAssets, products, links, index + engineContext.generation, measuredBrandColors);
       const directedDocument = applySiteArtDirection(baseDocument, assignedArtDirections[index]);
-      const narrativeDocument = enforceGeneratedNarrative(directedDocument, store, orderedAssets, products, index);
+      const brandedDocument = applyGeneratedBrandPalette(directedDocument, measuredBrandColors, index + engineContext.generation);
+      const narrativeDocument = enforceGeneratedNarrative(brandedDocument, store, orderedAssets, products, index);
       let recipeDocument = narrativeDocument;
       if (selectedTemplate) {
         try {
@@ -1956,6 +2050,13 @@ export class VisualStudioService {
         `Fotos: ${productAssetIndices(product).join(", ") || "ninguna"}`,
       ].join(" · ")).join("\n") || "Catálogo todavía vacío";
       const socialLinks = links.map((link) => `${link.label}: ${link.url}`).join("\n") || "Sin enlaces sociales configurados";
+      const measuredPalette = normalizedBrandColors([
+        ...(dto.brandPalette ?? []),
+        store.accentColor,
+      ]);
+      const measuredPaletteNote = measuredPalette.length
+        ? measuredPalette.join(", ")
+        : "sin muestras técnicas; deriva el color directamente de las imágenes";
       const assetLegend = assets.map((asset, index) => {
         const productOwners = products.flatMap((product, productIndex) => product.imageUrls.includes(asset.url) ? [`producto ${productIndex} (${product.name})`] : []);
         const role = asset.url === store.logoUrl
@@ -2017,10 +2118,11 @@ export class VisualStudioService {
         `Catálogo actual:\n${catalog}`,
         `Enlaces actuales:\n${socialLinks}`,
         `Índices y restricciones de activos:\n${assetLegend}`,
+        `Paleta medida del logo y las fotografías: ${measuredPaletteNote}. Trátala como evidencia de marca, no como una sugerencia genérica. Puedes aclarar u oscurecer estos tonos para asegurar contraste, pero no reemplazarlos por una familia cromática ajena.`,
         "Examina visualmente cada imagen. Distingue con seguridad logo, arte editorial, imagen de ambiente, detalle y foto de producto. Mantén cada foto de producto unida al producto que indica la leyenda. Si un activo es débil, redundante o imposible de usar sin deformarlo, márcalo como avoid.",
         "Define el papel del logo, la escena real del público y una estrategia de color derivada de la identidad con 3 a 5 colores coordinados: base, acento, apoyo y superficies. Indica dónde usar fondos cromáticos y palabras de color sin perder contraste. Añade una estrategia tipográfica con carácter, una lógica de composición asimétrica, un plan de merchandising producto por producto y una sola idea de movimiento con propósito.",
         "La única regla fija de orden es abrir con una sección visual animada y colocar el catálogo inmediatamente después. La apertura puede ser hero, historia o galería según la evidencia de marca; todo lo posterior debe variar libremente y cambiar el ritmo. Hero, story y catalog deben existir. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
-        "Decide también la arquitectura de páginas en pagePlan. Inicio es implícita y siempre contiene hero y catalog. Devuelve [] cuando el contenido no justifica destinos distintos. Crea como máximo tres páginas solo si cada una tiene una función y contenido verificable: por ejemplo Historia para story/gallery, Contacto para contact/links o Visítanos para location. No crees páginas para acortar artificialmente el scroll, no repitas una sección en dos páginas y nunca declares una página vacía. Usa ids y slugs únicos, breves y seguros; labels y slugs deben ser naturales en español.",
+        "Decide también la arquitectura de páginas en pagePlan. Inicio es implícita y debe ser una experiencia completa y larga: hero, catalog, story, gallery y contact permanecen en Inicio. Devuelve [] salvo que el comercio pida explícitamente una web multipágina en su brief. En ese caso crea como máximo dos destinos adicionales únicamente para location o links con contenido verificable. No crees páginas para acortar el scroll, no repitas una sección y nunca declares una página vacía. Usa ids y slugs únicos, breves y seguros; labels y slugs deben ser naturales en español.",
         "No inventes datos, origen, materiales, descuentos, testimonios ni promesas. Escribe el análisis en español y devuelve solo el esquema.",
       ].join("\n");
       let brandAnalysis = brandAnalysisCache.get(engineContext.brandFingerprint);
@@ -2046,10 +2148,10 @@ export class VisualStudioService {
         `Catálogo actual:\n${catalog}`,
         `Enlaces actuales (la plataforma los inyecta de forma segura):\n${socialLinks}`,
         `Índices de imágenes reutilizables:\n${assetLegend}`,
+        `Paleta medida del logo y las fotografías: ${measuredPaletteNote}. Construye theme y los fondos de sección con variaciones tonales de estos colores. No introduzcas un acento ajeno solo para diferenciar propuestas; la diferencia debe venir de composición, tipografía, escala y ritmo.`,
         `Análisis de marca obligatorio, realizado en la fase anterior:\n${JSON.stringify(brandAnalysis, null, 2)}`,
-        "Contrato multipágina obligatorio: siteDocument.pages materializa el pagePlan del análisis y cada sección declara pageId. El string vacío significa Inicio. hero y catalog siempre usan pageId=\"\". Un pageId no vacío debe coincidir exactamente con un id de pages, y cada página declarada debe recibir al menos una sección real. Si pagePlan está vacío, devuelve pages=[] y pageId=\"\" en todas las secciones. No inventes una página sin contenido para que el menú parezca más grande. La plataforma deriva de forma segura los enlaces Inicio, Tienda y páginas; no intentes escribir items de navegación.",
-        "Distribuye solo secciones compatibles: story y gallery pueden vivir en Historia; contact y links pueden vivir en Contacto; location puede vivir en Visítanos. Mantén una narrativa coherente dentro de cada destino y conserva Inicio como portada comercial completa. Las tres propuestas pueden tomar decisiones de páginas distintas cuando la evidencia lo permita, pero cada decisión debe seguir el pagePlan y el brief del comercio.",
-        "Contrato narrativo obligatorio de cada siteDocument: deben existir exactamente un hero, un story, un catalog y un contact. La primera sección debe ser una apertura animada entre hero, historia o galería según la topología asignada; catalog debe ser exactamente la segunda sección. Después de ese par, el orden es libre. Hero conserva 2 o 3 medios cuando estén disponibles, nunca el logo, e items con copy breve asociado a cada escena; con un solo medio úsalo una sola vez y no lo dupliques. Story usa motion=story-scroll y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
+        "Contrato multipágina obligatorio: siteDocument.pages materializa el pagePlan del análisis y cada sección declara pageId. El string vacío significa Inicio. hero, catalog, story, gallery y contact siempre usan pageId=\"\" para que Inicio conserve un recorrido completo. Si pagePlan está vacío, devuelve pages=[] y pageId=\"\" en todas las secciones. Solo location o links pueden usar un pageId no vacío cuando el brief pidió explícitamente una web multipágina; ese id debe coincidir con pages y recibir contenido real. La plataforma deriva de forma segura los enlaces Inicio, Tienda y páginas; no intentes escribir items de navegación.",
+        "Contrato narrativo obligatorio de cada siteDocument: deben existir exactamente un hero, un story, un catalog, un gallery y un contact. Las cinco secciones viven en Inicio y forman un descenso sustancial, no una portada corta. La primera sección debe ser una apertura animada entre hero, historia o galería según la topología asignada; catalog debe ser exactamente la segunda sección. Después de ese par, el orden es libre y debe alternar escala y densidad. Hero conserva 2 o 3 medios cuando estén disponibles, nunca el logo, e items con copy breve asociado a cada escena; con un solo medio úsalo una sola vez y no lo dupliques. Story usa motion=story-scroll y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Gallery crea el cuarto momento visual con medios no redundantes. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
         "Antes de componer, elige para cada propuesta una combinación distinta y pertinente entre atmósferas de lujo editorial, estructuralismo suave o tecnología sobria, y layouts de split editorial, bento asimétrico o cascada espacial sin solapamientos. Da a cada propuesta un concepto rector visible de principio a fin: una idea de marca que conecte paleta, escala, ritmo, recortes de imagen, navegación, catálogo, formulario y cierre. Haz que cambien de verdad en jerarquía, densidad, orden, tipografía, geometría, composición de producto y relación entre imagen y texto.",
         "Contrato de diferenciación verificable: las tres propuestas deben usar tres hero.layout distintos, las tres navigation.layout disponibles exactamente una vez cada una y tres theme.productLayout distintos. No basta cambiar color o copy. Cada dirección debe seguir siendo reconocible en escala de grises por su silueta, proporciones, orden y composición del catálogo.",
         "Distingue logo, arte editorial y foto de producto por su función. El logo pertenece a la identidad o navegación: no lo estires, no lo recortes como fotografía y no lo uses como fondo. Sitúa cada foto de producto con su producto correcto y usa merchandising para decidir qué productos abren la colección, cuáles se destacan y en qué orden se cuentan.",

@@ -138,13 +138,10 @@ describe("VisualStudioService", () => {
       expect(document.sections[0].motion).not.toBe("none");
       expect(document.sections[1].kind).toBe("catalog");
       expect(document.sections.find((section: { kind: string }) => section.kind === "gallery")?.layout).not.toBe("rail");
-      expect(document.pages).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: "contact-page", label: "Contacto", slug: "contacto" }),
-      ]));
-      expect(document.sections.find((section: { kind: string }) => section.kind === "contact")?.pageId).toBe("contact-page");
-      expect(document.navigation.items).toEqual(expect.arrayContaining([
-        expect.objectContaining({ target: "page", pageId: "contact-page", label: "Contacto" }),
-      ]));
+      expect(document.pages).toBeUndefined();
+      expect(document.sections.filter((section: { pageId?: string }) => !section.pageId)).toHaveLength(document.sections.length);
+      expect(document.sections.find((section: { kind: string }) => section.kind === "contact")?.pageId).toBeUndefined();
+      expect(document.navigation.items.every((item: { target: string }) => item.target !== "page")).toBe(true);
       expect(document.sections.find((section: { kind: string }) => section.kind === "hero")?.pageId).toBeUndefined();
       expect(document.sections.find((section: { kind: string }) => section.kind === "catalog")?.pageId).toBeUndefined();
       expect(new Set(document.sections.map((section: { family: string }) => section.family)).size).toBeGreaterThanOrEqual(2);
@@ -165,6 +162,28 @@ describe("VisualStudioService", () => {
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.experience.type)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections.find((section: { kind: string }) => section.kind === "gallery").motion)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.cartButtonLabel)).size).toBe(3);
+  });
+
+  it("builds every proposal from colors sampled from the merchant's own images", async () => {
+    const { service, prisma } = setup();
+    const brandPalette = ["#315f46", "#d6b26a", "#684438"];
+
+    await service.generate("merchant_1", "store_1", {
+      businessCategory: "matcha",
+      brandPalette,
+    });
+
+    for (const call of prisma.storeVisualProposal.create.mock.calls) {
+      const document = call[0].data.config.siteDocument;
+      expect(document.theme.pageBackground).not.toBe("#f4ead7");
+      expect(document.theme.accentColor).not.toBe("#7a351f");
+      expect(document.sections.find((section: { kind: string }) => section.kind === "hero").backgroundColor)
+        .toBe(document.theme.pageBackground);
+      expect(document.sections.find((section: { kind: string }) => section.kind === "story").backgroundColor)
+        .not.toBe(document.theme.pageBackground);
+      expect(document.sections.find((section: { kind: string }) => section.kind === "gallery").backgroundColor)
+        .not.toBe(document.theme.pageBackground);
+    }
   });
 
   it("creates one targeted private revision while preserving catalog and commerce fields", async () => {
@@ -876,12 +895,10 @@ describe("VisualStudioService", () => {
       const siteSchema = designRequest.text.format.schema.properties.directions.items.properties.siteDocument;
       expect(siteSchema.required).toContain("pages");
       expect(siteSchema.properties.sections.items.required).toContain("pageId");
-      expect(prisma.storeVisualProposal.create.mock.calls[0][0].data.config.siteDocument).toEqual(expect.objectContaining({
-        pages: [{ id: "story-page", label: "Nuestra historia", slug: "nuestra-historia" }],
-        navigation: expect.objectContaining({ items: expect.arrayContaining([
-          expect.objectContaining({ target: "page", pageId: "story-page", label: "Nuestra historia" }),
-        ]) }),
-      }));
+      const generatedDocument = prisma.storeVisualProposal.create.mock.calls[0][0].data.config.siteDocument;
+      expect(generatedDocument.pages).toBeUndefined();
+      expect(generatedDocument.sections.filter((section: { pageId?: string }) => !section.pageId)).toHaveLength(generatedDocument.sections.length);
+      expect(generatedDocument.navigation.items.every((item: { target: string }) => item.target !== "page")).toBe(true);
       expect(designRequest.input[0].content[0].text).toContain("No apiles muchas fotografías");
       expect(designRequest.input[0].content[0].text).toContain("placement siempre es after-catalog");
       expect(designRequest.input[0].content[0].text).toContain("Cada tipo distinto de none puede aparecer como máximo una vez");
