@@ -100,6 +100,77 @@ async function addAnimation(page, type = "hero-carousel") {
   }
 }
 
+test("agent workspace keeps a real goal, plan, and generated preview in one cockpit", async ({ page }) => {
+  // Representative renderer fixture: the production frame still uses the real
+  // Checkout URL; this fixture keeps screenshot evidence visibly merchant-owned.
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({
+    contentType: "text/html",
+    body: `<!doctype html><html><head><meta charset="utf-8"><style>
+      *{box-sizing:border-box}body{margin:0;background:#f3ead9;color:#20170f;font-family:Georgia,serif}header{display:flex;justify-content:space-between;align-items:center;padding:18px 26px;border-bottom:1px solid #312419;font:700 12px/1.2 system-ui;letter-spacing:.08em;text-transform:uppercase}.hero{display:grid;grid-template-columns:.88fr 1.12fr;min-height:520px}.copy{display:grid;align-content:center;padding:42px}.copy span{font:700 10px/1.2 system-ui;letter-spacing:.14em;text-transform:uppercase}.copy h1{margin:14px 0;font-size:clamp(42px,6vw,82px);font-weight:400;line-height:.9}.copy p{max-width:34ch;font:15px/1.6 system-ui}.copy button{width:max-content;margin-top:16px;padding:12px 18px;border:1px solid #20170f;background:#20170f;color:#fff;font:700 11px system-ui}.art{display:grid;place-items:center;overflow:hidden;background:#a95f42}.art svg{width:86%;height:86%}.catalog{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#312419;border-top:1px solid #312419}.catalog article{padding:18px;background:#f3ead9;font:12px system-ui}.catalog b{display:block;margin-bottom:4px}@media(max-width:600px){.hero{grid-template-columns:1fr}.art{min-height:300px}.copy{padding:28px}.catalog{grid-template-columns:1fr}}
+    </style></head><body><header><strong>Casa Arcilla</strong><nav>Colección&nbsp;&nbsp;·&nbsp;&nbsp;Historia&nbsp;&nbsp;·&nbsp;&nbsp;Contacto</nav></header><main><section class="hero"><div class="copy"><span>Nueva colección · Hecha en Bolivia</span><h1>Formas para habitar.</h1><p>Cerámica de uso diario, trabajada lentamente y terminada a mano.</p><button>Explorar colección</button></div><div class="art"><svg viewBox="0 0 700 620" role="img" aria-label="Colección de vasijas de Casa Arcilla"><rect width="700" height="620" fill="#c98461"/><circle cx="525" cy="140" r="95" fill="#efd29e"/><path d="M80 500h540" stroke="#442a20" stroke-width="12"/><path d="M125 500c35-98 21-178-12-250h145c-30 72-44 152-9 250z" fill="#f3ead9" stroke="#442a20" stroke-width="8"/><path d="M335 500c22-70 12-128-12-180h112c-23 53-34 111-10 180z" fill="#603b2e" stroke="#442a20" stroke-width="8"/><path d="M490 500c40-112 22-203-18-282h158c-39 80-57 171-17 282z" fill="#d8a06f" stroke="#442a20" stroke-width="8"/><path d="M142 300h96M500 276h105" stroke="#a95f42" stroke-width="13"/></svg></div></section><section class="catalog"><article><b>Taza de torno</b>Arcilla rojiza · edición corta</article><article><b>Jarra de mesa</b>Esmalte mineral · hecha a mano</article><article><b>Cuenco diario</b>Forma abierta · acabado mate</article></section></main><script>parent.postMessage({ source: "pagosya-checkout", type: "CHECKOUT_READY" }, "*");</script></body></html>`,
+  }));
+  const product = {
+    id: "product_1",
+    name: "Taza artesanal",
+    status: "ACTIVE",
+    amount: 7000,
+    currency: "BOB",
+    imageUrls: [],
+    tags: [],
+    variants: [],
+    extras: [],
+    stock: 8,
+  };
+  const proposal = {
+    id: "proposal_1",
+    title: "Taller contemporáneo",
+    rationale: "Una dirección clara basada en el catálogo real.",
+    provider: "local-curated",
+    status: "READY",
+    config: { backgroundColor: "#f8fafc", accentColor: "#8f5d31", fontStyle: "editorial", checkoutMode: "payment" },
+  };
+  const requests = await openDashboard(page, [store("store_1", "Casa Arcilla")], ({ path, request }) => {
+    if (path === "/stores/store_1/payment_links") return [product];
+    if (path === "/stores/store_1/visual-studio") return { proposals: [proposal], versions: [], templates: [] };
+    if (path === "/stores/store_1/visual-proposals" && request.method() === "POST") return {
+      proposals: [
+        { ...proposal, id: "proposal_2", title: "Arcilla editorial" },
+        { ...proposal, id: "proposal_3", title: "Taller luminoso" },
+        { ...proposal, id: "proposal_4", title: "Colección gráfica" },
+      ],
+      mode: "local",
+      engine: { closestSimilarities: [0.31, 0.38, 0.29], comparedAgainst: 9 },
+    };
+  });
+
+  await page.goto("/");
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "overview");
+  await expect(page.locator("#agentWorkspace")).toBeVisible();
+  await expect(page.locator("#agentStoreName")).toHaveText("Casa Arcilla");
+  await expect(page.locator("#agentCatalogStatus")).toHaveText("Listo");
+  await expect(page.locator("#agentDesignStatus")).toHaveText("Propuestas listas");
+  await expect.poll(() => page.locator(".store-preview-panel").evaluate((panel) => panel.parentElement?.id)).toBe("agentPreviewMount");
+  await expect(page.locator("#dashboardEntryLoader")).toBeHidden();
+  if (process.env.CAPTURE_AGENT_UI === "1") {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: "../../.impeccable/agent-workspace-desktop.png", fullPage: false });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: "../../.impeccable/agent-workspace-mobile.png", fullPage: false });
+    await page.setViewportSize({ width: 1440, height: 900 });
+  }
+
+  const goal = "Crea una portada cálida para mi nueva colección de cerámica.";
+  await page.locator("#agentWorkspaceInput").fill(goal);
+  await page.locator("#agentWorkspaceSubmit").click();
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "overview");
+  await expect(page.locator("#visualCreativeBrief")).toHaveValue(goal);
+  await expect(page.locator("#agentDesignStatus")).toHaveText("Vista privada");
+  await expect.poll(() => requests.find((entry) => entry.path === "/stores/store_1/visual-proposals" && entry.method === "POST")?.body?.creativeBrief).toBe(goal);
+  await expect(page.locator("#onboardingDialog")).not.toBeVisible();
+});
+
 test("AI storefront sections keep their own order and background controls", async ({ page }) => {
   await page.route("http://localhost:5175/**", (route) => route.fulfill({
     contentType: "text/html",

@@ -3447,9 +3447,487 @@
     body.store-preview-fullscreen .store-preview-toolbar strong { margin-right: 4px; }
     body.store-preview-fullscreen .preview-art-direction { display: none; }
   }
+
+  /* Agent-first merchant workspace */
+  .dashboard-nav-primary { display: grid; gap: 7px; }
+  .dashboard-tool-drawer {
+    margin-top: 5px;
+    border-top: 2px solid var(--bento-keyline);
+    padding-top: 9px;
+  }
+  .dashboard-tool-drawer > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    color: var(--pg-text-muted);
+    font-size: .72rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    list-style: none;
+  }
+  .dashboard-tool-drawer > summary::-webkit-details-marker { display: none; }
+  .dashboard-tool-drawer > summary::after { content: "+"; font-size: 1rem; line-height: 1; }
+  .dashboard-tool-drawer[open] > summary::after { content: "−"; }
+  .dashboard-tool-list { display: grid; gap: 5px; padding-top: 5px; }
+
+  .agent-workspace {
+    display: grid;
+    grid-template-columns: minmax(280px, .78fr) minmax(0, 1.42fr);
+    min-height: min(720px, calc(100dvh - 154px));
+    margin-bottom: 28px;
+    border: 3px solid var(--bento-keyline);
+    background: var(--pg-surface);
+    box-shadow: 7px 7px 0 var(--bento-keyline);
+  }
+  .agent-workbench {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    border-right: 3px solid var(--bento-keyline);
+    background: color-mix(in srgb, var(--bento-yellow) 16%, var(--pg-surface));
+  }
+  .agent-command {
+    display: grid;
+    gap: 13px;
+    padding: clamp(20px, 3vw, 34px);
+    border-bottom: 3px solid var(--bento-keyline);
+  }
+  .agent-kicker {
+    display: inline-flex;
+    width: max-content;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: var(--pg-text-muted);
+    font-size: .7rem;
+    font-weight: 950;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+  .agent-kicker::before { content: ""; width: 9px; height: 9px; border: 2px solid currentColor; background: var(--bento-green); }
+  .agent-command h3 {
+    max-width: 13ch;
+    margin: 0;
+    font-size: clamp(1.75rem, 3vw, 3rem);
+    line-height: .98;
+    letter-spacing: -.045em;
+  }
+  .agent-command > p { max-width: 52ch; margin: 0; color: var(--pg-text-muted); line-height: 1.55; }
+  .agent-prompt-label { font-size: .78rem; font-weight: 900; }
+  .agent-command textarea {
+    min-height: 116px;
+    resize: vertical;
+    border: 3px solid var(--bento-keyline);
+    border-radius: 2px;
+    background: var(--pg-surface);
+    box-shadow: 4px 4px 0 var(--bento-keyline);
+    font: inherit;
+    line-height: 1.45;
+  }
+  .agent-command textarea:focus { outline: 3px solid var(--bento-violet); outline-offset: 2px; }
+  .agent-prompt-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .agent-prompt-actions .primary { min-height: 44px; padding-inline: 18px; }
+  .agent-suggestions { display: flex; flex-wrap: wrap; gap: 7px; }
+  .agent-suggestion {
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 2px solid var(--bento-keyline);
+    border-radius: 999px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--pg-text-muted);
+    font-size: .68rem;
+    font-weight: 850;
+  }
+  .agent-suggestion:hover { background: var(--bento-yellow); color: #09090b; transform: none; box-shadow: none; }
+  .agent-timeline-wrap { display: grid; gap: 15px; padding: clamp(20px, 3vw, 32px); }
+  .agent-timeline-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+  .agent-timeline-head h3 { margin: 0; font-size: 1rem; }
+  .agent-timeline-head span { color: var(--pg-text-muted); font-size: .7rem; font-weight: 800; }
+  .agent-timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+  .agent-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 78px;
+    padding-bottom: 16px;
+  }
+  .agent-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 27px;
+    bottom: -3px;
+    left: 13px;
+    width: 3px;
+    background: var(--bento-keyline);
+  }
+  .agent-step-marker {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 29px;
+    height: 29px;
+    place-items: center;
+    border: 3px solid var(--bento-keyline);
+    background: var(--pg-surface);
+    font-size: .7rem;
+    font-weight: 950;
+  }
+  .agent-step[data-state="complete"] .agent-step-marker { background: var(--bento-green); }
+  .agent-step[data-state="current"] .agent-step-marker { background: var(--bento-yellow); box-shadow: 3px 3px 0 var(--bento-keyline); }
+  .agent-step-copy { display: grid; align-content: start; gap: 4px; padding-top: 2px; }
+  .agent-step-copy strong { font-size: .84rem; }
+  .agent-step-copy p { margin: 0; color: var(--pg-text-muted); font-size: .75rem; line-height: 1.45; }
+  .agent-step-status { width: max-content; margin-top: 3px; padding: 3px 7px; border: 1px solid currentColor; font-size: .62rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+  .agent-step[data-state="complete"] .agent-step-status { color: #21623a; }
+  .agent-step[data-state="current"] .agent-step-status { color: #6d4c00; }
+  .agent-step[data-state="waiting"] { opacity: .62; }
+
+  .agent-result { display: grid; min-width: 0; grid-template-rows: auto auto auto minmax(0, 1fr) auto; background: #dcded9; }
+  .agent-result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 17px 20px;
+    border-bottom: 3px solid var(--bento-keyline);
+    background: var(--pg-surface);
+  }
+  .agent-result-store { display: grid; gap: 2px; min-width: 0; }
+  .agent-result-store span { color: var(--pg-text-muted); font-size: .65rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .agent-result-store strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
+  .agent-store-open { flex: 0 0 auto; color: var(--pg-text); font-size: .72rem; font-weight: 900; }
+  .agent-store-open[aria-disabled="true"] { pointer-events: none; opacity: .45; }
+  .agent-lifecycle { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 3px solid var(--bento-keyline); background: var(--pg-surface); }
+  .agent-lifecycle-step { display: grid; gap: 3px; min-width: 0; padding: 11px 13px; border-right: 2px solid var(--bento-keyline); color: var(--pg-text-muted); }
+  .agent-lifecycle-step:last-child { border-right: 0; }
+  .agent-lifecycle-step b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; }
+  .agent-lifecycle-step small { font-size: .61rem; }
+  .agent-lifecycle-step[data-state="complete"] { background: color-mix(in srgb, var(--bento-green) 48%, white); color: #173f25; }
+  .agent-lifecycle-step[data-state="current"] { background: var(--bento-yellow); color: #352700; }
+  .agent-result-utility { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 13px; border-bottom: 2px solid var(--bento-keyline); background: var(--pg-surface); }
+  .agent-result-utility span { color: var(--pg-text-muted); font-size: .62rem; line-height: 1.35; }
+  .agent-result-utility button { flex: 0 0 auto; min-height: 30px; padding: 4px 7px; border: 0; background: transparent; box-shadow: none; font-size: .62rem; text-decoration: underline; text-underline-offset: 2px; }
+  .agent-preview-mount { display: grid; min-width: 0; min-height: 420px; padding: clamp(12px, 2vw, 22px); }
+  .agent-preview-mount:empty::before {
+    content: "La vista de tu tienda aparecerá aquí cuando selecciones o crees una tienda.";
+    display: grid;
+    min-height: 360px;
+    place-items: center;
+    padding: 30px;
+    border: 3px dashed var(--bento-keyline);
+    background: var(--pg-surface);
+    color: var(--pg-text-muted);
+    text-align: center;
+  }
+  .agent-preview-mount .store-preview-panel { width: 100%; min-height: 0; margin: 0; }
+  .agent-preview-mount .store-preview-stage { min-height: 430px; height: 100%; }
+  .agent-preview-mount .store-preview-frame { min-height: 430px; }
+  .agent-approval-seam {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 20px;
+    border-top: 3px solid var(--bento-keyline);
+    background: var(--bento-yellow);
+  }
+  .agent-approval-copy { display: grid; gap: 2px; }
+  .agent-approval-copy strong { font-size: .78rem; }
+  .agent-approval-copy span { color: #4e3d0b; font-size: .68rem; }
+  .agent-approval-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+  .agent-approval-actions button { min-height: 38px; padding: 7px 11px; font-size: .7rem; }
+  .overview-operations-heading { margin: 36px 0 14px; }
+  .overview-operations-heading span { display: block; margin-bottom: 4px; color: var(--pg-text-muted); font-size: .68rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .overview-operations-heading h3 { margin: 0; font-size: clamp(1.3rem, 2vw, 1.8rem); }
+
+  @media (max-width: 1080px) {
+    .agent-workspace { grid-template-columns: minmax(260px, .86fr) minmax(0, 1.14fr); }
+    .agent-command h3 { font-size: 2rem; }
+    .agent-result-head { align-items: flex-start; }
+  }
+  @media (max-width: 820px) {
+    .agent-workspace { grid-template-columns: 1fr; min-height: 0; }
+    .agent-workbench { border-right: 0; border-bottom: 3px solid var(--bento-keyline); }
+    .agent-command h3 { max-width: 18ch; }
+    .agent-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .agent-step { min-height: 0; padding: 0; }
+    .agent-step::after { display: none; }
+    .agent-preview-mount { min-height: 380px; }
+  }
+  @media (max-width: 900px) {
+    .dashboard-sidebar { flex-direction: row; align-items: center; gap: 8px; overflow-x: auto; }
+    .dashboard-nav { flex: 1 0 auto; align-items: center; overflow: visible; }
+    .dashboard-nav-primary { display: flex; flex: 0 0 auto; gap: 6px; }
+    .dashboard-tool-drawer { flex: 0 0 auto; margin: 0; padding: 0; border-top: 0; }
+    .dashboard-tool-drawer > summary { min-height: 44px; padding: 8px 11px; border: 2px solid transparent; }
+    .dashboard-tool-drawer[open] { display: flex; align-items: center; }
+    .dashboard-tool-drawer[open] > summary { display: none; }
+    .dashboard-tool-list { display: flex; gap: 6px; padding: 0; }
+    .ai-setup-launch { flex: 0 0 auto; margin: 0; }
+    .mobile-nav-hint { display: none; }
+  }
+  @media (max-width: 560px) {
+    .agent-command, .agent-timeline-wrap { padding: 18px; }
+    .agent-command h3 { font-size: 1.75rem; }
+    .agent-prompt-actions, .agent-approval-seam { align-items: stretch; flex-direction: column; }
+    .agent-prompt-actions .primary { width: 100%; }
+    .agent-timeline { grid-template-columns: 1fr; }
+    .agent-lifecycle-step { padding-inline: 8px; }
+    .agent-lifecycle-step small { display: none; }
+    .agent-preview-mount { min-height: 330px; padding: 8px; }
+    .agent-preview-mount .store-preview-stage, .agent-preview-mount .store-preview-frame { min-height: 360px; }
+    .agent-approval-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  }
+
+  /* Finish-review rebuild: compact agent cockpit, 38/62 work-to-preview split. */
+  body[data-dashboard-view="overview"] .topbar {
+    min-height: 64px;
+    margin-bottom: 10px;
+    padding: 7px 0 8px;
+  }
+  body[data-dashboard-view="overview"] .brand-mark { width: 38px; height: 38px; }
+  body[data-dashboard-view="overview"] .brand h1 { font-size: 1.05rem; }
+  body[data-dashboard-view="overview"] .brand .subtitle { font-size: .62rem; }
+  body[data-dashboard-view="overview"] .topbar-actions { flex-direction: row; align-items: center; gap: 8px; }
+  body[data-dashboard-view="overview"] .theme-option { min-height: 34px; padding: 6px 9px; }
+  body[data-dashboard-view="overview"] .profile-trigger { width: 40px; height: 40px; min-height: 40px; }
+  body[data-dashboard-view="overview"] .profile-trigger-avatar { width: 30px; height: 30px; }
+  body[data-dashboard-view="overview"] .workspace-header { display: none; }
+  body[data-dashboard-view="overview"] .dashboard-shell {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 12px;
+  }
+  body[data-dashboard-view="overview"] .dashboard-sidebar {
+    top: 10px;
+    min-height: calc(100dvh - 86px);
+    padding: 8px 6px;
+    box-shadow: 5px 5px 0 var(--bento-keyline);
+  }
+  body[data-dashboard-view="overview"] .dashboard-sidebar-head,
+  body[data-dashboard-view="overview"] .dashboard-sidebar-foot,
+  body[data-dashboard-view="overview"] .dashboard-nav-label,
+  body[data-dashboard-view="overview"] .ai-setup-launch,
+  body[data-dashboard-view="overview"] .mobile-nav-hint { display: none; }
+  body[data-dashboard-view="overview"] .dashboard-nav { gap: 7px; padding: 0; }
+  body[data-dashboard-view="overview"] .dashboard-nav-primary { gap: 7px; }
+  body[data-dashboard-view="overview"] .dashboard-nav-button {
+    width: 72px;
+    min-width: 72px;
+    min-height: 58px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 3px;
+    font-size: .58rem;
+    line-height: 1;
+    text-align: center;
+  }
+  body[data-dashboard-view="overview"] .dashboard-nav-icon { width: 18px; height: 18px; }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer { margin-top: auto; padding-top: 8px; }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer > summary {
+    width: 72px;
+    min-height: 48px;
+    justify-content: center;
+    padding: 6px;
+    border: 2px solid var(--bento-keyline);
+    font-size: 0;
+  }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer > summary::before { content: "•••"; font-size: .82rem; letter-spacing: .13em; }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer > summary::after { display: none; }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer[open] {
+    position: absolute;
+    z-index: 70;
+    left: 82px;
+    bottom: 6px;
+    display: block;
+    width: 220px;
+    padding: 8px;
+    border: 3px solid var(--bento-keyline);
+    background: var(--bento-card);
+    box-shadow: 5px 5px 0 var(--bento-keyline);
+  }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer[open] > summary { display: none; }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer[open] .dashboard-tool-list { display: grid; gap: 4px; }
+  body[data-dashboard-view="overview"] .dashboard-tool-drawer[open] .dashboard-nav-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: .66rem;
+    text-align: left;
+  }
+
+  body[data-dashboard-view="overview"] .agent-workspace {
+    position: relative;
+    grid-template-columns: minmax(330px, 38fr) minmax(0, 62fr);
+    height: calc(100dvh - 86px);
+    min-height: 680px;
+    margin: 0 7px 30px 0;
+    overflow: hidden;
+  }
+  body[data-dashboard-view="overview"] .agent-workbench {
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  body[data-dashboard-view="overview"] .agent-command {
+    gap: 8px;
+    padding: 16px 18px 15px;
+  }
+  body[data-dashboard-view="overview"] .agent-kicker { display: none; }
+  body[data-dashboard-view="overview"] .agent-command h3 {
+    max-width: 17ch;
+    font-size: clamp(1.45rem, 2vw, 2rem);
+    line-height: 1;
+  }
+  body[data-dashboard-view="overview"] .agent-command > p { font-size: .72rem; line-height: 1.42; }
+  body[data-dashboard-view="overview"] .agent-prompt-label { font-size: .68rem; }
+  body[data-dashboard-view="overview"] .agent-command textarea {
+    min-height: 68px;
+    max-height: 108px;
+    padding: 10px 11px;
+    font-size: .75rem;
+  }
+  body[data-dashboard-view="overview"] .agent-suggestion { min-height: 27px; padding: 4px 8px; font-size: .6rem; }
+  body[data-dashboard-view="overview"] .agent-prompt-actions { gap: 8px; }
+  body[data-dashboard-view="overview"] .agent-prompt-actions .faint { font-size: .59rem; }
+  body[data-dashboard-view="overview"] .agent-prompt-actions .primary { min-height: 36px; padding: 6px 11px; font-size: .67rem; }
+  body[data-dashboard-view="overview"] .agent-timeline-wrap {
+    min-height: 0;
+    align-content: start;
+    gap: 9px;
+    overflow-y: auto;
+    padding: 14px 18px;
+  }
+  body[data-dashboard-view="overview"] .agent-timeline-head h3 { font-size: .82rem; }
+  body[data-dashboard-view="overview"] .agent-timeline-head span { font-size: .58rem; }
+  body[data-dashboard-view="overview"] .agent-step {
+    grid-template-columns: 25px minmax(0, 1fr);
+    gap: 9px;
+    min-height: 62px;
+    padding-bottom: 9px;
+  }
+  body[data-dashboard-view="overview"] .agent-step:not(:last-child)::after { top: 23px; left: 11px; width: 2px; }
+  body[data-dashboard-view="overview"] .agent-step-marker { width: 25px; height: 25px; border-width: 2px; font-size: .6rem; }
+  body[data-dashboard-view="overview"] .agent-step-copy { gap: 2px; }
+  body[data-dashboard-view="overview"] .agent-step-copy strong { font-size: .72rem; }
+  body[data-dashboard-view="overview"] .agent-step-copy > p { font-size: .64rem; line-height: 1.35; }
+  body[data-dashboard-view="overview"] .agent-step-status { margin-top: 1px; padding: 2px 5px; font-size: .52rem; }
+  .agent-step-evidence { margin-top: 3px; }
+  .agent-step-evidence summary { width: max-content; cursor: pointer; color: var(--pg-text-muted); font-size: .56rem; font-weight: 850; text-decoration: underline; text-underline-offset: 2px; }
+  .agent-step-evidence p { margin: 4px 0 0; padding: 6px 7px; border-left: 2px solid var(--bento-keyline); background: var(--pg-surface); color: var(--pg-text-muted); font-size: .58rem; line-height: 1.4; }
+
+  body[data-dashboard-view="overview"] .agent-result { min-height: 0; grid-template-rows: auto auto auto minmax(0, 1fr); }
+  body[data-dashboard-view="overview"] .agent-result-head { padding: 10px 14px; }
+  body[data-dashboard-view="overview"] .agent-result-store span { font-size: .55rem; }
+  body[data-dashboard-view="overview"] .agent-result-store strong { font-size: .82rem; }
+  body[data-dashboard-view="overview"] .agent-lifecycle-step { padding: 8px 10px; }
+  body[data-dashboard-view="overview"] .agent-preview-mount { min-height: 0; padding: 8px; }
+  body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-panel,
+  body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-stage,
+  body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-frame { min-height: 0; height: 100%; }
+  body[data-dashboard-view="overview"] .agent-preview-mount .store-preview-toolbar {
+    min-height: 42px;
+    padding: 6px 9px;
+  }
+  body[data-dashboard-view="overview"] .agent-preview-mount :is(.preview-edit-toggle, .preview-ai-create, .preview-undo, #previewExpandToggle, #previewFullscreenToggle, .preview-save, .preview-art-direction, #previewStructureToggle) { display: none; }
+  body[data-dashboard-view="overview"] .agent-approval-seam {
+    position: absolute;
+    z-index: 25;
+    top: 50%;
+    left: 38%;
+    display: grid;
+    width: 140px;
+    align-items: stretch;
+    gap: 7px;
+    padding: 11px;
+    border: 3px solid var(--bento-keyline);
+    box-shadow: 5px 5px 0 var(--bento-keyline);
+    transform: translate(-50%, -50%);
+  }
+  body[data-dashboard-view="overview"] .agent-approval-seam > strong { font-size: .66rem; line-height: 1.2; text-align: center; }
+  body[data-dashboard-view="overview"] .agent-approval-seam button { width: 100%; min-height: 34px; padding: 6px 8px; font-size: .62rem; }
+
+  @media (max-width: 820px) {
+    body[data-dashboard-view="overview"] .topbar { min-height: 54px; margin-bottom: 8px; padding: 5px 0 7px; flex-wrap: nowrap; }
+    body[data-dashboard-view="overview"] .brand-mark { width: 32px; height: 32px; }
+    body[data-dashboard-view="overview"] .brand h1 { font-size: .86rem; }
+    body[data-dashboard-view="overview"] .brand .subtitle,
+    body[data-dashboard-view="overview"] .theme-control-label,
+    body[data-dashboard-view="overview"] .theme-option { font-size: 0; }
+    body[data-dashboard-view="overview"] .topbar-actions { width: auto; flex-direction: row; align-items: center; gap: 5px; }
+    body[data-dashboard-view="overview"] .theme-option { width: 28px; min-width: 28px; min-height: 28px; padding: 4px; }
+    body[data-dashboard-view="overview"] .theme-swatch { margin: 0; }
+    body[data-dashboard-view="overview"] .assistant-restore { min-height: 30px; padding: 5px 7px; font-size: .58rem; }
+    body[data-dashboard-view="overview"] .profile-trigger { width: 34px; height: 34px; min-height: 34px; }
+    body[data-dashboard-view="overview"] .profile-trigger-avatar { width: 25px; height: 25px; }
+    body[data-dashboard-view="overview"] .dashboard-shell { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    body[data-dashboard-view="overview"] .dashboard-sidebar {
+      position: static;
+      min-height: 0;
+      height: 62px;
+      padding: 7px;
+      overflow-x: auto;
+    }
+    body[data-dashboard-view="overview"] .dashboard-nav { flex: 1 0 auto; }
+    body[data-dashboard-view="overview"] .dashboard-nav-primary { display: flex; }
+    body[data-dashboard-view="overview"] .dashboard-nav-button {
+      width: auto;
+      min-width: 72px;
+      min-height: 44px;
+      flex-direction: row;
+      gap: 6px;
+      padding: 6px 8px;
+      font-size: .56rem;
+    }
+    body[data-dashboard-view="overview"] .dashboard-tool-drawer { display: none; }
+    body[data-dashboard-view="overview"] .agent-workspace {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: 0;
+      margin-right: 5px;
+      overflow: visible;
+    }
+    body[data-dashboard-view="overview"] .agent-workbench { grid-template-rows: auto auto; border-right: 0; }
+    body[data-dashboard-view="overview"] .agent-command { padding: 13px 15px; }
+    body[data-dashboard-view="overview"] .agent-command h3 { max-width: 19ch; font-size: 1.42rem; }
+    body[data-dashboard-view="overview"] .agent-command > p { font-size: .67rem; }
+    body[data-dashboard-view="overview"] .agent-command textarea { min-height: 58px; }
+    body[data-dashboard-view="overview"] .agent-suggestions .agent-suggestion:nth-child(3) { display: none; }
+    body[data-dashboard-view="overview"] .agent-timeline-wrap { max-height: none; overflow: visible; padding: 13px 15px 16px; }
+    body[data-dashboard-view="overview"] .agent-timeline { grid-template-columns: 1fr; gap: 0; }
+    body[data-dashboard-view="overview"] .agent-step { min-height: 56px; }
+    body[data-dashboard-view="overview"] .agent-step:not(:last-child)::after { display: block; }
+    body[data-dashboard-view="overview"] .agent-result { min-height: 540px; grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+    body[data-dashboard-view="overview"] .agent-approval-seam {
+      position: sticky;
+      bottom: 8px;
+      left: auto;
+      width: auto;
+      margin: 0 10px 10px;
+      transform: none;
+    }
+  }
 </style>
 </head>
 <body>
+  <!--
+    DIRECTION CONTRACT
+    THESIS: Agent actions and the live store are the default merchant workspace; refuse a metrics/dashboard-first overview.
+    OWN-WORLD: Preserve Terminal Ledger paper/graphite, 3px keylines, near-square geometry, hard shadows, pastel workflow states, and amber approval.
+    STORY: Describe a goal -> see a safe action sequence -> inspect the storefront -> approve drafts and publishing deliberately.
+    FIRST VIEWPORT: Slim grouped rail; prompt and timeline left; real storefront preview right; approval seam; tools secondary.
+    FORM: Task timeline with live preview; grounded candidate 3; concept seed 4de74820.
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+  -->
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
   <div class="dashboard-entry-loader" id="dashboardEntryLoader" role="status" aria-live="polite" aria-label="Cargando pagosYa">
     <div class="dashboard-entry-loader-inner">
@@ -3614,25 +4092,31 @@
           </div>
         </div>
         <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
-          <span class="dashboard-nav-label">Principal</span>
-          <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
-          <a class="dashboard-nav-button" href="#dashboard-progress" data-dashboard-view="progress"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Progreso</a>
-          <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Tiendas</a>
-          <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
-          <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
-          <a class="dashboard-nav-button" href="#dashboard-appearance" data-dashboard-view="appearance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Apariencia</a>
-          <span class="dashboard-nav-label" style="padding-top:12px">Operaciones</span>
-          <a class="dashboard-nav-button" href="#dashboard-operations" data-dashboard-view="operations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M17 13v8M13 17h8"/></svg></span>Centro operativo</a>
-          <a class="dashboard-nav-button" href="#dashboard-events" data-dashboard-view="events"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v3M19 3v3M4 8h16M5 5h14a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2z"/><path d="M8 12h3v3H8zM14 12h2M14 16h3"/></svg></span>Eventos</a>
-          <a class="dashboard-nav-button" href="#dashboard-charge-links" data-dashboard-view="charge-links"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg></span>Link de cobro</a>
-          <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
-          <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
-          <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
+          <span class="dashboard-nav-label">Flujo principal</span>
+          <div class="dashboard-nav-primary">
+            <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3z"/><path d="M5 15h14M5 20h9"/></svg></span>Crear</a>
+            <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Vender</a>
+            <a class="dashboard-nav-button" href="#dashboard-charge-links" data-dashboard-view="charge-links"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg></span>Cobrar</a>
+            <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplir</a>
+          </div>
+          <details class="dashboard-tool-drawer" id="dashboardToolDrawer">
+            <summary>Todas las herramientas</summary>
+            <div class="dashboard-tool-list">
+              <a class="dashboard-nav-button" href="#dashboard-progress" data-dashboard-view="progress"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Progreso</a>
+              <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Tiendas</a>
+              <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
+              <a class="dashboard-nav-button" href="#dashboard-appearance" data-dashboard-view="appearance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Editor avanzado</a>
+              <a class="dashboard-nav-button" href="#dashboard-operations" data-dashboard-view="operations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M17 13v8M13 17h8"/></svg></span>Centro operativo</a>
+              <a class="dashboard-nav-button" href="#dashboard-events" data-dashboard-view="events"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v3M19 3v3M4 8h16M5 5h14a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2z"/><path d="M8 12h3v3H8zM14 12h2M14 16h3"/></svg></span>Eventos</a>
+              <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
+              <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
+            </div>
+          </details>
         </nav>
         <span class="mobile-nav-hint" aria-hidden="true">Desliza para ver más →</span>
         <button class="ai-setup-launch" type="button" id="aiSetupLaunch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3zM5 14l.9 2.1L8 17l-2.1.9L5 20l-.9-2.1L2 17l2.1-.9zM18 13l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></svg>
-          <span>Configurar sitio con IA<small id="aiSetupLaunchStatus">Guía paso a paso</small></span>
+          <span>Crear sitio con Yapi<small id="aiSetupLaunchStatus">Guía paso a paso</small></span>
         </button>
         <div class="dashboard-sidebar-foot">
           <strong>Conexión protegida</strong>
@@ -3646,10 +4130,57 @@
         <header class="workspace-header" aria-live="polite">
           <div>
             <span class="workspace-kicker">Panel de comercio</span>
-            <h2 class="workspace-title" id="workspaceTitle">Resumen</h2>
-            <p class="workspace-description" id="workspaceDescription">Tu operación, ventas y estado general en un solo lugar.</p>
+            <h2 class="workspace-title" id="workspaceTitle">Crear con Yapi</h2>
+            <p class="workspace-description" id="workspaceDescription">Describe el resultado; Yapi organiza el trabajo y tú apruebas cada cambio.</p>
           </div>
         </header>
+    <section class="agent-workspace" id="agentWorkspace" data-dashboard-page="overview" aria-labelledby="agentWorkspaceTitle">
+      <div class="agent-workbench">
+        <form class="agent-command" id="agentWorkspaceForm">
+          <span class="agent-kicker">Yapi · agente de tu negocio</span>
+          <h3 id="agentWorkspaceTitle">¿Qué quieres crear o mejorar?</h3>
+          <p>Escribe el resultado que buscas. Yapi usa tu tienda y catálogo reales, prepara el siguiente paso y nunca cambia el sitio sin mostrarte qué ocurrirá.</p>
+          <label class="agent-prompt-label" for="agentWorkspaceInput">Tu objetivo</label>
+          <textarea id="agentWorkspaceInput" maxlength="1200" placeholder="Ej. Haz que mi tienda se sienta artesanal y prepara una portada para la nueva colección."></textarea>
+          <div class="agent-suggestions" aria-label="Ideas rápidas">
+            <button class="agent-suggestion" type="button" data-agent-prompt="Diseña una portada nueva para mi colección más reciente.">Nueva portada</button>
+            <button class="agent-suggestion" type="button" data-agent-prompt="Ordena mi tienda para que los productos más importantes se entiendan primero.">Ordenar catálogo</button>
+            <button class="agent-suggestion" type="button" data-agent-prompt="Dale a mi sitio una identidad más propia sin perder claridad para comprar.">Mejorar identidad</button>
+          </div>
+          <div class="agent-prompt-actions">
+            <span class="faint">Nada se publica sin una acción explícita.</span>
+            <button class="primary" id="agentWorkspaceSubmit" type="submit">Preparar cambio →</button>
+          </div>
+        </form>
+        <div class="agent-timeline-wrap">
+          <div class="agent-timeline-head"><h3>Plan de trabajo</h3><span id="agentTimelineSummary">Leyendo el estado real</span></div>
+          <ol class="agent-timeline" id="agentTimeline" aria-live="polite">
+            <li class="agent-step" id="agentIntentStep" data-state="current"><span class="agent-step-marker">1</span><div class="agent-step-copy"><strong>Entender el objetivo</strong><p id="agentIntentCopy">Cuéntale a Yapi qué resultado necesitas.</p><span class="agent-step-status" id="agentIntentStatus">Tu turno</span><details class="agent-step-evidence"><summary>Ver evidencia</summary><p id="agentIntentEvidence">Todavía no hay un objetivo guardado.</p></details></div></li>
+            <li class="agent-step" id="agentCatalogStep" data-state="waiting"><span class="agent-step-marker">2</span><div class="agent-step-copy"><strong>Revisar tienda y catálogo</strong><p id="agentCatalogCopy">Yapi comprobará qué contenido puede usar.</p><span class="agent-step-status" id="agentCatalogStatus">En espera</span><details class="agent-step-evidence"><summary>Ver evidencia</summary><p id="agentCatalogEvidence">La revisión comenzará cuando selecciones una tienda.</p></details></div></li>
+            <li class="agent-step" id="agentDesignStep" data-state="waiting"><span class="agent-step-marker">3</span><div class="agent-step-copy"><strong>Preparar el sitio</strong><p id="agentDesignCopy">Las propuestas aparecerán en una vista privada.</p><span class="agent-step-status" id="agentDesignStatus">En espera</span><details class="agent-step-evidence"><summary>Ver evidencia</summary><p id="agentDesignEvidence">Aún no hay propuestas para comparar.</p></details></div></li>
+            <li class="agent-step" id="agentApprovalStep" data-state="waiting"><span class="agent-step-marker">4</span><div class="agent-step-copy"><strong>Revisar y decidir</strong><p id="agentApprovalStepCopy">Tú eliges si aplicar o descartar.</p><span class="agent-step-status" id="agentApprovalStatus">Bloqueado</span><details class="agent-step-evidence"><summary>Ver evidencia</summary><p id="agentApprovalEvidence">Ninguna decisión fue tomada.</p></details></div></li>
+          </ol>
+        </div>
+      </div>
+      <div class="agent-result">
+        <div class="agent-result-head">
+          <div class="agent-result-store"><span>Resultado actual</span><strong id="agentStoreName">Selecciona una tienda</strong></div>
+          <a class="agent-store-open" id="agentStoreOpen" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir enlace ↗</a>
+        </div>
+        <div class="agent-lifecycle" id="agentLifecycle" aria-label="Estado del sitio">
+          <div class="agent-lifecycle-step" id="agentLifecyclePreview" data-state="waiting"><b>Vista privada</b><small>Sólo tú</small></div>
+          <div class="agent-lifecycle-step" id="agentLifecycleApplied" data-state="waiting"><b>Borrador aplicado</b><small>Listo para editar</small></div>
+          <div class="agent-lifecycle-step" id="agentLifecyclePublished" data-state="waiting"><b>Publicado</b><small>Enlace público</small></div>
+        </div>
+        <div class="agent-result-utility"><span id="agentApprovalCopy">Yapi usará contenido real; no inventará un avance.</span><button class="ghost" type="button" id="agentAdvancedEditor">Editor avanzado</button></div>
+        <div class="agent-preview-mount" id="agentPreviewMount"></div>
+        <div class="agent-approval-seam">
+          <strong id="agentApprovalTitle">Sin borrador</strong>
+          <button class="primary" type="button" id="agentReviewAction" disabled>No disponible</button>
+        </div>
+      </div>
+    </section>
+    <div class="overview-operations-heading" data-dashboard-page="overview"><span>Herramientas de control</span><h3>Resumen operativo</h3></div>
     <div class="cards" data-dashboard-page="overview">
       <div class="card">
         <div class="card-head">
@@ -5523,7 +6054,7 @@
   let assistantNotes = [];
   let assistantChat = [];
   let assistantSupportCases = [];
-  let assistantAutoHiddenForAppearance = false;
+  let assistantAutoHiddenForWorkspace = false;
   let assistantDragState = null;
   let suppressAssistantClick = false;
   let assistantWalkTimer = null;
@@ -6121,16 +6652,18 @@
   }
 
   function syncAssistantWorkspaceVisibility(view) {
-    if (view === "appearance") {
+    if (view === "overview" || view === "appearance") {
+      // Both surfaces already give Yapi a full, task-focused workspace.
+      // Hide the legacy floating companion so it never competes with the job.
       if (assistantDockEl.hidden) return;
       setAssistantOpen(false, false, false);
       assistantDockEl.hidden = true;
       assistantRestoreEl.hidden = false;
-      assistantAutoHiddenForAppearance = true;
+      assistantAutoHiddenForWorkspace = true;
       return;
     }
-    if (!assistantAutoHiddenForAppearance) return;
-    assistantAutoHiddenForAppearance = false;
+    if (!assistantAutoHiddenForWorkspace) return;
+    assistantAutoHiddenForWorkspace = false;
     let explicitlyHidden = false;
     try { explicitlyHidden = localStorage.getItem(ASSISTANT_HIDDEN_KEY) === "true"; } catch {}
     assistantDockEl.hidden = explicitlyHidden;
@@ -6194,7 +6727,7 @@
 
   assistantHideEl.addEventListener("click", () => setAssistantVisible(false));
   assistantRestoreEl.addEventListener("click", () => {
-    assistantAutoHiddenForAppearance = false;
+    assistantAutoHiddenForWorkspace = false;
     setAssistantVisible(true);
   });
   assistantCloseEl.addEventListener("click", () => setAssistantOpen(false));
@@ -7010,7 +7543,7 @@
   initDashboardSections();
   const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
   const DASHBOARD_VIEW_COPY = {
-    overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
+    overview: ["Crear con Yapi", "Describe el resultado; Yapi organiza el trabajo y tú apruebas cada cambio."],
     progress: ["Progreso", "Convierte la actividad real de tu tienda en niveles, estrellas y nuevos compañeros."],
     stores: ["Tiendas", "Crea y administra cada escaparate de tu comercio."],
     categories: ["Categorías", "Organiza el catálogo en el orden que verán tus clientes."],
@@ -7035,16 +7568,22 @@
       if (previewPanel && previewPanel.parentElement !== document.body) document.body.appendChild(previewPanel);
       return;
     }
-    const destination = view === "products"
-      ? document.getElementById("productPreviewMount")
-      : view === "appearance"
-        ? document.querySelector(".store-studio")
-        : null;
+    const destination = view === "overview"
+      ? document.getElementById("agentPreviewMount")
+      : view === "products"
+        ? document.getElementById("productPreviewMount")
+        : view === "appearance"
+          ? document.querySelector(".store-studio")
+          : null;
     if (previewPanel && destination && previewPanel.parentElement !== destination) destination.appendChild(previewPanel);
   }
 
   function setDashboardView(view, { remember = true } = {}) {
     const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
+    const primaryViews = new Set(["overview", "products", "charge-links", "compliance"]);
+    const toolDrawer = document.getElementById("dashboardToolDrawer");
+    if (toolDrawer && !primaryViews.has(nextView)) toolDrawer.open = true;
+    if (toolDrawer && nextView === "overview") toolDrawer.open = false;
     if (nextView !== "appearance" && storePreviewFullscreen) setStorePreviewFullscreen(false);
     const viewChanged = document.body.dataset.dashboardView !== nextView;
     if (nextView !== "progress" && document.getElementById("adventureGuide")?.getAttribute("aria-expanded") === "true") {
@@ -8107,6 +8646,194 @@
   let visualAiPreviewUrls = [];
   let visualLoaderTimer = null;
   let visualLoaderOffset = 0;
+
+  const agentWorkspaceInputEl = document.getElementById("agentWorkspaceInput");
+  const AGENT_PROMPT_KEY = "pagosya_agent_workspace_prompt";
+  let agentGenerationRunning = false;
+
+  function setAgentStep(id, state, copy, status) {
+    const step = document.getElementById(id);
+    if (!step) return;
+    step.dataset.state = state;
+    const copyEl = step.querySelector("p");
+    const statusEl = step.querySelector(".agent-step-status");
+    if (copyEl) copyEl.textContent = copy;
+    if (statusEl) statusEl.textContent = status;
+  }
+
+  function setAgentLifecycle(id, state) {
+    const element = document.getElementById(id);
+    if (element) element.dataset.state = state;
+  }
+
+  function renderAgentWorkspace() {
+    const store = lastStores.find((candidate) => candidate.id === currentStoreId) || null;
+    const products = lastPaymentLinks.filter((product) => product.status !== "ARCHIVED");
+    const proposals = visualStudioStoreId === currentStoreId
+      ? visualProposals.filter((proposal) => proposal.status !== "DISMISSED")
+      : [];
+    const appliedProposal = proposals
+      .filter((proposal) => proposal.status === "APPLIED")
+      .sort((first, second) => new Date(second.appliedAt || 0) - new Date(first.appliedAt || 0))[0] || null;
+    const activeProposal = activeVisualProposalId
+      ? proposals.find((proposal) => proposal.id === activeVisualProposalId) || null
+      : null;
+    const hasStore = Boolean(store);
+    const hasProducts = products.length > 0;
+    const hasProposal = proposals.length > 0;
+    const publicStore = store?.status === "ACTIVE";
+    const prompt = agentWorkspaceInputEl?.value.trim() || "";
+
+    document.getElementById("agentStoreName").textContent = store?.name || "Selecciona una tienda";
+    const storeOpen = document.getElementById("agentStoreOpen");
+    storeOpen.href = store ? publicStoreUrl(store) : "#";
+    storeOpen.setAttribute("aria-disabled", String(!store));
+    document.getElementById("agentTimelineSummary").textContent = !hasStore
+      ? "Falta una tienda"
+      : agentGenerationRunning ? "Yapi está componiendo"
+      : `${products.length} ${products.length === 1 ? "producto" : "productos"} · ${hasProposal ? `${proposals.length} ${proposals.length === 1 ? "propuesta" : "propuestas"}` : "sin propuesta"}`;
+
+    setAgentStep(
+      "agentIntentStep",
+      prompt || hasStore ? "complete" : "current",
+      prompt ? `Objetivo listo: “${prompt.length > 88 ? `${prompt.slice(0, 85)}…` : prompt}”` : hasStore ? `${store.name} está seleccionada y lista para trabajar.` : "Cuéntale a Yapi qué resultado necesitas.",
+      prompt || hasStore ? "Entendido" : "Tu turno",
+    );
+    setAgentStep(
+      "agentCatalogStep",
+      hasProducts ? "complete" : hasStore ? "current" : "waiting",
+      hasProducts ? `${products.length} ${products.length === 1 ? "producto real disponible" : "productos reales disponibles"} para componer el sitio.` : hasStore ? "Agrega al menos un producto para que Yapi diseñe con contenido real." : "Yapi revisará tu tienda y catálogo cuando exista una tienda.",
+      hasProducts ? "Listo" : hasStore ? "Necesita contenido" : "En espera",
+    );
+    setAgentStep(
+      "agentDesignStep",
+      hasProposal ? "complete" : agentGenerationRunning || hasProducts ? "current" : "waiting",
+      activeProposal ? `“${activeProposal.title}” está abierta en una vista que sólo tú ves.` : hasProposal ? `${proposals.length} ${proposals.length === 1 ? "dirección visual está lista" : "direcciones visuales están listas"} para comparar.` : agentGenerationRunning ? "Yapi está componiendo tres direcciones con tu catálogo y objetivo." : hasProducts ? "Describe una dirección y Yapi preparará tres sitios para comparar." : "Las propuestas aparecerán después de revisar el catálogo.",
+      activeProposal ? "Vista privada" : hasProposal ? "Propuestas listas" : agentGenerationRunning ? "Trabajando" : hasProducts ? "Listo para crear" : "En espera",
+    );
+    setAgentStep(
+      "agentApprovalStep",
+      appliedProposal ? "complete" : hasProposal ? "current" : "waiting",
+      appliedProposal ? `“${appliedProposal.title}” fue aplicada. La versión anterior quedó guardada.` : hasProposal ? "Recorre la propuesta en vivo; aplicar sigue siendo una decisión explícita." : "Tú eliges si aplicar o descartar cualquier propuesta.",
+      appliedProposal ? "Aplicado" : hasProposal ? "Requiere tu decisión" : "Bloqueado",
+    );
+
+    setAgentLifecycle("agentLifecyclePreview", activeProposal ? "current" : hasProposal ? "complete" : "waiting");
+    setAgentLifecycle("agentLifecycleApplied", appliedProposal ? (activeProposal ? "complete" : "current") : "waiting");
+    setAgentLifecycle("agentLifecyclePublished", publicStore ? (activeProposal || appliedProposal ? "complete" : "current") : "waiting");
+
+    document.getElementById("agentIntentEvidence").textContent = prompt
+      ? `Objetivo guardado para ${store?.name || "la próxima tienda"}: ${prompt}`
+      : store ? `Tienda seleccionada: ${store.name}. Falta describir el resultado.` : "Todavía no hay un objetivo ni una tienda seleccionada.";
+    document.getElementById("agentCatalogEvidence").textContent = hasProducts
+      ? `${products.length} productos activos: ${products.slice(0, 3).map((product) => product.name).join(", ")}${products.length > 3 ? "…" : ""}.`
+      : hasStore ? `${store.name} existe, pero no tiene productos activos.` : "La revisión comenzará cuando selecciones una tienda.";
+    document.getElementById("agentDesignEvidence").textContent = hasProposal
+      ? `Propuestas disponibles: ${proposals.map((proposal) => proposal.title).join(", ")}.`
+      : agentGenerationRunning ? "Solicitud enviada al generador. La tienda pública permanece sin cambios." : "Aún no hay propuestas para comparar.";
+    document.getElementById("agentApprovalEvidence").textContent = appliedProposal
+      ? `${appliedProposal.title} está aplicada. ${visualVersions.length} ${visualVersions.length === 1 ? "versión anterior disponible" : "versiones anteriores disponibles"}.`
+      : hasProposal ? "Hay un borrador revisable; ninguna propuesta nueva fue aplicada todavía." : "Ninguna decisión fue tomada.";
+
+    const approvalTitle = document.getElementById("agentApprovalTitle");
+    const approvalCopy = document.getElementById("agentApprovalCopy");
+    const reviewButton = document.getElementById("agentReviewAction");
+    reviewButton.disabled = !hasProposal || agentGenerationRunning;
+    if (!hasStore) {
+      approvalTitle.textContent = "Sin borrador";
+      approvalCopy.textContent = "Crea una tienda desde el objetivo para comenzar.";
+      reviewButton.textContent = "No disponible";
+    } else if (!hasProducts) {
+      approvalTitle.textContent = "Catálogo incompleto";
+      approvalCopy.textContent = "El catálogo necesita al menos un producto real.";
+      reviewButton.textContent = "No disponible";
+    } else if (agentGenerationRunning) {
+      approvalTitle.textContent = "Preparando borrador";
+      approvalCopy.textContent = "La tienda pública sigue intacta.";
+      reviewButton.textContent = "Preparando…";
+    } else if (activeProposal || (hasProposal && !appliedProposal)) {
+      approvalTitle.textContent = activeProposal ? "Vista privada lista" : "Borrador listo";
+      approvalCopy.textContent = "La tienda pública no cambia hasta que uses una propuesta.";
+      reviewButton.textContent = "Revisar";
+    } else if (appliedProposal) {
+      approvalTitle.textContent = "Sitio aplicado";
+      approvalCopy.textContent = "Puedes seguir editándolo o restaurar una versión anterior.";
+      reviewButton.textContent = "Revisar";
+    } else {
+      approvalTitle.textContent = "Sin borrador";
+      approvalCopy.textContent = "Describe el resultado y prepara el cambio a la izquierda.";
+      reviewButton.textContent = "No disponible";
+    }
+    const submitButton = document.getElementById("agentWorkspaceSubmit");
+    submitButton.disabled = agentGenerationRunning;
+    submitButton.textContent = agentGenerationRunning ? "Preparando…" : "Preparar cambio →";
+  }
+
+  function openAgentDestination(view) {
+    const toolDrawer = document.getElementById("dashboardToolDrawer");
+    if (!["overview", "products", "charge-links", "compliance"].includes(view) && toolDrawer) toolDrawer.open = true;
+    history.pushState(null, "", `#dashboard-${view}`);
+    setDashboardView(view);
+    document.querySelector(".workspace-header")?.scrollIntoView({ block: "start" });
+  }
+
+  function openAgentCreativeStudio(prompt = "") {
+    openAgentDestination("appearance");
+    const creativeBrief = document.getElementById("visualCreativeBrief");
+    if (prompt) creativeBrief.value = prompt;
+    const assistantToggle = document.getElementById("visualAssistantToggle");
+    if (assistantToggle?.getAttribute("aria-expanded") !== "true") document.getElementById("previewAiCreate")?.click();
+    window.setTimeout(() => {
+      creativeBrief?.focus({ preventScroll: true });
+      document.getElementById("visualOnboarding")?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }, 160);
+  }
+
+  try { agentWorkspaceInputEl.value = localStorage.getItem(AGENT_PROMPT_KEY) || ""; } catch {}
+  document.querySelectorAll("[data-agent-prompt]").forEach((button) => button.addEventListener("click", () => {
+    agentWorkspaceInputEl.value = button.dataset.agentPrompt;
+    agentWorkspaceInputEl.focus();
+    renderAgentWorkspace();
+  }));
+  agentWorkspaceInputEl.addEventListener("input", renderAgentWorkspace);
+  document.getElementById("agentWorkspaceForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const prompt = agentWorkspaceInputEl.value.trim();
+    if (!prompt) {
+      agentWorkspaceInputEl.focus();
+      infoEl.textContent = "Describe primero qué quieres crear o mejorar.";
+      return;
+    }
+    try { localStorage.setItem(AGENT_PROMPT_KEY, prompt); } catch {}
+    const store = lastStores.find((candidate) => candidate.id === currentStoreId);
+    if (!store) {
+      infoEl.textContent = "Crea una tienda para que Yapi pueda preparar el cambio.";
+      openAgentDestination("stores");
+      return;
+    }
+    if (!lastPaymentLinks.some((product) => product.status !== "ARCHIVED")) {
+      infoEl.textContent = "Agrega tu primer producto; Yapi diseñará con ese contenido real.";
+      openAgentDestination("products");
+      return;
+    }
+    document.getElementById("visualCreativeBrief").value = prompt;
+    agentGenerationRunning = true;
+    infoEl.textContent = "Yapi está preparando tres direcciones. La vista se actualizará aquí y tu sitio público no cambiará.";
+    renderAgentWorkspace();
+    visualGenerateEl.click();
+  });
+  document.getElementById("agentReviewAction").addEventListener("click", () => {
+    const visible = visualProposals.filter((proposal) => proposal.status !== "DISMISSED");
+    const proposal = activeVisualProposalId
+      ? visible.find((candidate) => candidate.id === activeVisualProposalId)
+      : visible.find((candidate) => candidate.status !== "APPLIED") || visible[0];
+    if (!proposal) return;
+    previewVisualProposal(proposal, { announce: false });
+    infoEl.textContent = `“${proposal.title}” está abierta en una vista privada. Recorre el sitio y usa Editor avanzado para aplicar o ajustar.`;
+  });
+  document.getElementById("agentAdvancedEditor").addEventListener("click", () => openAgentCreativeStudio(agentWorkspaceInputEl.value.trim()));
+  renderAgentWorkspace();
+
   const AI_ONBOARDING_SEEN_KEY = "pagosya_ai_onboarding_seen_v1";
   const AI_ONBOARDING_STEP_KEY = "pagosya_ai_onboarding_step_v1";
   const onboardingDialogEl = document.getElementById("onboardingDialog");
@@ -10056,6 +10783,7 @@
     storePreviewFrameEl.src = previewUrl;
     waitForStorePreviewHandshake();
     if (announce) visualProposalStatusEl.textContent = `Mostrando “${proposal.title}” en Tu tienda. Puedes recorrerla y cambiar de opción sin publicar nada.`;
+    renderAgentWorkspace();
     return true;
   }
 
@@ -10066,6 +10794,7 @@
     previewLiveStatusEl.textContent = "En vivo";
     storePreviewFrameEl.title = "Vista previa editable de la tienda";
     if (reload) refreshStorePreview(true);
+    renderAgentWorkspace();
   }
 
   function setVisualStep(step) {
@@ -10647,6 +11376,7 @@
         setButtonBusy(button, false, "Restaurar");
       }
     }));
+    renderAgentWorkspace();
   }
 
   async function loadVisualStudioState(storeId = currentStoreId) {
@@ -10688,6 +11418,7 @@
       if (storeId !== currentStoreId) return;
       visualProposalStatusEl.textContent = "No pudimos cargar las propuestas anteriores: " + err.message;
       visualSourceStatusEl.textContent = "No pudimos cargar los borradores de esta tienda. Puedes volver a intentarlo cambiando de tienda y regresando.";
+      renderAgentWorkspace();
     }
   }
 
@@ -13283,11 +14014,17 @@
   visualGenerateEl.addEventListener("click", async () => {
     if (!currentStoreId) return;
     const generationStoreId = currentStoreId;
+    const initiatedFromAgentWorkspace = agentGenerationRunning;
     const checkoutMode = selectedVisualCheckoutMode();
     const whatsappPhone = visualWhatsappPhoneEl.value.trim();
     if (checkoutMode === "whatsapp" && !hasUsableWhatsAppPhone(whatsappPhone)) {
       visualSourceStatusEl.textContent = "Escribe un número de WhatsApp válido, con 7 a 15 dígitos.";
       visualWhatsappPhoneEl.focus();
+      if (initiatedFromAgentWorkspace) {
+        agentGenerationRunning = false;
+        infoEl.textContent = "Completa el número de WhatsApp en Editor avanzado antes de generar propuestas.";
+        renderAgentWorkspace();
+      }
       return;
     }
     errorEl.textContent = "";
@@ -13345,12 +14082,25 @@
         ? "La primera dirección ya aparece en Tu tienda. Alterna entre las tres, recorre cada sitio y usa la que quieras seguir editando."
         : "La primera dirección ya aparece en Tu tienda. Puedes alternar entre las tres; la tienda publicada no cambió.") + originalitySummary;
       if (generatedProposals.length >= 3) {
-        setOnboardingStep(4, { open: true });
+        if (initiatedFromAgentWorkspace) {
+          onboardingStep = 4;
+          onboardingCompleted = false;
+          try { localStorage.setItem(onboardingStorageKey(AI_ONBOARDING_STEP_KEY), "4"); } catch {}
+          renderOnboardingProgress();
+        } else {
+          setOnboardingStep(4, { open: true });
+        }
       } else {
         visualProposalStatusEl.textContent = `Solo recibimos ${generatedProposals.length} de 3 propuestas. Intenta generarlas nuevamente antes de aprobar.`;
-        setOnboardingStep(3, { open: true });
-        onboardingStatusEl.setAttribute("role", "alert");
-        onboardingStatusEl.textContent = "No se pudieron completar las tres propuestas. Tus imágenes siguen guardadas para volver a intentar.";
+        if (initiatedFromAgentWorkspace) {
+          onboardingStep = 3;
+          try { localStorage.setItem(onboardingStorageKey(AI_ONBOARDING_STEP_KEY), "3"); } catch {}
+          renderOnboardingProgress();
+        } else {
+          setOnboardingStep(3, { open: true });
+          onboardingStatusEl.setAttribute("role", "alert");
+          onboardingStatusEl.textContent = "No se pudieron completar las tres propuestas. Tus imágenes siguen guardadas para volver a intentar.";
+        }
       }
     } catch (err) {
       if (generationStoreId !== currentStoreId) return;
@@ -13359,6 +14109,10 @@
     } finally {
       stopVisualGenerationLoader();
       if (generationStoreId === currentStoreId) visualGenerateEl.disabled = false;
+      if (initiatedFromAgentWorkspace) {
+        agentGenerationRunning = false;
+        renderAgentWorkspace();
+      }
     }
   });
   renderVisualSources();
@@ -14945,6 +15699,7 @@
       clearTimeout(previewPostTimer);
       storePreviewFrameEl.removeAttribute("src");
       setStorePreviewState(storeId ? "loading" : "empty");
+      renderAgentWorkspace();
     }
   }
 
@@ -15612,6 +16367,7 @@
     document.getElementById("debtCollectionSection").style.display = hasStore ? "block" : "none";
     document.getElementById("quickPaymentSection").style.display = hasStore ? "block" : "none";
     document.getElementById("noStoreMessage").style.display = hasStore ? "none" : "block";
+    renderAgentWorkspace();
 
     clearStoreEditorUndo();
     animationTextClipboard = null;
@@ -17272,6 +18028,7 @@
 
   function renderPaymentLinkRows(links) {
     lastPaymentLinks = links;
+    renderAgentWorkspace();
     renderPreviewProductNavigation();
     pendingStoreLocations.forEach((location, locationIndex) => {
       location.inventory ||= {};
@@ -18994,6 +19751,7 @@
 
       renderCategoryRows(categories);
       renderPaymentLinkRows(paymentLinks);
+      renderAgentWorkspace();
       if (document.body.dataset.dashboardView === "operations") await loadOperationsHub();
       renderPromoCodes(promoCodes);
       renderDebtCollectionLinks(debtCollectionLinks);
