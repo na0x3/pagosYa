@@ -134,9 +134,16 @@ describe("VisualStudioService", () => {
       expect(document.sections.flatMap((section: { mediaUrls: string[] }) => section.mediaUrls)).toContain(originalUrl);
       expect(typeof document.navigation.sticky).toBe("boolean");
       expect(document.sections.find((section: { kind: string }) => section.kind === "story")).toEqual(expect.objectContaining({ motion: "story-scroll" }));
-      expect(["hero", "story", "gallery"]).toContain(document.sections[0].kind);
+      expect(document.sections[0].kind).toBe("hero");
       expect(document.sections[0].motion).not.toBe("none");
       expect(document.sections[1].kind).toBe("catalog");
+      expect(document.footer).toEqual(expect.objectContaining({
+        enabled: true,
+        brandDescription: expect.stringContaining("MATCHO"),
+        copyright: expect.stringContaining("MATCHO"),
+        badge: expect.stringContaining("pagosYa"),
+        columns: expect.arrayContaining([expect.objectContaining({ items: expect.any(Array) })]),
+      }));
       expect(document.sections.find((section: { kind: string }) => section.kind === "gallery")?.layout).not.toBe("rail");
       expect(document.pages).toBeUndefined();
       expect(document.sections.filter((section: { pageId?: string }) => !section.pageId)).toHaveLength(document.sections.length);
@@ -144,6 +151,16 @@ describe("VisualStudioService", () => {
       expect(document.navigation.items.every((item: { target: string }) => item.target !== "page")).toBe(true);
       expect(document.sections.find((section: { kind: string }) => section.kind === "hero")?.pageId).toBeUndefined();
       expect(document.sections.find((section: { kind: string }) => section.kind === "catalog")?.pageId).toBeUndefined();
+      expect(document.navigation.items).toEqual(expect.arrayContaining([
+        expect.objectContaining({ label: "Inicio", target: "home" }),
+        expect.objectContaining({ target: "catalog" }),
+        expect.objectContaining({ target: "section", sectionId: document.sections.find((section: { kind: string }) => section.kind === "story").id }),
+        expect.objectContaining({ target: "section", sectionId: document.sections.find((section: { kind: string }) => section.kind === "gallery").id }),
+        expect.objectContaining({ target: "section", sectionId: document.sections.find((section: { kind: string }) => section.kind === "contact").id }),
+      ]));
+      expect(document.navigation.items.every((item: { target: string; sectionId?: string }) =>
+        item.target !== "section" || document.sections.some((section: { id: string }) => section.id === item.sectionId),
+      )).toBe(true);
       expect(new Set(document.sections.map((section: { family: string }) => section.family)).size).toBeGreaterThanOrEqual(2);
       expect(document.sections.every((section: { family: string }) => ["editorial", "cinematic", "product-led", "minimal"].includes(section.family))).toBe(true);
       expect(document.experience.placement).toBe("after-catalog");
@@ -153,7 +170,7 @@ describe("VisualStudioService", () => {
       expect(Object.values(document.theme)).not.toContain("#000000");
     }
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => JSON.stringify(call[0].data.config.siteDocument.sections.map((section: { kind: string; layout: string }) => [section.kind, section.layout])))).size).toBe(3);
-    expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections[0].kind)).size).toBeGreaterThanOrEqual(2);
+    expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections[0].motion)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.artDirection)).size).toBe(3);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections.find((section: { kind: string }) => section.kind === "hero").layout)).size).toBeGreaterThanOrEqual(2);
     expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections.find((section: { kind: string }) => section.kind === "hero").family)).size).toBeGreaterThanOrEqual(2);
@@ -394,7 +411,7 @@ describe("VisualStudioService", () => {
       expect(motions.some((motion: string) => motion !== "none")).toBe(true);
       expect(motions.filter((motion: string) => motion !== "none").length).toBeLessThanOrEqual(4);
       const activeMotions = motions.filter((motion: string) => motion !== "none");
-      expect(new Set(activeMotions).size).toBe(activeMotions.length);
+      expect(activeMotions.filter((motion: string) => motion === "story-scroll")).toHaveLength(1);
     }
   });
 
@@ -434,7 +451,7 @@ describe("VisualStudioService", () => {
     expect(JSON.stringify(config.contentOrder)).not.toContain("animation-circle");
     expect(config.siteDocument.experience.type).toBe("none");
     expect(config.siteDocument.sections.find((section: { kind: string }) => section.kind === "gallery").layout).toBe("grid");
-    expect(config.siteDocument.sections.map((section: { motion: string }) => section.motion)).toEqual(["none", "story-scroll", "clip", "reveal", "none"]);
+    expect(config.siteDocument.sections.map((section: { motion: string }) => section.motion)).toEqual(["none", "story-scroll", "clip", "reveal", "reveal"]);
   });
 
   it("starts a new AI site without carrying merchant-authored animation sections into it", async () => {
@@ -563,12 +580,14 @@ describe("VisualStudioService", () => {
       const catalog = config.siteDocument.sections.find((section: { kind: string }) => section.kind === "catalog");
       expect(config.siteDocument.experience.title).not.toBe(catalog.title);
       expect(config.siteDocument.experience.body).not.toBe(catalog.body);
-      const visibleTypes = [
+      const visibleSignatureTypes = [
         "hero-carousel",
-        ...config.siteDocument.sections.map((section: { motion: string }) => section.motion).filter((motion: string) => motion !== "none"),
+        ...config.siteDocument.sections
+          .map((section: { motion: string }) => section.motion)
+          .filter((motion: string) => ["story-scroll", "marquee"].includes(motion)),
         ...(config.siteDocument.experience.type === "none" ? [] : [config.siteDocument.experience.type]),
       ];
-      expect(new Set(visibleTypes).size).toBe(visibleTypes.length);
+      expect(new Set(visibleSignatureTypes).size).toBe(visibleSignatureTypes.length);
       if (config.siteDocument.experience.type === "scroll-expansion") {
         expect(config.siteDocument.experience.mediaUrls).toHaveLength(2);
       } else {
@@ -578,7 +597,7 @@ describe("VisualStudioService", () => {
     expect(new Set(signatureTypes)).toEqual(new Set(["scroll-expansion", "full-screen-chapters", "frame-sequence"]));
   });
 
-  it("uses materially different openings while retaining every required commerce section", async () => {
+  it("uses materially different visual hero openings while retaining every required commerce section", async () => {
     const { service, prisma } = setup();
 
     await service.generate("merchant_1", "store_1", {
@@ -588,9 +607,46 @@ describe("VisualStudioService", () => {
     const orders = prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections.map((section: { kind: string }) => section.kind));
     orders.forEach((order) => {
       expect(order).toEqual(expect.arrayContaining(["hero", "story", "catalog", "contact"]));
+      expect(order[0]).toBe("hero");
+      expect(order[1]).toBe("catalog");
     });
-    expect(new Set(orders.map((order) => order[0])).size).toBeGreaterThanOrEqual(2);
     expect(new Set(orders.map((order) => order.join("/"))).size).toBe(3);
+    const openingMotions = prisma.storeVisualProposal.create.mock.calls.map((call) => call[0].data.config.siteDocument.sections[0].motion);
+    expect(new Set(openingMotions)).toEqual(new Set(["reveal", "drift", "scale"]));
+  });
+
+  it("uses an uploaded video as the lead scene for one generated opening", async () => {
+    const { service, prisma } = setup();
+    const assets = [
+      { id: "asset_image_1", url: "/v1/uploads/00000000-0000-4000-8000-000000000001.jpg", storageKey: "one.jpg", mimeType: "image/jpeg" },
+      { id: "asset_image_2", url: "/v1/uploads/00000000-0000-4000-8000-000000000002.jpg", storageKey: "two.jpg", mimeType: "image/jpeg" },
+      { id: "asset_video", url: "/v1/uploads/00000000-0000-4000-8000-000000000003.mp4", storageKey: "opening.mp4", mimeType: "video/mp4" },
+    ].map((asset) => ({
+      ...asset,
+      merchantId: "merchant_1",
+      storeId: null,
+      byteSize: 10,
+      kind: "ORIGINAL",
+      parentAssetId: null,
+      createdAt: new Date(),
+    }));
+    prisma.mediaAsset.findMany.mockResolvedValue(assets);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "product_matcha",
+      name: "Matcha ceremonial",
+      description: "Té verde",
+      imageUrls: assets.slice(0, 2).map((asset) => asset.url),
+      tags: ["matcha"],
+    }]);
+
+    await service.generate("merchant_1", "store_1", {
+      assetUrls: assets.map((asset) => asset.url),
+      businessCategory: "matcha",
+    });
+
+    const thirdOpening = prisma.storeVisualProposal.create.mock.calls[2][0].data.config.siteDocument.sections[0];
+    expect(thirdOpening).toEqual(expect.objectContaining({ kind: "hero", motion: "scale" }));
+    expect(thirdOpening.mediaUrls[0]).toBe(assets[2].url);
   });
 
   it("accepts a large photo library without dumping it into the generated page", async () => {
@@ -763,7 +819,7 @@ describe("VisualStudioService", () => {
     expect(updateData.motionExperiences).toEqual([]);
     expect(updateData.motionDuoEnabled).toBe(false);
     expect(updateData.siteDocument.experience).toEqual(expect.objectContaining({ type: "frame-sequence" }));
-    expect(updateData.siteDocument.sections.map((section: { motion: string }) => section.motion)).toEqual(["none", "story-scroll", "reveal", "none"]);
+    expect(updateData.siteDocument.sections.map((section: { motion: string }) => section.motion)).toEqual(["none", "story-scroll", "reveal", "reveal"]);
   });
 
   it("uses structured AI directions for the whole appearance while keeping the model inside the visual allowlist", async () => {
@@ -870,7 +926,7 @@ describe("VisualStudioService", () => {
         expect(activeMotions.length).toBeGreaterThanOrEqual(2);
         expect(activeMotions.length).toBeLessThanOrEqual(3);
         expect(sections[0].motion).not.toBe("none");
-        expect(new Set(activeMotions).size).toBe(activeMotions.length);
+        expect(activeMotions.filter((motion: string) => motion === "story-scroll")).toHaveLength(1);
       }
       expect(new Set(prisma.storeVisualProposal.create.mock.calls.map((call) =>
         call[0].data.config.siteDocument.sections.find((section: { kind: string }) => section.kind === "gallery").motion,
@@ -887,7 +943,7 @@ describe("VisualStudioService", () => {
       expect(designRequest.max_output_tokens).toBe(14_000);
       expect(designRequest.input[0].content[0].text).toContain("Análisis de marca obligatorio");
       expect(designRequest.input[0].content[0].text).toContain("No existe benefits");
-      expect(designRequest.input[0].content[0].text).toContain("catalog debe ser exactamente la segunda sección");
+      expect(designRequest.input[0].content[0].text).toContain("Hero debe ser exactamente la primera sección");
       expect(designRequest.input[0].content[0].text).toContain("Topologías de página asignadas");
       expect(analysisRequest.input[0].content[0].text).toContain("arquitectura de páginas en pagePlan");
       expect(designRequest.input[0].content[0].text).toContain("Contrato multipágina obligatorio");

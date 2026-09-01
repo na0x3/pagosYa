@@ -5522,6 +5522,12 @@ body.has-bespoke-site[data-site-rhythm="compact"] .bespoke-zone { --zone-space: 
   overflow: visible;
   background: transparent;
 }
+.bespoke-story-flow .store-flow-copy h3 {
+  --canvas-base-font-size: clamp(34px, 5.5vw, 72px);
+  max-width: 14ch;
+  font-size: var(--canvas-base-font-size);
+  line-height: .92;
+}
 body.has-bespoke-site[data-site-image-treatment="editorial"] .bespoke-story-flow .store-flow-inner {
   grid-template-columns: minmax(360px, 1.2fr) minmax(0, .8fr);
 }

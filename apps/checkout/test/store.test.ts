@@ -1453,6 +1453,16 @@ describe("storefront routes", () => {
     expect(document.querySelectorAll(".bespoke-story .store-flow-section")).toHaveLength(3);
     expect(document.querySelectorAll(".bespoke-story .store-flow-copy h3")).toHaveLength(3);
     expect(document.querySelectorAll(".bespoke-story .store-flow-copy p")).toHaveLength(3);
+    const secondStorySection = document.querySelectorAll<HTMLElement>(".bespoke-story .store-flow-section")[1];
+    const secondStoryInner = secondStorySection.querySelector<HTMLElement>(".store-flow-inner")!;
+    vi.spyOn(secondStorySection, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: window.innerHeight * .6, top: window.innerHeight * .6, right: 900, bottom: window.innerHeight * 1.6,
+      left: 0, width: 900, height: window.innerHeight, toJSON: () => ({}),
+    });
+    window.dispatchEvent(new Event("scroll"));
+    await vi.waitFor(() => expect(Number(secondStoryInner.style.opacity)).toBeLessThan(1));
+    expect(secondStoryInner.style.clipPath).toContain("inset(");
+    expect(secondStoryInner.style.transform).toContain("translateY(");
     const editableStoryTitle = document.querySelector<HTMLElement>(".bespoke-story .store-flow-section h3");
     expect(editableStoryTitle?.dataset.storeEditorSection).toBe("site-brand-story");
     expect(editableStoryTitle?.dataset.storeEditorField).toBe("siteBlockText");

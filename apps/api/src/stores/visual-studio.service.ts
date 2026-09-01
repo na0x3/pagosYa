@@ -242,19 +242,139 @@ function applyGeneratedBrandPalette(
   };
 }
 
+function withGeneratedDefaultFooter(
+  document: StoreSiteDocument,
+  store: Store,
+  links: StoreLinkContext[],
+  index: number,
+): StoreSiteDocument {
+  if (document.footer?.enabled) return document;
+  const existingFooter = document.footer;
+  const sectionItem = (kind: StoreSiteDocument["sections"][number]["kind"], fallbackLabel: string) => {
+    const section = document.sections.find((candidate) => candidate.kind === kind);
+    return section ? [{ id: `section-${kind}`, label: section.title || fallbackLabel, href: `#site-section-${section.id}` }] : [];
+  };
+  const navigationVariants = [
+    { title: "Explora", items: [...sectionItem("catalog", "La tienda"), ...sectionItem("story", "Nuestra historia")] },
+    { title: "Descubre", items: [...sectionItem("catalog", "Productos"), ...sectionItem("gallery", "Galería")] },
+    { title: "Visita", items: [...sectionItem("catalog", "Catálogo"), ...sectionItem("contact", "Contacto")] },
+  ];
+  const navigation = navigationVariants[index % navigationVariants.length];
+  const realLinks = links
+    .filter((link) => /^https:\/\//i.test(link.url))
+    .slice(0, 4)
+    .map((link, linkIndex) => ({ id: `brand-link-${linkIndex + 1}`, label: link.label, href: link.url }));
+  const supportingItems = realLinks.length
+    ? realLinks
+    : [...sectionItem("contact", "Escríbenos"), ...sectionItem("links", "Redes y enlaces")];
+  const descriptions = [
+    `${store.name}: productos, imágenes y formas de conectar con la marca.`,
+    `Conoce el universo visual de ${store.name} y explora su catálogo actual.`,
+    `La selección, la historia y las novedades de ${store.name} en un solo lugar.`,
+  ];
+  const badges = ["Sitio impulsado por pagosYa", "Tienda creada con pagosYa", "Experiencia de compra pagosYa"];
+  return {
+    ...document,
+    footer: {
+      enabled: true,
+      brandDescription: existingFooter?.brandDescription || descriptions[index % descriptions.length],
+      columns: existingFooter?.columns.length ? existingFooter.columns : [
+        { id: "explore", title: navigation.title, items: navigation.items },
+        ...(supportingItems.length ? [{ id: "connect", title: realLinks.length ? "Conecta" : "Información", items: supportingItems }] : []),
+      ],
+      copyright: existingFooter?.copyright || `© ${new Date().getFullYear()} ${store.name}`,
+      badge: existingFooter?.badge || badges[index % badges.length],
+    },
+  };
+}
+
+function withGeneratedDefaultNavigation(document: StoreSiteDocument): StoreSiteDocument {
+  const homeSections = document.sections.filter((section) => !section.pageId);
+  const conciseLabel = (title: string | undefined, fallback: string) => {
+    const candidate = title?.replace(/\s+/g, " ").trim() ?? "";
+    return candidate && candidate.length <= 30 && candidate.split(" ").length <= 4 ? candidate : fallback;
+  };
+  const catalog = homeSections.find((section) => section.kind === "catalog");
+  const sectionSpecs: Array<{ kind: "story" | "gallery" | "contact"; fallback: string }> = [
+    { kind: "story", fallback: "Nuestra historia" },
+    { kind: "gallery", fallback: "Lookbook" },
+    { kind: "contact", fallback: "Contacto" },
+  ];
+  const items: NonNullable<StoreSiteDocument["navigation"]["items"]> = [
+    { id: "home", label: "Inicio", target: "home" },
+  ];
+  if (catalog) items.push({ id: "catalog", label: conciseLabel(catalog.title, "Colección"), target: "catalog" });
+  for (const { kind, fallback } of sectionSpecs) {
+    const section = homeSections.find((candidate) => candidate.kind === kind);
+    if (!section) continue;
+    const proposedLabel = conciseLabel(section.title, fallback);
+    const label = items.some((item) => item.label.toLocaleLowerCase("es") === proposedLabel.toLocaleLowerCase("es"))
+      ? fallback
+      : proposedLabel;
+    items.push({ id: `nav-${kind}`, label, target: "section", sectionId: section.id });
+  }
+  for (const page of document.pages ?? []) {
+    items.push({ id: `nav-${page.id}`.slice(0, 48), label: page.label, target: "page", pageId: page.id });
+  }
+  return {
+    ...document,
+    navigation: { ...document.navigation, items: items.slice(0, 8) },
+  };
+}
+
+function enforceGeneratedHeroOpening(
+  document: StoreSiteDocument,
+  assets: MediaAsset[],
+  directionIndex: number,
+  lockedSectionIds: readonly string[] = [],
+): StoreSiteDocument {
+  const hero = document.sections.find((section) => section.kind === "hero");
+  const catalog = document.sections.find((section) => section.kind === "catalog");
+  if (!hero || !catalog) return document;
+  const locked = new Set(lockedSectionIds);
+  if (locked.has(hero.id) || locked.has(catalog.id) || (document.sections[0] && locked.has(document.sections[0].id))) return document;
+  const videoUrls = assets.filter((asset) => asset.mimeType.startsWith("video/")).map((asset) => asset.url);
+  const prioritizedMedia = directionIndex % 3 === 2 && videoUrls.length
+    ? [...videoUrls, ...hero.mediaUrls.filter((url) => !videoUrls.includes(url))]
+    : hero.mediaUrls;
+  const mediaUrls = [...new Set(prioritizedMedia)].slice(0, 3);
+  const itemByMedia = new Map(hero.items.map((item) => [item.mediaUrl, item]));
+  const openingMotions = ["reveal", "drift", "scale"] as const;
+  const openingHero = {
+    ...hero,
+    motion: openingMotions[directionIndex % openingMotions.length],
+    mediaUrls,
+    items: mediaUrls.map((mediaUrl) => itemByMedia.get(mediaUrl) ?? {
+      mediaUrl,
+      title: hero.title,
+      body: hero.body,
+    }),
+  };
+  const tail = document.sections.filter((section) => section.id !== hero.id && section.id !== catalog.id);
+  const tailOffset = tail.length ? directionIndex % tail.length : 0;
+  const variedTail = [...tail.slice(tailOffset), ...tail.slice(0, tailOffset)];
+  return {
+    ...document,
+    sections: [openingHero, catalog, ...variedTail],
+  };
+}
+
 function enforceUniqueGeneratedAnimationTypes(
   document: StoreSiteDocument,
   animationCandidates: unknown,
   motionExperienceCandidates: unknown,
 ): { siteDocument: StoreSiteDocument; animations: unknown[]; motionExperiences: string[] } {
   const generatedTypes = new Set<string>();
+  const repeatableSectionMotions = new Set(["reveal", "clip", "drift", "scale", "parallax"]);
   const sections: StoreSiteDocument["sections"] = document.sections.map((section) => {
     // A generated multi-scene hero is already the page's hero-carousel. It is
     // stored as the hero primitive rather than a named animation, but must count
     // toward the same one-per-type rule.
     if (section.kind === "hero" && Array.isArray(section.mediaUrls) && section.mediaUrls.length >= 2) generatedTypes.add("hero-carousel");
     if (section.motion === "none") return section;
-    if (generatedTypes.has(section.motion)) return { ...section, motion: "none" as const };
+    if (generatedTypes.has(section.motion) && !repeatableSectionMotions.has(section.motion)) {
+      return { ...section, motion: "none" as const };
+    }
     generatedTypes.add(section.motion);
     return section;
   });
@@ -297,8 +417,9 @@ function enforceUniqueGeneratedProposalConfig(value: unknown): unknown {
   if (!document || typeof document !== "object" || Array.isArray(document)) return value;
   const siteDocument = document as unknown as StoreSiteDocument;
   if (!Array.isArray(siteDocument.sections) || !siteDocument.experience || typeof siteDocument.experience !== "object") return value;
+  const openingDocument = enforceGeneratedHeroOpening(siteDocument, [], 0);
   const uniqueInventory = enforceUniqueGeneratedAnimationTypes(
-    siteDocument,
+    openingDocument,
     [],
     [],
   );
@@ -319,6 +440,24 @@ function enforceUniqueGeneratedProposalConfig(value: unknown): unknown {
     motionExperiences: [],
     motionExperience: "hero-carousel",
     motionDuoEnabled: false,
+  };
+}
+
+function enrichGeneratedProposalConfig(
+  value: unknown,
+  store: Store,
+  links: StoreLinkContext[],
+  index: number,
+): unknown {
+  const repaired = enforceUniqueGeneratedProposalConfig(value);
+  if (!repaired || typeof repaired !== "object" || Array.isArray(repaired)) return repaired;
+  const config = repaired as Record<string, unknown>;
+  const document = config.siteDocument;
+  if (!document || typeof document !== "object" || Array.isArray(document)) return repaired;
+  const navigableDocument = withGeneratedDefaultNavigation(document as unknown as StoreSiteDocument);
+  return {
+    ...config,
+    siteDocument: withGeneratedDefaultFooter(navigableDocument, store, links, index),
   };
 }
 
@@ -1015,20 +1154,15 @@ function finalizeGeneratedPages(
     }
   }
   const { pages: _previousPages, ...documentWithoutPages } = document;
-  return {
+  return withGeneratedDefaultNavigation({
     ...documentWithoutPages,
     ...(pages.length ? { pages } : {}),
     ...(liveDocument?.footer ? { footer: structuredClone(liveDocument.footer) } : {}),
     navigation: {
       ...document.navigation,
-      items: [
-        { id: "home", label: "Inicio", target: "home" },
-        { id: "catalog", label: "Tienda", target: "catalog" },
-        ...pages.map((page) => ({ id: `nav-${page.id}`.slice(0, 48), label: page.label, target: "page" as const, pageId: page.id })),
-      ],
     },
     sections,
-  };
+  });
 }
 
 function legacyConfigFromSiteDocument(document: StoreSiteDocument): VisualConfig {
@@ -1430,13 +1564,14 @@ export class VisualStudioService {
 
   async list(merchantId: string, storeId: string) {
     const store = await this.ownedStore(merchantId, storeId);
-    const [proposals, versions, templates] = await Promise.all([
+    const [proposals, versions, templates, links] = await Promise.all([
       this.prisma.storeVisualProposal.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 12 }),
       this.prisma.storeVisualVersion.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 12 }),
       this.prisma.storeVisualTemplate.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" }, take: 24 }),
+      this.prisma.storeLink.findMany({ where: { storeId }, select: { label: true, url: true }, orderBy: { sortOrder: "asc" } }),
     ]);
     return {
-      proposals: proposals.map((proposal) => ({ ...proposal, config: enforceUniqueGeneratedProposalConfig(proposal.config) })),
+      proposals: proposals.map((proposal, index) => ({ ...proposal, config: enrichGeneratedProposalConfig(proposal.config, store, links, index) })),
       versions,
       templates,
       lockedSectionIds: storedSectionLocks(store.visualSectionLocks),
@@ -1731,7 +1866,12 @@ export class VisualStudioService {
       const baseDocument = existingDocument ?? localSiteDocument(store, preset, orderedAssets, products, links, index + engineContext.generation, measuredBrandColors);
       const directedDocument = applySiteArtDirection(baseDocument, assignedArtDirections[index]);
       const brandedDocument = applyGeneratedBrandPalette(directedDocument, measuredBrandColors, index + engineContext.generation);
-      const narrativeDocument = enforceGeneratedNarrative(brandedDocument, store, orderedAssets, products, index);
+      const narrativeDocument = withGeneratedDefaultFooter(
+        enforceGeneratedNarrative(brandedDocument, store, orderedAssets, products, index),
+        store,
+        links,
+        index + engineContext.generation,
+      );
       let recipeDocument = narrativeDocument;
       if (selectedTemplate) {
         try {
@@ -1743,6 +1883,7 @@ export class VisualStudioService {
       const topologyDocument = selectedTemplate
         ? recipeDocument
         : applyStorefrontTopology(recipeDocument, engineContext, index, 0, lockedSectionIds, mediaCandidates);
+      const openingDocument = enforceGeneratedHeroOpening(topologyDocument, orderedAssets, index, lockedSectionIds);
       const templateDocuments = (merchantTemplates ?? []).flatMap((template) => {
         if (template.id === selectedTemplate?.id) return [];
         try {
@@ -1752,22 +1893,25 @@ export class VisualStudioService {
         }
       });
       const uniqueInventory = enforceUniqueGeneratedAnimationTypes(
-        withStorefrontEngineMetadata(topologyDocument, engineContext, index),
+        withStorefrontEngineMetadata(openingDocument, engineContext, index),
         [],
         [],
       );
-      let siteDocument = finalizeGeneratedPages(
-        preserveLockedStorefrontSections(uniqueInventory.siteDocument, liveDocument, lockedSectionIds),
-        liveDocument,
-        lockedSectionIds,
+      let siteDocument = withGeneratedDefaultFooter(
+        finalizeGeneratedPages(
+          preserveLockedStorefrontSections(uniqueInventory.siteDocument, liveDocument, lockedSectionIds),
+          liveDocument,
+          lockedSectionIds,
+        ),
+        store,
+        links,
+        index + engineContext.generation,
       );
       let originality = storefrontOriginalityGate(siteDocument, [...previousDocuments, ...templateDocuments, ...acceptedDocuments], lockedSectionIds, 0.66, previousSignatures);
       // A locked opening owns its position as well as its contents. Requiring
       // a second opening kind in that case is impossible without violating the
       // merchant's lock, so diversity is measured on the remaining axes.
-      const openingIsLocked = Boolean(liveDocument?.sections[0] && lockedSectionIds.includes(liveDocument.sections[0].id));
-      const requireMultipleOpenings = index === presets.length - 1 && !openingIsLocked;
-      let advancesBatch = advancesGeneratedBatch(siteDocument, acceptedDocuments, requireMultipleOpenings);
+      let advancesBatch = advancesGeneratedBatch(siteDocument, acceptedDocuments, false);
       for (let attempt = 1; (!originality.accepted || !advancesBatch) && attempt <= 12; attempt += 1) {
         let varied: StoreSiteDocument;
         try {
@@ -1778,17 +1922,22 @@ export class VisualStudioService {
           throw new BadRequestException("La receta guardada ya no es compatible con el compositor actual. Guarda una receta nueva desde una propuesta reciente.");
         }
         const uniqueVariation = enforceUniqueGeneratedAnimationTypes(
-          withStorefrontEngineMetadata(varied, engineContext, index),
+          withStorefrontEngineMetadata(enforceGeneratedHeroOpening(varied, orderedAssets, index, lockedSectionIds), engineContext, index),
           [],
           [],
         );
-        siteDocument = finalizeGeneratedPages(
-          preserveLockedStorefrontSections(uniqueVariation.siteDocument, liveDocument, lockedSectionIds),
-          liveDocument,
-          lockedSectionIds,
+        siteDocument = withGeneratedDefaultFooter(
+          finalizeGeneratedPages(
+            preserveLockedStorefrontSections(uniqueVariation.siteDocument, liveDocument, lockedSectionIds),
+            liveDocument,
+            lockedSectionIds,
+          ),
+          store,
+          links,
+          index + engineContext.generation,
         );
         originality = storefrontOriginalityGate(siteDocument, [...previousDocuments, ...templateDocuments, ...acceptedDocuments], lockedSectionIds, 0.66, previousSignatures);
-        advancesBatch = advancesGeneratedBatch(siteDocument, acceptedDocuments, requireMultipleOpenings);
+        advancesBatch = advancesGeneratedBatch(siteDocument, acceptedDocuments, false);
       }
       if (!originality.accepted || !advancesBatch) {
         throw new BadRequestException("No pudimos crear tres direcciones suficientemente originales y distintas sin tocar tus secciones bloqueadas. Desbloquea una sección, amplía la receta o cambia el brief e inténtalo otra vez.");
@@ -1816,8 +1965,7 @@ export class VisualStudioService {
       };
     });
 
-    const lockedOpening = Boolean(liveDocument?.sections[0] && lockedSectionIds.includes(liveDocument.sections[0].id));
-    const diversity = evaluateStorefrontDiversity(acceptedDocuments, 0.66, lockedOpening ? 1 : 2);
+    const diversity = evaluateStorefrontDiversity(acceptedDocuments, 0.66, 1);
     if (!diversity.accepted) {
       throw new BadRequestException("Las tres propuestas no alcanzaron la variedad estructural mínima. Cambia el brief o la receta e inténtalo otra vez.");
     }
@@ -1904,10 +2052,13 @@ export class VisualStudioService {
 
   async apply(merchantId: string, storeId: string, proposalId: string) {
     const store = await this.ownedStore(merchantId, storeId);
-    const proposal = await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } });
+    const [proposal, links] = await Promise.all([
+      this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } }),
+      this.prisma.storeLink.findMany({ where: { storeId }, select: { label: true, url: true }, orderBy: { sortOrder: "asc" } }),
+    ]);
     if (!proposal) throw new NotFoundException("Visual proposal not found");
     const [updated] = await this.prisma.$transaction([
-      this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(enforceUniqueGeneratedProposalConfig(proposal.config)) }),
+      this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(enrichGeneratedProposalConfig(proposal.config, store, links, 0)) }),
       this.prisma.storeVisualVersion.create({
         data: { storeId, label: `Antes de “${proposal.title}”`, source: `proposal:${proposal.id}`, snapshot: snapshot(store) },
       }),
@@ -2121,7 +2272,7 @@ export class VisualStudioService {
         `Paleta medida del logo y las fotografías: ${measuredPaletteNote}. Trátala como evidencia de marca, no como una sugerencia genérica. Puedes aclarar u oscurecer estos tonos para asegurar contraste, pero no reemplazarlos por una familia cromática ajena.`,
         "Examina visualmente cada imagen. Distingue con seguridad logo, arte editorial, imagen de ambiente, detalle y foto de producto. Mantén cada foto de producto unida al producto que indica la leyenda. Si un activo es débil, redundante o imposible de usar sin deformarlo, márcalo como avoid.",
         "Define el papel del logo, la escena real del público y una estrategia de color derivada de la identidad con 3 a 5 colores coordinados: base, acento, apoyo y superficies. Indica dónde usar fondos cromáticos y palabras de color sin perder contraste. Añade una estrategia tipográfica con carácter, una lógica de composición asimétrica, un plan de merchandising producto por producto y una sola idea de movimiento con propósito.",
-        "La única regla fija de orden es abrir con una sección visual animada y colocar el catálogo inmediatamente después. La apertura puede ser hero, historia o galería según la evidencia de marca; todo lo posterior debe variar libremente y cambiar el ritmo. Hero, story y catalog deben existir. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
+        "La regla fija de orden es abrir con un hero visual y colocar el catálogo inmediatamente después. La apertura nunca es un bloque de historia con tipografía gigante: debe funcionar como slider cuando hay varias imágenes, como portada de video cuando existe un video útil o como reveal editorial cuando solo hay una imagen. Todo lo posterior debe variar libremente y cambiar el ritmo. Hero, story y catalog deben existir. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
         "Decide también la arquitectura de páginas en pagePlan. Inicio es implícita y debe ser una experiencia completa y larga: hero, catalog, story, gallery y contact permanecen en Inicio. Devuelve [] salvo que el comercio pida explícitamente una web multipágina en su brief. En ese caso crea como máximo dos destinos adicionales únicamente para location o links con contenido verificable. No crees páginas para acortar el scroll, no repitas una sección y nunca declares una página vacía. Usa ids y slugs únicos, breves y seguros; labels y slugs deben ser naturales en español.",
         "No inventes datos, origen, materiales, descuentos, testimonios ni promesas. Escribe el análisis en español y devuelve solo el esquema.",
       ].join("\n");
@@ -2138,7 +2289,7 @@ export class VisualStudioService {
         "Actúa como el director de diseño y desarrollo de un estudio digital senior. El estándar es una web de agencia de alta gama que se siente construida para una marca real, nunca una plantilla embellecida. Recibes un análisis de marca ya realizado. Úsalo como evidencia y devuelve exactamente tres documentos de sitio completos, personalizados y estructuralmente distintos. No son variaciones de una plantilla ni configuraciones del editor existente. Usa solamente los medios indicados y no solicites imágenes nuevas.",
         `Clave creativa de esta generación: ${creativeRun}. Úsala para evitar repetir decisiones de generaciones anteriores sin mencionarla en el resultado.`,
         `Direcciones de arte asignadas, en orden: ${proposalArtDirections(dto.artDirection, engineContext.generation).join(", ")}. Cada siteDocument.artDirection debe copiar exactamente la dirección correspondiente. Si el comercio eligió una, ocupa la primera propuesta; las otras dos deben contrastarla.`,
-        `Topologías de página asignadas, en orden: ${topologyAssignments.join(", ")}. Diseña el contenido para esas siluetas. La plataforma materializará la topología final de forma determinista: una apertura animada primero y el catálogo segundo; no fuerces hero como única apertura.`,
+        `Topologías de página asignadas, en orden: ${topologyAssignments.join(", ")}. Diseña el contenido para esas siluetas. La plataforma materializará la topología final de forma determinista: hero visual primero y catálogo segundo. La variedad de apertura viene de layout, medios y movimiento, no de convertir story en una portada tipográfica.`,
         "designGenome es el contrato visual vinculante, no metadata decorativa. Debe obedecer la dirección de arte asignada y hacer que todas las decisiones de secciones, tipografía, medios, color y movimiento pertenezcan al mismo mundo. Las tres combinaciones deben diferir claramente.",
         "family es la familia estructural de cada sección y debe ser exactamente editorial, cinematic, product-led o minimal. No es un sinónimo de layout: decide qué lidera la sección y cómo se leen los mismos blocks. Editorial prioriza copy y ritmo asimétrico; cinematic prioriza medios y escala; product-led pone catálogo, producto o acción antes que decoración; minimal reduce la composición a lo esencial. Usa al menos tres familias distintas dentro de cada página y cambia de familia entre propuestas para una misma sección importante.",
         "blocks es la composición interna canónica de cada sección y los campos planos title, body, ctaLabel, mediaIndices e items siguen como proyección compatible. Usa group solo en el nivel superior y hojas heading, text, action, media o commerce dentro; children no puede contener otro group. Cada id debe ser único dentro de la sección. Usa únicamente las ranuras registradas para ese kind. Catalog, contact, location, links y event-tickets conservan un bloque commerce en su ranura funcional: ese bloque posiciona UI confiable de pagosYa y nunca contiene HTML.",
@@ -2151,7 +2302,7 @@ export class VisualStudioService {
         `Paleta medida del logo y las fotografías: ${measuredPaletteNote}. Construye theme y los fondos de sección con variaciones tonales de estos colores. No introduzcas un acento ajeno solo para diferenciar propuestas; la diferencia debe venir de composición, tipografía, escala y ritmo.`,
         `Análisis de marca obligatorio, realizado en la fase anterior:\n${JSON.stringify(brandAnalysis, null, 2)}`,
         "Contrato multipágina obligatorio: siteDocument.pages materializa el pagePlan del análisis y cada sección declara pageId. El string vacío significa Inicio. hero, catalog, story, gallery y contact siempre usan pageId=\"\" para que Inicio conserve un recorrido completo. Si pagePlan está vacío, devuelve pages=[] y pageId=\"\" en todas las secciones. Solo location o links pueden usar un pageId no vacío cuando el brief pidió explícitamente una web multipágina; ese id debe coincidir con pages y recibir contenido real. La plataforma deriva de forma segura los enlaces Inicio, Tienda y páginas; no intentes escribir items de navegación.",
-        "Contrato narrativo obligatorio de cada siteDocument: deben existir exactamente un hero, un story, un catalog, un gallery y un contact. Las cinco secciones viven en Inicio y forman un descenso sustancial, no una portada corta. La primera sección debe ser una apertura animada entre hero, historia o galería según la topología asignada; catalog debe ser exactamente la segunda sección. Después de ese par, el orden es libre y debe alternar escala y densidad. Hero conserva 2 o 3 medios cuando estén disponibles, nunca el logo, e items con copy breve asociado a cada escena; con un solo medio úsalo una sola vez y no lo dupliques. Story usa motion=story-scroll y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Gallery crea el cuarto momento visual con medios no redundantes. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
+        "Contrato narrativo obligatorio de cada siteDocument: deben existir exactamente un hero, un story, un catalog, un gallery y un contact. Las cinco secciones viven en Inicio y forman un descenso sustancial, no una portada corta. Hero debe ser exactamente la primera sección y catalog exactamente la segunda. Después de ese par, el orden es libre y debe alternar escala y densidad. Hero conserva 2 o 3 medios cuando estén disponibles, nunca el logo, e items con copy breve asociado a cada escena; con varias imágenes funciona como slider, con video puede abrir en movimiento y con un solo medio usa un reveal editorial. No escribas una lista enorme de nombres de producto como título de apertura. Story usa motion=story-scroll y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Gallery crea el cuarto momento visual con medios no redundantes. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
         "Antes de componer, elige para cada propuesta una combinación distinta y pertinente entre atmósferas de lujo editorial, estructuralismo suave o tecnología sobria, y layouts de split editorial, bento asimétrico o cascada espacial sin solapamientos. Da a cada propuesta un concepto rector visible de principio a fin: una idea de marca que conecte paleta, escala, ritmo, recortes de imagen, navegación, catálogo, formulario y cierre. Haz que cambien de verdad en jerarquía, densidad, orden, tipografía, geometría, composición de producto y relación entre imagen y texto.",
         "Contrato de diferenciación verificable: las tres propuestas deben usar tres hero.layout distintos, las tres navigation.layout disponibles exactamente una vez cada una y tres theme.productLayout distintos. No basta cambiar color o copy. Cada dirección debe seguir siendo reconocible en escala de grises por su silueta, proporciones, orden y composición del catálogo.",
         "Distingue logo, arte editorial y foto de producto por su función. El logo pertenece a la identidad o navegación: no lo estires, no lo recortes como fotografía y no lo uses como fondo. Sitúa cada foto de producto con su producto correcto y usa merchandising para decidir qué productos abren la colección, cuáles se destacan y en qué orden se cuentan.",
@@ -2159,7 +2310,7 @@ export class VisualStudioService {
         "La tipografía debe sentirse elegida: usa roles grotesk, humanist o geometric para una voz tipo Geist, Satoshi o Cabinet Grotesk; editorial solo cuando el rubro justifique una serif moderna tipo Instrument Serif o Editorial New. No uses una estética equivalente a Inter, Roboto, Arial, Helvetica, Times, Georgia, Garamond o Palatino. Controla el tamaño con jerarquía y peso; cuerpo mínimo 16px, interlineado relajado y líneas de máximo 65 caracteres.",
         "En páginas largas usa al menos cuatro familias de composición. Prohíbe tres tarjetas iguales, la repetición constante de texto a la izquierda e imagen a la derecha, etiquetas decorativas, números de sección, scroll cues, tiras de hora o clima e interfaz falsa hecha con rectángulos. No apiles muchas fotografías una debajo de otra ni conviertas el descenso de la página en un collage sin relato: una imagen solo entra si cumple una función clara dentro de la portada, un capítulo Story Scroll, un producto o una galería posterior acotada. Usa tarjetas solo cuando la elevación comunique jerarquía; cuando existan, deben sentirse como una pieza dentro de un marco concéntrico y no como un rectángulo con borde gris. No uses guiones largos Unicode. Cada sección debe tener una función real y una composición propia dentro del mismo mundo.",
         "Usa este sistema de calidad Impeccable como constitución, no como estilo visual: jerarquía inequívoca, contraste AA, texto corporal legible, controles táctiles de 44px, foco de teclado visible, composición responsive sin scroll horizontal, estados estables y copy que nombra una acción real. El catálogo, carrito y formulario deben sentirse parte del mismo mundo visual. Alterna escala y densidad y crea uno o dos momentos memorables, no una colección de efectos.",
-        "Usa motion como dirección artística coordinada, no decoración. Cada propuesta debe combinar cuatro momentos distintos: la portada hero-carousel, la historia story-scroll, exactamente una sección gallery con un motion propio entre reveal, clip, drift, scale o parallax, y una experience distintiva después del catálogo. Las tres propuestas deben elegir motions de gallery diferentes. El resto de las secciones debe usar none para mantener catálogo, contacto, ubicación y enlaces legibles y estables. Cada tipo distinto de none puede aparecer como máximo una vez en la misma página. Están prohibidos el layout rail en gallery, las filas de imágenes angostas que dejan ver solo tiras verticales, coverflow, carruseles en profundidad, abanicos de láminas y galerías marquee o diagonales. Todo movimiento debe poder realizarse con transform y opacity, usar easing personalizado, respetar reduced motion y mantener catálogo y formulario estables.",
+        "Usa motion como dirección artística coordinada, no decoración. Cada propuesta debe combinar cuatro momentos distintos: una portada visual en hero (slider, video o reveal según los medios), la historia story-scroll, exactamente una sección gallery con un motion propio entre reveal, clip, drift, scale o parallax, y una experience distintiva después del catálogo. Las tres propuestas deben elegir motions de gallery diferentes. El resto de las secciones debe usar none para mantener catálogo, contacto, ubicación y enlaces legibles y estables. Cada tipo distinto de none puede aparecer como máximo una vez en la misma página. Están prohibidos el layout rail en gallery, las filas de imágenes angostas que dejan ver solo tiras verticales, coverflow, carruseles en profundidad, abanicos de láminas y galerías marquee o diagonales. Todo movimiento debe poder realizarse con transform, opacity o clip-path, usar easing personalizado, respetar reduced motion y mantener catálogo y formulario estables.",
         "Elige además una sola experience distintiva para después del catálogo y no repitas su tipo entre las tres propuestas. Reparte la variedad entre scroll-expansion, full-screen-chapters y frame-sequence cuando haya al menos dos medios; con menos medios usa tipos distintos entre layered-text, text-rotate, text-glitch, text-reveal-block y text-along-path. Las experiencias tipográficas llevan mediaIndices vacío y copy real, breve y verificable. No uses 3d-gallery, coverflow-carousel, zoom-parallax, video-pill, portfolio-scroller, image-stream, hero-gallery-scroll ni ninguna galería continua, diagonal o de láminas asomadas. Usa exactamente 2 medios en scroll-expansion y entre 2 y 5 en full-screen-chapters o frame-sequence. Su placement siempre es after-catalog.",
         "Usa full-bleed, offset, split, centered, grid, stacked, rail y minimal como herramientas libres, no como una receta. Evita una secuencia repetida de tarjetas genéricas y evita el patrón constante texto a la izquierda e imagen a la derecha.",
         "Respeta las capacidades del renderer: hero admite split, full-bleed, centered u offset; story admite split, offset, stacked, rail o centered; catalog admite grid, stacked, offset, rail o minimal; gallery admite grid, split, offset, stacked, full-bleed o rail; contact admite split, stacked, centered o minimal; location admite split, stacked, full-bleed u offset; links admite centered, stacked, minimal o rail. Mantén story-scroll solamente en story y usa motion compatible con la función real de cada sección.",

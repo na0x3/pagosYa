@@ -6869,16 +6869,16 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     const paintMotionDuo = () => {
       frame = 0;
       if (motionQuery?.matches) {
-        flowEntries.forEach(({ inner }) => (inner.style.transform = "none"));
+        flowEntries.forEach(({ inner }) => {
+          inner.style.transform = "none";
+          inner.style.clipPath = "inset(0 round 0)";
+          inner.style.opacity = "1";
+        });
         releaseMotionLayers();
         return;
       }
       const viewportHeight = Math.max(window.innerHeight, 1);
       flowEntries.forEach(({ inner, flowIndex }) => {
-        if (flowIndex === 0) {
-          inner.style.transform = "none";
-          return;
-        }
         const section = inner.closest<HTMLElement>(".store-flow-section");
         if (!section) return;
         const progress = clampProgress((viewportHeight - section.getBoundingClientRect().top) / (viewportHeight * .75));
@@ -6887,15 +6887,21 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         if (isGeneratedStory) {
           const remaining = 1 - progress;
           inner.style.transform = isCompactViewport
-            ? "none"
-            : `translateY(${remaining * 18}px) rotate(${remaining * 5}deg) scale(${.985 + progress * .015})`;
+            ? `translateY(${remaining * 24}px) scale(${.98 + progress * .02})`
+            : `translateY(${remaining * 8}svh) rotate(${remaining * 3}deg) scale(${.96 + progress * .04})`;
+          inner.style.clipPath = `inset(${remaining * 9}% 0 0 round ${remaining * 22}px)`;
+          inner.style.opacity = String(.72 + progress * .28);
+        } else if (flowIndex === 0) {
+          inner.style.transform = "none";
+          inner.style.clipPath = "inset(0 round 0)";
+          inner.style.opacity = "1";
         } else {
           inner.style.transform = `rotate(${(1 - progress) * 30}deg)`;
         }
       });
     };
     const requestMotionPaint = () => {
-      flowEntries.forEach(({ inner }) => (inner.style.willChange = "transform"));
+      flowEntries.forEach(({ inner }) => (inner.style.willChange = "transform, clip-path, opacity"));
       if (settleTimer) window.clearTimeout(settleTimer);
       settleTimer = window.setTimeout(releaseMotionLayers, 180);
       if (!frame) frame = window.requestAnimationFrame(paintMotionDuo);
