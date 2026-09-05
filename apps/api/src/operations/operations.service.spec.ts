@@ -117,6 +117,8 @@ describe("OperationsService operational calendar", () => {
 });
 
 describe("OperationsService external subscriptions", () => {
+  afterEach(() => jest.useRealTimers());
+
   it("verifies an active integration without exposing or storing its secret", async () => {
     const prisma = makePrisma();
     const service = makeService(prisma);
@@ -224,6 +226,7 @@ describe("OperationsService external subscriptions", () => {
   });
 
   it("offers only slots that are free in both pagosYa and Google Calendar", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-08-31T12:00:00.000Z"));
     const prisma = makePrisma();
     const calendar = {
       createEvent: jest.fn(), updateEvent: jest.fn(), deleteEvent: jest.fn(),

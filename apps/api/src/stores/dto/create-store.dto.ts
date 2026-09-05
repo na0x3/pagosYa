@@ -23,7 +23,20 @@ import {
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
-import { SITE_ART_DIRECTIONS, SITE_SECTION_BLOCK_KINDS, SITE_SECTION_BLOCK_ROLES, SITE_SECTION_FAMILIES } from "@pagosya/shared-types";
+import {
+  SITE_ART_DIRECTIONS,
+  SITE_SECTION_BLOCK_KINDS,
+  SITE_SECTION_BLOCK_ROLES,
+  SITE_SECTION_FAMILIES,
+  STORE_SITE_HEADER_ACTION_POSITIONS,
+  STORE_SITE_HEADER_POSITIONS,
+  STORE_SITE_HEADER_STYLES,
+  STORE_SITE_SECTION_ALIGNS,
+  STORE_SITE_SECTION_KINDS,
+  STORE_SITE_SECTION_LAYOUTS,
+  STORE_SITE_SECTION_MOTIONS,
+  STORE_SITE_SECTION_WIDTHS,
+} from "@pagosya/shared-types";
 
 function isSupportedMapEmbedUrl(value: string): boolean {
   try {
@@ -77,6 +90,16 @@ export const STORE_MOTION_EXPERIENCES = [
   "full-screen-chapters",
   "magnetic-target",
   "frame-sequence",
+  "video-background",
+  "draggable-cards",
+  "perspective-carousel",
+  "link-preview",
+  "video-pin-reveal",
+  "gallery-accordion",
+  "split-scroll",
+  "sticky-gallery",
+  "sticky-story",
+  "text-parallax",
 ] as const;
 export const STORE_ANIMATION_TEXT_ALIGNS = ["left", "center", "right"] as const;
 export const STORE_ANIMATION_TEXT_SIZES = ["small", "medium", "large"] as const;
@@ -108,6 +131,7 @@ export const STORE_MOTION_CONTENT_SECTIONS = [
   "motion-full-screen-chapters",
   "motion-magnetic-target",
   "motion-frame-sequence",
+  "motion-video-background",
 ] as const;
 // `motion` remains accepted so stores saved by the previous editor can be
 // expanded in place. New editors persist one section key per animation.
@@ -344,6 +368,12 @@ export class StoreAnimationDto {
   @IsIn(STORE_MOTION_EXPERIENCES)
   type!: string;
 
+  @ApiPropertyOptional({ example: "page-1", description: "Optional custom page that owns this animation." })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z][a-z0-9-]{0,47}$/)
+  pageId?: string;
+
   @ApiPropertyOptional({ example: "Una colección en movimiento" })
   @IsOptional()
   @IsString()
@@ -462,11 +492,13 @@ export class StoreAnimationDto {
   media!: StoreEditorialImageDto[];
 }
 
-export const STORE_SITE_SECTION_LAYOUTS = ["split", "full-bleed", "centered", "offset", "grid", "stacked", "rail", "minimal"] as const;
-export const STORE_SITE_SECTION_WIDTHS = ["full", "wide", "contained"] as const;
-export const STORE_SITE_SECTION_ALIGNS = ["left", "center", "right"] as const;
-export const STORE_SITE_SECTION_MOTIONS = ["none", "reveal", "clip", "drift", "scale", "parallax", "story-scroll"] as const;
-export const STORE_SITE_SECTION_KINDS = ["hero", "story", "catalog", "gallery", "event-tickets", "contact", "location", "links"] as const;
+export {
+  STORE_SITE_SECTION_ALIGNS,
+  STORE_SITE_SECTION_KINDS,
+  STORE_SITE_SECTION_LAYOUTS,
+  STORE_SITE_SECTION_MOTIONS,
+  STORE_SITE_SECTION_WIDTHS,
+};
 
 export class StoreCanvasTextStyleDto {
   @IsOptional()
@@ -474,6 +506,12 @@ export class StoreCanvasTextStyleDto {
   @Min(50)
   @Max(200)
   textScale?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(20)
+  @Max(100)
+  textWidthPercent?: number;
 
   @IsOptional()
   @IsIn(STORE_SITE_SECTION_ALIGNS)
@@ -486,6 +524,22 @@ export class StoreCanvasTextStyleDto {
   @IsOptional()
   @IsIn(STORE_FONT_STYLES)
   fontStyle?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(-1000)
+  @Max(1000)
+  textOffsetX?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(-1000)
+  @Max(1000)
+  textOffsetY?: number;
+
+  @IsOptional()
+  @IsIn(["element", "section"])
+  textOffsetBasis?: "element" | "section";
 }
 
 export class StoreSiteSectionItemDto {
@@ -576,6 +630,15 @@ export class StoreSiteSectionDto {
   @Matches(/^[a-z][a-z0-9-]{0,47}$/)
   pageId?: string;
 
+  @ApiPropertyOptional({ type: [String], description: "Optional curated products rendered by a catalog section." })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @Matches(/^[a-z0-9_-]{1,200}$/i, { each: true })
+  productIds?: string[];
+
   @IsIn(STORE_SITE_SECTION_KINDS)
   kind!: string;
 
@@ -609,6 +672,20 @@ export class StoreSiteSectionDto {
 
   @IsIn(STORE_SITE_SECTION_WIDTHS)
   width!: string;
+
+  @ApiPropertyOptional({ minimum: 180, maximum: 1800, description: "Merchant-controlled fixed section height in CSS pixels." })
+  @IsOptional()
+  @IsInt()
+  @Min(180)
+  @Max(1800)
+  heightPx?: number;
+
+  @ApiPropertyOptional({ minimum: 180, maximum: 1800, description: "Optional fixed section height for storefronts up to 760px wide." })
+  @IsOptional()
+  @IsInt()
+  @Min(180)
+  @Max(1800)
+  mobileHeightPx?: number;
 
   @IsIn(STORE_SITE_SECTION_ALIGNS)
   align!: string;
@@ -674,6 +751,11 @@ export class StoreSiteNavigationItemDto {
   @IsString()
   @Matches(/^[a-z][a-z0-9-]{0,47}$/)
   pageId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreCanvasTextStyleDto)
+  style?: StoreCanvasTextStyleDto;
 }
 
 export class StoreSitePageDto {
@@ -695,6 +777,40 @@ export class StoreSitePageDto {
 export class StoreSiteNavigationDto {
   @IsIn(["brand-left", "centered", "split"])
   layout!: "brand-left" | "centered" | "split";
+
+  @IsOptional()
+  @IsIn(STORE_SITE_HEADER_STYLES)
+  barStyle?: (typeof STORE_SITE_HEADER_STYLES)[number];
+
+  @IsOptional()
+  @IsIn(STORE_SITE_HEADER_POSITIONS)
+  brandPosition?: (typeof STORE_SITE_HEADER_POSITIONS)[number];
+
+  @IsOptional()
+  @IsIn(STORE_SITE_HEADER_POSITIONS)
+  navPosition?: (typeof STORE_SITE_HEADER_POSITIONS)[number];
+
+  @IsOptional()
+  @IsIn(STORE_SITE_HEADER_ACTION_POSITIONS)
+  searchPosition?: (typeof STORE_SITE_HEADER_ACTION_POSITIONS)[number];
+
+  @IsOptional()
+  @IsIn(STORE_SITE_HEADER_ACTION_POSITIONS)
+  profilePosition?: (typeof STORE_SITE_HEADER_ACTION_POSITIONS)[number];
+
+  @IsOptional()
+  @IsIn(STORE_SITE_HEADER_ACTION_POSITIONS)
+  cartPosition?: (typeof STORE_SITE_HEADER_ACTION_POSITIONS)[number];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreCanvasTextStyleDto)
+  brandStyle?: StoreCanvasTextStyleDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreCanvasTextStyleDto)
+  taglineStyle?: StoreCanvasTextStyleDto;
 
   @IsBoolean()
   sticky!: boolean;
@@ -795,6 +911,23 @@ export class StoreSiteFooterDto {
   @ValidateNested()
   @Type(() => StoreSiteNewsletterDto)
   newsletter?: StoreSiteNewsletterDto;
+}
+
+export class StoreCatalogCollectionDto {
+  @IsString()
+  @Matches(/^[a-z][a-z0-9-]{0,47}$/)
+  id!: string;
+
+  @IsString()
+  @IsSafeText()
+  @MaxLength(60)
+  name!: string;
+
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ArrayUnique()
+  @IsString({ each: true })
+  productIds!: string[];
 }
 
 export class StoreLocationInventoryDto {
@@ -920,7 +1053,7 @@ export class CreateStoreDto {
   @ApiPropertyOptional({ type: [StoreSiteSectionDto], description: "Safe editable fields for generated storefront sections." })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(10)
+  @ArrayMaxSize(16)
   @ArrayUnique((entry: StoreSiteSectionDto) => entry.id)
   @ValidateNested({ each: true })
   @Type(() => StoreSiteSectionDto)
@@ -955,6 +1088,28 @@ export class CreateStoreDto {
   @ValidateNested()
   @Type(() => StoreSiteFooterDto)
   siteFooter?: StoreSiteFooterDto;
+
+  @ApiPropertyOptional({ enum: ["tabs", "editorial-sidebar"], description: "How collection tabs are presented above the product catalog." })
+  @IsOptional()
+  @IsIn(["tabs", "editorial-sidebar"])
+  siteCatalogMenuStyle?: "tabs" | "editorial-sidebar";
+
+  @ApiPropertyOptional({ type: [StoreCatalogCollectionDto], description: "Merchant-authored product collections; one product may belong to several." })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ArrayUnique((entry: StoreCatalogCollectionDto) => entry.id)
+  @ValidateNested({ each: true })
+  @Type(() => StoreCatalogCollectionDto)
+  siteCatalogCollections?: StoreCatalogCollectionDto[];
+
+  @ApiPropertyOptional({ type: [String], description: "Existing generated section ids explicitly removed by the merchant." })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ArrayUnique()
+  @Matches(/^[a-z][a-z0-9-]{0,47}$/, { each: true })
+  siteDeletedSectionIds?: string[];
 
   @ApiPropertyOptional({
     example: "Ropa urbana hecha en Bolivia, envíos a todo el país.",
@@ -1278,7 +1433,6 @@ export class CreateStoreDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(STORE_MOTION_EXPERIENCES.length)
   @ArrayUnique()
   @IsIn(STORE_MOTION_EXPERIENCES, { each: true })

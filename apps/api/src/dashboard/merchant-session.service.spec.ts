@@ -17,7 +17,7 @@ function makeFakePrisma() {
     webhookEndpoint: { updateMany: jest.fn() },
     auditLogEntry: { create: jest.fn() },
   };
-  prisma.$executeRawUnsafe = jest.fn().mockResolvedValue(1);
+  prisma.$executeRaw = jest.fn().mockResolvedValue(1);
   prisma.$transaction = jest.fn((callback: any) => callback(prisma));
   return prisma;
 }
@@ -44,10 +44,8 @@ describe("MerchantSessionService.login", () => {
     expect(prisma.merchantSession.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ hashedToken: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) }),
     });
-    expect(prisma.$executeRawUnsafe).toHaveBeenCalledWith(
-      "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
-      "user_1",
-    );
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$executeRaw.mock.calls[0].slice(1)).toEqual(["user_1"]);
   });
 
   it("revokes the oldest sessions when a fourth active session is issued", async () => {

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsInt,
@@ -154,6 +155,18 @@ export class CreatePaymentLinkDto {
   @IsSafeText({ each: true })
   @MaxLength(24, { each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({
+    description: "Ordered Payment Link ids shown as recommendations on this product's detail page.",
+    type: [String],
+    default: [],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ArrayUnique()
+  @IsString({ each: true })
+  recommendedProductIds?: string[];
 
   @ApiPropertyOptional({
     description: "Remaining units. Omit to leave unchanged, or send null for unlimited (not tracked).",

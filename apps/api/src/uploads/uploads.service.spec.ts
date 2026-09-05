@@ -2,6 +2,8 @@ import {
   MAX_GIF_UPLOAD_BYTES,
   MAX_IMAGE_UPLOAD_BYTES,
   MAX_VIDEO_UPLOAD_BYTES,
+  MAX_IMAGE_PIXELS,
+  detectedImageDimensions,
   maxUploadBytesForMime,
   detectedMediaMime,
   UPLOAD_FILENAME_PATTERN,
@@ -10,6 +12,10 @@ import {
 
 describe("UploadsService media support", () => {
   const service = new UploadsService({ get: jest.fn().mockReturnValue("/tmp/pagosya-uploads-test") } as any);
+  const validPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  );
 
   it("serves GIF, MP4, and WEBM with their correct content types", () => {
     expect(service.contentTypeFor("hero.gif")).toBe("image/gif");
@@ -41,5 +47,45 @@ describe("UploadsService media support", () => {
     await expect(service.saveBuffer(Buffer.from("<html>not an image</html>"), "image/png")).rejects.toThrow(
       "File contents do not match",
     );
+  });
+
+  it("rejects copied PNG magic bytes and executable bytes appended after a complete PNG", async () => {
+    const signatureSpoof = Buffer.concat([
+      validPng.subarray(0, 8),
+      Buffer.from("<script>globalThis.stolen=true</script>"),
+    ]);
+    const pngWithTrailingScript = Buffer.concat([
+      validPng,
+      Buffer.from("<script>globalThis.stolen=true</script>"),
+    ]);
+
+    await expect(service.saveBuffer(signatureSpoof, "image/png")).rejects.toThrow("Malformed image data");
+    await expect(service.saveBuffer(pngWithTrailingScript, "image/png")).rejects.toThrow("Malformed image data");
+  });
+
+  it("reads dimensions from headers without decoding attacker-controlled image data", () => {
+    const png = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+    png.write("IHDR", 12, "ascii");
+    png.writeUInt32BE(4_000, 16);
+    png.writeUInt32BE(3_000, 20);
+
+    expect(detectedImageDimensions(png, "image/png")).toEqual({ width: 4_000, height: 3_000 });
+    expect(4_000 * 3_000).toBeLessThan(MAX_IMAGE_PIXELS);
+  });
+
+  it("rejects a tiny compressed file that declares decompression-bomb dimensions", async () => {
+    const bomb = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bomb);
+    bomb.write("IHDR", 12, "ascii");
+    bomb.writeUInt32BE(100_000, 16);
+    bomb.writeUInt32BE(100_000, 20);
+
+    await expect(service.saveBuffer(bomb, "image/png")).rejects.toThrow("dimensions are too large");
+  });
+
+  it("never resolves path traversal or SVG filenames as stored media", async () => {
+    await expect(service.getBuffer("../../etc/passwd")).resolves.toBeNull();
+    await expect(service.getBuffer("123e4567-e89b-12d3-a456-426614174000.svg")).resolves.toBeNull();
   });
 });

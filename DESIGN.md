@@ -127,7 +127,7 @@ components:
 
 pagosYa reads like a precise financial tool that happens to render in a developer's terminal, not a fintech marketing site that happens to show numbers. pagosYa-owned surfaces are set in the same monospace face — 0xProto Mono — for headings, labels, buttons, and body copy alike. Hosted storefronts belong to the merchant, so they may select one curated, store-wide type family while pagosYa's own dashboard and payment assurance remain typographically consistent. Numbers get tabular alignment and their own oversized weight so balances, payments, inventory, and settlement remain the most trustworthy objects on screen.
 
-The system is explicitly **surface-aware**. Checkout remains restrained and merchant-deferential because it is frequently embedded inside somebody else's page. The merchant dashboard and Ops share a business-bento material family: warm paper or graphite grounds, pale surfaces, 3px graphite keylines, near-square geometry, hard block shadows, uppercase hierarchy, and purposeful workflow color. Ops applies that family to its compact anchor-led review console and split support desk; it does not inherit the merchant dashboard's page switching or finance composition. The hosted storefront remains a professional, merchant-first lookbook where merchant identity, authored imagery, and catalog content lead while pagosYa recedes to secure-payment assurance.
+The system is explicitly **surface-aware**. Checkout remains restrained and merchant-deferential because it is frequently embedded inside somebody else's page. The merchant dashboard and Ops share a business-bento material family: warm paper or graphite grounds, pale surfaces, 3px graphite keylines, near-square geometry, hard block shadows, uppercase hierarchy, and purposeful workflow color. Ops applies that family to its compact anchor-led review console and split support desk; it does not inherit the merchant dashboard's page switching or finance composition. Merchant Studio uses a quieter pagosYa operator expression—mono type, paper, graphite, precise keylines, and rare amber actions—beside a merchant-owned editorial storefront preview. The hosted storefront remains a professional, merchant-first lookbook where merchant identity, authored imagery, and catalog content lead while pagosYa recedes to secure-payment assurance.
 
 **Key Characteristics:**
 - Monospace-only typography on pagosYa-owned surfaces; merchant storefronts may choose one curated store-wide family
@@ -135,6 +135,7 @@ The system is explicitly **surface-aware**. Checkout remains restrained and merc
 - Checkout remains dark-first with a merchant-compatible light variant; Ops uses Warm Paper (`#eee7dc`) and Pale Surface (`#fffaf2`) with Graphite (`#050505`) structure
 - Amber remains pagosYa's brand signal for pagosYa-owned primary actions; workspace bento colors organize merchant-dashboard data and Ops workflow without changing that semantic role
 - Hosted storefronts behave like authored merchant lookbooks, not a generic marketplace shell; merchant imagery and merchandising lead the composition
+- Merchant Studio keeps its auditable operator chrome visually distinct from the editorial storefront it is changing
 - Checkout retains soft continuous rounding; both admin workspaces use near-square 1–2px corners and square status badges
 - Authored merchant-dashboard motion is limited to page/view entrance and finance-chart reveals, and is removed under `prefers-reduced-motion: reduce`
 
@@ -196,9 +197,13 @@ The shared semantic core still uses indigo for focus, amber for pagosYa brand ac
 
 ## Layout
 
-No CSS grid framework or shared breakpoint system exists. Responsive coverage is hand-written per surface: `merchant-dashboard` uses 1180px for its appearance studio, 900px for navigation, and 640px for the compact workspace; the checkout storefront uses 720px; ops uses a compact 760px collapse for its navigation, connection controls, and wide data tables. Treat this as an explicit surface contract, not a shared breakpoint scale.
+No CSS grid framework or shared breakpoint system exists. Responsive coverage is hand-written per surface: `merchant-dashboard` uses 1180px for its appearance studio, 900px for navigation, and 640px for the compact workspace; Merchant Studio changes from a split workspace to a stacked one at 900px and compacts its toolbars at 600px; the checkout storefront uses 720px; ops uses a compact 760px collapse for its navigation, connection controls, and wide data tables. Treat this as an explicit surface contract, not a shared breakpoint scale.
 
 The merchant dashboard is a view-switched workspace inside a canvas capped at 1580px. Above 900px it uses a sticky 250px side rail and a flexible content column separated by a 22–42px gap. Each navigation item reveals one dashboard page rather than returning the user to a single undifferentiated scroll. At 900px and narrower the rail becomes a full-width horizontal, overflowable navigation strip; at 640px and narrower bento/KPI grids become one column, cards shorten, hard shadows reduce from 8px to 5px, and wide finance comparisons remain explicitly horizontally scrollable. Ops shares this material family but keeps its compact anchor-navigation model and long operational document; do not infer merchant page switching or finance layout for Ops.
+
+Merchant Studio is a conversation-and-canvas workspace: desktop reserves 35% for the persistent YAPI conversation and structured change set, with the remaining 65% for the storefront canvas, page controls, review tray, and status. At 900px and narrower it stacks the complete conversation workflow before the complete canvas; the storefront document retains a readable minimum width inside an explicitly scrollable preview frame instead of squeezing its editorial layout into operator chrome. At 600px and narrower, secondary toolbar labels and unavailable history controls recede while the change evidence, approval actions, review tray, and publish state remain present.
+
+**The Conversation-Beside-Result Rule.** A merchant request, its ordered references, the proposed change set, and the visible result belong in one workspace. Do not turn Merchant Studio into a settings form that hides the storefront outcome on another route.
 
 Account Support extends Ops as a split case desk: search, case creation, and recent cases occupy a 250–320px rail while the protected dossier uses the flexible pane. At 680px and narrower the desk becomes one column, the rail moves above the dossier with a quiet divider, fact and compact-detail rows reduce to two columns, and action controls keep full-width, touch-safe targets. Keep identity and connection compact in the first viewport so Account Support remains the first operational destination.
 
@@ -291,6 +296,18 @@ Both admin workspaces deliberately break from that softness: primary containers 
 - **Motion:** limit each site to two to four coordinated moments using reveal, clip, drift, scale, parallax, story-scroll, or coverflow. Animate transforms and opacity only, use custom weighted easing, never add a continuous marquee by default, and provide a complete reduced-motion result.
 - **Responsive:** collapse every multicolumn composition to one column below 768px, keep text and images in normal flow, and prohibit horizontal page scrolling. Mobile must preserve the full catalog, contact path, and checkout behavior.
 - **Copy bans:** no emojis, generic placeholder people or companies, fake round-number proof, scroll instructions, or AI clichés such as “Elevate,” “Seamless,” “Unleash,” “Next-Gen,” “Eleva,” “Revoluciona,” or “Sin límites.” Never invent claims, discounts, materials, origin, testimonials, shipping promises, or certifications.
+
+### Merchant Studio Review Workspace
+- **Milestone truth:** the current Merchant Studio is an interaction prototype. Its conversation replies, prepared changes, approval, publish status, and storefront mutations are local interface state; never describe this milestone as server-backed AI execution, durable publishing, or a production storefront renderer.
+- **Ordered image batch:** one picker or drop event creates one ordered batch of up to three accepted images. Each accepted file receives its own visible slot immediately, duplicate filenames remain separate files, loading and rejection state stays attached to the affected batch, and replacing the batch preserves one locally reversible prior batch.
+- **Selected-change evidence:** Hero, Palette, Products, and Checkout are individually selectable and includable. The selected Hero, Palette, or Products row reveals its target, before/after state, and concrete detail evidence directly beneath that row; selecting Checkout moves the canvas to Checkout and opens its before/after review tray.
+- **Sensitive approval gate:** an active Checkout change blocks publication until the merchant explicitly reviews and approves that selection. Excluding Checkout removes that pending sensitive change; changing its inclusion resets approval. Keep the warning, approval state, publish state, and “YAPI podrá revertir este cambio” language visible and specific.
+- **Operator/storefront separation:** pagosYa-owned controls use 0xProto Mono, paper, graphite, thin precise keylines, near-square geometry, Focus Indigo focus rings, and Signal Amber for active inclusion plus approval or publish actions. The embedded merchant preview uses editorial type, softer ecommerce geometry, merchant imagery, and merchant color so the authored site never reads as another pagosYa control panel.
+- **Honest controls:** capabilities reserved for a later integration—code mode, mobile viewport switching, persistent redo, voice input, and direct document section movement—remain visibly disabled with explanatory labels. A future affordance must not look actionable before it has an effect.
+
+**The Evidence-Follows-Selection Rule.** The active change and its proof are one object. Never separate the selected row from the evidence needed to judge it, and never replace the Checkout comparison with a generic success message.
+
+**The Approval-Is-Not-a-Toggle Rule.** Checkout approval is explicit consent to the currently included sensitive change, not decorative completion state. Any material change to that selection invalidates approval before publish.
 
 ### Yapi Workspace Assistant (merchant dashboard)
 - Yapi is a small orange pixel-art bird with dark square glasses. Keep the bird identity, palette, and silhouette consistent across idle, wave, and flying frames. While idle he makes one restrained shake every seven seconds; while dragged or keyboard-moved he switches to the flying pose and faces the current horizontal direction, mirroring cleanly between left and right. Reduced-motion mode removes the ambient shake while preserving the directional pose.
@@ -420,6 +437,7 @@ Both admin workspaces deliberately break from that softness: primary containers 
 - **Do** preserve Ops' Warm Paper, Pale Surface, Graphite keylines, near-square geometry, and 8px hard shadow as one coordinated visual contract; reduce the shadow to 5px on mobile.
 - **Do** gate Account Support dossiers behind a reasoned case, mask sensitive facts at both API and rendering boundaries, and record every access action with its reviewer-supplied reason.
 - **Do** keep Yapi support requests in-panel, label all four progress states, and poll for updates every 30 seconds only while the authenticated page is visible.
+- **Do** keep Merchant Studio's 35/65 desktop conversation/canvas topology, ordered per-slot image batch state, selected-change evidence, and explicit Checkout approval gate intact as one reviewable workflow; stack the full conversation before the scrollable canvas on mobile.
 
 ### Don't:
 - **Don't** add a resting (non-hover) shadow to a checkout storefront component — checkout is flat until it moves.
@@ -431,3 +449,4 @@ Both admin workspaces deliberately break from that softness: primary containers 
 - **Don't** copy the merchant dashboard's page-switching sidebar into ops or checkout without a separate IA decision; each surface keeps its own navigation contract.
 - **Don't** add looping, scroll-driven, or decorative animation to merchant-dashboard operations; data should move only when a view enters or a chart resolves, and reduced-motion users get the static final state.
 - **Don't** add merchant impersonation, hidden login, unmasked secrets, or an unaudited shortcut to Account Support; recovery and session controls are the bounded safe actions.
+- **Don't** claim that Merchant Studio's current local interaction prototype runs server-backed AI commands or durably publishes storefront changes, and don't enable future controls until their behavior exists.

@@ -1,4 +1,5 @@
-import { AI_SITE_DOCUMENT_SCHEMA, materializeSiteDocument } from "./site-document";
+import { STORE_SITE_SECTION_KINDS } from "@pagosya/shared-types";
+import { AI_SITE_DOCUMENT_SCHEMA, SITE_SECTION_KINDS, materializeSiteDocument } from "./site-document";
 
 function aiDocument() {
   const section = (id: string, kind: string, pageId = "") => ({
@@ -57,15 +58,60 @@ function aiDocument() {
       section("opening", "hero"),
       section("shop", "catalog"),
       section("story", "story", "story-page"),
+      section("story-shop", "catalog", "story-page"),
       section("information", "contact"),
     ],
   };
 }
 
 describe("AI site document page architecture", () => {
+  it("keeps server-owned event tickets out of the AI authoring contract", () => {
+    expect(STORE_SITE_SECTION_KINDS).toContain("event-tickets");
+    expect(SITE_SECTION_KINDS).not.toContain("event-tickets");
+    expect(AI_SITE_DOCUMENT_SCHEMA.properties.sections.items.anyOf.flatMap((schema) => schema.properties.kind.enum)).toEqual(SITE_SECTION_KINDS);
+  });
+
   it("requires the AI to return pages and a pageId for every section", () => {
     expect(AI_SITE_DOCUMENT_SCHEMA.required).toContain("pages");
-    expect(AI_SITE_DOCUMENT_SCHEMA.properties.sections.items.required).toContain("pageId");
+    for (const schema of AI_SITE_DOCUMENT_SCHEMA.properties.sections.items.anyOf) expect(schema.required).toContain("pageId");
+  });
+
+  it("constrains motion, layouts and block slots to their section kind in the provider schema", () => {
+    const catalog = AI_SITE_DOCUMENT_SCHEMA.properties.sections.items.anyOf.find((schema) => schema.properties.kind.enum.includes("catalog"))!;
+    expect(catalog.properties.motion.enum).toContain("reveal");
+    expect(catalog.properties.motion.enum).not.toContain("clip");
+    expect(catalog.properties.layout.enum).not.toContain("full-bleed");
+    expect(catalog.properties.blocks.items.properties.children.items.properties.slot.enum).toContain("products");
+    expect(catalog.properties.blocks.items.properties.slot.enum).not.toContain("primary-media");
+  });
+
+  it("normalizes an explicit Inicio page and registered incompatible motion without losing content", () => {
+    const input = aiDocument();
+    input.pages.unshift({ id: "home", label: "Inicio", slug: "home" });
+    input.sections.forEach((section) => { if (!section.pageId) section.pageId = "home"; });
+    input.sections[1].motion = "clip";
+    const document = materializeSiteDocument(input, []);
+    expect(document?.pages).toEqual([{ id: "story-page", label: "Nuestra historia", slug: "nuestra-historia" }]);
+    expect(document?.sections[0]).toMatchObject({ title: input.sections[0].title });
+    expect(document?.sections[0].pageId).toBeUndefined();
+    expect(document?.sections[1].motion).toBe("reveal");
+    expect(document?.sections[2].pageId).toBe("story-page");
+    input.sections[1].motion = "invented-motion";
+    expect(materializeSiteDocument(input, [])).toBeNull();
+  });
+
+  it("rejects ambiguous duplicate Inicio declarations", () => {
+    const input = aiDocument();
+    input.pages = [{ id: "home", label: "Inicio", slug: "home" }, { id: "home", label: "Otra", slug: "home" }];
+    expect(materializeSiteDocument(input, [])).toBeNull();
+  });
+
+  it("binds each additional catalog to its declared product indices without accepting foreign IDs", () => {
+    const input = aiDocument();
+    Object.assign(input.sections[3], { productIndices: [1, 1, 99, "foreign"] });
+    const document = materializeSiteDocument(input, [], [{ id: "bikini" }, { id: "enterizo" }]);
+    expect(document?.sections.find((section) => section.id === "story-shop")?.productIds).toEqual(["enterizo"]);
+    expect(document?.sections.find((section) => section.id === "shop")?.productIds).toBeUndefined();
   });
 
   it("materializes valid pages and derives their navigation items", () => {
@@ -77,22 +123,23 @@ describe("AI site document page architecture", () => {
         { id: "home", label: "Inicio", target: "home" },
         { id: "catalog", label: "Tienda", target: "catalog" },
         { id: "nav-story-page", label: "Nuestra historia", target: "page", pageId: "story-page" },
-      ] }),
+      ], barStyle: "floating", brandPosition: "left", navPosition: "center", searchPosition: "right", profilePosition: "right", cartPosition: "right" }),
     }));
     expect(document?.sections.find((section) => section.id === "story")?.pageId).toBe("story-page");
   });
 
-  it("rejects orphan assignments, commerce pages and empty declared pages", () => {
+  it("rejects orphan assignments, page heroes and pages without commerce", () => {
     const orphan = aiDocument();
     orphan.sections[2].pageId = "missing-page";
     expect(materializeSiteDocument(orphan, [])).toBeNull();
 
-    const commercePage = aiDocument();
-    commercePage.sections[0].pageId = "story-page";
-    expect(materializeSiteDocument(commercePage, [])).toBeNull();
+    const pageHero = aiDocument();
+    pageHero.sections[0].pageId = "story-page";
+    expect(materializeSiteDocument(pageHero, [])).toBeNull();
 
     const emptyPage = aiDocument();
     emptyPage.sections[2].pageId = "";
+    emptyPage.sections[3].pageId = "";
     expect(materializeSiteDocument(emptyPage, [])).toBeNull();
   });
 
@@ -100,6 +147,7 @@ describe("AI site document page architecture", () => {
     const input = aiDocument();
     input.pages = [];
     input.sections.forEach((section) => { section.pageId = ""; });
+    input.sections = input.sections.filter((section) => section.id !== "story-shop");
 
     const document = materializeSiteDocument(input, []);
 
@@ -108,5 +156,22 @@ describe("AI site document page architecture", () => {
       { id: "home", label: "Inicio", target: "home" },
       { id: "catalog", label: "Tienda", target: "catalog" },
     ]);
+  });
+
+  it("drops model-invented executable fields and never resolves invented media URLs", () => {
+    const input = aiDocument() as any;
+    input.html = "<script>steal()</script>";
+    input.sections[0].onload = "steal()";
+    input.sections[0].mediaIndices = [0, 999, "https://attacker.example/tracker.png"];
+    input.sections[0].title = "<img src=x onerror=steal()>";
+
+    const document = materializeSiteDocument(input, []);
+
+    expect(document).not.toBeNull();
+    expect(document).not.toHaveProperty("html");
+    expect(document?.sections[0]).not.toHaveProperty("onload");
+    expect(document?.sections[0].mediaUrls).toEqual([]);
+    // Copy remains plain text for the renderer to escape; it is never treated as HTML here.
+    expect(document?.sections[0].title).toBe("<img src=x onerror=steal()>");
   });
 });

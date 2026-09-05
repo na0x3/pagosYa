@@ -12,6 +12,7 @@
     "dev:db": "node scripts/dev-db.mjs start",
     "dev:db:stop": "node scripts/dev-db.mjs stop",
     "dev:dashboard": "pnpm --filter @pagosya/merchant-dashboard run dev",
+    "dev:studio": "pnpm --filter @pagosya/merchant-studio run dev",
     "dev:consumer": "pnpm --filter @pagosya/consumer-dashboard run dev",
     "demo:store": "node scripts/demo-store.mjs",
     "demo:inventory-db": "node examples/cafe-aroma/setup.mjs",

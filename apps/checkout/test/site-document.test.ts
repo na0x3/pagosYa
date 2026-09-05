@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SITE_DESIGN_GENOME, SITE_SECTION_CAPABILITIES, resolveSiteSectionFamily, siteSectionSupportsCapability } from "@pagosya/shared-types";
-import { sanitizeSiteDocument, synchronizeSiteDocument } from "../src/site-document";
+import {
+  DEFAULT_SITE_DESIGN_GENOME,
+  SITE_SECTION_CAPABILITIES,
+  STORE_SITE_SECTION_KINDS,
+  resolveSiteSectionFamily,
+  siteSectionSupportsCapability,
+} from "@pagosya/shared-types";
+import { normalizeStorefrontSiteContentOrder, sanitizeSiteDocument, synchronizeSiteDocument } from "../src/site-document";
 
 function documentFixture() {
   const section = (id: string, kind: string, mediaUrls: string[] = [], eventId?: string) => ({
@@ -27,17 +33,58 @@ function documentFixture() {
 }
 
 describe("sanitizeSiteDocument", () => {
+  it("accepts the server-owned event-ticket section from the shared persisted contract", () => {
+    const fixture: any = documentFixture();
+    fixture.sections.push({
+      id: "tickets",
+      kind: "event-tickets",
+      layout: "grid",
+      width: "wide",
+      align: "left",
+      motion: "none",
+      title: "Entradas",
+      body: "Elige tu entrada.",
+      ctaLabel: "Comprar",
+      eventId: "event_123",
+      backgroundColor: "#f5f2ea",
+      textColor: "#171717",
+      mediaUrls: [],
+      items: [],
+    });
+
+    const document = sanitizeSiteDocument(fixture);
+
+    expect(STORE_SITE_SECTION_KINDS).toContain("event-tickets");
+    expect(document?.sections.find((section) => section.kind === "event-tickets")).toMatchObject({
+      id: "tickets",
+      eventId: "event_123",
+    });
+  });
+
   it("keeps a complete document while stripping non-owned media URLs", () => {
     const fixture = documentFixture();
     fixture.sections[0].mediaUrls.push("https://attacker.invalid/image.jpg");
+    Object.assign(fixture.sections[0], { heightPx: 640, mobileHeightPx: 460 });
+    Object.assign(fixture.sections[1], { heightPx: 179, mobileHeightPx: 1801 });
     const document = sanitizeSiteDocument(fixture);
     expect(document?.sections[0].mediaUrls).toEqual(["/v1/uploads/hero.webp"]);
     expect(document?.sections.map((section) => section.kind)).toEqual(["hero", "story", "catalog", "contact"]);
     expect(document?.theme.displayScale).toBe("balanced");
     expect(document?.navigation.logoTreatment).toBe("wordmark");
+    expect(document?.navigation).toEqual(expect.objectContaining({
+      barStyle: "full",
+      brandPosition: "center",
+      navPosition: "center",
+      searchPosition: "right",
+      profilePosition: "right",
+      cartPosition: "right",
+    }));
     expect(document?.motion.intensity).toBe("restrained");
     expect(document?.designGenome).toEqual(DEFAULT_SITE_DESIGN_GENOME);
     expect(document?.sections.every((section) => section.family === "editorial")).toBe(true);
+    expect(document?.sections[0]).toMatchObject({ heightPx: 640, mobileHeightPx: 460 });
+    expect(document?.sections[1].heightPx).toBeUndefined();
+    expect(document?.sections[1].mobileHeightPx).toBeUndefined();
     expect(document?.sections[0].blocks?.map((block) => [block.id, block.slot, block.kind])).toEqual([
       ["heading", "heading", "heading"],
       ["body", "body", "text"],
@@ -46,12 +93,21 @@ describe("sanitizeSiteDocument", () => {
     expect(document?.sections[2].blocks?.at(-1)).toMatchObject({ id: "commerce", kind: "commerce", slot: "products" });
   });
 
-  it("keeps advanced art direction, safe motion and product merchandising", () => {
+  it("keeps advanced art direction, merchandising, and compatible section motion", () => {
     const fixture = {
       ...documentFixture(),
       artDirection: "cinematic-atelier",
       theme: { ...documentFixture().theme, displayScale: "monumental", density: "airy", imageTreatment: "cinematic" },
-      navigation: { ...documentFixture().navigation, logoTreatment: "seal" },
+      navigation: {
+        ...documentFixture().navigation,
+        logoTreatment: "seal",
+        barStyle: "full",
+        brandPosition: "center",
+        navPosition: "right",
+        searchPosition: "left",
+        profilePosition: "right",
+        cartPosition: "left",
+      },
       motion: { intensity: "cinematic" },
       designGenome: {
         composition: "gallery-axis",
@@ -67,6 +123,11 @@ describe("sanitizeSiteDocument", () => {
         productOrderIds: ["product_latte", "product_matcha"],
         spotlightLayout: "lookbook",
         showDescriptions: false,
+        collectionMenuStyle: "editorial-sidebar",
+        collections: [
+          { id: "invierno", name: "Línea Invierno", productIds: ["product_matcha", "product_latte", "product_matcha"] },
+          { id: "bad id", name: "Descartar", productIds: ["product_matcha"] },
+        ],
       },
       experience: {
         type: "scroll-expansion",
@@ -80,6 +141,14 @@ describe("sanitizeSiteDocument", () => {
     const document = sanitizeSiteDocument(fixture);
     expect(document?.theme).toEqual(expect.objectContaining({ displayScale: "monumental", density: "airy", imageTreatment: "cinematic" }));
     expect(document?.navigation.logoTreatment).toBe("seal");
+    expect(document?.navigation).toEqual(expect.objectContaining({
+      barStyle: "full",
+      brandPosition: "center",
+      navPosition: "right",
+      searchPosition: "left",
+      profilePosition: "right",
+      cartPosition: "left",
+    }));
     expect(document?.motion.intensity).toBe("cinematic");
     expect(document?.artDirection).toBe("cinematic-atelier");
     expect(document?.designGenome).toEqual(fixture.designGenome);
@@ -88,22 +157,27 @@ describe("sanitizeSiteDocument", () => {
       productOrderIds: ["product_latte", "product_matcha"],
       spotlightLayout: "lookbook",
       showDescriptions: false,
+      collectionMenuStyle: "editorial-sidebar",
+      collections: [{ id: "invierno", name: "Línea Invierno", productIds: ["product_matcha", "product_latte"] }],
     });
     expect(document?.experience).toEqual({
-      type: "scroll-expansion",
+      type: "none",
       placement: "after-story",
       title: "La imagen se abre",
       body: "Una transición entre historia y colección.",
-      mediaUrls: ["/v1/uploads/window-a.webp", "/v1/uploads/window-b.webp"],
+      mediaUrls: [],
     });
-    expect(document?.sections[1].motion).toBe("story-scroll");
+    expect(document?.sections.map((section) => section.motion)).toContain("story-scroll");
   });
 
   it("keeps editable header navigation and a bounded structured footer", () => {
     const fixture: any = documentFixture();
+    fixture.navigation.brandStyle = { textOffsetX: -28, textOffsetY: 9, textOffsetBasis: "element" };
+    fixture.navigation.taglineStyle = { textOffsetX: 4, textOffsetY: 12, textOffsetBasis: "element" };
     fixture.navigation.items = [
-      { id: "home", label: "Inicio", target: "home" },
+      { id: "home", label: "Inicio", target: "home", style: { textOffsetX: 18, textOffsetY: -6, textOffsetBasis: "element" } },
       { id: "story-link", label: "Nuestra historia", target: "section", sectionId: "story" },
+      { id: "section-information", label: "Contacto", target: "section", sectionId: "story" },
       { id: "missing", label: "No existe", target: "section", sectionId: "unknown" },
     ];
     fixture.footer = {
@@ -123,10 +197,14 @@ describe("sanitizeSiteDocument", () => {
     };
 
     const document = sanitizeSiteDocument(fixture);
+    expect(document?.navigation.brandStyle).toEqual({ textOffsetX: -28, textOffsetY: 9, textOffsetBasis: "element" });
+    expect(document?.navigation.taglineStyle).toEqual({ textOffsetX: 4, textOffsetY: 12, textOffsetBasis: "element" });
+    expect(document?.navigation.items?.[0].style).toEqual({ textOffsetX: 18, textOffsetY: -6, textOffsetBasis: "element" });
 
     expect(document?.navigation.items).toEqual([
-      { id: "home", label: "Inicio", target: "home" },
+      { id: "home", label: "Inicio", target: "home", style: { textOffsetX: 18, textOffsetY: -6, textOffsetBasis: "element" } },
       { id: "story-link", label: "Nuestra historia", target: "section", sectionId: "story" },
+      { id: "section-information", label: "Contacto", target: "section", sectionId: "information" },
     ]);
     expect(document?.footer).toMatchObject({
       enabled: true,
@@ -325,6 +403,49 @@ describe("sanitizeSiteDocument", () => {
     const duplicateCatalog = documentFixture();
     duplicateCatalog.sections.push({ ...duplicateCatalog.sections[2], id: "shop-again" });
     expect(sanitizeSiteDocument(duplicateCatalog)).toBeNull();
+  });
+});
+
+describe("normalizeStorefrontSiteContentOrder", () => {
+  it("migrates an applied AI proposal's legacy order to the same structured order used by the editor preview", () => {
+    const fixture: any = documentFixture();
+    fixture.sections.splice(2, 0, {
+      ...fixture.sections[1],
+      id: "visual-world",
+      kind: "gallery",
+    });
+
+    expect(normalizeStorefrontSiteContentOrder(
+      ["animation-opening", "hero", "animation-products", "products", "gallery", "about", "contact"],
+      fixture.sections,
+      ["animation-opening", "animation-products", "animation-signature"],
+      { signatureSectionKey: "animation-signature", signaturePlacement: "after-catalog" },
+    )).toEqual([
+      "animation-opening",
+      "site-opening",
+      "animation-products",
+      "site-shop",
+      "animation-signature",
+      "site-visual-world",
+      "site-story",
+      "site-information",
+    ]);
+  });
+
+  it("preserves an explicitly positioned signature animation", () => {
+    const fixture: any = documentFixture();
+    expect(normalizeStorefrontSiteContentOrder(
+      ["hero", "animation-signature", "products", "about"],
+      fixture.sections,
+      ["animation-signature"],
+      { signatureSectionKey: "animation-signature", signaturePlacement: "after-catalog" },
+    )).toEqual([
+      "site-opening",
+      "animation-signature",
+      "site-shop",
+      "site-story",
+      "site-information",
+    ]);
   });
 });
 

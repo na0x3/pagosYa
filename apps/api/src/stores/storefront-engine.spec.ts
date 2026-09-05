@@ -57,7 +57,7 @@ function documentFixture(variant: number): StoreSiteDocument {
       section("opening", "hero"),
       section("story", "story"),
       section("shop", "catalog"),
-      { ...section("visuals", "gallery"), motion: (["clip", "drift", "scale"] as const)[variant] },
+      section("visuals", "gallery"),
       section("information", "contact"),
     ],
   };
@@ -87,6 +87,20 @@ describe("StorefrontGenerationEngine", () => {
 
     expect(storefrontStructuralSignature(multiPage).fingerprint).not.toBe(storefrontStructuralSignature(singlePage).fingerprint);
     expect(storefrontStructuralSimilarity(singlePage, multiPage)).toBeLessThan(1);
+  });
+
+  it("ignores retired section kinds in historical proposal signatures", () => {
+    const current = documentFixture(0);
+    const historical = structuredClone(current) as StoreSiteDocument;
+    historical.sections.push({
+      ...structuredClone(historical.sections[0]),
+      id: "retired-benefits",
+      kind: "benefits",
+    } as unknown as StoreSiteDocument["sections"][number]);
+
+    expect(() => storefrontStructuralSignature(historical)).not.toThrow();
+    expect(storefrontStructuralSimilarity(current, historical)).toBe(1);
+    expect(storefrontOriginalityGate(current, [historical])).toEqual({ accepted: false, closestSimilarity: 1 });
   });
 
   it("keeps only recent brand analysis while rejecting template-level direction variance", () => {

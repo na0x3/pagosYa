@@ -8,6 +8,7 @@ import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
 import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
 import { ImportInventoryDto } from "./dto/import-inventory.dto";
 import { NormalizeInventoryCsvDto } from "./dto/normalize-inventory-csv.dto";
+import { ImportProductImagesDto } from "./dto/import-product-images.dto";
 import { ScheduleProductDiscountsDto } from "./dto/schedule-product-discounts.dto";
 
 /** Dashboard/backend-authenticated management of a single store's products (Payment
@@ -68,6 +69,16 @@ export class PaymentLinksController {
     @Body() dto: NormalizeInventoryCsvDto,
   ) {
     return this.paymentLinks.normalizeInventoryCsv(merchant.id, storeId, dto.csv, dto.imageFileNames ?? []);
+  }
+
+  @Post("import/images")
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  importProductImages(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("storeId") storeId: string,
+    @Body() dto: ImportProductImagesDto,
+  ) {
+    return this.paymentLinks.interpretAndImportProductImages(merchant.id, storeId, dto);
   }
 
   @Post(":id/archive")

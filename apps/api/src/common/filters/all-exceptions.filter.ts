@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import type { Request, Response } from "express";
+import { IllegalStateTransitionError } from "../../payment-intents/payment-intent.state-machine";
 
 function redactSecrets(value: string): string {
   return value
@@ -38,12 +39,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const isHttpException = exception instanceof HttpException;
-    const status = isHttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    const isStateConflict = exception instanceof IllegalStateTransitionError;
+    const status = isHttpException
+      ? exception.getStatus()
+      : isStateConflict
+        ? HttpStatus.CONFLICT
+        : HttpStatus.INTERNAL_SERVER_ERROR;
     const payload = isHttpException
       ? exception.getResponse()
-      : { statusCode: status, message: "Internal server error" };
+      : isStateConflict
+        ? { statusCode: status, message: "PaymentIntent state changed; refresh and retry" }
+        : { statusCode: status, message: "Internal server error" };
 
-    if (!isHttpException || status >= 500) {
+    if ((!isHttpException && !isStateConflict) || status >= 500) {
       const message = redactSecrets(exception instanceof Error ? exception.message : String(exception));
       const stack = exception instanceof Error && exception.stack ? redactSecrets(exception.stack) : undefined;
       this.logger.error(`${request.method} ${requestPath(request)} -> ${status}: ${message}`, stack);

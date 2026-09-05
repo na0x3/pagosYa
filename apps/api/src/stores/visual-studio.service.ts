@@ -1,4 +1,13 @@
-import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  BadGatewayException,
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { MediaAsset, Prisma, Store, StoreVisualProposal } from "@prisma/client";
 import {
@@ -10,11 +19,18 @@ import {
   type SiteCreativeRecipe,
 } from "@pagosya/shared-types";
 import { PrismaService } from "../prisma/prisma.service";
-import { UploadsService } from "../uploads/uploads.service";
-import { STORE_FONT_STYLES, type StoreFontStyle } from "./dto/create-store.dto";
+import { PaymentLinksService } from "../payment-links/payment-links.service";
+import { SAFE_TEXT_PATTERN } from "../common/validation/safe-text.decorator";
+import { MAX_IMAGE_UPLOAD_BYTES, UploadsService } from "../uploads/uploads.service";
+import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES, type StoreFontStyle } from "./dto/create-store.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
+import { StoreAgentSelectionDto } from "./dto/send-store-agent-message.dto";
+import { assertWebsiteRevision, saveWebsiteDraftPatch, websiteEditorStore, websiteDraft } from "./website-draft";
+import { assertSelectedOperations, instructionUsesSelection, resolveStoreAgentSelection, selectedOperation } from "./store-agent-selection";
+import { storefrontPageProductIds } from "./storefront-page-products";
 import {
   AI_SITE_DOCUMENT_SCHEMA,
+  SITE_SECTION_MOTIONS,
   materializeSiteDocument,
   siteDocumentJson,
   type AiSiteDocument,
@@ -29,7 +45,6 @@ import {
   evaluateStorefrontDiversity,
   storefrontBrandFingerprint,
   storefrontCreativeRecipe,
-  storefrontDirectionsAreDiverse,
   storefrontOriginalityGate,
   storefrontStructuralSignature,
   storedStorefrontStructuralSignature,
@@ -41,6 +56,16 @@ import {
   type StorefrontSemanticMediaCandidate,
   type StorefrontStructuralSignature,
 } from "./storefront-engine";
+import {
+  STORE_AGENT_EDITOR_CATALOG,
+  STORE_AGENT_EDITOR_ENTITIES,
+  applyStoreAgentEditorOperations,
+  applyStoreAgentProposalVisualOperations,
+  assertStoreAgentOperationBudget,
+  storeAgentEditableInventory,
+  storeAgentOperationIsProposalVisual,
+  type StoreAgentEditorOperation,
+} from "./store-agent-editor";
 
 const VISUAL_FIELDS = [
   "tagline", "bannerUrl", "backgroundColor", "backgroundMode", "backgroundGradientStart", "backgroundGradientEnd", "backgroundGradientAngle", "backgroundImageUrl", "aboutText", "aboutTitle", "aboutSubtitle", "aboutImageUrl",
@@ -65,12 +90,47 @@ type ProposalPreset = {
 type AiDirection = { title: string; rationale: string; siteDocument: AiSiteDocument };
 type MaterializedAiDirection = Omit<AiDirection, "siteDocument"> & { siteDocument: StoreSiteDocument };
 
+type StoreAgentImageRequest = {
+  action: "add" | "set";
+  entity: "section-media" | "section-item" | "section-block" | "visual-setting" | "hero-slide" | "editorial-image" | "animation-media" | "new-product";
+  targetId: string;
+  parentId: string;
+  field: string;
+  position: number;
+  aspectRatio: "landscape" | "portrait" | "square";
+  prompt: string;
+};
+
+type StoreAgentProductRequest = {
+  key: string;
+  name: string;
+  nameEvidence: string;
+  description: string;
+  descriptionEvidence: string;
+  amount: number;
+  amountEvidence: string;
+  currency: "BOB";
+  stock: number;
+  stockEvidence: string;
+  categoryId: string;
+  imageUrls: string[];
+  pageIds: string[];
+};
+
 export type StoreAgentRevisionPlan = {
   target: "opening" | "catalog" | "story" | "gallery" | "contact" | "footer" | "site" | "unsupported";
   tone: "warmer" | "cooler" | "bolder" | "quieter" | "minimal" | "editorial" | "unchanged";
+  action: "restyle" | "replace-title" | "replace-body" | "replace-cta" | "set-color" | "move-up" | "move-down" | "social-link" | "set-link" | "unsupported";
+  value: string;
+  color: string;
   preserveCatalog: boolean;
   socialHandle: string;
   socialPlatform: "instagram" | "tiktok" | "facebook" | "x" | "youtube" | "unknown";
+  linkLabel: string;
+  linkUrl: string;
+  operations: StoreAgentEditorOperation[];
+  imageRequests: StoreAgentImageRequest[];
+  productRequests: StoreAgentProductRequest[];
   summary: string;
 };
 
@@ -125,19 +185,15 @@ type BrandAnalysis = {
 const brandAnalysisCache = new TtlLruCache<BrandAnalysis>(64, 30 * 60_000);
 
 const CONTENT_SECTIONS = ["hero", "products", "about", "gallery", "motion", "links"] as const;
-const MOTION_EXPERIENCES = [
-  "story-scroll", "hero-carousel", "image-stream",
-  "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
-  "portfolio-scroller", "circle-reveal", "clarity-marquee",
-  "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
-  "full-screen-chapters", "magnetic-target", "frame-sequence",
-] as const;
-const RETIRED_MOTION_EXPERIENCES = new Set(["3d-gallery", "coverflow-carousel", "zoom-parallax", "video-pill"]);
+// This is the only animation inventory the AI composition path may use. The
+// model never supplies component names or executable motion code.
+const MOTION_EXPERIENCES = STORE_MOTION_EXPERIENCES;
+const TEXT_MOTION_EXPERIENCES = new Set([
+  "clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
+]);
 const SAFE_GENERATED_BACKGROUNDS = ["#eef1f5", "#e8f2ef", "#eeebf5"] as const;
 const GENERATED_SIGNATURE_PROFILES = [
-  { visual: "scroll-expansion", text: "text-reveal-block", section: "clip" },
-  { visual: "full-screen-chapters", text: "text-rotate", section: "drift" },
-  { visual: "frame-sequence", text: "text-along-path", section: "scale" },
+  "text-reveal-block", "text-rotate", "text-along-path",
 ] as const;
 
 function proposalArtDirections(preferred: unknown, generation: number): SiteArtDirection[] {
@@ -149,8 +205,8 @@ function proposalArtDirections(preferred: unknown, generation: number): SiteArtD
 }
 
 function generatedMotionProfile(index: number, assetCount: number) {
-  const profile = GENERATED_SIGNATURE_PROFILES[index % GENERATED_SIGNATURE_PROFILES.length];
-  return { ...profile, signature: assetCount >= 2 ? profile.visual : profile.text };
+  void assetCount;
+  return { section: "none" as const, signature: GENERATED_SIGNATURE_PROFILES[index % GENERATED_SIGNATURE_PROFILES.length] };
 }
 
 type GeneratedBrandPalette = {
@@ -254,10 +310,15 @@ function withGeneratedDefaultFooter(
     const section = document.sections.find((candidate) => candidate.kind === kind);
     return section ? [{ id: `section-${kind}`, label: section.title || fallbackLabel, href: `#site-section-${section.id}` }] : [];
   };
+  const pageItems = (document.pages ?? []).map((page) => ({
+    id: `page-${page.id}`.slice(0, 48),
+    label: page.label,
+    href: `/s/${store.slug}?page=${page.slug}`,
+  }));
   const navigationVariants = [
-    { title: "Explora", items: [...sectionItem("catalog", "La tienda"), ...sectionItem("story", "Nuestra historia")] },
-    { title: "Descubre", items: [...sectionItem("catalog", "Productos"), ...sectionItem("gallery", "Galería")] },
-    { title: "Visita", items: [...sectionItem("catalog", "Catálogo"), ...sectionItem("contact", "Contacto")] },
+    { title: "Explora", items: pageItems.length ? pageItems : [...sectionItem("catalog", "La tienda"), ...sectionItem("story", "Nuestra historia")] },
+    { title: "Descubre", items: pageItems.length ? pageItems : [...sectionItem("catalog", "Productos"), ...sectionItem("gallery", "Galería")] },
+    { title: "Visita", items: pageItems.length ? pageItems : [...sectionItem("catalog", "Catálogo"), ...sectionItem("contact", "Contacto")] },
   ];
   const navigation = navigationVariants[index % navigationVariants.length];
   const realLinks = links
@@ -304,7 +365,7 @@ function withGeneratedDefaultNavigation(document: StoreSiteDocument): StoreSiteD
     { id: "home", label: "Inicio", target: "home" },
   ];
   if (catalog) items.push({ id: "catalog", label: conciseLabel(catalog.title, "Colección"), target: "catalog" });
-  for (const { kind, fallback } of sectionSpecs) {
+  for (const { kind, fallback } of (document.pages?.length ? [] : sectionSpecs)) {
     const section = homeSections.find((candidate) => candidate.kind === kind);
     if (!section) continue;
     const proposedLabel = conciseLabel(section.title, fallback);
@@ -365,14 +426,13 @@ function enforceUniqueGeneratedAnimationTypes(
   motionExperienceCandidates: unknown,
 ): { siteDocument: StoreSiteDocument; animations: unknown[]; motionExperiences: string[] } {
   const generatedTypes = new Set<string>();
-  const repeatableSectionMotions = new Set(["reveal", "clip", "drift", "scale", "parallax"]);
   const sections: StoreSiteDocument["sections"] = document.sections.map((section) => {
     // A generated multi-scene hero is already the page's hero-carousel. It is
     // stored as the hero primitive rather than a named animation, but must count
     // toward the same one-per-type rule.
     if (section.kind === "hero" && Array.isArray(section.mediaUrls) && section.mediaUrls.length >= 2) generatedTypes.add("hero-carousel");
     if (section.motion === "none") return section;
-    if (generatedTypes.has(section.motion) && !repeatableSectionMotions.has(section.motion)) {
+    if (generatedTypes.has(section.motion)) {
       return { ...section, motion: "none" as const };
     }
     generatedTypes.add(section.motion);
@@ -410,6 +470,42 @@ function enforceUniqueGeneratedAnimationTypes(
   return { siteDocument: { ...document, sections, experience }, animations, motionExperiences };
 }
 
+function staticGeneratedPhotography(document: StoreSiteDocument): StoreSiteDocument {
+  return {
+    ...document,
+    sections: document.sections.map((section) => {
+      const sourceMediaUrls = Array.isArray(section.mediaUrls) ? section.mediaUrls : [];
+      const mediaUrls = section.kind === "hero" ? sourceMediaUrls.slice(0, 1) : sourceMediaUrls;
+      const heroMedia = mediaUrls[0];
+      const items = Array.isArray(section.items) ? section.items : [];
+      return {
+        ...section,
+        mediaUrls,
+        ...(section.kind === "hero"
+          ? { items: heroMedia ? items.filter((item) => item.mediaUrl === heroMedia).slice(0, 1) : [] }
+          : {}),
+        ...(section.kind === "gallery" && section.layout === "rail" ? { layout: "grid" as const } : {}),
+      };
+    }),
+    experience: TEXT_MOTION_EXPERIENCES.has(document.experience.type)
+      ? { ...document.experience, mediaUrls: [] }
+      : { ...document.experience, type: "none" as const, mediaUrls: [] },
+  };
+}
+
+function repairGeneratedPrimaryCatalog(document: StoreSiteDocument): StoreSiteDocument {
+  let changed = false;
+  const sections = document.sections.map((section) => {
+    if (section.kind !== "catalog" || section.pageId || !Array.isArray(section.productIds) || section.productIds.length > 0) {
+      return section;
+    }
+    changed = true;
+    const { productIds: _emptyGeneratedSelection, ...fullInventoryCatalog } = section;
+    return fullInventoryCatalog;
+  });
+  return changed ? { ...document, sections } : document;
+}
+
 function enforceUniqueGeneratedProposalConfig(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const config = value as Record<string, unknown>;
@@ -420,44 +516,43 @@ function enforceUniqueGeneratedProposalConfig(value: unknown): unknown {
   const openingDocument = enforceGeneratedHeroOpening(siteDocument, [], 0);
   const uniqueInventory = enforceUniqueGeneratedAnimationTypes(
     openingDocument,
-    [],
-    [],
+    config.animations,
+    config.motionExperiences,
   );
-  const generatedDocument = {
-    ...uniqueInventory.siteDocument,
-    sections: uniqueInventory.siteDocument.sections.map((section) =>
-      section.kind === "gallery" && section.layout === "rail"
-        ? { ...section, layout: "grid" as const }
-        : section,
-    ),
-  };
+  const generatedDocument = staticGeneratedPhotography(repairGeneratedPrimaryCatalog(uniqueInventory.siteDocument));
+  const animations = uniqueInventory.animations;
+  const animationTypes = animations.flatMap((animation) => {
+    const type = animation && typeof animation === "object" && !Array.isArray(animation)
+      ? (animation as Record<string, unknown>).type
+      : null;
+    return typeof type === "string" ? [type] : [];
+  });
   return {
     ...freshGeneratedVisualReset(),
     ...config,
     siteDocument: generatedDocument,
-    contentOrder: cleanGeneratedContentOrder(config.contentOrder),
-    animations: [],
-    motionExperiences: [],
-    motionExperience: "hero-carousel",
-    motionDuoEnabled: false,
+    contentOrder: expandMotionSections(cleanGeneratedContentOrder(config.contentOrder), animations.flatMap((animation) => {
+      const id = animation && typeof animation === "object" && !Array.isArray(animation)
+        ? (animation as Record<string, unknown>).id
+        : null;
+      return typeof id === "string" ? [id] : [];
+    })),
+    animations,
+    motionExperiences: animationTypes,
+    motionExperience: animationTypes[0] || "clarity-marquee",
+    motionDuoEnabled: animations.length > 0,
   };
 }
 
-function enrichGeneratedProposalConfig(
-  value: unknown,
-  store: Store,
-  links: StoreLinkContext[],
-  index: number,
-): unknown {
+function stableGeneratedProposalConfig(value: unknown): unknown {
   const repaired = enforceUniqueGeneratedProposalConfig(value);
   if (!repaired || typeof repaired !== "object" || Array.isArray(repaired)) return repaired;
   const config = repaired as Record<string, unknown>;
   const document = config.siteDocument;
   if (!document || typeof document !== "object" || Array.isArray(document)) return repaired;
-  const navigableDocument = withGeneratedDefaultNavigation(document as unknown as StoreSiteDocument);
   return {
     ...config,
-    siteDocument: withGeneratedDefaultFooter(navigableDocument, store, links, index),
+    siteDocument: withGeneratedDefaultNavigation(document as unknown as StoreSiteDocument),
   };
 }
 
@@ -485,6 +580,16 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
   }
   baseSections.forEach(append);
   ["links", "contact", "location"].forEach(append);
+
+  // Generated sites have an authored hero opening. Keep that opening first in
+  // the rendered content order as well as in siteDocument.sections; otherwise
+  // the first generated animation becomes the public page's first section and
+  // makes the intended opening look like section two.
+  const heroIndex = result.indexOf("hero");
+  if (heroIndex > 0) {
+    result.splice(heroIndex, 1);
+    result.unshift("hero");
+  }
   if (!animationIds.length) return result;
 
   // Split AI-authored motion around the catalog so the storefront has a visual
@@ -495,7 +600,9 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
   const beforeCount = Math.ceil(animationIds.length / 2);
   const beforeIds = animationIds.slice(0, beforeCount);
   const afterIds = animationIds.slice(beforeCount);
-  const beforeGaps = Array.from({ length: productIndex + 1 }, (_, gap) => gap);
+  // Gap zero is before the hero. Motion may bridge the opening and catalog,
+  // but it must never displace the opening itself.
+  const beforeGaps = Array.from({ length: Math.max(1, productIndex) }, (_, gap) => gap + 1);
   const afterLastGap = linksIndex > productIndex ? linksIndex : result.length;
   const afterGaps = Array.from({ length: Math.max(1, afterLastGap - productIndex) }, (_, index) => productIndex + 1 + index);
   const animationGroups = Array.from({ length: result.length + 1 }, () => [] as string[]);
@@ -510,9 +617,10 @@ function expandMotionSections(value: unknown, animationIds: string[]): string[] 
 
 function animationMediaRequirement(type: string): { min: number; max: number } {
   if (["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"].includes(type)) return { min: 0, max: 0 };
-  if (["circle-reveal", "magnetic-target"].includes(type)) return { min: 1, max: 1 };
+  if (["circle-reveal", "magnetic-target", "video-background", "link-preview", "video-pin-reveal"].includes(type)) return { min: 1, max: 1 };
   if (type === "scroll-expansion") return { min: 2, max: 2 };
-  return { min: type === "hero-gallery-scroll" ? 3 : 2, max: 8 };
+  if (["hero-gallery-scroll", "gallery-accordion", "split-scroll", "sticky-gallery"].includes(type)) return { min: 3, max: 8 };
+  return { min: 2, max: 8 };
 }
 
 function distributedAnimationMedia(
@@ -615,7 +723,7 @@ function passesPremiumDirectionGuardrails(document: StoreSiteDocument): boolean 
   const quietDirection = document.artDirection === "quiet-gallery";
   if (!hero || !story || !catalog) return false;
   if (opening?.kind === "hero" && !quietDirection && (hero.layout === "centered" || hero.align === "center")) return false;
-  if (story.motion !== "story-scroll") return false;
+  if (document.sections.some((section) => !(SITE_SECTION_MOTIONS as readonly string[]).includes(section.motion))) return false;
   if (document.navigation.sticky && !["product-studio", "graphic-market"].includes(document.artDirection || "")) return false;
   const copy = [
     document.direction,
@@ -628,26 +736,126 @@ function passesPremiumDirectionGuardrails(document: StoreSiteDocument): boolean 
   return true;
 }
 
-function defaultMotionSuite(index: number, assetCount: number): string[] {
-  if (assetCount <= 1) {
-    return [
-      ["text-reveal-block", "magnetic-target"],
-      ["circle-reveal", "text-rotate"],
-      ["text-glitch", "circle-reveal"],
-    ][index % 3];
-  }
-  if (assetCount === 2) {
-    return [
-      ["story-scroll", "layered-text"],
-      ["hero-carousel", "circle-reveal"],
-      ["image-stream", "magnetic-target"],
-    ][index % 3];
-  }
+const FEATURED_AI_MOTION_EXPERIENCES = [
+  "draggable-cards",
+  "perspective-carousel",
+  "link-preview",
+  "video-pin-reveal",
+  "gallery-accordion",
+  "split-scroll",
+  "sticky-gallery",
+  "sticky-story",
+  "text-parallax",
+] as const satisfies ReadonlyArray<(typeof MOTION_EXPERIENCES)[number]>;
+
+function seededAnimationLibrary(seed: string): Array<(typeof MOTION_EXPERIENCES)[number]> {
+  let state = Array.from(seed).reduce(
+    (hash, character) => Math.imul(hash ^ character.charCodeAt(0), 16777619),
+    2166136261,
+  ) >>> 0;
+  const random = () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+  const shuffle = <T,>(values: readonly T[]) => {
+    const result = [...values];
+    for (let index = result.length - 1; index > 0; index -= 1) {
+      const next = Math.floor(random() * (index + 1));
+      [result[index], result[next]] = [result[next], result[index]];
+    }
+    return result;
+  };
+  const featured = new Set<(typeof MOTION_EXPERIENCES)[number]>(FEATURED_AI_MOTION_EXPERIENCES);
   return [
-    ["hero-gallery-scroll", "frame-sequence", "text-along-path"],
-    ["portfolio-scroller", "frame-sequence", "circle-reveal"],
-    ["image-stream", "full-screen-chapters", "magnetic-target"],
-  ][index % 3];
+    ...shuffle(FEATURED_AI_MOTION_EXPERIENCES),
+    ...shuffle(MOTION_EXPERIENCES.filter((type) => !featured.has(type))),
+  ];
+}
+
+const GENERATED_ANIMATION_NAMES: Record<(typeof MOTION_EXPERIENCES)[number], string> = {
+  "story-scroll": "Historia al desplazarse",
+  "hero-carousel": "Slider de colección",
+  "image-stream": "Flujo de imágenes",
+  "scroll-expansion": "Expansión al desplazarse",
+  "hero-gallery-scroll": "Galería al desplazarse",
+  "stagger-testimonials": "Escenas escalonadas",
+  "portfolio-scroller": "Recorrido de colección",
+  "circle-reveal": "Revelado circular",
+  "clarity-marquee": "Cinta de marca",
+  "layered-text": "Texto en capas",
+  "text-rotate": "Texto rotativo",
+  "text-glitch": "Texto con interferencia",
+  "text-reveal-block": "Revelado tipográfico",
+  "text-along-path": "Texto en recorrido",
+  "full-screen-chapters": "Capítulos completos",
+  "magnetic-target": "Llamado magnético",
+  "frame-sequence": "Secuencia de cuadros",
+  "video-background": "Video de fondo",
+  "draggable-cards": "Tarjetas arrastrables",
+  "perspective-carousel": "Carrusel con perspectiva",
+  "link-preview": "Vista previa de enlace",
+  "video-pin-reveal": "Video revelado",
+  "gallery-accordion": "Galería acordeón",
+  "split-scroll": "Relato dividido",
+  "sticky-gallery": "Galería fija",
+  "sticky-story": "Historia fija",
+  "text-parallax": "Texto en paralaje",
+};
+
+function generatedAnimationSuite(
+  preferredTypes: unknown,
+  assets: MediaAsset[],
+  products: StoreProductContext[],
+  storeName: string,
+  proposalIndex: number,
+  generation: number,
+): Array<Record<string, unknown>> {
+  const requested = Array.isArray(preferredTypes)
+    ? preferredTypes.filter((type): type is (typeof MOTION_EXPERIENCES)[number] =>
+        typeof type === "string" && MOTION_EXPERIENCES.includes(type as (typeof MOTION_EXPERIENCES)[number]))
+    : [];
+  const rotatedLibrary = seededAnimationLibrary(`${storeName}:${generation}:${proposalIndex}`);
+  const candidates = [...new Set([
+    ...requested,
+    ...rotatedLibrary,
+  ])] as Array<(typeof MOTION_EXPERIENCES)[number]>;
+  const targetCount = assets.length >= 3 ? 3 : 2;
+  const selected = candidates.filter((type) => {
+    const availableAssets = ["video-background", "video-pin-reveal"].includes(type)
+      ? assets.filter((asset) => asset.mimeType.startsWith("video/"))
+      : assets;
+    return animationMediaRequirement(type).min <= availableAssets.length;
+  }).slice(0, targetCount);
+  const visualCount = Math.max(1, selected.filter((type) => animationMediaRequirement(type).max > 0).length);
+
+  return selected.map((type, animationIndex) => {
+    const availableAssets = ["video-background", "video-pin-reveal"].includes(type)
+      ? assets.filter((asset) => asset.mimeType.startsWith("video/"))
+      : assets;
+    const media = distributedAnimationMedia(availableAssets, [], animationIndex, visualCount, type).map((item, sceneIndex) => {
+      const imageUrl = typeof item.imageUrl === "string" ? item.imageUrl : "";
+      const product = products.find((candidate) => candidate.imageUrls.includes(imageUrl));
+      return {
+        ...item,
+        title: product?.name || `${storeName} · escena ${sceneIndex + 1}`,
+        caption: product?.description || "",
+        body: "",
+      };
+    });
+    const featuredProduct = products[(proposalIndex + animationIndex) % Math.max(1, products.length)];
+    return {
+      id: `ai-${proposalIndex + 1}-${type}`,
+      name: GENERATED_ANIMATION_NAMES[type],
+      type,
+      title: storeName,
+      subtitle: featuredProduct?.description || `Una escena de ${storeName} construida con contenido real de la tienda.`,
+      ...(featuredProduct?.id ? { productId: featuredProduct.id } : {}),
+      media,
+    };
+  });
 }
 
 const AI_DIRECTIONS_SCHEMA = {
@@ -712,7 +920,7 @@ const BRAND_ANALYSIS_SCHEMA = {
               productIndex: { type: "integer", minimum: 0, maximum: 23 },
               role: { type: "string", enum: ["lead", "support", "catalog"] },
               placement: { type: "string", minLength: 3, maxLength: 160 },
-              imageAssetIndices: { type: "array", minItems: 0, maxItems: 8, uniqueItems: true, items: { type: "integer", minimum: 0, maximum: 23 } },
+              imageAssetIndices: { type: "array", minItems: 0, maxItems: 8, items: { type: "integer", minimum: 0, maximum: 23 } },
             },
           },
         },
@@ -739,7 +947,7 @@ const BRAND_ANALYSIS_SCHEMA = {
               slug: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
               purpose: { type: "string", minLength: 10, maxLength: 240 },
               sectionKinds: {
-                type: "array", minItems: 1, maxItems: 5, uniqueItems: true,
+                type: "array", minItems: 1, maxItems: 5,
                 items: { type: "string", enum: ["story", "gallery", "contact", "location", "links"] },
               },
             },
@@ -780,7 +988,7 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
     ? [...usableMediaUrls.slice(index % usableMediaUrls.length), ...usableMediaUrls.slice(0, index % usableMediaUrls.length)]
     : [];
   const motionProfile = generatedMotionProfile(index, rotatedMediaUrls.length);
-  const heroMediaUrls = rotatedMediaUrls.slice(0, Math.min(3, rotatedMediaUrls.length));
+  const heroMediaUrls = rotatedMediaUrls.slice(0, 1);
   const storyMediaUrls = rotatedMediaUrls.length > 1
     ? [...rotatedMediaUrls.slice(1), rotatedMediaUrls[0]].slice(0, Math.min(3, rotatedMediaUrls.length))
     : rotatedMediaUrls;
@@ -870,11 +1078,7 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
       body: index === 0
         ? copy(config.aboutSubtitle, "Una frase editorial que continúa la historia de la marca.")
         : copy(config.catalogSubtitle, `Explora la selección actual de ${store.name}.`),
-      mediaUrls: motionProfile.signature === "scroll-expansion"
-        ? rotatedMediaUrls.slice(0, 2)
-        : motionProfile.signature === motionProfile.visual
-          ? rotatedMediaUrls.slice(0, 5)
-          : [],
+      mediaUrls: [],
     },
     sections: [
       {
@@ -902,7 +1106,7 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
         layout: "stacked",
         width: "full",
         align: index === 1 ? "right" : "left",
-        motion: "story-scroll",
+        motion: "none",
         title: copy(config.aboutTitle, `Conoce ${store.name}`),
         body: copy(config.aboutText, `Descubre la intención y la selección detrás de ${store.name}.`),
         ctaLabel: "",
@@ -986,6 +1190,106 @@ function localSiteDocument(store: Store, preset: ProposalPreset, assets: MediaAs
   };
 }
 
+function ensureGeneratedCommercePages(
+  document: StoreSiteDocument,
+  store: Store,
+  assets: MediaAsset[],
+  products: StoreProductContext[],
+  directionIndex: number,
+): StoreSiteDocument {
+  const pages = [...(document.pages ?? [])].slice(0, 3);
+  const usedPageIds = new Set(pages.map((page) => page.id));
+  const usedSlugs = new Set(pages.map((page) => page.slug));
+  const defaults = [
+    { id: "collection-page", label: "Colección", slug: "coleccion" },
+    { id: "story-page", label: "Historia", slug: "historia" },
+    { id: "new-page", label: "Novedades", slug: "novedades" },
+  ];
+  for (const candidate of defaults) {
+    if (pages.length >= 2) break;
+    if (usedPageIds.has(candidate.id) || usedSlugs.has(candidate.slug)) continue;
+    pages.push(candidate);
+    usedPageIds.add(candidate.id);
+    usedSlugs.add(candidate.slug);
+  }
+
+  const visualMedia = assets.filter((asset) => asset.url !== store.logoUrl).map((asset) => asset.url);
+  const sections = document.sections.map((section, sectionIndex) => {
+    if (!section.pageId) return section;
+    if (section.kind === "catalog") {
+      const pageIndex = Math.max(0, pages.findIndex((page) => page.id === section.pageId));
+      const assigned = storefrontPageProductIds(pages[pageIndex], document.sections, products, pageIndex, section.productIds);
+      return {
+        ...section,
+        productIds: assigned,
+        motion: section.motion === "none" ? (["scale", "reveal", "drift"] as const)[(pageIndex + directionIndex) % 3] : section.motion,
+      };
+    }
+    return section.motion === "none" && ["story", "gallery", "contact", "location", "links"].includes(section.kind)
+      ? { ...section, motion: "reveal" as const }
+      : section;
+  });
+  const sectionIds = new Set(sections.map((section) => section.id));
+  const uniqueSectionId = (base: string) => {
+    let id = base;
+    let suffix = 2;
+    while (sectionIds.has(id)) id = `${base}-${suffix++}`;
+    sectionIds.add(id);
+    return id;
+  };
+
+  pages.forEach((page, pageIndex) => {
+    const pageSections = sections.filter((section) => section.pageId === page.id);
+    if (!pageSections.some((section) => section.kind !== "catalog")) {
+      const mediaUrl = visualMedia.length ? visualMedia[(pageIndex + directionIndex) % visualMedia.length] : null;
+      const story: StoreSiteDocument["sections"][number] = {
+        id: uniqueSectionId(`${page.id}-story`.slice(0, 48)),
+        pageId: page.id,
+        kind: "story",
+        family: pageIndex % 2 === 0 ? "editorial" : "cinematic",
+        layout: pageIndex % 2 === 0 ? "offset" : "stacked",
+        width: "wide",
+        align: pageIndex % 2 === 0 ? "left" : "right",
+        motion: pageIndex % 2 === 0 ? "clip" : "reveal",
+        title: page.label,
+        body: pageIndex % 2 === 0
+          ? `Una selección curada del universo de ${store.name}.`
+          : `Conoce las piezas, la intención y las novedades de ${store.name}.`,
+        ctaLabel: "",
+        backgroundColor: pageIndex % 2 === 0 ? document.theme.surfaceColor : document.theme.secondaryColor,
+        textColor: pageIndex % 2 === 0 ? document.theme.textColor : readableInk(document.theme.secondaryColor),
+        mediaUrls: mediaUrl ? [mediaUrl] : [],
+        items: mediaUrl ? [{ mediaUrl, title: page.label, body: `Descubre ${store.name} en detalle.` }] : [],
+      };
+      sections.push({ ...story, blocks: deriveLegacySiteSectionBlocks(story) });
+    }
+    if (!pageSections.some((section) => section.kind === "catalog")) {
+      const assigned = storefrontPageProductIds(page, sections, products, pageIndex);
+      const catalog: StoreSiteDocument["sections"][number] = {
+        id: uniqueSectionId(`${page.id}-shop`.slice(0, 48)),
+        pageId: page.id,
+        productIds: [...new Set(assigned)],
+        kind: "catalog",
+        family: "product-led",
+        layout: pageIndex % 2 === 0 ? "grid" : "offset",
+        width: "wide",
+        align: "left",
+        motion: (["scale", "reveal", "drift"] as const)[(pageIndex + directionIndex) % 3],
+        title: `Productos de ${page.label}`,
+        body: `Una selección de ${store.name} elegida para esta página.`,
+        ctaLabel: "",
+        backgroundColor: document.theme.pageBackground,
+        textColor: document.theme.textColor,
+        mediaUrls: [],
+        items: [],
+      };
+      sections.push({ ...catalog, blocks: deriveLegacySiteSectionBlocks(catalog) });
+    }
+  });
+
+  return withGeneratedDefaultNavigation({ ...document, pages, sections: sections.slice(0, 16) });
+}
+
 function enforceGeneratedNarrative(
   document: StoreSiteDocument,
   store: Store,
@@ -993,8 +1297,8 @@ function enforceGeneratedNarrative(
   products: StoreProductContext[],
   directionIndex: number,
 ): StoreSiteDocument {
-  const hero = document.sections.find((section) => section.kind === "hero");
-  const catalog = document.sections.find((section) => section.kind === "catalog");
+  const hero = document.sections.find((section) => section.kind === "hero" && !section.pageId);
+  const catalog = document.sections.find((section) => section.kind === "catalog" && !section.pageId);
   if (!hero || !catalog) return document;
 
   const visualAssetUrls = assets
@@ -1002,11 +1306,13 @@ function enforceGeneratedNarrative(
     .map((asset) => asset.url);
   const usableAssetUrls = visualAssetUrls.length ? visualAssetUrls : assets.map((asset) => asset.url);
   const knownAssetUrls = new Set(usableAssetUrls);
-  const uniqueMedia = (preferred: string[], fallbackOffset: number, limit: number) => {
+  const uniqueMedia = (preferred: string[], fallbackOffset: number, limit: number, used: ReadonlySet<string> = new Set()) => {
     const fallback = usableAssetUrls.length
       ? [...usableAssetUrls.slice(fallbackOffset % usableAssetUrls.length), ...usableAssetUrls.slice(0, fallbackOffset % usableAssetUrls.length)]
       : [];
-    return [...new Set([...preferred.filter((url) => knownAssetUrls.has(url)), ...fallback])].slice(0, limit);
+    return [...new Set([...preferred.filter((url) => knownAssetUrls.has(url)), ...fallback])]
+      .filter((url) => !used.has(url))
+      .slice(0, limit);
   };
   const productForMedia = (url: string) => products.find((product) => product.imageUrls.includes(url));
   const pairNarrativeItems = (
@@ -1022,22 +1328,62 @@ function enforceGeneratedNarrative(
     };
   });
 
-  const heroMediaUrls = uniqueMedia(hero.mediaUrls, 0, 3);
+  const rebindSectionMedia = (
+    section: StoreSiteDocument["sections"][number],
+    mediaUrls: string[],
+  ): StoreSiteDocument["sections"][number] => {
+    let mediaIndex = 0;
+    const visitBlocks = (blocks: NonNullable<StoreSiteDocument["sections"][number]["blocks"]>): NonNullable<StoreSiteDocument["sections"][number]["blocks"]> => blocks.map((block) => {
+      if (block.kind === "media") {
+        const mediaUrl = mediaUrls[mediaIndex] ?? null;
+        mediaIndex += 1;
+        return { ...block, mediaUrl };
+      }
+      return block.children.length ? { ...block, children: visitBlocks(block.children) } : block;
+    });
+    return {
+      ...section,
+      mediaUrls,
+      items: pairNarrativeItems(section, mediaUrls),
+      ...(section.blocks?.length ? { blocks: visitBlocks(section.blocks) } : {}),
+    };
+  };
+
+  const simplifyAdditionalFullBleed = (sections: StoreSiteDocument["sections"]): StoreSiteDocument["sections"] => {
+    let photographicFullBleedClaimed = false;
+    return sections.map((section) => {
+      const photographic = ["hero", "story", "gallery", "location"].includes(section.kind) && section.mediaUrls.length > 0;
+      const fullBleed = photographic && (section.width === "full" || section.layout === "full-bleed");
+      if (!fullBleed) return section;
+      if (!photographicFullBleedClaimed) {
+        photographicFullBleedClaimed = true;
+        return section;
+      }
+      return {
+        ...section,
+        width: "wide",
+        layout: section.layout === "full-bleed"
+          ? section.kind === "gallery" ? "grid" : "split"
+          : section.layout,
+      };
+    });
+  };
+
+  const heroMediaUrls = uniqueMedia(hero.mediaUrls, 0, 1);
+  const pageUsedMedia = new Set(heroMediaUrls);
   const { pageId: _heroPageId, ...heroOnHome } = hero;
-  const normalizedHero = {
+  const normalizedHero = rebindSectionMedia({
     ...heroOnHome,
     motion: "none" as const,
-    mediaUrls: heroMediaUrls,
-    items: pairNarrativeItems(hero, heroMediaUrls),
-  };
-  const existingStory = document.sections.find((section) => section.kind === "story");
+  }, heroMediaUrls);
+  const existingStory = document.sections.find((section) => section.kind === "story" && !section.pageId);
   const story = existingStory ?? {
     id: "brand-story",
     kind: "story" as const,
     layout: "stacked" as const,
     width: "full" as const,
     align: "left" as const,
-    motion: "story-scroll" as const,
+    motion: "none" as const,
     title: `Conoce ${store.name}`,
     body: `Una mirada a la selección y al universo visual de ${store.name}.`,
     ctaLabel: "",
@@ -1046,28 +1392,40 @@ function enforceGeneratedNarrative(
     mediaUrls: [],
     items: [],
   };
-  const storyMediaUrls = uniqueMedia(story.mediaUrls, 1, 3);
+  const storyMediaLimit = usableAssetUrls.length >= 5 ? 2 : usableAssetUrls.length >= 3 ? 1 : 0;
+  const storyMediaUrls = uniqueMedia(story.mediaUrls, 1, storyMediaLimit, pageUsedMedia);
+  storyMediaUrls.forEach((url) => pageUsedMedia.add(url));
   const { pageId: _storyPageId, ...storyOnHome } = story;
-  const normalizedStory = {
+  const normalizedStory = rebindSectionMedia({
     ...storyOnHome,
     layout: "stacked" as const,
     width: "full" as const,
-    motion: "story-scroll" as const,
-    mediaUrls: storyMediaUrls,
-    items: pairNarrativeItems(story, storyMediaUrls),
-  };
+    motion: "none" as const,
+  }, storyMediaUrls);
   const motionProfile = generatedMotionProfile(directionIndex, usableAssetUrls.length);
   const normalizedSections = document.sections.map((section) => {
-    if (section.kind === "hero") return normalizedHero;
-    if (section.kind === "story") return normalizedStory;
-    if (section.kind === "catalog") {
+    if (section.id === hero.id) return normalizedHero;
+    if (section.id === story.id) return normalizedStory;
+    if (section.id === catalog.id) {
       const { pageId: _catalogPageId, ...catalogOnHome } = catalog;
       return catalogOnHome;
     }
     if (section.kind === "gallery") {
-      const { pageId: _galleryPageId, ...galleryOnHome } = section;
+      if (!section.pageId) {
+        const remainingCount = Math.max(0, usableAssetUrls.length - pageUsedMedia.size);
+        const galleryMediaUrls = usableAssetUrls.length >= 3
+          ? uniqueMedia(section.mediaUrls, 1 + storyMediaUrls.length, Math.min(4, remainingCount), pageUsedMedia)
+          : [];
+        galleryMediaUrls.forEach((url) => pageUsedMedia.add(url));
+        return rebindSectionMedia({
+          ...section,
+          layout: galleryMediaUrls.length < 3 || section.layout === "rail" ? "grid" as const : section.layout,
+          width: galleryMediaUrls.length < 3 ? "wide" as const : section.width,
+          motion: galleryMediaUrls.length ? motionProfile.section : "none" as const,
+        }, galleryMediaUrls);
+      }
       return {
-        ...galleryOnHome,
+        ...section,
         // Generated galleries avoid the thin peeking-image treatment, while
         // their position remains owned by the selected page topology.
         layout: section.layout === "rail" ? (directionIndex % 2 === 0 ? "grid" as const : "split" as const) : section.layout,
@@ -1075,8 +1433,7 @@ function enforceGeneratedNarrative(
       };
     }
     if (section.kind === "contact") {
-      const { pageId: _contactPageId, ...contactOnHome } = section;
-      return { ...contactOnHome, motion: "none" as const };
+      return section.pageId ? { ...section, motion: "reveal" as const } : { ...section, motion: "none" as const };
     }
     return { ...section, motion: "none" as const };
   });
@@ -1084,11 +1441,7 @@ function enforceGeneratedNarrative(
     const catalogIndex = normalizedSections.findIndex((section) => section.kind === "catalog");
     normalizedSections.splice(catalogIndex < 0 ? normalizedSections.length : catalogIndex, 0, normalizedStory);
   }
-  const experienceMediaUrls = motionProfile.signature === "scroll-expansion"
-    ? uniqueMedia(document.experience.mediaUrls, 2, 2)
-    : motionProfile.signature === motionProfile.visual
-      ? uniqueMedia(document.experience.mediaUrls, 2, 5)
-      : [];
+  const experienceMediaUrls: string[] = [];
   const copyKey = (value: string) => value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -1124,7 +1477,7 @@ function enforceGeneratedNarrative(
       body: experienceBody,
       mediaUrls: experienceMediaUrls,
     },
-    sections: normalizedSections,
+    sections: simplifyAdditionalFullBleed(normalizedSections),
   };
 }
 
@@ -1240,8 +1593,8 @@ function freshGeneratedVisualReset(): VisualConfig {
     aboutImageUrl: null,
     sectionBackgrounds: {},
     announcement: null,
-    announcementMode: "static",
-    announcementSpeed: 18,
+    announcementMode: "marquee",
+    announcementSpeed: 22,
     announcementSize: "medium",
     announcementColor: "#111827",
     announcementFont: "store",
@@ -1295,8 +1648,83 @@ function normalizedAgentInstruction(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function agentInstructionExplicitlyRequestsMotion(instruction: string): boolean {
+  const normalized = normalizedAgentInstruction(instruction);
+  if (/(?:no te pedi|nunca pedi|nada que ver|solo queria|unicamente queria).{0,64}(?:animacion|animaciones|movimiento)/.test(normalized)) return false;
+  return /(?:cambi|edit|modific|ajust|agreg|anad|quit|elimin|borra|muev|reorden|duplic|pon|restaur|recuper).{0,48}(?:animacion|animaciones|movimiento)/.test(normalized)
+    || /(?:animacion|animaciones|movimiento).{0,48}(?:cambi|edit|modific|ajust|agreg|anad|quit|elimin|borra|muev|reorden|duplic|pon|restaur|recuper)/.test(normalized);
+}
+
+function assertAgentRevisionScope(
+  instruction: string,
+  document: StoreSiteDocument,
+  plan: StoreAgentRevisionPlan,
+  selectedTarget = false,
+): void {
+  const normalized = normalizedAgentInstruction(instruction);
+  const motionEntities = new Set(["motion", "animation", "animation-text", "animation-media"]);
+  const changesMotion = plan.operations.some((operation) => (
+    motionEntities.has(operation.entity)
+    || (operation.entity === "section" && operation.field === "motion")
+    || (operation.entity === "design-genome" && operation.field === "motionLanguage")
+  ));
+  if (changesMotion && !agentInstructionExplicitlyRequestsMotion(instruction)) {
+    throw new BadRequestException("Yapi intentó cambiar animaciones que no pediste. La variante fue rechazada y el borrador anterior sigue intacto.");
+  }
+  const requestsGeneratedImage = /(?:genera|generar|crea|crear|generate|create).{0,40}(?:imagen|imagenes|foto|fotos|image|photo)/.test(normalized);
+  if (plan.imageRequests.length && !requestsGeneratedImage) {
+    throw new BadRequestException("Yapi intentó generar imágenes cuando sólo pediste usar o cambiar una foto. La variante fue rechazada y el borrador anterior sigue intacto.");
+  }
+  if (plan.productRequests.length && !storeAgentInstructionLooksLikeProductCreation(instruction)) {
+    throw new BadRequestException("Yapi intentó crear productos que no pediste. La variante fue rechazada y el borrador anterior sigue intacto.");
+  }
+
+  if (selectedTarget) return;
+  const targetsOpeningContent = /(?:primera seccion|primer bloque|portada|apertura|\bhero\b)/.test(normalized)
+    && /(?:foto|imagen|texto|titulo|encabezado|descripcion|subtitulo|boton|cta)/.test(normalized);
+  const broadRedesign = /(?:redisen|disen|crea|genera|arma).{0,36}(?:sitio|website|pagina web|tienda|direccion visual|propuesta).{0,24}(?:complet|desde cero|nuev)/.test(normalized);
+  if (!targetsOpeningContent || broadRedesign) return;
+
+  const openingId = document.sections.find((section) => !section.pageId)?.id ?? document.sections[0]?.id;
+  const imageRequestsAllowed = plan.imageRequests.every((request) => (
+    request.entity === "section-media" && request.parentId === openingId
+  ) || request.entity === "hero-slide" || (request.entity === "visual-setting" && ["bannerUrl", "backgroundImageUrl"].includes(request.field)));
+  if (!imageRequestsAllowed) {
+    throw new BadRequestException("Yapi intentó colocar una imagen fuera de la primera sección. La variante fue rechazada y el borrador anterior sigue intacto.");
+  }
+  const allowed = plan.operations.every((operation) => {
+    if (operation.entity === "section") {
+      return operation.action === "set"
+        && operation.targetId === openingId
+        && ["title", "body", "ctaLabel"].includes(operation.field);
+    }
+    if (["section-media", "section-item", "section-block"].includes(operation.entity)) {
+      return operation.parentId === openingId
+        && (operation.entity !== "section-block" || operation.field === "text");
+    }
+    if (operation.entity === "hero-slide") {
+      return ["imageUrl", "title", "body", "ctaLabel", "ctaUrl", ""].includes(operation.field);
+    }
+    if (operation.entity === "visual-setting") {
+      return ["bannerUrl", "tagline"].includes(operation.field);
+    }
+    return false;
+  });
+  if (!allowed) {
+    throw new BadRequestException("Yapi intentó modificar partes fuera de la primera sección. La variante fue rechazada y el borrador anterior sigue intacto.");
+  }
+}
+
 function localAgentRevisionPlan(instruction: string): StoreAgentRevisionPlan {
   const normalized = normalizedAgentInstruction(instruction);
+  const linkUrl = (instruction.match(/https:\/\/[^\s<>"'’]+/iu)?.[0] ?? "")
+    .replace(/[),.;!?]+$/u, "")
+    .slice(0, 500);
+  const linkLabel = (instruction.match(/(?:que|cual)\s+dice\s+[“"'‘]?(.{1,100}?)[”"'’]?\s+(?:ponle|pon|agrega|anade|añade|cambia|asigna|vincula)\b/iu)?.[1] ?? "")
+    .trim()
+    .replace(/^[“"'‘]|[”"'’]$/gu, "")
+    .trim()
+    .slice(0, 100);
   const preserveCatalog = /(manten|mantener|conserv|preserv|no (?:cambies|toques|modifiques)).{0,32}(catalog|producto|tienda)/.test(normalized);
   const tone: StoreAgentRevisionPlan["tone"] = /(calid|acogedor|cercan|humano)/.test(normalized)
     ? "warmer"
@@ -1312,17 +1740,20 @@ function localAgentRevisionPlan(instruction: string): StoreAgentRevisionPlan {
               ? "editorial"
               : "unchanged";
   const target: StoreAgentRevisionPlan["target"] = /(footer|pie de pagina|\bred(?:es)?\b|\bsocial(?:es)?\b|sigueme|siguenos)/.test(normalized)
+    || (linkUrl && /\b(enlace|link|vinculo)\b/.test(normalized))
     ? "footer"
-    : /(apertura|portada|inicio|hero|cabecera)/.test(normalized)
+    : /(primera seccion|primer bloque|apertura|portada|inicio|hero|cabecera)/.test(normalized)
     ? "opening"
     : /(historia|story|relato)/.test(normalized)
       ? "story"
-      : /(galeria|gallery|fotos)/.test(normalized)
+      : /(galeria|gallery)/.test(normalized)
         ? "gallery"
         : /(contacto|contact)/.test(normalized)
           ? "contact"
           : /(catalog|producto|tienda)/.test(normalized) && !preserveCatalog
             ? "catalog"
+            : /(boton|cta|titulo|encabezado|descripcion|subtitulo)/.test(normalized)
+              ? "opening"
             : tone !== "unchanged"
               ? "site"
               : "unsupported";
@@ -1339,19 +1770,152 @@ function localAgentRevisionPlan(instruction: string): StoreAgentRevisionPlan {
           : /youtube/.test(normalized)
             ? "youtube"
             : "unknown";
+  const quotedValue = instruction.match(/[“"]([^”"]{1,600})[”"]/u)?.[1]?.trim()
+    ?? instruction.match(/['‘]([^'’]{1,600})['’]/u)?.[1]?.trim()
+    ?? "";
+  const trailingValue = instruction.match(/(?:\ba\b|\bpor\b|:)\s*[“"'‘]?(.{1,600}?)[”"'’]?[.!]?$/iu)?.[1]?.trim() ?? "";
+  const value = (quotedValue || trailingValue).slice(0, 600);
+  const color = instruction.match(/#[0-9a-f]{6}\b/i)?.[0].toLowerCase() ?? "";
+  const action: StoreAgentRevisionPlan["action"] = target === "footer" && socialHandle
+    ? "social-link"
+    : target === "footer" && linkUrl
+      ? "set-link"
+    : /(mueve|sube|subir|lleva|coloca).{0,32}(arriba|antes)/.test(normalized)
+      ? "move-up"
+      : /(mueve|baja|bajar|lleva|coloca).{0,32}(abajo|despues)/.test(normalized)
+        ? "move-down"
+        : color && /(color|fondo|background)/.test(normalized)
+          ? "set-color"
+          : /(boton|cta|llamada a la accion)/.test(normalized) && value
+            ? "replace-cta"
+            : /(titulo|encabezado)/.test(normalized) && value
+              ? "replace-title"
+              : /(descripcion|subtitulo|texto|parrafo)/.test(normalized) && value
+                ? "replace-body"
+                : tone !== "unchanged"
+                  ? "restyle"
+                  : "unsupported";
   const targetLabel = target === "opening" ? "la apertura" : target === "site" ? "el lenguaje visual" : target === "footer" ? "el pie de página" : `la sección ${target}`;
   const toneLabel = tone === "unchanged" ? "siguiendo la instrucción" : `con un tono ${tone}`;
   const summary = target === "footer" && socialHandle
     ? `Agregar ${socialHandle} al pie de página sin cambiar el resto de la tienda.`
-    : target === "unsupported"
+    : target === "footer" && action === "set-link"
+      ? `Asignar ${linkUrl} al enlace “${linkLabel || "indicado"}” del pie de página.`
+    : target === "unsupported" || action === "unsupported"
       ? "La instrucción no identifica una zona editable de forma segura."
-      : `Ajustar ${targetLabel} ${toneLabel}.`;
-  return { target, tone, preserveCatalog, socialHandle, socialPlatform, summary };
+      : action === "replace-title" ? `Cambiar el título de ${targetLabel} a “${value.slice(0, 80)}”.`
+        : action === "replace-body" ? `Cambiar el texto de ${targetLabel}.`
+          : action === "replace-cta" ? `Cambiar el botón de ${targetLabel} a “${value.slice(0, 40)}”.`
+            : action === "set-color" ? `Cambiar el fondo de ${targetLabel} a ${color}.`
+              : action === "move-up" ? `Mover ${targetLabel} una posición hacia arriba.`
+                : action === "move-down" ? `Mover ${targetLabel} una posición hacia abajo.`
+                  : `Ajustar ${targetLabel} ${toneLabel}.`;
+  const operations: StoreAgentEditorOperation[] = action === "set-link"
+    ? [{ action: "set", entity: "footer-link", targetId: linkLabel, parentId: "", field: "href", value: linkUrl, secondaryValue: "", position: -1 }]
+    : [];
+  return { target, tone, action, value, color, preserveCatalog, socialHandle, socialPlatform, linkLabel, linkUrl, operations, imageRequests: [], productRequests: [], summary };
 }
 
 export function storeAgentInstructionIsScoped(instruction: string): boolean {
-  const target = localAgentRevisionPlan(instruction).target;
-  return target !== "site" && target !== "unsupported";
+  const plan = localAgentRevisionPlan(instruction);
+  return plan.target !== "unsupported" && plan.action !== "unsupported" && (plan.target !== "site" || plan.action !== "restyle");
+}
+
+export function storeAgentInstructionLooksLikeEditorCommand(instruction: string): boolean {
+  const normalized = normalizedAgentInstruction(instruction);
+  if (/(?:redisen|diseñ|disen|crea|genera|arma).{0,36}(?:sitio|website|pagina web|tienda|direccion visual|propuesta).{0,24}(?:complet|desde cero|nuev)/.test(normalized)) return false;
+  const operation = /(cambi|edit|modific|ajust|agreg|anad|añad|quit|elimin|borra|muev|sube|baja|reorden|duplic|copi|ocult|muestr|activ|desactiv|vincul|enlaz|asign|renombr|pon|fij)/.test(normalized)
+    || /(?:genera|crea).{0,32}(?:imagen|foto)/.test(normalized);
+  const editorEntity = /(portada|titulo|texto|boton|tema|color|tipograf|encabezado|menu|naveg|pagina|seccion|galeria|historia|catalog|producto|footer|pie de pagina|columna|enlace|link|boletin|newsletter|coleccion|animacion|movimiento|experiencia|imagen|foto|alto|ancho|alineacion|fondo)/.test(normalized);
+  return operation && editorEntity;
+}
+
+export function storeAgentInstructionLooksLikeProductCreation(instruction: string): boolean {
+  const normalized = normalizedAgentInstruction(instruction);
+  return /(?:crea|crear|agrega|agregar|anade|anadir|añade|añadir).{0,32}(?:producto|articulo|servicio)/.test(normalized);
+}
+
+function instructionExplicitlyUsesAttachedImage(instruction: string): boolean {
+  const normalized = normalizedAgentInstruction(instruction);
+  const placementVerb = "(?:cambi|reempla|sustitu|pon|usa|utiliz|coloca|agreg|anad|anade|adjunt|replace|use)";
+  const imageNoun = "(?:foto|fotos|imagen|imagenes|image|photo)";
+  return new RegExp(`${placementVerb}.{0,48}${imageNoun}|${imageNoun}.{0,48}${placementVerb}`).test(normalized);
+}
+
+function withDeterministicAttachedImage(
+  instruction: string,
+  document: StoreSiteDocument,
+  plan: StoreAgentRevisionPlan,
+  attachedImageUrls: string[],
+): StoreAgentRevisionPlan {
+  if (!attachedImageUrls.length || !instructionExplicitlyUsesAttachedImage(instruction)) return plan;
+  const locallyDetectedTarget = localAgentRevisionPlan(instruction).target;
+  const target = ["opening", "story", "gallery", "contact"].includes(plan.target)
+    ? plan.target
+    : locallyDetectedTarget;
+  if (!["opening", "story", "gallery", "contact"].includes(target)) return plan;
+  const section = target === "opening"
+    ? document.sections.find((candidate) => !candidate.pageId) ?? document.sections[0]
+    : document.sections.find((candidate) => candidate.kind === target);
+  if (!section) return plan;
+
+  const imageUrl = attachedImageUrls[0];
+  const replacement: StoreAgentEditorOperation = {
+    action: section.mediaUrls.length ? "set" : "add",
+    entity: "section-media",
+    targetId: "",
+    parentId: section.id,
+    field: "imageUrl",
+    value: imageUrl,
+    secondaryValue: "",
+    position: 0,
+  };
+  const operations = plan.operations.filter((operation) => !(
+    operation.entity === "section-media"
+    && operation.parentId === section.id
+    && (operation.position === 0 || operation.value === imageUrl)
+  ));
+  return {
+    ...plan,
+    target,
+    operations: [...operations, replacement],
+  };
+}
+
+function withDeterministicGeneratedOpeningImage(
+  instruction: string,
+  document: StoreSiteDocument,
+  plan: StoreAgentRevisionPlan,
+): StoreAgentRevisionPlan {
+  const normalized = normalizedAgentInstruction(instruction);
+  const requestsGeneratedImage = /(?:genera|generar|crea|crear|generate|create).{0,40}(?:imagen|imagenes|foto|fotos|image|photo)/.test(normalized);
+  const targetsOpening = /(?:primera seccion|primer bloque|portada|apertura|\bhero\b)/.test(normalized);
+  if (!requestsGeneratedImage || !targetsOpening) return plan;
+  // The local repair can fill one missing opening destination. It must not
+  // discard a compound image request that the planner already supplied.
+  if (plan.imageRequests.length > 1) return plan;
+
+  const opening = document.sections.find((section) => !section.pageId) ?? document.sections[0];
+  if (!opening) return plan;
+  const authoredRequest = plan.imageRequests.find((request) => request.entity !== "new-product");
+  const prompt = authoredRequest?.prompt?.trim()
+    || `Una imagen editorial original para la portada de esta tienda, coherente con ${document.direction || "su identidad visual"}`;
+  const imageRequest: StoreAgentImageRequest = {
+    action: opening.mediaUrls.length ? "set" : "add",
+    entity: "section-media",
+    targetId: "",
+    parentId: opening.id,
+    field: "",
+    position: 0,
+    aspectRatio: authoredRequest?.aspectRatio ?? "landscape",
+    prompt: prompt.slice(0, 1_200),
+  };
+
+  return {
+    ...plan,
+    target: "opening",
+    imageRequests: [imageRequest],
+  };
 }
 
 function hexChannels(value: string): [number, number, number] | null {
@@ -1382,6 +1946,145 @@ function contrastRatio(first: string, second: string): number {
 function readableText(background: string, preferred: string): string {
   if (contrastRatio(background, preferred) >= 4.5) return preferred;
   return contrastRatio(background, "#17120f") >= contrastRatio(background, "#fffaf2") ? "#17120f" : "#fffaf2";
+}
+
+function generatedImageOperation(request: StoreAgentImageRequest, url: string): StoreAgentEditorOperation {
+  if (request.entity === "new-product") throw new BadRequestException("Las fotos de producto se asignan al crear el producto, no como una operación visual.");
+  const base: StoreAgentEditorOperation = {
+    action: request.action,
+    entity: request.entity,
+    targetId: request.targetId,
+    parentId: request.parentId,
+    field: request.field,
+    value: url,
+    secondaryValue: "",
+    position: request.position,
+  };
+  if (request.entity === "section-media" && request.parentId && (request.action === "add" || request.action === "set")) {
+    return { ...base, field: "" };
+  }
+  if (["section-item", "section-block"].includes(request.entity) && request.action === "set" && request.parentId && request.field === "mediaUrl") return base;
+  if (request.entity === "visual-setting" && request.action === "set" && ["bannerUrl", "backgroundImageUrl", "aboutImageUrl", "promotionImageUrl"].includes(request.field)) return base;
+  if (request.entity === "hero-slide" && (request.action === "add" || (request.action === "set" && request.field === "imageUrl"))) return base;
+  if (request.entity === "editorial-image" && (request.action === "add" || (request.action === "set" && request.field === "imageUrl"))) return base;
+  if (request.entity === "animation-media" && request.parentId && (request.action === "add" || (request.action === "set" && request.field === "imageUrl"))) return base;
+  throw new BadRequestException("Yapi intentó colocar una imagen generada en un destino que no admite imágenes.");
+}
+
+function evidenceAppearsInInstruction(instruction: string, evidence: string): boolean {
+  const normalize = (value: string) => value.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
+  const needle = normalize(evidence);
+  return Boolean(needle) && normalize(instruction).includes(needle);
+}
+
+function bobAmountFromEvidence(evidence: string): number | null {
+  const normalized = evidence.normalize("NFKC").replace(/\s+/g, " ").trim();
+  const before = /(?:\bBs\.?|\bBOB\b|bolivianos?)\s*(\d{1,9}(?:[.,]\d{1,2})?)/i.exec(normalized)?.[1];
+  const after = /(\d{1,9}(?:[.,]\d{1,2})?)\s*(?:\bBs\.?|\bBOB\b|bolivianos?)/i.exec(normalized)?.[1];
+  const amount = Number((before || after || "").replace(",", "."));
+  return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null;
+}
+
+function validatedProductRequest(
+  request: StoreAgentProductRequest,
+  instruction: string,
+  document: StoreSiteDocument,
+  allowedMediaUrls: ReadonlySet<string>,
+): StoreAgentProductRequest {
+  if (!request || !/^[a-z][a-z0-9-]{0,47}$/.test(request.key)) {
+    throw new BadRequestException("Yapi no pudo asignar una clave segura al producto nuevo.");
+  }
+  if (!evidenceAppearsInInstruction(instruction, request.nameEvidence)) {
+    throw new BadRequestException("Indica el nombre exacto del producto para que Yapi no tenga que inventarlo.");
+  }
+  const name = request.nameEvidence.trim();
+  if (!name || name.length > 120 || !SAFE_TEXT_PATTERN.test(name)) throw new BadRequestException("El nombre del producto no es válido.");
+  const amount = evidenceAppearsInInstruction(instruction, request.amountEvidence)
+    ? bobAmountFromEvidence(request.amountEvidence)
+    : null;
+  if (amount === null || amount !== request.amount) {
+    throw new BadRequestException("Indica el precio explícitamente en BOB o Bs. para crear el producto sin adivinarlo.");
+  }
+  let description = "";
+  if (request.descriptionEvidence) {
+    if (!evidenceAppearsInInstruction(instruction, request.descriptionEvidence)) {
+      throw new BadRequestException("La descripción propuesta no aparece en tu instrucción.");
+    }
+    description = request.descriptionEvidence.trim();
+  }
+  if (description.length > 500 || !SAFE_TEXT_PATTERN.test(description)) throw new BadRequestException("La descripción del producto no es válida.");
+  let stock = -1;
+  if (request.stockEvidence) {
+    if (!evidenceAppearsInInstruction(instruction, request.stockEvidence)) {
+      throw new BadRequestException("El stock propuesto no aparece en tu instrucción.");
+    }
+    const stockMatch = /\d{1,7}/.exec(request.stockEvidence);
+    const parsedStock = stockMatch ? Number(stockMatch[0]) : NaN;
+    if (!Number.isInteger(parsedStock) || parsedStock < 0 || parsedStock > 1_000_000 || parsedStock !== request.stock) {
+      throw new BadRequestException("El stock indicado para el producto no es válido.");
+    }
+    stock = parsedStock;
+  } else if (request.stock !== -1) {
+    throw new BadRequestException("Yapi no puede inventar el stock de un producto.");
+  }
+  if (request.categoryId) throw new BadRequestException("Yapi no puede inventar una categoría; asígnala después desde Productos.");
+  const imageUrls = [...new Set(Array.isArray(request.imageUrls) ? request.imageUrls : [])].slice(0, 10);
+  if (imageUrls.some((url) => !allowedMediaUrls.has(url))) {
+    throw new BadRequestException("Todas las fotos del producto deben pertenecer a este comercio.");
+  }
+  const knownPageIds = new Set(["", ...(document.pages ?? []).map((page) => page.id)]);
+  const pageIds = [...new Set(Array.isArray(request.pageIds) ? request.pageIds : [])].slice(0, 6);
+  if (!pageIds.length || pageIds.some((pageId) => !knownPageIds.has(pageId))) {
+    throw new BadRequestException("Elige al menos una página existente para colocar el producto.");
+  }
+  return {
+    ...request,
+    name,
+    nameEvidence: name,
+    description,
+    descriptionEvidence: description,
+    amount,
+    currency: "BOB",
+    stock,
+    imageUrls,
+    pageIds,
+  };
+}
+
+function productCatalogOperations(
+  document: StoreSiteDocument,
+  products: Array<{ id: string; pageIds: string[] }>,
+): StoreAgentEditorOperation[] {
+  const operations: StoreAgentEditorOperation[] = [];
+  const usedSectionIds = new Set(document.sections.map((section) => section.id));
+  const productsByPage = new Map<string, string[]>();
+  for (const product of products) {
+    for (const pageId of product.pageIds) {
+      const ids = productsByPage.get(pageId) ?? [];
+      ids.push(product.id);
+      productsByPage.set(pageId, ids);
+    }
+  }
+  for (const [pageId, productIds] of productsByPage) {
+    const existing = document.sections.find((section) => section.kind === "catalog" && (section.pageId ?? "") === pageId);
+    let sectionId = existing?.id ?? `catalog-${pageId || "home"}`.slice(0, 48);
+    for (let suffix = 2; !existing && usedSectionIds.has(sectionId); suffix += 1) sectionId = `catalog-${pageId || "home"}-${suffix}`.slice(0, 48);
+    if (!existing) {
+      usedSectionIds.add(sectionId);
+      operations.push({ action: "add", entity: "section", targetId: sectionId, parentId: pageId, field: "catalog", value: "Productos", secondaryValue: "", position: -1 });
+    }
+    operations.push({
+      action: "set",
+      entity: "section",
+      targetId: sectionId,
+      parentId: "",
+      field: "productIds",
+      value: [...new Set([...(existing?.productIds ?? []), ...productIds])].join(","),
+      secondaryValue: "",
+      position: -1,
+    });
+  }
+  return operations;
 }
 
 function socialHref(platform: StoreAgentRevisionPlan["socialPlatform"], handle: string): string {
@@ -1428,15 +2131,44 @@ function footerWithSocialHandle(document: StoreSiteDocument, plan: StoreAgentRev
   return footer;
 }
 
+function normalizedFooterLinkLabel(value: string): string {
+  return normalizedAgentInstruction(value).replace(/\s+/g, " ").trim();
+}
+
+function footerWithUpdatedLink(document: StoreSiteDocument, plan: StoreAgentRevisionPlan): StoreSiteFooter {
+  const footer = document.footer ? structuredClone(document.footer) : null;
+  if (!footer) throw new BadRequestException("Esta tienda todavía no tiene un pie de página editable.");
+  if (!/^https:\/\/[^\s]+$/i.test(plan.linkUrl) || plan.linkUrl.length > 500) {
+    throw new BadRequestException("Indica un enlace HTTPS válido para actualizar el pie de página.");
+  }
+  const requestedLabel = normalizedFooterLinkLabel(plan.linkLabel);
+  const allItems = footer.columns.flatMap((column) => column.items);
+  const matchingItems = requestedLabel
+    ? allItems.filter((item) => normalizedFooterLinkLabel(item.label) === requestedLabel)
+    : allItems.filter((item) => !item.href.trim());
+  if (matchingItems.length === 0) {
+    throw new BadRequestException(plan.linkLabel
+      ? `No encontré un enlace llamado “${plan.linkLabel}” en el pie de página.`
+      : "Dime el texto del enlace del pie de página que quieres actualizar.");
+  }
+  if (matchingItems.length > 1) {
+    throw new BadRequestException(`Hay más de un enlace llamado “${plan.linkLabel || "Nuevo enlace"}”. Cambia uno de los nombres para poder identificarlo.`);
+  }
+  matchingItems[0].href = plan.linkUrl;
+  return footer;
+}
+
 function applyAgentRevisionPlan(document: StoreSiteDocument, plan: StoreAgentRevisionPlan): StoreSiteDocument {
-  if (plan.target === "unsupported") {
-    throw new BadRequestException("Dime qué zona quieres cambiar —por ejemplo apertura, catálogo, historia, galería, contacto o pie de página— para preparar una variante segura.");
+  if (plan.target === "unsupported" || plan.action === "unsupported") {
+    throw new BadRequestException("Dime qué quieres cambiar —por ejemplo ‘cambia el título de la portada a …’, ‘mueve la galería arriba’ o ‘haz la historia más cálida’— para preparar una variante segura.");
   }
   if (plan.target === "footer") {
     return {
       ...structuredClone(document),
       direction: `${document.direction || "Dirección propia"} · ${plan.summary}`.slice(0, 120),
-      footer: footerWithSocialHandle(document, plan),
+      footer: plan.action === "set-link"
+        ? footerWithUpdatedLink(document, plan)
+        : footerWithSocialHandle(document, plan),
     };
   }
   const openingId = document.sections.find((section) => !section.pageId && (!plan.preserveCatalog || section.kind !== "catalog"))?.id
@@ -1446,24 +2178,42 @@ function applyAgentRevisionPlan(document: StoreSiteDocument, plan: StoreAgentRev
     if (plan.target === "opening") return section.id === openingId;
     return section.kind === plan.target;
   };
+  const nextDocument = structuredClone(document);
+  if (plan.action === "move-up" || plan.action === "move-down") {
+    const fromIndex = nextDocument.sections.findIndex(matchesTarget);
+    if (fromIndex < 0) throw new BadRequestException("La sección indicada no existe en esta tienda.");
+    const pageId = nextDocument.sections[fromIndex].pageId;
+    const direction = plan.action === "move-up" ? -1 : 1;
+    let toIndex = fromIndex + direction;
+    while (toIndex >= 0 && toIndex < nextDocument.sections.length && nextDocument.sections[toIndex].pageId !== pageId) toIndex += direction;
+    if (toIndex < 0 || toIndex >= nextDocument.sections.length) throw new BadRequestException("Esa sección ya está en el extremo solicitado.");
+    [nextDocument.sections[fromIndex], nextDocument.sections[toIndex]] = [nextDocument.sections[toIndex], nextDocument.sections[fromIndex]];
+    nextDocument.direction = `${document.direction || "Dirección propia"} · ${plan.summary}`.slice(0, 120);
+    return nextDocument;
+  }
   const tint = plan.tone === "warmer" ? "#f1ad62"
     : plan.tone === "cooler" ? "#9fc7d4"
       : plan.tone === "bolder" ? "#e58a32"
         : plan.tone === "editorial" ? "#cbb69a"
           : "#eee9df";
-  const amount = plan.tone === "bolder" ? 0.42 : plan.tone === "unchanged" ? 0.12 : 0.28;
+  const amount = plan.tone === "bolder" ? 0.42 : plan.tone === "unchanged" ? 0 : 0.28;
   return {
-    ...document,
+    ...nextDocument,
     direction: `${document.direction || "Dirección propia"} · ${plan.summary}`.slice(0, 120),
-    sections: document.sections.map((section) => {
+    sections: nextDocument.sections.map((section) => {
       if (!matchesTarget(section)) return structuredClone(section);
-      const backgroundColor = plan.tone === "minimal"
+      const backgroundColor = plan.action === "set-color" && /^#[0-9a-f]{6}$/i.test(plan.color)
+        ? plan.color
+        : plan.tone === "minimal"
         ? document.theme.pageBackground
         : blendHex(section.backgroundColor, tint, amount);
       return {
         ...section,
         backgroundColor,
         textColor: readableText(backgroundColor, section.textColor),
+        ...(plan.action === "replace-title" ? { title: plan.value.slice(0, 120) } : {}),
+        ...(plan.action === "replace-body" ? { body: plan.value.slice(0, 600) } : {}),
+        ...(plan.action === "replace-cta" ? { ctaLabel: plan.value.slice(0, 40) } : {}),
         ...(plan.tone === "minimal" ? { motion: "none" as const } : {}),
       };
     }),
@@ -1525,26 +2275,19 @@ function toStoreUpdate(config: unknown): Prisma.StoreUpdateInput {
     );
   }
   if (typeof allowed.motionExperience === "string" && !MOTION_EXPERIENCES.includes(allowed.motionExperience as (typeof MOTION_EXPERIENCES)[number])) {
-    allowed.motionExperience = "hero-carousel";
+    allowed.motionExperience = "clarity-marquee";
   }
   if (Array.isArray(allowed.animations)) {
-    allowed.animations = allowed.animations.filter((entry) => {
+    const supportedAnimations = allowed.animations.filter((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
       return MOTION_EXPERIENCES.includes((entry as Record<string, unknown>).type as (typeof MOTION_EXPERIENCES)[number]);
     });
+    allowed.animations = supportedAnimations;
+    allowed.motionDuoEnabled = supportedAnimations.length > 0;
   }
   if (allowed.siteDocument && typeof allowed.siteDocument === "object" && !Array.isArray(allowed.siteDocument)) {
     const document = structuredClone(allowed.siteDocument) as Record<string, any>;
-    if (Array.isArray(document.sections)) {
-      document.sections = document.sections.map((section: unknown) => {
-        if (!section || typeof section !== "object" || Array.isArray(section)) return section;
-        const normalized = { ...(section as Record<string, unknown>) };
-        if (normalized.motion === "coverflow") normalized.motion = "none";
-        if (normalized.kind === "gallery" && normalized.layout === "rail") normalized.layout = "grid";
-        return normalized;
-      });
-    }
-    if (document.experience && typeof document.experience === "object" && RETIRED_MOTION_EXPERIENCES.has(document.experience.type)) {
+    if (document.experience && typeof document.experience === "object" && !TEXT_MOTION_EXPERIENCES.has(document.experience.type)) {
       document.experience = { ...document.experience, type: "none", mediaUrls: [] };
     }
     allowed.siteDocument = document;
@@ -1560,18 +2303,108 @@ export class VisualStudioService {
     private readonly prisma: PrismaService,
     private readonly uploads: UploadsService,
     private readonly config: ConfigService,
+    private readonly paymentLinks: PaymentLinksService,
   ) {}
+
+  canPlanStorefrontOperations(): boolean {
+    return Boolean(this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey"));
+  }
+
+  private canGenerateStorefrontImages(): boolean {
+    return Boolean(
+      this.config.get<boolean>("app.openAi.enabled")
+      && this.config.get<string>("app.openAi.apiKey")
+      && this.config.get<string>("app.openAi.imageModel"),
+    );
+  }
+
+  private async generateStorefrontImage(
+    merchantId: string,
+    storeId: string,
+    storeName: string,
+    request: Pick<StoreAgentImageRequest, "prompt" | "aspectRatio">,
+    context = "",
+    allowProductRepresentation = false,
+  ): Promise<MediaAsset> {
+    if (!this.canGenerateStorefrontImages()) {
+      throw new ServiceUnavailableException("La generación de imágenes de Yapi no está configurada en este momento.");
+    }
+    const prompt = [
+      `Crea una fotografía editorial original para el sitio web de ${storeName}.`,
+      request.prompt,
+      context,
+      allowProductRepresentation
+        ? "Representa únicamente el producto descrito literalmente por el comercio. No inventes materiales, ingredientes, funciones, empaque, texto, logotipo, beneficios ni afirmaciones que no estén en la descripción."
+        : "Debe funcionar como atmósfera visual de marca y dejar espacio útil para texto de interfaz.",
+      allowProductRepresentation
+        ? "Fotografía de producto limpia y compatible con una galería comercial. Sin marcas ajenas, texto legible, interfaz, precios, descuentos, certificaciones, sellos ni marcas de agua."
+        : "No representes un producto específico ni inventes características del negocio. Sin logotipos, marcas ajenas, texto legible, interfaz, precios, descuentos, certificaciones, sellos ni marcas de agua.",
+    ].filter(Boolean).join("\n");
+    const size = request.aspectRatio === "portrait" ? "1024x1536" : request.aspectRatio === "square" ? "1024x1024" : "1536x1024";
+    let response: Response;
+    try {
+      response = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.get<string>("app.openAi.apiKey")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: this.config.get<string>("app.openAi.imageModel") ?? "gpt-image-2",
+          prompt,
+          n: 1,
+          size,
+          quality: "medium",
+          output_format: "jpeg",
+          output_compression: 86,
+          moderation: "auto",
+        }),
+        signal: AbortSignal.timeout(150_000),
+      });
+    } catch (error) {
+      throw new ServiceUnavailableException(`No pudimos generar la imagen en este momento: ${(error as Error).message}`);
+    }
+    const body = await response.json() as { data?: Array<{ b64_json?: string }>; error?: { code?: string; message?: string } };
+    if (!response.ok) {
+      if (body.error?.code === "moderation_blocked") {
+        throw new BadRequestException("La imagen solicitada no pudo generarse de forma segura. Describe otra escena editorial sin personas identificables, logos ni afirmaciones.");
+      }
+      throw new BadGatewayException(body.error?.message || "El proveedor de imágenes no devolvió una imagen utilizable.");
+    }
+    const encoded = body.data?.[0]?.b64_json;
+    if (!encoded) throw new BadGatewayException("El proveedor de imágenes no devolvió una imagen utilizable.");
+    const buffer = Buffer.from(encoded, "base64");
+    if (!buffer.length || buffer.byteLength > MAX_IMAGE_UPLOAD_BYTES) {
+      throw new BadGatewayException("La imagen generada no tiene un tamaño compatible con la biblioteca de la tienda.");
+    }
+    const stored = await this.uploads.saveBuffer(buffer, "image/jpeg");
+    try {
+      return await this.prisma.mediaAsset.create({
+        data: {
+          merchantId,
+          storeId,
+          url: stored.url,
+          storageKey: stored.filename,
+          kind: "AI_DERIVED",
+          mimeType: stored.mimeType,
+          byteSize: stored.byteSize,
+        },
+      });
+    } catch (error) {
+      await this.uploads.deleteFiles([stored.url]);
+      throw error;
+    }
+  }
 
   async list(merchantId: string, storeId: string) {
     const store = await this.ownedStore(merchantId, storeId);
-    const [proposals, versions, templates, links] = await Promise.all([
+    const [proposals, versions, templates] = await Promise.all([
       this.prisma.storeVisualProposal.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 12 }),
       this.prisma.storeVisualVersion.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 12 }),
       this.prisma.storeVisualTemplate.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" }, take: 24 }),
-      this.prisma.storeLink.findMany({ where: { storeId }, select: { label: true, url: true }, orderBy: { sortOrder: "asc" } }),
     ]);
     return {
-      proposals: proposals.map((proposal, index) => ({ ...proposal, config: enrichGeneratedProposalConfig(proposal.config, store, links, index) })),
+      proposals: proposals.map((proposal) => ({ ...proposal, config: stableGeneratedProposalConfig(proposal.config) })),
       versions,
       templates,
       lockedSectionIds: storedSectionLocks(store.visualSectionLocks),
@@ -1582,34 +2415,135 @@ export class VisualStudioService {
     instruction: string,
     document: StoreSiteDocument,
     conversationContext: string[],
+    allowedProductIds: ReadonlySet<string>,
+    allowedMediaUrls: ReadonlySet<string>,
+    sourceConfig: Record<string, unknown>,
+    attachedAssets: Array<Pick<MediaAsset, "url" | "mimeType">> = [],
+    selection?: StoreAgentSelectionDto,
   ): Promise<StoreAgentRevisionPlan> {
     const fallback = localAgentRevisionPlan(instruction);
     if (!this.config.get<boolean>("app.openAi.enabled") || !this.config.get<string>("app.openAi.apiKey")) return fallback;
     const schema = {
       type: "object",
       additionalProperties: false,
-      required: ["target", "tone", "preserveCatalog", "socialHandle", "socialPlatform", "summary"],
+      required: ["target", "tone", "action", "value", "color", "preserveCatalog", "socialHandle", "socialPlatform", "linkLabel", "linkUrl", "operations", "imageRequests", "productRequests", "summary"],
       properties: {
         target: { type: "string", enum: ["opening", "catalog", "story", "gallery", "contact", "footer", "site", "unsupported"] },
         tone: { type: "string", enum: ["warmer", "cooler", "bolder", "quieter", "minimal", "editorial", "unchanged"] },
+        action: { type: "string", enum: ["restyle", "replace-title", "replace-body", "replace-cta", "set-color", "move-up", "move-down", "social-link", "set-link", "unsupported"] },
+        value: { type: "string", maxLength: 600 },
+        color: { type: "string", maxLength: 7, pattern: "^$|^#[0-9A-Fa-f]{6}$" },
         preserveCatalog: { type: "boolean" },
         socialHandle: { type: "string", maxLength: 31, pattern: "^$|^@[A-Za-z0-9._-]{1,30}$" },
         socialPlatform: { type: "string", enum: ["instagram", "tiktok", "facebook", "x", "youtube", "unknown"] },
+        linkLabel: { type: "string", maxLength: 100 },
+        linkUrl: { type: "string", maxLength: 500, pattern: "^$|^https://[^\\s]+$" },
+        operations: {
+          type: "array",
+          maxItems: 12,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["action", "entity", "targetId", "parentId", "field", "value", "secondaryValue", "position"],
+            properties: {
+              action: { type: "string", enum: ["set", "add", "remove", "move", "duplicate"] },
+              entity: { type: "string", enum: [...STORE_AGENT_EDITOR_ENTITIES] },
+              targetId: { type: "string", maxLength: 120 },
+              parentId: { type: "string", maxLength: 120 },
+              field: { type: "string", maxLength: 80 },
+              value: { type: "string", maxLength: 1200 },
+              secondaryValue: { type: "string", maxLength: 600 },
+              position: { type: "integer", minimum: -1, maximum: 99 },
+            },
+          },
+        },
+        imageRequests: {
+          type: "array",
+          maxItems: 2,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["action", "entity", "targetId", "parentId", "field", "position", "aspectRatio", "prompt"],
+            properties: {
+              action: { type: "string", enum: ["add", "set"] },
+              entity: { type: "string", enum: ["section-media", "section-item", "section-block", "visual-setting", "hero-slide", "editorial-image", "animation-media", "new-product"] },
+              targetId: { type: "string", maxLength: 120 },
+              parentId: { type: "string", maxLength: 120 },
+              field: { type: "string", maxLength: 80 },
+              position: { type: "integer", minimum: -1, maximum: 99 },
+              aspectRatio: { type: "string", enum: ["landscape", "portrait", "square"] },
+              prompt: { type: "string", minLength: 12, maxLength: 800 },
+            },
+          },
+        },
+        productRequests: {
+          type: "array",
+          maxItems: 6,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["key", "name", "nameEvidence", "description", "descriptionEvidence", "amount", "amountEvidence", "currency", "stock", "stockEvidence", "categoryId", "imageUrls", "pageIds"],
+            properties: {
+              key: { type: "string", pattern: "^[a-z][a-z0-9-]{0,47}$" },
+              name: { type: "string", minLength: 1, maxLength: 120 },
+              nameEvidence: { type: "string", minLength: 1, maxLength: 120 },
+              description: { type: "string", maxLength: 500 },
+              descriptionEvidence: { type: "string", maxLength: 500 },
+              amount: { type: "integer", minimum: 0, maximum: 99999999999 },
+              amountEvidence: { type: "string", minLength: 1, maxLength: 60 },
+              currency: { type: "string", enum: ["BOB"] },
+              stock: { type: "integer", minimum: -1, maximum: 1000000 },
+              stockEvidence: { type: "string", maxLength: 80 },
+              categoryId: { type: "string", enum: [""] },
+              imageUrls: { type: "array", maxItems: 10, items: { type: "string", maxLength: 240 } },
+              pageIds: { type: "array", minItems: 1, maxItems: 6, items: { type: "string", maxLength: 48 } },
+            },
+          },
+        },
         summary: { type: "string", minLength: 1, maxLength: 160 },
       },
     };
     const sections = document.sections.map((section, index) => `${index === 0 ? "opening " : ""}${section.id}:${section.kind}:${section.title}`).join("\n");
+    const footerLinks = document.footer?.columns.flatMap((column) => column.items.map((item) => `${column.title}:${item.label}:${item.href || "sin enlace"}`)).join("\n") || "Sin enlaces editables.";
+    const attachedImageUrls = attachedAssets.filter((asset) => typeof asset.mimeType === "string" && asset.mimeType.startsWith("image/")).map((asset) => asset.url);
     const prompt = [
       "Interpreta una instrucción de edición para una tienda. Devuelve sólo un plan JSON acotado; no escribas HTML, CSS ni código.",
-      "El plan puede cambiar el tono visual de una zona, pero nunca precios, productos, inventario, pagos, checkout, formularios, KYC ni publicación.",
+      "La INSTRUCCIÓN ACTUAL tiene prioridad absoluta. El contexto reciente sólo sirve para resolver referencias como ‘esa foto’ o ‘la sección anterior’; nunca continúes cambios antiguos que la instrucción actual no repita.",
+      "Cambia únicamente los elementos y campos nombrados en la instrucción actual. Todo campo, sección, orden, estilo y animación no mencionado debe quedar exactamente igual. Las palabras ‘solo’, ‘solamente’, ‘únicamente’, ‘just’ y ‘only’ convierten este límite en una restricción estricta.",
+      "Si la instrucción pide foto y texto de una sección, limita operations a los medios y campos de texto de esa sección. No cambies su layout, colores, movimiento, otras secciones ni animaciones.",
+      "Las referencias adjuntas en este mensaje son entradas visuales reales y autorizadas. Examínalas, respeta su orden y usa exactamente sus URLs permitidas cuando la instrucción diga usar, poner, cambiar o reemplazar una foto. No respondas que falta una imagen cuando esta lista no esté vacía.",
+      "El plan puede ejecutar cualquier operación del catálogo del editor sobre el borrador privado, pero nunca cambiar precios, inventario, pagos, checkout, KYC, publicación ni datos fuera del sitio.",
+      "Usa replace-title, replace-body o replace-cta sólo cuando el comercio haya dado el texto exacto; cópialo en value y nunca inventes contenido. Usa set-color sólo con un hex explícito en color.",
+      "Usa move-up o move-down para mover una sección exactamente una posición dentro de su misma página.",
       "Usa target footer para redes sociales o pie de página. Copia un @usuario en socialHandle. No inventes una plataforma: usa unknown cuando no esté nombrada.",
+      "Usa set-link sólo para asignar una URL HTTPS explícita a un enlace existente del pie de página. Copia su texto visible exacto en linkLabel y la URL en linkUrl; no inventes ninguno.",
+      "Para cualquier edición concreta usa operations y sigue exactamente el catálogo. Puedes combinar varias operaciones cuando el comercio pida varios cambios. Los campos legacy anteriores sirven para compatibilidad y resumen.",
+      "Usa imageRequests sólo cuando el comercio pida explícitamente generar una imagen nueva. Máximo 2. No pongas URLs de relleno en operations: señala la entidad y el ID exactos donde irá la imagen; el sistema generará la URL y construirá la operación.",
+      "Salvo cuando entity=new-product, las imágenes generadas sólo pueden ser editoriales o ambientales para el sitio. Nunca representes un producto específico, logo, texto legible, precio, descuento, certificación ni afirmación comercial. No inventes hechos visuales sobre el negocio.",
+      "Usa productRequests sólo cuando el comercio pida explícitamente crear productos. Máximo 6. Copia literalmente el nombre en nameEvidence, el precio completo con Bs./BOB/bolivianos en amountEvidence y cualquier descripción en descriptionEvidence; esos fragmentos deben existir en la instrucción. amount usa centavos y currency siempre BOB. Si no se indicó stock usa stock=-1 y stockEvidence vacío. Nunca inventes precio, descripción, stock, variantes, extras, descuento, categoría ni datos fiscales.",
+      "Cada productRequest debe indicar una o más pageIds existentes; usa el string vacío para Inicio. imageUrls admite hasta 10 URLs del inventario permitido y conserva el orden: la primera será portada. Para generar hasta dos fotos nuevas del producto usa imageRequests con entity=new-product, action=add, targetId igual a productRequest.key y field=imageUrl. Sólo hazlo si el comercio pidió explícitamente generar fotos del producto y describió su apariencia con suficiente precisión.",
       "Usa target unsupported cuando la instrucción no identifique una zona o un cambio visual seguro; nunca uses site como comodín.",
       "preserveCatalog debe ser true cuando el comercio pida mantener, conservar o no tocar el catálogo o los productos.",
       `Secciones disponibles:\n${sections}`,
+      `Enlaces del pie de página:\n${footerLinks}`,
+      `Catálogo completo de operaciones:\n${STORE_AGENT_EDITOR_CATALOG}`,
+      `Inventario editable actual (fuente de verdad para IDs y valores):\n${storeAgentEditableInventory(document, allowedProductIds, allowedMediaUrls, sourceConfig)}`,
+      attachedImageUrls.length
+        ? `Referencias adjuntas en este mensaje, en orden:\n${attachedImageUrls.map((url, index) => `${index + 1}. ${url}`).join("\n")}`
+        : "Este mensaje no incluye referencias visuales nuevas.",
       conversationContext.length ? `Contexto reciente:\n${conversationContext.slice(-6).join("\n")}` : "Sin contexto anterior.",
       `Instrucción actual:\n${instruction}`,
+      selection ? `Elemento seleccionado validado: ${JSON.stringify(selection)}. Si el pedido dice este/esta/ese/this, cambia únicamente este campo mediante operaciones set. No cambies el resto del sitio.` : "Sin elemento seleccionado.",
     ].join("\n\n");
     try {
+      const attachedInputs = (await Promise.all(attachedAssets.filter((asset) => typeof asset.mimeType === "string" && asset.mimeType.startsWith("image/")).slice(0, 6).map(async (asset, index) => {
+        const filename = asset.url.split("/").pop();
+        const bytes = filename ? await this.uploads.getBuffer(filename) : null;
+        return bytes ? [
+          { type: "input_text" as const, text: `Referencia adjunta ${index + 1}: ${asset.url}` },
+          { type: "input_image" as const, image_url: `data:${asset.mimeType};base64,${bytes.toString("base64")}`, detail: "high" as const },
+        ] : [];
+      }))).flat();
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -1618,10 +2552,10 @@ export class VisualStudioService {
         },
         body: JSON.stringify({
           model: this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol",
-          input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+          input: [{ role: "user", content: [{ type: "input_text", text: prompt }, ...attachedInputs] }],
           text: { format: { type: "json_schema", name: "store_agent_revision_plan", strict: true, schema } },
           reasoning: { effort: "medium" },
-          max_output_tokens: 900,
+          max_output_tokens: 2400,
         }),
         signal: AbortSignal.timeout(45_000),
       });
@@ -1637,6 +2571,9 @@ export class VisualStudioService {
         ...plan,
         target: fallback.target !== "site" && fallback.target !== "unsupported" ? fallback.target : plan.target,
         tone: fallback.tone !== "unchanged" ? fallback.tone : plan.tone,
+        action: fallback.action !== "unsupported" ? fallback.action : plan.action,
+        value: fallback.value || String(plan.value || "").slice(0, 600),
+        color: fallback.color || (/^#[0-9a-f]{6}$/i.test(plan.color) ? plan.color.toLowerCase() : ""),
         preserveCatalog: fallback.preserveCatalog || plan.preserveCatalog,
         socialHandle: fallback.socialHandle || (/^@[A-Za-z0-9._-]{1,30}$/.test(plan.socialHandle) ? plan.socialHandle : ""),
         socialPlatform: fallback.target === "footer"
@@ -1644,6 +2581,11 @@ export class VisualStudioService {
           : fallback.socialPlatform !== "unknown"
             ? fallback.socialPlatform
             : plan.socialPlatform,
+        linkLabel: fallback.linkLabel || String(plan.linkLabel || "").slice(0, 100),
+        linkUrl: fallback.linkUrl || (/^https:\/\/[^\s]+$/i.test(plan.linkUrl) ? plan.linkUrl.slice(0, 500) : ""),
+        operations: Array.isArray(plan.operations) ? plan.operations : fallback.operations,
+        imageRequests: Array.isArray(plan.imageRequests) ? plan.imageRequests : [],
+        productRequests: Array.isArray(plan.productRequests) ? plan.productRequests : [],
       };
       const targetExists = ["site", "opening", "footer", "unsupported"].includes(guardedPlan.target)
         || document.sections.some((section) => section.kind === guardedPlan.target);
@@ -1660,12 +2602,19 @@ export class VisualStudioService {
     proposalId: string | null,
     instruction: string,
     conversationContext: string[] = [],
+    requestedAssetUrls: string[] = [],
+    editorContext?: { revision: number; selection?: StoreAgentSelectionDto },
   ) {
-    const store = await this.ownedStore(merchantId, storeId);
+    const publishedStore = await this.ownedStore(merchantId, storeId);
+    if (editorContext) assertWebsiteRevision(publishedStore, editorContext.revision);
+    const store = websiteEditorStore(publishedStore);
     const source = proposalId
       ? await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } })
       : null;
     if (proposalId && !source) throw new NotFoundException("Visual proposal not found");
+    if (source && source.baseWebsiteRevision !== (store.websiteRevision ?? 0)) {
+      throw new ConflictException("Esta propuesta parte de un borrador anterior. Abre el borrador actual y vuelve a pedir el cambio.");
+    }
     const sourceConfig = source?.config && typeof source.config === "object" && !Array.isArray(source.config)
       ? source.config as Record<string, unknown>
       : snapshot(store) as Record<string, unknown>;
@@ -1675,55 +2624,229 @@ export class VisualStudioService {
         ? "La propuesta ya no contiene un documento visual editable"
         : "La tienda actual todavía no tiene un sitio estructurado que el agente pueda editar sin regenerarlo. Crea una dirección visual primero.");
     }
-    const plan = await this.agentRevisionPlan(instruction, sourceDocument, conversationContext);
-    const nextDocument = applyAgentRevisionPlan(sourceDocument, plan);
-    const nextConfig = {
-      ...sourceConfig,
-      ...legacyConfigFromSiteDocument(nextDocument),
-    } as Prisma.InputJsonObject;
-    const signature = storefrontStructuralSignature(nextDocument);
-    const proposal = await this.prisma.$transaction(async (transaction) => {
-      const created = await transaction.storeVisualProposal.create({
-        data: {
-          storeId,
-          title: `${source?.title ?? store.name} · ajuste`.slice(0, 120),
-          rationale: plan.summary,
-          provider: this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey")
-            ? `agent:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol"}`
-            : "agent:bounded-local",
-          config: nextConfig,
-          sourceAssetUrls: (source?.sourceAssetUrls ?? []) as Prisma.InputJsonValue,
-          generatedUrls: (source?.generatedUrls ?? []) as Prisma.InputJsonValue,
-        },
-      });
-      await transaction.storeVisualSignature.create({
-        data: {
-          storeId,
-          sourceType: "PROPOSAL",
-          sourceId: created.id,
-          fingerprint: signature.fingerprint,
-          signature: signature as unknown as Prisma.InputJsonObject,
-        },
-      });
-      return created;
+    const selection = editorContext?.selection;
+    const selected = selection ? resolveStoreAgentSelection(selection, sourceDocument, sourceConfig) : null;
+    const useSelection = selected && instructionUsesSelection(instruction);
+    const assetUrls = [...new Set(requestedAssetUrls)];
+    const ownedAssets = assetUrls.length
+      ? await this.prisma.mediaAsset.findMany({
+          where: { merchantId, url: { in: assetUrls }, mimeType: { in: ["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm"] } },
+          select: { url: true, mimeType: true },
+        })
+      : [];
+    if (ownedAssets.length !== assetUrls.length) throw new BadRequestException("Una o más referencias visuales no pertenecen a este comercio.");
+    const orderedOwnedAssets = assetUrls.flatMap((url) => ownedAssets.find((asset) => asset.url === url) ?? []);
+    const allowedProductIds = new Set([
+      ...sourceDocument.merchandising.featuredProductIds,
+      ...sourceDocument.merchandising.productOrderIds,
+      ...sourceDocument.sections.flatMap((section) => section.productIds ?? []),
+      ...(sourceDocument.merchandising.collections ?? []).flatMap((collection) => collection.productIds),
+    ]);
+    const allowedMediaUrls = new Set(orderedOwnedAssets.map((asset) => asset.url));
+    let plan = await this.agentRevisionPlan(instruction, sourceDocument, conversationContext, allowedProductIds, allowedMediaUrls, sourceConfig, orderedOwnedAssets, selection);
+    assertStoreAgentOperationBudget(plan.operations.length);
+    if (plan.imageRequests.length > 2 || plan.productRequests.length > 6) {
+      throw new BadRequestException("Este pedido supera el límite de 2 imágenes nuevas o 6 productos por cambio. Divídelo en dos pedidos; todavía no se creó nada.");
+    }
+    if (!useSelection) plan = withDeterministicAttachedImage(
+      instruction,
+      sourceDocument,
+      plan,
+      orderedOwnedAssets.filter((asset) => typeof asset.mimeType === "string" && asset.mimeType.startsWith("image/")).map((asset) => asset.url),
+    );
+    if (!useSelection) plan = withDeterministicGeneratedOpeningImage(instruction, sourceDocument, plan);
+    if (useSelection && selected) {
+      // Fill bounded local plans only; a model plan that leaves the selected
+      // target is rejected below, never silently rewritten or partially used.
+      if (!plan.operations.length && !plan.imageRequests.length && !plan.productRequests.length) {
+        const quoted = /["“«]([^"”»]+)["”»]/.exec(instruction)?.[1];
+        const ordinal = /\b(segunda|segundo|second)\b/i.test(instruction) ? 1 : 0;
+        const imageUrl = orderedOwnedAssets.filter((asset) => asset.mimeType.startsWith("image/"))[ordinal]?.url;
+        if (selected.image && imageUrl && instructionExplicitlyUsesAttachedImage(instruction)) plan.operations = [selectedOperation(selected.selection, imageUrl)];
+        else if (!selected.image && quoted) plan.operations = [selectedOperation(selected.selection, quoted)];
+        else if (selected.image && /(?:genera|crea|generate|create).{0,40}(?:imagen|foto|image|photo)/i.test(instruction)) {
+          const operation = selectedOperation(selected.selection, "");
+          plan.imageRequests = [{ ...operation, entity: operation.entity as StoreAgentImageRequest["entity"], action: "set", aspectRatio: "landscape", prompt: instruction }];
+        }
+      }
+      if (plan.productRequests.length) throw new BadRequestException("Seleccionaste un elemento visual. Pide la creación de productos en un pedido separado.");
+      assertSelectedOperations(selected.selection, [...plan.operations, ...plan.imageRequests]);
+      if (plan.operations.length && !plan.imageRequests.length && plan.operations.every((operation) => operation.value === selected.value)) {
+        throw new BadRequestException("Ese elemento ya tiene ese contenido. No hay cambios para preparar.");
+      }
+      // Selection authorizes content in an animation, not changes to its motion.
+      assertAgentRevisionScope(instruction, sourceDocument, { ...plan, operations: plan.operations.filter((operation) => !["animation", "animation-media"].includes(operation.entity)) }, true);
+    } else assertAgentRevisionScope(instruction, sourceDocument, plan);
+    const productRequests = plan.productRequests.map((request) => validatedProductRequest(request, instruction, sourceDocument, allowedMediaUrls));
+    const productKeys = new Set(productRequests.map((request) => request.key));
+    if (productKeys.size !== productRequests.length) throw new BadRequestException("Cada producto nuevo debe tener una clave distinta.");
+    if (storeAgentInstructionLooksLikeProductCreation(instruction) && !productRequests.length) {
+      throw new BadRequestException("Para crear un producto, indica su nombre exacto, precio en Bs. o BOB y la página donde quieres mostrarlo.");
+    }
+    const imageRequests = plan.imageRequests;
+    const productImageInstruction = /(?:genera|generar|crea|crear).{0,40}(?:imagen|imagenes|foto|fotos)/.test(normalizedAgentInstruction(instruction));
+    imageRequests.forEach((request) => {
+      if (request.entity !== "new-product") {
+        generatedImageOperation(request, "/v1/uploads/pending-generated-image.jpg");
+        return;
+      }
+      if (request.action !== "add" || request.field !== "imageUrl" || !productKeys.has(request.targetId)) {
+        throw new BadRequestException("Yapi intentó generar una foto para un producto que no forma parte de esta solicitud.");
+      }
+      if (!productImageInstruction) {
+        throw new BadRequestException("Yapi sólo puede generar fotos de producto cuando lo pides explícitamente.");
+      }
     });
-    const changedAreas = plan.target === "opening"
-      ? ["apertura"]
-      : plan.target === "site"
-        ? ["lenguaje visual"]
-        : plan.target === "footer"
-          ? ["pie de página"]
-          : [plan.target];
-    const preservedAreas = [
-      ...(plan.preserveCatalog || plan.target !== "catalog" ? ["catálogo"] : []),
-      ...(plan.target === "footer" ? ["menú", "secciones", "colores y tipografía"] : []),
-      "productos",
-      "precios",
-      "inventario",
-      "checkout",
-      "estado público",
+    productRequests.forEach((product) => {
+      const generatedPhotoCount = imageRequests.filter((request) => request.entity === "new-product" && request.targetId === product.key).length;
+      if (product.imageUrls.length + generatedPhotoCount > 10) {
+        throw new BadRequestException(`El producto “${product.name}” supera el máximo de 10 fotos. Quita algunas antes de generar nuevas.`);
+      }
+    });
+    // Replay the complete plan against private stand-ins before any paid image
+    // call or product creation. Both validation and the budget include the
+    // operations that the server will add for generated media and placement.
+    const preflightProducts = productRequests.map((request, index) => ({ id: `pending-yapi-product-${index}`, pageIds: request.pageIds }));
+    const preflightImageUrls = imageRequests.map((_, index) => `/v1/uploads/pending-yapi-image-${index}.jpg`);
+    const preflightOperations = [
+      ...plan.operations,
+      ...imageRequests.flatMap((request, index) => request.entity === "new-product" ? [] : [generatedImageOperation(request, preflightImageUrls[index])]),
+      ...productCatalogOperations(sourceDocument, preflightProducts),
     ];
-    return { proposal, plan, changedAreas, preservedAreas };
+    assertStoreAgentOperationBudget(preflightOperations.length);
+    const preflightOptions = {
+      allowedProductIds: new Set([...allowedProductIds, ...preflightProducts.map((product) => product.id)]),
+      allowedMediaUrls: new Set([...allowedMediaUrls, ...preflightImageUrls]),
+    };
+    const preflightDocumentOperations = preflightOperations.filter((operation) => !storeAgentOperationIsProposalVisual(operation));
+    const preflightVisualOperations = preflightOperations.filter(storeAgentOperationIsProposalVisual);
+    const preflightDocument = preflightDocumentOperations.length
+      ? applyStoreAgentEditorOperations(sourceDocument, preflightDocumentOperations, preflightOptions).document
+      : sourceDocument;
+    if (preflightVisualOperations.length) {
+      applyStoreAgentProposalVisualOperations({ ...sourceConfig, siteDocument: siteDocumentJson(preflightDocument) }, preflightVisualOperations, preflightOptions);
+    }
+    if (imageRequests.length && !this.canGenerateStorefrontImages()) {
+      throw new ServiceUnavailableException("Yapi entendió dónde debe ir la imagen, pero la generación de imágenes no está configurada en este momento.");
+    }
+    const generatedAssets = await Promise.all(imageRequests.map((request) => this.generateStorefrontImage(
+      merchantId,
+      storeId,
+      store.name,
+      request,
+      request.entity === "new-product"
+        ? `La imagen será una foto del producto ${productRequests.find((product) => product.key === request.targetId)?.name ?? "descrito"} y debe integrarse con la paleta visual de la tienda.`
+        : `La imagen se usará en ${request.entity}; conserva la paleta y el lenguaje visual del documento actual.`,
+      request.entity === "new-product",
+    )));
+    generatedAssets.forEach((asset) => allowedMediaUrls.add(asset.url));
+    imageRequests.forEach((request, index) => {
+      if (request.entity !== "new-product") return;
+      const product = productRequests.find((candidate) => candidate.key === request.targetId)!;
+      if (!product.imageUrls.includes(generatedAssets[index].url) && product.imageUrls.length < 10) product.imageUrls.push(generatedAssets[index].url);
+    });
+    const generatedOperations = imageRequests.flatMap((request, index) => request.entity === "new-product"
+      ? []
+      : [generatedImageOperation(request, generatedAssets[index].url)]);
+    const createdProducts: Awaited<ReturnType<PaymentLinksService["create"]>>[] = [];
+    try {
+      for (const request of productRequests) {
+        createdProducts.push(await this.paymentLinks.create(merchantId, storeId, {
+          name: request.name,
+          description: request.description || null,
+          amount: request.amount,
+          currency: "BOB",
+          stock: request.stock >= 0 ? request.stock : null,
+          imageUrls: request.imageUrls,
+        }));
+      }
+      createdProducts.forEach((product) => allowedProductIds.add(product.id));
+      const productOperations = productCatalogOperations(sourceDocument, createdProducts.map((product, index) => ({
+        id: product.id,
+        pageIds: productRequests[index].pageIds,
+      })));
+      const allOperations = [...plan.operations, ...generatedOperations, ...productOperations];
+      assertStoreAgentOperationBudget(allOperations.length);
+      const documentOperations = allOperations.filter((operation) => !storeAgentOperationIsProposalVisual(operation));
+      const proposalOperations = allOperations.filter(storeAgentOperationIsProposalVisual);
+      const documentResult = documentOperations.length
+        ? applyStoreAgentEditorOperations(sourceDocument, documentOperations, { allowedProductIds, allowedMediaUrls })
+        : null;
+      const nextDocument = documentResult?.document
+        ?? (allOperations.length ? sourceDocument : applyAgentRevisionPlan(sourceDocument, plan));
+      // A revision is a patch, not a fresh generated direction. Rebuilding the
+      // complete legacy projection here used to reset animations, galleries and
+      // content order even when the merchant only edited one title or photo.
+      const documentConfig = {
+        ...sourceConfig,
+        siteDocument: siteDocumentJson(nextDocument),
+      } as Record<string, unknown>;
+      const proposalResult = proposalOperations.length
+        ? applyStoreAgentProposalVisualOperations(documentConfig, proposalOperations, { allowedProductIds, allowedMediaUrls })
+        : null;
+      const nextConfig = (proposalResult?.config ?? documentConfig) as Prisma.InputJsonObject;
+      const signature = storefrontStructuralSignature(nextDocument);
+      const proposal = await this.prisma.$transaction(async (transaction) => {
+        const created = await transaction.storeVisualProposal.create({
+          data: {
+            storeId,
+            title: `${source?.title ?? store.name} · ajuste`.slice(0, 120),
+            baseWebsiteRevision: store.websiteRevision ?? 0,
+            rationale: plan.summary,
+            provider: this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey")
+              ? `agent:${this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol"}`
+              : "agent:bounded-local",
+            config: nextConfig,
+            sourceAssetUrls: [...new Set([
+              ...(Array.isArray(source?.sourceAssetUrls) ? source.sourceAssetUrls.filter((url): url is string => typeof url === "string") : []),
+              ...assetUrls,
+            ])] as Prisma.InputJsonValue,
+            generatedUrls: [...new Set([
+              ...(Array.isArray(source?.generatedUrls) ? source.generatedUrls.filter((url): url is string => typeof url === "string") : []),
+              ...generatedAssets.map((asset) => asset.url),
+            ])] as Prisma.InputJsonValue,
+          },
+        });
+        await transaction.storeVisualSignature.create({
+          data: {
+            storeId,
+            sourceType: "PROPOSAL",
+            sourceId: created.id,
+            fingerprint: signature.fingerprint,
+            signature: signature as unknown as Prisma.InputJsonObject,
+          },
+        });
+        return created;
+      });
+      const operationChangedAreas = [...new Set([
+        ...(documentResult?.changedAreas ?? []),
+        ...(proposalResult?.changedAreas ?? []),
+        ...(createdProducts.length ? ["productos"] : []),
+        ...(generatedAssets.length ? ["imágenes generadas"] : []),
+      ])];
+      const changedAreas = operationChangedAreas.length ? operationChangedAreas : (plan.target === "opening"
+        ? ["apertura"]
+        : plan.target === "site"
+          ? ["lenguaje visual"]
+          : plan.target === "footer"
+            ? ["pie de página"]
+            : [plan.target]);
+      const preservedAreas = [
+        ...(plan.preserveCatalog || plan.target !== "catalog" ? [createdProducts.length ? "catálogo existente" : "catálogo"] : []),
+        ...(plan.target === "footer" ? ["menú", "secciones", "colores y tipografía"] : []),
+        ...(createdProducts.length ? ["productos, precios e inventario existentes"] : ["productos", "precios", "inventario"]),
+        "checkout",
+        "estado público",
+      ];
+      return { proposal, plan, changedAreas, preservedAreas, createdProducts };
+    } catch (error) {
+      if (createdProducts.length) {
+        await this.prisma.paymentLink.deleteMany({ where: { storeId, id: { in: createdProducts.map((product) => product.id) } } }).catch((cleanupError: unknown) => {
+          this.logger.error(`No se pudieron retirar productos de una revisión fallida: ${(cleanupError as Error).message}`);
+        });
+      }
+      throw error;
+    }
   }
 
   async setSectionLocks(merchantId: string, storeId: string, sectionIds: string[]) {
@@ -1737,7 +2860,23 @@ export class VisualStudioService {
   }
 
   async generate(merchantId: string, storeId: string, dto: GenerateVisualProposalsDto) {
-    const store = await this.ownedStore(merchantId, storeId);
+    try {
+      return await this.generateProposals(merchantId, storeId, dto);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `Visual proposal generation failed for store ${storeId}: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException(
+        "No pudimos completar las propuestas por un problema temporal del compositor. Tus fotos y tu tienda siguen guardadas; vuelve a intentarlo en unos segundos.",
+      );
+    }
+  }
+
+  private async generateProposals(merchantId: string, storeId: string, dto: GenerateVisualProposalsDto) {
+    const store = websiteEditorStore(await this.ownedStore(merchantId, storeId));
+    if (dto.revision !== undefined) assertWebsiteRevision(store, dto.revision);
     const selectedTemplate = dto.templateId
       ? await this.prisma.storeVisualTemplate.findFirst({ where: { id: dto.templateId, merchantId } })
       : null;
@@ -1801,7 +2940,22 @@ export class VisualStudioService {
       await this.prisma.mediaAsset.updateMany({ where: { id: { in: assets.filter((asset) => uploadedAssetUrls.includes(asset.url)).map((asset) => asset.id) }, storeId: null }, data: { storeId } });
     }
 
-    const orderedAssets = assetUrls.flatMap((url) => assets.find((asset) => asset.url === url) ?? []);
+    let orderedAssets = assetUrls.flatMap((url) => assets.find((asset) => asset.url === url) ?? []);
+    let generatedAssetUrls: string[] = [];
+    if (!orderedAssets.some((asset) => asset.url !== store.logoUrl) && this.canGenerateStorefrontImages()) {
+      const generatedAssets = await Promise.all([
+        this.generateStorefrontImage(merchantId, storeId, store.name, {
+          aspectRatio: "landscape",
+          prompt: "Escena principal amplia, distintiva y serena, pensada como portada editorial con espacio negativo para el titular.",
+        }, `Categoría: ${proposalInput.businessCategory || "comercio independiente"}. Personalidad: ${proposalInput.personality || "auténtica"}. Brief: ${proposalInput.creativeBrief || "sin brief adicional"}.`),
+        this.generateStorefrontImage(merchantId, storeId, store.name, {
+          aspectRatio: "portrait",
+          prompt: "Detalle ambiental vertical y complementario, con luz y textura coherentes, pensado para una sección de historia o galería.",
+        }, `Categoría: ${proposalInput.businessCategory || "comercio independiente"}. Personalidad: ${proposalInput.personality || "auténtica"}. Brief: ${proposalInput.creativeBrief || "sin brief adicional"}.`),
+      ]);
+      orderedAssets = [...orderedAssets, ...generatedAssets];
+      generatedAssetUrls = generatedAssets.map((asset) => asset.url);
+    }
     if (orderedAssets.length === 0) {
       throw new BadRequestException("Agrega al menos una foto o video a la tienda o a un producto antes de crear el sitio con IA");
     }
@@ -1867,7 +3021,13 @@ export class VisualStudioService {
       const directedDocument = applySiteArtDirection(baseDocument, assignedArtDirections[index]);
       const brandedDocument = applyGeneratedBrandPalette(directedDocument, measuredBrandColors, index + engineContext.generation);
       const narrativeDocument = withGeneratedDefaultFooter(
-        enforceGeneratedNarrative(brandedDocument, store, orderedAssets, products, index),
+        ensureGeneratedCommercePages(
+          enforceGeneratedNarrative(brandedDocument, store, orderedAssets, products, index),
+          store,
+          orderedAssets,
+          products,
+          index + engineContext.generation,
+        ),
         store,
         links,
         index + engineContext.generation,
@@ -1942,22 +3102,51 @@ export class VisualStudioService {
       if (!originality.accepted || !advancesBatch) {
         throw new BadRequestException("No pudimos crear tres direcciones suficientemente originales y distintas sin tocar tus secciones bloqueadas. Desbloquea una sección, amplía la receta o cambia el brief e inténtalo otra vez.");
       }
+      siteDocument = staticGeneratedPhotography(repairGeneratedPrimaryCatalog(siteDocument));
+      const requestedAnimationTypes = [dto.motionExperience, ...(dto.motionExperiences ?? [])].filter(Boolean);
+      const generatedAnimations = generatedAnimationSuite(
+        requestedAnimationTypes,
+        orderedAssets.filter((asset) => asset.url !== store.logoUrl),
+        products,
+        store.name,
+        index,
+        engineContext.generation,
+      );
+      const finalAnimationInventory = enforceUniqueGeneratedAnimationTypes(siteDocument, generatedAnimations, []);
+      siteDocument = finalAnimationInventory.siteDocument;
+      const animations = finalAnimationInventory.animations;
+      const animationIds = animations.flatMap((animation) => {
+        const id = animation && typeof animation === "object" && !Array.isArray(animation)
+          ? (animation as Record<string, unknown>).id
+          : null;
+        return typeof id === "string" ? [id] : [];
+      });
+      const animationTypes = animations.flatMap((animation) => {
+        const type = animation && typeof animation === "object" && !Array.isArray(animation)
+          ? (animation as Record<string, unknown>).type
+          : null;
+        return typeof type === "string" ? [type] : [];
+      });
       acceptedDocuments.push(siteDocument);
       acceptedOriginality.push(originality.closestSimilarity);
+      const legacyConfig = legacyConfigFromSiteDocument(siteDocument);
       return {
         ...preset,
         config: {
           ...freshGeneratedVisualReset(),
           ...preset.config,
-          ...legacyConfigFromSiteDocument(siteDocument),
-          motionDuoEnabled: false,
-          motionExperience: "hero-carousel",
-          motionExperiences: [],
-          animations: [],
-          // Continuous ribbons are an obvious generated-store tell. Keep the
-          // default calm and only animate the announcement when an older,
-          // explicit client still asks for that behavior.
-          announcementMode: dto.announcementMarqueeEnabled === true ? "marquee" : "static",
+          ...legacyConfig,
+          contentOrder: expandMotionSections(legacyConfig.contentOrder, animationIds),
+          motionDuoEnabled: animations.length > 0,
+          motionExperience: animationTypes[0] || "clarity-marquee",
+          motionExperiences: animationTypes,
+          animations,
+          announcement: `${store.name} • Explora la tienda`,
+          announcementMode: dto.announcementMarqueeEnabled === false ? "static" : "marquee",
+          announcementSpeed: 22,
+          announcementSize: "medium",
+          announcementFont: "store",
+          announcementEffect: "none",
           checkoutMode,
           ...(checkoutMode === "whatsapp" && { cartButtonLabel: "Pedir por WhatsApp", contactPhone: whatsappPhone }),
           ...(checkoutMode === "external" && { cartButtonLabel: "Continuar al enlace", leadCaptureUrl }),
@@ -1977,11 +3166,12 @@ export class VisualStudioService {
           data: {
             storeId,
             title: preset.title,
+            baseWebsiteRevision: store.websiteRevision ?? 0,
             rationale: preset.rationale,
             provider,
             config: preset.config as Prisma.InputJsonObject,
             sourceAssetUrls: assetUrls,
-            generatedUrls: [],
+            generatedUrls: generatedAssetUrls,
           },
         }));
       }
@@ -2050,38 +3240,30 @@ export class VisualStudioService {
     });
   }
 
-  async apply(merchantId: string, storeId: string, proposalId: string) {
+  async apply(merchantId: string, storeId: string, proposalId: string, revision?: number) {
     const store = await this.ownedStore(merchantId, storeId);
-    const [proposal, links] = await Promise.all([
-      this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } }),
-      this.prisma.storeLink.findMany({ where: { storeId }, select: { label: true, url: true }, orderBy: { sortOrder: "asc" } }),
-    ]);
+    assertWebsiteRevision(store, revision);
+    const proposal = await this.prisma.storeVisualProposal.findFirst({ where: { id: proposalId, storeId } });
     if (!proposal) throw new NotFoundException("Visual proposal not found");
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(enrichGeneratedProposalConfig(proposal.config, store, links, 0)) }),
-      this.prisma.storeVisualVersion.create({
-        data: { storeId, label: `Antes de “${proposal.title}”`, source: `proposal:${proposal.id}`, snapshot: snapshot(store) },
-      }),
-      this.prisma.storeVisualProposal.updateMany({
-        where: { storeId, id: { not: proposal.id }, status: "APPLIED" },
-        data: { status: "READY", appliedAt: null },
-      }),
-      this.prisma.storeVisualProposal.update({ where: { id: proposal.id }, data: { status: "APPLIED", appliedAt: new Date() } }),
-    ]);
-    return updated;
+    if (proposal.baseWebsiteRevision !== revision) throw new ConflictException("Esta propuesta pertenece a un borrador anterior. Pide el cambio de nuevo sobre el borrador actual.");
+    const config = toStoreUpdate(stableGeneratedProposalConfig(proposal.config)) as Prisma.JsonObject;
+    return saveWebsiteDraftPatch(this.prisma, store, revision, config, undefined, {
+      label: `Antes de “${proposal.title}”`, source: `draft-proposal:${proposal.id}`, snapshot: snapshot(websiteEditorStore(store)),
+    });
   }
 
-  async restore(merchantId: string, storeId: string, versionId: string) {
+  async restore(merchantId: string, storeId: string, versionId: string, revision?: number) {
     const store = await this.ownedStore(merchantId, storeId);
+    assertWebsiteRevision(store, revision);
     const version = await this.prisma.storeVisualVersion.findFirst({ where: { id: versionId, storeId } });
     if (!version) throw new NotFoundException("Visual version not found");
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.store.update({ where: { id: storeId }, data: toStoreUpdate(version.snapshot) }),
-      this.prisma.storeVisualVersion.create({
-        data: { storeId, label: "Antes de restaurar", source: `restore:${version.id}`, snapshot: snapshot(store) },
-      }),
-    ]);
-    return updated;
+    const saved = version.snapshot as Prisma.JsonObject;
+    // Publication snapshots contain additional normalized settings. All keys
+    // originate on the server, never from a restore request body.
+    const { links, ...data } = version.source.startsWith("publish:") ? saved : toStoreUpdate(saved) as Prisma.JsonObject;
+    return saveWebsiteDraftPatch(this.prisma, store, revision, data,
+      Array.isArray(links) ? links as Array<{ label: string; url: string }> : undefined,
+      { label: "Antes de restaurar borrador", source: `draft-restore:${version.id}`, snapshot: snapshot(websiteEditorStore(store)) });
   }
 
   async dismiss(merchantId: string, storeId: string, proposalId: string) {
@@ -2233,6 +3415,7 @@ export class VisualStudioService {
         schema: object,
         requestPrompt: string,
         maxOutputTokens: number,
+        reasoningEffort: "medium" | "high",
       ) => {
         const response = await fetch("https://api.openai.com/v1/responses", {
           method: "POST",
@@ -2244,20 +3427,28 @@ export class VisualStudioService {
             model: this.config.get<string>("app.openAi.designModel") ?? "gpt-5.6-sol",
             input: [{ role: "user", content: [{ type: "input_text", text: requestPrompt }, ...usableImages] }],
             text: { format: { type: "json_schema", name, strict: true, schema } },
-            reasoning: { effort: "high" },
+            reasoning: { effort: reasoningEffort },
             max_output_tokens: maxOutputTokens,
           }),
-          signal: AbortSignal.timeout(120_000),
+          signal: AbortSignal.timeout(name === "store_visual_directions" ? 240_000 : 120_000),
         });
         const body = await response.json() as {
+          id?: string;
+          status?: string;
+          incomplete_details?: { reason?: string };
+          usage?: { output_tokens?: number };
           output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string; refusal?: string }> }>;
           error?: { message?: string };
         };
         if (!response.ok) throw new BadGatewayException(body.error?.message || "OpenAI design generation failed");
+        if (body.status === "incomplete") {
+          throw new BadGatewayException(`OpenAI ${name} incomplete: ${body.incomplete_details?.reason || "unknown reason"}`);
+        }
         const outputText = body.output
           ?.flatMap((item) => item.content ?? [])
           .find((item) => item.type === "output_text")?.text;
         if (!outputText) throw new BadGatewayException("OpenAI design generation returned no structured output");
+        this.logger.log(`${name} completed: response=${body.id || "unknown"}, outputTokens=${body.usage?.output_tokens ?? "unknown"}`);
         return outputText;
       };
 
@@ -2272,14 +3463,16 @@ export class VisualStudioService {
         `Paleta medida del logo y las fotografías: ${measuredPaletteNote}. Trátala como evidencia de marca, no como una sugerencia genérica. Puedes aclarar u oscurecer estos tonos para asegurar contraste, pero no reemplazarlos por una familia cromática ajena.`,
         "Examina visualmente cada imagen. Distingue con seguridad logo, arte editorial, imagen de ambiente, detalle y foto de producto. Mantén cada foto de producto unida al producto que indica la leyenda. Si un activo es débil, redundante o imposible de usar sin deformarlo, márcalo como avoid.",
         "Define el papel del logo, la escena real del público y una estrategia de color derivada de la identidad con 3 a 5 colores coordinados: base, acento, apoyo y superficies. Indica dónde usar fondos cromáticos y palabras de color sin perder contraste. Añade una estrategia tipográfica con carácter, una lógica de composición asimétrica, un plan de merchandising producto por producto y una sola idea de movimiento con propósito.",
-        "La regla fija de orden es abrir con un hero visual y colocar el catálogo inmediatamente después. La apertura nunca es un bloque de historia con tipografía gigante: debe funcionar como slider cuando hay varias imágenes, como portada de video cuando existe un video útil o como reveal editorial cuando solo hay una imagen. Todo lo posterior debe variar libremente y cambiar el ritmo. Hero, story y catalog deben existir. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
-        "Decide también la arquitectura de páginas en pagePlan. Inicio es implícita y debe ser una experiencia completa y larga: hero, catalog, story, gallery y contact permanecen en Inicio. Devuelve [] salvo que el comercio pida explícitamente una web multipágina en su brief. En ese caso crea como máximo dos destinos adicionales únicamente para location o links con contenido verificable. No crees páginas para acortar el scroll, no repitas una sección y nunca declares una página vacía. Usa ids y slugs únicos, breves y seguros; labels y slugs deben ser naturales en español.",
+        "La regla fija de orden es abrir con un hero visual estático de una sola imagen y colocar el catálogo inmediatamente después. El título del hero es el único gran gesto tipográfico de la página; los títulos posteriores son claramente menores. La apertura nunca es un bloque de historia con tipografía gigante, slider, video automático ni reveal dirigido por scroll. Después del catálogo, varía composición y densidad y planifica movimiento compatible con el renderer: reveal, clip, drift, scale, parallax o story-scroll, con un propósito concreto y lectura completa con movimiento reducido. Hero, story y catalog deben existir. Si no hay historia empresarial verificable, los capítulos deben contar la colección usando nombres, descripciones y fotos reales, sin inventar origen ni proceso. No incluyas una sección genérica que explique que el sitio permite explorar, elegir o contactar.",
+        "Decide también la arquitectura de páginas en pagePlan. Inicio es implícita y debe ser una experiencia completa y larga: hero, catalog, story, gallery y contact permanecen en Inicio. Planifica dos o tres destinos adicionales con contenido real, alineados con las pestañas o colecciones que pida el comercio. Cada destino debe aportar una narrativa o galería propia usando sectionKinds válidos; el compositor añadirá un catálogo con productos reales a cada página. No limites las páginas a location o links, no dupliques el mismo relato y nunca declares una página vacía. Usa ids y slugs únicos, breves y seguros; labels y slugs deben ser naturales en español.",
         "No inventes datos, origen, materiales, descuentos, testimonios ni promesas. Escribe el análisis en español y devuelve solo el esquema.",
       ].join("\n");
       let brandAnalysis = brandAnalysisCache.get(engineContext.brandFingerprint);
       const analysisCacheHit = Boolean(brandAnalysis);
       if (!brandAnalysis) {
-        const analysisText = await requestStructuredOutput("store_brand_analysis", BRAND_ANALYSIS_SCHEMA, analysisPrompt, 5_000);
+        // The token cap includes reasoning. A 5k/high budget truncated the real
+        // analysis before its JSON completed, forcing that run to fall back.
+        const analysisText = await requestStructuredOutput("store_brand_analysis", BRAND_ANALYSIS_SCHEMA, analysisPrompt, 8_000, "medium");
         brandAnalysis = (JSON.parse(analysisText) as { analysis?: BrandAnalysis }).analysis;
         if (brandAnalysis) brandAnalysisCache.set(engineContext.brandFingerprint, brandAnalysis);
       }
@@ -2301,26 +3494,27 @@ export class VisualStudioService {
         `Índices de imágenes reutilizables:\n${assetLegend}`,
         `Paleta medida del logo y las fotografías: ${measuredPaletteNote}. Construye theme y los fondos de sección con variaciones tonales de estos colores. No introduzcas un acento ajeno solo para diferenciar propuestas; la diferencia debe venir de composición, tipografía, escala y ritmo.`,
         `Análisis de marca obligatorio, realizado en la fase anterior:\n${JSON.stringify(brandAnalysis, null, 2)}`,
-        "Contrato multipágina obligatorio: siteDocument.pages materializa el pagePlan del análisis y cada sección declara pageId. El string vacío significa Inicio. hero, catalog, story, gallery y contact siempre usan pageId=\"\" para que Inicio conserve un recorrido completo. Si pagePlan está vacío, devuelve pages=[] y pageId=\"\" en todas las secciones. Solo location o links pueden usar un pageId no vacío cuando el brief pidió explícitamente una web multipágina; ese id debe coincidir con pages y recibir contenido real. La plataforma deriva de forma segura los enlaces Inicio, Tienda y páginas; no intentes escribir items de navegación.",
-        "Contrato narrativo obligatorio de cada siteDocument: deben existir exactamente un hero, un story, un catalog, un gallery y un contact. Las cinco secciones viven en Inicio y forman un descenso sustancial, no una portada corta. Hero debe ser exactamente la primera sección y catalog exactamente la segunda. Después de ese par, el orden es libre y debe alternar escala y densidad. Hero conserva 2 o 3 medios cuando estén disponibles, nunca el logo, e items con copy breve asociado a cada escena; con varias imágenes funciona como slider, con video puede abrir en movimiento y con un solo medio usa un reveal editorial. No escribas una lista enorme de nombres de producto como título de apertura. Story usa motion=story-scroll y solo 2 o 3 escenas intencionales, cada una emparejada mediante items con su propia imagen y copy verificable. Gallery crea el cuarto momento visual con medios no redundantes. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
+        "Contrato multipágina obligatorio: siteDocument.pages materializa dos o tres destinos reales y cada sección declara pageId. El string vacío significa Inicio. Conserva hero, un catalog principal, story, gallery y contact en Inicio. Cada página adicional usa su id exacto en al menos dos secciones: una sección narrativa o visual y un catalog propio. En cada catalog adicional elige productIndices del catálogo real que correspondan a esa página; nunca mezcles categorías por posición ni inventes productos. La plataforma valida esos índices, deriva enlaces seguros y mantiene una URL estable por slug; no escribas items de navegación.",
+        "Contrato narrativo obligatorio de cada siteDocument: debe existir exactamente un hero, un story, un catalog, un gallery y un contact en Inicio, además de un catalog por cada página adicional. Inicio forma un descenso sustancial, no una portada corta. Hero debe ser la primera sección y el catalog principal la segunda. Después de ese par, alterna escala y densidad. Hero usa exactamente un medio, nunca el logo, con copy breve. Da a las páginas movimientos compatibles y variados entre reveal, clip, drift, scale, parallax o story-scroll; evita repetir el mismo efecto en todas. Catalog es la zona transaccional donde la plataforma inserta productos, carrito y checkout reales. No existe benefits: no generes una sección genérica de razones, pasos, Explora/Elige/Conecta ni una explicación de lo que hace una tienda.",
         "Antes de componer, elige para cada propuesta una combinación distinta y pertinente entre atmósferas de lujo editorial, estructuralismo suave o tecnología sobria, y layouts de split editorial, bento asimétrico o cascada espacial sin solapamientos. Da a cada propuesta un concepto rector visible de principio a fin: una idea de marca que conecte paleta, escala, ritmo, recortes de imagen, navegación, catálogo, formulario y cierre. Haz que cambien de verdad en jerarquía, densidad, orden, tipografía, geometría, composición de producto y relación entre imagen y texto.",
         "Contrato de diferenciación verificable: las tres propuestas deben usar tres hero.layout distintos, las tres navigation.layout disponibles exactamente una vez cada una y tres theme.productLayout distintos. No basta cambiar color o copy. Cada dirección debe seguir siendo reconocible en escala de grises por su silueta, proporciones, orden y composición del catálogo.",
-        "Distingue logo, arte editorial y foto de producto por su función. El logo pertenece a la identidad o navegación: no lo estires, no lo recortes como fotografía y no lo uses como fondo. Sitúa cada foto de producto con su producto correcto y usa merchandising para decidir qué productos abren la colección, cuáles se destacan y en qué orden se cuentan.",
-        "Aplica este protocolo anti-genérico obligatorio: densidad visual cercana a 4/10, varianza 8/10 y movimiento 6/10; una paleta coherente de 3 a 5 colores con un acento principal de saturación menor a 80%, uno o dos tonos de apoyo y un solo sistema de radios. Al menos dos secciones posteriores a la portada deben usar fondos cromáticos distintos y algunas palabras o frases breves pueden usar color cuando el contraste siga siendo AA. El color debe responder a la marca, no repartirse al azar. Nunca uses #000000, morado o azul neón, glow exterior, degradado de texto ni mezcla de grises cálidos y fríos. La portada debe caber en el primer viewport, ser asimétrica, estar alineada a la izquierda o dividida y tener como máximo un CTA. No uses hero centrado. La navegación debe tener sticky=false para evitar una barra pegada de borde a borde. Mantén cada elemento en una zona espacial limpia, sin texto superpuesto sobre otro contenido.",
+        "Distingue logo, arte editorial y foto de producto por su función. El logo pertenece a la identidad o navegación: no lo estires, no lo recortes como fotografía y no lo uses como fondo. Sitúa cada foto de producto con su producto correcto y usa merchandising para decidir qué productos abren la colección, cuáles se destacan y en qué orden se cuentan. Reserva una imagen dominante para el hero y asigna imágenes distintas a story y gallery; solo repite cuando el inventario único se agote. Mantén un solo lenguaje de recorte y tratamiento por propuesta. Con pocos activos, simplifica o elimina la galería antes de duplicar fotografías.",
+        "Aplica este protocolo anti-genérico obligatorio: densidad visual cercana a 4/10, varianza 8/10 y movimiento tipográfico 2/10; una paleta coherente de 3 a 5 colores con un acento principal de saturación menor a 80%, uno o dos tonos de apoyo y un solo sistema de radios. Al menos dos secciones posteriores a la portada deben usar fondos cromáticos distintos y algunas palabras o frases breves pueden usar color cuando el contraste siga siendo AA. El color debe responder a la marca, no repartirse al azar. Nunca uses #000000, morado o azul neón, glow exterior, degradado de texto ni mezcla de grises cálidos y fríos. La portada debe caber en el primer viewport, ser asimétrica, estar alineada a la izquierda o dividida y tener como máximo un CTA. No uses hero centrado. La navegación debe tener sticky=false para evitar una barra pegada de borde a borde. Mantén cada elemento en una zona espacial limpia, sin texto superpuesto sobre otro contenido.",
         "La tipografía debe sentirse elegida: usa roles grotesk, humanist o geometric para una voz tipo Geist, Satoshi o Cabinet Grotesk; editorial solo cuando el rubro justifique una serif moderna tipo Instrument Serif o Editorial New. No uses una estética equivalente a Inter, Roboto, Arial, Helvetica, Times, Georgia, Garamond o Palatino. Controla el tamaño con jerarquía y peso; cuerpo mínimo 16px, interlineado relajado y líneas de máximo 65 caracteres.",
         "En páginas largas usa al menos cuatro familias de composición. Prohíbe tres tarjetas iguales, la repetición constante de texto a la izquierda e imagen a la derecha, etiquetas decorativas, números de sección, scroll cues, tiras de hora o clima e interfaz falsa hecha con rectángulos. No apiles muchas fotografías una debajo de otra ni conviertas el descenso de la página en un collage sin relato: una imagen solo entra si cumple una función clara dentro de la portada, un capítulo Story Scroll, un producto o una galería posterior acotada. Usa tarjetas solo cuando la elevación comunique jerarquía; cuando existan, deben sentirse como una pieza dentro de un marco concéntrico y no como un rectángulo con borde gris. No uses guiones largos Unicode. Cada sección debe tener una función real y una composición propia dentro del mismo mundo.",
         "Usa este sistema de calidad Impeccable como constitución, no como estilo visual: jerarquía inequívoca, contraste AA, texto corporal legible, controles táctiles de 44px, foco de teclado visible, composición responsive sin scroll horizontal, estados estables y copy que nombra una acción real. El catálogo, carrito y formulario deben sentirse parte del mismo mundo visual. Alterna escala y densidad y crea uno o dos momentos memorables, no una colección de efectos.",
-        "Usa motion como dirección artística coordinada, no decoración. Cada propuesta debe combinar cuatro momentos distintos: una portada visual en hero (slider, video o reveal según los medios), la historia story-scroll, exactamente una sección gallery con un motion propio entre reveal, clip, drift, scale o parallax, y una experience distintiva después del catálogo. Las tres propuestas deben elegir motions de gallery diferentes. El resto de las secciones debe usar none para mantener catálogo, contacto, ubicación y enlaces legibles y estables. Cada tipo distinto de none puede aparecer como máximo una vez en la misma página. Están prohibidos el layout rail en gallery, las filas de imágenes angostas que dejan ver solo tiras verticales, coverflow, carruseles en profundidad, abanicos de láminas y galerías marquee o diagonales. Todo movimiento debe poder realizarse con transform, opacity o clip-path, usar easing personalizado, respetar reduced motion y mantener catálogo y formulario estables.",
-        "Elige además una sola experience distintiva para después del catálogo y no repitas su tipo entre las tres propuestas. Reparte la variedad entre scroll-expansion, full-screen-chapters y frame-sequence cuando haya al menos dos medios; con menos medios usa tipos distintos entre layered-text, text-rotate, text-glitch, text-reveal-block y text-along-path. Las experiencias tipográficas llevan mediaIndices vacío y copy real, breve y verificable. No uses 3d-gallery, coverflow-carousel, zoom-parallax, video-pill, portfolio-scroller, image-stream, hero-gallery-scroll ni ninguna galería continua, diagonal o de láminas asomadas. Usa exactamente 2 medios en scroll-expansion y entre 2 y 5 en full-screen-chapters o frame-sequence. Su placement siempre es after-catalog.",
+        "El movimiento debe tener propósito y variar por página. Usa motion=none donde la lectura necesite calma y elige reveal, clip, drift, scale, parallax o story-scroll solo cuando refuerce la jerarquía. Evita pinning largo, zoom agresivo y escenas que bloqueen el desplazamiento; toda composición debe seguir siendo legible con movimiento reducido.",
+        `Contrato cerrado de animación: no inventes nombres, componentes, transiciones, HTML, CSS ni JavaScript de movimiento. Para motion de sección usa exclusivamente ${SITE_SECTION_MOTIONS.join(", ")}. Para experience usa exclusivamente el enum del esquema. Después de validar el documento, la plataforma elegirá de forma variada y reproducible dos o tres componentes existentes de esta biblioteca registrada: ${MOTION_EXPERIENCES.join(", ")}. El modelo no puede ampliar ni reemplazar esa biblioteca.`,
+        "Elige una sola experience tipográfica discreta para después del catálogo y no repitas su tipo entre las tres propuestas. Usa únicamente layered-text, text-rotate, text-glitch, text-reveal-block o text-along-path. La experience lleva mediaIndices=[] y copy real, breve y verificable. Su placement siempre es after-catalog.",
         "Usa full-bleed, offset, split, centered, grid, stacked, rail y minimal como herramientas libres, no como una receta. Evita una secuencia repetida de tarjetas genéricas y evita el patrón constante texto a la izquierda e imagen a la derecha.",
-        "Respeta las capacidades del renderer: hero admite split, full-bleed, centered u offset; story admite split, offset, stacked, rail o centered; catalog admite grid, stacked, offset, rail o minimal; gallery admite grid, split, offset, stacked, full-bleed o rail; contact admite split, stacked, centered o minimal; location admite split, stacked, full-bleed u offset; links admite centered, stacked, minimal o rail. Mantén story-scroll solamente en story y usa motion compatible con la función real de cada sección.",
+        "Respeta las capacidades del renderer: hero admite split, full-bleed, centered u offset; story admite split, offset, stacked, rail o centered; catalog admite grid, stacked, offset, rail o minimal; gallery admite grid, split, offset, stacked, full-bleed o rail; contact admite split, stacked, centered o minimal; location admite split, stacked, full-bleed u offset; links admite centered, stacked, minimal o rail. Usa únicamente movimientos compatibles con cada kind.",
         "Ranuras válidas por sección: hero = eyebrow, heading, body, actions, primary-media, secondary-media; story = heading, body, chapters, media-rail; catalog = heading, intro, filters, products, footer-action; gallery = heading, body, media-grid, caption; contact = heading, body, details, actions; location = heading, address, hours, map, media; links = heading, body, links. Todos los children heredan una ranura válida de su sección.",
         "Los CTA deben ser breves, específicos al rubro y conducir al catálogo o contacto. Evita emojis, nombres genéricos, porcentajes redondos falsos y clichés como Elevate, Seamless, Unleash, Next-Gen, Eleva, Revoluciona o Sin límites. Nunca inventes descuentos, envíos, certificaciones, origen, materiales, testimonios ni promesas verificables.",
         "mediaIndices y assetIndex solo pueden referenciar los índices disponibles. Usa assetIndex=-1 cuando un item no necesite medio. No incluyas URLs externas.",
         "Escribe copy borrador atractivo en español. No devuelvas HTML, CSS, JavaScript ni texto fuera del esquema estructurado.",
       ].join("\n");
 
-      const outputText = await requestStructuredOutput("store_visual_directions", AI_DIRECTIONS_SCHEMA, prompt, 14_000);
+      const outputText = await requestStructuredOutput("store_visual_directions", AI_DIRECTIONS_SCHEMA, prompt, 32_000, "high");
       const parsed = JSON.parse(outputText) as { directions?: unknown };
       const directions = this.validDirections(parsed.directions, store, assets, products);
       if (!directions) throw new BadGatewayException("OpenAI design generation returned an unsafe theme configuration");
@@ -2352,11 +3546,17 @@ export class VisualStudioService {
       const siteDocument = materializedSiteDocument
         ? enforceGeneratedNarrative(materializedSiteDocument, store, assets, products, directionIndex)
         : null;
+      if (!siteDocument) this.logger.warn(`AI direction ${directionIndex + 1} could not be materialized`);
+      else if (!passesPremiumDirectionGuardrails(siteDocument)) this.logger.warn(`AI direction ${directionIndex + 1} did not pass theme/content checks`);
       return siteDocument && passesPremiumDirectionGuardrails(siteDocument)
         ? [{ title: generatedCopy(direction.title), rationale: generatedCopy(direction.rationale), siteDocument }]
         : [];
     });
     if (materialized.length !== 3) return null;
-    return storefrontDirectionsAreDiverse(materialized.map((direction) => direction.siteDocument)) ? materialized : null;
+    // Measure diversity after the compositor assigns art direction and topology.
+    // Rejecting here prevented its bounded repair pass from ever running.
+    // generateProposals still requires the final originality and diversity gates
+    // to pass before it persists any proposal.
+    return materialized;
   }
 }

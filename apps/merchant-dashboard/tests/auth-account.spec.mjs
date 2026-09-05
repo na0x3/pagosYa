@@ -54,6 +54,46 @@ async function mockDashboardApi(page, customResponse) {
   return requests;
 }
 
+for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+  test(`remembered Appearance leaves sign-in reachable at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.addInitScript(() => localStorage.setItem("pagosya_dashboard_view", "appearance"));
+    await mockDashboardApi(page);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/is-logged-out/);
+    await expect(page.locator("body")).not.toHaveClass(/store-preview-fullscreen/);
+    await expect(page.locator(".store-preview-panel")).toBeHidden();
+    await page.locator("#loginForm").getByLabel("Correo electrónico", { exact: true }).fill("fixture@example.com");
+    await page.locator("#loginForm").getByLabel("Contraseña", { exact: true }).fill("fixture-password");
+    await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click({ trial: true });
+  });
+}
+
+test("an expired session closes fullscreen and returns to sign-in", async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("pagosya_merchant_session", "dash_test");
+    sessionStorage.setItem("pagosya_merchant_email", "fixture@example.com");
+  });
+  await mockDashboardApi(page);
+  let expired = false;
+  await page.route("http://localhost:3001/v1/stores", (route) => route.fulfill({
+    status: expired ? 401 : 200,
+    contentType: "application/json",
+    body: JSON.stringify(expired ? { message: "Tu sesión venció. Vuelve a iniciar sesión." } : [store]),
+  }));
+  await page.goto("/#dashboard-appearance");
+  await expect(page.locator("body")).toHaveClass(/store-preview-fullscreen/);
+  await expect(page.locator("#storeNameInput")).toHaveValue(store.name);
+  expired = true;
+  await page.evaluate(() => window.refresh());
+  await expect(page.locator("body")).toHaveClass(/is-logged-out/);
+  await expect(page.locator("body")).not.toHaveClass(/store-preview-fullscreen/);
+  await expect(page.locator(".store-preview-panel")).toBeHidden();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click({ trial: true });
+  await expect(page.locator("#error")).toContainText("sesión venció");
+});
+
 test("merchant can sign in with a configured Google account", async ({ page }) => {
   await page.route("https://accounts.google.com/gsi/client", (route) => route.fulfill({
     contentType: "application/javascript",

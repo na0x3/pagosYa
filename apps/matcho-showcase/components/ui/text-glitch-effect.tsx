@@ -15,7 +15,7 @@ export function TextGlitch({ text, hoverText, href, className, delay = 0 }: Text
     const heading = headingRef.current;
     if (!heading) return;
     const tween = gsap.fromTo(heading, { opacity: .7, transform: "scale(.95)" }, { opacity: 1, transform: "scale(1)", duration: .6, delay, ease: "back.out(1.7)" });
-    return () => tween.kill();
+    return () => { tween.kill(); };
   }, [delay]);
   useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
   const enter = () => {

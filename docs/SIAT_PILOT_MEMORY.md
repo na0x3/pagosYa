@@ -415,3 +415,46 @@ The portal check was completed in the fresh authorization attempt. `Registro
 de Compras` was disabled because Stage XII was already part of the process, but
 the parameterless service still returned HTTP 500. No reset or additional
 portal action remains available to correct that backend state.
+
+### Retry after SIAT reported a fix on 2026-09-02
+
+The guarded Stage XII sequence was repeated with a newly issued delegated token
+and a freshly refreshed point-0 CUFD:
+
+- `refresh-cufd 0` succeeded, confirming that the token and the general SIAT
+  code service were working.
+- `verify-purchase` still returned HTTP 500 with SOAP fault `Fault occurred
+  while processing`.
+- `query-purchases` still returned transaction false, code `-1`, `Error
+  inesperado`, with no archive.
+- `self-purchase-smoke` emitted one new self-emitter/self-receptor source
+  factura. SIAT accepted and validated it with status 908, but the immediate
+  one-document type-1 purchase reception still returned transaction false,
+  code `-1`, `Error inesperado`, without a reception code.
+
+The full 25-case batch was not started because the smoke reception was not
+accepted. Stage XII therefore remains blocked with the same payload-independent
+backend failure signature observed before SIAT reported the fix.
+
+### Corrected-period resubmission after the service restart
+
+An audit of the 2026-09-02 smoke request found that the runner still hardcoded
+`gestion=2026` and `periodo=8` from the August certification attempts. SIAT's
+published contract requires both values to correspond to the facturas inside
+the package, so the runner was corrected to derive them from the packaged
+facturas and to reject packages that mix accounting periods.
+
+The live pilot WSDL and its imported request schema were fetched again after
+the reported restart and were byte-for-byte identical to the locally audited
+copies. The already validated September self-emitter/self-receptor factura was
+then repackaged and resubmitted with `gestion=2026` and `periodo=9`, avoiding the
+creation of another source factura. The resulting GZIP passed an integrity
+check, its TAR contained the expected `F0_RegistroCompra` entry, and the XML
+validated against an XSD whose SHA-256 matched the official SIAT archive.
+
+`recepcionPaqueteCompras` still returned transaction false, code `-1`, `Error
+inesperado`, without a reception code. A subsequent parameterless
+`verificarComunicacion` still returned HTTP 500 with `Fault occurred while
+processing`, and `consultaCompras` still returned code `-1` without an archive.
+The full batch was not started because these checks prove that the restarted
+purchase service is still failing independently of the package payload.

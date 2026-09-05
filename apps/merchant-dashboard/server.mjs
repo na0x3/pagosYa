@@ -60,7 +60,7 @@ function scheduleReload() {
 
 function isDashboardSourceFile(filename) {
   const normalized = String(filename || "").split(path.sep).join("/");
-  return normalized === "index.html" || normalized.startsWith("assets/") || normalized.startsWith("fonts/");
+  return normalized === "index.html" || normalized.startsWith("assets/") || normalized.startsWith("fonts/") || normalized.startsWith("src/");
 }
 
 const server = createServer(async (req, res) => {
@@ -98,6 +98,13 @@ const server = createServer(async (req, res) => {
       const css = await readFile(path.join(dirname, "journey.css"), "utf8");
       res.writeHead(200, { "content-type": "text/css; charset=utf-8", "cache-control": liveReloadEnabled ? "no-cache" : "public, max-age=3600" });
       res.end(css);
+      return;
+    }
+    if (["/src/store-editor/state.js", "/src/store-editor/commands.js", "/src/store-editor/persistence.js", "/src/store-editor/selection.js", "/src/store-editor/bootstrap.js"].includes(requestUrl.pathname)) {
+      const filename = requestUrl.pathname.slice("/src/store-editor/".length);
+      const source = await readFile(path.join(dirname, "src", "store-editor", filename), "utf8");
+      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+      res.end(source);
       return;
     }
     if (mascotAssets.has(requestUrl.pathname)) {

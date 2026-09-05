@@ -191,9 +191,13 @@ export type SiteSectionBlockRole = (typeof SITE_SECTION_BLOCK_ROLES)[number];
 
 export interface SiteSectionBlockTextStyle {
   textScale?: number;
+  textWidthPercent?: number;
   textAlign?: "left" | "center" | "right";
   textColor?: string;
   fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
+  textOffsetX?: number;
+  textOffsetY?: number;
+  textOffsetBasis?: "element" | "section";
 }
 
 export interface SiteSectionBlock {
@@ -346,7 +350,7 @@ export const SITE_SECTION_CAPABILITIES: Readonly<Record<SiteCapabilitySectionKin
     families: SITE_SECTION_FAMILIES,
     preferredFamilies: ["cinematic", "editorial", "product-led"],
     slots: ["heading", "body", "media-grid", "caption"],
-    media: { min: 1, max: 8 },
+    media: { min: 0, max: 8 },
   },
   "event-tickets": {
     layouts: ["grid", "stacked", "split", "minimal"],
@@ -460,10 +464,10 @@ export const SITE_ART_DIRECTION_PRESETS: Readonly<Record<SiteArtDirection, SiteA
       hero: { family: "cinematic", layout: "full-bleed", width: "full", align: "left" },
       story: { family: "cinematic", layout: "stacked", width: "full", align: "left" },
       catalog: { family: "product-led", layout: "grid", width: "wide", align: "left" },
-      gallery: { family: "cinematic", layout: "full-bleed", width: "full", align: "left" },
+      gallery: { family: "cinematic", layout: "grid", width: "wide", align: "left" },
       "event-tickets": { family: "cinematic", layout: "split", width: "wide", align: "left" },
       contact: { family: "cinematic", layout: "split", width: "wide", align: "left" },
-      location: { family: "cinematic", layout: "full-bleed", width: "full", align: "left" },
+      location: { family: "cinematic", layout: "split", width: "wide", align: "left" },
       links: { family: "minimal", layout: "centered", width: "contained", align: "center" },
     },
   },

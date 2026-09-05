@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { PaymentLinkStatus } from "@prisma/client";
+import { PaymentIntentStatus, PaymentLinkStatus } from "@prisma/client";
 import { PaymentIntentsService } from "./payment-intents.service";
 
 function makeService() {
@@ -288,5 +288,58 @@ describe("PaymentIntentsService directed charge recipients", () => {
       email: "maria@gmail.com",
       phone: "+59170000000",
     });
+  });
+});
+
+describe("PaymentIntentsService callback admission", () => {
+  function callbackHarness(intent: Record<string, unknown>) {
+    const prisma = { paymentIntent: { findUnique: jest.fn().mockResolvedValue(intent) } };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    const applyRailResult = jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: intent });
+    return { service, applyRailResult };
+  }
+
+  it.each([
+    [{ amount: 4_999 }, "amount"],
+    [{ currency: "USD" }, "currency"],
+    [{ railId: "mock_qr" }, "rail"],
+  ])("rejects a callback with a mismatched %s binding before any ledger mutation", async (expectations, label) => {
+    const test = callbackHarness({
+      id: "pi_callback",
+      merchantId: "merchant_1",
+      railId: "mock_bank_transfer",
+      amount: 5_000,
+      currency: "BOB",
+      status: PaymentIntentStatus.REQUIRES_ACTION,
+    });
+
+    await expect(test.service.applyCallbackResult("pi_callback", {
+      status: "succeeded",
+      railReference: "provider_ref_1",
+      raw: {},
+    }, expectations)).rejects.toThrow(new RegExp(label as string, "i"));
+    expect(test.applyRailResult).not.toHaveBeenCalled();
+  });
+
+  it("acknowledges a replay of the same terminal callback without another transaction", async () => {
+    const intent = {
+      id: "pi_callback",
+      merchantId: "merchant_1",
+      railId: "mock_bank_transfer",
+      amount: 5_000,
+      currency: "BOB",
+      status: PaymentIntentStatus.SUCCEEDED,
+    };
+    const test = callbackHarness(intent);
+
+    await expect(test.service.applyCallbackResult("pi_callback", {
+      status: "succeeded",
+      railReference: "provider_ref_1",
+      raw: {},
+    }, { railId: "mock_bank_transfer", amount: 5_000, currency: "BOB" })).resolves.toEqual({
+      paymentIntent: intent,
+      railResult: expect.objectContaining({ status: "succeeded" }),
+    });
+    expect(test.applyRailResult).not.toHaveBeenCalled();
   });
 });

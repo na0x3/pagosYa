@@ -979,7 +979,7 @@ describe("StoresService.update — accentColor clearing", () => {
 
     expect(prisma.store.update).toHaveBeenCalledWith({
       where: { id: "store_1" },
-      data: { accentColor: null },
+      data: { accentColor: null, websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
     });
   });
 
@@ -1013,6 +1013,27 @@ describe("StoresService.update — animation media roles", () => {
 });
 
 describe("StoresService.update — authored AI site", () => {
+  it("persists an explicit generated-section deletion without treating partial edits as deletions", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: kind, body: "", ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: [], items: [],
+    });
+    const siteDocument = { version: 1, theme: {}, sections: [section("opening", "hero"), section("story", "story"), section("shop", "catalog"), section("information", "contact")] };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteDeletedSectionIds: ["story"],
+      siteSections: [{ ...section("shop", "catalog"), title: "Catálogo actualizado", heightPx: 720, mobileHeightPx: 480 }],
+    } as any);
+
+    const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.sections.map((entry: any) => entry.id)).toEqual(["opening", "shop", "information"]);
+    expect(saved.sections.find((entry: any) => entry.id === "shop").title).toBe("Catálogo actualizado");
+    expect(saved.sections.find((entry: any) => entry.id === "shop")).toMatchObject({ heightPx: 720, mobileHeightPx: 480 });
+  });
+
   it("persists editable header links and a structured footer inside the site document", async () => {
     const prisma = makeFakePrisma();
     const section = (id: string, kind: string) => ({
@@ -1029,8 +1050,22 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.update.mockResolvedValue(store);
 
     await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteNavigation: {
+        layout: "centered",
+        barStyle: "full",
+        brandPosition: "center",
+        navPosition: "right",
+        searchPosition: "left",
+        profilePosition: "right",
+        cartPosition: "left",
+        brandStyle: { textOffsetX: -32, textOffsetY: 8, textOffsetBasis: "element" },
+        taglineStyle: { textOffsetX: 6, textOffsetY: 10, textOffsetBasis: "element" },
+        sticky: true,
+        transparent: false,
+        logoTreatment: "wordmark",
+      },
       siteNavigationItems: [
-        { id: "home", label: "Inicio", target: "home" },
+        { id: "home", label: "Inicio", target: "home", style: { textOffsetX: 14, textOffsetY: -5, textOffsetBasis: "element" } },
         { id: "story-link", label: "Nuestra historia", target: "section", sectionId: "story" },
       ],
       siteFooter: {
@@ -1043,8 +1078,18 @@ describe("StoresService.update — authored AI site", () => {
     } as any);
 
     const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.navigation).toEqual(expect.objectContaining({
+      barStyle: "full",
+      brandPosition: "center",
+      navPosition: "right",
+      searchPosition: "left",
+      profilePosition: "right",
+      cartPosition: "left",
+      brandStyle: { textOffsetX: -32, textOffsetY: 8, textOffsetBasis: "element" },
+      taglineStyle: { textOffsetX: 6, textOffsetY: 10, textOffsetBasis: "element" },
+    }));
     expect(saved.navigation.items).toEqual([
-      { id: "home", label: "Inicio", target: "home" },
+      { id: "home", label: "Inicio", target: "home", style: { textOffsetX: 14, textOffsetY: -5, textOffsetBasis: "element" } },
       { id: "story-link", label: "Nuestra historia", target: "section", sectionId: "story" },
     ]);
     expect(saved.footer).toEqual(expect.objectContaining({ enabled: true, brandDescription: "Hecho en Bolivia.", copyright: "© 2026 Mi tienda" }));
@@ -1227,7 +1272,7 @@ describe("StoresService.update — board texture", () => {
 
     expect(prisma.store.update).toHaveBeenCalledWith({
       where: { id: "store_1" },
-      data: { boardTexture: "kraft" },
+      data: { boardTexture: "kraft", websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
     });
   });
 });
@@ -1310,7 +1355,7 @@ describe("StoresService.saveSettings", () => {
     );
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { name: "Renamed" } });
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { name: "Renamed", websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } } });
     expect(prisma.storeLink.createMany).toHaveBeenCalledWith({
       data: [{ storeId: "store_1", label: "Instagram", url: "https://instagram.com/x", sortOrder: 0 }],
     });

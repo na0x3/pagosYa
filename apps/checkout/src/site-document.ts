@@ -1,4 +1,24 @@
 import {
+  STORE_SITE_DENSITIES,
+  STORE_SITE_DISPLAY_SCALES,
+  STORE_SITE_EXPERIENCE_PLACEMENTS,
+  STORE_SITE_FONT_ROLES,
+  STORE_SITE_HEADER_ACTION_POSITIONS,
+  STORE_SITE_HEADER_POSITIONS,
+  STORE_SITE_IMAGE_TREATMENTS,
+  STORE_SITE_LOGO_TREATMENTS,
+  STORE_SITE_MOTION_INTENSITIES,
+  STORE_SITE_NAV_LAYOUTS,
+  STORE_SITE_PRODUCT_LAYOUTS,
+  STORE_SITE_SECTION_ALIGNS,
+  STORE_SITE_SECTION_KINDS,
+  STORE_SITE_SECTION_LAYOUTS,
+  STORE_SITE_SECTION_MOTIONS,
+  STORE_SITE_SECTION_WIDTHS,
+  STORE_SITE_SHADOW_STYLES,
+  STORE_SITE_SIGNATURE_EXPERIENCES,
+  STORE_SITE_SPOTLIGHT_LAYOUTS,
+  STORE_SITE_TEXT_EXPERIENCES,
   SITE_SECTION_BLOCK_KINDS,
   SITE_SECTION_BLOCK_ROLES,
   SITE_SECTION_FAMILIES,
@@ -7,153 +27,110 @@ import {
   resolveSiteSectionFamily,
   sanitizeSiteDesignGenome,
   siteSectionBlockSlotIsSupported,
-  type SiteDesignGenome,
-  type SiteArtDirection,
   type SiteSectionBlock,
-  type SiteSectionFamily,
+  type StoreCanvasTextStyle,
+  type StoreSiteDocument,
+  type StoreSiteFooter,
+  type StoreSiteNavigationItem,
+  type StoreSitePage,
 } from "@pagosya/shared-types";
 
-export const SITE_SECTION_KINDS = ["hero", "story", "catalog", "gallery", "event-tickets", "contact", "location", "links"] as const;
-const SITE_SECTION_LAYOUTS = ["split", "full-bleed", "centered", "offset", "grid", "stacked", "rail", "minimal"] as const;
-const SITE_SECTION_WIDTHS = ["full", "wide", "contained"] as const;
-const SITE_SECTION_ALIGNS = ["left", "center", "right"] as const;
-const SITE_SECTION_MOTIONS = ["none", "reveal", "clip", "drift", "scale", "parallax", "story-scroll"] as const;
-const SITE_FONT_ROLES = ["grotesk", "editorial", "humanist", "geometric", "classic", "mono", "artisan", "condensed", "luxury"] as const;
-const SITE_NAV_LAYOUTS = ["brand-left", "centered", "split"] as const;
-const SITE_PRODUCT_LAYOUTS = ["gallery", "editorial", "compact", "showcase"] as const;
-const SITE_SHADOWS = ["none", "soft", "lifted"] as const;
-const SITE_DISPLAY_SCALES = ["balanced", "dramatic", "monumental"] as const;
-const SITE_DENSITIES = ["airy", "balanced", "dense"] as const;
-const SITE_IMAGE_TREATMENTS = ["natural", "cinematic", "cutout", "editorial"] as const;
-const SITE_LOGO_TREATMENTS = ["mark", "wordmark", "oversized", "seal"] as const;
-const SITE_MOTION_INTENSITIES = ["restrained", "expressive", "cinematic"] as const;
-const SITE_SPOTLIGHT_LAYOUTS = ["feature-first", "alternating", "lookbook", "collection"] as const;
-const SITE_SIGNATURE_EXPERIENCES = [
-  "none", "scroll-expansion", "hero-gallery-scroll", "image-stream", "full-screen-chapters", "frame-sequence",
-  "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
-] as const;
-const SITE_EXPERIENCE_PLACEMENTS = ["after-hero", "after-story", "after-catalog"] as const;
+export const SITE_SECTION_KINDS = STORE_SITE_SECTION_KINDS;
+const SITE_SECTION_LAYOUTS = STORE_SITE_SECTION_LAYOUTS;
+const SITE_SECTION_WIDTHS = STORE_SITE_SECTION_WIDTHS;
+const SITE_SECTION_ALIGNS = STORE_SITE_SECTION_ALIGNS;
+const SITE_SECTION_MOTIONS = STORE_SITE_SECTION_MOTIONS;
+const SITE_FONT_ROLES = STORE_SITE_FONT_ROLES;
+const SITE_HEADER_ACTION_POSITIONS = STORE_SITE_HEADER_ACTION_POSITIONS;
+const SITE_HEADER_POSITIONS = STORE_SITE_HEADER_POSITIONS;
+const SITE_NAV_LAYOUTS = STORE_SITE_NAV_LAYOUTS;
+const SITE_PRODUCT_LAYOUTS = STORE_SITE_PRODUCT_LAYOUTS;
+const SITE_SHADOWS = STORE_SITE_SHADOW_STYLES;
+const SITE_DISPLAY_SCALES = STORE_SITE_DISPLAY_SCALES;
+const SITE_DENSITIES = STORE_SITE_DENSITIES;
+const SITE_IMAGE_TREATMENTS = STORE_SITE_IMAGE_TREATMENTS;
+const SITE_LOGO_TREATMENTS = STORE_SITE_LOGO_TREATMENTS;
+const SITE_MOTION_INTENSITIES = STORE_SITE_MOTION_INTENSITIES;
+const SITE_SPOTLIGHT_LAYOUTS = STORE_SITE_SPOTLIGHT_LAYOUTS;
+const SITE_SIGNATURE_EXPERIENCES = STORE_SITE_SIGNATURE_EXPERIENCES;
+const SITE_TEXT_EXPERIENCES = new Set<string>(STORE_SITE_TEXT_EXPERIENCES);
+const SITE_EXPERIENCE_PLACEMENTS = STORE_SITE_EXPERIENCE_PLACEMENTS;
 
-type ValueOf<T extends readonly string[]> = T[number];
+export type {
+  StoreCanvasTextStyle,
+  StoreSiteDocument,
+  StoreSiteFooter,
+  StoreSiteFooterItem,
+  StoreSiteNavigationItem,
+  StoreSitePage,
+} from "@pagosya/shared-types";
 
-export interface StoreCanvasTextStyle {
-  textScale?: number;
-  textAlign?: "left" | "center" | "right";
-  textColor?: string;
-  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
-}
+const LEGACY_CONTENT_SECTION_KIND = {
+  hero: "hero",
+  products: "catalog",
+  about: "story",
+  gallery: "gallery",
+  contact: "contact",
+  location: "location",
+  links: "links",
+} as const;
 
-export interface StoreSiteNavigationItem {
-  id: string;
-  label: string;
-  target: "home" | "catalog" | "section" | "page";
-  sectionId?: string;
-  pageId?: string;
-}
-
-export interface StoreSitePage {
-  id: string;
-  label: string;
-  slug: string;
-}
-
-export interface StoreSiteFooterItem {
-  id: string;
-  label: string;
-  href: string;
-}
-
-export interface StoreSiteFooter {
-  enabled: boolean;
-  brandDescription: string;
-  columns: Array<{
-    id: string;
-    title: string;
-    items: StoreSiteFooterItem[];
-  }>;
-  copyright: string;
-  badge: string;
-  newsletter?: {
-    enabled: boolean;
-    title: string;
-    body: string;
-    buttonLabel: string;
-    successMessage: string;
+/**
+ * Resolve both historical (`hero`, `products`, ...) and current (`site-*`)
+ * content-order entries onto the structured site document. The dashboard
+ * performs the same migration for its editable preview; Checkout must do it
+ * too so a newly applied AI proposal cannot reorder itself when it becomes
+ * the public storefront.
+ */
+export function normalizeStorefrontSiteContentOrder(
+  value: unknown,
+  sections: StoreSiteDocument["sections"],
+  animationSectionKeys: readonly string[],
+  options: {
+    signatureSectionKey?: string | null;
+    signaturePlacement?: (typeof STORE_SITE_EXPERIENCE_PLACEMENTS)[number] | null;
+  } = {},
+): string[] {
+  const siteSectionKeys = sections.map((section) => `site-${section.id}`);
+  const allowedSiteSections = new Set(siteSectionKeys);
+  const allowedAnimations = new Set(animationSectionKeys);
+  const result: string[] = [];
+  const append = (section: string) => {
+    if (!result.includes(section)) result.push(section);
   };
-}
+  const requested = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+  const signatureWasExplicit = !!options.signatureSectionKey && requested.includes(options.signatureSectionKey);
 
-export interface StoreSiteDocument {
-  version: 1;
-  direction: string;
-  artDirection?: SiteArtDirection;
-  designGenome: SiteDesignGenome;
-  theme: {
-    pageBackground: string;
-    textColor: string;
-    accentColor: string;
-    secondaryColor: string;
-    surfaceColor: string;
-    mutedColor: string;
-    borderColor: string;
-    headingFont: ValueOf<typeof SITE_FONT_ROLES>;
-    bodyFont: ValueOf<typeof SITE_FONT_ROLES>;
-    radius: number;
-    shadow: ValueOf<typeof SITE_SHADOWS>;
-    productLayout: ValueOf<typeof SITE_PRODUCT_LAYOUTS>;
-    displayScale: ValueOf<typeof SITE_DISPLAY_SCALES>;
-    density: ValueOf<typeof SITE_DENSITIES>;
-    imageTreatment: ValueOf<typeof SITE_IMAGE_TREATMENTS>;
-  };
-  navigation: {
-    layout: ValueOf<typeof SITE_NAV_LAYOUTS>;
-    sticky: boolean;
-    transparent: boolean;
-    logoTreatment: ValueOf<typeof SITE_LOGO_TREATMENTS>;
-    items?: StoreSiteNavigationItem[];
-  };
-  pages?: StoreSitePage[];
-  footer?: StoreSiteFooter;
-  motion: { intensity: ValueOf<typeof SITE_MOTION_INTENSITIES> };
-  merchandising: {
-    featuredProductIds: string[];
-    productOrderIds: string[];
-    spotlightLayout: ValueOf<typeof SITE_SPOTLIGHT_LAYOUTS>;
-    showDescriptions: boolean;
-  };
-  experience: {
-    type: ValueOf<typeof SITE_SIGNATURE_EXPERIENCES>;
-    placement: ValueOf<typeof SITE_EXPERIENCE_PLACEMENTS>;
-    title: string;
-    body: string;
-    mediaUrls: string[];
-  };
-  sections: Array<{
-    id: string;
-    pageId?: string;
-    kind: ValueOf<typeof SITE_SECTION_KINDS>;
-    family?: SiteSectionFamily;
-    layout: ValueOf<typeof SITE_SECTION_LAYOUTS>;
-    width: ValueOf<typeof SITE_SECTION_WIDTHS>;
-    align: ValueOf<typeof SITE_SECTION_ALIGNS>;
-    motion: ValueOf<typeof SITE_SECTION_MOTIONS>;
-    title: string;
-    body: string;
-    ctaLabel: string;
-    eventId?: string;
-    backgroundColor: string;
-    textColor: string;
-    titleStyle?: StoreCanvasTextStyle;
-    bodyStyle?: StoreCanvasTextStyle;
-    mediaUrls: string[];
-    items: Array<{
-      title: string;
-      body: string;
-      mediaUrl: string | null;
-      titleStyle?: StoreCanvasTextStyle;
-      bodyStyle?: StoreCanvasTextStyle;
-    }>;
-    blocks?: SiteSectionBlock[];
-  }>;
+  requested.forEach((entry) => {
+    if (allowedSiteSections.has(entry) || allowedAnimations.has(entry)) {
+      append(entry);
+      return;
+    }
+    const kind = LEGACY_CONTENT_SECTION_KIND[entry as keyof typeof LEGACY_CONTENT_SECTION_KIND];
+    if (kind) sections.filter((section) => section.kind === kind).forEach((section) => append(`site-${section.id}`));
+  });
+
+  siteSectionKeys.forEach(append);
+
+  const missingAnimations = animationSectionKeys.filter((section) => !result.includes(section) && section !== options.signatureSectionKey);
+  if (missingAnimations.length) {
+    const linksKey = sections.find((section) => section.kind === "links");
+    const linksIndex = linksKey ? result.indexOf(`site-${linksKey.id}`) : -1;
+    result.splice(linksIndex < 0 ? result.length : linksIndex, 0, ...missingAnimations);
+  }
+
+  if (options.signatureSectionKey && allowedAnimations.has(options.signatureSectionKey) && !signatureWasExplicit) {
+    const placementKind = options.signaturePlacement === "after-hero"
+      ? "hero"
+      : options.signaturePlacement === "after-story"
+        ? "story"
+        : "catalog";
+    const placementSection = sections.find((section) => section.kind === placementKind);
+    const placementIndex = placementSection ? result.indexOf(`site-${placementSection.id}`) : -1;
+    result.splice(placementIndex < 0 ? result.length : placementIndex + 1, 0, options.signatureSectionKey);
+  }
+
+  return result;
 }
 
 function enumValue<T extends readonly string[]>(value: unknown, values: T): value is T[number] {
@@ -213,12 +190,21 @@ function sanitizeNavigationItems(value: unknown, sectionIds: Set<string>, pageId
     const label = text(source.label, 40);
     if (!/^[a-z][a-z0-9-]*$/.test(id) || ids.has(id) || !label || !["home", "catalog", "section", "page"].includes(String(source.target))) return [];
     const target = source.target as StoreSiteNavigationItem["target"];
-    const sectionId = text(source.sectionId, 48);
+    const storedSectionId = text(source.sectionId, 48);
+    const inferredSectionId = id.startsWith("section-") ? id.slice("section-".length) : "";
+    const sectionId = inferredSectionId && sectionIds.has(inferredSectionId) ? inferredSectionId : storedSectionId;
     const pageId = text(source.pageId, 48);
     if (target === "section" && !sectionIds.has(sectionId)) return [];
     if (target === "page" && !pageIds.has(pageId)) return [];
     ids.add(id);
-    return [{ id, label, target, ...(target === "section" ? { sectionId } : {}), ...(target === "page" ? { pageId } : {}) }];
+    return [{
+      id,
+      label,
+      target,
+      ...(target === "section" ? { sectionId } : {}),
+      ...(target === "page" ? { pageId } : {}),
+      ...(canvasTextStyle(source.style) ? { style: canvasTextStyle(source.style) } : {}),
+    }];
   });
   return items.length ? items : undefined;
 }
@@ -272,11 +258,21 @@ function canvasTextStyle(value: unknown): StoreCanvasTextStyle | undefined {
   const source = value as Record<string, unknown>;
   const style: StoreCanvasTextStyle = {};
   if (Number.isInteger(source.textScale) && Number(source.textScale) >= 50 && Number(source.textScale) <= 200) style.textScale = Number(source.textScale);
+  if (Number.isInteger(source.textWidthPercent) && Number(source.textWidthPercent) >= 20 && Number(source.textWidthPercent) <= 100) style.textWidthPercent = Number(source.textWidthPercent);
   if (["left", "center", "right"].includes(String(source.textAlign))) style.textAlign = source.textAlign as StoreCanvasTextStyle["textAlign"];
   const textColor = color(source.textColor);
   if (textColor) style.textColor = textColor;
   if (["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(String(source.fontStyle))) style.fontStyle = source.fontStyle as StoreCanvasTextStyle["fontStyle"];
+  if (Number.isInteger(source.textOffsetX) && Number(source.textOffsetX) >= -1000 && Number(source.textOffsetX) <= 1000) style.textOffsetX = Number(source.textOffsetX);
+  if (Number.isInteger(source.textOffsetY) && Number(source.textOffsetY) >= -1000 && Number(source.textOffsetY) <= 1000) style.textOffsetY = Number(source.textOffsetY);
+  if (source.textOffsetBasis === "element" || source.textOffsetBasis === "section") style.textOffsetBasis = source.textOffsetBasis;
   return Object.keys(style).length ? style : undefined;
+}
+
+function sectionHeight(value: unknown): number | undefined {
+  return Number.isInteger(value) && Number(value) >= 180 && Number(value) <= 1800
+    ? Number(value)
+    : undefined;
 }
 
 function sanitizeSectionBlocks(
@@ -332,10 +328,25 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
   const designGenome = sanitizeSiteDesignGenome(source.designGenome);
   const pages = sanitizePages(source.pages);
   const pageIds = new Set((pages ?? []).map((page) => page.id));
+  const collectionIds = new Set<string>();
+  const collections = Array.isArray(merchandising?.collections)
+    ? merchandising.collections.slice(0, 12).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
+        const collection = candidate as Record<string, unknown>;
+        const id = text(collection.id, 48);
+        const name = text(collection.name, 60);
+        if (!/^[a-z][a-z0-9-]*$/.test(id) || collectionIds.has(id) || !name) return [];
+        collectionIds.add(id);
+        const productIds = Array.isArray(collection.productIds)
+          ? [...new Set(collection.productIds.flatMap((productId) => typeof productId === "string" && /^[a-z0-9_-]{1,200}$/i.test(productId) ? [productId] : []))].slice(0, 200)
+          : [];
+        return [{ id, name, productIds }];
+      })
+    : [];
 
   const ids = new Set<string>();
   const sections: StoreSiteDocument["sections"] = [];
-  for (const entry of source.sections.slice(0, 10)) {
+  for (const entry of source.sections.slice(0, 16)) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
     const section = entry as Record<string, unknown>;
     // Benefits was a generic platform explainer that appeared in every early
@@ -354,10 +365,17 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
     const normalizedSection = {
       id,
       ...(pageIds.has(text(section.pageId, 48)) ? { pageId: text(section.pageId, 48) } : {}),
+      ...(section.kind === "catalog" && Array.isArray(section.productIds) ? {
+        productIds: [...new Set(section.productIds.flatMap((productId) =>
+          typeof productId === "string" && /^[a-z0-9_-]{1,200}$/i.test(productId) ? [productId] : [],
+        ))].slice(0, 200),
+      } : {}),
       kind: section.kind,
       family: resolveSiteSectionFamily(section.kind, section.family, designGenome),
       layout: section.layout,
       width: section.width,
+      ...(sectionHeight(section.heightPx) ? { heightPx: sectionHeight(section.heightPx) } : {}),
+      ...(sectionHeight(section.mobileHeightPx) ? { mobileHeightPx: sectionHeight(section.mobileHeightPx) } : {}),
       align: section.align,
       motion: sectionMotion,
       title: text(section.title, 120),
@@ -388,7 +406,9 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
     sections.push({ ...normalizedSection, blocks });
   }
   if (sections.length < 3) return null;
-  if (!["hero", "catalog", "contact"].every((kind) => sections.filter((section) => section.kind === kind).length === 1)) return null;
+  if (sections.filter((section) => section.kind === "hero" && !section.pageId).length !== 1) return null;
+  if (sections.filter((section) => section.kind === "catalog" && !section.pageId).length !== 1) return null;
+  if (sections.filter((section) => section.kind === "contact").length !== 1) return null;
   const sectionIds = new Set(sections.map((section) => section.id));
   const navigationItems = sanitizeNavigationItems(navigation.items, sectionIds, pageIds);
   const footer = sanitizeFooter(source.footer);
@@ -416,6 +436,18 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
     },
     navigation: {
       layout: navigation.layout,
+      barStyle: "full",
+      brandPosition: enumValue(navigation.brandPosition, SITE_HEADER_POSITIONS)
+        ? navigation.brandPosition
+        : navigation.layout === "centered" ? "center" : "left",
+      navPosition: enumValue(navigation.navPosition, SITE_HEADER_POSITIONS)
+        ? navigation.navPosition
+        : navigation.layout === "split" ? "left" : "center",
+      searchPosition: enumValue(navigation.searchPosition, SITE_HEADER_ACTION_POSITIONS) ? navigation.searchPosition : "right",
+      profilePosition: enumValue(navigation.profilePosition, SITE_HEADER_ACTION_POSITIONS) ? navigation.profilePosition : "right",
+      cartPosition: enumValue(navigation.cartPosition, SITE_HEADER_ACTION_POSITIONS) ? navigation.cartPosition : "right",
+      ...(canvasTextStyle(navigation.brandStyle) ? { brandStyle: canvasTextStyle(navigation.brandStyle) } : {}),
+      ...(canvasTextStyle(navigation.taglineStyle) ? { taglineStyle: canvasTextStyle(navigation.taglineStyle) } : {}),
       sticky: navigation.sticky,
       transparent: navigation.transparent,
       logoTreatment: enumValue(navigation.logoTreatment, SITE_LOGO_TREATMENTS) ? navigation.logoTreatment : "wordmark",
@@ -433,15 +465,17 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
         : [],
       spotlightLayout: merchandising && enumValue(merchandising.spotlightLayout, SITE_SPOTLIGHT_LAYOUTS) ? merchandising.spotlightLayout : "collection",
       showDescriptions: merchandising?.showDescriptions !== false,
+      collectionMenuStyle: merchandising?.collectionMenuStyle === "editorial-sidebar" ? "editorial-sidebar" : "tabs",
+      collections,
     },
     experience: {
-      type: experience?.type === "coverflow-carousel"
-        ? "none"
-        : experience && enumValue(experience.type, SITE_SIGNATURE_EXPERIENCES) ? experience.type : "none",
+      type: experience && enumValue(experience.type, SITE_SIGNATURE_EXPERIENCES) && SITE_TEXT_EXPERIENCES.has(experience.type)
+        ? experience.type
+        : "none",
       placement: experience && enumValue(experience.placement, SITE_EXPERIENCE_PLACEMENTS) ? experience.placement : "after-catalog",
       title: text(experience?.title, 100),
       body: text(experience?.body, 320),
-      mediaUrls: experience && Array.isArray(experience.mediaUrls)
+      mediaUrls: experience && SITE_TEXT_EXPERIENCES.has(String(experience.type)) && Array.isArray(experience.mediaUrls)
         ? [...new Set(experience.mediaUrls.map(mediaUrl).filter((url): url is string => Boolean(url)))].slice(0, 8)
         : [],
     },

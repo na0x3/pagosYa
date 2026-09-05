@@ -1,11 +1,14 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, IsInt, Min } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
 import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "./create-store.dto";
 import { SITE_ART_DIRECTIONS } from "@pagosya/shared-types";
 
 export class GenerateVisualProposalsDto {
+  @ApiPropertyOptional()
+  @IsOptional() @IsInt() @Min(0)
+  revision?: number;
   @ApiPropertyOptional({ description: "Merchant-owned creative recipe to materialize against this store's own content." })
   @IsOptional()
   @IsString()

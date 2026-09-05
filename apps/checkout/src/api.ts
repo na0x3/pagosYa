@@ -62,6 +62,7 @@ export interface StoreItem {
   imageUrls: string[];
   imagePositions?: string[];
   tags: string[];
+  recommendedProductIds: string[];
   // null = unlimited/not tracked, 0 = genuinely sold out.
   stock: number | null;
   // Cart enforcement ceiling. This remains available when exact inventory is
@@ -111,6 +112,9 @@ export const STORE_MOTION_EXPERIENCES = [
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
   "full-screen-chapters", "magnetic-target", "frame-sequence",
+  "video-background",
+  "draggable-cards", "perspective-carousel", "link-preview", "video-pin-reveal",
+  "gallery-accordion", "split-scroll", "sticky-gallery", "sticky-story", "text-parallax",
 ] as const;
 export type StoreMotionExperience = (typeof STORE_MOTION_EXPERIENCES)[number];
 export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "location" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}` | `site-${string}`;
@@ -148,6 +152,7 @@ export interface StoreAnimation {
   id: string;
   name: string;
   type: StoreMotionExperience;
+  pageId?: string;
   title?: string;
   subtitle?: string;
   productId?: string;
@@ -326,7 +331,9 @@ export function assetUrl(path: string | null): string | null {
 
 export async function fetchStore(slug: string, options: { preview?: boolean } = {}): Promise<Store> {
   const previewQuery = options.preview ? "?preview=1" : "";
-  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/store${previewQuery}`);
+  // A storefront is merchant-authored live data. Never reuse an earlier GET
+  // after the merchant saves and then opens or reloads the public link.
+  const response = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/store${previewQuery}`, { cache: "no-store" });
   return parseOrThrow<Store>(response);
 }
 

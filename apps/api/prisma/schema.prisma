@@ -1505,6 +1505,10 @@ enum CustomDomainStatus {
 // path, just without requiring a merchant backend to call anything.
 model Store {
   id                           String                           @id @default(cuid())
+  // Private editor state. Public readers continue to use the Store columns.
+  websiteDraft                 Json?
+  websiteRevision              Int                              @default(0)
+  websitePublishedRevision     Int                              @default(0)
   merchantId                   String
   merchant                     Merchant                         @relation(fields: [merchantId], references: [id])
   slug                         String                           @unique
@@ -1903,6 +1907,7 @@ model StoreVisualProposal {
   provider        String
   status          VisualProposalStatus @default(READY)
   config          Json
+  baseWebsiteRevision Int?
   sourceAssetUrls Json                 @default("[]")
   generatedUrls   Json                 @default("[]")
   appliedAt       DateTime?
@@ -2042,6 +2047,10 @@ model PaymentLink {
   // Free-form small labels the merchant types, e.g. "Nuevo", "Agotado" —
   // rendered as pill badges on the storefront. Not a controlled vocabulary.
   tags               String[]          @default([])
+  // Ordered product ids chosen by the merchant for the recommendation shelf
+  // on this product's detail page. The service validates that every id belongs
+  // to the same store and never allows the product to recommend itself.
+  recommendedProductIds String[]        @default([])
   // Remaining units, null = not tracked (unlimited, today's behavior for
   // every existing product). When set, the storefront caps cart quantity to
   // it and cart-checkout/payment success enforce it server-side.

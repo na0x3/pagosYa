@@ -11,9 +11,10 @@ import { CustomDomainsService } from "./custom-domains.service";
 import { PromoCodesController } from "../promo-codes/promo-codes.controller";
 import { PromoCodesService } from "../promo-codes/promo-codes.service";
 import { StoreAgentService } from "./store-agent.service";
+import { PaymentLinksModule } from "../payment-links/payment-links.module";
 
 @Module({
-  imports: [PaymentIntentsModule, DashboardModule, AuthModule, UploadsModule],
+  imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule],
   controllers: [StoresController, StoresPublicController, PromoCodesController],
   providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService],
   exports: [StoresService],

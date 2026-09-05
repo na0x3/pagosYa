@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { EventStatus, MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
@@ -19,6 +19,8 @@ import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
+import { SaveWebsiteDraftDto } from "./dto/save-website-draft.dto";
+import { assertWebsiteRevision, saveWebsiteDraftPatch, websiteDraft, websiteEditorStore, websiteUpdateData, WebsiteDraft } from "./website-draft";
 import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
@@ -81,6 +83,7 @@ type StoreAnimation = {
   id: string;
   name: string;
   type: string;
+  pageId?: string;
   title?: string;
   subtitle?: string;
   productId?: string;
@@ -382,7 +385,9 @@ function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
 }
 
 function animationMediaLimit(type: string): number {
-  return type === "scroll-expansion" ? 2 : 8;
+  return ["circle-reveal", "magnetic-target", "video-background", "link-preview", "video-pin-reveal"].includes(type)
+    ? 1
+    : type === "scroll-expansion" ? 2 : 8;
 }
 
 function readStoreAnimationTextBlocks(value: unknown): StoreAnimationTextBlock[] {
@@ -425,6 +430,16 @@ const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "full-screen-chapters": "Capítulos a pantalla completa",
   "magnetic-target": "Llamado magnético",
   "frame-sequence": "Secuencia por fotogramas",
+  "video-background": "Video de fondo",
+  "draggable-cards": "Tarjetas arrastrables",
+  "perspective-carousel": "Carrusel con perspectiva",
+  "link-preview": "Vista previa de enlace",
+  "video-pin-reveal": "Video revelado",
+  "gallery-accordion": "Galería acordeón",
+  "split-scroll": "Relato dividido",
+  "sticky-gallery": "Galería fija",
+  "sticky-story": "Historia fija",
+  "text-parallax": "Texto en paralaje",
 };
 
 function readStoreAnimations(
@@ -451,6 +466,7 @@ function readStoreAnimations(
           id: entry.id as string,
           name: (entry.name as string).slice(0, 60),
           type: entry.type as string,
+          ...(typeof entry.pageId === "string" && /^[a-z][a-z0-9-]{0,47}$/.test(entry.pageId) ? { pageId: entry.pageId } : {}),
           ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
           ...(typeof entry.subtitle === "string" && entry.subtitle ? { subtitle: entry.subtitle } : {}),
           ...(typeof entry.productId === "string" && entry.productId ? { productId: entry.productId.slice(0, 80) } : {}),
@@ -523,9 +539,13 @@ function synchronizedSiteDocument(
   const backgrounds = dto.sectionBackgrounds ?? {};
   const canvasTextStyle = (style: Record<string, unknown> | undefined) => style ? {
     ...(Number.isInteger(style.textScale) ? { textScale: style.textScale } : {}),
+    ...(Number.isInteger(style.textWidthPercent) ? { textWidthPercent: Math.min(100, Math.max(20, Number(style.textWidthPercent))) } : {}),
     ...(["left", "center", "right"].includes(String(style.textAlign)) ? { textAlign: style.textAlign } : {}),
     ...(typeof style.textColor === "string" ? { textColor: style.textColor.toLowerCase() } : {}),
     ...(typeof style.fontStyle === "string" ? { fontStyle: style.fontStyle } : {}),
+    ...(Number.isInteger(style.textOffsetX) ? { textOffsetX: Math.min(1000, Math.max(-1000, Number(style.textOffsetX))) } : {}),
+    ...(Number.isInteger(style.textOffsetY) ? { textOffsetY: Math.min(1000, Math.max(-1000, Number(style.textOffsetY))) } : {}),
+    ...(["element", "section"].includes(String(style.textOffsetBasis)) ? { textOffsetBasis: style.textOffsetBasis } : {}),
   } : undefined;
   const normalizedBlocks = (blocks: unknown, sectionKind: string) => {
     if (!Array.isArray(blocks)) return undefined;
@@ -550,14 +570,28 @@ function synchronizedSiteDocument(
   };
   const backgroundKey: Record<string, string> = { hero: "hero", story: "about", catalog: "products", gallery: "gallery", contact: "contact", location: "location", links: "links" };
   const projectedLegacyKinds = new Set<string>();
-  document.sections = document.sections.filter((entry: unknown) => !(entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).kind === "benefits")).map((entry: unknown) => {
+  const deletedSectionIds = new Set(dto.siteDeletedSectionIds ?? []);
+  const requiredSiteSectionIds = new Set(["hero", "catalog", "contact"].flatMap((kind) => {
+    const section = document.sections.find((entry: unknown) => {
+      if (!(entry && typeof entry === "object" && !Array.isArray(entry))) return false;
+      const candidate = entry as Record<string, unknown>;
+      return candidate.kind === kind && !candidate.pageId;
+    }) as Record<string, unknown> | undefined;
+    return typeof section?.id === "string" ? [section.id] : [];
+  }));
+  document.sections = document.sections.filter((entry: unknown) => {
+    if (!(entry && typeof entry === "object" && !Array.isArray(entry))) return false;
+    const candidate = entry as Record<string, unknown>;
+    if (candidate.kind === "benefits") return false;
+    return requiredSiteSectionIds.has(String(candidate.id || "")) || !deletedSectionIds.has(String(candidate.id || ""));
+  }).map((entry: unknown) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
     const section = { ...(entry as Record<string, any>) };
     if (["hero", "story", "catalog", "gallery", "event-tickets", "contact", "location", "links"].includes(section.kind)) {
       section.family = resolveSiteSectionFamily(section.kind, section.family, document.designGenome);
     }
-    const projectLegacy = !projectedLegacyKinds.has(section.kind);
-    projectedLegacyKinds.add(section.kind);
+    const projectLegacy = !section.pageId && !projectedLegacyKinds.has(section.kind);
+    if (!section.pageId) projectedLegacyKinds.add(section.kind);
     const setText = (field: "title" | "body", candidate: unknown) => {
       if (candidate === null || typeof candidate === "string") section[field] = candidate || "";
     };
@@ -593,12 +627,17 @@ function synchronizedSiteDocument(
       if (authored.pageId && !pageIds.has(authored.pageId)) throw new BadRequestException("Una sección apunta a una página que no existe");
       if (authored.pageId) section.pageId = authored.pageId;
       else delete section.pageId;
+      if (section.kind === "catalog") section.productIds = [...new Set(authored.productIds || [])].slice(0, 200);
       section.title = authored.title;
       section.family = resolveSiteSectionFamily(section.kind, authored.family ?? section.family, document.designGenome);
       section.body = authored.body;
       section.ctaLabel = authored.ctaLabel;
       section.layout = authored.layout;
       section.width = authored.width;
+      if (authored.heightPx !== undefined) section.heightPx = authored.heightPx;
+      else delete section.heightPx;
+      if (authored.mobileHeightPx !== undefined) section.mobileHeightPx = authored.mobileHeightPx;
+      else delete section.mobileHeightPx;
       section.align = authored.align;
       section.motion = authored.motion;
       section.backgroundColor = authored.backgroundColor.toLowerCase();
@@ -637,12 +676,13 @@ function synchronizedSiteDocument(
   const existingSectionIds = new Set(document.sections.map((section: Record<string, unknown>) => section.id));
   const singletonKinds = new Set(["contact", "location", "links"]);
   for (const authored of dto.siteSections ?? []) {
-    if (existingSectionIds.has(authored.id) || ["hero", "catalog"].includes(authored.kind)) continue;
+    if (existingSectionIds.has(authored.id) || authored.kind === "hero") continue;
     if (singletonKinds.has(authored.kind) && document.sections.some((section: Record<string, unknown>) => section.kind === authored.kind)) continue;
     if (authored.pageId && !pageIds.has(authored.pageId)) throw new BadRequestException("Una sección apunta a una página que no existe");
     document.sections.push({
       id: authored.id,
       ...(authored.pageId ? { pageId: authored.pageId } : {}),
+      ...(authored.kind === "catalog" ? { productIds: [...new Set(authored.productIds || [])].slice(0, 200) } : {}),
       kind: authored.kind,
       family: resolveSiteSectionFamily(authored.kind as any, authored.family, document.designGenome),
       title: authored.title,
@@ -650,6 +690,8 @@ function synchronizedSiteDocument(
       ctaLabel: authored.ctaLabel,
       layout: authored.layout,
       width: authored.width,
+      ...(authored.heightPx !== undefined ? { heightPx: authored.heightPx } : {}),
+      ...(authored.mobileHeightPx !== undefined ? { mobileHeightPx: authored.mobileHeightPx } : {}),
       align: authored.align,
       motion: authored.motion,
       backgroundColor: authored.backgroundColor.toLowerCase(),
@@ -674,6 +716,18 @@ function synchronizedSiteDocument(
       : null;
     if (!navigation) throw new BadRequestException("La navegación del sitio no es válida");
     navigation.layout = dto.siteNavigation.layout;
+    navigation.barStyle = dto.siteNavigation.barStyle || "floating";
+    navigation.brandPosition = dto.siteNavigation.brandPosition || (dto.siteNavigation.layout === "centered" ? "center" : "left");
+    navigation.navPosition = dto.siteNavigation.navPosition || (dto.siteNavigation.layout === "split" ? "left" : "center");
+    navigation.searchPosition = dto.siteNavigation.searchPosition || "right";
+    navigation.profilePosition = dto.siteNavigation.profilePosition || "right";
+    navigation.cartPosition = dto.siteNavigation.cartPosition || "right";
+    const brandStyle = canvasTextStyle(dto.siteNavigation.brandStyle as Record<string, unknown> | undefined);
+    const taglineStyle = canvasTextStyle(dto.siteNavigation.taglineStyle as Record<string, unknown> | undefined);
+    if (brandStyle) navigation.brandStyle = brandStyle;
+    else delete navigation.brandStyle;
+    if (taglineStyle) navigation.taglineStyle = taglineStyle;
+    else delete navigation.taglineStyle;
     navigation.sticky = dto.siteNavigation.sticky;
     navigation.transparent = dto.siteNavigation.transparent;
     navigation.logoTreatment = dto.siteNavigation.logoTreatment;
@@ -697,6 +751,7 @@ function synchronizedSiteDocument(
       target: item.target,
       ...(item.target === "section" ? { sectionId: item.sectionId } : {}),
       ...(item.target === "page" ? { pageId: item.pageId } : {}),
+      ...(canvasTextStyle(item.style as Record<string, unknown> | undefined) ? { style: canvasTextStyle(item.style as Record<string, unknown>) } : {}),
     }));
   }
   if (dto.siteFooter !== undefined) {
@@ -718,6 +773,18 @@ function synchronizedSiteDocument(
         successMessage: dto.siteFooter.newsletter.successMessage.trim(),
       } } : {}),
     };
+  }
+  if (dto.siteCatalogMenuStyle !== undefined || dto.siteCatalogCollections !== undefined) {
+    const merchandising = document.merchandising && typeof document.merchandising === "object" && !Array.isArray(document.merchandising)
+      ? document.merchandising as Record<string, unknown>
+      : {};
+    if (dto.siteCatalogMenuStyle !== undefined) merchandising.collectionMenuStyle = dto.siteCatalogMenuStyle;
+    if (dto.siteCatalogCollections !== undefined) merchandising.collections = dto.siteCatalogCollections.map((collection) => ({
+      id: collection.id,
+      name: collection.name.trim(),
+      productIds: [...new Set(collection.productIds)],
+    }));
+    document.merchandising = merchandising;
   }
   return document as Prisma.InputJsonValue;
 }
@@ -788,7 +855,7 @@ function storeUpdateData(
       animations: normalizedAnimations as unknown as Prisma.InputJsonValue,
       motionDuoEnabled: normalizedAnimations.length > 0,
       motionExperiences: [...new Set(normalizedAnimations.map((animation) => animation.type))] as unknown as Prisma.InputJsonValue,
-      motionExperience: normalizedAnimations[0]?.type ?? "hero-carousel",
+      motionExperience: normalizedAnimations[0]?.type ?? "clarity-marquee",
     }),
     ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
     ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
@@ -993,7 +1060,7 @@ export class StoresService implements OnModuleDestroy {
             animations: animations as unknown as Prisma.InputJsonValue,
             motionDuoEnabled: animations.length > 0,
             motionExperiences: [...new Set(animations.map((animation: StoreAnimationDto | StoreAnimation) => animation.type))] as unknown as Prisma.InputJsonValue,
-            motionExperience: animations[0]?.type ?? "hero-carousel",
+            motionExperience: animations[0]?.type ?? "clarity-marquee",
             ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
             buttonVariant: dto.buttonVariant,
             buttonMotion: dto.buttonMotion,
@@ -1040,14 +1107,14 @@ export class StoresService implements OnModuleDestroy {
     if (dto.locations !== undefined) {
       assertValidStoreLocations(dto.locations);
       return this.prisma.$transaction(async (tx) => {
-        const updated = await tx.store.update({ where: { id }, data: storeUpdateData(dto, store.siteDocument, store) });
+        const updated = await tx.store.update({ where: { id }, data: { ...storeUpdateData(dto, store.siteDocument, store), websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } } });
         await this.syncLocationInventory(tx, id, dto.locations!);
         return updated;
       });
     }
     return this.prisma.store.update({
       where: { id },
-      data: storeUpdateData(dto, store.siteDocument, store),
+      data: { ...storeUpdateData(dto, store.siteDocument, store), websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
     });
   }
 
@@ -1064,6 +1131,8 @@ export class StoresService implements OnModuleDestroy {
         where: { id },
         data: {
           ...storeUpdateData(storeDto, store.siteDocument, store),
+          websiteRevision: { increment: 1 },
+          websitePublishedRevision: { increment: 1 },
           ...(locations !== undefined && { locations: storeLocationSnapshot(locations) as unknown as Prisma.InputJsonValue }),
         },
       });
@@ -1075,6 +1144,80 @@ export class StoresService implements OnModuleDestroy {
       const savedLinks = await tx.storeLink.findMany({ where: { storeId: id }, orderBy: { sortOrder: "asc" } });
       return { ...updated, links: savedLinks };
     });
+  }
+
+  async saveWebsiteDraft(merchantId: string, id: string, dto: SaveWebsiteDraftDto) {
+    const published = await this.prisma.store.findFirst({ where: { id, merchantId } });
+    if (!published) throw new NotFoundException("Store not found");
+    assertWebsiteRevision(published, dto.revision);
+    const store = websiteEditorStore(published);
+    await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
+    if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
+    const { revision, links, inventoryProductIds = [], ...settings } = dto;
+    const data = storeUpdateData(settings, store.siteDocument, store) as Prisma.JsonObject;
+    let inventory: Pick<WebsiteDraft, "inventoryChanges" | "locationInventory"> | undefined;
+    if (inventoryProductIds.length && dto.locations) {
+      const products = await this.prisma.paymentLink.findMany({ where: { storeId: id, id: { in: inventoryProductIds } }, select: { id: true, name: true, stock: true, locationStocks: true } });
+      if (products.length !== inventoryProductIds.length) throw new BadRequestException("Uno de los productos del ajuste de inventario ya no pertenece a esta tienda.");
+      const previousChanges = websiteDraft(published)?.inventoryChanges ?? [];
+      const inventoryChanges = previousChanges.filter((change) => !inventoryProductIds.includes(change.id));
+      const sameLocations = (a: unknown, b: unknown) => JSON.stringify(Object.entries((a || {}) as object).sort()) === JSON.stringify(Object.entries((b || {}) as object).sort());
+      for (const product of products) {
+        if (!dto.locations.every((location) => location.inventory?.some((entry) => entry.paymentLinkId === product.id))) throw new BadRequestException(`Completa el stock de ${product.name} en cada ubicación.`);
+        const previous = previousChanges.find((change) => change.id === product.id);
+        if (previous && (previous.beforeStock !== product.stock || !sameLocations(previous.beforeLocations, product.locationStocks))) {
+          throw new ConflictException(`El stock de ${product.name} cambió. Revisa el inventario antes de guardar ese ajuste.`);
+        }
+        const locationStocks = Object.fromEntries(dto.locations.map((location) => {
+          const allocation = location.inventory!.find((entry) => entry.paymentLinkId === product.id)!;
+          return [location.id, allocation.stock === undefined ? 0 : allocation.stock];
+        }));
+        const values = Object.values(locationStocks);
+        const stock = !values.length ? product.stock : values.some((value) => value === null) ? null : values.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+        if (stock !== product.stock || !sameLocations(locationStocks, product.locationStocks)) inventoryChanges.push({ id: product.id, name: product.name, beforeStock: product.stock, beforeLocations: product.locationStocks, stock, locationStocks });
+      }
+      inventory = { inventoryChanges, locationInventory: dto.locations.map((location) => ({ id: location.id, inventory: inventoryChanges.map((change) => ({ paymentLinkId: change.id, stock: change.locationStocks[location.id] ?? null })) })) };
+    }
+    return saveWebsiteDraftPatch(this.prisma, published, revision, data, links, undefined, inventory);
+  }
+
+  async publishWebsiteDraft(merchantId: string, id: string, revision: number) {
+    const store = await this.prisma.store.findFirst({ where: { id, merchantId }, include: { links: { orderBy: { sortOrder: "asc" } } } });
+    if (!store) throw new NotFoundException("Store not found");
+    assertWebsiteRevision(store, revision);
+    const draft = websiteDraft(store);
+    if (!draft) throw new BadRequestException("Guarda un borrador antes de publicarlo.");
+    // Capture every field being promoted, including link order, for restoration.
+    const before = Object.fromEntries(Object.keys(draft.data).map((key) => [key, (store as any)[key] ?? null]));
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.store.updateMany({
+        where: { id, merchantId, websiteRevision: revision, websitePublishedRevision: draft.basePublishedRevision },
+        data: { ...websiteUpdateData(draft.data) as Prisma.StoreUpdateManyMutationInput,
+          websiteDraft: Prisma.DbNull, websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
+      });
+      if (result.count !== 1) throw new ConflictException("El borrador cambió antes de publicar. Revisa los cambios más recientes.");
+      for (const change of draft.inventoryChanges ?? []) {
+        const changed = await tx.paymentLink.updateMany({ where: { id: change.id, storeId: id, stock: change.beforeStock,
+          locationStocks: { equals: change.beforeLocations === null ? Prisma.DbNull : change.beforeLocations as Prisma.InputJsonValue } },
+          data: { stock: change.stock, locationStocks: change.locationStocks } });
+        if (changed.count !== 1) throw new ConflictException(`El stock de ${change.name} cambió. No publicamos nada; revisa ese ajuste de inventario.`);
+      }
+      await tx.storeVisualVersion.create({ data: { storeId: id, label: "Antes de publicar", source: `publish:${revision}`,
+        snapshot: { ...before, links: store.links.map(({ label, url }) => ({ label, url })) } as Prisma.InputJsonObject } });
+      if (draft.links) {
+        await tx.storeLink.deleteMany({ where: { storeId: id } });
+        await tx.storeLink.createMany({ data: draft.links.map((link, sortOrder) => ({ storeId: id, ...link, sortOrder })) });
+      }
+      return tx.store.findUniqueOrThrow({ where: { id }, include: { links: { orderBy: { sortOrder: "asc" } } } });
+    });
+  }
+
+  async discardWebsiteDraft(merchantId: string, id: string, revision: number) {
+    // Explicit recovery when a public settings change made a draft obsolete.
+    const result = await this.prisma.store.updateMany({ where: { id, merchantId, websiteRevision: revision },
+      data: { websiteDraft: Prisma.DbNull, websiteRevision: { increment: 1 } } });
+    if (result.count !== 1) throw new ConflictException("El borrador cambió. Recarga antes de descartarlo.");
+    return this.prisma.store.findFirstOrThrow({ where: { id, merchantId }, include: { links: { orderBy: { sortOrder: "asc" } } } });
   }
 
   private async assertOwnedSiteSectionMedia(merchantId: string, dto: UpdateStoreDto, currentDocument: Prisma.JsonValue | null) {
@@ -1130,6 +1273,7 @@ export class StoresService implements OnModuleDestroy {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
     await this.prisma.$transaction([
+      this.prisma.store.update({ where: { id }, data: { websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } } }),
       this.prisma.storeLink.deleteMany({ where: { storeId: id } }),
       this.prisma.storeLink.createMany({
         data: dto.links.map((link, index) => ({ storeId: id, label: link.label, url: link.url, sortOrder: index })),
@@ -1445,6 +1589,7 @@ export class StoresService implements OnModuleDestroy {
         imageUrls: item.imageUrls,
         imagePositions: item.imagePositions,
         tags: item.tags,
+        recommendedProductIds: item.recommendedProductIds,
         // null = unlimited/not tracked; 0 means genuinely sold out, both are
         // meaningfully different from "in stock" and the storefront needs to
         // tell them apart.

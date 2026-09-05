@@ -90,8 +90,8 @@ export class MerchantSessionService {
       // Serialize session issuance per user across API replicas. Without this,
       // simultaneous logins can both decide they are the primary session or
       // briefly exceed the three-session cap.
-      if (typeof tx.$executeRawUnsafe === "function") {
-        await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", user.id);
+      if (typeof tx.$executeRaw === "function") {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${user.id}, 0))`;
       }
       await tx.merchantSession.updateMany({
         where: { merchantUserId: user.id, isPrimary: true, expiresAt: { lte: new Date() } },

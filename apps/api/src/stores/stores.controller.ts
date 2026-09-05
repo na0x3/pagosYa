@@ -8,7 +8,6 @@ import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
 import { VisualStudioService } from "./visual-studio.service";
-import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
 import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { Throttle } from "@nestjs/throttler";
 import { CustomDomainsService } from "./custom-domains.service";
@@ -17,6 +16,7 @@ import { SaveVisualTemplateDto } from "./dto/save-visual-template.dto";
 import { SetVisualSectionLocksDto } from "./dto/set-visual-section-locks.dto";
 import { StoreAgentService } from "./store-agent.service";
 import { SendStoreAgentMessageDto } from "./dto/send-store-agent-message.dto";
+import { SaveWebsiteDraftDto, WebsiteRevisionDto } from "./dto/save-website-draft.dto";
 
 /** Dashboard/backend-authenticated management of a merchant's stores — a merchant
  * can run several independent storefronts (separate slug/branding/catalog each).
@@ -95,8 +95,18 @@ export class StoresController {
   }
 
   @Put(":id/settings")
-  saveSettings(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: SaveStoreSettingsDto) {
-    return this.stores.saveSettings(merchant.id, id, dto);
+  saveSettings(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: SaveWebsiteDraftDto) {
+    return this.stores.saveWebsiteDraft(merchant.id, id, dto);
+  }
+
+  @Post(":id/website-draft/publish")
+  publishWebsiteDraft(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: WebsiteRevisionDto) {
+    return this.stores.publishWebsiteDraft(merchant.id, id, dto.revision);
+  }
+
+  @Post(":id/website-draft/discard")
+  discardWebsiteDraft(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: WebsiteRevisionDto) {
+    return this.stores.discardWebsiteDraft(merchant.id, id, dto.revision);
   }
 
   @Put(":id/links")
@@ -139,8 +149,8 @@ export class StoresController {
   }
 
   @Post(":id/visual-proposals/:proposalId/apply")
-  applyVisualProposal(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("proposalId") proposalId: string) {
-    return this.visualStudio.apply(merchant.id, id, proposalId);
+  applyVisualProposal(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("proposalId") proposalId: string, @Body() dto: WebsiteRevisionDto) {
+    return this.visualStudio.apply(merchant.id, id, proposalId, dto.revision);
   }
 
   @Post(":id/visual-proposals/:proposalId/template")
@@ -159,8 +169,8 @@ export class StoresController {
   }
 
   @Post(":id/visual-versions/:versionId/restore")
-  restoreVisualVersion(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("versionId") versionId: string) {
-    return this.visualStudio.restore(merchant.id, id, versionId);
+  restoreVisualVersion(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Param("versionId") versionId: string, @Body() dto: WebsiteRevisionDto) {
+    return this.visualStudio.restore(merchant.id, id, versionId, dto.revision);
   }
 
   @Post(":id/archive")

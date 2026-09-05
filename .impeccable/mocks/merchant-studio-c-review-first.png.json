@@ -1,0 +1,16 @@
+{
+  "approved": true,
+  "approved_at": "2026-09-05T13:24:00-04:00",
+  "approval": "User selected A + C: direction C supplies sensitive-change approval, reversibility, and before/after evidence.",
+  "carry_forward": [
+    "Structured change set with independently selectable operations",
+    "Checkout changes require explicit approval before publish",
+    "Before and after evidence stays attached to the selected change",
+    "YAPI communicates that reversible work can be undone"
+  ],
+  "do_not_literalize": [
+    "Fake autonomous backend execution",
+    "Unapproved price, inventory, payment, or publishing changes",
+    "Synthetic conversion claims"
+  ]
+}

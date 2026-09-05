@@ -10,5 +10,6 @@ import { InvoicingModule } from "../invoicing/invoicing.module";
   imports: [DashboardModule, AuthModule, UploadsModule, InvoicingModule],
   controllers: [PaymentLinksController],
   providers: [PaymentLinksService],
+  exports: [PaymentLinksService],
 })
 export class PaymentLinksModule {}

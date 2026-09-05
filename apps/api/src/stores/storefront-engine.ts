@@ -535,6 +535,10 @@ export function varyStorefrontStructure(
   const sections = document.sections.map((section, index) => {
     if (locked.has(section.id)) return section;
     const capability = SITE_SECTION_CAPABILITIES[section.kind];
+    // Historical proposal JSON predates the current section capability
+    // contract. Keep an unknown legacy section stable while varying the
+    // supported sections instead of crashing proposal generation.
+    if (!capability) return section;
     return {
       ...section,
       family: choose(resolveSiteSectionFamily(section.kind, section.family, genome), capability.families, `family:${index}`),
@@ -777,7 +781,13 @@ export function preserveLockedStorefrontSections(
 
 function structuralFeatures(document: StoreSiteDocument, ignoredSectionIds: ReadonlySet<string>): string[] {
   const genome = sanitizeSiteDesignGenome(document.designGenome);
-  const sections = document.sections.filter((section) => !ignoredSectionIds.has(section.id));
+  // Saved proposals are intentionally retained across renderer revisions.
+  // Some of them can contain retired section kinds, so originality telemetry
+  // must compare only sections supported by the current engine.
+  const sections = document.sections.filter((section) =>
+    !ignoredSectionIds.has(section.id)
+    && Boolean(SITE_SECTION_CAPABILITIES[section.kind]),
+  );
   const pages = document.pages ?? [];
   return [
     `art:${document.artDirection || "custom"}`,
@@ -957,7 +967,11 @@ export function storefrontDirectionsAreDiverse(documents: StoreSiteDocument[]): 
   const artDirections = new Set(documents.map((document) => document.artDirection));
   if (artDirections.size !== 3) return false;
   if (heroLayouts.size < 2 || navigationLayouts.size < 2 || productLayouts.size < 2) return false;
-  if (signatureExperiences.size !== 3 || galleryMotions.size !== 3) return false;
+  if (signatureExperiences.size !== 3) return false;
+  // Photo motion is intentionally static across generated directions. Layout,
+  // typography, art direction and the text-only signature still carry the
+  // meaningful differentiation between proposals.
+  if (galleryMotions.size !== 1 || !galleryMotions.has("none")) return false;
   if (genomeCompositions.size !== 3 || genomeGeometries.size < 2) return false;
   if (heroFamilies.size !== 3) return false;
   for (let first = 0; first < features.length; first += 1) {

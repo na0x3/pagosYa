@@ -1,4 +1,9 @@
 import { ArgumentsHost, BadRequestException, Logger, ServiceUnavailableException } from "@nestjs/common";
+import { PaymentIntentStatus } from "@prisma/client";
+import {
+  IllegalStateTransitionError,
+  PaymentIntentEvent,
+} from "../../payment-intents/payment-intent.state-machine";
 import { AllExceptionsFilter } from "./all-exceptions.filter";
 
 function makeHost(request: { method: string; url: string }) {
@@ -41,6 +46,25 @@ describe("AllExceptionsFilter", () => {
       expect.stringContaining("prisma connection reset"),
       expect.any(String),
     );
+    errorSpy.mockRestore();
+  });
+
+  it("returns a controlled conflict when a concurrent request wins a PaymentIntent transition", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const { host, response } = makeHost({ method: "POST", url: "/v1/payment_intents/pi_123/confirm" });
+
+    filter.catch(
+      new IllegalStateTransitionError(PaymentIntentStatus.PROCESSING, PaymentIntentEvent.CONFIRM),
+      host,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode: 409,
+      message: "PaymentIntent state changed; refresh and retry",
+    });
+    expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
 

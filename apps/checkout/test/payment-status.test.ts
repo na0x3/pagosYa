@@ -52,6 +52,7 @@ async function payAndGet(confirmResult: unknown, path = "/?client_secret=pi_1_se
 
 describe("payment outcome rendering", () => {
   beforeEach(() => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "x" }));
     vi.restoreAllMocks();
   });
 
@@ -67,15 +68,44 @@ describe("payment outcome rendering", () => {
     expect(document.querySelector(".receipt")?.textContent).toContain("pi_1");
     expect(document.querySelector(".receipt-subtotal")?.textContent).toContain("50.00 BOB");
     const overlay = document.querySelector<HTMLElement>(".payment-success-overlay");
-    expect(overlay?.textContent).toContain("Payment Successful!");
-    expect(overlay?.getAttribute("role")).toBe("status");
-    expect(document.querySelector<HTMLImageElement>(".payment-success-bird-crop img")?.src).toContain("/logo-mark.png");
-    expect(document.querySelectorAll(".payment-success-particles i")).toHaveLength(10);
+    expect(overlay?.textContent).toContain("Imprimiendo tu pedido");
+    expect(overlay?.getAttribute("role")).toBe("dialog");
+    expect(overlay?.dataset.stage).toBe("printing");
+    expect(document.querySelector(".payment-printer-machine-screen")?.textContent).toContain("50.00 BOB");
+    expect(document.querySelector<HTMLImageElement>(".payment-printer-machine-brand img")?.src).toContain("/logo-mark.png");
+    expect(document.querySelector<HTMLImageElement>('img[src="/receipt-printer-terminal.png"]')).toBeNull();
+    expect(document.querySelector(".payment-printer-feed")?.textContent).toContain("Corte de cabello");
+    expect(document.querySelector<HTMLImageElement>(".receipt-brand img")?.src).toContain("/logo-mark.png");
+    expect(document.querySelector(".payment-printer-paper")?.textContent).toContain("50.00 BOB");
+    expect(document.querySelector(".receipt-print")?.textContent).toContain("Imprimir comprobante");
     expect(document.body.classList.contains("payment-success-overlay-open")).toBe(true);
+    expect(document.getElementById("app")?.hasAttribute("inert")).toBe(true);
 
-    overlay!.dispatchEvent(new Event("animationend"));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "x" }));
     expect(document.querySelector(".payment-success-overlay")).toBeNull();
     expect(document.body.classList.contains("payment-success-overlay-open")).toBe(false);
+    expect(document.getElementById("app")?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("puts shipment tracking and print actions on the printed receipt", async () => {
+    vi.doMock("../src/api", () => ({
+      fetchSession: vi.fn().mockResolvedValue({ ...session, trackingToken: "track_secret_1" }),
+      confirmPaymentIntent: vi.fn().mockResolvedValue({
+        paymentIntent: { ...session, status: "SUCCEEDED", railId: "mock_card" },
+        railResult: { status: "succeeded" },
+      }),
+      assetUrl: (path: string | null) => path,
+    }));
+
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    fillContactFields();
+    document.querySelector<HTMLButtonElement>("#pay")!.click();
+    await vi.waitFor(() => expect(document.querySelector(".payment-printer-paper")).toBeTruthy());
+
+    const trackingLink = document.querySelector<HTMLAnchorElement>(".payment-printer-paper .tracking-success-link");
+    expect(trackingLink?.textContent).toContain("Ver estado del pedido");
+    expect(trackingLink?.getAttribute("href")).toBe("/track/track_secret_1");
+    expect(document.querySelector(".payment-printer-paper .receipt-print")?.textContent).toContain("Imprimir comprobante");
   });
 
   it("offers a way back to the originating store after a completed order", async () => {
