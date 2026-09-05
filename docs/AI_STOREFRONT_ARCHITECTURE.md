@@ -1,5 +1,11 @@
 # AI storefront architecture
 
+This document describes the existing structured-document storefront pipeline.
+The additive [independent source-project pipeline](INDEPENDENT_STOREFRONT_PROJECTS.md)
+now stores private frontend source revisions and exports portable ZIP archives.
+Its source is never executed by this renderer; generation, sandbox previews and
+publication of independent source projects are subsequent increments.
+
 ## Product boundary
 
 The merchant should describe the brand, provide visual references, and choose only the business behavior that cannot be inferred safely (for example, whether an order ends in pagosYa checkout or WhatsApp). Typography, layout, motion, image roles, section rhythm, and storefront copy belong to the generated proposal.

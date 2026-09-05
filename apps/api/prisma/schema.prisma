@@ -1680,6 +1680,7 @@ model Store {
   visualProposals              StoreVisualProposal[]
   visualVersions               StoreVisualVersion[]
   visualSignatures             StoreVisualSignature[]
+  sourceProject                StoreSourceProject?
   agentThread                  StoreAgentThread?
   customDomains                CustomDomain[]
   leads                        StoreLead[]
@@ -1915,6 +1916,30 @@ model StoreVisualProposal {
   agentMessages   StoreAgentMessage[]
 
   @@index([storeId, createdAt])
+}
+
+// Independent storefront source is private, immutable per revision, and never
+// evaluated by the API or the legacy document renderer.
+model StoreSourceProject {
+  storeId   String @id
+  store     Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  revision  Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  versions  StoreSourceVersion[]
+}
+
+model StoreSourceVersion {
+  storeId      String
+  project      StoreSourceProject @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  revision     Int
+  label        String
+  digest       String
+  snapshot     Json
+  restoredFrom Int?
+  createdAt    DateTime @default(now())
+
+  @@id([storeId, revision])
 }
 
 // Snapshots are created before applying an AI proposal or restoring an older
