@@ -55,7 +55,7 @@ describe("Independent source artifacts", () => {
     for (const file of [{ path: "src/index.js", content: "YQ==", encoding: "base64" as const }, { path: "public/a.png", content: "!!!!", encoding: "base64" as const }]) {
       expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, file] })).toThrow(/base64/);
     }
-    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...Array.from({ length: 4 }, (_, i) => ({ path: `src/large${i}.txt`, content: "x".repeat(150_000) }))] })).toThrow(/512 KiB/);
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...Array.from({ length: 60 }, (_, i) => ({ path: `src/large${i}.txt`, content: "x".repeat(150_000) }))] })).toThrow(/8 MiB/);
   });
 
   it("exports a deterministic ZIP that an independent reader extracts and builds outside the monorepo", () => {

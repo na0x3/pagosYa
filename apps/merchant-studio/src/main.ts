@@ -1,3 +1,4 @@
+import { mountSourceStudio } from "./source-studio";
 import "./style.css";
 import type { StoreSiteDocument } from "@pagosya/shared-types";
 import { batchStatusLabel, validateImageBatch } from "./batch-upload";
@@ -704,5 +705,6 @@ function bindEvents(): void {
 }
 
 const demoMode = new URLSearchParams(window.location.search).get("demo") === "1";
-if (demoMode) render();
+if (new URLSearchParams(window.location.search).get("source") === "1") void mountSourceStudio(app);
+else if (demoMode) render();
 else void mountConnectedStudio(app);

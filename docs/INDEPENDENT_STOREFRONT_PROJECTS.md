@@ -1,119 +1,154 @@
 # Independent storefront projects
 
-## Checkpoint and development boundary
+## Checkpoints and rollback
 
-The workspace before this work is committed and pushed as `2101512` on
-`session-work-20260827`. New development is on `feature/independent-storefront-projects`.
-Switching back to the checkpoint branch restores tracked code. It does not undo
-database migrations, upload changes, environment settings, or external operations.
-Commit current work before switching so Git can preserve both lines of development.
+The original workspace is committed and pushed as `2101512` on
+`session-work-20260827`. Development continues on
+`feature/independent-storefront-projects`; the source storage foundation is `d1443b3`.
+Switching branches restores tracked code. It does not undo database migrations,
+uploads, environment settings or deployments. Save current work before switching.
 
-## First increment: private source and portable exports
+Source restoration appends a revision: restoring revision 1 while revision 3 is
+current creates revision 4, preserving every previous snapshot. Source revisions
+are separate from the existing website drafts and published storefronts.
 
-A store can now have its own source files, independent of the legacy `siteDocument`
-renderer. `StoreSourceProject` tracks the current revision; `StoreSourceVersion`
-stores immutable full snapshots. Each snapshot contains a business brief and files.
-The brief records business type, audience, primary customer action and visual direction.
-It is guidance for future generation, not a fixed list of layout or style enums.
+## Merchant Studio
 
-Saving requires the current source revision (0 for the first save). The database
-increments it and inserts the immutable snapshot in one transaction. A stale tab
-or concurrent first save gets HTTP 409. Restoring revision 1 while revision 3 is
-current creates revision 4 with the contents of revision 1; it retains all history.
-Source revisions are separate from the existing website draft and publication revisions.
+Run `pnpm dev:studio`, open `http://127.0.0.1:4312/?source=1`, and sign in with an
+existing dashboard account. The connected editor also links to **Sitio independiente**.
+Select a store, describe its business, audience, customer task and visual direction,
+then request a site. Optional merchant-owned uploads supply up to six PNG/JPEG/WebP
+images of at most 2 MB each, with a 6 MiB combined asset budget checked before generation.
 
-All endpoints use `MerchantAuthGuard` and check store ownership. There is no public
-source endpoint. Source strings, imports and package scripts are never evaluated
-by the API. Saving and restoring source do not change the published website,
-products, inventory, payments, or the existing editor draft.
+The generator authors complete static HTML, CSS and classic JavaScript. It can
+choose the structure and visual identity without using the legacy `siteDocument`
+renderer or a list of theme presets. The platform supplies portable catalog/cart
+code, public configuration, a dependency-free build script, local server and README.
+An edit receives the prior authored files and retains previously bundled assets.
 
-## API
+Review a saved revision in desktop/mobile preview, choose an HTML page, inspect and
+edit its text files, download its ZIP, or restore an earlier revision. Saving one
+text file sends only that file and appends a snapshot with the existing assets.
+Unsaved edits disable revision changes and downloads. This increment has no
+publication switch: an exported site's static `dist/` can be deployed separately.
 
+## Café example
+
+`examples/independent-cafe` is a standalone, individually designed café storefront:
+local serif/sans fonts, an original generated breakfast photo, responsive menu,
+category filters and an order sidebar. It has no workspace imports or dependencies.
+
+```sh
+pnpm dev:independent-cafe
+# http://127.0.0.1:4315
+```
+
+The example uses an eight-product demonstration catalog. Demo orders never create
+payments. A real export refreshes the public catalog before enabling purchases;
+the API determines final stock and prices. Variants/extras use the existing hosted
+product-detail flow. Payments use the existing hosted checkout; WhatsApp and
+external contact checkout modes are supported. Commerce and customer data remain
+on PagosYa. This is portable frontend source, not an exported payments backend.
+
+To package the café for the existing source-save API:
+
+```sh
+node scripts/pack-storefront.mjs --dir examples/independent-cafe \
+  --brief examples/independent-cafe/brief.json --out /tmp/cafe-source.json
+pnpm storefront:source save --store STORE_ID --input /tmp/cafe-source.json
+```
+
+Review `config.js` before importing. It intentionally starts in demo mode.
+The packer refuses overwriting output and limits imports to the existing HTTP body
+limit. Large images should use Studio uploads and the generation endpoint.
+
+## Server configuration
+
+Apply the checked-in Prisma migrations and rebuild the API. The local development
+source migration was applied on 2026-09-05; test suites use a disposable database.
+Generation uses `OPENAI_API_KEY`, `OPENAI_VISUAL_STUDIO_ENABLED` and
+`OPENAI_DESIGN_MODEL`. Set `PUBLIC_API_URL` to the public API base ending in `/v1`
+(HTTPS in production) and `CHECKOUT_ORIGIN` to the checkout application. Allow each
+deployed storefront origin in the API CORS configuration. Credentials belong only
+on the server, never in exported configuration.
+
+The production build copies `src/stores/source-kit` into the API distribution.
+Generated scripts are parsed for syntax, never executed by the API. The supplied
+build script copies static files and checks classic JavaScript syntax without
+running storefront scripts. It requires Node 20+ and no dependency installation.
+
+## API and storage
+
+All routes require `MerchantAuthGuard` and store ownership.
 Base: `/v1/stores/:storeId/source-project`.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| GET | `/` | Current revision and 30 history summaries; use `nextBefore` as `?before=` for the next page |
+| GET | `/` | Current revision and 30 summaries; paginate with `?before=nextBefore` |
 | PUT | `/` | Save `{ revision, label, brief, files }` as the next revision |
+| POST | `/generate` | Generate from `{ revision, brief, instruction, assetUrls? }` |
+| PATCH | `/file` | Edit `{ revision, path, content }`, preserving other files |
 | GET | `/versions/:revision` | Exact source snapshot and digest |
-| POST | `/versions/:revision/restore` | Append a restoration; body `{ revision: CURRENT_REVISION }` |
-| GET | `/versions/:revision/export` | Download that exact revision as a ZIP attachment |
+| POST | `/versions/:revision/restore` | Append restoration; body `{ revision: CURRENT_REVISION }` |
+| GET | `/versions/:revision/export` | Download exact revision as a ZIP attachment |
 
-Each file has `path`, `content`, and optional `encoding` (`utf8` by default, or
-`base64` for supported image/font files). The pilot allows 100 files, 180,000
-characters per file, 512 KiB of decoded content in total, within the existing
-1 MiB HTTP JSON limit. Large photography libraries require the upcoming asset
-packaging pipeline; this increment is not a complete media-library exporter.
+The brief contains businessType, audience, primaryAction and visualDirection.
+Each file has path, content and optional encoding (`utf8` or supported image/font
+`base64`). Limits: 100 files, 180,000 characters per text file, 2,800,000 encoded
+characters per binary file, 8 MiB decoded total. Direct PUT imports still use the
+existing 1 MiB HTTP JSON limit. Generation packages owned uploads server-side;
+PATCH edits one text file without retransmitting binary content.
 
-Paths must be relative and portable. Traversal, case collisions, file/directory
-collisions, private configuration, generated output and dependency folders are
-rejected. `.env.example` is allowed. Recognized private-key/live-token patterns
-are rejected, but this check is not a comprehensive secret scanner. Include only
-public browser configuration and example values in source files.
+`StoreSourceProject` tracks the current revision; `StoreSourceVersion` stores
+immutable full snapshots. Saving compares and increments the revision in the same
+transaction as inserting the snapshot. Stale or conflicting requests return 409,
+including generation when another tab saves while the model is running.
 
-A project must include `package.json` with a build script and a nonempty
-`README.md`. Direct dependencies cannot use workspace, local-file or symlink
-protocols. These checks establish an artifact contract, not a verified successful
-build: dependency resolution, sandbox builds and automated preview review remain
-future work. No particular frontend framework is required.
+Paths must be relative and portable. Traversal, case and directory collisions,
+private configuration, generated output/dependency folders, recognized private
+credential patterns and nonportable direct dependency protocols are rejected.
+This is not a comprehensive secret scanner or a security audit of customer code.
+Every project needs package.json with a build script and a nonempty README.md.
 
-The ZIP contains original files plus `pagosya-project.json`: a canonical source
-digest, per-file SHA-256 hashes, business brief, revision and backend-dependency
-disclosure. Archives have stable bytes for a given revision. Export verifies the
-stored digest before returning a download. Source files and included small assets
-are portable; the PagosYa commerce backend and customer data are not included.
+The ZIP includes `pagosya-project.json`: source digest, per-file SHA-256 hashes,
+brief, revision and backend-dependency disclosure. Exports verify the stored digest
+and have stable bytes for a given revision. Selected uploaded images are bundled;
+other product images may still depend on the API. Font licensing travels with the
+café example. Custom fonts for AI-generated sites are not currently auto-bundled.
 
-## Developer workflow
+## Preview boundary and current limits
 
-Apply the checked-in Prisma migration to the intended development environment
-using the repository's normal migration workflow, then rebuild/start the API.
-The automated HTTP suite applies migrations to its own disposable PostgreSQL
-instance; it does not migrate the user's development database.
+Studio loads source into an opaque iframe with only `sandbox="allow-scripts"`,
+never `allow-same-origin`. Local scripts, styles, images and fonts become data URLs.
+A restrictive CSP blocks fetch/subresource network requests, frames, workers and
+forms; the preview flag disables the supplied commerce runtime's payment actions.
+Static external links are removed and page selection lives in Studio.
 
-Set `PAGOSYA_API_URL` to the API base ending in `/v1`, and
-`PAGOSYA_MERCHANT_TOKEN` to an existing dashboard session or merchant credential.
-Do not put this token in storefront source or pass it as a command-line argument.
+Arbitrary customer JavaScript is untrusted. Browser sandboxing does not impose a
+CPU/time limit, and script-driven self-navigation is not a comprehensive network
+isolation boundary. Source must never be served on the merchant dashboard origin.
+The preview is a review tool, not an assurance that arbitrary code is safe to deploy.
 
-```sh
-pnpm storefront:source history --store STORE_ID
-pnpm storefront:source save --store STORE_ID --input source-project.json
-pnpm storefront:source export --store STORE_ID --revision 1 --out storefront.zip
-pnpm storefront:source restore --store STORE_ID --target 1 --revision 3
-```
-
-The save file follows the API contract above. The CLI refuses credential-bearing
-URLs, nonlocal plain HTTP, redirects and overwriting an existing output archive.
-
-## Next increments
-
-1. Author a complete café/restaurant source project with its own information
-   architecture and buying flow, connecting the existing public catalog and
-   commerce endpoints. Add fashion and service businesses as separate compositions.
-2. Give the generator the business brief, verified content and source workspace;
-   let it author complete frontend files, saving accepted output through this API.
-3. Build generated code in a separate sandbox without merchant credentials; verify
-   desktop/mobile renders, navigation and commerce behavior. Never run generated
-   package scripts in the API or merchant dashboard process.
-4. Add asset packaging, editor source revisions, preview origins, and explicit
-   promotion of a verified deployment. Publishing should reference an exact
-   source digest, and deployment rollback must be separate from source restoration.
-
-The source pipeline is additive. Existing structured-document storefronts remain
-available while independent projects mature. There is no AI source generation,
-source editor UI, sandbox preview, deployment or publication switch in this increment.
+Still to build: automated visual/interaction review of every generated revision,
+managed per-store deployment origins with exact-digest promotion and deployment
+rollback, and more distinct business examples. This static pilot does not install
+or execute arbitrary generated React/npm build systems. Manual source storage can
+hold other frameworks, but the current preview/build kit targets static projects.
 
 ## Verification
 
 ```sh
-pnpm --filter @pagosya/api prisma:generate
 pnpm --filter @pagosya/api build
-pnpm --filter @pagosya/api exec jest --runInBand source-project.spec.ts source-projects.service.spec.ts
-pnpm --filter @pagosya/api test:e2e --runInBand source-projects.e2e-spec.ts
+pnpm --filter @pagosya/merchant-studio build
+pnpm --filter @pagosya/api test --runInBand source-project source-generation
+pnpm --filter @pagosya/api test:e2e --runInBand source-projects
+pnpm --filter @pagosya/merchant-studio test:e2e source-studio.spec.ts
 ```
 
-Unit coverage checks paths, credential patterns, size limits, source digests,
-archive CRCs with Python's independent ZIP reader, binary asset round-tripping,
-an extracted build outside the monorepo, revision history and failure rollback.
-HTTP/PostgreSQL coverage checks nested validation, authentication, cross-merchant
-access, concurrent initial saves, public-store isolation, attachment delivery and
-restoration with stale-revision rejection.
+Tests cover paths, credential patterns, decoded size, binary preservation, ZIP
+integrity and extracted builds, immutable history, conflict rollback, ownership,
+HTTP validation, asset ownership before reads/model calls, generated-source syntax,
+model failures, preview access to parent sessions/network, generation/edit/restore/
+download UI, responsive overflow, catalog refresh, stock limits and checkout payloads.
+The browser flow uses deterministic API responses; provider availability is checked
+separately with a real generation smoke test.

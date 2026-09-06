@@ -10,7 +10,7 @@ export class SourceProjectBriefDto {
 
 export class SourceProjectFileDto {
   @IsString() @MinLength(1) @MaxLength(200) path!: string;
-  @IsString() @MaxLength(180_000) content!: string;
+  @IsString() @MaxLength(2_800_000) content!: string;
   @IsOptional() @IsIn(["utf8", "base64"]) encoding?: "utf8" | "base64";
 }
 
@@ -23,4 +23,9 @@ export class SaveSourceProjectDto extends SourceProjectRevisionDto {
   @IsDefined() @ValidateNested() @Type(() => SourceProjectBriefDto) brief!: SourceProjectBriefDto;
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100)
   @ValidateNested({ each: true }) @Type(() => SourceProjectFileDto) files!: SourceProjectFileDto[];
+}
+
+export class EditSourceFileDto extends SourceProjectRevisionDto {
+  @IsString() @MinLength(1) @MaxLength(200) path!: string;
+  @IsString() @MaxLength(180_000) content!: string;
 }

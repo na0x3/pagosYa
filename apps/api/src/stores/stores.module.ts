@@ -14,11 +14,12 @@ import { StoreAgentService } from "./store-agent.service";
 import { PaymentLinksModule } from "../payment-links/payment-links.module";
 import { SourceProjectsController } from "./source-projects.controller";
 import { SourceProjectsService } from "./source-projects.service";
+import { SourceGenerationService } from "./source-generation.service";
 
 @Module({
   imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule],
   controllers: [StoresController, StoresPublicController, PromoCodesController, SourceProjectsController],
-  providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService],
+  providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService],
   exports: [StoresService],
 })
 export class StoresModule {}

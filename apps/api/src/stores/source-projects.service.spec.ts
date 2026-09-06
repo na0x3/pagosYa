@@ -82,6 +82,17 @@ describe("Private source project revisions", () => {
     await expect(service.archive("m1", "s1", 1)).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it("edits one text file while preserving binary assets and rejecting a stale revision", async () => {
+    const { service } = setup();
+    const binary = { path: "assets/photo.png", content: Buffer.from("asset bytes").toString("base64"), encoding: "base64" as const };
+    await service.save("m1", "s1", { ...input(), files: [...input().files, binary] });
+    await service.editFile("m1", "s1", { revision: 1, path: "README.md", content: "Updated documentation" });
+    const saved = await service.version("m1", "s1", 2);
+    expect((saved.snapshot as any).files).toEqual(expect.arrayContaining([binary]));
+    await expect(service.editFile("m1", "s1", { revision: 1, path: "README.md", content: "stale" })).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.editFile("m1", "s1", { revision: 2, path: binary.path, content: "bad" })).rejects.toThrow("texto");
+  });
+
   it("paginates history without dropping or repeating the boundary revision", async () => {
     const { service } = setup();
     for (let revision = 0; revision < 32; revision++) await service.save("m1", "s1", { ...input(), revision });

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="La carta de Café Aroma: café, panadería y pequeñas pausas. Tienda de demostración.">
+  <meta name="theme-color" content="#f5efe5">
+  <title>Café Aroma — Un buen día empieza aquí</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script>
+  <script src="commerce.js" defer></script>
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#carta">Ir a la carta</a>
+  <header class="masthead">
+    <a class="wordmark" href="#" data-store-name>CAFÉ AROMA</a>
+    <nav aria-label="Navegación principal"><a href="#carta">La carta</a><a href="#mesa">Nuestra mesa</a></nav>
+    <a class="order-link" href="#pedido">Pedido <span>(<span data-cart-count>0</span>)</span></a>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">Un buen día<br>empieza aquí.</h1>
+        <p>Café, algo recién elegido de la carta y un momento para ti. Haz una pausa. Nosotros ponemos la mesa.</p>
+        <a class="primary-button" href="#carta">Ver la carta <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></a>
+        <span class="demo-label"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10c0 3 4 3 4 0 0 3 5 3 5 0 0 3 5 3 5 0 0 3 4 3 4 0M9 20v-6h6v6"/></svg>Tienda de demostración</span>
+      </div>
+      <figure class="hero-photo"><img src="assets/breakfast.webp" width="1100" height="734" alt="Cappuccino y croissant en una mesa iluminada por la ventana" fetchpriority="high"></figure>
+    </section>
+    <section class="menu-layout" id="carta" aria-labelledby="menu-title">
+      <div class="menu-main"><div class="section-heading"><h2 id="menu-title">La carta</h2><span>Café. Pan. Buena compañía.</span></div>
+        <div class="categories" data-pagosya-categories aria-label="Categorías de la carta"></div>
+        <div data-pagosya-catalog><p>Cargando la carta…</p></div>
+        <button class="retry-button" type="button" data-retry>Actualizar disponibilidad</button>
+      </div>
+      <aside class="order-panel" id="pedido" aria-labelledby="order-title"><h2 id="order-title">Tu pedido</h2><div data-pagosya-cart></div><p class="order-status" data-pagosya-status role="status" aria-live="polite"></p></aside>
+    </section>
+    <section class="table-story" id="mesa" aria-labelledby="table-title"><span class="story-rule" aria-hidden="true"></span><h2 id="table-title">Siempre hay espacio<br>para una pausa.</h2><div><p>Un americano para empezar. Un cappuccino para alargar la conversación. Un croissant para acompañar.</p><a href="#carta">Encuentra tu combinación <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></a></div></section>
+  </main>
+  <footer><a class="wordmark" href="#" data-store-name>Café Aroma</a><p>Una tienda de demostración de pagosYa.<br>Los pedidos de prueba no generan cobros.</p><a href="#carta">Volver a la carta</a></footer>
+</body>
+</html>

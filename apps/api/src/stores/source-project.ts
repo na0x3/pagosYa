@@ -8,7 +8,7 @@ export interface SourceProjectSnapshot {
   files: Array<{ path: string; content: string; encoding: "utf8" | "base64" }>;
 }
 
-const MAX_BYTES = 512 * 1024;
+const MAX_BYTES = 8 * 1024 * 1024;
 const BINARY_EXTENSIONS = /\.(png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf)$/i;
 const RESERVED_PATH = "pagosya-project.json";
 const PRIVATE_FILE = /^(?:\.env(?:\..+)?|\.npmrc|\.yarnrc(?:\.yml)?|\.netrc|id_rsa|id_ed25519|credentials(?:\.json)?|.*\.(?:pem|key|p12|pfx))$/i;
@@ -45,11 +45,11 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     if (key === RESERVED_PATH || paths.has(key)) reject("Duplicate or reserved source file path");
     paths.add(key);
     const encoding = file.encoding ?? "utf8";
-    if (typeof file.content !== "string" || file.content.length > 180_000 || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
+    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? 2_800_000 : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
     if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image and font assets are supported");
     if (encoding === "utf8" && (file.content.includes("\0") || SECRET.test(file.content))) reject("Source files cannot contain NUL characters or recognized private credentials");
     total += Buffer.byteLength(file.content, encoding === "base64" ? "base64" : "utf8");
-    if (total > MAX_BYTES) reject("Source project exceeds the 512 KiB pilot limit");
+    if (total > MAX_BYTES) reject("Source project exceeds the 8 MiB limit");
     return { path: file.path, content: file.content, encoding };
   }).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   for (const file of files) {

@@ -45,6 +45,7 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
 
   it("requires authentication and ownership on all source routes", async () => {
     await request(app.getHttpServer()).get(route).expect(401);
+    await request(app.getHttpServer()).post(`${route}/generate`).set(auth(foreignToken)).send({ revision: 0, brief: source(0, "Foreign").brief, instruction: "Generate" }).expect(404);
     await request(app.getHttpServer()).get(route).set(auth(foreignToken)).expect(404);
     await request(app.getHttpServer()).put(route).set(auth(foreignToken)).send(source(0, "Foreign")).expect(404);
     await request(app.getHttpServer()).get(`${route}/versions/1`).set(auth(foreignToken)).expect(404);
@@ -93,4 +94,14 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     expect(history.body.versions.map((version: { revision: number }) => version.revision)).toEqual([3, 2, 1]);
     expect(history.body.versions[0]).not.toHaveProperty("snapshot");
   });
+  it("edits a text file without resending assets and rejects stale or foreign edits", async () => {
+    const body = { revision: 3, path: "README.md", content: "Updated independent source instructions" };
+    await request(app.getHttpServer()).patch(`${route}/file`).set(auth(foreignToken)).send(body).expect(404);
+    const saved = await request(app.getHttpServer()).patch(`${route}/file`).set(auth()).send(body).expect(200);
+    expect(saved.body.revision).toBe(4);
+    await request(app.getHttpServer()).patch(`${route}/file`).set(auth()).send(body).expect(409);
+    const current = await request(app.getHttpServer()).get(`${route}/versions/4`).set(auth()).expect(200);
+    expect(current.body.snapshot.files.find((file: { path: string }) => file.path === "README.md").content).toBe(body.content);
+  });
+
 });

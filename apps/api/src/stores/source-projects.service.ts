@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { SaveSourceProjectDto } from "./dto/save-source-project.dto";
+import { EditSourceFileDto, SaveSourceProjectDto } from "./dto/save-source-project.dto";
 import { sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot, SourceProjectSnapshot } from "./source-project";
 
 const summarySelect = { revision: true, label: true, digest: true, restoredFrom: true, createdAt: true } as const;
@@ -39,6 +39,15 @@ export class SourceProjectsService {
     await this.ownedStore(merchantId, storeId);
     const snapshot = sourceProjectSnapshot(input);
     return this.append(storeId, input.revision, input.label, snapshot);
+  }
+
+  async editFile(merchantId: string, storeId: string, input: EditSourceFileDto) {
+    const version = await this.version(merchantId, storeId, input.revision);
+    const snapshot = version.snapshot as unknown as SourceProjectSnapshot;
+    const file = snapshot.files.find((entry) => entry.path === input.path);
+    if (!file || file.encoding === "base64") throw new BadRequestException("Selecciona un archivo de texto existente.");
+    return this.save(merchantId, storeId, { revision: input.revision, label: `Edición de ${input.path}`.slice(0, 120), brief: snapshot.brief,
+      files: snapshot.files.map((entry) => entry.path === input.path ? { ...entry, content: input.content } : entry) });
   }
 
   private async append(storeId: string, revision: number, label: string, snapshot: SourceProjectSnapshot, restoredFrom: number | null = null) {

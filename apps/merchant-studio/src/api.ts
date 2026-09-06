@@ -126,6 +126,36 @@ export class MerchantStudioApi {
     return this.request("/stores");
   }
 
+  sourceState(storeId: string, before?: number): Promise<SourceState> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project${before ? `?before=${before}` : ""}`);
+  }
+
+  editSourceFile(storeId: string, revision: number, path: string, content: string): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/file`, { method: "PATCH", body: JSON.stringify({ revision, path, content }) });
+  }
+
+  sourceVersion(storeId: string, revision: number): Promise<SourceVersion> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}`);
+  }
+
+  generateSource(storeId: string, body: { revision: number; brief: import("./source-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[] }): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/generate`, { method: "POST", body: JSON.stringify(body) });
+  }
+
+  restoreSource(storeId: string, target: number, revision: number): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${target}/restore`, { method: "POST", body: JSON.stringify({ revision }) });
+  }
+
+  saveSource(storeId: string, body: { revision: number; label: string; brief: import("./source-preview").SourceSnapshot["brief"]; files: import("./source-preview").SourceFile[] }): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project`, { method: "PUT", body: JSON.stringify(body) });
+  }
+
+  async exportSource(storeId: string, revision: number): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}/export`, { headers: { Authorization: `Bearer ${this.token}` } });
+    if (!response.ok) throw new ApiError("No se pudo descargar esta revisión.", response.status);
+    return response.blob();
+  }
+
   conversation(storeId: string): Promise<ConversationResponse> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/agent-conversation`);
   }
@@ -163,6 +193,10 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/visual-versions/${encodeURIComponent(versionId)}/restore`, { method: "POST", body: JSON.stringify({ revision }) });
   }
 }
+
+export interface SourceRevision { revision: number; label: string; digest: string; restoredFrom: number | null; createdAt: string }
+export interface SourceState { revision: number; versions: SourceRevision[]; nextBefore: number | null }
+export interface SourceVersion extends SourceRevision { snapshot: import("./source-preview").SourceSnapshot }
 
 export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualProposal | null): string {
   const url = new URL(`/s/${encodeURIComponent(store.slug)}`, CHECKOUT_ORIGIN);

@@ -23,7 +23,8 @@
     "verify:events": "node scripts/verify-events-demo.mjs",
     "verify:face-entry": "node scripts/verify-reusable-face-entry.mjs",
     "build": "pnpm -r run build",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "dev:independent-cafe": "node examples/independent-cafe/build.mjs && node examples/independent-cafe/server.mjs"
   },
   "devDependencies": {
     "embedded-postgres": "18.4.0-beta.17",

@@ -19,3 +19,6 @@ tmp/
 *.tsbuildinfo
 SFVL-SOL-AUT-709354049-9526
 Screenshot 2026-08-15 at 3.24.06 PM.png
+
+.backups/
+**/.test-artifacts/

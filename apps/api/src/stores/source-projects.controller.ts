@@ -1,22 +1,36 @@
-import { Body, Controller, Get, Header, Param, ParseIntPipe, Post, Put, Query, StreamableFile, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, ParseIntPipe, Patch, Post, Put, Query, StreamableFile, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
-import { SaveSourceProjectDto, SourceProjectRevisionDto } from "./dto/save-source-project.dto";
+import { EditSourceFileDto, SaveSourceProjectDto, SourceProjectRevisionDto } from "./dto/save-source-project.dto";
 import { SourceProjectsService } from "./source-projects.service";
+import { SourceGenerationService } from "./source-generation.service";
+import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 
 @ApiTags("storefront-source-projects")
 @ApiBearerAuth()
 @UseGuards(MerchantAuthGuard)
 @Controller("v1/stores/:storeId/source-project")
 export class SourceProjectsController {
-  constructor(private readonly projects: SourceProjectsService) {}
+  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService) {}
+
+  @Post("generate")
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  generate(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: GenerateSourceProjectDto) {
+    return this.generation.generate(merchant.id, storeId, input);
+  }
 
   @Get()
   @Header("Cache-Control", "private, no-store")
   state(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Query("before", new ParseIntPipe({ optional: true })) before?: number) {
     return this.projects.state(merchant.id, storeId, before);
+  }
+
+  @Patch("file")
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  editFile(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: EditSourceFileDto) {
+    return this.projects.editFile(merchant.id, storeId, input);
   }
 
   @Put()
