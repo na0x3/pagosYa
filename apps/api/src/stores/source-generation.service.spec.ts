@@ -11,10 +11,21 @@ function setup() {
   const projects:any={state:jest.fn().mockResolvedValue({revision:0}),save:jest.fn().mockImplementation(async(_m,_s,value)=>({revision:1,snapshot:sourceProjectSnapshot(value)})),version:jest.fn()};
   const config:any={get:jest.fn((key:string)=>({'app.openAi.apiKey':'test-server-key','app.openAi.enabled':true,'app.checkoutOrigin':'http://localhost:5174','app.environment':'test'}[key]))};
   const uploads:any={getBuffer:jest.fn(),contentTypeFor:jest.fn().mockReturnValue('image/png')};
-  return {service:new SourceGenerationService(prisma,stores,projects,uploads,config),prisma,projects,config,uploads};
+  return {service:new SourceGenerationService(prisma,stores,projects,uploads,config),prisma,projects,config,uploads,stores};
 }
 describe('Independent source generation',()=>{
   afterEach(()=>jest.restoreAllMocks());
+  it('refreshes only public catalog fields for the owning merchant without tracking a storefront view', async () => {
+    const { service, prisma, stores } = setup();
+    prisma.store.findFirst.mockResolvedValueOnce(null);
+    await expect(service.catalog('other', 's')).rejects.toThrow('Store not found');
+    expect(stores.getStorePublic).not.toHaveBeenCalled();
+    stores.getStorePublic.mockResolvedValueOnce({ storeName: 'Café', items: [{ id: 'p1', amount: 6500, stock: 7 }], categories: [], privateCredential: 'not-for-preview' });
+    const catalog = await service.catalog('m', 's');
+    expect(catalog.items[0].amount).toBe(6500);
+    expect(catalog).not.toHaveProperty('privateCredential');
+    expect(stores.getStorePublic).toHaveBeenCalledWith('cafe', { trackView: false });
+  });
   it('packages generated files with portable commerce without executing source or exporting secrets',async()=>{
     const fetchMock=jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({label:'Café menu',files:files()})}]}]})));
     const {service}=setup();const result=await service.generate('m','s',input);

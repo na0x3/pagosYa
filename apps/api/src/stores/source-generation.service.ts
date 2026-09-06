@@ -36,6 +36,15 @@ export function validateGeneratedSource(files: SourceProjectFileDto[]): void {
 export class SourceGenerationService {
   constructor(private readonly prisma: PrismaService, private readonly stores: StoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService) {}
 
+  async catalog(merchantId: string, storeId: string) {
+    const owner = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true } });
+    if (!owner) throw new NotFoundException("Store not found");
+    const data = await this.stores.getStorePublic(owner.slug, { trackView: false });
+    return { storeName: data.storeName, tagline: data.tagline, checkoutMode: data.checkoutMode,
+      contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
+      categories: data.categories, locations: data.locations, items: data.items };
+  }
+
   async generate(merchantId: string, storeId: string, dto: GenerateSourceProjectDto) {
     const owner = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true } });
     if (!owner) throw new NotFoundException("Store not found");
@@ -49,7 +58,7 @@ export class SourceGenerationService {
     if (!/^https?:$/.test(apiUrl.protocol) || apiUrl.username || apiUrl.password) throw new ServiceUnavailableException("PUBLIC_API_URL no es una URL pública válida.");
     if (this.config.get<string>("app.environment") === "production" && apiUrl.protocol !== "https:") throw new ServiceUnavailableException("PUBLIC_API_URL debe usar HTTPS en producción.");
     const data = {
-      storeName: publicStore.storeName, tagline: publicStore.tagline, checkoutMode: publicStore.checkoutMode,
+      storeName: publicStore.storeName, logoUrl: publicStore.logoUrl, tagline: publicStore.tagline, checkoutMode: publicStore.checkoutMode,
       contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
       categories: publicStore.categories, locations: publicStore.locations,
       items: publicStore.items.map((item) => ({ ...item, imageUrls: item.imageUrls.map((url) => new URL(url, apiUrl).href) })),

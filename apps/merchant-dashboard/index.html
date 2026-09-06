@@ -3917,6 +3917,29 @@
     body.is-logged-in:not(.store-preview-fullscreen) .workspace-title { font-size: clamp(2rem, 13vw, 3.35rem); }
   }
 
+
+  .merchant-store-tabs { border: 2px solid #242424; background: #fff; margin-bottom: 18px; box-shadow: 4px 4px 0 #242424; }
+  .merchant-store-context { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #242424; }
+  .merchant-store-context strong { color: #242424; overflow-wrap: anywhere; }
+  .merchant-store-context a { color: #3e379a; font-size: 12px; white-space: nowrap; }
+  .merchant-store-tab-links { display: flex; overflow-x: auto; }
+  .merchant-store-tab-links a { padding: 14px 16px; white-space: nowrap; border-right: 1px solid #242424; color: #242424; font-size: 12px; text-decoration: none; }
+  .merchant-store-tab-links a[aria-current="page"] { background: #ffc44d; box-shadow: inset 0 -3px #242424; }
+  #merchantSiteWorkspace { min-width: 0; }
+  #merchantStudioFrame { width: 100%; height: max(720px, calc(100dvh - 200px)); border: 2px solid #242424; background: #fff; }
+  .merchant-workspace-note { font-size: 12px; line-height: 1.7; color: #595959; }
+  body[data-dashboard-view="workspace"] .workspace-header { padding-block: 0; margin-bottom: 16px; }
+  body[data-dashboard-view="workspace"] .workspace-title { font-size: 28px; }
+  body[data-dashboard-view="workspace"] :is(.assistant-restore, #assistantRestore) { display: none; }
+  body.is-logged-in[data-dashboard-view="workspace"] .workspace-header { display: none; }
+  body.is-logged-in[data-dashboard-view="workspace"] .dashboard-workspace { padding: 12px; }
+  body.is-logged-in[data-dashboard-view="workspace"] > .topbar { position: static; }
+  body[data-dashboard-view="workspace"] .merchant-store-tabs { position: sticky; top: 0; z-index: 25; }
+  body[data-dashboard-view="workspace"] #merchantStudioFrame { height: max(560px, calc(100dvh - 245px)); }
+  body[data-dashboard-view="workspace"] .merchant-workspace-note { color: var(--pg-text); }
+  body[data-dashboard-view="products"] #productPreviewMount { display: none; }
+  body[data-dashboard-view="products"] .product-editor-studio { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 950px) { body[data-dashboard-view="workspace"] #merchantStudioFrame { height: 1600px; } }
 </style>
 </head>
 <body>
@@ -4080,7 +4103,7 @@
           <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Tiendas</a>
           <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
           <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
-          <a class="dashboard-nav-button" href="#dashboard-appearance" data-dashboard-view="appearance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Apariencia</a>
+          <a class="dashboard-nav-button" href="#dashboard-workspace" data-dashboard-view="workspace"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Mi tienda</a>
           <span class="dashboard-nav-label" style="padding-top:12px">Operaciones</span>
           <a class="dashboard-nav-button" href="#dashboard-operations" data-dashboard-view="operations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M17 13v8M13 17h8"/></svg></span>Centro operativo</a>
           <a class="dashboard-nav-button" href="#dashboard-events" data-dashboard-view="events"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v3M19 3v3M4 8h16M5 5h14a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2z"/><path d="M8 12h3v3H8zM14 12h2M14 16h3"/></svg></span>Eventos</a>
@@ -4112,6 +4135,23 @@
             <p class="workspace-description" id="workspaceDescription">Tu operación, ventas y estado general en un solo lugar.</p>
           </div>
         </header>
+        <nav class="merchant-store-tabs" id="merchantStoreTabs" aria-label="Espacio de la tienda" hidden>
+          <div class="merchant-store-context"><strong id="merchantWorkspaceStoreName">Mi tienda</strong><a href="#dashboard-stores" data-dashboard-view="stores">Cambiar tienda</a></div>
+          <div class="merchant-store-tab-links">
+            <a href="#dashboard-workspace" data-dashboard-view="workspace">Sitio · YAPI</a>
+            <a href="#dashboard-products" data-dashboard-view="products">Productos</a>
+            <a href="#dashboard-categories" data-dashboard-view="categories">Categorías</a>
+            <a href="#dashboard-operations" data-dashboard-view="operations">Operación</a>
+            <a href="#dashboard-charge-links" data-dashboard-view="charge-links">Cobrar</a>
+            <a href="#dashboard-payments" data-dashboard-view="payments">Pagos</a>
+            <a href="#dashboard-compliance" data-dashboard-view="compliance">Facturación y cuenta</a>
+          </div>
+        </nav>
+        <section id="merchantSiteWorkspace" data-dashboard-page="workspace" aria-label="Diseño de tu tienda" hidden>
+          <p id="merchantStudioEmpty">Selecciona o crea una tienda en <a href="#dashboard-stores" data-dashboard-view="stores">Tiendas</a> para empezar con YAPI.</p>
+          <iframe id="merchantStudioFrame" title="YAPI · Editor de tu tienda" hidden></iframe>
+          <p class="merchant-workspace-note">El diseño se guarda como borrador. Tu catálogo y checkout siguen conectados a pagosYa. <a href="#dashboard-appearance" data-dashboard-view="appearance">Configuración de la tienda publicada</a></p>
+        </section>
     <div class="cards" data-dashboard-page="overview">
       <div class="card">
         <div class="card-head">
@@ -6575,7 +6615,7 @@
   }
 
   function syncAssistantWorkspaceVisibility(view) {
-    if (view === "appearance") {
+    if (view === "appearance" || view === "workspace") {
       if (assistantDockEl.hidden) return;
       setAssistantOpen(false, false, false);
       assistantDockEl.hidden = true;
@@ -7472,6 +7512,7 @@
     stores: ["Tiendas", "Crea y administra cada escaparate de tu comercio."],
     categories: ["Categorías", "Organiza el catálogo en el orden que verán tus clientes."],
     products: ["Productos", "Gestiona productos, precios, inventario y enlaces de pago."],
+    workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     appearance: ["Apariencia", "Personaliza la identidad visual y revisa los cambios en vivo."],
     operations: ["Centro operativo", "Coordina clientes, inventario, agenda, entregas, caja y conexiones externas."],
     events: ["Eventos", "Vende entradas, registra asistentes y controla acceso y aforo en una sola operación."],
@@ -7480,6 +7521,39 @@
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
     compliance: ["Cumplimiento y credenciales", "Completa KYC, facturación electrónica y credenciales de producción."],
   };
+
+  function canLeaveMerchantStudio() {
+    const frame = document.getElementById("merchantStudioFrame");
+    try { return frame.contentWindow?.pagosyaStudioCanLeave?.() ?? true; } catch { return false; }
+  }
+  function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
+    const store = lastStores.find(candidate => candidate.id === currentStoreId);
+    const views = ["workspace", "products", "categories", "operations", "charge-links", "payments", "compliance"];
+    document.getElementById("merchantStoreTabs").hidden = !store || !views.includes(view);
+    document.getElementById("merchantWorkspaceStoreName").textContent = store?.name || "Mi tienda";
+    const frame = document.getElementById("merchantStudioFrame");
+    if (!sessionToken || !store || frame.dataset.storeId && frame.dataset.storeId !== store.id) {
+      frame.removeAttribute("src"); delete frame.dataset.storeId;
+    }
+    frame.hidden = !store;
+    document.getElementById("merchantStudioEmpty").hidden = Boolean(store);
+    if (view === "workspace" && sessionToken && store && !frame.getAttribute("src")) {
+      sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
+      frame.dataset.storeId = store.id;
+      frame.src = `/studio/?source=1&embedded=1&store=${encodeURIComponent(store.id)}`;
+    }
+    if (view === "workspace" && frame.getAttribute("src")) frame.contentWindow?.postMessage({ type: "pagosya:catalog-refresh" }, location.origin);
+  }
+  window.addEventListener("message", event => {
+    const frame = document.getElementById("merchantStudioFrame");
+    if (event.origin !== location.origin || event.source !== frame.contentWindow) return;
+    if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
+    if (event.data?.type === "pagosya:workspace" && ["products", "categories", "charge-links"].includes(event.data.view)) {
+      history.pushState(null, "", `#dashboard-${event.data.view}`);
+      setDashboardView(event.data.view);
+      document.getElementById("merchantStoreTabs").scrollIntoView({ block: "start" });
+    }
+  });
 
   function placeStorePreviewForDashboardView(view) {
     const previewPanel = document.querySelector(".store-preview-panel");
@@ -7530,6 +7604,7 @@
     if (nextView === "appearance" && dashboardSections.get("storeSettingsSection")?.toggle.getAttribute("aria-expanded") !== "true") {
       setDashboardSectionExpanded("storeSettingsSection", true, false);
     }
+    syncMerchantStoreWorkspace(nextView);
     placeStorePreviewForDashboardView(nextView);
     // Keep an explicitly opened settings pane open when its controls update
     // the selected canvas element. Only entering Appearance opens fullscreen.
@@ -8701,7 +8776,7 @@
       item.classList.toggle("is-complete", onboardingCompleted || step < onboardingStep);
       item.setAttribute("aria-current", step === onboardingStep ? "step" : "false");
     });
-    aiSetupLaunchStatusEl.textContent = onboardingCompleted ? "Configuración completada" : `Paso ${onboardingStep} de 4`;
+    aiSetupLaunchStatusEl.textContent = "Diseñar con YAPI";
   }
 
   function onboardingTourMarkup() {
@@ -9221,6 +9296,8 @@
   }
 
   function maybeShowFirstTimeOnboarding() {
+    // Old deep links retain their walkthrough; the main merchant flow uses YAPI.
+    if (document.body.dataset.dashboardView !== "appearance") return;
     const identity = onboardingStorageKey("identity");
     if (firstTimeOnboardingIdentity === identity) return;
     onboardingCsvFile = null;
@@ -9237,7 +9314,7 @@
     }
   }
 
-  document.getElementById("aiSetupLaunch").addEventListener("click", () => { loadOnboardingState(); showOnboarding(); });
+  document.getElementById("aiSetupLaunch").addEventListener("click", () => { history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); });
   document.getElementById("onboardingClose").addEventListener("click", () => onboardingDialogEl.close());
   renderOnboarding();
   let pendingLogoUrl = null;
@@ -17071,12 +17148,14 @@
   document.getElementById("createStoreForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target));
+    if (!canLeaveMerchantStudio()) return;
     try {
       const store = await api("/stores", { method: "POST", body: JSON.stringify({ name: data.name }) });
       e.target.reset();
       selectStore(store.id);
       await refresh();
-      if (!onboardingCompleted && onboardingStep === 2) showOnboarding(2);
+      history.pushState(null, "", "#dashboard-workspace");
+      setDashboardView("workspace");
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     }
@@ -17962,17 +18041,24 @@
       .join("") || `<p class="muted" style="margin:14px 0 0">Todavía no tienes tiendas — crea una arriba.</p>`;
 
     document.querySelectorAll(".store-row").forEach((row) => {
+      row.setAttribute("tabindex", "0");
+      row.setAttribute("aria-label", `Administrar ${stores.find(store => store.id === row.dataset.id)?.name || "tienda"}`);
+      row.addEventListener("keydown", event => { if (event.target === row && ["Enter", " "].includes(event.key)) { event.preventDefault(); row.click(); } });
       row.addEventListener("click", async () => {
         const changingStore = row.dataset.id !== currentStoreId;
+        if (changingStore && !canLeaveMerchantStudio()) return;
         if (changingStore && storeSettingsDirty && !confirm("Tienes cambios sin guardar. ¿Cambiar de tienda y descartarlos?")) return;
         if (changingStore) setStoreSettingsDirty(false);
         selectStore(row.dataset.id);
+        history.pushState(null, "", "#dashboard-workspace");
+        setDashboardView("workspace");
         await refresh();
       });
     });
     document.querySelectorAll(".delete-store").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
+        if (currentStoreId === btn.dataset.id && !canLeaveMerchantStudio()) return;
         if (!confirm(`¿Eliminar la tienda "${btn.dataset.name}" y todos sus productos? Esta acción no se puede deshacer.`)) return;
         try {
           await api(`/stores/${btn.dataset.id}`, { method: "DELETE" });
@@ -17987,6 +18073,7 @@
       link.addEventListener("click", (event) => event.stopPropagation());
     });
 
+    syncMerchantStoreWorkspace();
     const hasStore = !!currentStoreId;
     if (!hasStore && storePreviewFullscreen) setStorePreviewFullscreen(false);
     if (hasStore && storePreviewInitialOpenPending && document.body.dataset.dashboardView === "appearance") setStorePreviewFullscreen(true);
@@ -20604,6 +20691,8 @@
   });
 
   function showLoggedOut() {
+    const studioFrame = document.getElementById("merchantStudioFrame");
+    studioFrame.removeAttribute("src"); delete studioFrame.dataset.storeId;
     dashboardRefreshVersion += 1;
     document.body.classList.add("is-logged-out");
     document.body.classList.remove("is-logged-in");
@@ -21502,6 +21591,7 @@
   });
 
   document.getElementById("logout").addEventListener("click", async () => {
+    if (!canLeaveMerchantStudio()) return;
     if (profileMenuEl.matches(":popover-open")) profileMenuEl.hidePopover();
     try {
       await api("/dashboard/logout", { method: "POST" });

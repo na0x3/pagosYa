@@ -1,15 +1,15 @@
 import { SourceChatService } from './source-chat.service';
 function setup(messages: any[] = []) {
   const prisma: any = {
-    store: { findFirst: jest.fn().mockResolvedValue({ name: 'Café Aroma' }) },
+    store: { findFirst: jest.fn().mockResolvedValue({ name: 'Café Aroma', logoUrl: '/v1/uploads/logo.png', _count: { paymentLinks: 3 } }) },
     storeAgentThread: { findUnique: jest.fn().mockImplementation(async () => ({ id: 't1', messages: [...messages].reverse() })), upsert: jest.fn().mockResolvedValue({ id: 't1' }) },
     storeAgentMessage: { create: jest.fn().mockImplementation(async ({data}) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }) },
   };
-  const projects: any = { state: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() };
+  const projects: any = { state: jest.fn().mockResolvedValue({ revision: 1 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessType: 'Café Aroma', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Editorial' } } }) };
   const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Carta editorial' }) };
   return { service: new SourceChatService(prisma, projects, generation), prisma, projects, generation, messages };
 }
-const request = { revision: 0, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
+const request = { revision: 1, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
 describe('Source chat in the existing store conversation infrastructure', () => {
   it('persists requests and replies with a source revision link', async () => {
     const { service, messages, generation } = setup();
@@ -41,5 +41,40 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     expect(generation.generate.mock.calls[0][2]).toMatchObject({assetUrls:['/v1/uploads/a.png']});
     expect(generation.generate.mock.calls[0][2].instruction).toContain('Crea mi café');
     expect(prisma.storeAgentThread.findUnique).toHaveBeenCalledWith(expect.objectContaining({include:{messages:{where:{channel:'source'},orderBy:{createdAt:'desc'},take:100}}}));
+  });
+});
+
+
+describe('Guided first-site setup', () => {
+  it('asks about business, logo, catalog and colors, resumes after reload, and generates only after confirmation', async () => {
+    const { service, projects, generation } = setup();
+    projects.state.mockResolvedValue({ revision: 0 });
+    const send = (instruction: string, setupStep: string, setupAction?: 'generate' | 'restart', assetUrls: string[] = []) => service.send('m', 's', { revision: 0, instruction, setupStep, setupAction, assetUrls });
+    expect((await service.conversation('m', 's')).setup?.step).toBe('business');
+    await send('Café de especialidad para vecinos del barrio', 'business');
+    expect((await service.conversation('m', 's')).setup?.step).toBe('logo');
+    await send('Usar mi logo actual', 'logo');
+    expect((await service.conversation('m', 's')).setup?.prompt).toContain('3 productos');
+    await send('Destacar café en grano y bebidas', 'products');
+    await send('Crema y verde bosque, editorial', 'colors');
+    await send('Quiero una carta fácil de leer', 'review');
+    expect(generation.generate).not.toHaveBeenCalled();
+    expect((await service.conversation('m', 's')).setup?.prompt).toContain('verde bosque');
+    generation.generate.mockRejectedValueOnce(new Error('timeout'));
+    await expect(send('Crear mi sitio', 'review', 'generate')).rejects.toThrow('timeout');
+    expect((await service.conversation('m', 's')).setup?.step).toBe('review');
+    await send('Crear mi sitio', 'review', 'generate');
+    expect(generation.generate.mock.calls[1][2]).toMatchObject({ assetUrls: ['/v1/uploads/logo.png'], brief: { visualDirection: 'Crema y verde bosque, editorial' } });
+    expect(generation.generate.mock.calls[1][2].instruction).toContain('Café de especialidad');
+    expect(generation.generate.mock.calls[1][2].instruction).toContain('carta fácil');
+  });
+  it('rejects early generation and stale answers, and permits restarting without losing the conversation', async () => {
+    const { service, projects, generation, messages } = setup(); projects.state.mockResolvedValue({ revision: 0 });
+    await expect(service.send('m', 's', { ...request, revision: 0, setupAction: 'generate' })).rejects.toThrow('Primero completa');
+    await service.send('m', 's', { ...request, revision: 0, setupStep: 'business' });
+    await expect(service.send('m', 's', { ...request, revision: 0, setupStep: 'business' })).rejects.toThrow('avanzó');
+    await service.send('m', 's', { ...request, revision: 0, setupStep: 'logo', setupAction: 'restart' });
+    expect((await service.conversation('m', 's')).setup?.step).toBe('business');
+    expect(messages).toHaveLength(4); expect(generation.generate).not.toHaveBeenCalled();
   });
 });

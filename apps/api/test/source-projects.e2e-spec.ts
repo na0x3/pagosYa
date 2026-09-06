@@ -48,6 +48,11 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
 
   it("requires authentication and ownership on all source routes", async () => {
     await request(app.getHttpServer()).get(route).expect(401);
+    await request(app.getHttpServer()).get(`${route}/catalog`).expect(401);
+    await request(app.getHttpServer()).get(`${route}/catalog`).set(auth(foreignToken)).expect(404);
+    const catalog = await request(app.getHttpServer()).get(`${route}/catalog`).set(auth()).expect(200);
+    expect(catalog.body.storeName).toBe("Original public store");
+    expect(catalog.body.items).toEqual([]);
     await request(app.getHttpServer()).post(`${route}/generate`).set(auth(foreignToken)).send({ revision: 0, brief: source(0, "Foreign").brief, instruction: "Generate" }).expect(404);
     await request(app.getHttpServer()).get(route).set(auth(foreignToken)).expect(404);
     await request(app.getHttpServer()).put(route).set(auth(foreignToken)).send(source(0, "Foreign")).expect(404);

@@ -55,3 +55,13 @@
   .source-empty-copy { padding: 28px 22px; }
   .source-mode .canvas-status { font-size: .53rem; }
 }
+
+.source-setup { margin-block: 20px; padding: 20px 16px; border: 2px solid var(--ink); background: var(--surface); box-shadow: 3px 3px 0 var(--ink); }
+.source-setup p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .75rem; line-height: 1.8; }
+.studio-shell.source-embedded { grid-template-rows: minmax(0, 1fr); }
+.source-embedded > .topbar { display: none; }
+.source-embedded-title { font-size: .7rem; }
+@media (min-width: 901px) { .source-embedded .studio-workspace { grid-template-columns: minmax(290px, 34%) minmax(0, 1fr); } }
+@media (max-width: 900px) { .studio-shell.source-embedded { grid-template-rows: auto; } }
+
+.source-setup .clarification-options button { min-height: 40px; padding: 8px 10px; }

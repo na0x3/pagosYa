@@ -1,6 +1,9 @@
 export const SESSION_STORAGE_KEY = "pagosya_merchant_session";
 
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+const embedded = new URLSearchParams(location.search).get("embedded") === "1" && window.parent !== window;
+const API_BASE_URL: string = embedded
+  ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
+  : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 export const CHECKOUT_ORIGIN: string = import.meta.env.VITE_CHECKOUT_ORIGIN ?? "http://localhost:5174";
 
 export type JsonRecord = Record<string, unknown>;
@@ -54,7 +57,13 @@ export interface Clarification {
   options: ClarificationOption[];
 }
 
+export interface SourceSetup {
+  step: 'business' | 'logo' | 'products' | 'colors' | 'review';
+  prompt: string;
+  options: Array<{ label: string; value: string; action?: 'generate' | 'restart' }>;
+}
 export interface ConversationResponse {
+  setup?: SourceSetup | null;
   messages: AgentMessage[];
 }
 
@@ -126,12 +135,16 @@ export class MerchantStudioApi {
     return this.request("/stores");
   }
 
+  sourceCatalog(storeId: string): Promise<JsonRecord> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
+  }
+
   sourceConversation(storeId: string): Promise<ConversationResponse> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number): Promise<{ userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision }) });
+  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction }) });
   }
 
   sourceState(storeId: string, before?: number): Promise<SourceState> {

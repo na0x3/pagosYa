@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === "embedded" ? "/studio/" : "/",
   server: {
     port: 4312,
     proxy: {
@@ -16,6 +17,7 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    ...(mode === "embedded" ? { outDir: "../merchant-dashboard/public/studio", emptyOutDir: true } : {}),
     sourcemap: true,
   },
-});
+}));

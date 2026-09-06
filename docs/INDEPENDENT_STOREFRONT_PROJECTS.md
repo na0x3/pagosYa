@@ -14,7 +14,33 @@ are separate from the existing website drafts and published storefronts.
 
 ## Merchant Studio
 
-Run `pnpm dev:studio`, open `http://127.0.0.1:4312/?source=1`, and sign in with an
+The normal merchant dashboard now opens this editor when a merchant selects or
+creates a store, or chooses **Mi tienda** / **Configurar sitio con IA**. A shared
+store navigation keeps **Sitio · YAPI**, products, categories, operations, payments,
+collection tools, and the existing invoicing/account controls together. Products
+use the original CRUD, inventory, upload, variant, and fiscal mapping APIs.
+
+Dashboard `dev` and `build` compile Studio into `public/studio` with base `/studio/`.
+The dashboard serves it at the same origin and reuses the merchant session and API
+configuration. The embedded editor stays mounted across workspace tabs. Switching
+stores or logging out checks for active generation and unsaved work. Parent/frame
+messages require both the exact origin and the exact frame window; generated code
+remains in a separate opaque sandbox and receives no merchant credentials.
+After editing Studio during a dashboard-only dev session, run
+`pnpm --filter @pagosya/merchant-dashboard run build:studio` and reload. The normal
+build also copies the embedded assets into dashboard `dist/studio`.
+
+New source projects begin with saved chat questions: business/audience, logo,
+existing catalog/featured products, colors/style, then an editable summary and
+**Crear mi sitio** confirmation. Answers and selected images are stored in source
+message metadata; failed generation can resume from the summary. Setup does not
+create products or invent prices; **Administrar productos** opens the real product
+form and returning preserves the message. A private, ownership-checked catalog
+endpoint refreshes the preview without recording a public storefront view.
+Existing source revisions continue directly with editing requests. No SIAT
+activation or source publication is implied by this workspace integration.
+
+For the standalone editor, run `pnpm dev:studio`, open `http://127.0.0.1:4312/?source=1`, and sign in with an
 existing dashboard account. Use **Sitio a medida** in the existing editor workspace (alongside **Tienda actual**).
 Both modes share the login, YAPI composer, icons, monospace typography, amber controls
 and split chat/preview layout. Describe the business and site in chat, then continue
@@ -95,7 +121,8 @@ Base: `/v1/stores/:storeId/source-project`.
 | --- | --- | --- |
 | GET | `/` | Current revision and 30 summaries; paginate with `?before=nextBefore` |
 | PUT | `/` | Save `{ revision, label, brief, files }` as the next revision |
-| GET | `/conversation` | Saved source conversation, oldest to newest |
+| GET | `/conversation` | Saved source conversation and current first-site setup question |
+| GET | `/catalog` | Current public catalog projection, authenticated owner only; no view tracking |
 | POST | `/messages` | Send `{ revision, instruction, assetUrls? }`; returns messages and an optional generated revision |
 | POST | `/generate` | Generate from `{ revision, brief, instruction, assetUrls? }` |
 | PATCH | `/file` | Edit `{ revision, path, content }`, preserving other files |

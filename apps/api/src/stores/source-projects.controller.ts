@@ -17,6 +17,12 @@ import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 export class SourceProjectsController {
   constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService) {}
 
+  @Get("catalog")
+  @Header("Cache-Control", "private, no-store")
+  catalog(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string) {
+    return this.generation.catalog(merchant.id, storeId);
+  }
+
   @Get("conversation")
   @Header("Cache-Control", "private, no-store")
   conversation(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string) {
@@ -24,7 +30,7 @@ export class SourceProjectsController {
   }
 
   @Post("messages")
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
   message(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SendSourceMessageDto) {
     return this.chat.send(merchant.id, storeId, input);
   }

@@ -67,6 +67,21 @@ const server = createServer(async (req, res) => {
   applySecurityHeaders(res);
   try {
     const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    if (requestUrl.pathname.startsWith("/studio/")) {
+      const relative = decodeURIComponent(requestUrl.pathname.slice("/studio/".length)) || "index.html";
+      const root = path.join(dirname, "public", "studio");
+      const filename = path.resolve(root, relative);
+      if (!filename.startsWith(root + path.sep)) { res.writeHead(404); res.end("not found"); return; }
+      const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ttf": "font/ttf", ".svg": "image/svg+xml" };
+      try {
+        const content = await readFile(filename);
+        res.setHeader("content-security-policy", "frame-ancestors 'self'; base-uri 'self'");
+        res.setHeader("x-frame-options", "SAMEORIGIN");
+        res.writeHead(200, { "content-type": types[path.extname(filename)] || "application/octet-stream", "cache-control": "no-store" });
+        res.end(content);
+      } catch (error) { if (error.code !== "ENOENT") throw error; res.writeHead(404); res.end("Studio unavailable. Run pnpm run build:studio."); }
+      return;
+    }
     if (requestUrl.pathname === "/__live_reload" && liveReloadEnabled) {
       res.writeHead(200, {
         "content-type": "text/event-stream",
