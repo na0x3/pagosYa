@@ -65,3 +65,6 @@
 @media (max-width: 900px) { .studio-shell.source-embedded { grid-template-rows: auto; } }
 
 .source-setup .clarification-options button { min-height: 40px; padding: 8px 10px; }
+
+/* Reserve the first header slot for the dashboard's purple menu overlay. */
+.source-embedded .agent-header { padding-left: 124px; }

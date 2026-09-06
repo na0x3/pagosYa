@@ -56,6 +56,10 @@ test('store opens the shared editor; setup and an unsent message survive product
   const { editor, products, requests } = await workspace(page);
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'workspace');
   await expect(page.locator('#onboardingDialog')).not.toBeVisible();
+  await expect(page.locator('#merchantStoreTabs')).not.toBeVisible();
+  await expect(page.locator('#storeFullscreenNavHandle')).toBeVisible();
+  const bounds = await page.locator('#merchantStudioFrame').boundingBox();
+  expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize() });
   await expect(editor.locator('#source-store')).not.toBeVisible();
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Café de especialidad para el barrio'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
@@ -94,7 +98,8 @@ test('switching stores protects unsent work and scopes the editor; untrusted mes
   const { editor } = await workspace(page);
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Un mensaje sin enviar');
-  await page.locator('#merchantStoreTabs [data-dashboard-view="stores"]').click();
+  await page.locator('#storeFullscreenNavHandle').click();
+  await page.locator('#dashboardNav [data-dashboard-view="stores"]').click();
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('.store-row[data-id="store_2"] .store-row-name').click();
   await expect(page.locator('#merchantStudioFrame')).toHaveAttribute('data-store-id', 'store_1');
@@ -110,7 +115,8 @@ test('switching stores protects unsent work and scopes the editor; untrusted mes
 
 test('saved site previews refresh the real catalog after product creation without a new source revision', async ({ page }) => {
   const { editor, products, requests } = await workspace(page, true);
-  await page.locator('#merchantStoreTabs [data-dashboard-view="products"]').click();
+  await page.locator('#storeFullscreenNavHandle').click();
+  await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
   await page.locator('#paymentLinkName').fill('Café recién tostado');
   await page.locator('#paymentLinkAmount').fill('42');
   await page.locator('#paymentLinkSubmit').click();

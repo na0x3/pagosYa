@@ -15,7 +15,9 @@ are separate from the existing website drafts and published storefronts.
 ## Merchant Studio
 
 The normal merchant dashboard now opens this editor when a merchant selects or
-creates a store, or chooses **Mi tienda** / **Configurar sitio con IA**. A shared
+creates a store, or chooses **Mi tienda** / **Configurar sitio con IA**. Chat and
+preview fill the viewport; the purple **Menú** button opens the existing dashboard
+navigation above the editor. A shared
 store navigation keeps **Sitio · YAPI**, products, categories, operations, payments,
 collection tools, and the existing invoicing/account controls together. Products
 use the original CRUD, inventory, upload, variant, and fiscal mapping APIs.
