@@ -8,14 +8,15 @@ scan(root);
 const snapshot={schemaVersion:1,brief:{businessType:'Cafetería',audience:'Vecinos',primaryAction:'Hacer un pedido',visualDirection:'Menú editorial'},files};
 
 test('source studio generates, previews commerce, edits a file, restores and downloads',async({page})=>{
-  const versions:any[]=[];let revision=0;let patch:any;let generated:any;
+  const versions:any[]=[];let revision=0;let patch:any;let generated:any;const messages:any[]=[];
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/v1/**',async route=>{
     const url=new URL(route.request().url());const pathname=url.pathname;const method=route.request().method();
     let body:any={};
     if(pathname.endsWith('/dashboard/login')) body={token:'test-session',user:{email:'test@example.com'}};
     else if(pathname.endsWith('/stores'))body=[{id:'s1',name:'Café Aroma',slug:'cafe-aroma'}];
-    else if(pathname.endsWith('/generate')) {generated=route.request().postDataJSON();revision++;versions.unshift({revision,label:'Carta propia',snapshot:structuredClone(snapshot)});body=versions[0];}
+    else if(pathname.endsWith('/conversation'))body={messages};
+    else if(pathname.endsWith('/messages')) {generated=route.request().postDataJSON();revision++;versions.unshift({revision,label:'Carta propia',snapshot:structuredClone(snapshot)});const userMessage={id:`u${revision}`,role:'USER',content:generated.instruction,metadata:{},createdAt:new Date().toISOString()};const assistantMessage={id:`a${revision}`,role:'ASSISTANT',content:'Preparé la carta. Dime qué ajustamos.',metadata:{sourceRevision:revision,label:'Carta propia'},createdAt:new Date().toISOString()};messages.push(userMessage,assistantMessage);body={userMessage,assistantMessage,revision:versions[0]};}
     else if(pathname.endsWith('/file')) {patch=route.request().postDataJSON();const copy=structuredClone(versions[0].snapshot);copy.files.find((f:any)=>f.path===patch.path).content=patch.content;revision++;versions.unshift({revision,label:'Edición',snapshot:copy});body=versions[0];}
     else if(pathname.endsWith('/restore')) {const target=Number(pathname.split('/').at(-2));revision++;versions.unshift({revision,label:'Restaurada',restoredFrom:target,snapshot:structuredClone(versions.find(v=>v.revision===target).snapshot)});body=versions[0];}
     else if(pathname.endsWith('/export')) {await route.fulfill({status:200,contentType:'application/zip',body:Buffer.from('PK-test-download')});return;}
@@ -24,19 +25,22 @@ test('source studio generates, previews commerce, edits a file, restores and dow
     else throw new Error(`Unexpected request ${method} ${pathname}`);
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
   });
-  await page.goto('/?source=1');await page.getByLabel('Correo',{exact:true}).fill('test@example.com');await page.getByLabel('Contraseña').fill('test-password');await page.getByRole('button',{name:'Entrar',exact:true}).click();
-  await page.getByLabel('Tipo de negocio').fill('Cafetería');await page.getByLabel('Para quién es').fill('Vecinos');await page.getByLabel('Detalles que debe incluir').fill('Una carta clara con pedido visible');await page.getByRole('button',{name:'Crear mi sitio'}).click();
+  await page.goto('/?source=1');await page.getByLabel('Correo',{exact:true}).fill('test@example.com');await page.getByLabel('Contraseña').fill('test-password');await page.getByRole('button',{name:'Entrar al Studio',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Un sitio que se sienta tuyo.'})).toBeVisible();
+  await page.getByRole('textbox',{name:'Indicación para YAPI'}).fill('Crea una cafetería con una carta clara y pedido visible');await page.getByRole('button',{name:'Enviar a YAPI'}).click();
   const frame=page.frameLocator('iframe');await expect(frame.getByRole('heading',{name:'Un buen día empieza aquí.'})).toBeVisible();
-  expect(generated.revision).toBe(0);expect(generated.brief.businessType).toBe('Cafetería');
+  expect(generated.revision).toBe(0);expect(generated.instruction).toContain('cafetería');expect(generated).not.toHaveProperty('brief');
+  await page.reload();await expect(page.getByText('Preparé la carta. Dime qué ajustamos.',{exact:true})).toBeVisible();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox','allow-scripts');
   await frame.getByRole('button',{name:'Añadir Café americano',exact:true}).click();
   await expect(frame.locator('[data-cart-count]')).toHaveText('1');
   await frame.getByRole('button',{name:'Revisar pedido de prueba'}).click();await expect(frame.locator('[data-pagosya-status]')).toContainText(/demostración|prueba|previa/);
   await page.getByRole('button',{name:'Código',exact:true}).click();const editor=page.getByRole('textbox',{name:'Código del archivo'});await editor.fill((await editor.inputValue()).replace('Un buen día','Una buena mañana'));
   await expect(page.getByRole('button',{name:'Descargar ZIP'})).toBeDisabled();await page.getByRole('button',{name:'Guardar como nueva revisión'}).click();await expect(page.locator('#source-revision')).toHaveValue('2');expect(patch.revision).toBe(1);expect(patch.path).toBe('index.html');expect(patch).not.toHaveProperty('files');
-  await page.locator('#source-revision').selectOption('1');await expect(page.getByRole('button',{name:'Generar nueva revisión'})).toBeDisabled();await page.getByRole('button',{name:'Restaurar esta revisión'}).click();await expect(page.locator('#source-revision')).toHaveValue('3');
+  await page.locator('#source-revision').selectOption('1');await expect(page.getByRole('button',{name:'Enviar a YAPI'})).toBeDisabled();await page.getByRole('button',{name:'Restaurar esta revisión'}).click();await expect(page.locator('#source-revision')).toHaveValue('3');
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar ZIP'}).click();expect((await download).suggestedFilename()).toBe('storefront-r3.zip');
-  await page.getByRole('button',{name:'Vista previa',exact:true}).click();await page.screenshot({path:'.test-artifacts/source-studio-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});await page.locator('iframe').scrollIntoViewIfNeeded();await expect(frame.getByRole('heading',{name:'Un buen día empieza aquí.'})).toBeVisible();await page.screenshot({path:'.test-artifacts/source-studio-mobile.png',fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByRole('textbox',{name:'Indicación para YAPI'}).fill('Haz la portada más editorial');await page.getByRole('button',{name:'Enviar a YAPI'}).click();await expect(page.locator('#source-revision')).toHaveValue('4');expect(generated.revision).toBe(3);
+  await page.getByRole('button',{name:'Vista previa',exact:true}).click();await expect(frame.getByRole('heading',{name:'Un buen día empieza aquí.'})).toBeVisible();await page.screenshot({path:'.test-artifacts/source-studio-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});await page.locator('iframe').scrollIntoViewIfNeeded();await expect(frame.getByRole('heading',{name:'Un buen día empieza aquí.'})).toBeVisible();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:'.test-artifacts/source-studio-mobile.png',fullPage:false});await page.locator('iframe').scrollIntoViewIfNeeded();await expect(frame.getByRole('heading',{name:'Un buen día empieza aquí.'})).toBeVisible();await page.screenshot({path:'.test-artifacts/source-studio-mobile-preview.png',fullPage:false});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -61,4 +65,40 @@ test('portable commerce refreshes stock and sends only product ids and quantitie
   await expect(page.getByRole('button',{name:'Añadir Café americano',exact:true})).toBeVisible();await expect.poll(()=>loaded).toBe(true);
   await page.getByRole('button',{name:'Añadir Café americano',exact:true}).click();await expect(page.getByRole('button',{name:'Añadir Café americano',exact:true})).toBeDisabled();
   await page.locator('.checkout-button').click();await expect.poll(()=>checkout).toBeTruthy();expect(checkout.items).toEqual([{paymentLinkId:'CAF-001',quantity:1}]);expect(checkout.items[0]).not.toHaveProperty('amount');
+});
+
+test('failed chat generation preserves the request and permits retry', async ({ page }) => {
+  let calls = 0, revision = 0;
+  const messages: any[] = [];
+  const saved = { revision: 1, label: 'Carta propia', snapshot };
+  await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
+  await page.route('**/api/v1/**', async route => {
+    const pathname = new URL(route.request().url()).pathname;
+    let body: any;
+    if (pathname.endsWith('/stores')) body = [{ id: 's1', name: 'Café Aroma', slug: 'cafe' }];
+    else if (pathname.endsWith('/conversation')) body = { messages };
+    else if (pathname.endsWith('/source-project')) body = { revision, versions: revision ? [saved] : [], nextBefore: null };
+    else if (pathname.endsWith('/versions/1')) body = saved;
+    else if (pathname.endsWith('/messages')) {
+      calls++;
+      if (calls === 1) {
+        messages.push({ id: 'failed', role: 'ASSISTANT', content: 'No pude completar esta revisión.', metadata: { failed: true } });
+        await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ message: 'La generación no respondió. Vuelve a intentarlo.' }) }); return;
+      }
+      revision = 1;
+      body = { revision: saved, userMessage: { id: 'u', role: 'USER', content: route.request().postDataJSON().instruction }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Tu revisión está lista.', metadata: { sourceRevision: 1 } } };
+      messages.push(body.userMessage, body.assistantMessage);
+    } else throw new Error(`Unexpected route ${pathname}`);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+  await page.goto('/?source=1');
+  const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
+  await composer.fill('Crea una carta cálida para mi cafetería');
+  await page.getByRole('button', { name: 'Enviar a YAPI' }).click();
+  await expect(page.getByRole('alert')).toContainText('Vuelve a intentarlo');
+  await expect(composer).toHaveValue('Crea una carta cálida para mi cafetería');
+  await page.getByRole('button', { name: 'Enviar a YAPI' }).click();
+  await expect(page.locator('#source-revision')).toHaveValue('1');
+  await expect(composer).toHaveValue('');
+  expect(calls).toBe(2);
 });

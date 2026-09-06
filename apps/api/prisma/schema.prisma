@@ -1887,6 +1887,7 @@ model StoreAgentMessage {
   threadId   String
   thread     StoreAgentThread      @relation(fields: [threadId], references: [id], onDelete: Cascade)
   role       StoreAgentMessageRole
+  channel    String                @default("website")
   content    String
   proposalId String?
   proposal   StoreVisualProposal?  @relation(fields: [proposalId], references: [id], onDelete: SetNull)
@@ -1894,6 +1895,7 @@ model StoreAgentMessage {
   createdAt  DateTime              @default(now())
 
   @@index([threadId, createdAt])
+  @@index([threadId, channel, createdAt])
   @@index([proposalId])
 }
 

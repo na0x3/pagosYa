@@ -2221,3 +2221,14 @@ input:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Shared destinations in the same editor workspace. */
+.studio-mode-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.studio-mode-nav a, .studio-mode-nav span { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 10px; color: var(--muted); text-decoration: none; font-size: .62rem; border: 1px solid transparent; }
+.studio-mode-nav [aria-current=page] { border-color: var(--ink); color: var(--ink); background: var(--surface); }
+.connected-canvas > .canvas-toolbar:has(.studio-mode-nav) { flex-wrap: wrap; height: auto; min-height: 52px; gap: 8px; }
+.connected-canvas:has(.studio-mode-nav) { grid-template-rows: auto minmax(0, 1fr) 31px; }
+.source-mode .source-canvas { grid-template-rows: auto auto minmax(0, 1fr) 31px; }
+@media (max-width: 900px) {
+  .source-mode .source-canvas { grid-template-rows: auto auto minmax(580px, 1fr) 31px; }
+}

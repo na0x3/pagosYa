@@ -1,3 +1,4 @@
+import { SourceChatService } from "./source-chat.service";
 import { Module } from "@nestjs/common";
 import { StoresService } from "./stores.service";
 import { StoresController } from "./stores.controller";
@@ -19,7 +20,7 @@ import { SourceGenerationService } from "./source-generation.service";
 @Module({
   imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule],
   controllers: [StoresController, StoresPublicController, PromoCodesController, SourceProjectsController],
-  providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService],
+  providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService, SourceChatService],
   exports: [StoresService],
 })
 export class StoresModule {}

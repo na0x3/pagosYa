@@ -1,3 +1,5 @@
+import { SourceChatService } from "./source-chat.service";
+import { SendSourceMessageDto } from "./dto/send-source-message.dto";
 import { Body, Controller, Get, Header, Param, ParseIntPipe, Patch, Post, Put, Query, StreamableFile, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
@@ -13,7 +15,19 @@ import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 @UseGuards(MerchantAuthGuard)
 @Controller("v1/stores/:storeId/source-project")
 export class SourceProjectsController {
-  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService) {}
+  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService) {}
+
+  @Get("conversation")
+  @Header("Cache-Control", "private, no-store")
+  conversation(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string) {
+    return this.chat.conversation(merchant.id, storeId);
+  }
+
+  @Post("messages")
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  message(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SendSourceMessageDto) {
+    return this.chat.send(merchant.id, storeId, input);
+  }
 
   @Post("generate")
   @Throttle({ default: { limit: 3, ttl: 60_000 } })

@@ -1,3 +1,4 @@
+import { escapeHtml, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from "./studio-ui";
 import { batchStatusLabel, validateImageBatch } from "./batch-upload";
 import {
   ApiError,
@@ -61,32 +62,6 @@ const state: ConnectedState = {
   toast: "",
 };
 
-const iconPaths = {
-  check: '<path d="m5 12 4 4L19 6"/>',
-  upload: '<path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 15v4h14v-4"/>',
-  image: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="m3 15 5-5 4 4 3-3 6 6"/>',
-  cart: '<path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.4L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>',
-  eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
-  undo: '<path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/>',
-  paperclip: '<path d="m8 12 6.7-6.7a3 3 0 0 1 4.3 4.2L10.5 18a5 5 0 0 1-7-7l8-8"/>',
-  send: '<path d="m4 4 17 8-17 8 3-8-3-8Z"/><path d="M7 12h14"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>',
-  desktop: '<rect x="3" y="4" width="18" height="13" rx="1"/><path d="M9 21h6m-3-4v4"/>',
-  lock: '<rect x="5" y="10" width="14" height="10" rx="1"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
-  alert: '<path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
-  logout: '<path d="M10 5H5v14h5m4-4 4-3-4-3m4 3H9"/>',
-} as const;
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>'"]/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
-  })[character] ?? character);
-}
-
-function icon(name: keyof typeof iconPaths): string {
-  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
-}
-
 function selectedStore(): MerchantStore | undefined {
   return state.stores.find((store) => store.id === state.storeId);
 }
@@ -120,29 +95,7 @@ function clarificationFrom(message: AgentMessage): Clarification | null {
   return typeof candidate.prompt === "string" && Array.isArray(candidate.options) ? candidate : null;
 }
 
-function renderLogin(): string {
-  return `
-    <main class="studio-auth">
-      <section class="studio-auth__intro">
-        <a class="studio-auth__brand" href="/" aria-label="pagosYa"><img src="/logo-mark.png" alt="" /><span>pagosYa</span></a>
-        <span class="eyebrow">MERCHANT STUDIO</span>
-        <h1>Tu tienda, dirigida en conversación.</h1>
-        <p>YAPI prepara cambios privados sobre tu tienda real. Tú revisas la propuesta y decides cuándo publicarla.</p>
-        <div class="auth-trust"><span>${icon("check")} Propuestas privadas</span><span>${icon("undo")} Historial recuperable</span><span>${icon("lock")} Checkout protegido</span></div>
-      </section>
-      <section class="studio-auth__form-wrap">
-        <form class="studio-auth__form" data-login-form>
-          <span class="eyebrow">ACCESO DE COMERCIO</span>
-          <h2>Entrar a Merchant Studio</h2>
-          <p>Usa la misma cuenta que empleas en el dashboard.</p>
-          <label>Correo<input name="email" type="email" autocomplete="username" required placeholder="tu@comercio.com" /></label>
-          <label>Contraseña<input name="password" type="password" autocomplete="current-password" required /></label>
-          ${state.error ? `<p class="auth-error" role="alert">${escapeHtml(state.error)}</p>` : ""}
-          <button class="button button--publish auth-submit" type="submit" ${state.busy ? "disabled" : ""}>${state.busy ? "Verificando…" : "Entrar al Studio"}</button>
-        </form>
-      </section>
-    </main>`;
-}
+function renderLogin(): string { return renderStudioLogin(state); }
 
 function renderLoading(): string {
   return `<main class="studio-loading" aria-live="polite"><img src="/logo-mark.png" alt="" /><span class="eyebrow">MERCHANT STUDIO</span><h1>Conectando tu tienda…</h1><div class="loading-line"><i></i></div></main>`;
@@ -224,16 +177,10 @@ function renderConversation(): string {
 }
 
 function renderComposer(): string {
-  return `<div class="composer-wrap connected-composer">
-    ${renderBatch()}
-    <div class="suggestions" aria-label="Sugerencias"><button type="button" data-suggestion="Haz la portada más editorial">Portada editorial</button><button type="button" data-suggestion="Mejora la jerarquía visual sin cambiar precios ni checkout">Mejorar jerarquía</button></div>
-    <form class="composer" data-composer>
-      <label for="agent-command" class="sr-only">Indicación para YAPI</label>
-      <textarea id="agent-command" name="command" rows="2" placeholder="Describe qué quieres cambiar…" ${state.busy ? "disabled" : ""}></textarea>
-      <div class="composer__tools"><div><button class="icon-button" type="button" data-action="open-upload" aria-label="Adjuntar hasta tres imágenes">${icon("paperclip")}</button><span class="model-label">YAPI · tienda real</span></div><button class="send-button" type="submit" aria-label="Enviar a YAPI" ${state.busy ? "disabled" : ""}>${icon("send")}</button></div>
-    </form>
-    <input class="sr-only" type="file" accept="image/*" multiple data-image-input aria-label="Seleccionar hasta tres imágenes" />
-  </div>`;
+  return renderStudioComposer({ busy: state.busy, attachments: renderBatch(), suggestions: [
+    { label: "Portada editorial", instruction: "Haz la portada más editorial" },
+    { label: "Mejorar jerarquía", instruction: "Mejora la jerarquía visual sin cambiar precios ni checkout" },
+  ] });
 }
 
 function renderAgentPanel(): string {
@@ -246,7 +193,7 @@ function renderCanvas(): string {
   const proposal = selectedProposal();
   return `<main class="canvas-panel connected-canvas" aria-label="Vista previa real de la tienda">
     <header class="canvas-toolbar">
-      <div class="viewport-controls"><button class="is-active" type="button" aria-label="Vista de escritorio">${icon("desktop")}</button><span>Vista real</span></div>
+      ${studioModeNav("website")}<div class="viewport-controls"><button class="is-active" type="button" aria-label="Vista de escritorio">${icon("desktop")}</button><span>Vista real</span></div>
       <div class="history-controls"><button type="button" data-action="restore" aria-label="Restaurar versión anterior" ${state.versions.length && !state.busy ? "" : "disabled"}>${icon("undo")}</button><span>${state.versions.length} versiones</span></div>
       <div class="page-control"><label for="connected-page-select">Página</label><select id="connected-page-select" data-page-select><option value="home" ${state.page === "home" ? "selected" : ""}>Tienda</option><option value="checkout" ${state.page === "checkout" ? "selected" : ""}>Carrito / checkout</option></select></div>
       <span class="canvas-state">${proposal || store.websiteDraft ? "Vista del borrador" : "Tienda publicada"}</span>
@@ -264,7 +211,7 @@ function renderTopbar(): string {
     <a class="product-mark" href="/" aria-label="pagosYa Merchant Studio"><img src="/logo-mark.png" alt="" /><span>pagosYa</span><i></i><strong>Merchant Studio</strong></a>
     <div class="connected-store-select"><label for="store-select">Tienda</label><select id="store-select" data-store-select>${state.stores.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === state.storeId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></div>
     <div class="save-state">${icon("check")} ${proposal ? "Borrador guardado" : "Conectado"}</div>
-    <div class="top-actions"><a class="button button--ghost" href="/?source=1">Sitio independiente</a><button class="button button--ghost" type="button" data-action="logout" title="Cerrar sesión">${icon("logout")} Salir</button><button class="button button--publish ${proposal && !approved ? "needs-review" : ""}" type="button" data-action="publish" ${(proposal && approved || !proposal && selectedStore()?.websiteDraft) && !state.busy ? "" : "disabled"}>${state.busy ? "Procesando…" : proposal ? "Usar en borrador" : selectedStore()?.websiteDraft ? selectedStore()?.websiteDraft?.inventoryChanges?.length ? "Publicar sitio y stock" : "Publicar" : "Sin borrador"}</button></div>
+    <div class="top-actions"><button class="button button--ghost" type="button" data-action="logout" title="Cerrar sesión">${icon("logout")} Salir</button><button class="button button--publish ${proposal && !approved ? "needs-review" : ""}" type="button" data-action="publish" ${(proposal && approved || !proposal && selectedStore()?.websiteDraft) && !state.busy ? "" : "disabled"}>${state.busy ? "Procesando…" : proposal ? "Usar en borrador" : selectedStore()?.websiteDraft ? selectedStore()?.websiteDraft?.inventoryChanges?.length ? "Publicar sitio y stock" : "Publicar" : "Sin borrador"}</button></div>
   </header>`;
 }
 

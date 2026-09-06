@@ -15,10 +15,19 @@ are separate from the existing website drafts and published storefronts.
 ## Merchant Studio
 
 Run `pnpm dev:studio`, open `http://127.0.0.1:4312/?source=1`, and sign in with an
-existing dashboard account. The connected editor also links to **Sitio independiente**.
-Select a store, describe its business, audience, customer task and visual direction,
-then request a site. Optional merchant-owned uploads supply up to six PNG/JPEG/WebP
+existing dashboard account. Use **Sitio a medida** in the existing editor workspace (alongside **Tienda actual**).
+Both modes share the login, YAPI composer, icons, monospace typography, amber controls
+and split chat/preview layout. Describe the business and site in chat, then continue
+with follow-up requests. There is no separate setup form. Optional merchant-owned uploads supply up to six PNG/JPEG/WebP
 images of at most 2 MB each, with a 6 MiB combined asset budget checked before generation.
+
+Conversation uses the existing `StoreAgentThread`/`StoreAgentMessage` infrastructure.
+A `source` message channel keeps these requests separate from the existing `website`
+channel, which remains the default for earlier conversations. Each successful YAPI
+reply links to its source revision. Vague requests reuse the existing clarification
+choices before generation; failures preserve the request and a failure reply. Recent
+conversation and the current source snapshot provide context for follow-up edits.
+The latest 100 source messages are returned by the conversation endpoint.
 
 The generator authors complete static HTML, CSS and classic JavaScript. It can
 choose the structure and visual identity without using the legacy `siteDocument`
@@ -86,6 +95,8 @@ Base: `/v1/stores/:storeId/source-project`.
 | --- | --- | --- |
 | GET | `/` | Current revision and 30 summaries; paginate with `?before=nextBefore` |
 | PUT | `/` | Save `{ revision, label, brief, files }` as the next revision |
+| GET | `/conversation` | Saved source conversation, oldest to newest |
+| POST | `/messages` | Send `{ revision, instruction, assetUrls? }`; returns messages and an optional generated revision |
 | POST | `/generate` | Generate from `{ revision, brief, instruction, assetUrls? }` |
 | PATCH | `/file` | Edit `{ revision, path, content }`, preserving other files |
 | GET | `/versions/:revision` | Exact source snapshot and digest |
@@ -140,9 +151,9 @@ hold other frameworks, but the current preview/build kit targets static projects
 ```sh
 pnpm --filter @pagosya/api build
 pnpm --filter @pagosya/merchant-studio build
-pnpm --filter @pagosya/api test --runInBand source-project source-generation
+pnpm --filter @pagosya/api test --runInBand source-project source-generation source-chat store-agent.service
 pnpm --filter @pagosya/api test:e2e --runInBand source-projects
-pnpm --filter @pagosya/merchant-studio test:e2e source-studio.spec.ts
+pnpm --filter @pagosya/merchant-studio test:e2e
 ```
 
 Tests cover paths, credential patterns, decoded size, binary preservation, ZIP

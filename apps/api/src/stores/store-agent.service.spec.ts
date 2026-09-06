@@ -96,7 +96,7 @@ describe("StoreAgentService", () => {
 
     expect(prisma.storeAgentThread.findUnique).toHaveBeenCalledWith({
       where: { storeId: "store_1" },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
+      include: { messages: { where: { channel: "website" }, orderBy: { createdAt: "asc" } } },
     });
     expect(result.messages.map((message) => message.id)).toEqual(["message_old", "message_new"]);
     expect(result.thread?.messages.map((message) => message.id)).toEqual(["message_old", "message_new"]);

@@ -126,6 +126,14 @@ export class MerchantStudioApi {
     return this.request("/stores");
   }
 
+  sourceConversation(storeId: string): Promise<ConversationResponse> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
+  }
+
+  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number): Promise<{ userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision }) });
+  }
+
   sourceState(storeId: string, before?: number): Promise<SourceState> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project${before ? `?before=${before}` : ""}`);
   }

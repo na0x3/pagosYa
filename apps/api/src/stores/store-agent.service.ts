@@ -80,7 +80,7 @@ export class StoreAgentService {
     await this.ownedStore(merchantId, storeId);
     const thread = await this.prisma.storeAgentThread.findUnique({
       where: { storeId },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
+      include: { messages: { where: { channel: "website" }, orderBy: { createdAt: "asc" } } },
     });
     const messages = thread?.messages ?? [];
     return { thread: thread ? { ...thread, messages } : null, messages };
@@ -98,7 +98,7 @@ export class StoreAgentService {
     const submittedInstruction = dto.instruction.trim();
     const existing = await this.prisma.storeAgentThread.findUnique({
       where: { storeId },
-      include: { messages: { orderBy: { createdAt: "desc" }, take: 8 } },
+      include: { messages: { where: { channel: "website" }, orderBy: { createdAt: "desc" }, take: 8 } },
     });
     const latestMessage = existing?.messages?.[0];
     const latestMetadata = latestMessage?.metadata && typeof latestMessage.metadata === "object" && !Array.isArray(latestMessage.metadata)

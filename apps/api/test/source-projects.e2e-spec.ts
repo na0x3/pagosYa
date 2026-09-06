@@ -1,3 +1,6 @@
+import { SourceGenerationService } from "../src/stores/source-generation.service";
+import { SourceProjectsService } from "../src/stores/source-projects.service";
+import { StoreAgentService } from "../src/stores/store-agent.service";
 import "reflect-metadata";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -102,6 +105,23 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     await request(app.getHttpServer()).patch(`${route}/file`).set(auth()).send(body).expect(409);
     const current = await request(app.getHttpServer()).get(`${route}/versions/4`).set(auth()).expect(200);
     expect(current.body.snapshot.files.find((file: { path: string }) => file.path === "README.md").content).toBe(body.content);
+  });
+
+  it("persists source chat in the existing infrastructure without mixing website conversations", async () => {
+    await request(app.getHttpServer()).get(`${route}/conversation`).expect(401);
+    await request(app.getHttpServer()).get(`${route}/conversation`).set(auth(foreignToken)).expect(404);
+    await request(app.getHttpServer()).post(`${route}/messages`).set(auth(foreignToken)).send({revision:4,instruction:"Crea una carta editorial"}).expect(404);
+    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation((merchantId, id, input) => app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")));
+    const sent = await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:4,instruction:"Crea una carta editorial para mi café"}).expect(201);
+    expect(sent.body.revision.revision).toBe(5);
+    expect(sent.body.assistantMessage.metadata.sourceRevision).toBe(5);
+    const history = await request(app.getHttpServer()).get(`${route}/conversation`).set(auth()).expect(200);
+    expect(history.body.messages.map((message: { role: string }) => message.role)).toEqual(["USER", "ASSISTANT"]);
+    const owner = await prisma.store.findUniqueOrThrow({where:{id:storeId}});
+    expect((await app.get(StoreAgentService).conversation(owner.merchantId,storeId)).messages).toEqual([]);
+    await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:4,instruction:"Cambia la portada"}).expect(409);
+    expect(generator).toHaveBeenCalledTimes(1);
+    generator.mockRestore();
   });
 
 });
