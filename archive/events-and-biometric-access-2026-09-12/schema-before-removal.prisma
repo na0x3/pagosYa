@@ -1,0 +1,3102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SettlementMode {
+  AGGREGATOR
+  FACILITATOR
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum ApiKeyMode {
+  TEST
+  LIVE
+}
+
+enum ApiKeyType {
+  PUBLISHABLE
+  SECRET
+}
+
+enum PaymentMethodType {
+  CARD
+  TIGO_MONEY
+  BANK_TRANSFER
+  QR
+}
+
+enum PaymentIntentStatus {
+  REQUIRES_PAYMENT_METHOD
+  REQUIRES_CONFIRMATION
+  PROCESSING
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum TransactionType {
+  AUTHORIZATION
+  CAPTURE
+  REFUND
+  PAYOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum LedgerAccount {
+  RAIL_CLEARING
+  MERCHANT_PAYABLE
+  PAGOSYA_FEE_REVENUE
+  RESERVE
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum WebhookEventStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+enum ConsumerAffiliationStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum OrderFulfillmentStatus {
+  AWAITING_PAYMENT
+  PAID
+  PREPARING
+  READY_FOR_PICKUP
+  SHIPPED
+  DELIVERED
+  CANCELED
+  REFUNDED
+}
+
+enum KycStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  PENDING
+  EMITTED
+  FAILED
+}
+
+enum PayoutStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum OpsRole {
+  SUPPORT_AGENT
+  SUPPORT_ADMIN
+}
+
+enum SupportCaseCategory {
+  ACCOUNT_ACCESS
+  PAYMENTS
+  KYC
+  PAYOUTS
+  STORES
+  OTHER
+}
+
+enum SupportCasePriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportCaseStatus {
+  PENDING
+  SENT
+  REVIEWED
+  RESOLVED
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum EventPricingMode {
+  SEATED
+  GENERAL_ADMISSION
+}
+
+enum EventSeatStatus {
+  AVAILABLE
+  HELD
+  SOLD
+}
+
+enum TicketTypeKind {
+  GENERAL
+  VIP
+  EARLY_BIRD
+  TABLE
+  GUEST
+  STAFF
+  CUSTOM
+}
+
+enum TicketReservationStatus {
+  RESERVED
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+enum AdmissionSource {
+  ONLINE
+  CASH_DOOR
+  PROMOTER
+  COMPLIMENTARY
+  ADMIN
+  PARTNER
+}
+
+enum EventPaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  QR_PAYMENT
+  ONLINE_GATEWAY
+  COMPLIMENTARY
+}
+
+enum EventPaymentStatus {
+  PENDING
+  PAID
+  CANCELED
+  REFUNDED
+  VOID
+
+  @@map("EventOrderStatus")
+}
+
+enum AdmissionStatus {
+  VALID
+  ACTIVE
+  REVOKED
+  USED
+  VOID
+  CANCELLED
+
+  @@map("EventTicketStatus")
+}
+
+enum AssignmentStatus {
+  UNASSIGNED
+  CLAIMED
+}
+
+enum BiometricEnrollmentStatus {
+  NOT_REQUIRED
+  PENDING
+  ENROLLED
+  FAILED
+  DELETED
+}
+
+enum BiometricProvider {
+  MOCK
+  ZKTECO
+  FUTURE_PROVIDER
+}
+
+enum BiometricIdentityStatus {
+  ACTIVE
+  REVOKED
+  DELETED
+  REQUIRES_REENROLLMENT
+}
+
+enum BiometricConsentScope {
+  EVENT_ONLY
+  REUSABLE
+}
+
+enum BiometricReenrollmentReason {
+  ALGORITHM_INCOMPATIBLE
+  POOR_ENROLLMENT
+  CREDENTIAL_CORRUPT
+  CUSTOMER_REQUESTED
+  VENDOR_MIGRATION
+  CONSENT_CHANGED
+}
+
+enum EventBiometricAuthorizationStatus {
+  AUTHORIZED
+  REVOKED
+  EXPIRED
+}
+
+enum DevicePersonSyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  REMOVAL_PENDING
+  REMOVED
+}
+
+enum PresenceStatus {
+  NEVER_ENTERED
+  OUTSIDE
+  INSIDE
+}
+
+enum EventStaffRole {
+  ORGANIZATION_ADMIN
+  EVENT_MANAGER
+  CASHIER
+  DOOR_STAFF
+  PROMOTER
+  AUDITOR
+}
+
+enum AccessDeviceRole {
+  ENTRY
+  EXIT
+  BIDIRECTIONAL
+  ENROLLMENT
+}
+
+enum AccessDeviceStatus {
+  ONLINE
+  OFFLINE
+  DEGRADED
+  DISABLED
+}
+
+enum AccessDirection {
+  ENTRY
+  EXIT
+  MANUAL_ENTRY
+  MANUAL_EXIT
+}
+
+enum AccessDecision {
+  ALLOW
+  DENY
+  IGNORED
+}
+
+enum BiometricDeletionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PromoterAllocationKind {
+  COMPLIMENTARY
+  DISCOUNTED
+}
+
+enum GuestListStatus {
+  INVITED
+  CLAIMED
+  ENROLLED
+  ENTERED
+  CANCELLED
+}
+
+// A named pagosYa staff member allowed to review KYC — replaces a single
+// shared INTERNAL_OPS_SECRET so every review decision is attributable to a
+// specific, revocable person instead of "whoever had the secret."
+model OpsUser {
+  id                   String                  @id @default(cuid())
+  name                 String
+  email                String                  @unique
+  hashedToken          String
+  role                 OpsRole                 @default(SUPPORT_AGENT)
+  revokedAt            DateTime?
+  createdAt            DateTime                @default(now())
+  kycReviews           MerchantKycSubmission[]
+  createdSupportCases  SupportCase[]           @relation("SupportCaseCreator")
+  assignedSupportCases SupportCase[]           @relation("SupportCaseAssignee")
+  supportNotes         SupportCaseNote[]
+}
+
+// Generic append-only trail for sensitive ops actions (KYC review today;
+// intentionally generic so other ops actions can log to it later without a
+// schema change).
+model AuditLogEntry {
+  id         String   @id @default(cuid())
+  actorType  String
+  actorId    String
+  actorLabel String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// A durable support envelope. Sensitive account reads and actions are tied to
+// one case so the audit trail records not only who accessed an account, but why.
+model SupportCase {
+  id                      String              @id @default(cuid())
+  merchantId              String
+  merchant                Merchant            @relation(fields: [merchantId], references: [id])
+  createdByOpsUserId      String?
+  createdByOpsUser        OpsUser?            @relation("SupportCaseCreator", fields: [createdByOpsUserId], references: [id])
+  createdByMerchantUserId String?
+  createdByMerchantUser   MerchantUser?       @relation("SupportCaseMerchantCreator", fields: [createdByMerchantUserId], references: [id])
+  assignedToOpsUserId     String?
+  assignedToOpsUser       OpsUser?            @relation("SupportCaseAssignee", fields: [assignedToOpsUserId], references: [id])
+  category                SupportCaseCategory
+  priority                SupportCasePriority @default(NORMAL)
+  status                  SupportCaseStatus   @default(PENDING)
+  summary                 String
+  resolution              String?
+  notes                   SupportCaseNote[]
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  closedAt                DateTime?
+
+  @@index([merchantId, createdAt])
+  @@index([status, updatedAt])
+  @@index([assignedToOpsUserId, status])
+  @@index([createdByMerchantUserId, createdAt])
+}
+
+model SupportCaseNote {
+  id        String      @id @default(cuid())
+  caseId    String
+  case      SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  opsUserId String
+  opsUser   OpsUser     @relation(fields: [opsUserId], references: [id])
+  body      String
+  createdAt DateTime    @default(now())
+
+  @@index([caseId, createdAt])
+}
+
+model Merchant {
+  id               String                    @id @default(cuid())
+  name             String
+  email            String                    @unique
+  settlementMode   SettlementMode            @default(AGGREGATOR)
+  status           MerchantStatus            @default(PENDING)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  apiKeys          ApiKey[]
+  paymentIntents   PaymentIntent[]
+  webhookEndpoints WebhookEndpoint[]
+  kycSubmissions   MerchantKycSubmission[]
+  invoicingProfile MerchantInvoicingProfile?
+  invoices         Invoice[]
+  payouts          Payout[]
+  users            MerchantUser[]
+  stores           Store[]
+  mediaAssets      MediaAsset[]
+  productStats     StoreProductStat[]
+  storeLeads       StoreLead[]
+  supportCases     SupportCase[]
+  venues           Venue[]
+  events           Event[]
+  eventAttendees   Attendee[]
+  eventStaff       EventStaffMembership[]
+  eventOrders      AdmissionOrder[]
+  eventAuditLogs   EventAuditLog[]
+  visualTemplates  StoreVisualTemplate[]
+}
+
+// A human login for the merchant dashboard — deliberately separate from
+// ApiKey. The dashboard must never need a merchant's secret key in the
+// browser; this is what apps/merchant-dashboard authenticates with instead.
+model MerchantUser {
+  id                    String                        @id @default(cuid())
+  merchantId            String
+  merchant              Merchant                      @relation(fields: [merchantId], references: [id])
+  email                 String                        @unique
+  hashedPassword        String
+  // Daily-login stars are user-scoped so signing into more than one store does
+  // not multiply the same day's reward.
+  dailyLoginStars       Int                           @default(0)
+  lastDailyStarAt       DateTime?
+  // Stable Google OpenID Connect subject. Email is display/contact data and
+  // can change; provider identity must always be keyed by `sub`.
+  googleSubject         String?                       @unique
+  // Account deletion is intentionally a deactivation. Financial, tax,
+  // fulfillment, support, and audit evidence stays attached to stable IDs.
+  deletedAt             DateTime?
+  // Null until the confirmation link is used. An unverified row doesn't
+  // permanently claim its email — see MerchantUserService.signup for why.
+  emailVerifiedAt       DateTime?
+  createdAt             DateTime                      @default(now())
+  sessions              MerchantSession[]
+  verificationTokens    EmailVerificationToken[]
+  passwordResetTokens   PasswordResetToken[]
+  supportCases          SupportCase[]                 @relation("SupportCaseMerchantCreator")
+  progressCelebrations  MerchantProgressCelebration[]
+  eventStaffMemberships EventStaffMembership[]
+  cashShifts            CashShift[]
+  eventAuditLogs        EventAuditLog[]
+  manualAccessEvents    AccessEvent[]
+  eventRefunds          EventRefund[]
+  promoterProfile       PromoterProfile?
+}
+
+// Durable acknowledgement for a newly unlocked companion. This is scoped to
+// a store because storefront sales and visits determine that store's XP.
+model MerchantProgressCelebration {
+  merchantUserId      String
+  merchantUser        MerchantUser @relation(fields: [merchantUserId], references: [id], onDelete: Cascade)
+  storeId             String
+  store               Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lastCelebratedLevel Int          @default(-1)
+  updatedAt           DateTime     @updatedAt
+
+  @@id([merchantUserId, storeId])
+  @@index([storeId])
+}
+
+// Single-use, short-lived proof that whoever called signup actually
+// controls the email they claimed — closes the account-squatting/
+// enumeration gap a bare email-uniqueness check would otherwise open.
+model EmailVerificationToken {
+  id             String       @id @default(cuid())
+  merchantUserId String
+  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
+  hashedToken    String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
+  @@index([hashedToken])
+}
+
+// Single-use, short-lived (1h) password reset token. requestPasswordReset()
+// always responds identically regardless of whether the email exists — same
+// enumeration-safety reasoning as MerchantUserService.signup.
+model PasswordResetToken {
+  id             String       @id @default(cuid())
+  merchantUserId String
+  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id])
+  hashedToken    String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
+}
+
+// Short-lived, revocable dashboard session token (dash_...) — what
+// MerchantAuthGuard accepts alongside a secret API key.
+model MerchantSession {
+  id              String       @id @default(cuid())
+  merchantUserId  String
+  merchantUser    MerchantUser @relation(fields: [merchantUserId], references: [id])
+  merchantId      String
+  hashedToken     String       @unique
+  profileName     String       @default("Propietario")
+  profileAvatarId Int          @default(1)
+  isPrimary       Boolean      @default(false)
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdAt       DateTime     @default(now())
+
+  @@index([expiresAt])
+  @@index([merchantUserId, revokedAt, expiresAt])
+  @@index([merchantId, revokedAt, expiresAt])
+}
+
+// Buyer identity is deliberately separate from MerchantUser: a person may
+// shop at and hold obligations with many unrelated pagosYa merchants.
+model ConsumerUser {
+  id                  String                           @id @default(cuid())
+  name                String
+  email               String                           @unique
+  carnet              String                           @unique
+  hashedPassword      String
+  googleSubject       String?                          @unique
+  deletedAt           DateTime?
+  emailVerifiedAt     DateTime?
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+  sessions            ConsumerSession[]
+  verificationTokens  ConsumerVerificationToken[]
+  affiliations        ConsumerInstitutionAffiliation[]
+  paymentIntents      PaymentIntent[]
+  orders              StoreOrder[]
+  eventAttendees      Attendee[]
+  biometricIdentities BiometricIdentity[]
+  biometricConsents   BiometricConsent[]
+  enrollmentSessions  EnrollmentSession[]
+}
+
+model ConsumerSession {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  hashedToken    String       @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([consumerUserId, expiresAt])
+}
+
+model ConsumerVerificationToken {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  hashedToken    String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
+}
+
+model ConsumerInstitutionAffiliation {
+  id             String                    @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser              @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  storeId        String
+  store          Store                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  status         ConsumerAffiliationStatus @default(ACTIVE)
+  acceptedAt     DateTime                  @default(now())
+  revokedAt      DateTime?
+
+  @@unique([consumerUserId, storeId])
+  @@index([storeId, status])
+}
+
+// NIT/branch/point-of-sale registration a merchant needs on file before
+// pagosYa can emit a Factura Electrónica on their behalf. `cuis` is issued
+// once per (nit, sucursal, puntoVenta); `cufd`/`cufdExpiresAt` cache SIN's
+// daily invoicing code (valid ~24h — see InvoicingService/InvoiceEmissionWorker).
+model MerchantInvoicingProfile {
+  id                 String             @id @default(cuid())
+  merchantId         String             @unique
+  merchant           Merchant           @relation(fields: [merchantId], references: [id])
+  nit                String
+  razonSocial        String
+  sucursal           Int                @default(0)
+  puntoVenta         Int                @default(0)
+  cuis               String?
+  cuisIssuedAt       DateTime?
+  cufd               String?
+  cufdExpiresAt      DateTime?
+  // General-purpose Factura Compra-Venta. Other sectors can be added later,
+  // but activity compatibility must always come from synchronization.
+  documentSectorCode Int                @default(1)
+  siatCatalogs       SiatCatalogCache[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+// SIAT requires catalog synchronization at least daily. Cache each catalog
+// per taxpayer profile because activities and their product/sector relations
+// are scoped to the merchant NIT, even where the underlying catalog is broad.
+model SiatCatalogCache {
+  id                 String                   @id @default(cuid())
+  invoicingProfileId String
+  invoicingProfile   MerchantInvoicingProfile @relation(fields: [invoicingProfileId], references: [id], onDelete: Cascade)
+  catalog            String
+  entries            Json
+  syncedAt           DateTime                 @default(now())
+
+  @@unique([invoicingProfileId, catalog])
+  @@index([syncedAt])
+}
+
+// One Factura Electrónica per succeeded PaymentIntent. Created PENDING in the
+// same transaction as the payment's success (transactional outbox, same
+// pattern as WebhookEvent) and emitted asynchronously by InvoiceEmissionWorker
+// — SIN's real service is external, can be slow/down, and needs retries.
+model Invoice {
+  id               String        @id @default(cuid())
+  merchantId       String
+  merchant         Merchant      @relation(fields: [merchantId], references: [id])
+  paymentIntentId  String        @unique
+  paymentIntent    PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  amount           Int
+  currency         String        @default("BOB")
+  customerName     String        @default("SIN NOMBRE")
+  customerDocument String        @default("0")
+  status           InvoiceStatus @default(PENDING)
+  cuf              String?
+  cufd             String?
+  attempts         Int           @default(0)
+  nextRetryAt      DateTime?
+  failureReason    String?
+  emittedAt        DateTime?
+  createdAt        DateTime      @default(now())
+
+  @@index([status, nextRetryAt])
+}
+
+// Payout is the payout-side analog of Transaction (which is always scoped to
+// one PaymentIntent): a payout nets a merchant's *unpaid* MERCHANT_PAYABLE
+// ledger balance across many PaymentIntents into one disbursement. Only ever
+// created for AGGREGATOR merchants — FACILITATOR merchants' MERCHANT_PAYABLE
+// entries are informational only, since the rail already settled funds
+// straight to them; paying those out too would be sending money twice.
+model Payout {
+  id            String       @id @default(cuid())
+  merchantId    String
+  merchant      Merchant     @relation(fields: [merchantId], references: [id])
+  amount        Int
+  currency      String       @default("BOB")
+  bankAccount   String
+  status        PayoutStatus @default(PENDING)
+  railReference String?
+  failureReason String?
+  attempts      Int          @default(0)
+  nextRetryAt   DateTime?
+  paidOutAt     DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([status, nextRetryAt])
+  @@index([merchantId, createdAt])
+}
+
+model MerchantKycSubmission {
+  id                  String    @id @default(cuid())
+  merchantId          String
+  merchant            Merchant  @relation(fields: [merchantId], references: [id])
+  legalName           String
+  taxId               String
+  legalRepName        String
+  legalRepDocumentId  String
+  payoutBankAccount   String
+  status              KycStatus @default(PENDING_REVIEW)
+  reviewNote          String?
+  reviewedAt          DateTime?
+  reviewedByOpsUserId String?
+  reviewedByOpsUser   OpsUser?  @relation(fields: [reviewedByOpsUserId], references: [id])
+  // Snapshot of the reviewer's name/email at review time — the audit record
+  // shouldn't change retroactively if the OpsUser is later renamed/revoked.
+  reviewedByLabel     String?
+  createdAt           DateTime  @default(now())
+
+  @@index([merchantId, createdAt])
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  merchantId   String
+  merchant     Merchant   @relation(fields: [merchantId], references: [id])
+  mode         ApiKeyMode
+  type         ApiKeyType
+  keyPrefix    String
+  // Human-readable metadata only. The complete credential is returned once
+  // at creation and is never stored in recoverable form.
+  label        String?
+  lastFour     String?
+  hashedSecret String
+  revokedAt    DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([keyPrefix])
+}
+
+model PaymentIntent {
+  id                   String              @id @default(cuid())
+  merchantId           String
+  merchant             Merchant            @relation(fields: [merchantId], references: [id])
+  consumerUserId       String?
+  consumerUser         ConsumerUser?       @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  amount               Int
+  currency             String              @default("BOB")
+  status               PaymentIntentStatus @default(REQUIRES_PAYMENT_METHOD)
+  paymentMethodType    PaymentMethodType?
+  paymentMethodId      String?
+  paymentMethod        PaymentMethod?      @relation(fields: [paymentMethodId], references: [id])
+  clientSecret         String              @unique
+  livemode             Boolean             @default(false)
+  description          String?
+  metadata             Json?
+  railId               String?
+  confirmationAttempts Int                 @default(0)
+  lastError            Json?
+  customerName         String?
+  customerDocument     String?
+  // Buyer contact info, collected at checkout so the merchant can reach out
+  // about this order — separate from customerDocument (tax ID, for invoicing).
+  customerEmail        String?
+  customerPhone        String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  transactions         Transaction[]
+  invoice              Invoice?
+  debtRecords          DebtRecord[]
+  storeOrder           StoreOrder?
+  ticketReservation    TicketReservation?
+  admissionOrder       AdmissionOrder?
+
+  @@index([merchantId, createdAt])
+  @@index([consumerUserId, createdAt])
+}
+
+model Venue {
+  id         String         @id @default(cuid())
+  merchantId String
+  merchant   Merchant       @relation(fields: [merchantId], references: [id])
+  name       String
+  address    String?
+  city       String         @default("La Paz")
+  timezone   String         @default("America/La_Paz")
+  capacity   Int?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  events     Event[]
+  devices    AccessDevice[]
+
+  @@index([merchantId, createdAt])
+}
+
+model Event {
+  id                      String                        @id @default(cuid())
+  merchantId              String
+  merchant                Merchant                      @relation(fields: [merchantId], references: [id])
+  storeId                 String?
+  store                   Store?                        @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  venueId                 String?
+  venue                   Venue?                        @relation(fields: [venueId], references: [id])
+  slug                    String                        @unique
+  name                    String                        @map("title")
+  description             String?
+  publicityImageUrl       String                        @default("")
+  venueName               String                        @default("")
+  venueAddress            String?
+  startsAt                DateTime
+  endsAt                  DateTime?
+  doorsOpenAt             DateTime?
+  lastEntryAt             DateTime?
+  capacity                Int?
+  currency                String                        @default("BOB")
+  pricingMode             EventPricingMode              @default(GENERAL_ADMISSION)
+  timezone                String                        @default("America/La_Paz")
+  status                  EventStatus                   @default(DRAFT)
+  allowReentry            Boolean                       @default(true)
+  biometricRequired       Boolean                       @default(true)
+  retentionHours          Int                           @default(24)
+  salesAtDoorEnabled      Boolean                       @default(true)
+  onlineSalesEnabled      Boolean                       @default(true)
+  entryGracePeriodMinutes Int                           @default(0)
+  manualOverrideAllowed   Boolean                       @default(true)
+  reservationMinutes      Int                           @default(10)
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  ticketTypes             TicketType[]
+  reservations            TicketReservation[]
+  orders                  AdmissionOrder[]
+  admissions              Admission[]
+  attendees               Attendee[]
+  consents                BiometricConsent[]
+  biometricAuthorizations EventBiometricAuthorization[]
+  devices                 AccessDevice[]
+  accessEvents            AccessEvent[]
+  accessAttempts          AccessAttempt[]
+  cashShifts              CashShift[]
+  staff                   EventStaffMembership[]
+  promoterAllocations     EventPromoterAllocation[]
+  guestList               GuestListEntry[]
+  auditLogs               EventAuditLog[]
+  enrollmentSessions      EnrollmentSession[]
+  deletionJobs            BiometricDeletionJob[]
+  legacySeats             EventSeat[]
+
+  @@index([merchantId, startsAt])
+  @@index([venueId, startsAt])
+  @@index([status, startsAt])
+}
+
+model TicketType {
+  id                   String                    @id @default(cuid())
+  eventId              String
+  event                Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  kind                 TicketTypeKind            @default(CUSTOM)
+  name                 String
+  price                Int
+  currency             String                    @default("BOB")
+  inventory            Int?                      @map("quantity")
+  sortOrder            Int                       @default(0) @map("order")
+  reservedQuantity     Int                       @default(0) @map("heldCount")
+  soldQuantity         Int                       @default(0) @map("soldCount")
+  salesStart           DateTime?
+  salesEnd             DateTime?
+  reentryAllowed       Boolean                   @default(true)
+  capacityContribution Int                       @default(1)
+  active               Boolean                   @default(true)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  reservationItems     TicketReservationItem[]
+  admissions           Admission[]
+  guestList            GuestListEntry[]
+  promoterAllocations  EventPromoterAllocation[]
+  legacyOrders         AdmissionOrder[]          @relation("LegacyOrderTicketType")
+
+  @@unique([eventId, name])
+  @@index([eventId, active])
+  @@map("EventPriceStage")
+}
+
+model TicketReservation {
+  id                       String                  @id @default(cuid())
+  merchantId               String
+  eventId                  String
+  event                    Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status                   TicketReservationStatus @default(RESERVED)
+  totalAmount              Int
+  currency                 String                  @default("BOB")
+  buyerName                String?
+  buyerEmail               String?
+  buyerPhone               String?
+  managementTokenHash      String                  @unique
+  managementTokenExpiresAt DateTime
+  expiresAt                DateTime
+  completedAt              DateTime?
+  paymentIntentId          String?                 @unique
+  paymentIntent            PaymentIntent?          @relation(fields: [paymentIntentId], references: [id])
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  items                    TicketReservationItem[]
+  order                    AdmissionOrder?
+
+  @@index([eventId, status, expiresAt])
+  @@index([merchantId, createdAt])
+}
+
+model TicketReservationItem {
+  id            String            @id @default(cuid())
+  reservationId String
+  reservation   TicketReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  ticketTypeId  String
+  ticketType    TicketType        @relation(fields: [ticketTypeId], references: [id])
+  quantity      Int
+  unitAmount    Int
+  createdAt     DateTime          @default(now())
+
+  @@unique([reservationId, ticketTypeId])
+  @@index([ticketTypeId])
+}
+
+model AdmissionOrder {
+  id                    String                      @id @default(cuid())
+  merchantId            String
+  merchant              Merchant                    @relation(fields: [merchantId], references: [id])
+  eventId               String
+  event                 Event                       @relation(fields: [eventId], references: [id])
+  reservationId         String?                     @unique
+  reservation           TicketReservation?          @relation(fields: [reservationId], references: [id])
+  paymentIntentId       String?                     @unique
+  paymentIntent         PaymentIntent?              @relation(fields: [paymentIntentId], references: [id])
+  cashShiftId           String?
+  cashShift             CashShift?                  @relation(fields: [cashShiftId], references: [id])
+  source                AdmissionSource
+  paymentMethod         EventPaymentMethod
+  paymentStatus         EventPaymentStatus          @default(PENDING) @map("status")
+  totalAmount           Int                         @map("amount")
+  currency              String                      @default("BOB")
+  buyerName             String?
+  buyerEmail            String?
+  buyerPhone            String?
+  legacyTicketTypeId    String?                     @map("gaPriceStageId")
+  legacyTicketType      TicketType?                 @relation("LegacyOrderTicketType", fields: [legacyTicketTypeId], references: [id])
+  legacyQuantity        Int?                        @map("gaQuantity")
+  legacyHoldExpiresAt   DateTime?                   @map("holdExpiresAt")
+  managementTokenHash   String?                     @unique
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  admissions            Admission[]
+  financialTransactions EventFinancialTransaction[]
+  refunds               EventRefund[]
+
+  @@index([merchantId, createdAt])
+  @@index([eventId, source, createdAt])
+  @@index([paymentStatus, createdAt])
+  @@map("EventOrder")
+}
+
+model Admission {
+  id                        String                       @id @default(cuid())
+  code                      String                       @unique @map("qrToken")
+  orderId                   String                       @map("eventOrderId")
+  order                     AdmissionOrder               @relation(fields: [orderId], references: [id])
+  legacySeatId              String?                      @unique @map("eventSeatId")
+  legacySeat                EventSeat?                   @relation(fields: [legacySeatId], references: [id])
+  eventId                   String
+  event                     Event                        @relation(fields: [eventId], references: [id])
+  ticketTypeId              String?                      @map("eventPriceStageId")
+  ticketType                TicketType?                  @relation(fields: [ticketTypeId], references: [id])
+  attendeeId                String?
+  attendee                  Attendee?                    @relation(fields: [attendeeId], references: [id])
+  source                    AdmissionSource
+  status                    AdmissionStatus              @default(ACTIVE)
+  legacyLabel               String?                      @map("gaLabel")
+  legacyUsedAt              DateTime?                    @map("usedAt")
+  assignmentStatus          AssignmentStatus             @default(UNASSIGNED)
+  biometricEnrollmentStatus BiometricEnrollmentStatus    @default(PENDING)
+  presenceStatus            PresenceStatus               @default(NEVER_ENTERED)
+  claimedAt                 DateTime?
+  firstEnteredAt            DateTime?
+  lastPresenceChangedAt     DateTime?
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  assignments               AdmissionAssignment[]
+  consents                  BiometricConsent[]
+  biometricAuthorization    EventBiometricAuthorization?
+  accessEvents              AccessEvent[]
+  accessAttempts            AccessAttempt[]
+  enrollmentSessions        EnrollmentSession[]
+  guestListEntry            GuestListEntry?
+
+  @@index([eventId, presenceStatus])
+  @@index([eventId, status])
+  @@index([attendeeId])
+  @@index([orderId])
+  @@index([ticketTypeId])
+  @@map("EventTicket")
+}
+
+model EventSeat {
+  id                    String          @id @default(cuid())
+  eventId               String
+  event                 Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label                 String
+  section               String          @default("General")
+  rowLabel              String
+  seatNumber            Int
+  x                     Int
+  y                     Int
+  price                 Int
+  currency              String          @default("BOB")
+  status                EventSeatStatus @default(AVAILABLE)
+  heldByPaymentIntentId String?
+  holdExpiresAt         DateTime?
+  soldAt                DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  admission             Admission?
+
+  @@unique([eventId, label])
+  @@index([eventId, status])
+  @@index([heldByPaymentIntentId])
+}
+
+model AdmissionAssignment {
+  id             String    @id @default(cuid())
+  admissionId    String
+  admission      Admission @relation(fields: [admissionId], references: [id], onDelete: Cascade)
+  attendeeId     String
+  attendee       Attendee  @relation(fields: [attendeeId], references: [id])
+  claimTokenHash String?   @unique
+  expiresAt      DateTime?
+  claimedAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([admissionId, createdAt])
+  @@index([attendeeId, createdAt])
+}
+
+model Attendee {
+  id                      String                        @id @default(cuid())
+  merchantId              String
+  merchant                Merchant                      @relation(fields: [merchantId], references: [id])
+  eventId                 String
+  event                   Event                         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  consumerUserId          String?
+  consumerUser            ConsumerUser?                 @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  displayName             String
+  email                   String?
+  phone                   String?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  admissions              Admission[]
+  assignments             AdmissionAssignment[]
+  consents                BiometricConsent[]
+  biometricAuthorizations EventBiometricAuthorization[]
+  accessEvents            AccessEvent[]
+  accessAttempts          AccessAttempt[]
+
+  @@unique([eventId, consumerUserId])
+  @@index([merchantId, createdAt])
+  @@index([eventId, displayName])
+  @@index([eventId, email])
+  @@index([eventId, phone])
+  @@index([consumerUserId])
+}
+
+model BiometricConsent {
+  id                  String                        @id @default(cuid())
+  eventId             String
+  event               Event                         @relation(fields: [eventId], references: [id])
+  attendeeId          String
+  attendee            Attendee                      @relation(fields: [attendeeId], references: [id])
+  admissionId         String
+  admission           Admission                     @relation(fields: [admissionId], references: [id])
+  consumerUserId      String?
+  consumerUser        ConsumerUser?                 @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  biometricIdentityId String?
+  biometricIdentity   BiometricIdentity?            @relation("BiometricIdentityConsents", fields: [biometricIdentityId], references: [id])
+  activeForIdentity   BiometricIdentity?            @relation("ActiveBiometricConsent")
+  scope               BiometricConsentScope         @default(EVENT_ONLY)
+  version             String
+  purpose             String
+  consentedAt         DateTime
+  expiresAt           DateTime?
+  revokedAt           DateTime?
+  retentionUntil      DateTime?
+  createdAt           DateTime                      @default(now())
+  authorizations      EventBiometricAuthorization[]
+
+  @@index([eventId, consentedAt])
+  @@index([attendeeId, consentedAt])
+  @@index([admissionId])
+  @@index([consumerUserId, scope, revokedAt])
+  @@index([biometricIdentityId, revokedAt])
+}
+
+model BiometricIdentity {
+  id                         String                        @id @default(cuid())
+  consumerUserId             String?
+  consumerUser               ConsumerUser?                 @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  provider                   BiometricProvider
+  status                     BiometricIdentityStatus       @default(ACTIVE)
+  reusableAcrossEvents       Boolean                       @default(false)
+  activeConsentId            String?                       @unique
+  activeConsent              BiometricConsent?             @relation("ActiveBiometricConsent", fields: [activeConsentId], references: [id])
+  providerExternalId         String?
+  algorithmVersion           String?
+  encryptedVendorPayload     String?
+  encryptedTemplateReference String?
+  metadata                   Json?
+  lastVerifiedAt             DateTime?
+  reenrollmentReason         BiometricReenrollmentReason?
+  revokedAt                  DateTime?
+  deletedAt                  DateTime?
+  createdAt                  DateTime                      @default(now())
+  updatedAt                  DateTime                      @updatedAt
+  consents                   BiometricConsent[]            @relation("BiometricIdentityConsents")
+  credentials                BiometricCredential[]
+  authorizations             EventBiometricAuthorization[]
+  deviceMappings             DevicePersonMapping[]
+  deletionJobs               BiometricDeletionJob[]
+
+  @@index([consumerUserId, status, reusableAcrossEvents])
+  @@index([provider, providerExternalId])
+  @@index([status, updatedAt])
+}
+
+model BiometricCredential {
+  id                         String            @id @default(cuid())
+  biometricIdentityId        String
+  biometricIdentity          BiometricIdentity @relation(fields: [biometricIdentityId], references: [id])
+  provider                   BiometricProvider
+  providerExternalId         String?
+  algorithmVersion           String?
+  encryptedVendorPayload     String?
+  encryptedTemplateReference String?
+  enrolledAt                 DateTime
+  lastVerifiedAt             DateTime?
+  deletedAt                  DateTime?
+  metadata                   Json?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+
+  @@index([biometricIdentityId, deletedAt])
+  @@index([provider, providerExternalId])
+}
+
+model EventBiometricAuthorization {
+  id                  String                            @id @default(cuid())
+  eventId             String
+  event               Event                             @relation(fields: [eventId], references: [id])
+  admissionId         String                            @unique
+  admission           Admission                         @relation(fields: [admissionId], references: [id])
+  attendeeId          String
+  attendee            Attendee                          @relation(fields: [attendeeId], references: [id])
+  biometricIdentityId String
+  biometricIdentity   BiometricIdentity                 @relation(fields: [biometricIdentityId], references: [id])
+  consentId           String
+  consent             BiometricConsent                  @relation(fields: [consentId], references: [id])
+  status              EventBiometricAuthorizationStatus @default(AUTHORIZED)
+  authorizedAt        DateTime                          @default(now())
+  revokedAt           DateTime?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+
+  @@unique([eventId, biometricIdentityId])
+  @@index([eventId, status])
+  @@index([attendeeId, status])
+  @@index([biometricIdentityId, status])
+}
+
+model AccessDevice {
+  id                   String                @id @default(cuid())
+  merchantId           String
+  venueId              String
+  venue                Venue                 @relation(fields: [venueId], references: [id])
+  eventId              String?
+  event                Event?                @relation(fields: [eventId], references: [id])
+  name                 String
+  vendor               String                @default("ZKTeco")
+  model                String                @default("SpeedFace-V5")
+  serialNumber         String?
+  ipAddress            String?
+  port                 Int?
+  role                 AccessDeviceRole
+  status               AccessDeviceStatus    @default(OFFLINE)
+  lastSeenAt           DateTime?
+  firmwareVersion      String?
+  faceCapacity         Int?
+  algorithmVersion     String?
+  providerCapabilities Json?
+  configuration        Json?
+  encryptedSecrets     String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  personMappings       DevicePersonMapping[]
+  ingestedEvents       DeviceEventIngest[]
+  accessEvents         AccessEvent[]
+  accessAttempts       AccessAttempt[]
+
+  @@unique([merchantId, serialNumber])
+  @@index([eventId, role, status])
+  @@index([venueId, status])
+}
+
+model DevicePersonMapping {
+  id                  String                 @id @default(cuid())
+  deviceId            String
+  device              AccessDevice           @relation(fields: [deviceId], references: [id])
+  eventId             String
+  biometricIdentityId String
+  biometricIdentity   BiometricIdentity      @relation(fields: [biometricIdentityId], references: [id])
+  externalPersonId    String
+  syncStatus          DevicePersonSyncStatus @default(PENDING)
+  contentFingerprint  String?
+  algorithmVersion    String?
+  syncedAt            DateTime?
+  lastAttemptedAt     DateTime?
+  removedAt           DateTime?
+  lastError           String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@unique([deviceId, eventId, externalPersonId])
+  @@unique([deviceId, eventId, biometricIdentityId])
+  @@index([biometricIdentityId, syncStatus])
+  @@index([eventId, syncStatus])
+  @@index([externalPersonId])
+}
+
+model DeviceEventIngest {
+  id                      String         @id @default(cuid())
+  externalEventId         String         @unique
+  deviceId                String
+  device                  AccessDevice   @relation(fields: [deviceId], references: [id])
+  occurredAt              DateTime
+  eventType               String
+  externalPersonId        String?
+  matchConfidence         Float?
+  livenessPassed          Boolean?
+  rawVendorEventReference String?
+  receivedAt              DateTime       @default(now())
+  processedAt             DateTime?
+  accessEventId           String?        @unique
+  accessEvent             AccessEvent?   @relation(fields: [accessEventId], references: [id])
+  accessAttemptId         String?        @unique
+  accessAttempt           AccessAttempt? @relation(fields: [accessAttemptId], references: [id])
+
+  @@index([deviceId, occurredAt])
+  @@index([occurredAt])
+}
+
+model AccessEvent {
+  id          String             @id @default(cuid())
+  eventId     String
+  event       Event              @relation(fields: [eventId], references: [id])
+  deviceId    String?
+  device      AccessDevice?      @relation(fields: [deviceId], references: [id])
+  admissionId String
+  admission   Admission          @relation(fields: [admissionId], references: [id])
+  attendeeId  String
+  attendee    Attendee           @relation(fields: [attendeeId], references: [id])
+  actorUserId String?
+  actorUser   MerchantUser?      @relation(fields: [actorUserId], references: [id])
+  direction   AccessDirection
+  decision    AccessDecision     @default(ALLOW)
+  reason      String?
+  occurredAt  DateTime
+  createdAt   DateTime           @default(now())
+  ingest      DeviceEventIngest?
+
+  @@index([eventId, occurredAt])
+  @@index([admissionId, occurredAt])
+  @@index([attendeeId, occurredAt])
+  @@index([deviceId, occurredAt])
+}
+
+model AccessAttempt {
+  id               String             @id @default(cuid())
+  eventId          String?
+  event            Event?             @relation(fields: [eventId], references: [id])
+  deviceId         String?
+  device           AccessDevice?      @relation(fields: [deviceId], references: [id])
+  admissionId      String?
+  admission        Admission?         @relation(fields: [admissionId], references: [id])
+  attendeeId       String?
+  attendee         Attendee?          @relation(fields: [attendeeId], references: [id])
+  direction        AccessDirection?
+  decision         AccessDecision
+  reason           String
+  externalPersonId String?
+  occurredAt       DateTime
+  createdAt        DateTime           @default(now())
+  ingest           DeviceEventIngest?
+
+  @@index([eventId, occurredAt])
+  @@index([admissionId, occurredAt])
+  @@index([deviceId, occurredAt])
+}
+
+model EnrollmentSession {
+  id             String                @id @default(cuid())
+  eventId        String
+  event          Event                 @relation(fields: [eventId], references: [id])
+  admissionId    String
+  admission      Admission             @relation(fields: [admissionId], references: [id])
+  deviceId       String?
+  consumerUserId String?
+  consumerUser   ConsumerUser?         @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  requestedScope BiometricConsentScope @default(EVENT_ONLY)
+  codeHash       String                @unique
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  failedAt       DateTime?
+  createdAt      DateTime              @default(now())
+
+  @@index([eventId, expiresAt])
+  @@index([admissionId, expiresAt])
+}
+
+model BiometricDeletionJob {
+  id                  String                  @id @default(cuid())
+  eventId             String?
+  event               Event?                  @relation(fields: [eventId], references: [id])
+  biometricIdentityId String
+  biometricIdentity   BiometricIdentity       @relation(fields: [biometricIdentityId], references: [id])
+  status              BiometricDeletionStatus @default(PENDING)
+  requestedById       String?
+  reason              String
+  requestedAt         DateTime                @default(now())
+  startedAt           DateTime?
+  completedAt         DateTime?
+  failureReason       String?
+  attempts            Int                     @default(0)
+
+  @@index([status, requestedAt])
+  @@index([eventId, status])
+  @@index([biometricIdentityId, status])
+}
+
+model CashShift {
+  id           String                      @id @default(cuid())
+  eventId      String
+  event        Event                       @relation(fields: [eventId], references: [id])
+  cashierId    String
+  cashier      MerchantUser                @relation(fields: [cashierId], references: [id])
+  openedAt     DateTime                    @default(now())
+  closedAt     DateTime?
+  openingFloat Int
+  expectedCash Int?
+  declaredCash Int?
+  difference   Int?
+  orders       AdmissionOrder[]
+  transactions EventFinancialTransaction[]
+
+  @@index([eventId, openedAt])
+  @@index([cashierId, openedAt])
+}
+
+model EventFinancialTransaction {
+  id              String                      @id @default(cuid())
+  eventId         String
+  orderId         String
+  order           AdmissionOrder              @relation(fields: [orderId], references: [id])
+  cashShiftId     String?
+  cashShift       CashShift?                  @relation(fields: [cashShiftId], references: [id])
+  type            String
+  paymentMethod   EventPaymentMethod
+  status          EventPaymentStatus
+  amount          Int
+  currency        String                      @default("BOB")
+  reason          String?
+  actorUserId     String?
+  adjustmentForId String?
+  adjustmentFor   EventFinancialTransaction?  @relation("FinancialAdjustments", fields: [adjustmentForId], references: [id])
+  adjustments     EventFinancialTransaction[] @relation("FinancialAdjustments")
+  createdAt       DateTime                    @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([cashShiftId, createdAt])
+  @@index([orderId, createdAt])
+}
+
+model EventRefund {
+  id          String         @id @default(cuid())
+  orderId     String
+  order       AdmissionOrder @relation(fields: [orderId], references: [id])
+  amount      Int
+  currency    String         @default("BOB")
+  reason      String
+  actorUserId String
+  actorUser   MerchantUser   @relation(fields: [actorUserId], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model EventStaffMembership {
+  id             String         @id @default(cuid())
+  merchantId     String
+  merchant       Merchant       @relation(fields: [merchantId], references: [id])
+  eventId        String
+  event          Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  merchantUserId String
+  merchantUser   MerchantUser   @relation(fields: [merchantUserId], references: [id])
+  role           EventStaffRole
+  permissions    Json?
+  revokedAt      DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@unique([eventId, merchantUserId, role])
+  @@index([merchantId, eventId])
+  @@index([merchantUserId, revokedAt])
+}
+
+model PromoterProfile {
+  id             String                    @id @default(cuid())
+  merchantUserId String                    @unique
+  merchantUser   MerchantUser              @relation(fields: [merchantUserId], references: [id])
+  displayName    String
+  createdAt      DateTime                  @default(now())
+  allocations    EventPromoterAllocation[]
+  guests         GuestListEntry[]
+}
+
+model EventPromoterAllocation {
+  id             String                 @id @default(cuid())
+  eventId        String
+  event          Event                  @relation(fields: [eventId], references: [id])
+  promoterId     String
+  promoter       PromoterProfile        @relation(fields: [promoterId], references: [id])
+  ticketTypeId   String?
+  ticketType     TicketType?            @relation(fields: [ticketTypeId], references: [id])
+  kind           PromoterAllocationKind
+  quota          Int
+  used           Int                    @default(0)
+  discountAmount Int?
+  createdAt      DateTime               @default(now())
+  guests         GuestListEntry[]
+
+  @@unique([eventId, promoterId, kind, ticketTypeId])
+  @@index([promoterId, eventId])
+}
+
+model GuestListEntry {
+  id           String                  @id @default(cuid())
+  eventId      String
+  event        Event                   @relation(fields: [eventId], references: [id])
+  promoterId   String
+  promoter     PromoterProfile         @relation(fields: [promoterId], references: [id])
+  allocationId String
+  allocation   EventPromoterAllocation @relation(fields: [allocationId], references: [id])
+  ticketTypeId String?
+  ticketType   TicketType?             @relation(fields: [ticketTypeId], references: [id])
+  admissionId  String?                 @unique
+  admission    Admission?              @relation(fields: [admissionId], references: [id])
+  guestName    String
+  guestEmail   String?
+  guestPhone   String?
+  status       GuestListStatus         @default(INVITED)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@index([eventId, status])
+  @@index([promoterId, createdAt])
+}
+
+model EventAuditLog {
+  id          String        @id @default(cuid())
+  actorUserId String?
+  actorUser   MerchantUser? @relation(fields: [actorUserId], references: [id])
+  merchantId  String
+  merchant    Merchant      @relation(fields: [merchantId], references: [id])
+  eventId     String?
+  event       Event?        @relation(fields: [eventId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime      @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([eventId, createdAt])
+  @@index([entityType, entityId])
+}
+
+enum PaymentLinkStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DebtCollectionLinkStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DebtRecordStatus {
+  PENDING
+  PAID
+}
+
+enum CustomDomainStatus {
+  PENDING
+  VERIFIED
+  ACTIVE
+}
+
+// No-code entry point: a merchant with no developer creates one of these from
+// the dashboard and gets a shareable storefront URL/QR. A merchant can run
+// several independent Stores (e.g. two different shops under one account) —
+// each has its own slug/branding/product catalog. The public checkout page
+// (apps/checkout, /s/<slug>; legacy ?link=<slug>) turns a visit into a PaymentIntent via
+// StoresService — same PaymentIntent/rail/ledger machinery as the full API
+// path, just without requiring a merchant backend to call anything.
+model Store {
+  funnelVisits StoreFunnelVisit[]
+  creditsEnabled Boolean @default(false)
+  digitalGoodsEnabled Boolean @default(false)
+  credits StoreCredit[]
+  digitalAssets DigitalAsset[]
+  redirects StoreRedirect[]
+  reviews StoreReview[]
+  articles StoreArticle[]
+  bundles StoreBundle[]
+  bundlesEnabled Boolean @default(false)
+  shippingEnabled Boolean @default(false)
+  shippingPickupEnabled Boolean @default(true)
+  brandProfile StoreBrandProfile?
+  brandRevisions StoreBrandRevision[]
+  aiUsage StoreAiUsage[]
+  id                           String                           @id @default(cuid())
+  // Private editor state. Public readers continue to use the Store columns.
+  websiteDraft                 Json?
+  websiteRevision              Int                              @default(0)
+  websitePublishedRevision     Int                              @default(0)
+  merchantId                   String                           @unique
+  merchant                     Merchant                         @relation(fields: [merchantId], references: [id])
+  slug                         String                           @unique
+  debtPortalSlug               String?                          @unique
+  name                         String
+  // Short about/tagline text shown under the store name on the storefront.
+  tagline                      String?
+  // "/v1/uploads/<uuid>.<ext>" — path returned by POST /v1/uploads, not a data URL.
+  logoUrl                      String?
+  // Wide header image, separate from logoUrl (which stays small/square).
+  bannerUrl                    String?
+  // "#RRGGBB", validated at the DTO layer only.
+  backgroundColor              String?
+  // Storefront ground can be a single color or a merchant-authored two-color
+  // gradient. The solid color remains the safe fallback for older clients.
+  backgroundMode               String                           @default("solid")
+  backgroundGradientStart      String                           @default("#f8fafc")
+  backgroundGradientEnd        String                           @default("#e0e7ff")
+  backgroundGradientAngle      Int                              @default(135)
+  // "/v1/uploads/<uuid>.<ext>" — full-page storefront background photo.
+  // Independent of backgroundColor: when set, the image is what's shown
+  // (backgroundColor still renders behind it while the image loads / behind
+  // any transparent areas), when unset backgroundColor (or the default) is
+  // used as before.
+  backgroundImageUrl           String?
+  // Support channel shown to customers on the receipt/success screen — e.g.
+  // for a refund request or an order question. Both optional and independent
+  // (a merchant may only want to expose one).
+  contactPhone                 String?
+  contactEmail                 String?
+  // Optional public contact form. The delivery address stays private and is
+  // never returned by the public storefront endpoint.
+  contactFormEnabled           Boolean                          @default(false)
+  contactFormEmail             String?
+  contactTitle                 String?
+  contactSubtitle              String?
+  // Optional public location block. New stores place it at the bottom, and
+  // merchants can later move it through the shared content-order editor.
+  // Only allow-listed map embed URLs reach this field (validated by the DTO);
+  // merchant copy remains plain text and is escaped by the storefront.
+  locationMapUrl               String?
+  locationDescription          String?
+  locationHighlight            String?
+  locationTitle                String?
+  locationSubtitle             String?
+  // Ordered branches. Public copy and fulfillment capabilities live here;
+  // product quantities remain on PaymentLink.locationStocks so payment
+  // confirmation can decrement one branch atomically.
+  locations                    Json                             @default("[]")
+  // Long-form brand story ("Nuestra historia") rendered as its own storefront
+  // section — multi-paragraph (blank-line separated), unlike the one-line tagline.
+  aboutText                    String?
+  aboutTitle                   String?
+  aboutSubtitle                String?
+  // Optional background photo for the "Nuestra historia" section. The section
+  // remains plain and transparent when this is null.
+  aboutImageUrl                String?
+  catalogTitle                 String?
+  catalogSubtitle              String?
+  galleryTitle                 String?
+  gallerySubtitle              String?
+  linksTitle                   String?
+  // "#RRGGBB" brand accent for storefront highlights (chips, links, pay button,
+  // title gradient). Null = pagosYa's default palette accent, per theme.
+  accentColor                  String?
+  // Curated storefront typography: "modern" (default) | "editorial" |
+  // "friendly" | "classic" | "geometric". The dashboard itself always keeps pagosYa's
+  // 0xProto Mono identity; this choice belongs only to the merchant storefront.
+  fontStyle                    String                           @default("modern")
+  // Corner treatment for the storefront's interactive elements:
+  // "rounded" (default) | "pill" | "square". Validated at the DTO layer.
+  buttonStyle                  String                           @default("rounded")
+  // Storefront ground material for the "El Tablero" (hand-lettered price
+  // board) visual world: "chalkboard" (default) | "kraft" | "painted".
+  // Validated at the DTO layer.
+  boardTexture                 String                           @default("chalkboard")
+  // Short promo/notice line shown in a bar at the very top of the storefront.
+  announcement                 String?
+  // "static" (default) | "marquee". Speed is one full marquee pass in seconds.
+  announcementMode             String                           @default("static")
+  announcementSpeed            Int                              @default(18)
+  // Merchant-controlled announcement presentation. Color is the strip
+  // background; storefront code derives a contrasting ink color automatically.
+  announcementSize             String                           @default("medium")
+  announcementColor            String                           @default("#ffffff")
+  // Independent lettering for the announcement strip. The font is selected
+  // from the same curated storefront families; the effect is a bounded CSS
+  // treatment with an accessible reduced-motion fallback.
+  announcementFont             String                           @default("store")
+  announcementEffect           String                           @default("none")
+  // Merchant-authored promotion dialog. The customer can dismiss it for the
+  // current browser session; preview mode always renders it for editing.
+  promotionEnabled             Boolean                          @default(false)
+  // Optional visual shown at the top of the promotion dialog.
+  promotionImageUrl            String?
+  promotionTitle               String?
+  promotionBody                String?
+  promotionCtaLabel            String?
+  promotionCtaUrl              String?
+  // Ordered, merchant-authored storefront hero slides. JSON keeps this
+  // lightweight customization atomic with the rest of the appearance editor;
+  // every entry is validated by CreateStoreDto before it reaches Prisma.
+  heroSlides                   Json                             @default("[]")
+  // Every public content section appears exactly once. The dashboard edits
+  // this array as an ordered list; empty sections simply do not render.
+  contentOrder                 Json                             @default("[\"animation-welcome\",\"hero\",\"about\",\"products\",\"gallery\",\"links\",\"contact\",\"location\"]")
+  // Optional background colors keyed by contentOrder section id. Keeping this
+  // separate from content lets the visual editor recolor a section without
+  // rewriting its copy, media, or position.
+  sectionBackgrounds           Json                             @default("{}")
+  // Structural storefront composition selected by the merchant or visual AI:
+  // cinematic | editorial | collage | catalog-first.
+  layoutStyle                  String                           @default("cinematic")
+  // Post-catalog visual experience selected by the merchant or visual AI:
+  // coverflow | diagonal-marquee | story-scroller.
+  experienceStyle              String                           @default("coverflow")
+  // Opt-in merchant-authored animation section. AI proposals enable it, but
+  // merchants preview the selected template before applying it.
+  motionDuoEnabled             Boolean                          @default(true)
+  // The selected animation template. Values are validated by CreateStoreDto.
+  motionExperience             String                           @default("clarity-marquee")
+  // Ordered animation templates rendered inside the movable motion section.
+  // motionExperience remains as a compatibility fallback for older clients.
+  motionExperiences            Json                             @default("[\"clarity-marquee\"]")
+  // Named animation instances. Each owns its template, copy, and media and is
+  // positioned independently through contentOrder as "animation-<id>".
+  animations                   Json                             @default("[{\"id\":\"welcome\",\"name\":\"Bienvenida en movimiento\",\"type\":\"clarity-marquee\",\"media\":[]}]")
+  // Captioned brand/editorial photos, separate from product image galleries.
+  // Validated JSON snapshot [{ imageUrl, caption }], maximum 8 entries.
+  editorialGallery             Json                             @default("[]")
+  // Button customization layers: corner shape lives in buttonStyle; these
+  // control fill treatment, motion, and the customer-facing cart CTA copy.
+  buttonVariant                String                           @default("solid")
+  buttonMotion                 String                           @default("lift")
+  cartButtonLabel              String                           @default("Ir a pagar")
+  // Versioned, bounded document produced by the AI site director. It controls
+  // composition and art direction while catalog, cart, contact and checkout
+  // remain trusted pagosYa components. Null keeps legacy stores unchanged.
+  siteDocument                 Json?
+  // Stable ids of sections the merchant wants preserved across AI runs.
+  // Kept outside siteDocument so renderer state stays purely presentational.
+  visualSectionLocks           Json                             @default("[]")
+  // "payment" opens pagosYa checkout; "whatsapp" sends the composed cart
+  // to contactPhone; "external" sends the interested customer to a merchant
+  // URL. The latter two never create a PaymentIntent and do not require NIT.
+  checkoutMode                 String                           @default("payment")
+  leadCaptureUrl               String?
+  // Merchant-controlled cross-sell shelf inside the cart review. Recommendations
+  // are explicitly selected by the merchant and always exclude cart items.
+  cartRecommendationsEnabled   Boolean                          @default(true)
+  cartRecommendationProductIds Json                             @default("[]")
+  // Inventory quantities stay private unless the merchant explicitly opts in.
+  // Sold-out state is still public so customers cannot add unavailable items.
+  showLowStockToCustomers      Boolean                          @default(false)
+  // Optional merchant-authored sales target shown and tracked by Yapi.
+  salesGoalLabel               String?
+  salesGoalAmount              Int?
+  status                       StoreStatus                      @default(ACTIVE)
+  // Incremented once per storefront page load (getStorePublic) — a simple
+  // visit counter, not deduplicated per visitor. Good enough for "is anyone
+  // looking at this store" without building real analytics infra.
+  viewCount                    Int                              @default(0)
+  createdAt                    DateTime                         @default(now())
+  updatedAt                    DateTime                         @updatedAt
+  paymentLinks                 PaymentLink[]
+  categories                   Category[]
+  links                        StoreLink[]
+  mediaAssets                  MediaAsset[]
+  visualProposals              StoreVisualProposal[]
+  visualVersions               StoreVisualVersion[]
+  visualSignatures             StoreVisualSignature[]
+  sourcePublicationPaused      Boolean                          @default(false)
+  publishedSourceRevision      Int?
+  sourcePublicationVersion     Int @default(0)
+  sourcePublishedAt            DateTime?
+  sourceExperiments            StoreSourceExperiment[]
+  sourceProject                StoreSourceProject?
+  sourceGenerations            StoreSourceGeneration[]
+  agentThread                  StoreAgentThread?
+  customDomains                CustomDomain[]
+  leads                        StoreLead[]
+  retention StoreRetention?
+  comebackCards ComebackCard[]
+  savedCarts StoreSavedCart[]
+  emailCampaigns StoreEmailCampaign[]
+  emailDeliveries StoreEmailDelivery[]
+  newsletterSubscribers        StoreNewsletterSubscriber[]
+  debtCollectionLinks          DebtCollectionLink[]
+  consumerAffiliations         ConsumerInstitutionAffiliation[]
+  promoCodes                   PromoCode[]
+  progressCelebrations         MerchantProgressCelebration[]
+  events                       Event[]
+
+  @@index([merchantId, createdAt])
+  partners StorePartner[]
+
+}
+
+// A merchant-owned hostname that points at the existing hosted storefront.
+// Ownership is proven with a unique DNS TXT value before public hostname
+// resolution is enabled. TLS and edge routing stay deployment concerns; this
+// row is the application-level hostname -> Store mapping.
+model CustomDomain {
+  id                String             @id @default(cuid())
+  storeId           String
+  store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  hostname          String             @unique
+  status            CustomDomainStatus @default(PENDING)
+  verificationToken String             @unique
+  verifiedAt        DateTime?
+  lastCheckedAt     DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([storeId, createdAt])
+}
+
+// Payment status and fulfillment status are separate. Item snapshots survive
+// later catalog edits and remain truthful in the buyer's history.
+model StorePartner {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name String
+  code String @unique
+  commissionBps Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  orders StoreOrder[]
+  @@index([storeId, createdAt])
+}
+
+model StoreOrder {
+  @@index([funnelVisitId])
+  funnelVisitId String?
+  funnelVisit StoreFunnelVisit? @relation(fields: [funnelVisitId], references: [id], onDelete: SetNull)
+  sourceVisitId String?
+  sourceVisit StoreSourceVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: SetNull)
+  partnerId String?
+  partner StorePartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  partnerCommissionBps Int?
+  id                      String                  @id @default(cuid())
+  paymentIntentId         String                  @unique
+  paymentIntent           PaymentIntent           @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+  consumerUserId          String?
+  consumerUser            ConsumerUser?           @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  merchantId              String
+  storeId                 String
+  storeName               String
+  fulfillmentLocationId   String?
+  fulfillmentLocationName String?
+  fulfillmentMethod       String?
+  fulfillmentReadyAt      DateTime?
+  items                   Json
+  amount                  Int
+  currency                String                  @default("BOB")
+  status                  OrderFulfillmentStatus  @default(AWAITING_PAYMENT)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  statusEvents            StoreOrderStatusEvent[]
+
+  @@index([consumerUserId, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model StoreOrderStatusEvent {
+  id        String                 @id @default(cuid())
+  orderId   String
+  order     StoreOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderFulfillmentStatus
+  createdAt DateTime               @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// A company shares one collection URL; customers identify their own open
+// balance with a carnet/CI and pay the server-owned amount through the same
+// PaymentIntent rails used by storefront orders.
+model DebtCollectionLink {
+  id                String                   @id @default(cuid())
+  storeId           String
+  store             Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug              String                   @unique
+  name              String
+  notificationEmail String?
+  currency          String                   @default("BOB")
+  status            DebtCollectionLinkStatus @default(ACTIVE)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  debts             DebtRecord[]
+
+  @@index([storeId, createdAt])
+}
+
+model DebtRecord {
+  id                   String             @id @default(cuid())
+  debtCollectionLinkId String
+  debtCollectionLink   DebtCollectionLink @relation(fields: [debtCollectionLinkId], references: [id], onDelete: Cascade)
+  customerDocument     String
+  normalizedDocument   String
+  customerName         String
+  customerEmail        String?
+  customerPhone        String?
+  description          String?
+  reference            String?
+  amount               Int
+  currency             String             @default("BOB")
+  status               DebtRecordStatus   @default(PENDING)
+  paymentIntentId      String?
+  paymentIntent        PaymentIntent?     @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+  paidAt               DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([debtCollectionLinkId, normalizedDocument])
+  @@index([debtCollectionLinkId, status])
+  @@index([paymentIntentId])
+}
+
+// Contact requests created by lead-capture stores and zero-total carts. Paid
+// orders continue to live in PaymentIntent; the merchant order feed combines
+// both sources without pretending a lead was a completed sale.
+model StoreLead {
+  status String @default("NEW")
+  updatedAt DateTime @default(now()) @updatedAt
+  id            String   @id @default(cuid())
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customerName  String
+  customerEmail String
+  customerPhone String
+  message       String?
+  items         Json
+  amount        Int
+  currency      String   @default("BOB")
+  createdAt     DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+// Consent is store-scoped and deduplicated by normalized email. This keeps
+// newsletter signups separate from sales leads and contact requests.
+model StoreNewsletterSubscriber {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  unsubscribeToken String @unique @default(uuid())
+  email     String
+  name      String?
+  phone     String?
+  interests String[] @default([])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, email])
+  @@index([storeId, createdAt])
+}
+
+enum MediaAssetKind {
+  ORIGINAL
+  AI_DERIVED
+}
+
+// Upload ownership and lineage live in the database even when the bytes move
+// from local disk to object storage. Original merchant files are never
+// overwritten by AI output; derived files point back to their source.
+model MediaAsset {
+  id            String         @id @default(cuid())
+  merchantId    String
+  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId       String?
+  store         Store?         @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  url           String         @unique
+  storageKey    String         @unique
+  kind          MediaAssetKind @default(ORIGINAL)
+  mimeType      String
+  byteSize      Int
+  parentAssetId String?
+  parentAsset   MediaAsset?    @relation("MediaAssetLineage", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  derivatives   MediaAsset[]   @relation("MediaAssetLineage")
+  createdAt     DateTime       @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+enum VisualProposalStatus {
+  READY
+  APPLIED
+  DISMISSED
+}
+
+enum StoreAgentMessageRole {
+  USER
+  ASSISTANT
+}
+
+// The thread is owned by the store rather than by an AI provider. This makes
+// the merchant's working conversation durable even when models change.
+model StoreAgentThread {
+  id        String              @id @default(cuid())
+  storeId   String              @unique
+  store     Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  messages  StoreAgentMessage[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model StoreAgentMessage {
+  id         String                @id @default(cuid())
+  threadId   String
+  thread     StoreAgentThread      @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role       StoreAgentMessageRole
+  channel    String                @default("website")
+  content    String
+  proposalId String?
+  proposal   StoreVisualProposal?  @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  metadata   Json                  @default("{}")
+  createdAt  DateTime              @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([threadId, channel, createdAt])
+  @@index([proposalId])
+}
+
+// A proposal stores only the bounded storefront configuration accepted by the
+// API. It never stores or executes model-generated HTML, CSS, or JavaScript.
+model StoreVisualProposal {
+  id              String               @id @default(cuid())
+  storeId         String
+  store           Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  title           String
+  rationale       String
+  provider        String
+  status          VisualProposalStatus @default(READY)
+  config          Json
+  baseWebsiteRevision Int?
+  sourceAssetUrls Json                 @default("[]")
+  generatedUrls   Json                 @default("[]")
+  appliedAt       DateTime?
+  createdAt       DateTime             @default(now())
+  agentMessages   StoreAgentMessage[]
+
+  @@index([storeId, createdAt])
+}
+
+// Independent storefront source is private, immutable per revision, and never
+// evaluated by the API or the legacy document renderer.
+// Private generation telemetry. No prompts, source, assets or credentials.
+model StoreSourceGeneration {
+  id             String   @id @default(cuid())
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  activeStoreId  String?  @unique
+  baseRevision  Int
+  revision      Int?
+  requestedModel String
+  model          String
+  maxCredits     Int
+  credits        Int      @default(0)
+  status         String   @default("RUNNING")
+  attempts       Json     @default("[]")
+  durationMs     Int?
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+  @@index([storeId, createdAt])
+}
+
+model StoreSourceProject {
+  storeId   String @id
+  store     Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  revision  Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  versions  StoreSourceVersion[]
+}
+
+model StoreSourceVersion {
+  storeId      String
+  project      StoreSourceProject @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  revision     Int
+  label        String
+  digest       String
+  snapshot     Json
+  restoredFrom Int?
+  createdAt    DateTime @default(now())
+
+  @@id([storeId, revision])
+}
+
+// Snapshots are created before applying an AI proposal or restoring an older
+// version, making every visual change reversible without touching products.
+model StoreVisualVersion {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  label     String
+  source    String
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt])
+}
+
+// A reusable creative recipe. The JSON is deliberately content-free: it may
+// contain weighted visual axes, section structures, and semantic media roles,
+// but never product ids, merchant copy, or asset URLs.
+model StoreVisualTemplate {
+  id               String   @id @default(cuid())
+  merchantId       String
+  merchant         Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  name             String
+  sourceProposalId String?
+  recipe           Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([merchantId, createdAt])
+}
+
+// Content-free structural history used by the originality gate. Features
+// describe topology, type roles, geometry, rhythm, media placement and motion;
+// this table never contains merchant copy, product ids, or asset URLs.
+model StoreVisualSignature {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sourceType  String
+  sourceId    String?
+  fingerprint String
+  signature   Json
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([storeId, createdAt])
+  @@index([sourceType, sourceId])
+  @@index([fingerprint])
+}
+
+// Merchant-defined buttons rendered under the storefront header — social
+// profiles, a catalog PDF, a map pin, anything the merchant wants to link out
+// to. Replaced wholesale via PUT /v1/stores/:id/links (order = sortOrder), so
+// there's no per-row CRUD.
+model StoreLink {
+  id        String @id @default(cuid())
+  storeId   String
+  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  label     String
+  // http(s) only, enforced at the DTO layer — these render as clickable
+  // buttons on a customer-facing page, so no javascript:/data: schemes.
+  url       String
+  sortOrder Int    @default(0)
+
+  @@index([storeId, sortOrder])
+}
+
+enum StoreStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum PromoDiscountType {
+  PERCENT
+  FIXED
+}
+
+// Shareable, store-scoped codes. FIXED values use minor currency units,
+// matching every other amount in the payment domain.
+model PromoCode {
+  id            String            @id @default(cuid())
+  storeId       String
+  store         Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  code          String
+  discountType  PromoDiscountType
+  discountValue Int
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([storeId, code])
+  @@index([storeId, isActive, createdAt])
+}
+
+// Groups a Store's products into sections on the storefront (e.g. "Bebidas",
+// "Postres") — optional per product; uncategorized products still render,
+// just outside any section.
+model Category {
+  id           String        @id @default(cuid())
+  storeId      String
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name         String
+  bannerUrl    String?
+  highlights   String[]      @default([])
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  paymentLinks PaymentLink[]
+
+  @@index([storeId, sortOrder])
+}
+
+// A product within a Store's catalog.
+model PaymentLink {
+  subscriptionOptions ProductSubscriptionOption[]
+  fulfillmentType String @default("PHYSICAL")
+  digitalAssets DigitalAsset[]
+  shippingWeightGrams Int?
+  id                 String            @id @default(cuid())
+  storeId            String
+  store              Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId         String?
+  category           Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name               String
+  description        String?
+  // "/v1/uploads/<uuid>.<ext>" paths returned by POST /v1/uploads — first
+  // entry is the cover photo, rest render as a gallery. Replaces the old
+  // single `imageUrl` column (see migration 20260807150000_store_catalog_v2).
+  imageUrls          String[]          @default([])
+  // CSS object-position values ("x% y%") aligned by index with imageUrls.
+  // Missing entries fall back to centered, preserving every existing product.
+  imagePositions     String[]          @default([])
+  // Free-form small labels the merchant types, e.g. "Nuevo", "Agotado" —
+  // rendered as pill badges on the storefront. Not a controlled vocabulary.
+  tags               String[]          @default([])
+  // Ordered product ids chosen by the merchant for the recommendation shelf
+  // on this product's detail page. The service validates that every id belongs
+  // to the same store and never allows the product to recommend itself.
+  recommendedProductIds String[]        @default([])
+  // Remaining units, null = not tracked (unlimited, today's behavior for
+  // every existing product). When set, the storefront caps cart quantity to
+  // it and cart-checkout/payment success enforce it server-side.
+  stock              Int?
+  // { [storeLocationId]: number | null }; null means unlimited at that
+  // branch. When branches are configured, stock is the derived aggregate.
+  locationStocks     Json              @default("{}")
+  // "#RRGGBB" product color swatch (e.g. a T-shirt color), validated at the DTO layer only.
+  color              String?
+  // Optional purchasable choices such as Pequeña/Grande. Stored as a small
+  // validated JSON snapshot [{ id, name, amount, stock }]. A missing stock
+  // field preserves the earlier shared-product-stock behavior; null means the
+  // option is unlimited, and an integer is decremented atomically in Postgres.
+  variants           Json              @default("[]")
+  // Additive product modifiers [{ id, name, amount, required }]. Their amount
+  // is added server-side after validating the customer's selected ids.
+  extras             Json              @default("[]")
+  amount             Int
+  currency           String            @default("BOB")
+  // Optional percentage campaign. Pricing only applies it while the server
+  // clock is inside this closed-open window [startsAt, endsAt).
+  discountPercent    Int?
+  discountStartsAt   DateTime?
+  discountEndsAt     DateTime?
+  // Merchant/PagosYa SKU. This is codigoProducto in the invoice XML and is
+  // deliberately separate from SIN's generic product classification.
+  codigoProducto     String?
+  // Taxpayer activity selected from sincronizarActividades.
+  actividadEconomica String?
+  // SIN generic product/service code, synchronized for actividadEconomica.
+  codigoProductoSin  String?
+  // SIAT unit classifier from sincronizarParametricaUnidadMedida.
+  unidadMedida       Int?
+  status             PaymentLinkStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([storeId, codigoProducto])
+  @@index([storeId, createdAt])
+  @@index([categoryId])
+}
+
+// Offer configuration only: these rows do not enroll customers or schedule charges.
+enum ProductSubscriptionCadence {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model ProductSubscriptionOption {
+  id              String                     @id @default(cuid())
+  paymentLinkId   String
+  paymentLink     PaymentLink                @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  // WEEKLY = 7 days, BIWEEKLY = 14 days, MONTHLY = one calendar month.
+  cadence         ProductSubscriptionCadence
+  // Integer percent off the one-time product/variant price, from 0 through 99.
+  // No default: the merchant must confirm even a zero discount.
+  discountPercent Int
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  @@unique([paymentLinkId, cadence])
+}
+
+// Persisted checkout totals keep storefront sorting and finance summaries
+// bounded as payment history grows. storeId/paymentLinkId are snapshots, not
+// foreign keys, so deleting a storefront never erases its financial history.
+model StoreProductStat {
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId       String
+  paymentLinkId String
+  productName   String
+  quantity      Int      @default(0)
+  revenue       Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@id([storeId, paymentLinkId])
+  @@index([merchantId, quantity])
+  @@index([storeId, quantity])
+}
+
+model PaymentMethod {
+  id             String            @id @default(cuid())
+  merchantId     String
+  type           PaymentMethodType
+  token          String
+  last4          String?
+  brand          String?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  paymentIntents PaymentIntent[]
+
+  @@unique([merchantId, token])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  paymentIntentId String
+  paymentIntent   PaymentIntent     @relation(fields: [paymentIntentId], references: [id])
+  type            TransactionType
+  railId          String
+  amount          Int
+  status          TransactionStatus
+  railReference   String?
+  rawResponse     Json?
+  createdAt       DateTime          @default(now())
+  ledgerEntries   LedgerEntry[]
+
+  @@index([paymentIntentId])
+}
+
+model LedgerEntry {
+  id                 String          @id @default(cuid())
+  transactionGroupId String
+  transactionId      String?
+  transaction        Transaction?    @relation(fields: [transactionId], references: [id])
+  merchantId         String?
+  account            LedgerAccount
+  direction          LedgerDirection
+  amount             Int
+  currency           String          @default("BOB")
+  createdAt          DateTime        @default(now())
+
+  @@index([transactionGroupId])
+  @@index([merchantId, account])
+}
+
+model WebhookEndpoint {
+  id            String         @id @default(cuid())
+  merchantId    String
+  merchant      Merchant       @relation(fields: [merchantId], references: [id])
+  url           String
+  secret        String
+  enabledEvents String[]
+  status        String         @default("ACTIVE")
+  createdAt     DateTime       @default(now())
+  events        WebhookEvent[]
+}
+
+model WebhookEvent {
+  id                 String             @id @default(cuid())
+  merchantId         String
+  webhookEndpointId  String
+  webhookEndpoint    WebhookEndpoint    @relation(fields: [webhookEndpointId], references: [id])
+  eventType          String
+  payload            Json
+  status             WebhookEventStatus @default(PENDING)
+  attempts           Int                @default(0)
+  nextRetryAt        DateTime?
+  lastAttemptAt      DateTime?
+  lastResponseStatus Int?
+  createdAt          DateTime           @default(now())
+
+  @@index([status, nextRetryAt])
+}
+
+model IdempotencyKey {
+  id             String    @id @default(cuid())
+  merchantId     String
+  key            String
+  requestHash    String
+  responseStatus Int?
+  responseBody   Json?
+  status         String    @default("IN_PROGRESS")
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@unique([merchantId, key])
+}
+
+// Merchant operations hub ----------------------------------------------------
+// These records deliberately retain merchantId/storeId snapshots instead of
+// Prisma relations. The operational tools must remain queryable even when a
+// storefront is archived, while the migration still installs database-level
+// foreign keys where erasing the parent is safe.
+
+model BusinessCustomer {
+  id               String    @id @default(cuid())
+  merchantId       String
+  storeId          String
+  name             String
+  email            String?
+  phone            String?
+  document         String?
+  tags             String[]  @default([])
+  marketingConsent Boolean   @default(false)
+  loyaltyPoints    Int       @default(0)
+  lifetimeValue    Int       @default(0)
+  orderCount       Int       @default(0)
+  lastOrderAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([storeId, email])
+  @@index([merchantId, updatedAt])
+  @@index([storeId, loyaltyPoints])
+}
+
+model CustomerLoyaltyEntry {
+  id         String   @id @default(cuid())
+  merchantId String
+  storeId    String
+  customerId String
+  points     Int
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model MerchantAutomation {
+  id         String    @id @default(cuid())
+  merchantId String
+  storeId    String
+  name       String
+  kind       String
+  channel    String    @default("EMAIL")
+  delayHours Int       @default(24)
+  subject    String?
+  message    String
+  isActive   Boolean   @default(true)
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([storeId, isActive, kind])
+}
+
+model AutomationDelivery {
+  id            String    @id @default(cuid())
+  automationId  String
+  merchantId    String
+  storeId       String
+  recipient     String
+  sourceType    String
+  sourceId      String
+  status        String    @default("DELIVERED")
+  failureReason String?
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([automationId, sourceType, sourceId])
+  @@index([storeId, createdAt])
+}
+
+model DeliveryZone {
+  countryCodes String[] @default([])
+  postalPrefixes String[] @default([])
+  currency String @default("BOB")
+  freeAbove Int?
+  maximumOrder Int?
+  minimumWeightGrams Int?
+  maximumWeightGrams Int?
+  id               String   @id @default(cuid())
+  merchantId       String
+  storeId          String
+  name             String
+  fee              Int
+  minimumOrder     Int      @default(0)
+  radiusKm         Float?
+  estimatedMinutes Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, isActive])
+}
+
+model Courier {
+  id         String   @id @default(cuid())
+  merchantId String
+  storeId    String
+  name       String
+  phone      String?
+  vehicle    String?
+  status     String   @default("AVAILABLE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([storeId, status])
+}
+
+model DeliveryAssignment {
+  id          String    @id @default(cuid())
+  merchantId  String
+  storeId     String
+  orderId     String    @unique
+  courierId   String?
+  zoneId      String?
+  status      String    @default("UNASSIGNED")
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  fee         Int       @default(0)
+  notes       String?
+  estimatedAt DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([storeId, status, createdAt])
+  @@index([courierId, status])
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  merchantId  String
+  storeId     String
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, updatedAt])
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  merchantId  String
+  storeId     String
+  supplierId  String
+  status      String    @default("DRAFT")
+  currency    String    @default("BOB")
+  expectedAt  DateTime?
+  receivedAt  DateTime?
+  totalAmount Int       @default(0)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([storeId, status, createdAt])
+  @@index([supplierId, createdAt])
+}
+
+model PurchaseOrderItem {
+  id               String   @id @default(cuid())
+  purchaseOrderId  String
+  paymentLinkId    String?
+  sku              String?
+  name             String
+  quantity         Int
+  unitCost         Int
+  receivedQuantity Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([purchaseOrderId])
+  @@index([paymentLinkId])
+}
+
+model InventoryMovement {
+  id            String   @id @default(cuid())
+  merchantId    String
+  storeId       String
+  paymentLinkId String
+  quantityDelta Int
+  stockAfter    Int?
+  reason        String
+  sourceType    String
+  sourceId      String?
+  createdAt     DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([paymentLinkId, createdAt])
+}
+
+model ReconciliationImport {
+  id              String    @id @default(cuid())
+  merchantId      String
+  storeId         String
+  source          String
+  currency        String    @default("BOB")
+  totalAmount     Int
+  matchedAmount   Int       @default(0)
+  unmatchedAmount Int       @default(0)
+  status          String    @default("PROCESSING")
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  @@index([storeId, createdAt])
+}
+
+model ReconciliationEntry {
+  id            String   @id @default(cuid())
+  importId      String
+  externalId    String
+  occurredAt    DateTime
+  amount        Int
+  description   String?
+  railReference String?
+  transactionId String?
+  status        String   @default("UNMATCHED")
+  createdAt     DateTime @default(now())
+
+  @@unique([importId, externalId])
+  @@index([importId, status])
+  @@index([railReference])
+}
+
+model CustomerFavorite {
+  id             String   @id @default(cuid())
+  consumerUserId String
+  storeId        String
+  paymentLinkId  String
+  createdAt      DateTime @default(now())
+
+  @@unique([consumerUserId, paymentLinkId])
+  @@index([consumerUserId, createdAt])
+}
+
+model CustomerReturnRequest {
+  id             String    @id @default(cuid())
+  merchantId     String
+  storeId        String
+  orderId        String
+  consumerUserId String?
+  reason         String
+  details        String?
+  status         String    @default("REQUESTED")
+  resolution     String?
+  dueAt          DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([storeId, status, createdAt])
+  @@index([storeId, status, dueAt])
+  @@index([consumerUserId, createdAt])
+}
+
+model PosSession {
+  id            String    @id @default(cuid())
+  merchantId    String
+  storeId       String
+  cashierName   String
+  openingFloat  Int       @default(0)
+  closingAmount Int?
+  status        String    @default("OPEN")
+  openedAt      DateTime  @default(now())
+  closedAt      DateTime?
+
+  @@index([storeId, status, openedAt])
+}
+
+model PosSale {
+  id            String   @id @default(cuid())
+  merchantId    String
+  storeId       String
+  sessionId     String
+  paymentMethod String
+  amount        Int
+  currency      String   @default("BOB")
+  items         Json
+  customerName  String?
+  customerEmail String?
+  createdAt     DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model IntegrationConnection {
+  id         String    @id @default(cuid())
+  merchantId String
+  storeId    String
+  kind       String
+  name       String
+  secretHash String
+  status     String    @default("ACTIVE")
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, status, kind])
+}
+
+model IntegrationProductMapping {
+  id            String   @id @default(cuid())
+  connectionId  String
+  paymentLinkId String
+  externalSku   String
+  externalName  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([connectionId, externalSku])
+  @@unique([connectionId, paymentLinkId])
+  @@index([paymentLinkId])
+}
+
+model IntegrationSubscriptionPlanMapping {
+  id                 String   @id @default(cuid())
+  connectionId       String
+  subscriptionPlanId String
+  externalPlanCode   String
+  externalName       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([connectionId, externalPlanCode])
+  @@unique([connectionId, subscriptionPlanId])
+  @@index([subscriptionPlanId])
+}
+
+model IntegrationCustomerMapping {
+  id                 String   @id @default(cuid())
+  connectionId       String
+  businessCustomerId String
+  externalCustomerId String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([connectionId, externalCustomerId])
+  @@index([businessCustomerId])
+}
+
+model IntegrationSubscriptionMapping {
+  id                     String   @id @default(cuid())
+  connectionId           String
+  customerSubscriptionId String   @unique
+  externalSubscriptionId String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([connectionId, externalSubscriptionId])
+  @@index([connectionId])
+}
+
+model IntegrationSyncRun {
+  id           String    @id @default(cuid())
+  connectionId String
+  direction    String
+  status       String    @default("RUNNING")
+  itemCount    Int       @default(0)
+  errorMessage String?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([connectionId, startedAt])
+}
+
+model AppointmentServiceOffering {
+  id              String   @id @default(cuid())
+  merchantId      String
+  storeId         String
+  name            String
+  durationMinutes Int
+  bufferMinutes   Int      @default(0)
+  price           Int      @default(0)
+  currency        String   @default("BOB")
+  color           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, isActive])
+}
+
+model Appointment {
+  id                     String    @id @default(cuid())
+  merchantId             String
+  storeId                String
+  serviceOfferingId      String
+  customerName           String
+  customerEmail          String?
+  customerPhone          String?
+  startsAt               DateTime
+  endsAt                 DateTime
+  status                 String    @default("CONFIRMED")
+  holdExpiresAt          DateTime?
+  notes                  String?
+  depositPaymentIntentId String?
+  googleEventId          String?   @unique
+  calendarSyncError      String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([storeId, startsAt])
+  @@index([storeId, status, holdExpiresAt])
+  @@index([serviceOfferingId, startsAt])
+}
+
+model CalendarConnection {
+  id                     String   @id @default(cuid())
+  merchantId             String
+  storeId                String   @unique
+  provider               String   @default("GOOGLE")
+  accountEmail           String?
+  calendarId             String
+  refreshTokenCiphertext String
+  syncToken              String?
+  status                 String   @default("ACTIVE")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([merchantId, status])
+}
+
+model CalendarOauthState {
+  id         String   @id @default(cuid())
+  stateHash  String   @unique
+  merchantId String
+  storeId    String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model SubscriptionPlan {
+  id                  String   @id @default(cuid())
+  merchantId          String
+  storeId             String
+  name                String
+  amount              Int
+  currency            String   @default("BOB")
+  interval            String   @default("MONTHLY")
+  intervalCount       Int      @default(1)
+  reminderHoursBefore Int      @default(24)
+  collectionMode      String   @default("MANUAL_LINK")
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, isActive])
+}
+
+model CustomerSubscription {
+  id                 String    @id @default(cuid())
+  merchantId         String
+  storeId            String
+  planId             String
+  customerId         String?
+  customerName       String
+  customerEmail      String?
+  customerPhone      String?
+  amountOverride     Int?
+  nextAmountOverride Int?
+  activeKey          String?   @unique
+  status             String    @default("ACTIVE")
+  startedAt          DateTime  @default(now())
+  nextBillingAt      DateTime
+  canceledAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([storeId, status, nextBillingAt])
+  @@index([planId, status])
+}
+
+model SubscriptionInvoice {
+  id              String    @id @default(cuid())
+  subscriptionId  String
+  merchantId      String
+  storeId         String
+  periodStart     DateTime
+  amount          Int
+  currency        String    @default("BOB")
+  status          String    @default("DUE")
+  paymentIntentId String?
+  dueAt           DateTime
+  paidAt          DateTime?
+  initialNoticeAt DateTime?
+  lastReminderAt  DateTime?
+  reminderCount   Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@unique([subscriptionId, periodStart])
+  @@index([storeId, status, dueAt])
+}
+
+
+model StoreSourceExperiment {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  activeStoreId String? @unique
+  controlRevision Int
+  variantRevision Int
+  status String @default("RUNNING")
+  winner String?
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  visits StoreSourceVisit[]
+  @@index([storeId, startedAt])
+}
+
+model StoreSourceVisit {
+  id String @id @default(cuid())
+  experimentId String
+  experiment StoreSourceExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  visitorHash String
+  token String @unique
+  variant String
+  createdAt DateTime @default(now())
+  orders StoreOrder[]
+  @@unique([experimentId, visitorHash])
+  @@index([experimentId, variant])
+}
+
+// Merchant-owned, durable brand knowledge. Imported interpretations remain separate.
+model StoreBrandProfile {
+  storeId String @id
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  revision Int @default(0)
+  data Json @default("{\"confirmed\":[],\"suggested\":[]}")
+  analysisHash String?
+  updatedAt DateTime @updatedAt
+}
+
+model StoreAiUsage {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  stage String
+  model String
+  status String
+  responseId String?
+  durationMs Int
+  usage Json?
+  createdAt DateTime @default(now())
+  @@index([storeId, createdAt])
+}
+
+model StoreReview {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderId String
+  productId String
+  displayName String
+  rating Int
+  body String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  @@unique([orderId, productId])
+  @@index([storeId, status, createdAt])
+}
+model StoreArticle {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug String
+  locale String @default("es")
+  title String
+  excerpt String
+  body String
+  author String
+  publishedAt DateTime?
+  revision Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId, locale, slug])
+  @@index([storeId, publishedAt])
+}
+model StoreBundle {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name String
+  kind String
+  items Json
+  minimumQuantity Int @default(2)
+  discountPercent Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([storeId, active])
+}
+
+model StoreBrandRevision {
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  revision Int
+  data Json
+  createdAt DateTime @default(now())
+  @@id([storeId, revision])
+}
+
+model StoreCredit {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  codeHash String @unique
+  reference String
+  label String
+  kind String @default("GIFT_CARD")
+  currency String
+  issuedAmount Int
+  balance Int
+  active Boolean @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  reservations StoreCreditReservation[]
+  entries StoreCreditEntry[]
+  @@unique([storeId, reference])
+}
+model StoreCreditReservation {
+  paymentIntentId String @id
+  creditId String
+  credit StoreCredit @relation(fields: [creditId], references: [id])
+  amount Int
+  refundedAmount Int @default(0)
+  status String @default("RESERVED")
+  createdAt DateTime @default(now())
+}
+model StoreCreditEntry {
+  id String @id @default(cuid())
+  creditId String
+  credit StoreCredit @relation(fields: [creditId], references: [id])
+  reference String @unique
+  delta Int
+  kind String
+  createdAt DateTime @default(now())
+}
+model DigitalAsset {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId String
+  product PaymentLink @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storageKey String @unique
+  filename String
+  mimeType String
+  byteSize Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([storeId, productId, active])
+}
+model StoreRedirect {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  fromPath String
+  toPath String
+  createdAt DateTime @default(now())
+  @@unique([storeId, fromPath])
+}
+
+// Optional customer retention. All automated outreach is opt-in and queued.
+model StoreRetention {
+  storeId String @id
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  settings Json
+  revision Int @default(1)
+  startedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model ComebackCard {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email String
+  token String @unique
+  rewards ComebackReward[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId, email])
+}
+model ComebackReward {
+  id String @id @default(cuid())
+  cardId String
+  card ComebackCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  code String @unique
+  label String
+  days String[]
+  redeemedAt DateTime @default(now())
+}
+model StoreSavedCart {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email String
+  token String @unique
+  items Json
+  paymentIntentId String?
+  consentAt DateTime @default(now())
+  dueAt DateTime
+  sentAt DateTime?
+  closedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([closedAt, sentAt, dueAt])
+  @@index([storeId, email])
+}
+model StoreEmailCampaign {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  subject String
+  body String
+  queuedAt DateTime?
+  createdAt DateTime @default(now())
+  deliveries StoreEmailDelivery[]
+  @@index([storeId, createdAt])
+}
+model StoreEmailDelivery {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaignId String?
+  campaign StoreEmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email String
+  kind String
+  sourceId String?
+  subject String
+  body String
+  dedupeKey String @unique
+  status String @default("PENDING")
+  attempts Int @default(0)
+  dueAt DateTime @default(now())
+  lockedAt DateTime?
+  sentAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  @@index([status, dueAt])
+  @@index([storeId, createdAt])
+}
+
+// Consent-based anonymous sessions; no address, contact details, or payment data.
+model StoreFunnelVisit {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sessionHash String
+  token String @unique
+  createdAt DateTime @default(now())
+  productViewedAt DateTime?
+  cartAddedAt DateTime?
+  checkoutStartedAt DateTime?
+  deliverySelectedAt DateTime?
+  fulfillmentMethod String?
+  orders StoreOrder[]
+  @@unique([storeId, sessionHash])
+  @@index([storeId, createdAt])
+}
