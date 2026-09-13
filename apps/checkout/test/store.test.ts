@@ -373,13 +373,16 @@ describe("storefront routes", () => {
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
   });
 
-  it("renders multiple photos and selectable product types on a direct product URL", async () => {
+  it.each([
+    { smallStock: 2, startingPrice: "40.00 BOB" },
+    { smallStock: 0, startingPrice: "65.00 BOB" },
+  ])("keeps legacy product types selectable and prices from available versions (small stock: $smallStock)", async ({ smallStock, startingPrice }) => {
     const productWithGallery = {
       ...baseItem,
       imageUrls: ["/v1/uploads/frente.webp", "/v1/uploads/detalle.webp"],
       imagePositions: ["50% 18%", "72% 84%"],
       variants: [
-        { id: "small", name: "Pequeño", amount: 4000, stock: 2 },
+        { id: "small", name: "Pequeño", amount: 4000, stock: smallStock },
         { id: "large", name: "Grande", amount: 6500, stock: 4 },
       ],
     };
@@ -396,7 +399,7 @@ describe("storefront routes", () => {
 
     expect(document.querySelectorAll(".product-detail-thumbnail")).toHaveLength(2);
     expect(document.querySelectorAll(".product-detail-option")).toHaveLength(2);
-    expect(document.querySelector(".product-detail-price")?.textContent).toBe("50.00 BOB");
+    expect(document.querySelector(".product-detail-price")?.textContent).toBe(startingPrice);
     expect(document.querySelector<HTMLButtonElement>(".product-add")!.disabled).toBe(true);
     expect(document.querySelector<HTMLImageElement>(".product-detail-main-image")?.style.objectPosition).toBe("50% 18%");
 

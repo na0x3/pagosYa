@@ -6101,6 +6101,9 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
        }`
     : `<div class="product-detail-main-image-wrap product-detail-placeholder" aria-label="${escapeHtml(item.name)}"><span>${escapeHtml(initials(item.name))}</span></div>`;
 
+  const startingVariant = selectedVariant ?? variants
+    .filter(variant => optionStock(item, variant) !== 0)
+    .sort((a, b) => a.amount - b.amount)[0];
   const variantsHtml = variants.length
     ? `<fieldset class="product-detail-variants">
         <legend>Selecciona una versión</legend>
@@ -6150,7 +6153,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
         <div class="product-detail-purchase">
           <div>
-            ${salePriceHtml(item, selectedUnitAmount(item, selectedVariant, selectedExtras), originalSelectedUnitAmount(item, selectedVariant, selectedExtras), "product-detail-price")}
+            ${variants.length && !selectedVariant ? '<span>Desde </span>' : ''}${salePriceHtml(item, selectedUnitAmount(item, startingVariant, selectedExtras), originalSelectedUnitAmount(item, startingVariant, selectedExtras), "product-detail-price")}
             ${unavailableRequiredExtra ? `<div class="product-detail-stock out">${escapeHtml(unavailableRequiredExtra.name)} agotado</div>` : visibleStock ? `<div class="product-detail-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</div>` : ""}
           </div>
           ${
