@@ -20,11 +20,11 @@
     "demo:inventory-stock": "node examples/cafe-aroma/update-stock.mjs",
     "demo:inventory-sync": "node examples/cafe-aroma/sync-stock.mjs",
     "demo:subscriptions-sync": "node examples/cafe-aroma/sync-subscriptions.mjs",
-    "verify:events": "node scripts/verify-events-demo.mjs",
-    "verify:face-entry": "node scripts/verify-reusable-face-entry.mjs",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
-    "dev:independent-cafe": "node examples/independent-cafe/build.mjs && node examples/independent-cafe/server.mjs"
+    "test:source-requests": "pnpm --filter @pagosya/api exec node -r ts-node/register scripts/source-request-gauntlet.ts",
+    "dev:independent-cafe": "node examples/independent-cafe/build.mjs && node examples/independent-cafe/server.mjs",
+    "benchmark:source": "pnpm --filter @pagosya/api exec node --env-file=.env -r ts-node/register scripts/benchmark-source.ts"
   },
   "devDependencies": {
     "embedded-postgres": "18.4.0-beta.17",

@@ -44,7 +44,7 @@ module.exports = async () => {
     const projectRoot = path.resolve(__dirname, "../../..");
     execFileSync(
       process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      ["exec", "prisma", "migrate", "deploy", "--schema", "apps/api/prisma/schema.prisma"],
+      ["--filter", "@pagosya/api", "exec", "prisma", "migrate", "deploy"],
       {
         cwd: projectRoot,
         env: { ...process.env, NODE_ENV: "test", DATABASE_URL: databaseUrl },

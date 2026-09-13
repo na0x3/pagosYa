@@ -11,7 +11,7 @@ web
 Three distinct primary users, each with their own surface:
 
 - **Customers** (Bolivian shoppers and payers) — may pay once as guests through `apps/checkout`, or optionally create a separate account in `apps/consumer-dashboard` to see purchases, fulfillment, receipts, and accepted relationships with any participating business or institution. An account is never required to complete checkout.
-- **Merchants** (small/independent Bolivian businesses) — manage their store(s), products, payment links, branding, finances, payouts, and SIN invoicing profile through `apps/merchant-dashboard`. Recurring, task-driven users who log in repeatedly.
+- **Merchants** (small/independent Bolivian businesses) — manage their single store per merchant account, products, payment links, branding, finances, payouts, and SIN invoicing profile through `apps/merchant-dashboard`. Recurring, task-driven users who log in repeatedly.
 - **Internal ops reviewers** (pagosYa's own compliance staff) — review and approve/reject merchant KYC submissions, and monitor delivery failures (failed payouts/invoices/webhooks) and the audit log, through `apps/ops`. Internal-only, authenticated by named per-reviewer token.
 
 ## Product Purpose

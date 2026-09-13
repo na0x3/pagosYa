@@ -1504,12 +1504,27 @@ enum CustomDomainStatus {
 // StoresService — same PaymentIntent/rail/ledger machinery as the full API
 // path, just without requiring a merchant backend to call anything.
 model Store {
+  funnelVisits StoreFunnelVisit[]
+  creditsEnabled Boolean @default(false)
+  digitalGoodsEnabled Boolean @default(false)
+  credits StoreCredit[]
+  digitalAssets DigitalAsset[]
+  redirects StoreRedirect[]
+  reviews StoreReview[]
+  articles StoreArticle[]
+  bundles StoreBundle[]
+  bundlesEnabled Boolean @default(false)
+  shippingEnabled Boolean @default(false)
+  shippingPickupEnabled Boolean @default(true)
+  brandProfile StoreBrandProfile?
+  brandRevisions StoreBrandRevision[]
+  aiUsage StoreAiUsage[]
   id                           String                           @id @default(cuid())
   // Private editor state. Public readers continue to use the Store columns.
   websiteDraft                 Json?
   websiteRevision              Int                              @default(0)
   websitePublishedRevision     Int                              @default(0)
-  merchantId                   String
+  merchantId                   String                           @unique
   merchant                     Merchant                         @relation(fields: [merchantId], references: [id])
   slug                         String                           @unique
   debtPortalSlug               String?                          @unique
@@ -1541,7 +1556,7 @@ model Store {
   contactEmail                 String?
   // Optional public contact form. The delivery address stays private and is
   // never returned by the public storefront endpoint.
-  contactFormEnabled           Boolean                          @default(true)
+  contactFormEnabled           Boolean                          @default(false)
   contactFormEmail             String?
   contactTitle                 String?
   contactSubtitle              String?
@@ -1680,10 +1695,21 @@ model Store {
   visualProposals              StoreVisualProposal[]
   visualVersions               StoreVisualVersion[]
   visualSignatures             StoreVisualSignature[]
+  sourcePublicationPaused      Boolean                          @default(false)
+  publishedSourceRevision      Int?
+  sourcePublicationVersion     Int @default(0)
+  sourcePublishedAt            DateTime?
+  sourceExperiments            StoreSourceExperiment[]
   sourceProject                StoreSourceProject?
+  sourceGenerations            StoreSourceGeneration[]
   agentThread                  StoreAgentThread?
   customDomains                CustomDomain[]
   leads                        StoreLead[]
+  retention StoreRetention?
+  comebackCards ComebackCard[]
+  savedCarts StoreSavedCart[]
+  emailCampaigns StoreEmailCampaign[]
+  emailDeliveries StoreEmailDelivery[]
   newsletterSubscribers        StoreNewsletterSubscriber[]
   debtCollectionLinks          DebtCollectionLink[]
   consumerAffiliations         ConsumerInstitutionAffiliation[]
@@ -1692,6 +1718,8 @@ model Store {
   events                       Event[]
 
   @@index([merchantId, createdAt])
+  partners StorePartner[]
+
 }
 
 // A merchant-owned hostname that points at the existing hosted storefront.
@@ -1715,7 +1743,28 @@ model CustomDomain {
 
 // Payment status and fulfillment status are separate. Item snapshots survive
 // later catalog edits and remain truthful in the buyer's history.
+model StorePartner {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name String
+  code String @unique
+  commissionBps Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  orders StoreOrder[]
+  @@index([storeId, createdAt])
+}
+
 model StoreOrder {
+  @@index([funnelVisitId])
+  funnelVisitId String?
+  funnelVisit StoreFunnelVisit? @relation(fields: [funnelVisitId], references: [id], onDelete: SetNull)
+  sourceVisitId String?
+  sourceVisit StoreSourceVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: SetNull)
+  partnerId String?
+  partner StorePartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  partnerCommissionBps Int?
   id                      String                  @id @default(cuid())
   paymentIntentId         String                  @unique
   paymentIntent           PaymentIntent           @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
@@ -1799,6 +1848,8 @@ model DebtRecord {
 // orders continue to live in PaymentIntent; the merchant order feed combines
 // both sources without pretending a lead was a completed sale.
 model StoreLead {
+  status String @default("NEW")
+  updatedAt DateTime @default(now()) @updatedAt
   id            String   @id @default(cuid())
   merchantId    String
   merchant      Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -1823,7 +1874,11 @@ model StoreNewsletterSubscriber {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  unsubscribeToken String @unique @default(uuid())
   email     String
+  name      String?
+  phone     String?
+  interests String[] @default([])
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1922,6 +1977,26 @@ model StoreVisualProposal {
 
 // Independent storefront source is private, immutable per revision, and never
 // evaluated by the API or the legacy document renderer.
+// Private generation telemetry. No prompts, source, assets or credentials.
+model StoreSourceGeneration {
+  id             String   @id @default(cuid())
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  activeStoreId  String?  @unique
+  baseRevision  Int
+  revision      Int?
+  requestedModel String
+  model          String
+  maxCredits     Int
+  credits        Int      @default(0)
+  status         String   @default("RUNNING")
+  attempts       Json     @default("[]")
+  durationMs     Int?
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+  @@index([storeId, createdAt])
+}
+
 model StoreSourceProject {
   storeId   String @id
   store     Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -2057,6 +2132,10 @@ model Category {
 
 // A product within a Store's catalog.
 model PaymentLink {
+  subscriptionOptions ProductSubscriptionOption[]
+  fulfillmentType String @default("PHYSICAL")
+  digitalAssets DigitalAsset[]
+  shippingWeightGrams Int?
   id                 String            @id @default(cuid())
   storeId            String
   store              Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -2118,6 +2197,28 @@ model PaymentLink {
   @@unique([storeId, codigoProducto])
   @@index([storeId, createdAt])
   @@index([categoryId])
+}
+
+// Offer configuration only: these rows do not enroll customers or schedule charges.
+enum ProductSubscriptionCadence {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model ProductSubscriptionOption {
+  id              String                     @id @default(cuid())
+  paymentLinkId   String
+  paymentLink     PaymentLink                @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  // WEEKLY = 7 days, BIWEEKLY = 14 days, MONTHLY = one calendar month.
+  cadence         ProductSubscriptionCadence
+  // Integer percent off the one-time product/variant price, from 0 through 99.
+  // No default: the merchant must confirm even a zero discount.
+  discountPercent Int
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  @@unique([paymentLinkId, cadence])
 }
 
 // Persisted checkout totals keep storefront sorting and finance summaries
@@ -2304,6 +2405,13 @@ model AutomationDelivery {
 }
 
 model DeliveryZone {
+  countryCodes String[] @default([])
+  postalPrefixes String[] @default([])
+  currency String @default("BOB")
+  freeAbove Int?
+  maximumOrder Int?
+  minimumWeightGrams Int?
+  maximumWeightGrams Int?
   id               String   @id @default(cuid())
   merchantId       String
   storeId          String
@@ -2726,4 +2834,269 @@ model SubscriptionInvoice {
 
   @@unique([subscriptionId, periodStart])
   @@index([storeId, status, dueAt])
+}
+
+
+model StoreSourceExperiment {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  activeStoreId String? @unique
+  controlRevision Int
+  variantRevision Int
+  status String @default("RUNNING")
+  winner String?
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  visits StoreSourceVisit[]
+  @@index([storeId, startedAt])
+}
+
+model StoreSourceVisit {
+  id String @id @default(cuid())
+  experimentId String
+  experiment StoreSourceExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  visitorHash String
+  token String @unique
+  variant String
+  createdAt DateTime @default(now())
+  orders StoreOrder[]
+  @@unique([experimentId, visitorHash])
+  @@index([experimentId, variant])
+}
+
+// Merchant-owned, durable brand knowledge. Imported interpretations remain separate.
+model StoreBrandProfile {
+  storeId String @id
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  revision Int @default(0)
+  data Json @default("{\"confirmed\":[],\"suggested\":[]}")
+  analysisHash String?
+  updatedAt DateTime @updatedAt
+}
+
+model StoreAiUsage {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  stage String
+  model String
+  status String
+  responseId String?
+  durationMs Int
+  usage Json?
+  createdAt DateTime @default(now())
+  @@index([storeId, createdAt])
+}
+
+model StoreReview {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderId String
+  productId String
+  displayName String
+  rating Int
+  body String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  @@unique([orderId, productId])
+  @@index([storeId, status, createdAt])
+}
+model StoreArticle {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug String
+  locale String @default("es")
+  title String
+  excerpt String
+  body String
+  author String
+  publishedAt DateTime?
+  revision Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId, locale, slug])
+  @@index([storeId, publishedAt])
+}
+model StoreBundle {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name String
+  kind String
+  items Json
+  minimumQuantity Int @default(2)
+  discountPercent Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([storeId, active])
+}
+
+model StoreBrandRevision {
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  revision Int
+  data Json
+  createdAt DateTime @default(now())
+  @@id([storeId, revision])
+}
+
+model StoreCredit {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  codeHash String @unique
+  reference String
+  label String
+  kind String @default("GIFT_CARD")
+  currency String
+  issuedAmount Int
+  balance Int
+  active Boolean @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  reservations StoreCreditReservation[]
+  entries StoreCreditEntry[]
+  @@unique([storeId, reference])
+}
+model StoreCreditReservation {
+  paymentIntentId String @id
+  creditId String
+  credit StoreCredit @relation(fields: [creditId], references: [id])
+  amount Int
+  refundedAmount Int @default(0)
+  status String @default("RESERVED")
+  createdAt DateTime @default(now())
+}
+model StoreCreditEntry {
+  id String @id @default(cuid())
+  creditId String
+  credit StoreCredit @relation(fields: [creditId], references: [id])
+  reference String @unique
+  delta Int
+  kind String
+  createdAt DateTime @default(now())
+}
+model DigitalAsset {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId String
+  product PaymentLink @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storageKey String @unique
+  filename String
+  mimeType String
+  byteSize Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([storeId, productId, active])
+}
+model StoreRedirect {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  fromPath String
+  toPath String
+  createdAt DateTime @default(now())
+  @@unique([storeId, fromPath])
+}
+
+// Optional customer retention. All automated outreach is opt-in and queued.
+model StoreRetention {
+  storeId String @id
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  settings Json
+  revision Int @default(1)
+  startedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model ComebackCard {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email String
+  token String @unique
+  rewards ComebackReward[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId, email])
+}
+model ComebackReward {
+  id String @id @default(cuid())
+  cardId String
+  card ComebackCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  code String @unique
+  label String
+  days String[]
+  redeemedAt DateTime @default(now())
+}
+model StoreSavedCart {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email String
+  token String @unique
+  items Json
+  paymentIntentId String?
+  consentAt DateTime @default(now())
+  dueAt DateTime
+  sentAt DateTime?
+  closedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([closedAt, sentAt, dueAt])
+  @@index([storeId, email])
+}
+model StoreEmailCampaign {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  subject String
+  body String
+  queuedAt DateTime?
+  createdAt DateTime @default(now())
+  deliveries StoreEmailDelivery[]
+  @@index([storeId, createdAt])
+}
+model StoreEmailDelivery {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaignId String?
+  campaign StoreEmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email String
+  kind String
+  sourceId String?
+  subject String
+  body String
+  dedupeKey String @unique
+  status String @default("PENDING")
+  attempts Int @default(0)
+  dueAt DateTime @default(now())
+  lockedAt DateTime?
+  sentAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  @@index([status, dueAt])
+  @@index([storeId, createdAt])
+}
+
+// Consent-based anonymous sessions; no address, contact details, or payment data.
+model StoreFunnelVisit {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sessionHash String
+  token String @unique
+  createdAt DateTime @default(now())
+  productViewedAt DateTime?
+  cartAddedAt DateTime?
+  checkoutStartedAt DateTime?
+  deliverySelectedAt DateTime?
+  fulfillmentMethod String?
+  orders StoreOrder[]
+  @@unique([storeId, sessionHash])
+  @@index([storeId, createdAt])
 }
