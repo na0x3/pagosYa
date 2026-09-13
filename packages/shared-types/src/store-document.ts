@@ -13,7 +13,7 @@ import type {
  * rendering must all agree on these persisted values.
  */
 export const STORE_SITE_DOCUMENT_VERSION = 1 as const;
-export const STORE_SITE_SECTION_KINDS = ["hero", "story", "catalog", "gallery", "event-tickets", "contact", "location", "links"] as const;
+export const STORE_SITE_SECTION_KINDS = ["hero", "story", "catalog", "gallery", "contact", "location", "links"] as const;
 export const STORE_SITE_SECTION_LAYOUTS = ["split", "full-bleed", "centered", "offset", "grid", "stacked", "rail", "minimal"] as const;
 export const STORE_SITE_SECTION_WIDTHS = ["full", "wide", "contained"] as const;
 export const STORE_SITE_SECTION_ALIGNS = ["left", "center", "right"] as const;
@@ -172,7 +172,6 @@ export interface StoreSiteDocument {
     body: string;
     ctaLabel: string;
     /** Server-owned binding. AI generation cannot invent this value. */
-    eventId?: string;
     backgroundColor: string;
     textColor: string;
     titleStyle?: StoreCanvasTextStyle;

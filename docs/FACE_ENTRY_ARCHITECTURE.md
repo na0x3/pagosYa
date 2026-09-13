@@ -1,5 +1,7 @@
 # Reusable PagosYa Face Entry architecture
 
+> Archived 2026-09-12: the Events, ticketing, Face Entry, and event edge implementations have been retired. This document describes the former implementation.
+
 Status: implemented for the mock provider. Real SpeedFace-V5 profile transport remains blocked pending official vendor documentation.
 
 ## Architectural decision

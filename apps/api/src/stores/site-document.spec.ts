@@ -65,8 +65,8 @@ function aiDocument() {
 }
 
 describe("AI site document page architecture", () => {
-  it("keeps server-owned event tickets out of the AI authoring contract", () => {
-    expect(STORE_SITE_SECTION_KINDS).toContain("event-tickets");
+  it("excludes retired event tickets from persisted and AI contracts", () => {
+    expect(STORE_SITE_SECTION_KINDS).not.toContain("event-tickets");
     expect(SITE_SECTION_KINDS).not.toContain("event-tickets");
     expect(AI_SITE_DOCUMENT_SCHEMA.properties.sections.items.anyOf.flatMap((schema) => schema.properties.kind.enum)).toEqual(SITE_SECTION_KINDS);
   });

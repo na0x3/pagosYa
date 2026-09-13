@@ -349,9 +349,8 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
   for (const entry of source.sections.slice(0, 16)) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
     const section = entry as Record<string, unknown>;
-    // Benefits was a generic platform explainer that appeared in every early
-    // AI site. Retire it at read time so already-saved sites lose it too.
-    if (section.kind === "benefits") continue;
+    // Ignore retired sections so older saved sites retain their active content.
+    if (section.kind === "benefits" || section.kind === "event-tickets") continue;
     const id = text(section.id, 48);
     const backgroundColor = color(section.backgroundColor);
     const textColor = color(section.textColor);
@@ -381,9 +380,6 @@ export function sanitizeSiteDocument(value: unknown): StoreSiteDocument | null {
       title: text(section.title, 120),
       body: text(section.body, 600),
       ctaLabel: text(section.ctaLabel, 40),
-      ...(section.kind === "event-tickets" && typeof section.eventId === "string" && /^[a-z0-9_-]{1,200}$/i.test(section.eventId)
-        ? { eventId: section.eventId }
-        : {}),
       backgroundColor,
       textColor,
       ...(canvasTextStyle(section.titleStyle) ? { titleStyle: canvasTextStyle(section.titleStyle) } : {}),
@@ -530,7 +526,7 @@ export function synchronizeSiteDocument(
   if (Array.isArray(patch.animations)) document.experience = { ...document.experience, type: "none" };
   const backgrounds = patch.sectionBackgrounds ?? {};
   const backgroundKey: Record<StoreSiteDocument["sections"][number]["kind"], string> = {
-    hero: "hero", story: "about", catalog: "products", gallery: "gallery", "event-tickets": "products", contact: "contact", location: "location", links: "links",
+    hero: "hero", story: "about", catalog: "products", gallery: "gallery", contact: "contact", location: "location", links: "links",
   };
   const projectedLegacyKinds = new Set<StoreSiteDocument["sections"][number]["kind"]>();
   document.sections = document.sections.map((section) => {

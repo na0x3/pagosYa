@@ -126,8 +126,6 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await expect(page.locator("#app")).toBeVisible();
   await expect(page.locator("#profileMenuTrigger")).toBeVisible();
   await expect(page.locator("#logout")).not.toBeVisible();
-  await page.locator("#onboardingDialog").waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await page.locator("#onboardingDialog[open]").count()) await page.locator("#onboardingDialog").evaluate((dialog) => dialog.close());
   await page.locator("#profileMenuTrigger").click();
   await expect(page.locator("#profileMenu")).toBeVisible();
   await expect(page.locator("#loggedInAs")).toContainText("owner@gmail.com");
@@ -153,10 +151,6 @@ test("merchant deletion requires typed confirmation and clears the session", asy
   });
 
   await page.goto("/");
-  await page.locator("#onboardingDialog").waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await page.locator("#onboardingDialog[open]").count()) {
-    await page.locator("#onboardingDialog").evaluate((dialog) => dialog.close());
-  }
   await page.locator("#profileMenuTrigger").click();
   await page.locator("#deleteMerchantAccount").click();
   await expect(page.locator("#merchantDeleteDialog")).toBeVisible();
@@ -192,7 +186,6 @@ test("profile menu can close another active session", async ({ page }) => {
   });
 
   await page.goto("/");
-  await page.locator("#onboardingDialog").waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
   if (await page.locator("dialog[open]").count()) await page.locator("dialog[open]").evaluate((dialog) => dialog.close());
   await page.locator("#profileMenuTrigger").click();
   await expect(page.locator("#profileSessionCount")).toHaveText("2 / 3");
@@ -226,7 +219,6 @@ test("main session can rename another logged-in profile", async ({ page }) => {
   });
 
   await page.goto("/");
-  await page.locator("#onboardingDialog").waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
   if (await page.locator("dialog[open]").count()) await page.locator("dialog[open]").evaluate((dialog) => dialog.close());
   await page.locator("#profileMenuTrigger").click();
   await page.locator('[data-edit-session="session_other"]').click();

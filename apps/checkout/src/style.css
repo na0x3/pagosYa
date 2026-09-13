@@ -2589,34 +2589,6 @@ body.has-custom-accent {
 .store-appointment-actions { display: flex; align-items: center; gap: 14px; }
 .store-appointment-actions .primary { width: auto; min-width: 180px; margin: 0; }
 .store-appointment-actions span { color: var(--pg-text-muted); font-size: 12px; line-height: 1.45; }
-.store-event { display: grid; grid-template-columns: minmax(0, .82fr) minmax(420px, 1.18fr); gap: clamp(32px, 7vw, 96px); width: min(1180px, calc(100% - 32px)); margin: clamp(64px, 10vw, 128px) auto; }
-.store-event-intro { display: grid; align-content: start; gap: 24px; }
-.store-event-intro img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--pg-radius); }
-.store-event-date { display: grid; place-items: center; width: 132px; aspect-ratio: 1; border: 1px solid var(--pg-border); border-radius: 50%; color: var(--pg-text); }
-.store-event-date strong { font: 800 clamp(42px, 6vw, 72px)/.8 var(--site-head, inherit); letter-spacing: -.04em; }
-.store-event-date span { font-size: 13px; font-weight: 800; text-transform: uppercase; }
-.store-event-intro h2 { max-width: 12ch; margin: 0; color: inherit; font: 800 clamp(36px, 5vw, 64px)/.94 var(--site-head, inherit); letter-spacing: -.04em; text-wrap: balance; }
-.store-event-intro p { max-width: 60ch; color: color-mix(in srgb, currentColor 72%, transparent); line-height: 1.65; }
-.store-event-when { font-weight: 750; }
-.store-event-by { display: block; margin-top: 20px; font-size: 12px; font-weight: 750; }
-.store-event-form { padding: clamp(22px, 3.5vw, 42px); border: 1px solid color-mix(in srgb, currentColor 24%, transparent); border-radius: var(--pg-radius); background: color-mix(in srgb, currentColor 5%, transparent); }
-.store-event-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.store-event-form legend { margin-bottom: 18px; font-size: 13px; font-weight: 800; }
-.store-event-ticket-list { display: grid; gap: 1px; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); background: color-mix(in srgb, currentColor 18%, transparent); }
-.store-event-ticket { display: grid; grid-template-columns: minmax(0, 1fr) auto 76px; align-items: center; gap: 16px; padding: 16px; background: var(--zone-bg, var(--pg-bg)); color: var(--zone-ink, var(--pg-text)); }
-.store-event-ticket span:first-child { display: grid; gap: 4px; }
-.store-event-ticket small { opacity: .68; }
-.store-event-ticket-price { font-weight: 800; }
-.store-event-ticket input { width: 76px; min-height: 44px; margin: 0; text-align: center; }
-.store-event-buyer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
-.store-event-buyer .field { margin: 0; }
-.store-event-buyer .field:last-child { grid-column: 1 / -1; }
-.store-event-buyer input { width: 100%; min-height: 48px; font-size: 16px; }
-.store-event-actions { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
-.store-event-actions .primary { width: auto; min-width: 190px; margin: 0; }
-.store-event-actions span { font-size: 12px; line-height: 1.45; }
-.store-event-actions span[role="alert"] { color: #b42318; }
-.store-event-sold-out { margin: 0; padding: 20px; background: var(--zone-bg, var(--pg-bg)); }
 .store-location-section {
   margin: clamp(42px, 7vw, 82px) 0 clamp(28px, 5vw, 54px);
   padding: clamp(28px, 4vw, 52px) 0;
@@ -2747,18 +2719,10 @@ body.store-preview-editor-enabled .store-location-inline-actions button:focus-vi
 .store-location-map.is-empty { display: grid; place-items: center; border-style: dashed; }
 .store-location-map.is-empty p { margin: 0; color: var(--pg-text-muted); font-size: 13px; }
 @media (max-width: 720px) {
-  .store-contact-section, .store-contact-form, .store-appointments, .store-appointment-form, .store-event, .store-location-card { grid-template-columns: 1fr; }
+  .store-contact-section, .store-contact-form, .store-appointments, .store-appointment-form, .store-location-card { grid-template-columns: 1fr; }
   .store-contact-message, .store-contact-actions, .store-appointment-slots-field, .store-appointment-actions { grid-column: auto; }
   .store-contact-actions, .store-appointment-actions { align-items: stretch; flex-direction: column; }
   .store-contact-actions .primary, .store-appointment-actions .primary { width: 100%; }
-  .store-event { width: min(100% - 24px, 720px); gap: 28px; }
-  .store-event-buyer { grid-template-columns: 1fr; }
-  .store-event-buyer .field:last-child { grid-column: auto; }
-  .store-event-actions { align-items: stretch; flex-direction: column; }
-  .store-event-actions .primary { width: 100%; }
-  .store-event-ticket { grid-template-columns: minmax(0, 1fr) 72px; }
-  .store-event-ticket-price { grid-column: 1; }
-  .store-event-ticket input { grid-column: 2; grid-row: 1 / 3; }
   .store-location-section { margin-top: 68px; padding: 38px 0; }
   .store-location-heading { align-items: stretch; flex-direction: column; margin-bottom: 30px; }
   .store-location-heading h2 { font-size: clamp(40px, 14vw, 58px); }

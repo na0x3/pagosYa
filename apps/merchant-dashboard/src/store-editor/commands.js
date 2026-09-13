@@ -14,7 +14,6 @@ const SITE_COPY_SLOTS = {
   contact: { heading: "heading", text: "body", action: "actions" },
   location: { heading: "heading", text: "address", action: "hours" },
   links: { heading: "heading", text: "body", action: "links" },
-  "event-tickets": { heading: "heading", text: "event-summary", action: "checkout-action" },
 };
 
 const VISUAL_CANVAS_FIELDS = [

@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
-import { EventStatus, MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
+import { MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
 import * as QRCode from "qrcode";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
@@ -587,7 +587,7 @@ function synchronizedSiteDocument(
   }).map((entry: unknown) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
     const section = { ...(entry as Record<string, any>) };
-    if (["hero", "story", "catalog", "gallery", "event-tickets", "contact", "location", "links"].includes(section.kind)) {
+    if (["hero", "story", "catalog", "gallery", "contact", "location", "links"].includes(section.kind)) {
       section.family = resolveSiteSectionFamily(section.kind, section.family, document.designGenome);
     }
     const projectLegacy = !section.pageId && !projectedLegacyKinds.has(section.kind);
@@ -1428,7 +1428,7 @@ export class StoresService implements OnModuleDestroy {
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
     const trackView = options.trackView !== false;
-    const [items, categories, links, productStats, appointmentOfferings, events] = await Promise.all([
+    const [items, categories, links, productStats, appointmentOfferings] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
@@ -1440,33 +1440,6 @@ export class StoresService implements OnModuleDestroy {
         where: { storeId: store.id, isActive: true },
         select: { id: true, name: true, durationMinutes: true, bufferMinutes: true, price: true, currency: true, color: true },
         orderBy: { name: "asc" },
-      }),
-      this.prisma.event.findMany({
-        where: {
-          storeId: store.id,
-          status: { in: [EventStatus.PUBLISHED, EventStatus.ACTIVE] },
-          onlineSalesEnabled: true,
-          startsAt: { gte: new Date() },
-        },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          publicityImageUrl: true,
-          startsAt: true,
-          endsAt: true,
-          doorsOpenAt: true,
-          timezone: true,
-          venue: { select: { name: true, city: true } },
-          ticketTypes: {
-            where: { active: true },
-            orderBy: [{ sortOrder: "asc" }, { price: "asc" }],
-            select: { id: true, name: true, price: true, currency: true, inventory: true, reservedQuantity: true, soldQuantity: true },
-          },
-        },
-        orderBy: { startsAt: "asc" },
-        take: 12,
       }),
     ]);
     if (trackView) this.queueStoreView(store.id);
@@ -1567,13 +1540,6 @@ export class StoresService implements OnModuleDestroy {
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
       showLowStockToCustomers: store.showLowStockToCustomers,
       appointmentOfferings,
-      events: events.map((event) => ({
-        ...event,
-        ticketTypes: event.ticketTypes.map(({ inventory, reservedQuantity, soldQuantity, ...ticket }) => ({
-          ...ticket,
-          available: Math.max(0, (inventory ?? 0) - reservedQuantity - soldQuantity),
-        })),
-      })),
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
       categories: categories.map((c) => ({
         id: c.id,

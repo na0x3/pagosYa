@@ -275,30 +275,9 @@ export interface Store {
   cartRecommendationProductIds: string[];
   showLowStockToCustomers: boolean;
   appointmentOfferings?: AppointmentOffering[];
-  events?: PublicStoreEvent[];
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];
-}
-
-export interface PublicStoreEvent {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  publicityImageUrl: string;
-  startsAt: string;
-  endsAt: string | null;
-  doorsOpenAt: string | null;
-  timezone: string;
-  venue: { name: string; city: string } | null;
-  ticketTypes: Array<{
-    id: string;
-    name: string;
-    price: number;
-    currency: string;
-    available: number;
-  }>;
 }
 
 export interface PublishedStore {
@@ -335,23 +314,6 @@ export async function fetchStore(slug: string, options: { preview?: boolean } = 
   // after the merchant saves and then opens or reloads the public link.
   const response = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/store${previewQuery}`, { cache: "no-store" });
   return parseOrThrow<Store>(response);
-}
-
-export async function createEventReservation(
-  eventSlug: string,
-  input: {
-    items: Array<{ ticketTypeId: string; quantity: number }>;
-    buyerName?: string;
-    buyerEmail?: string;
-    buyerPhone?: string;
-  },
-): Promise<{ reservationId: string; amount: number; currency: string; expiresAt: string; clientSecret: string; managementToken: string }> {
-  const response = await fetch(`${API_BASE_URL}/events/public/${encodeURIComponent(eventSlug)}/reservations`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  return parseOrThrow(response);
 }
 
 export interface AppointmentAvailability {

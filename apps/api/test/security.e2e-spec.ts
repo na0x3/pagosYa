@@ -86,6 +86,12 @@ describe("credential-free security boundaries (HTTP + PostgreSQL)", () => {
     await app.close();
   });
 
+  it("does not expose the retired event and facial-entry APIs", async () => {
+    await request(app.getHttpServer()).get('/v1/events/public').expect(404);
+    await request(app.getHttpServer()).get('/v1/events/consumer/face-entry').expect(404);
+    await request(app.getHttpServer()).post('/v1/events/dev/device-simulator').send({}).expect(404);
+  });
+
   it("prevents horizontal access to stores, products, proposals, API keys, and payment intents", async () => {
     const ownStores = await request(app.getHttpServer()).get("/v1/stores").set(bearer(merchantA.secretKey)).expect(200);
     expect(ownStores.body.map((store: { id: string }) => store.id)).toEqual([merchantA.storeId]);

@@ -15,7 +15,6 @@ import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
-import { completeEventReservationPayment } from "../events/events-payment.bridge";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -449,7 +448,6 @@ export class PaymentIntentsService {
           currency: updated.currency,
           status: updated.status,
         });
-        await completeEventReservationPayment(tx, updated);
         await this.invoicing.enqueueInvoice(tx, merchantId, {
           paymentIntentId: updated.id,
           amount: updated.amount,

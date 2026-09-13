@@ -33,7 +33,7 @@ function documentFixture() {
 }
 
 describe("sanitizeSiteDocument", () => {
-  it("accepts the server-owned event-ticket section from the shared persisted contract", () => {
+  it("discards retired event sections while preserving the rest of a saved storefront", () => {
     const fixture: any = documentFixture();
     fixture.sections.push({
       id: "tickets",
@@ -54,11 +54,8 @@ describe("sanitizeSiteDocument", () => {
 
     const document = sanitizeSiteDocument(fixture);
 
-    expect(STORE_SITE_SECTION_KINDS).toContain("event-tickets");
-    expect(document?.sections.find((section) => section.kind === "event-tickets")).toMatchObject({
-      id: "tickets",
-      eventId: "event_123",
-    });
+    expect(STORE_SITE_SECTION_KINDS).not.toContain("event-tickets");
+    expect(document?.sections.map(section => section.kind)).toEqual(["hero", "story", "catalog", "contact"]);
   });
 
   it("keeps a complete document while stripping non-owned media URLs", () => {
@@ -374,25 +371,6 @@ describe("sanitizeSiteDocument", () => {
     const document = sanitizeSiteDocument(fixture);
 
     expect(document?.sections.map((section) => section.kind)).toEqual(["hero", "story", "catalog", "contact"]);
-  });
-
-  it("keeps a connected Paya event block and its server-owned event id", () => {
-    const fixture = documentFixture();
-    fixture.sections.splice(3, 0, {
-      ...fixture.sections[2],
-      id: "event-summer",
-      kind: "event-tickets",
-      eventId: "event_123",
-      title: "Entradas",
-    });
-
-    const document = sanitizeSiteDocument(fixture);
-
-    expect(document?.sections.find((section) => section.kind === "event-tickets")).toMatchObject({
-      id: "event-summer",
-      eventId: "event_123",
-      title: "Entradas",
-    });
   });
 
   it("rejects documents that omit or duplicate trusted commerce zones", () => {

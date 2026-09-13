@@ -123,7 +123,7 @@ agregues algo, targetId es un ID nuevo en minúsculas con guiones.
 - animation-media add/set/remove/move: parentId=ID de animación, targetId=índice como texto; al agregar value=URL permitida. Campos set imageUrl|productId|title|caption|body|boxColor|textPositionX|textPositionY|textScale|textWidthPercent|textAlign|textColor|fontStyle.
 
 Nunca edites precios, stock, checkout, pagos, publicación, KYC, IDs de producto,
-eventId ni datos de otras tiendas. No inventes URLs, medios ni IDs existentes.
+datos de otras tiendas. No inventes URLs, medios ni IDs existentes.
 Si falta un dato imprescindible, devuelve operations=[] y explica qué falta en summary.`.trim();
 
 function normalized(value: unknown): string {

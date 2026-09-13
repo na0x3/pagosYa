@@ -200,47 +200,6 @@ describe("storefront routes", () => {
     })));
   });
 
-  it("renders connected Paya events and creates a ticket reservation through the shared checkout", async () => {
-    const createEventReservation = vi.fn().mockRejectedValue(new Error("Prueba de reserva detenida"));
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
-    vi.doMock("../src/api", () => ({
-      fetchStore: vi.fn().mockResolvedValue({
-        ...baseStoreFields,
-        storeName: "Casa Norte",
-        items: [baseItem],
-        events: [{
-          id: "event_1",
-          slug: "noche-norte",
-          name: "Noche Norte",
-          description: "Música en vivo",
-          publicityImageUrl: "",
-          startsAt: "2099-10-10T00:00:00.000Z",
-          endsAt: "2099-10-10T04:00:00.000Z",
-          doorsOpenAt: "2099-10-09T23:00:00.000Z",
-          timezone: "America/La_Paz",
-          venue: { name: "Patio Norte", city: "La Paz" },
-          ticketTypes: [{ id: "ticket_1", name: "General", price: 8000, currency: "BOB", available: 50 }],
-        }],
-      } satisfies Store),
-      createEventReservation,
-      assetUrl: (path: string | null) => path,
-    }));
-
-    await loadCheckout("/?link=casa-norte#event-event_1");
-
-    expect(document.querySelector("#event-event_1")?.textContent).toContain("Noche Norte");
-    const form = document.querySelector<HTMLFormElement>("[data-event-reservation]")!;
-    form.querySelector<HTMLInputElement>("[data-ticket-type]")!.value = "2";
-    (form.elements.namedItem("buyerName") as HTMLInputElement).value = "Ana";
-    form.requestSubmit();
-
-    await vi.waitFor(() => expect(createEventReservation).toHaveBeenCalledWith("noche-norte", expect.objectContaining({
-      items: [{ ticketTypeId: "ticket_1", quantity: 2 }],
-      buyerName: "Ana",
-    })));
-    await vi.waitFor(() => expect(form.textContent).toContain("Prueba de reserva detenida"));
-  });
-
   it("renders a flat solid canvas even for legacy stores that saved a gradient", async () => {
     vi.doMock("../src/api", () => ({
       fetchStore: vi.fn().mockResolvedValue({

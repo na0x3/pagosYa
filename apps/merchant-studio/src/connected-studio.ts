@@ -204,7 +204,6 @@ function renderCanvas(): string {
 }
 
 function renderTopbar(): string {
-  const store = selectedStore();
   const proposal = selectedProposal();
   const approved = Boolean(proposal && state.approvedProposalId === proposal.id);
   return `<header class="topbar connected-topbar">

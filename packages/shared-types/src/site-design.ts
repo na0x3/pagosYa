@@ -157,7 +157,7 @@ export function sanitizeSiteDesignGenome(value: unknown): SiteDesignGenome {
   };
 }
 
-export type SiteCapabilitySectionKind = "hero" | "story" | "catalog" | "gallery" | "event-tickets" | "contact" | "location" | "links";
+export type SiteCapabilitySectionKind = "hero" | "story" | "catalog" | "gallery" | "contact" | "location" | "links";
 export type SiteCapabilityLayout = "split" | "full-bleed" | "centered" | "offset" | "grid" | "stacked" | "rail" | "minimal";
 export type SiteCapabilityMotion = "none" | "reveal" | "clip" | "drift" | "scale" | "parallax" | "story-scroll";
 
@@ -233,7 +233,6 @@ const COPY_SLOTS: Record<SiteCapabilitySectionKind, { heading: string; body: str
   story: { heading: "heading", body: "body", action: "body", media: "media-rail", commerce: "chapters" },
   catalog: { heading: "heading", body: "intro", action: "footer-action", media: "products", commerce: "products" },
   gallery: { heading: "heading", body: "body", action: "caption", media: "media-grid", commerce: "media-grid" },
-  "event-tickets": { heading: "heading", body: "event-summary", action: "checkout-action", media: "event-summary", commerce: "ticket-types" },
   contact: { heading: "heading", body: "body", action: "actions", media: "details", commerce: "details" },
   location: { heading: "heading", body: "address", action: "hours", media: "media", commerce: "map" },
   links: { heading: "heading", body: "body", action: "links", media: "links", commerce: "links" },
@@ -275,7 +274,7 @@ export function deriveLegacySiteSectionBlocks(section: LegacyBlockSection): Site
     });
   }
 
-  if (["catalog", "event-tickets", "contact", "location", "links"].includes(section.kind)) {
+  if (["catalog", "contact", "location", "links"].includes(section.kind)) {
     blocks.push(legacyBlock("commerce", "commerce", slots.commerce, "primary"));
   }
   return blocks;
@@ -351,15 +350,6 @@ export const SITE_SECTION_CAPABILITIES: Readonly<Record<SiteCapabilitySectionKin
     preferredFamilies: ["cinematic", "editorial", "product-led"],
     slots: ["heading", "body", "media-grid", "caption"],
     media: { min: 0, max: 8 },
-  },
-  "event-tickets": {
-    layouts: ["grid", "stacked", "split", "minimal"],
-    preferredLayouts: ["grid", "stacked"],
-    motions: ["none", "reveal", "drift", "scale"],
-    families: SITE_SECTION_FAMILIES,
-    preferredFamilies: ["product-led", "cinematic", "minimal"],
-    slots: ["heading", "event-summary", "ticket-types", "checkout-action"],
-    media: { min: 0, max: 1 },
   },
   contact: {
     layouts: ["split", "stacked", "centered", "minimal"],
@@ -444,7 +434,6 @@ export const SITE_ART_DIRECTION_PRESETS: Readonly<Record<SiteArtDirection, SiteA
       story: { family: "editorial", layout: "offset", width: "wide", align: "left" },
       catalog: { family: "product-led", layout: "offset", width: "wide", align: "left" },
       gallery: { family: "editorial", layout: "offset", width: "full", align: "left" },
-      "event-tickets": { family: "product-led", layout: "grid", width: "wide", align: "left" },
       contact: { family: "minimal", layout: "minimal", width: "contained", align: "left" },
       location: { family: "editorial", layout: "split", width: "wide", align: "left" },
       links: { family: "minimal", layout: "centered", width: "contained", align: "center" },
@@ -465,7 +454,6 @@ export const SITE_ART_DIRECTION_PRESETS: Readonly<Record<SiteArtDirection, SiteA
       story: { family: "cinematic", layout: "stacked", width: "full", align: "left" },
       catalog: { family: "product-led", layout: "grid", width: "wide", align: "left" },
       gallery: { family: "cinematic", layout: "grid", width: "wide", align: "left" },
-      "event-tickets": { family: "cinematic", layout: "split", width: "wide", align: "left" },
       contact: { family: "cinematic", layout: "split", width: "wide", align: "left" },
       location: { family: "cinematic", layout: "split", width: "wide", align: "left" },
       links: { family: "minimal", layout: "centered", width: "contained", align: "center" },
@@ -486,7 +474,6 @@ export const SITE_ART_DIRECTION_PRESETS: Readonly<Record<SiteArtDirection, SiteA
       story: { family: "editorial", layout: "split", width: "wide", align: "left" },
       catalog: { family: "product-led", layout: "grid", width: "wide", align: "left" },
       gallery: { family: "product-led", layout: "grid", width: "wide", align: "left" },
-      "event-tickets": { family: "product-led", layout: "grid", width: "wide", align: "left" },
       contact: { family: "product-led", layout: "split", width: "wide", align: "left" },
       location: { family: "editorial", layout: "split", width: "wide", align: "left" },
       links: { family: "minimal", layout: "rail", width: "wide", align: "left" },
@@ -507,7 +494,6 @@ export const SITE_ART_DIRECTION_PRESETS: Readonly<Record<SiteArtDirection, SiteA
       story: { family: "minimal", layout: "centered", width: "contained", align: "center" },
       catalog: { family: "minimal", layout: "minimal", width: "wide", align: "left" },
       gallery: { family: "minimal", layout: "stacked", width: "contained", align: "left" },
-      "event-tickets": { family: "minimal", layout: "minimal", width: "contained", align: "left" },
       contact: { family: "minimal", layout: "minimal", width: "contained", align: "left" },
       location: { family: "minimal", layout: "split", width: "contained", align: "left" },
       links: { family: "minimal", layout: "centered", width: "contained", align: "center" },
@@ -528,7 +514,6 @@ export const SITE_ART_DIRECTION_PRESETS: Readonly<Record<SiteArtDirection, SiteA
       story: { family: "editorial", layout: "rail", width: "wide", align: "left" },
       catalog: { family: "product-led", layout: "rail", width: "full", align: "left" },
       gallery: { family: "cinematic", layout: "offset", width: "full", align: "left" },
-      "event-tickets": { family: "product-led", layout: "grid", width: "full", align: "left" },
       contact: { family: "cinematic", layout: "split", width: "wide", align: "left" },
       location: { family: "cinematic", layout: "offset", width: "full", align: "left" },
       links: { family: "product-led", layout: "rail", width: "wide", align: "left" },

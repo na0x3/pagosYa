@@ -6,7 +6,6 @@ import {
   checkoutDebt,
   confirmPaymentIntent,
   createAppointmentPayment,
-  createEventReservation,
   fetchDebtCollection,
   fetchAppointmentAvailability,
   fetchSession,
@@ -7184,28 +7183,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       </section>`
     : "";
 
-  const eventDate = (value: string) => new Intl.DateTimeFormat("es-BO", {
-    timeZone: "America/La_Paz",
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(new Date(value));
-  const eventTicketsHtml = (eventId: string, section?: StoreSiteDocument["sections"][number]) => {
-    const event = (store.events ?? []).find((candidate) => candidate.id === eventId);
-    if (!event) return "";
-    const availableTypes = event.ticketTypes.filter((ticket) => ticket.available > 0);
-    const image = assetUrl(event.publicityImageUrl || null);
-    return `<section class="store-event" id="event-${escapeHtml(event.id)}" aria-labelledby="event-title-${escapeHtml(event.id)}">
-      <div class="store-event-intro">
-        ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(event.name)}" loading="lazy">` : `<div class="store-event-date" aria-hidden="true"><strong>${escapeHtml(new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", day: "2-digit" }).format(new Date(event.startsAt)))}</strong><span>${escapeHtml(new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", month: "short" }).format(new Date(event.startsAt)))}</span></div>`}
-        <div><h2 id="event-title-${escapeHtml(event.id)}">${escapeHtml(section?.eventId ? section.title || event.name : event.name)}</h2><p class="store-event-when">${escapeHtml(eventDate(event.startsAt))}${event.venue ? ` · ${escapeHtml(event.venue.name)}, ${escapeHtml(event.venue.city)}` : ""}</p>${event.description || section?.body ? `<p>${escapeHtml(event.description || section?.body || "")}</p>` : ""}<span class="store-event-by">Un evento de ${escapeHtml(store.storeName)}, con entradas y pago en pagosYa.</span></div>
-      </div>
-      <form class="store-event-form" data-event-reservation data-event-slug="${escapeHtml(event.slug)}">
-        <fieldset><legend>Elige tus entradas</legend><div class="store-event-ticket-list">${availableTypes.map((ticket) => `<label class="store-event-ticket"><span><strong>${escapeHtml(ticket.name)}</strong><small>${ticket.available} disponibles</small></span><span class="store-event-ticket-price">${escapeHtml(formatAmount(ticket.price, ticket.currency))}</span><input type="number" name="ticket-${escapeHtml(ticket.id)}" data-ticket-type="${escapeHtml(ticket.id)}" min="0" max="${Math.min(20, ticket.available)}" value="0" inputmode="numeric" aria-label="Cantidad de entradas ${escapeHtml(ticket.name)}"></label>`).join("") || '<p class="store-event-sold-out">Las entradas en línea están agotadas.</p>'}</div></fieldset>
-        ${availableTypes.length ? `<div class="store-event-buyer"><div class="field"><label>Nombre<input name="buyerName" autocomplete="name" maxlength="120"></label></div><div class="field"><label>Correo<input name="buyerEmail" type="email" autocomplete="email" maxlength="254"></label></div><div class="field"><label>Teléfono<input name="buyerPhone" autocomplete="tel" inputmode="tel" maxlength="40"></label></div></div><div class="store-event-actions"><button class="primary" type="submit">${escapeHtml(section?.ctaLabel || "Comprar entradas")}</button><span role="status" aria-live="polite"></span></div>` : ""}
-      </form>
-    </section>`;
-  };
-
   const locationCardHtml = (location: StoreLocation, index: number) => {
     const mapUrl = safeStoreMapEmbedUrl(location.mapEmbedUrl);
     const fulfillment = [location.pickupEnabled ? "Retiro" : "", location.deliveryEnabled ? "Entrega" : ""].filter(Boolean).join(" · ");
@@ -7390,10 +7367,6 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       "div",
       section.productIds ? "is-curated-products" : "",
     );
-    if (section.kind === "event-tickets") {
-      const selectedEvents = section.eventId ? (store.events ?? []).filter((event) => event.id === section.eventId) : (store.events ?? []);
-      return bespokeFrame(section, trustedFamilyContent(section, selectedEvents.map((event) => eventTicketsHtml(event.id, section)).join("")), "div");
-    }
     if (section.kind === "contact") return bespokeFrame(section, trustedFamilyContent(section, contactHtml), "div");
     if (section.kind === "location") return bespokeFrame(section, trustedFamilyContent(section, locationHtml), "div");
     if (section.kind === "links") return bespokeFrame(section, trustedFamilyContent(section, linksHtml), "div");
@@ -7429,17 +7402,10 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     : siteDocument
       ? authoredBespokeOrder.map((section) => bespokeSectionHtmlByKey[section] || motionSectionHtmlByKey[section] || "").join("")
       : contentOrder.map((section) => sectionHtml[section] || "").join("");
-  const eventSections = siteSectionsForPage.filter((section) => section.kind === "event-tickets");
-  const placedEventIds = new Set(eventSections.some((section) => !section.eventId)
-    ? (store.events ?? []).map((event) => event.id)
-    : eventSections.map((section) => section.eventId).filter(Boolean));
-  const connectedEventsHtml = selectedCatalogSection || activeSitePage
-    ? ""
-    : (store.events ?? []).filter((event) => !placedEventIds.has(event.id)).map((event) => eventTicketsHtml(event.id)).join("");
   app.innerHTML = `
     ${storefrontHeaderHtml(slug, store, { current: selectedCatalogSection ? "catalog" : activeSitePage ? "page" : "home", pageId: activeSitePage?.id, catalogUrl: selectedCatalogSection ? categoryPageUrl(slug, selectedCatalogSection.id) : storeCatalogUrl(slug) })}
     ${announcementHtml}
-    ${orderedSectionsHtml}${connectedEventsHtml}
+    ${orderedSectionsHtml}
     ${selectedCatalogSection ? "" : storefrontFooterHtml(store)}
     <div class="secure-note">${store.checkoutMode === "payment" ? ICON_LOCK : store.checkoutMode === "whatsapp" ? ICON_WHATSAPP : ICON_EXTERNAL}<span>${store.checkoutMode === "payment" ? "Pago procesado de forma segura por pagosYa" : store.checkoutMode === "whatsapp" ? "El pedido se enviará directamente a WhatsApp" : "Tu correo y selección se enviarán a la tienda"}</span></div>
     ${selectedCatalogSection ? "" : promotionHtml}
@@ -7619,53 +7585,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     void loadSlots();
   }
 
-  app.querySelectorAll<HTMLFormElement>("[data-event-reservation]").forEach((eventForm) => {
-    eventForm.addEventListener("submit", async (formEvent) => {
-      formEvent.preventDefault();
-      const submit = eventForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-      const status = eventForm.querySelector<HTMLElement>(".store-event-actions span")!;
-      const data = new FormData(eventForm);
-      const items = Array.from(eventForm.querySelectorAll<HTMLInputElement>("[data-ticket-type]")).flatMap((input) => {
-        const quantity = Number.parseInt(input.value, 10) || 0;
-        return quantity > 0 ? [{ ticketTypeId: input.dataset.ticketType!, quantity }] : [];
-      });
-      if (!items.length) {
-        status.setAttribute("role", "alert");
-        status.textContent = "Elige al menos una entrada.";
-        eventForm.querySelector<HTMLInputElement>("[data-ticket-type]")?.focus();
-        return;
-      }
-      submit.disabled = true;
-      submit.setAttribute("aria-busy", "true");
-      submit.textContent = "Apartando entradas…";
-      status.setAttribute("role", "status");
-      status.textContent = "";
-      try {
-        const result = await createEventReservation(eventForm.dataset.eventSlug!, {
-          items,
-          buyerName: String(data.get("buyerName") || "").trim() || undefined,
-          buyerEmail: String(data.get("buyerEmail") || "").trim().toLowerCase() || undefined,
-          buyerPhone: String(data.get("buyerPhone") || "").trim() || undefined,
-        });
-        sessionStorage.setItem(`pagosya_event_${result.reservationId}`, JSON.stringify({ managementToken: result.managementToken, expiresAt: result.expiresAt }));
-        window.location.assign(`${storeCatalogUrl(slug)}#client_secret=${encodeURIComponent(result.clientSecret)}`);
-      } catch (error) {
-        status.setAttribute("role", "alert");
-        status.textContent = (error as Error).message;
-        submit.disabled = false;
-        submit.removeAttribute("aria-busy");
-        submit.textContent = "Comprar entradas";
-      }
-    });
-  });
-
   bindStoreAnnouncementPlayback();
   bindTimedDiscountSchedule(slug, store);
-
-  if (/^#event-[a-z0-9_-]+$/i.test(window.location.hash)) {
-    const eventAnchorId = window.location.hash.slice(1);
-    requestAnimationFrame(() => document.getElementById(eventAnchorId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
 
   activePromotionCleanup?.();
   activePromotionCleanup = null;
