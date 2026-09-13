@@ -11,13 +11,14 @@ pnpm dev
 pnpm dev:studio
 ```
 
-Open `http://127.0.0.1:4312` and sign in with the same merchant email and password used by the dashboard. In local development, Vite proxies `/api` to `http://localhost:3001`, while the embedded storefront uses `http://localhost:5174`.
+Open `http://127.0.0.1:4312` and sign in with the same merchant email and password used by the dashboard. In local development, Vite proxies `/api` to `http://localhost:3001`. Studio uses `VITE_CHECKOUT_ORIGIN`, then the dashboard's saved checkout origin, then `http://localhost:5175` (the `pnpm dev` stack). When running checkout separately on port 5174, set `VITE_CHECKOUT_ORIGIN=http://localhost:5174`.
 
 For a deployed Studio, set:
 
 ```bash
 VITE_API_BASE_URL=https://api.example.com/v1
 VITE_CHECKOUT_ORIGIN=https://stores.example.com
+VITE_DASHBOARD_ORIGIN=https://merchants.example.com
 ```
 
 The Studio origin must also be included in the API's `ADDITIONAL_CORS_ORIGINS` setting.
@@ -43,3 +44,14 @@ pnpm --filter @pagosya/merchant-studio build
 ```
 
 The end-to-end suite covers both the design prototype and the connected flow: login, one three-image selection, three uploads, YAPI proposal review, checkout review, approval, and publish.
+
+
+## Source editor: store tools and photo creation
+
+In `/?source=1` (including the embedded editor), **Mi tienda** in the canvas toolbar groups brand/content, marketing, shipping, digital files and gift-card/store-credit tools. Digital files and balances open separate panels; article redirects remain accessible under content tools. The composer stays focused on the conversation.
+
+**Crear tienda desde una foto** starts with one JPG, PNG or WebP product image. Existing sites also expose **Mi tienda → Diseñar desde una foto**. Review the photo, optionally add details in chat, and choose **Crear tienda desde esta foto**. This sends `setupAction: product-photo` through the existing authenticated upload and source-message APIs. It explicitly delegates design and bypasses the two discovery questions only for this photo workflow. Ordinary chat and legacy quick creation retain their discovery gate. An unclear photo can still require clarification.
+
+The result is a draft using the real photograph. Names, prices, stock and selling policies are not inferred from pixels; missing product information must be completed before selling. This flow does not publish. Generation uses the selected AI model and credit limit; image requests need a vision-capable model. Upload and generation errors preserve the draft or offer a retry using the same uploaded URL.
+
+Focused checks: `source-product-photo.spec.ts`, `source-composer.spec.ts`, `brand-commerce.spec.ts`, `commerce-parity.spec.ts`, and API `source-chat.service.spec.ts` / `source-conversation.service.spec.ts`. Browser tests mock external AI responses; they do not assess a live generated design.

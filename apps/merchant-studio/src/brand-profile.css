@@ -1,0 +1,30 @@
+.brand-dialog { box-sizing: border-box; width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; padding: 24px; border: 3px solid var(--ink, #11110f); border-radius: 2px; box-shadow: 8px 8px 0 var(--ink, #11110f); background: var(--paper, #f4f4f5); color: var(--ink, #11110f); font: 14px/1.5 "0xProto Mono", ui-monospace, monospace; }
+.brand-dialog::backdrop { background: rgb(0 0 0 / 40%); }
+.brand-dialog header { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.brand-dialog h2 { font-size: 30px; line-height: 1.15; margin: 6px 0 12px; }
+.brand-dialog h3 { font-size: 18px; margin: 0 0 8px; }
+.brand-fields { display: grid; gap: 16px; margin: 20px 0; }
+.brand-dialog label { display: grid; gap: 6px; font-weight: 700; }
+.brand-dialog textarea, .brand-dialog input, .brand-dialog select { min-width: 0; width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border: 2px solid var(--ink, #11110f); border-radius: 2px; background: #fff; color: #11110f; }
+.brand-dialog textarea { resize: vertical; }
+.brand-dialog textarea::placeholder, .brand-dialog input::placeholder { color: #666660; opacity: 1; }
+.brand-dialog :focus-visible { outline: 3px solid #6366f1; outline-offset: 3px; }
+.brand-dialog button { min-height: 44px; padding: 10px 14px; border: 2px solid var(--ink, #11110f); border-radius: 2px; background: #fff; cursor: pointer; }
+.brand-dialog button:hover:not(:disabled) { background: #eaf2f8; }
+.brand-dialog button:disabled { cursor: wait; opacity: .6; }
+.brand-dialog .button--publish { background: var(--amber, #ffbd59); color: #241804; box-shadow: 4px 4px 0 #11110f; }
+.brand-dialog .button--publish:hover:not(:disabled) { background: var(--amber-hover, #ffab2e); }
+.brand-dialog details { border-top: 2px solid #11110f; }
+.brand-dialog summary { min-height: 48px; padding: 12px 0; font-weight: 700; cursor: pointer; }
+.brand-dialog details[open] > summary { margin-bottom: 12px; }
+.brand-import, .brand-suggestions { margin-top: 24px; padding-top: 20px; border-top: 2px solid #11110f; }
+.brand-dialog details > .brand-import:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.brand-import label { margin: 14px 0; }
+.brand-suggestions article { padding: 18px 0; border-bottom: 1px solid #aaa79f; }
+.brand-suggestions small { display: block; color: #555550; overflow-wrap: anywhere; margin-bottom: 10px; }
+.brand-actions { position: sticky; bottom: -24px; display: grid; gap: 12px; margin-top: 8px; padding: 16px 0 24px; background: var(--paper, #f4f4f5); border-top: 2px solid #11110f; }
+.brand-actions [role=status] { margin: 0; overflow-wrap: anywhere; }
+.brand-actions [role=status]:empty { display: none; }
+.brand-actions button { justify-self: stretch; }
+.brand-dialog select { min-height: 44px; }
+@media (max-width: 600px) { .brand-dialog { padding: 16px; box-shadow: 5px 5px 0 #11110f; } .brand-dialog h2 { font-size: 26px; } .brand-actions { bottom: -16px; padding-bottom: 16px; } }

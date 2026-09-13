@@ -15,7 +15,7 @@ export class DeliveryFailuresService {
   constructor(private readonly prisma: PrismaService) {}
 
   async summary() {
-    const [payouts, invoices, webhookEvents] = await Promise.all([
+    const [payouts, invoices, webhookEvents, emailDeliveries] = await Promise.all([
       this.prisma.payout.findMany({
         where: { status: "FAILED" },
         select: { id: true, merchantId: true, amount: true, currency: true, failureReason: true, attempts: true, nextRetryAt: true, createdAt: true },
@@ -34,6 +34,12 @@ export class DeliveryFailuresService {
         orderBy: { createdAt: "desc" },
         take: 100,
       }),
+      this.prisma.storeEmailDelivery.findMany({
+        where: { status: "FAILED" },
+        select: { id: true, storeId: true, kind: true, attempts: true, lastError: true, dueAt: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
     ]);
 
     // nextRetryAt is only ever null on a FAILED row once the worker has
@@ -49,6 +55,9 @@ export class DeliveryFailuresService {
       payouts: bucket(payouts),
       invoices: bucket(invoices),
       webhookEvents: bucket(webhookEvents),
+      // Email workers mark a row FAILED only after their retry budget is
+      // exhausted, so these are actionable failures rather than a retry queue.
+      emailDeliveries: { retrying: [], exhausted: emailDeliveries },
     };
   }
 }

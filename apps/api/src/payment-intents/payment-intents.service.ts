@@ -1,3 +1,5 @@
+import { sourceCheckoutBranding } from "@pagosya/shared-types";
+import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
@@ -28,6 +30,7 @@ type ProductVariant = { id: string; name: string; amount: number; stock?: number
 type CartInventoryLine = {
   paymentLinkId: string;
   variantId?: string;
+  digitalAssetIds?: string[];
   quantity: number;
   name: string;
   variantName?: string;
@@ -86,6 +89,19 @@ function readLocationStocks(value: Prisma.JsonValue): Record<string, number | nu
 export class PaymentIntentsService {
   private readonly logger = new Logger(PaymentIntentsService.name);
 
+  async checkoutBranding(intent: { merchantId: string; metadata: unknown }) {
+    // Merchant identity comes from the authenticated intent, never metadata or URL input.
+    const store = await this.prisma.store.findUnique({ where: { merchantId: intent.merchantId }, select: {
+      id: true, name: true, logoUrl: true, backgroundColor: true, accentColor: true, fontStyle: true, publishedSourceRevision: true,
+    } });
+    if (!store) return null;
+    const version = store.publishedSourceRevision == null ? null : await this.prisma.storeSourceVersion.findUnique({
+      where: { storeId_revision: { storeId: store.id, revision: store.publishedSourceRevision } }, select: { snapshot: true },
+    });
+    return sourceCheckoutBranding(store, version?.snapshot as Parameters<typeof sourceCheckoutBranding>[1]);
+  }
+
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly railRegistry: RailRegistry,
@@ -126,6 +142,25 @@ export class PaymentIntentsService {
         livemode,
       },
     });
+  }
+
+  /** A credit-only sale consumes a merchant liability; it never posts a cash capture. */
+  async completeCreditPaymentInTransaction(tx: Prisma.TransactionClient, id: string) {
+    const intent = await tx.paymentIntent.findUniqueOrThrow({ where: { id } });
+    const reservation = await tx.storeCreditReservation.findUnique({ where: { paymentIntentId: id } });
+    const order = await tx.storeOrder.findUnique({ where: { paymentIntentId: id } });
+    if (intent.status !== 'REQUIRES_PAYMENT_METHOD' || intent.amount !== 0 || !order || !reservation || reservation.status !== 'RESERVED' || reservation.amount !== order.amount) throw new BadRequestException('El saldo no cubre este pedido.');
+    await this.assertCartStillAvailable(tx, intent.metadata);
+    const locationStockReserved = await this.reserveLocationStockForCart(tx, intent.metadata);
+    const metadata = { ...(intent.metadata as Prisma.JsonObject), ...(locationStockReserved ? { locationStockReserved: true } : {}) };
+    await finishCredit(tx, id, true);
+    await this.decrementStockForCart(tx, metadata);
+    await this.recordProductStats(tx, intent.merchantId, metadata);
+    const updated = await tx.paymentIntent.update({ where: { id }, data: { status: 'SUCCEEDED', metadata } });
+    await tx.storeOrder.update({ where: { id: order.id }, data: { status: 'PAID', statusEvents: { create: { status: 'PAID' } } } });
+    await this.webhooks.enqueueEvent(tx, intent.merchantId, 'payment_intent.succeeded', { id, amount: 0, creditAmount: reservation.amount, orderTotal: order.amount, currency: intent.currency, status: 'SUCCEEDED' });
+    await this.invoicing.enqueueInvoice(tx, intent.merchantId, { paymentIntentId: id, amount: order.amount, currency: intent.currency, customerName: null, customerDocument: null });
+    return updated;
   }
 
   async findByIdForMerchant(merchantId: string, id: string) {
@@ -204,14 +239,19 @@ export class PaymentIntentsService {
    * already scopes the caller to exactly this PaymentIntent, so there's no
    * separate ownership check to do here.
    */
-  async cancelById(id: string) {
+  async cancelById(id: string, abandonedBefore?: Date) {
     return this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<{ status: PaymentIntentStatus; metadata: Prisma.JsonValue }[]>`
         SELECT status, metadata FROM "PaymentIntent" WHERE id = ${id} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
+      if (abandonedBefore) {
+        const intent = await tx.paymentIntent.findUniqueOrThrow({ where: { id } });
+        if (intent.createdAt >= abandonedBefore || !['REQUIRES_PAYMENT_METHOD', 'REQUIRES_CONFIRMATION'].includes(current.status)) return intent;
+      }
       const nextStatus = transition(current.status, PaymentIntentEvent.CANCEL);
+      if ((current.metadata as Prisma.JsonObject)?.storeCredit) await finishCredit(tx, id, false);
       const hadReservation = (current.metadata as { locationStockReserved?: boolean } | null)?.locationStockReserved === true;
       if (hadReservation) await this.releaseLocationStockForCart(tx, current.metadata);
       const metadata = current.metadata && typeof current.metadata === "object" && !Array.isArray(current.metadata)
@@ -254,6 +294,7 @@ export class PaymentIntentsService {
 
       const confirmedStatus = transition(current.status, PaymentIntentEvent.CONFIRM);
 
+      if ((current.metadata as Prisma.JsonObject)?.storeCredit) await ensureCreditReservation(tx, paymentIntentId);
       await this.assertCartStillAvailable(tx, current.metadata);
       const locationStockReserved = await this.reserveLocationStockForCart(tx, current.metadata);
       const paymentMethod = await this.paymentMethods.findOrCreate(tx, current.merchantId, dto.paymentMethod);
@@ -408,6 +449,8 @@ export class PaymentIntentsService {
         ? current.metadata as Prisma.JsonObject
         : {};
 
+      if (currentMetadata.storeCredit && result.status !== 'requires_action' && ['succeeded', 'failed'].includes(result.status)) await finishCredit(tx, paymentIntentId, result.status === 'succeeded');
+
       const transactionRow = await tx.transaction.create({
         data: {
           paymentIntentId,
@@ -450,7 +493,7 @@ export class PaymentIntentsService {
         });
         await this.invoicing.enqueueInvoice(tx, merchantId, {
           paymentIntentId: updated.id,
-          amount: updated.amount,
+          amount: Number((currentMetadata.storeCredit as Prisma.JsonObject)?.orderTotal) || updated.amount,
           currency: updated.currency,
           customerName: current.customerName,
           customerDocument: current.customerDocument,
@@ -664,6 +707,7 @@ export class PaymentIntentsService {
     if (fulfillment?.locationId) {
       for (const [paymentLinkId, quantity] of requestedByLinkId) {
         const link = links.find((candidate) => candidate.id === paymentLinkId)!;
+        if (cart.some(line => line.paymentLinkId === paymentLinkId && line.digitalAssetIds?.length)) continue;
         const stock = readLocationStocks(link.locationStocks)[fulfillment.locationId] ?? 0;
         if (stock !== null && stock < quantity) {
           throw new BadRequestException(`${fulfillment.locationName || "La ubicación elegida"} ya no tiene suficiente stock de "${link.name}"`);
@@ -697,7 +741,7 @@ export class PaymentIntentsService {
     const requestedByExtraPool = new Map<string, { quantity: number; name: string }>();
     const requestedByLocationProduct = new Map<string, number>();
     for (const line of cart) {
-      requestedByLocationProduct.set(line.paymentLinkId, (requestedByLocationProduct.get(line.paymentLinkId) ?? 0) + line.quantity);
+      if (!line.digitalAssetIds?.length) requestedByLocationProduct.set(line.paymentLinkId, (requestedByLocationProduct.get(line.paymentLinkId) ?? 0) + line.quantity);
       if (line.variantId) {
         const key = `${line.paymentLinkId}:${line.variantId}`;
         const requested = requestedByVariant.get(key);
@@ -838,7 +882,7 @@ export class PaymentIntentsService {
     const locationId = (metadata as { fulfillment?: { locationId?: string } } | null)?.fulfillment?.locationId;
     if (!cart || !locationId) return false;
     const requested = new Map<string, number>();
-    for (const line of cart) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
+    for (const line of cart.filter(line => !line.digitalAssetIds?.length)) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
     for (const [paymentLinkId, quantity] of requested) {
       const updated = await tx.$executeRaw`
         UPDATE "PaymentLink"
@@ -868,7 +912,7 @@ export class PaymentIntentsService {
     const locationId = (metadata as { fulfillment?: { locationId?: string } } | null)?.fulfillment?.locationId;
     if (!cart || !locationId) return;
     const requested = new Map<string, number>();
-    for (const line of cart) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
+    for (const line of cart.filter(line => !line.digitalAssetIds?.length)) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
     for (const [paymentLinkId, quantity] of requested) {
       await tx.$executeRaw`
         UPDATE "PaymentLink"

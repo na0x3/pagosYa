@@ -28,6 +28,22 @@ export class CartItemDto {
 }
 
 export class CartCheckoutDto {
+  @IsOptional() @Matches(/^[a-zA-Z0-9_-]{32}$/) funnelToken?: string;
+  @IsOptional() @Matches(/^[a-f0-9]{64}$/) recoveryToken?: string;
+  @IsOptional() @Matches(/^[A-Z]{2}$/) shippingCountry?: string;
+  @IsOptional() @IsString() @MaxLength(20) @Matches(/^[A-Za-z0-9 -]{1,20}$/) shippingPostalCode?: string;
+  @IsOptional() @IsString() @MaxLength(50) @Matches(/^[a-fA-F0-9-]{32,39}$/) creditCode?: string;
+  @IsOptional() @IsString() @MaxLength(48) shippingZoneId?: string;
+  @IsOptional() @IsString() @MaxLength(500) shippingAddress?: string;
+
+  @IsOptional()
+  @Matches(/^[a-zA-Z0-9_-]{32}$/)
+  sourceVisitToken?: string;
+
+  @IsOptional()
+  @Matches(/^[a-zA-Z0-9_-]{8,40}$/)
+  partnerCode?: string;
+
   @ApiProperty({ type: [CartItemDto] })
   @IsArray()
   @ArrayMinSize(1)

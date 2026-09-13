@@ -153,7 +153,7 @@ body.store-page[data-font-style="luxury"] { --store-font-family: Didot, "Bodoni 
    as a self-contained card — it's usually embedded borderless in a merchant's
    own page via iframe, so it needs its own visual edge rather than floating
    text directly on the host page's background. */
-body:not(.store-page) #app {
+body:not(.store-page):not(.source-store-page) #app {
   max-width: 400px;
   margin: 0 auto;
   background: var(--pg-bg);
@@ -161,6 +161,25 @@ body:not(.store-page) #app {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Published designs own the entire viewport; payment styling resumes at checkout. */
+body.source-store-page {
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+}
+body.source-store-page #app {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  animation: none;
 }
 
 body:is(.debt-collection-page, .payment-page) {
@@ -836,6 +855,19 @@ a.tracking-store-link:hover strong { color: var(--pg-accent); }
 .tracking-updated { margin: 16px 0 0; color: var(--pg-text-faint); font-size: 12px; }
 .tracking-progress-section,.tracking-order-section { margin-top: 14px; padding: clamp(20px, 4vw, 30px); }
 .tracking-progress-section h2,.tracking-order-section h2,.tracking-account-cta h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+.tracking-review-section { margin-top: 14px; padding: clamp(20px, 4vw, 30px); border: 1px solid var(--pg-border); border-radius: 12px; background: var(--pg-bg); }
+.tracking-review-section > h2 { margin: 0; font-size: clamp(20px, 3vw, 28px); letter-spacing: -.03em; }
+.tracking-review-section > p { max-width: 62ch; margin: 10px 0 0; color: var(--pg-text-muted); font-size: 12px; line-height: 1.6; }
+.tracking-review-list { display: grid; gap: 14px; margin-top: 22px; }
+.tracking-review-form { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--pg-border); }
+.tracking-review-form h3 { margin: 0; font-size: 14px; }
+.tracking-review-form label { display: grid; gap: 6px; color: var(--pg-text-muted); font-size: 12px; }
+.tracking-review-form input,.tracking-review-form select,.tracking-review-form textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--pg-border-strong); border-radius: 8px; background: var(--pg-page-bg); color: var(--pg-text); font: inherit; }
+.tracking-review-form textarea { min-height: 110px; resize: vertical; }
+.tracking-review-form input:focus-visible,.tracking-review-form select:focus-visible,.tracking-review-form textarea:focus-visible { outline: 3px solid var(--pg-accent-soft); outline-offset: 2px; border-color: var(--pg-accent); }
+.tracking-review-submit { justify-self: start; min-height: 44px; padding: 10px 14px; border: 1px solid var(--pg-accent); border-radius: 8px; background: var(--pg-accent); color: var(--pg-accent-contrast); font: inherit; cursor: pointer; }
+.tracking-review-submit:disabled { cursor: wait; opacity: .62; }
+.tracking-review-status { min-height: 18px; margin: 0; color: var(--pg-text-muted); font-size: 12px; line-height: 1.45; }
 .tracking-timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 24px 0 0; padding: 0; list-style: none; }
 .tracking-timeline li { position: relative; min-width: 0; padding-right: 12px; }
 .tracking-timeline li::before { content: ""; position: absolute; top: 15px; left: 32px; right: 0; height: 2px; background: var(--pg-border-strong); }
@@ -7739,3 +7771,87 @@ body.has-bespoke-site[data-site-composition="catalog-poster"] .bespoke-catalog[d
   }
   body.store-page .store-site-nav::-webkit-scrollbar { display: none; }
 }
+
+/* Store orders use the full page; direct payment links retain their compact shell. */
+body.payment-page.store-payment-page{display:block;padding:0;background:var(--debt-paper)}
+body.payment-page.store-payment-page #app{width:100%;max-width:none;min-height:100dvh;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;animation:none}
+body.payment-page.store-payment-page #app:has(.payment-form-panel){display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr)}
+body.payment-page.store-payment-page #app:not(:has(.payment-form-panel)){max-width:760px;min-height:0;margin:0 auto;padding:clamp(20px,5vw,64px)}
+.store-payment-page .payment-summary-panel{padding:clamp(28px,6vw,88px);border:0;border-right:1px solid var(--debt-ink)}
+.store-payment-page .payment-form-panel{padding:clamp(28px,6vw,80px);min-width:0}
+.store-payment-page #payment-form{max-width:620px;margin:0 auto}
+.store-payment-page .payment-page-title{max-width:620px;margin:0 auto 36px;font-size:clamp(28px,3vw,42px);line-height:1.15;letter-spacing:-.025em}
+@media(max-width:760px){body.payment-page.store-payment-page #app:has(.payment-form-panel){grid-template-columns:1fr}.store-payment-page .payment-summary-panel{border-right:0;border-bottom:1px solid var(--debt-ink);padding:28px 20px}.store-payment-page .payment-form-panel{padding:32px 20px}.store-payment-page .payment-page-title{margin-bottom:28px}}
+
+.store-payment-page .payment-secure-note{grid-column:1/-1}
+
+.store-payment-page .delivery-request-toggle:not(label){display:block;min-height:0;cursor:default}
+
+.store-payment-page .payment-success-panel .status.success{color:var(--debt-ink)}
+
+/* Contact stays out of the page flow until the customer asks for it. */
+body .store-contact-widget {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+  display: block;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  pointer-events: none;
+}
+body .store-contact-widget[hidden] { display: none; }
+body .store-contact-widget button { font: inherit; cursor: pointer; }
+body .store-contact-widget svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+body .store-contact-widget .store-contact-launcher {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 14px;
+  background: var(--pg-text);
+  color: var(--pg-bg);
+  pointer-events: auto;
+}
+body .store-contact-widget .store-contact-launcher span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+body .store-contact-widget .store-contact-panel {
+  position: absolute;
+  right: 0;
+  bottom: 68px;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(720px, calc(100dvh - 104px));
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--pg-border);
+  border-radius: 16px;
+  background: var(--pg-panel);
+  color: var(--pg-text);
+  pointer-events: auto;
+}
+body .store-contact-widget .store-contact-panel[hidden] { display: none; }
+body .store-contact-widget .store-contact-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+body .store-contact-widget .store-contact-copy h2 { max-width: 14ch; font-size: clamp(24px, 4vw, 32px); }
+body .store-contact-widget .store-contact-copy p { margin: 0; }
+body .store-contact-widget .store-contact-close { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; border: 1px solid currentColor; border-radius: 50%; background: transparent; color: inherit; }
+body .store-contact-widget .store-contact-form { grid-template-columns: 1fr; gap: 16px; margin-top: 24px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+body .store-contact-widget .store-contact-message,
+body .store-contact-widget .store-contact-actions { grid-column: auto; }
+body .store-contact-widget :is(input, textarea) { background: transparent; }
+body .store-contact-widget :focus-visible { outline: 3px solid var(--pg-accent); outline-offset: 3px; }
+@media (max-width: 560px) {
+  body .store-contact-widget { right: 16px; bottom: 16px; }
+  body .store-contact-widget .store-contact-panel { bottom: 68px; width: calc(100vw - 32px); padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .store-contact-widget * { transition: none !important; animation: none !important; }
+}
+
+.product-options-clear{justify-self:start;min-height:44px;padding:8px 0;border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.product-options-clear:focus-visible{outline:2px solid currentColor;outline-offset:4px}

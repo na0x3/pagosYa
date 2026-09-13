@@ -1,8 +1,20 @@
 # SIAT pilot operational memory
 
-This file records the current SIAT certification blocker without storing
+This file records SIAT certification progress without storing
 credentials or reusable authorization material. Do not add the delegated token,
 CUIS, CUFD, system code, authorization codes, packaged XML, or portal password.
+
+## Current status — 2026-09-08
+
+All 25 Stage XII purchase test operations succeeded on the original authorization
+process using `tmp/siat/pilot-state.json`: 10 receptions, 10 validations, and 5
+cancellations. The purchase-service blocker described below no longer reproduces.
+The portal's displayed certification progress has not yet been verified because
+the pilot `/launcher/` page remained blank in Chrome.
+
+Sanitized results: `tmp/siat/purchase-success-2026-09-08.json` and
+`tmp/siat/purchase-batch-last.json`. The separate August 28 authorization process
+and its state file were not used or changed by this run.
 
 ## 2026-08-17 — Stage XII purchase reception blocker
 
@@ -458,3 +470,62 @@ inesperado`, without a reception code. A subsequent parameterless
 processing`, and `consultaCompras` still returned code `-1` without an archive.
 The full batch was not started because these checks prove that the restarted
 purchase service is still failing independently of the package payload.
+
+### Retry requested by SIN on 2026-09-08
+
+The operator supplied a screenshot of SIN's 2026-09-07 reply requesting another
+attempt against the purchases and sales service. On 2026-09-08 at approximately
+14:23 -04:00, the saved configuration and default `pilot-state.json` were used
+to begin the guarded retry sequence.
+
+`refresh-cufd 0` returned HTTP 500 with SOAP fault `API KEY NO VALIDO`.
+Consequently, no CUFD was refreshed, no source factura was emitted, and no
+purchase package was submitted. This authentication failure does not establish
+whether the earlier purchase-service code `-1` blocker has been fixed.
+
+The pilot portal redirected to `/launcher/` in Chrome but displayed a blank
+page, including after one reload. The next prerequisite is a valid delegated
+token for the existing authorization process. Once restored, repeat the CUFD
+refresh, purchase communication/query checks, and fresh self-purchase smoke
+test; continue the remaining Stage XII cases if reception is accepted.
+
+### Successful Stage XII batch on 2026-09-08
+
+The operator supplied a valid delegated token matching the configured system.
+It was saved only in the ignored local environment file. The guarded sequence
+then succeeded:
+
+- Point-0 CUFD refresh succeeded, valid until 2026-09-09 at 14:26 -04:00.
+- `verificarComunicacion` returned transaction true.
+- `consultaCompras` returned code 3206, `NO SE ENCONTRARON RESULTADOS`, replacing
+  the earlier unexpected server error.
+- A fresh self-emitter/self-receptor factura 376 was accepted with status 908.
+  Its September purchase package was accepted with status 5152, `EN PROCESO`,
+  and message 2220, `Archivo registrado con éxito.`
+
+The restored purchase service uses different statuses from invoice reception.
+Purchase validation transitioned from 5152 to 5154 with transaction true and
+message 2222, `Consulta realizada con éxito.: {}`. The runner previously waited
+for invoice status 908 and therefore incorrectly stopped after this response.
+It now recognizes the observed purchase completion response only with transaction
+true and an empty issue map, retains support for 908, and rejects pending,
+failed, unknown, or nonempty-issue responses. Focused assertions verified those
+conditions. Purchase polling was extended from ten seconds to three minutes.
+
+The resumable `purchases` command was also corrected to generate fresh validated
+self-receptor source facturas for missing packages instead of selecting old
+non-self-receptor invoices by array position. Across the smoke and resumed batch,
+facturas 376-430 supplied the 55 source documents. The batch submitted types 1-5,
+each with one-document and ten-document packages. Every package used period 9
+and management year 2026.
+
+- All 10 receptions returned transaction true, status 5152, message 2220.
+- All 10 validations reached transaction true, status 5154, and an empty issue map.
+- All 5 purchase cancellations returned transaction true, status 8415,
+  `ELIMINADO`, and message 2217, `Compra eliminada con éxito.`
+
+One transient validation timeout was recovered by resuming saved accepted
+packages; no accepted package was resubmitted. The final runner exited 0.
+All 25 required operation results are recorded in the sanitized success report.
+Official portal counters and any subsequent authorization steps remain unverified;
+do not infer final certification approval from the successful API batch alone.

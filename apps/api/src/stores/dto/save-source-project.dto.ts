@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsDefined, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 
 export class SourceProjectBriefDto {
+  @IsOptional() @IsString() @MaxLength(80000) businessInformation?: string;
   @IsString() @MinLength(1) @MaxLength(120) businessType!: string;
   @IsString() @MinLength(1) @MaxLength(500) audience!: string;
   @IsString() @MinLength(1) @MaxLength(500) primaryAction!: string;
@@ -10,7 +11,7 @@ export class SourceProjectBriefDto {
 
 export class SourceProjectFileDto {
   @IsString() @MinLength(1) @MaxLength(200) path!: string;
-  @IsString() @MaxLength(2_800_000) content!: string;
+  @IsString() @MaxLength(26_666_668) content!: string;
   @IsOptional() @IsIn(["utf8", "base64"]) encoding?: "utf8" | "base64";
 }
 

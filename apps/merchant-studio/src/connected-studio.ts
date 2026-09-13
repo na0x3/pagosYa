@@ -208,7 +208,7 @@ function renderTopbar(): string {
   const approved = Boolean(proposal && state.approvedProposalId === proposal.id);
   return `<header class="topbar connected-topbar">
     <a class="product-mark" href="/" aria-label="pagosYa Merchant Studio"><img src="/logo-mark.png" alt="" /><span>pagosYa</span><i></i><strong>Merchant Studio</strong></a>
-    <div class="connected-store-select"><label for="store-select">Tienda</label><select id="store-select" data-store-select>${state.stores.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === state.storeId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></div>
+    <div class="connected-store-select"><span>Mi tienda</span><strong>${escapeHtml(selectedStore()?.name || 'Sin tienda')}</strong></div>
     <div class="save-state">${icon("check")} ${proposal ? "Borrador guardado" : "Conectado"}</div>
     <div class="top-actions"><button class="button button--ghost" type="button" data-action="logout" title="Cerrar sesión">${icon("logout")} Salir</button><button class="button button--publish ${proposal && !approved ? "needs-review" : ""}" type="button" data-action="publish" ${(proposal && approved || !proposal && selectedStore()?.websiteDraft) && !state.busy ? "" : "disabled"}>${state.busy ? "Procesando…" : proposal ? "Usar en borrador" : selectedStore()?.websiteDraft ? selectedStore()?.websiteDraft?.inventoryChanges?.length ? "Publicar sitio y stock" : "Publicar" : "Sin borrador"}</button></div>
   </header>`;
@@ -304,18 +304,6 @@ function checkoutPreview(): void {
   const frame = document.querySelector<HTMLIFrameElement>("[data-store-preview]");
   if (!frame?.contentWindow || state.page !== "checkout") return;
   frame.contentWindow.postMessage({ type: "PAGOSYA_STORE_PREVIEW_NAVIGATION", previewAction: "cart", previewSection: "products" }, new URL(CHECKOUT_ORIGIN).origin);
-}
-
-function showConnectionFailure(app: HTMLDivElement, error: unknown): void {
-  if (error instanceof ApiError && error.status === 401) {
-    sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    state.phase = "signed-out";
-    state.error = "Tu sesión venció. Vuelve a ingresar.";
-  } else {
-    state.phase = "error";
-    state.error = error instanceof Error ? error.message : "No se pudo conectar Merchant Studio.";
-  }
-  render(app);
 }
 
 async function sendCommand(app: HTMLDivElement, instruction: string): Promise<void> {
@@ -455,9 +443,6 @@ function bindEvents(app: HTMLDivElement): void {
     const files = Array.from(input.files ?? []);
     input.value = "";
     void acceptImages(app, files);
-  });
-  document.querySelector<HTMLSelectElement>("[data-store-select]")?.addEventListener("change", (event) => {
-    void loadStore(app, (event.currentTarget as HTMLSelectElement).value).catch((error: unknown) => showConnectionFailure(app, error));
   });
   document.querySelector<HTMLSelectElement>("[data-page-select]")?.addEventListener("change", (event) => {
     state.page = (event.currentTarget as HTMLSelectElement).value as StudioPage;

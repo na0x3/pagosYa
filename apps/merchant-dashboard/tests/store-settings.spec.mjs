@@ -77,14 +77,7 @@ async function openDashboard(
   });
   await page.goto("/#dashboard-appearance");
   await expect(page.locator("#storeNameInput")).toHaveValue(stores[0].name);
-  await expect(page.locator("#onboardingDialog")).toBeVisible();
-  await page.evaluate(() => {
-    const openDialog = document.querySelector("dialog[open]");
-    if (!openDialog) return;
-    const explore = document.getElementById("onboardingExplore");
-    if (explore) explore.click();
-    else openDialog.close();
-  });
+  await expect(page.locator("#onboardingDialog")).toHaveCount(0);
   const appearanceToggle = page.locator("#storeSettingsSection > .panel > .section-head .section-toggle");
   await expect(appearanceToggle).toHaveAttribute("aria-expanded", "true");
   if (await page.locator("body").evaluate((body) => body.classList.contains("store-preview-fullscreen"))) {
@@ -1519,11 +1512,28 @@ async function prepareInventoryImport(page, responseForRequest) {
   return requests;
 }
 
+test("inventory review explains a lost API connection and retries with the same selected files", async ({ page }) => {
+  const requests = await prepareInventoryImport(page);
+  const endpoint = "http://localhost:3001/v1/stores/store_1/payment_links/import/normalize";
+  await page.route(endpoint, route => route.abort("connectionrefused"));
+  await page.locator("#inventoryPrepare").click();
+  await expect(page.locator("#inventoryImportStatus")).toContainText("No se pudo conectar con el servidor de pagosYa");
+  await expect(page.locator("#inventoryImportStatus")).toContainText("El CSV y las fotos siguen seleccionados");
+  await expect(page.locator("#inventoryImportStatus")).not.toContainText("Failed to fetch");
+  await expect(page.locator("#inventoryPrepare")).toBeEnabled();
+  expect(await page.locator("#inventoryCsvInput").evaluate(input => input.files[0]?.name)).toBe("productos.csv");
+  expect(await page.locator("#inventoryImagesInput").evaluate(input => input.files[0]?.name)).toBe("silpancho.png");
+  await page.unroute(endpoint);
+  await page.locator("#inventoryPrepare").click();
+  await expect(page.locator("#inventoryImportStatus")).toHaveText("Archivo adaptado por IA y listo para revisar.");
+  expect(requests.some(request => request.path.endsWith("/payment_links/import"))).toBe(false);
+});
+
 const successfulInventoryResponse = ({ path }) => {
   if (path === "/stores/store_1/operations/integrations") {
     return [{ id: "integration_1", name: "Caja Café", kind: "CUSTOM_DATABASE", status: "ACTIVE" }];
   }
-  if (path === "/uploads") return { url: "/uploads/silpancho.png" };
+  if (path === "/uploads") return { url: "/v1/uploads/silpancho.png" };
   if (path === "/stores/store_1/payment_links/import") {
     return {
       categoriesCreated: [{ id: "category_food", name: "Comida" }],
@@ -1536,7 +1546,7 @@ const successfulInventoryResponse = ({ path }) => {
         currency: "BOB",
         status: "ACTIVE",
         categoryId: "category_food",
-        imageUrls: ["/uploads/silpancho.png"],
+        imageUrls: ["/v1/uploads/silpancho.png"],
         tags: [],
         variants: [],
         stock: null,
@@ -4596,13 +4606,15 @@ test("CSV and picture import reports the committed result as successful", async 
   await page.locator("#inventoryCommit").click();
 
   await expect(page.locator("#inventoryImportStatus")).toHaveText("Importación completada.");
+  await expect(page.locator("#onboardingDialog")).toHaveCount(0);
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "products");
   await expect(page.locator("#info")).toContainText("1 producto importado y 1 categorías nuevas");
   await expect(page.locator("#info")).toContainText("1 SKU conectado");
   await expect(page.locator("#error")).toBeEmpty();
   await expect(page.locator("#paymentLinkRows")).toContainText("Silpancho");
   expect(requests.find((request) => request.path.endsWith("/payment_links/import"))?.body).toMatchObject({
     integrationConnectionId: "integration_1",
-    products: [{ name: "Silpancho", codigoProducto: "COM-001", imageUrls: ["/uploads/silpancho.png"] }],
+    products: [{ name: "Silpancho", codigoProducto: "COM-001", imageUrls: ["/v1/uploads/silpancho.png"] }],
   });
 });
 
@@ -4725,6 +4737,8 @@ test("a local catalog render problem does not relabel a committed import as fail
   await page.locator("#inventoryCommit").click();
 
   await expect(page.locator("#inventoryImportStatus")).toHaveText("Importación completada.");
+  await expect(page.locator("#onboardingDialog")).toHaveCount(0);
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "products");
   await expect(page.locator("#info")).toContainText("Actualiza la página para ver el catálogo completo.");
   await expect(page.locator("#error")).toBeEmpty();
   await expect(page.locator("#inventoryImportStatus")).not.toContainText("no se completó");
@@ -4833,117 +4847,13 @@ test("merchant can save a zero-priced product and grouped free extras", async ({
   ]);
 });
 
-test("an empty catalog can become products from photos, confirmed prices, and sections", async ({ page }) => {
-  let uploadNumber = 0;
-  const requests = await openDashboard(page, [store("store_1", "Primera")], async ({ path, request }) => {
-    if (path === "/uploads") return { url: `/v1/uploads/product-${++uploadNumber}.jpg` };
-    if (path === "/stores/store_1/payment_links/import/images" && request.method() === "POST") {
-      return {
-        interpreted: true,
-        categoriesCreated: [{ id: "category_1", name: "Cerámica", sortOrder: 0 }],
-        products: [
-          { id: "product_1", name: "Taza azul", amount: 4550, currency: "BOB", status: "ACTIVE", categoryId: "category_1", imageUrls: ["/v1/uploads/product-1.jpg"], imagePositions: ["50% 50%"], tags: ["Azul"], variants: [], extras: [], stock: null },
-          { id: "product_2", name: "Plato arena", amount: 3200, currency: "BOB", status: "ACTIVE", categoryId: "category_1", imageUrls: ["/v1/uploads/product-2.jpg"], imagePositions: ["50% 50%"], tags: ["Arena"], variants: [], extras: [], stock: null },
-        ],
-      };
-    }
-    return undefined;
-  });
-
-  await expect(page.locator("#emptyCatalogPhotoImport")).toHaveCount(1);
-  await page.locator("#aiSetupLaunch").click();
-  await page.locator("#onboardingStartAi").click();
-  await expect(page.locator("#onboardingPhotoCatalogPanel")).toBeVisible();
-  await page.locator("#onboardingProductImages").setInputFiles([
-    { name: "taza.jpg", mimeType: "image/jpeg", buffer: Buffer.from("taza") },
-    { name: "plato.jpg", mimeType: "image/jpeg", buffer: Buffer.from("plato") },
-  ]);
-  await expect(page.locator(".onboarding-photo-product")).toHaveCount(2);
-  await page.locator('[data-product-photo-price="0"]').fill("45,50");
-  await page.locator('[data-product-photo-category="0"]').fill("Cerámica");
-  await page.locator('[data-product-photo-price="1"]').fill("32");
-  await page.locator('[data-product-photo-category="1"]').fill("Cerámica");
-  await page.locator("#onboardingImportPhotos").click();
-
-  await expect(page.locator("#onboardingTitle")).toHaveText("Diseña tu sitio dentro de Tu tienda");
-  await expect(page.locator('#paymentLinkRows [data-payment-link-id="product_1"]')).toContainText("Taza azul");
-  const interpretation = requests.find((entry) => entry.path === "/stores/store_1/payment_links/import/images");
-  expect(interpretation?.body).toEqual({ products: [
-    { imageUrl: "/v1/uploads/product-1.jpg", amount: 4550, categoryName: "Cerámica" },
-    { imageUrl: "/v1/uploads/product-2.jpg", amount: 3200, categoryName: "Cerámica" },
-  ] });
-});
-
-test("Yapi starts with the store name, logo, socials, and requested content", async ({ page }) => {
-  const requests = await openDashboard(page, [store("store_1", "Primera")], ({ path }) => {
-    if (path === "/uploads") return { url: "/v1/uploads/casa-jacaranda-logo.png" };
-    return undefined;
-  });
-
-  await page.locator("#aiSetupLaunch").click();
-  await expect(page.locator("#onboardingTitle")).toHaveText("Cuéntale a Yapi sobre tu marca");
-  if (process.env.PAGOSYA_VISUAL_QA === "1") {
-    await page.locator("#onboardingDialog").screenshot({ path: "../../.impeccable/yapi-brand-desktop.png" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator("#onboardingDialog").screenshot({ path: "../../.impeccable/yapi-brand-mobile.png" });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  }
-  await page.locator("#onboardingBrandName").fill("Casa Jacarandá");
-  await page.locator("#onboardingBrandLogo").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: Buffer.from("logo") });
-  await page.locator("#onboardingBrandInstagram").fill("@casa.jacaranda");
-  await page.locator("#onboardingBrandTiktok").fill("@jacaranda.bo");
-  await page.locator("#onboardingBrandWhatsapp").fill("+591 71234567");
-  await page.locator("#onboardingBrandWebsite").fill("casajacaranda.bo/catalogo");
-  await page.locator("#onboardingBrandRequest").fill("Agrega nuestra historia, entregas en Santa Cruz y pedidos personalizados.");
-  await page.locator("#onboardingStartAi").click();
-
-  await expect(page.locator("#onboardingTitle")).toHaveText("Empieza por tu catálogo");
-  const write = requests.find((request) => request.method === "PUT" && request.path === "/stores/store_1/settings");
-  expect(write.body).toEqual({
-    name: "Casa Jacarandá",
-    logoUrl: "/v1/uploads/casa-jacaranda-logo.png",
-    contactPhone: "+591 71234567",
-    linksTitle: "Síguenos",
-    links: [
-      { label: "Instagram", url: "https://instagram.com/casa.jacaranda" },
-      { label: "TikTok", url: "https://tiktok.com/@jacaranda.bo" },
-      { label: "WhatsApp", url: "https://wa.me/59171234567" },
-      { label: "Sitio web", url: "https://casajacaranda.bo/catalogo" },
-    ],
-  });
-
-  await page.locator("#onboardingSkipCsv").click();
-  await expect(page.locator("#onboardingCreativeBrief")).toHaveValue("Agrega nuestra historia, entregas en Santa Cruz y pedidos personalizados.");
-  await page.locator("#onboardingGenerate").click();
-  await expect.poll(() => requests.find((request) => request.method === "POST" && request.path === "/stores/store_1/agent-conversation/messages")?.body.instruction).toBe(
-    "Agrega nuestra historia, entregas en Santa Cruz y pedidos personalizados.",
-  );
-});
-
-test("AI onboarding keeps prior photo batches and lets the merchant remove each draft", async ({ page }) => {
+test("empty catalog opens the importer without the retired setup wizard", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Primera")]);
-  await page.locator("#aiSetupLaunch").click();
-  await page.locator("#onboardingStartAi").click();
-  await page.locator("#onboardingSkipCsv").click();
-  await page.locator("#onboardingCategory").fill("Cerámica artesanal");
-
-  await page.locator("#onboardingAiImages").setInputFiles([
-    { name: "taller-1.jpg", mimeType: "image/jpeg", buffer: Buffer.from("taller-1") },
-    { name: "taller-2.jpg", mimeType: "image/jpeg", buffer: Buffer.from("taller-2") },
-  ]);
-  await expect(page.locator("#onboardingAiPreviews img")).toHaveCount(2);
-  await page.locator("#onboardingAiImages").setInputFiles([
-    { name: "taller-3.jpg", mimeType: "image/jpeg", buffer: Buffer.from("taller-3") },
-    { name: "taller-4.jpg", mimeType: "image/jpeg", buffer: Buffer.from("taller-4") },
-  ]);
-
-  await expect(page.locator("#onboardingAiPreviews img")).toHaveCount(4);
-  await expect(page.locator("#onboardingAiFileStatus")).toContainText("4 fotos listas");
-  await expect(page.locator("#onboardingCategory")).toHaveValue("Cerámica artesanal");
-  await page.getByRole("button", { name: "Quitar taller-2.jpg" }).click();
-  await expect(page.locator("#onboardingAiPreviews img")).toHaveCount(3);
-  await expect(page.locator("#onboardingAiPreviews img").nth(1)).toHaveAttribute("alt", "taller-3.jpg");
-  await expect(page.locator("#onboardingDialog")).toBeVisible();
+  await navigateDashboard(page, "products");
+  await page.locator("#emptyCatalogImport").click();
+  await expect(page.locator("#inventoryImporterToggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#inventoryCsvInput")).toBeFocused();
+  await expect(page.locator("#onboardingDialog")).toHaveCount(0);
 });
 
 test("AI conversation stays beside direct preview editing", async ({ page }) => {
@@ -5543,4 +5453,12 @@ test("applying an AI proposal cannot discard a dirty local canvas", async ({ pag
   await expect(page.locator("#error")).toContainText("Guarda tus cambios");
   await expect(page.locator("#storeTaglineInput")).toHaveValue("Borrador local que debe descartarse");
   expect(requests.filter((request) => request.path.endsWith("/apply"))).toHaveLength(0);
+});
+
+
+test("published source design is identified as managed in YAPI", async ({page}) => {
+  await openDashboard(page, [{...store('store_1','Source shop'),publishedSourceRevision:5}]);
+  await expect(page.locator('#storeSaveStatus')).toHaveText('Diseño publicado en YAPI · revisión 5');
+  await expect(page.locator('#previewLiveStatus')).toHaveText('Diseño administrado en YAPI');
+  await expect(page.locator('#previewPublishButton')).toHaveText('Aplicar configuración');
 });

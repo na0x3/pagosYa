@@ -7,6 +7,7 @@ async function loadStore(store: Store) {
   document.body.className = "";
   window.history.pushState({}, "", "/?link=hostile-store");
   vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
     fetchStore: vi.fn().mockResolvedValue(store),
     assetUrl: (path: string | null) => path,
   }));
@@ -87,6 +88,7 @@ function hostileStore(): Store {
 describe("storefront hostile-content rendering", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
     localStorage.clear();
     sessionStorage.clear();
     delete (globalThis as typeof globalThis & { __xss?: number }).__xss;

@@ -1,3 +1,5 @@
+import { nextStoreFiles, nextBrief, nextStoreConfig } from './fixtures/next-store';
+import { nextProjectScaffold } from './source-next';
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { SourceProjectsService } from "./source-projects.service";
 
@@ -26,6 +28,8 @@ function setup() {
       findMany: jest.fn(async ({ where, take }) => versions.filter((v) => !where.revision || v.revision < where.revision.lt).reverse().slice(0, take)),
     },
   };
+  prisma.store.findUniqueOrThrow = jest.fn().mockResolvedValue({ publishedSourceRevision: null, sourcePublicationVersion: 0, status: 'ACTIVE', slug: 'cafe', checkoutMode: 'payment', merchant: { status: 'ACTIVE' } });
+  prisma.storeSourceExperiment = { findFirst: jest.fn().mockResolvedValue(null) };
   prisma.$transaction = async (work: any) => {
     if (Array.isArray(work)) return Promise.all(work);
     const before = structuredClone({ project, versions });
@@ -101,5 +105,24 @@ describe("Private source project revisions", () => {
     const next = await service.state("m1", "s1", page.nextBefore!);
     expect(next.versions.map((v) => v.revision)).toEqual([2, 1]);
     expect(next.nextBefore).toBeNull();
+  });
+});
+
+
+describe('React source revisions', () => {
+  it('recompiles edits, rejects broken source atomically, and exports Next tooling', async () => {
+    const { service } = setup();
+    await service.save('m1', 's1', { revision: 0, label: 'Next', brief: nextBrief, files: [...nextStoreFiles(), ...nextProjectScaffold('cafe'), { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` }, { path: 'commerce.js', content: '/* runtime */' }] });
+    const source = nextStoreFiles().find(f => f.path === 'components/home.tsx')!.content;
+    await service.editFile('m1', 's1', { revision: 1, path: 'components/home.tsx', content: source.replace('Nuestra carta', 'Menú actualizado') });
+    const version: any = await service.version('m1', 's1', 2);
+    expect(version.snapshot.files.find((f: any) => f.path === '_compiled/home.js').content).toContain('Menú actualizado');
+    await expect(service.editFile('m1', 's1', { revision: 2, path: 'components/home.tsx', content: 'invalid source' })).rejects.toThrow();
+    await expect(service.editFile('m1', 's1', { revision: 2, path: '_compiled/home.js', content: 'tampered' })).rejects.toThrow('componentes React');
+    expect((await service.state('m1', 's1')).revision).toBe(2);
+    const archive = await service.archive('m1', 's1', 2);
+    expect(archive.buffer.toString()).toContain('pages/index.tsx');
+    expect(archive.buffer.toString()).toContain('public/commerce.js');
+    expect(archive.buffer.toString()).not.toContain('_compiled/home.js');
   });
 });

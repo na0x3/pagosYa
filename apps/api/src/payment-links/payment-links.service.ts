@@ -1,3 +1,4 @@
+import { normalizeProductVariants, type ProductVariant } from './product-variants';
 import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PaymentLinkStatus, Prisma } from "@prisma/client";
@@ -10,10 +11,10 @@ import { ImportInventoryDto } from "./dto/import-inventory.dto";
 import { ImportProductImagesDto } from "./dto/import-product-images.dto";
 import { SiatCatalogService } from "../invoicing/siat-catalog.service";
 import { ScheduleProductDiscountsDto } from "./dto/schedule-product-discounts.dto";
+import { RemoveProductSubscriptionsDto, UpdateProductSubscriptionsDto } from "./dto/update-product-subscriptions.dto";
+import { applyProductSubscriptionOperations, validateProductSubscriptions, validateRemovedSubscriptions } from "./product-subscriptions";
 
-const variantIdPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 const extraIdPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
-type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
 type ProductExtra = {
   id: string;
   name: string;
@@ -308,37 +309,7 @@ export class PaymentLinksService {
     variants: CreatePaymentLinkDto["variants"],
     existing: ProductVariant[] | null = null,
   ): ProductVariant[] {
-    if (!variants?.length) return [];
-    if (variants.length < 2) throw new BadRequestException("Agrega por lo menos 2 opciones o elimina las opciones del producto");
-    const existingIds = new Set((existing ?? []).map((variant) => variant.id));
-    const names = new Set<string>();
-    return variants.map((variant) => {
-      const name = variant.name.trim();
-      const nameKey = name.toLocaleLowerCase("es");
-      if (!name) throw new BadRequestException("Cada opción necesita un nombre");
-      if (names.has(nameKey)) throw new BadRequestException(`La opción "${name}" está repetida`);
-      names.add(nameKey);
-
-      if (existing !== null && variant.id && !existingIds.has(variant.id)) {
-        throw new BadRequestException("Una opción del producto ya no existe");
-      }
-      const normalized: ProductVariant = {
-        id: existing !== null && variant.id ? variant.id : `var_${variantIdPart()}`,
-        name,
-        amount: variant.amount,
-      };
-      // Missing stock is a legacy shared-inventory marker. Keep that
-      // distinction on edits so merely renaming an old option cannot turn a
-      // finite product into an unlimited one. New options send null explicitly
-      // when the merchant chooses unlimited stock.
-      if (existing === null || "stock" in variant) {
-        normalized.stock = variant.stock ?? null;
-      } else {
-        const existingVariant = existing.find((candidate) => candidate.id === variant.id);
-        if (existingVariant && "stock" in existingVariant) normalized.stock = existingVariant.stock;
-      }
-      return normalized;
-    });
+    return normalizeProductVariants(variants, existing);
   }
 
   private normalizeExtras(extras: CreatePaymentLinkDto["extras"], existing: ProductExtra[] | null = null): ProductExtra[] {
@@ -457,6 +428,7 @@ export class PaymentLinksService {
         recommendedProductIds: dto.recommendedProductIds ?? [],
         stock: variants.length ? this.totalVariantStock(variants) : dto.stock,
         color: dto.color,
+        shippingWeightGrams: dto.shippingWeightGrams,
         variants: variants as unknown as Prisma.InputJsonValue,
         extras: extras as unknown as Prisma.InputJsonValue,
         // `amount` remains the sortable/fallback product price. With options,
@@ -499,6 +471,41 @@ export class PaymentLinksService {
         orderBy: { createdAt: "desc" },
       });
     });
+  }
+
+  async listSubscriptions(merchantId: string, storeId: string, id: string) {
+    await this.ownedStoreOrThrow(merchantId, storeId);
+    const product = await this.prisma.paymentLink.findFirst({
+      where: { id, storeId }, include: { subscriptionOptions: { orderBy: { cadence: "asc" } } },
+    });
+    if (!product) throw new NotFoundException("Payment link not found");
+    return product.subscriptionOptions;
+  }
+
+  async updateSubscriptions(merchantId: string, storeId: string, id: string, dto: UpdateProductSubscriptionsDto) {
+    await this.ownedStoreOrThrow(merchantId, storeId);
+    const options = validateProductSubscriptions(dto);
+    return this.prisma.$transaction(tx => applyProductSubscriptionOperations(tx, storeId, id,
+      options.map(option => ({ action: "upsert", ...option }))));
+  }
+
+  async removeSubscriptions(merchantId: string, storeId: string, id: string, dto: RemoveProductSubscriptionsDto) {
+    await this.ownedStoreOrThrow(merchantId, storeId);
+    const cadences = validateRemovedSubscriptions(dto);
+    return this.prisma.$transaction(tx => applyProductSubscriptionOperations(tx, storeId, id,
+      cadences.map(cadence => ({ action: "delete", cadence }))));
+  }
+
+  /** Same active-store/publication checks as StoresService.findActiveBySlugPublic. */
+  async listPublicSubscriptions(slug: string, id: string) {
+    const product = await this.prisma.paymentLink.findFirst({
+      where: { id, status: PaymentLinkStatus.ACTIVE, store: { slug, status: "ACTIVE", sourcePublicationPaused: false } },
+      select: { subscriptionOptions: { orderBy: { cadence: "asc" }, select: {
+        id: true, paymentLinkId: true, cadence: true, discountPercent: true,
+      } } },
+    });
+    if (!product) throw new NotFoundException("Este producto ya no está disponible");
+    return product.subscriptionOptions;
   }
 
   async clearDiscounts(merchantId: string, storeId: string) {
@@ -817,6 +824,7 @@ export class PaymentLinksService {
     await this.ownedStoreOrThrow(merchantId, storeId);
     const link = await this.prisma.paymentLink.findFirst({ where: { id, storeId } });
     if (!link) throw new NotFoundException("Payment link not found");
+    if (link.fulfillmentType === 'DIGITAL') throw new BadRequestException('Archiva el producto digital para conservar los archivos de pedidos pagados.');
     await this.prisma.paymentLink.delete({ where: { id } });
     await this.uploads.deleteFiles(link.imageUrls);
     return { success: true };
@@ -864,6 +872,7 @@ export class PaymentLinksService {
         ...(imagePositions !== undefined && { imagePositions }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
         ...(dto.recommendedProductIds !== undefined && { recommendedProductIds: dto.recommendedProductIds }),
+        ...(dto.shippingWeightGrams !== undefined && { shippingWeightGrams: dto.shippingWeightGrams }),
         ...(variants !== undefined && variants.length > 0 && variants.every((variant) => variant.stock !== undefined)
           ? { stock: this.totalVariantStock(variants) }
           : dto.stock !== undefined

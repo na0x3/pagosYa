@@ -78,6 +78,15 @@ export class MerchantSessionService {
     return this.issueSession(user);
   }
 
+  /**
+   * Public entry point for callers that have already proven mailbox control
+   * some other way than login()/loginWithGoogle() — e.g. MerchantUserService
+   * consuming a valid password-reset token. Same session as a normal login.
+   */
+  async createSession(user: { id: string; merchantId: string; email: string }) {
+    return this.issueSession(user);
+  }
+
   private async issueSession(user: { id: string; merchantId: string; email: string }) {
     const token = `dash_${generateSecretPart()}`;
     // Session tokens carry ~190 bits of randomness, so a deterministic SHA-256

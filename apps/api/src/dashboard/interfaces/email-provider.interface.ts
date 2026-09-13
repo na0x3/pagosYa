@@ -6,6 +6,7 @@
  * for a real sender (SES, Postmark, etc.) without touching either caller.
  */
 export interface SendEmailRequest {
+  idempotencyKey?: string;
   to: string;
   subject: string;
   body: string;

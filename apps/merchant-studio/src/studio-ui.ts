@@ -1,4 +1,5 @@
 const iconPaths = {
+  external: '<path d="M14 3h7v7m0-7L10 14"/><path d="M10 3H3v18h18v-7"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
   upload: '<path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 15v4h14v-4"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="m3 15 5-5 4 4 3-3 6 6"/>',
@@ -56,15 +57,15 @@ export function renderStudioComposer(options: {
   busy: boolean; attachments?: string; instruction?: string; source?: boolean;
   suggestions: Array<{ label: string; instruction: string }>;
 }): string {
-  const uploadLabel = options.source ? 'Adjuntar hasta seis imágenes' : 'Adjuntar hasta tres imágenes';
+  const uploadLabel = options.source ? 'Adjuntar hasta 24 imágenes o videos MP4' : 'Adjuntar hasta tres imágenes';
   return `<div class="composer-wrap connected-composer">
     ${options.attachments || ''}
     <div class="suggestions" aria-label="Sugerencias">${options.suggestions.map(s => `<button type="button" data-suggestion="${escapeHtml(s.instruction)}" ${options.busy ? 'disabled' : ''}>${escapeHtml(s.label)}</button>`).join('')}</div>
     <form class="composer" data-composer>
       <label for="agent-command" class="sr-only">Indicación para YAPI</label>
-      <textarea id="agent-command" name="command" rows="2" maxlength="${options.source ? 6000 : 8000}" placeholder="${options.source ? 'Cuéntame cómo quieres tu sitio…' : 'Describe qué quieres cambiar…'}" ${options.busy ? 'disabled' : ''}>${escapeHtml(options.instruction || '')}</textarea>
+      <textarea id="agent-command" name="command" rows="2" maxlength="${options.source ? 12000 : 8000}" placeholder="${options.source ? 'Cuéntame cómo quieres tu sitio…' : 'Describe qué quieres cambiar…'}" ${options.busy ? 'disabled' : ''}>${escapeHtml(options.instruction || '')}</textarea>
       <div class="composer__tools"><div><button class="icon-button" type="button" data-action="open-upload" aria-label="${uploadLabel}" ${options.busy ? 'disabled' : ''}>${icon('paperclip')}</button><span class="model-label">YAPI · ${options.source ? 'sitio a medida' : 'tienda real'}</span></div><button class="send-button" type="submit" aria-label="Enviar a YAPI" ${options.busy ? 'disabled' : ''}>${icon('send')}</button></div>
     </form>
-    <input class="sr-only" type="file" accept="${options.source ? 'image/png,image/jpeg,image/webp' : 'image/*'}" multiple data-image-input aria-label="${options.source ? 'Seleccionar hasta seis imágenes' : 'Seleccionar hasta tres imágenes'}" />
+    <input class="sr-only" type="file" accept="${options.source ? 'image/png,image/jpeg,image/webp,video/mp4,.mp4' : 'image/*'}" multiple data-image-input aria-label="${options.source ? 'Seleccionar hasta 24 imágenes o videos MP4' : 'Seleccionar hasta tres imágenes'}" />
   </div>`;
 }

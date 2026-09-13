@@ -5,7 +5,17 @@ import type { Store, StoreMotionExperience, CartCheckoutResult } from "../src/ap
 // calls main() itself on import — vi.resetModules() + a fresh dynamic
 // import per test gives each test a clean module instance instead of
 // leaking state between tests.
+let disposeDocumentListeners = () => {};
 async function loadCheckout(path: string) {
+  // A real navigation discards preview document listeners. resetModules alone
+  // leaves the previous preview's capture handler intercepting custom-domain links.
+  disposeDocumentListeners();
+  const listeners: Array<[string, EventListenerOrEventListenerObject, boolean | AddEventListenerOptions | undefined]> = [];
+  const add = document.addEventListener.bind(document);
+  const spy = vi.spyOn(document, 'addEventListener').mockImplementation((type, listener, options) => {
+    listeners.push([type, listener, options]); add(type, listener, options);
+  });
+  disposeDocumentListeners = () => { listeners.forEach(([type, listener, options]) => document.removeEventListener(type, listener, options)); spy.mockRestore(); };
   vi.resetModules();
   document.body.innerHTML = '<div id="app"></div>';
   document.body.className = "";
@@ -93,15 +103,52 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("storefront routes", () => {
+  it("keeps color/size, photo, price and stock coherent through the cart", async () => {
+    const variants = [
+      {id:'black-m',name:'Negro / M',amount:12000,stock:1,options:[{name:'Color',value:'Negro'},{name:'Talla',value:'M'}],imageUrl:'/black.jpg'},
+      {id:'black-l',name:'Negro / L',amount:12000,stock:0,options:[{name:'Color',value:'Negro'},{name:'Talla',value:'L'}]},
+      {id:'white-l',name:'Blanco / L',amount:14000,stock:3,options:[{name:'Color',value:'Blanco'},{name:'Talla',value:'L'}],imageUrl:'/white.jpg'},
+    ];
+    const checkoutCart=vi.fn();
+    vi.doMock('../src/api',()=>({API_BASE_URL:'https://api.example/v1',fetchStore:vi.fn().mockResolvedValue({...baseStoreFields,storeName:'FHASIN',items:[{...baseItem,name:'Camisa',amount:12000,stock:4,variants,imageUrls:['/black.jpg','/white.jpg']}]}),assetUrl:(url:string|null)=>url,checkoutCart}));
+    await loadCheckout('/s/fhasin/p/link_1');
+    const option=(group:number,value:number)=>document.querySelector<HTMLButtonElement>(`[data-option-group="${group}"][data-option-value="${value}"]`)!;
+    await vi.waitFor(()=>expect(option(0,0)).toBeTruthy());
+    expect(document.querySelector<HTMLButtonElement>('.product-add')!.disabled).toBe(true);
+    option(0,0).click();
+    expect(option(1,1).disabled).toBe(true);
+    option(1,0).click();
+    expect(document.querySelector('.product-detail-price')?.textContent).toContain('120.00');
+    document.querySelector<HTMLButtonElement>('.product-add')!.click();
+    expect(document.querySelector<HTMLButtonElement>('.qty-plus')!.disabled).toBe(true);
+    option(1,0).click(); option(0,1).click();
+    expect(document.querySelector('.product-detail-price')?.textContent).toContain('140.00');
+    expect(document.querySelector<HTMLImageElement>('.product-detail-main-image')!.getAttribute('src')).toBe('/white.jpg');
+    option(1,1).click();
+    expect(document.querySelector('.product-detail-price')?.textContent).toContain('140.00');
+    expect(document.querySelector<HTMLImageElement>('.product-detail-main-image')!.getAttribute('src')).toBe('/white.jpg');
+    document.querySelector<HTMLButtonElement>('.product-add')!.click();
+    document.querySelector<HTMLButtonElement>('#cart-pay')!.click();
+    expect(document.querySelector('.cart-review')?.textContent || document.body.textContent).toContain('Negro / M');
+    expect(document.body.textContent).toContain('Blanco / L');
+    expect(document.body.textContent).toContain('260.00');
+    expect(JSON.parse(localStorage.getItem('pagosya_cart_store_1') || '{}')).toEqual({'link_1::black-m':1,'link_1::white-l':1});
+    localStorage.setItem('pagosya_cart_store_1', JSON.stringify({'link_1::white-l':1}));
+    await loadCheckout('/s/fhasin/p/link_1');
+    await vi.waitFor(()=>expect(document.querySelector<HTMLImageElement>('.product-detail-main-image')?.getAttribute('src')).toBe('/white.jpg'));
+    expect(document.querySelector('.product-detail-price')?.textContent).toContain('140.00');
+  });
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     vi.restoreAllMocks();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
   });
 
   it("starts every embedded store preview at the top", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista desde arriba",
@@ -123,6 +170,7 @@ describe("storefront routes", () => {
       items: [baseItem],
     } satisfies Store);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore,
       assetUrl: (path: string | null) => path,
     }));
@@ -142,6 +190,7 @@ describe("storefront routes", () => {
   it("shows a neutral empty-state, not the red failure style, for a store with no items", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda Vacía",
@@ -172,6 +221,7 @@ describe("storefront routes", () => {
     });
     const createAppointmentPayment = vi.fn().mockResolvedValue({ appointmentId: "appointment_1", clientSecret: null, checkoutUrl: null, holdExpiresAt: null, status: "CONFIRMED" });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Barbería Norte",
@@ -202,6 +252,7 @@ describe("storefront routes", () => {
 
   it("renders a flat solid canvas even for legacy stores that saved a gradient", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda Fondo Plano",
@@ -222,6 +273,7 @@ describe("storefront routes", () => {
 
   it("renders store items with name, price, and a working quantity stepper", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Corte de cabello",
@@ -251,6 +303,7 @@ describe("storefront routes", () => {
 
   it("highlights an active timed discount and uses the lower price in the cart", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Café Norte",
@@ -279,6 +332,7 @@ describe("storefront routes", () => {
   it("opens a product's own shareable page from its catalog card and returns to the store", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
@@ -301,7 +355,9 @@ describe("storefront routes", () => {
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
     expect(document.querySelector(".product-detail-description")?.textContent).toBe("Incluye lavado y peinado");
 
+    const returned = new Promise<void>(resolve => window.addEventListener("popstate", () => resolve(), { once: true }));
     document.querySelector<HTMLAnchorElement>(".product-back-link")!.click();
+    await returned;
     await vi.waitFor(() => expect(window.location.pathname).toBe("/s/taller-norte"));
     await vi.waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 684));
     expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
@@ -316,6 +372,7 @@ describe("storefront routes", () => {
       items: [baseItem],
     } satisfies Store);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       resolveStoreDomain,
       fetchStore,
       assetUrl: (p: string | null) => p,
@@ -346,10 +403,12 @@ describe("storefront routes", () => {
       ],
     };
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
         items: [productWithGallery],
+        publishedSourceRevision: 1,
       } satisfies Store),
       assetUrl: (p: string | null) => p,
     }));
@@ -379,6 +438,7 @@ describe("storefront routes", () => {
 
   it("continues a product page into related collection discovery", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
@@ -411,6 +471,7 @@ describe("storefront routes", () => {
       backgroundColor: "#f6f0e4", textColor: "#171717", mediaUrls: [], items: [],
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
@@ -458,6 +519,7 @@ describe("storefront routes", () => {
 
   it("renders merchant hero slides and lets the shopper move between them", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
@@ -508,6 +570,7 @@ describe("storefront routes", () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
     const pause = vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda multimedia",
@@ -548,6 +611,7 @@ describe("storefront routes", () => {
       contactEmail: null,
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Hamburguesas",
@@ -597,7 +661,7 @@ describe("storefront routes", () => {
     expect(checkoutCart).toHaveBeenCalledWith("burger-options", [
       { paymentLinkId: "link_1", variantId: "var_small", quantity: 1 },
       { paymentLinkId: "link_1", variantId: "var_large", quantity: 1 },
-    ]);
+    ], undefined, undefined, undefined);
   });
 
   it("quotes a promo code, shows the reduced total, and submits the code with checkout", async () => {
@@ -610,6 +674,7 @@ describe("storefront routes", () => {
     });
     const quotePromoCode = vi.fn().mockResolvedValue({ code: "VERANO20", discountType: "PERCENT", discountValue: 20 });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({ ...baseStoreFields, storeName: "Café Norte", items: [baseItem] } satisfies Store),
       quotePromoCode,
       checkoutCart,
@@ -630,7 +695,7 @@ describe("storefront routes", () => {
     expect(document.querySelector(".cart-review-total")?.textContent).toContain("40.00 BOB");
     document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
     await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalled());
-    expect(checkoutCart).toHaveBeenCalledWith("cafe-norte", [{ paymentLinkId: "link_1", quantity: 1 }], "VERANO20");
+    expect(checkoutCart).toHaveBeenCalledWith("cafe-norte", [{ paymentLinkId: "link_1", quantity: 1 }], "VERANO20", undefined, undefined);
   });
 
   it("blocks adding until required choices are selected and prices chosen extras", async () => {
@@ -642,6 +707,7 @@ describe("storefront routes", () => {
       contactEmail: null,
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Pizzería",
@@ -677,11 +743,12 @@ describe("storefront routes", () => {
     expect(document.querySelector(".cart-line-extras")?.textContent).toContain("Queso · Caja regalo");
     document.querySelector<HTMLButtonElement>("#cart-confirm")!.click();
     await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalled());
-    expect(checkoutCart).toHaveBeenCalledWith("pizzeria", [{ paymentLinkId: "link_1", variantId: "large", extraIds: ["cheese", "gift"], quantity: 1 }]);
+    expect(checkoutCart).toHaveBeenCalledWith("pizzeria", [{ paymentLinkId: "link_1", variantId: "large", extraIds: ["cheese", "gift"], quantity: 1 }], undefined, undefined, undefined);
   });
 
   it("includes two sides for free and charges only the third grouped choice", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "El Almuerzo",
@@ -713,6 +780,7 @@ describe("storefront routes", () => {
 
   it("marks a product unavailable when a required shared extra is exhausted", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Pizzería",
@@ -732,6 +800,7 @@ describe("storefront routes", () => {
 
   it("shares a product's stock limit across all of its options", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Hamburguesas",
@@ -766,6 +835,7 @@ describe("storefront routes", () => {
 
   it("enforces stock independently for each product option", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Hamburguesas",
@@ -805,6 +875,7 @@ describe("storefront routes", () => {
 
   it("requires an explicit purchasable option and disables exhausted choices", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Hamburguesas",
@@ -836,6 +907,7 @@ describe("storefront routes", () => {
 
   it("renders merchant marquee, promotion, and button customization", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda Promo",
@@ -895,6 +967,7 @@ describe("storefront routes", () => {
 
   it("applies promotional settings sent by the merchant live preview", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista previa",
@@ -944,6 +1017,7 @@ describe("storefront routes", () => {
 
   it("does not rebuild the storefront for duplicate preview messages", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista estable",
@@ -972,6 +1046,7 @@ describe("storefront routes", () => {
 
   it("keeps the storefront preview at the same position when an edit rebuilds it", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista en contexto",
@@ -1036,6 +1111,7 @@ describe("storefront routes", () => {
       { id: "heading-2", kind: "heading", role: "primary", slot: "heading", text: "Línea Verano", mediaUrl: null, style: { textColor: "#cc7722", textWidthPercent: 44 }, children: [] },
     );
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "PERRAN",
@@ -1110,6 +1186,7 @@ describe("storefront routes", () => {
 
   it("enlarges a preview logo when the store name is blank and reveals the edited section", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Nombre publicado",
@@ -1144,6 +1221,7 @@ describe("storefront routes", () => {
 
   it("opens and updates the cart when the merchant edits a cart control", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista previa",
@@ -1206,6 +1284,7 @@ describe("storefront routes", () => {
 
   it("opens the exact product detail and previews its draft description", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista previa",
@@ -1247,6 +1326,7 @@ describe("storefront routes", () => {
 
   it("targets the matching editorial story while visual motion remains visible", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista previa",
@@ -1311,6 +1391,7 @@ describe("storefront routes", () => {
 
   it("renders a standalone AI proposal preview from the URL without publishing it", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda publicada",
@@ -1387,6 +1468,7 @@ describe("storefront routes", () => {
     const pageItem = { ...baseItem, id: "link_2", name: "Peine de madera", amount: 3200 };
     const subscribeStoreNewsletter = vi.fn().mockResolvedValue({ subscribed: true });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
@@ -1494,6 +1576,7 @@ describe("storefront routes", () => {
     const heroMedia = ["/v1/uploads/bikano-hero-1.webp", "/v1/uploads/bikano-hero-2.webp", "/v1/uploads/bikano-hero-3.webp"];
     const storyMedia = ["/v1/uploads/bikano-story-1.webp", "/v1/uploads/bikano-story-2.webp", "/v1/uploads/bikano-story-3.webp"];
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Bikano",
@@ -1688,6 +1771,7 @@ describe("storefront routes", () => {
       dispatchEvent: vi.fn(),
     }) as unknown as MediaQueryList);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Lienzo móvil",
@@ -1775,6 +1859,7 @@ describe("storefront routes", () => {
       body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe5", textColor: "#171717", mediaUrls, items: [],
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Galería editable",
@@ -1877,6 +1962,7 @@ describe("storefront routes", () => {
 
   it("moves into the payment form after checking out the cart", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Corte de cabello",
@@ -1919,6 +2005,7 @@ describe("storefront routes", () => {
     const checkoutCart = vi.fn();
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller WhatsApp",
@@ -1948,6 +2035,7 @@ describe("storefront routes", () => {
     const checkoutCart = vi.fn();
     const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Estudio de interiores",
@@ -1986,6 +2074,7 @@ describe("storefront routes", () => {
   it("renders an optional contact section and sends its message independently of checkout mode", async () => {
     const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller abierto",
@@ -2023,6 +2112,7 @@ describe("storefront routes", () => {
 
   it("renders a safe location map, highlighted reference, and description near the bottom", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Norte",
@@ -2051,6 +2141,7 @@ describe("storefront routes", () => {
 
   it("lets the merchant move location through the same section order", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller móvil",
@@ -2070,6 +2161,7 @@ describe("storefront routes", () => {
 
   it("does not embed an untrusted location URL", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller Seguro",
@@ -2089,6 +2181,7 @@ describe("storefront routes", () => {
 
   it("lets the merchant insert, validate, clear, and delete a location directly in editor mode", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller editable",
@@ -2145,6 +2238,7 @@ describe("storefront routes", () => {
     const dayIndex = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[weekday as "Sun"] ?? 0;
     const openingHours = Array.from({ length: 7 }, (_, day) => ({ day, open: "09:00", close: "18:00", closed: day !== (dayIndex + 1) % 7 }));
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Cocina Norte",
@@ -2176,6 +2270,7 @@ describe("storefront routes", () => {
       [{ paymentLinkId: "link_1", quantity: 1 }],
       undefined,
       { locationId: "centro", fulfillmentMethod: "delivery" },
+      undefined,
     ));
   });
 
@@ -2183,6 +2278,7 @@ describe("storefront routes", () => {
     const checkoutCart = vi.fn();
     const submitStoreLead = vi.fn().mockResolvedValue({ submitted: true });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda de muestras",
@@ -2213,6 +2309,7 @@ describe("storefront routes", () => {
     const checkoutCart = vi.fn();
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller sin teléfono",
@@ -2245,6 +2342,7 @@ describe("storefront routes", () => {
         cartDescription: "Producto x1",
       } satisfies CartCheckoutResult);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda reintento",
@@ -2281,6 +2379,7 @@ describe("storefront routes", () => {
 
   it("shows image-led section choices before disclosing categorized products", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con categorías",
@@ -2315,6 +2414,7 @@ describe("storefront routes", () => {
       title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe6", textColor: "#152b2f", mediaUrls: [], items: [],
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Bikano",
@@ -2359,6 +2459,7 @@ describe("storefront routes", () => {
       title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe6", textColor: "#152b2f", mediaUrls: [], items: [],
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Catálogo recuperado",
@@ -2398,6 +2499,7 @@ describe("storefront routes", () => {
       title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f4efe6", textColor: "#152b2f", mediaUrls: [], items: [],
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller editorial",
@@ -2427,6 +2529,7 @@ describe("storefront routes", () => {
 
   it("lets merchants replace a product-section cover directly from the preview", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Portadas editables",
@@ -2456,6 +2559,7 @@ describe("storefront routes", () => {
 
   it("opens a category as a focused, directly addressable catalog page", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Casa Nativa",
@@ -2489,6 +2593,7 @@ describe("storefront routes", () => {
 
   it("renders no section headers at all when the store has no categories", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda simple",
@@ -2528,6 +2633,7 @@ describe("storefront routes", () => {
       ],
     };
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({ ...baseStoreFields, storeName: "Temporadas", siteDocument, items: [baseItem, summerItem] } as unknown as Store),
       assetUrl: (path: string | null) => path,
     }));
@@ -2557,6 +2663,7 @@ describe("storefront routes", () => {
 
   it("shows tag badges and a remaining-stock note, and caps the quantity stepper at stock", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con stock",
@@ -2581,6 +2688,7 @@ describe("storefront routes", () => {
 
   it("hides healthy stock, reveals it below five, and announces exhaustion at the cart limit", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con inventario",
@@ -2609,6 +2717,7 @@ describe("storefront routes", () => {
 
   it("keeps inventory quantities private unless the store opts in", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con inventario privado",
@@ -2632,6 +2741,7 @@ describe("storefront routes", () => {
 
   it("offers pictured recommendations in the cart and adds one without leaving the review", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Cafetería",
@@ -2661,6 +2771,7 @@ describe("storefront routes", () => {
 
   it("does not render cart recommendations when the merchant disables them", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         cartRecommendationsEnabled: false,
@@ -2681,6 +2792,7 @@ describe("storefront routes", () => {
 
   it("marks a sold-out product (stock 0) as unavailable, with no quantity stepper at all", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda agotada",
@@ -2698,6 +2810,7 @@ describe("storefront routes", () => {
 
   it("switches the cover photo when a gallery thumbnail is clicked", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con galería",
@@ -2727,6 +2840,7 @@ describe("storefront routes", () => {
 
   it("ignores legacy background images and keeps the canvas brand-color only", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con fondo",
@@ -2754,6 +2868,7 @@ describe("storefront routes", () => {
 
   it("hides the search/category toolbar for a small, uncategorized catalog", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda pequeña",
@@ -2769,6 +2884,7 @@ describe("storefront routes", () => {
 
   it("filters the grid by search text without touching the search input's focus", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Catálogo grande",
@@ -2799,6 +2915,7 @@ describe("storefront routes", () => {
 
   it("shows a neutral empty state when a search matches nothing", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Catálogo grande",
@@ -2820,6 +2937,7 @@ describe("storefront routes", () => {
 
   it("opens one section's products and browsing tools when its picture is touched", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Catálogo con categorías",
@@ -2864,6 +2982,7 @@ describe("storefront routes", () => {
 
   it("shows the announcement bar, brand links, and brand story when the store sets them", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con marca",
@@ -2903,6 +3022,7 @@ describe("storefront routes", () => {
 
   it("uses an optional merchant image behind Nuestra historia", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con historia visual",
@@ -2922,6 +3042,7 @@ describe("storefront routes", () => {
 
   it("respects the merchant's free section order, including animation", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Taller seguro",
@@ -2967,6 +3088,7 @@ describe("storefront routes", () => {
     ["story-scroller", ".store-story-scroller"],
   ] as const)("renders the AI-selected %s experience after the catalog", async (experienceStyle, selector) => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda inmersiva",
@@ -2995,6 +3117,7 @@ describe("storefront routes", () => {
 
   it.each(["coverflow", "diagonal-marquee"] as const)("retires legacy %s galleries into the static editorial grid", async (experienceStyle) => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Galería migrada",
@@ -3016,6 +3139,7 @@ describe("storefront routes", () => {
 
   it("opens a selected product when the shopper taps a linked editorial photo", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Galería comprable",
@@ -3043,6 +3167,7 @@ describe("storefront routes", () => {
 
   it("does not invent a visual animation when an older store only opted into motion", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con movimiento",
@@ -3091,6 +3216,7 @@ describe("storefront routes", () => {
     ["text-parallax", "[data-text-parallax]"],
   ] as const)("renders only the selected %s motion experience", async (motionExperience, selector) => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con movimiento elegido",
@@ -3121,6 +3247,7 @@ describe("storefront routes", () => {
 
   it("ignores retired video-pill animations saved by older stores", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con animación retirada",
@@ -3146,6 +3273,7 @@ describe("storefront routes", () => {
   it("marks storefront sections for direct editing only in explicit editor mode", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda editable",
@@ -3222,6 +3350,7 @@ describe("storefront routes", () => {
 
   it("binds editable header links and footer copy to their dedicated editor sections", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con navegación editable",
@@ -3497,6 +3626,7 @@ describe("storefront routes", () => {
   });
   it("keeps incomplete visual animations editable in the merchant preview", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Animación en progreso",
@@ -3539,6 +3669,7 @@ describe("storefront routes", () => {
 
   it("renders visual animations sent to the live preview with their canvas settings", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Vista de animaciones",
@@ -3587,6 +3718,7 @@ describe("storefront routes", () => {
 
   it("dismisses the canvas editor when the merchant touches non-editable space", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Lienzo descartable",
@@ -3631,6 +3763,7 @@ describe("storefront routes", () => {
 
   it("lets merchants double-click storefront text and images for inline editing", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda editable",
@@ -3682,6 +3815,7 @@ describe("storefront routes", () => {
 
   it("keeps animation copy empty when the merchant clears every optional text field", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda visual",
@@ -3725,6 +3859,7 @@ describe("storefront routes", () => {
 
   it("renders saved section backgrounds and merchant-editable section headings", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda por secciones",
@@ -3750,6 +3885,7 @@ describe("storefront routes", () => {
 
   it("renders the text-only marquee without animation media and links its featured product", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Heladería tropical",
@@ -3790,6 +3926,7 @@ describe("storefront routes", () => {
 
   it("opens the exact product linked to an animation picture card", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Galería de productos",
@@ -3824,6 +3961,7 @@ describe("storefront routes", () => {
 
   it("keeps internal animation names accessible without showing them as section titles", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Pastelería clara",
@@ -3849,6 +3987,7 @@ describe("storefront routes", () => {
 
   it("renders rotating text as an editorial typewriter with an authored prefix", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Pastelería editorial",
@@ -3877,6 +4016,7 @@ describe("storefront routes", () => {
 
   it("renders every selected animation in the merchant's saved order", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con varias animaciones",
@@ -3910,6 +4050,7 @@ describe("storefront routes", () => {
 
   it("keeps named animation instances independent and renders their own media and copy", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda por capítulos",
@@ -3982,6 +4123,7 @@ describe("storefront routes", () => {
 
   it("does not repeat the catalog heading as an empty-looking motion preface", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda sin repetición",
@@ -4014,6 +4156,7 @@ describe("storefront routes", () => {
 
   it("renders independent text objects and opens typography controls directly on the preview canvas", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Lienzo tipográfico",
@@ -4096,6 +4239,7 @@ describe("storefront routes", () => {
   it("exposes direct text styling targets in every text animation", async () => {
     const textTypes: StoreMotionExperience[] = ["clarity-marquee", "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path"];
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Texto por todas partes",
@@ -4163,6 +4307,7 @@ describe("storefront routes", () => {
       animation("parallax-video", "text-parallax", 2),
     ];
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Videos por animación",
@@ -4202,6 +4347,7 @@ describe("storefront routes", () => {
       textAlign: index === 3 ? "right" as const : "left" as const,
     }));
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Escenas estables",
@@ -4276,6 +4422,7 @@ describe("storefront routes", () => {
       caption: `Texto ${index}`,
     });
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Dos animaciones",
@@ -4307,6 +4454,7 @@ describe("storefront routes", () => {
 
   it("lets the store editor move and rewrite animation text with one clean canvas grabber", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda manipulable",
@@ -4396,6 +4544,7 @@ describe("storefront routes", () => {
 
   it("does not render a retired 3D gallery saved by an older store", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Galería retirada",
@@ -4424,6 +4573,7 @@ describe("storefront routes", () => {
 
   it("applies the merchant's selected font to the entire storefront", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Casa Editorial",
@@ -4441,6 +4591,7 @@ describe("storefront routes", () => {
 
   it("renders none of the branding chrome when the store customizes nothing", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda sencilla",
@@ -4466,6 +4617,7 @@ describe("storefront routes", () => {
 
   it("keeps custom accent text AA-readable on both sides of the black/white boundary", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con contraste límite",
@@ -4492,6 +4644,7 @@ describe("storefront routes", () => {
 
   it("applies the merchant accent color and button style to the page", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda con acento",
@@ -4511,6 +4664,7 @@ describe("storefront routes", () => {
 
   it("applies visual editor messages only when the storefront explicitly enables editor mode", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Nombre guardado",
@@ -4546,6 +4700,7 @@ describe("storefront routes", () => {
 
   it("shows the search/sort toolbar as soon as a store has two products", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda de dos",
@@ -4565,6 +4720,7 @@ describe("storefront routes", () => {
 
   it("sorts products by price and by units sold via the sort select", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda ordenable",
@@ -4600,6 +4756,7 @@ describe("storefront routes", () => {
 
   it("keeps the default color canvas when a store has no custom background color", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda sin fondo",
@@ -4616,6 +4773,7 @@ describe("storefront routes", () => {
 
   it("keeps the merchant background color authoritative and derives a readable theme from it", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda crema",
@@ -4638,6 +4796,7 @@ describe("storefront routes", () => {
 
   it("uses pure white text for every text role on a dark merchant background", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda oscura",
@@ -4657,6 +4816,7 @@ describe("storefront routes", () => {
 
   it("chooses the higher-contrast pure foreground on a mid-tone background", async () => {
     vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
       fetchStore: vi.fn().mockResolvedValue({
         ...baseStoreFields,
         storeName: "Tienda tono medio",

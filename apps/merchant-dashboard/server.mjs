@@ -68,6 +68,7 @@ const server = createServer(async (req, res) => {
   try {
     const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     if (requestUrl.pathname.startsWith("/studio/")) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
       const relative = decodeURIComponent(requestUrl.pathname.slice("/studio/".length)) || "index.html";
       const root = path.join(dirname, "public", "studio");
       const filename = path.resolve(root, relative);

@@ -1,10 +1,21 @@
+import type { AssetLibrary, VisualReport } from './source-visual-tools';
+import type { BrandState } from './brand-profile';
 export const SESSION_STORAGE_KEY = "pagosya_merchant_session";
 
 const embedded = new URLSearchParams(location.search).get("embedded") === "1" && window.parent !== window;
-const API_BASE_URL: string = embedded
+export const API_BASE_URL: string = embedded || new URLSearchParams(location.search).get("browser") === "1"
   ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
-export const CHECKOUT_ORIGIN: string = import.meta.env.VITE_CHECKOUT_ORIGIN ?? "http://localhost:5174";
+function configuredCheckoutOrigin(): string {
+  if (import.meta.env.VITE_CHECKOUT_ORIGIN) return import.meta.env.VITE_CHECKOUT_ORIGIN;
+  // Embedded Studio and its browser preview share the dashboard's connection settings.
+  try {
+    const saved = sessionStorage.getItem('pagosya_checkout_origin');
+    if (saved) return saved;
+  } catch { /* Storage may be unavailable in a restricted preview. */ }
+  return 'http://localhost:5175'; // Port used by the repository's pnpm dev stack.
+}
+export const CHECKOUT_ORIGIN: string = configuredCheckoutOrigin();
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -58,7 +69,7 @@ export interface Clarification {
 }
 
 export interface SourceSetup {
-  step: 'business' | 'logo' | 'products' | 'colors' | 'review';
+  step: 'conversation' | 'logo' | 'brand' | 'audience' | 'business' | 'products' | 'delivery' | 'review';
   prompt: string;
   options: Array<{ label: string; value: string; action?: 'generate' | 'restart' }>;
 }
@@ -135,6 +146,46 @@ export class MerchantStudioApi {
     return this.request("/stores");
   }
 
+  retention(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention`); }
+  writeRetention(storeId: string, path: string, method: string, body: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention${path ? '/' + path : ''}`, { method, body: JSON.stringify(body) }); }
+  commercePlatform(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce`); }
+  writeCommercePlatform(storeId: string, path: string, method: string, body: Record<string, unknown>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce/${path}`, { method, body: JSON.stringify(body) }); }
+  uploadDigitalFile(storeId: string, productId: string, body: FormData): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce/products/${encodeURIComponent(productId)}/files`, { method: 'POST', body }); }
+  commerceContent(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce-content`); }
+  commerceContentReviews(storeId: string, query: { status?: string; before?: string } = {}): Promise<any> {
+    const params = new URLSearchParams(); if (query.status) params.set('status', query.status); if (query.before) params.set('before', query.before);
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/stores/${encodeURIComponent(storeId)}/commerce-content/reviews${suffix}`);
+  }
+  writeCommerceContent(storeId: string, path: string, method: string, body: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce-content/${path}`, { method, body: JSON.stringify(body) }); }
+  shippingSettings(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping`); }
+  saveShippingSettings(storeId: string, input: { enabled: boolean; pickupEnabled: boolean }): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping`, { method: 'POST', body: JSON.stringify(input) }); }
+  createShippingRate(storeId: string, input: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/delivery/zones`, { method: 'POST', body: JSON.stringify(input) }); }
+  toggleShippingRate(storeId: string, rateId: string, active: boolean): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/rates/${encodeURIComponent(rateId)}`, { method: 'PATCH', body: JSON.stringify({ active }) }); }
+  saveShippingWeight(storeId: string, productId: string, weightGrams: number | null): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ weightGrams }) }); }
+  brandProfile(storeId: string): Promise<BrandState> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/brand`);
+  }
+  brandHistory(storeId: string): Promise<Array<BrandState & { createdAt: string }>> { return this.request(`/stores/${encodeURIComponent(storeId)}/brand/history`); }
+  restoreBrand(storeId: string, revision: number, targetRevision: number): Promise<BrandState> { return this.request(`/stores/${encodeURIComponent(storeId)}/brand/restore`, { method: 'POST', body: JSON.stringify({ revision, targetRevision }) }); }
+  saveBrandProfile(storeId: string, state: BrandState): Promise<BrandState> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/brand`, { method: 'PUT', body: JSON.stringify({ revision: state.revision, ...state.data }) });
+  }
+  analyzeBrandProfile(storeId: string, input: { revision: number; text: string; websiteUrl?: string; assetUrls: string[] }): Promise<BrandState> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/brand/analyze`, { method: 'POST', body: JSON.stringify(input) });
+  }
+  latestSourceVisualReview(storeId: string, revision: number, page: string): Promise<VisualReport | null> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-review?revision=${revision}&page=${encodeURIComponent(page)}`);
+  }
+  sourceAssets(storeId: string, revision: number): Promise<AssetLibrary> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/assets?revision=${revision}`);
+  }
+  saveSourceAssetRoles(storeId: string, revision: number, assets: Array<{ path: string; role: string; description: string }>): Promise<SourceVersion> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/assets`, { method: 'PATCH', body: JSON.stringify({ revision, assets }) });
+  }
+  reviewSourceVisuals(storeId: string, body: { revision: number; page: string; model?: SourceGenerationSettings['model']; maxCredits: number }): Promise<VisualReport> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-review`, { method: 'POST', body: JSON.stringify(body) });
+  }
   sourceCatalog(storeId: string): Promise<JsonRecord> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
   }
@@ -143,12 +194,42 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction }) });
+  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[]): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}) }) });
   }
 
+  estimateSource(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; assetUrls: string[] }): Promise<SourceGenerationEstimate> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/estimate`, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  sourceUsage(storeId: string): Promise<{ runs: SourceGenerationRun[]; aiUsage?: Array<{ stage: string; model: string; status: string; usage: { providerMicroUsd?: number | null } | null }> }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/usage`);
+  }
+
+  sourceVisibility(storeId: string, published: boolean, publicationVersion: number): Promise<SourcePublication> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visibility`, { method: 'POST', body: JSON.stringify({ published, publicationVersion }) });
+  }
+  setSourceContactForm(storeId: string, revision: number, enabled: boolean): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/contact-form`, { method: 'PATCH', body: JSON.stringify({ revision, enabled }) });
+  }
+  publishSource(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/publish`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
+  }
+  startSourceTest(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/experiments`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
+  }
+  finishSourceTest(storeId: string, experimentId: string, publicationVersion: number, apply: boolean): Promise<SourcePublication> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/experiments/finish`, { method: 'POST', body: JSON.stringify({ experimentId, publicationVersion, apply }) });
+  }
+  sourceAlternative(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string }): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/alternative`, { method: 'POST', body: JSON.stringify(body) });
+  }
   sourceState(storeId: string, before?: number): Promise<SourceState> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project${before ? `?before=${before}` : ""}`);
+  }
+
+  setSourceMotion(storeId: string, revision: number, motion: SourceMotionMode): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/motion`, { method: 'PATCH', body: JSON.stringify({ revision, motion }) });
   }
 
   editSourceFile(storeId: string, revision: number, path: string, content: string): Promise<SourceRevision> {
@@ -159,7 +240,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}`);
   }
 
-  generateSource(storeId: string, body: { revision: number; brief: import("./source-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[] }): Promise<SourceRevision> {
+  generateSource(storeId: string, body: { revision: number; brief: import("./source-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/generate`, { method: "POST", body: JSON.stringify(body) });
   }
 
@@ -216,7 +297,12 @@ export class MerchantStudioApi {
 }
 
 export interface SourceRevision { revision: number; label: string; digest: string; restoredFrom: number | null; createdAt: string }
-export interface SourceState { revision: number; versions: SourceRevision[]; nextBefore: number | null }
+export interface SourcePublication {
+  payments?: 'live' | 'test' | 'contact';
+  contactFormEnabled?: boolean; revision: number | null; version: number; publishedAt: string | null; active: boolean; slug: string;
+  experiment: null | { id: string; status: string; startedAt: string; controlRevision: number; variantRevision: number; winner: string | null; evidence: { winner: string | null; reason: string }; variants: Array<{ variant: string; revision: number; visitors: number; buyers: number; paidOrders: number; conversionRate: number; revenue: Array<{ currency: string; amount: number }> }> };
+}
+export interface SourceState { publication?: SourcePublication; revision: number; versions: SourceRevision[]; nextBefore: number | null }
 export interface SourceVersion extends SourceRevision { snapshot: import("./source-preview").SourceSnapshot }
 
 export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualProposal | null): string {
@@ -236,3 +322,9 @@ export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualPropos
   url.hash = hash.toString();
   return url.toString();
 }
+
+export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt-5.6-sol' | 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'deepseek-v4-flash-vision-exp';
+export type SourceMotionMode = 'auto' | 'off' | 'subtle' | 'expressive';
+export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode };
+export type SourceGenerationEstimate = { model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
+export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };

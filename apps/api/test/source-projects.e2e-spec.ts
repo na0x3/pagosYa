@@ -1,3 +1,6 @@
+import { StoresService } from '../src/stores/stores.service';
+import { requestedSourceProducts, requestedSourceProductOperations } from '../src/stores/source-products';
+import { SourceConversationService } from '../src/stores/source-conversation.service';
 import { SourceGenerationService } from "../src/stores/source-generation.service";
 import { SourceProjectsService } from "../src/stores/source-projects.service";
 import { StoreAgentService } from "../src/stores/store-agent.service";
@@ -23,6 +26,9 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
       { path: "package.json", content: '{"name":"cafe","scripts":{"build":"node build.mjs"}}' },
       { path: "README.md", content: "Run npm run build. Configure the PagosYa API separately." },
       { path: "build.mjs", content: 'globalThis.__sourceMustStayInert = true;' },
+      { path: 'index.html', content: '<h1>Shop</h1>' },
+      { path: 'commerce.js', content: '// Platform runtime is excluded from estimates' },
+      { path: 'assets/logo.png', content: 'YWJj', encoding: 'base64' as const },
     ],
   });
   const auth = (key = token) => ({ Authorization: `Bearer ${key}` });
@@ -45,6 +51,36 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
   });
 
   afterAll(async () => { await app?.close(); });
+
+  it('requires the first website to start through YAPI chat, including the direct API', async () => {
+    const generator = jest.spyOn(app.get(SourceGenerationService), 'generate');
+    try {
+      const result = await request(app.getHttpServer()).post(`${route}/generate`).set(auth())
+        .send({ revision: 0, brief: source(0, 'First').brief, instruction: 'Create now' }).expect(400);
+      expect(result.body.message).toContain('preguntas de YAPI');
+      expect(generator).not.toHaveBeenCalled();
+    } finally { generator.mockRestore(); }
+  });
+
+  it("persists contextual replies and accepts free conversation through the HTTP DTO", async () => {
+    const decide = jest.spyOn(app.get(SourceConversationService), 'decide').mockResolvedValue({
+      action: 'reply', reply: '¿Tienes fotos de tus productos? También podemos empezar sin ellas.',
+      summary: 'Cafetería. Fotos opcionales; uso pendiente.', generationInstruction: '', imageUses: [],
+    });
+    try {
+      const first = await request(app.getHttpServer()).get(`${route}/conversation`).set(auth()).expect(200);
+      expect(first.body.setup).toMatchObject({step:'conversation',options:[]});
+      await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:0,instruction:'Tengo una cafetería',setupStep:'conversation'}).expect(201);
+      decide.mockResolvedValueOnce({action:'reply',reply:'¿Prefieres subir fotos o empezar sin ellas?',summary:'Cafetería. Fotos opcionales; uso pendiente.',generationInstruction:'',imageUses:[]});
+      const reply = await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:0,instruction:'La luna es de queso',setupStep:'conversation'}).expect(201);
+      expect(reply.body).not.toHaveProperty('revision');
+      const restored = await request(app.getHttpServer()).get(`${route}/conversation`).set(auth()).expect(200);
+      expect(restored.body.setup.prompt).toBe('¿Prefieres subir fotos o empezar sin ellas?');
+      expect(restored.body.messages).toHaveLength(4);
+      expect(restored.body.messages.at(-1).metadata.sourceSetup.answers).toEqual({context:'Cafetería. Fotos opcionales; uso pendiente.'});
+      expect((await request(app.getHttpServer()).get(route).set(auth()).expect(200)).body.revision).toBe(0);
+    } finally { decide.mockRestore(); }
+  });
 
   it("requires authentication and ownership on all source routes", async () => {
     await request(app.getHttpServer()).get(route).expect(401);
@@ -116,17 +152,133 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     await request(app.getHttpServer()).get(`${route}/conversation`).expect(401);
     await request(app.getHttpServer()).get(`${route}/conversation`).set(auth(foreignToken)).expect(404);
     await request(app.getHttpServer()).post(`${route}/messages`).set(auth(foreignToken)).send({revision:4,instruction:"Crea una carta editorial"}).expect(404);
-    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation((merchantId, id, input) => app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")));
+    const decide = jest.spyOn(app.get(SourceConversationService), 'decide').mockResolvedValue({action:'generate',reply:'',summary:'Café editorial.',generationInstruction:'Crea una carta editorial para mi café',imageUses:[]});
+    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation(async (merchantId, id, input) => ({ ...await app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")), generation: { id: "test-run", requestedModel: "auto", model: "gpt-5.6-terra", credits: 0, maxCredits: 50, attempts: [], durationMs: 0, status: "COMPLETED" } }));
     const sent = await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:4,instruction:"Crea una carta editorial para mi café"}).expect(201);
     expect(sent.body.revision.revision).toBe(5);
     expect(sent.body.assistantMessage.metadata.sourceRevision).toBe(5);
     const history = await request(app.getHttpServer()).get(`${route}/conversation`).set(auth()).expect(200);
-    expect(history.body.messages.map((message: { role: string }) => message.role)).toEqual(["USER", "ASSISTANT"]);
+    expect(history.body.messages).toHaveLength(6);
+    expect(history.body.messages.slice(-2).map((message: { role: string }) => message.role)).toEqual(["USER", "ASSISTANT"]);
     const owner = await prisma.store.findUniqueOrThrow({where:{id:storeId}});
     expect((await app.get(StoreAgentService).conversation(owner.merchantId,storeId)).messages).toEqual([]);
     await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:4,instruction:"Cambia la portada"}).expect(409);
     expect(generator).toHaveBeenCalledTimes(1);
-    generator.mockRestore();
+    generator.mockRestore(); decide.mockRestore();
+  });
+
+  it("authenticates estimates and usage, validates model choices, and never spends on estimates", async () => {
+    const estimate = { revision: 5, instruction: 'Cambia el color del título', model: 'auto', maxCredits: 10 };
+    await request(app.getHttpServer()).get(`${route}/usage`).expect(401);
+    await request(app.getHttpServer()).get(`${route}/usage`).set(auth(foreignToken)).expect(404);
+    await request(app.getHttpServer()).post(`${route}/estimate`).set(auth(foreignToken)).send(estimate).expect(404);
+    await request(app.getHttpServer()).post(`${route}/estimate`).set(auth()).send({ ...estimate, model: 'arbitrary-model' }).expect(400);
+    const result = await request(app.getHttpServer()).post(`${route}/estimate`).set(auth()).send(estimate).expect(201);
+    expect(result.body.model).toBe('gpt-5.6-luna');
+    expect(result.body.maxCredits).toBe(10);
+    expect(await prisma.storeSourceGeneration.count({ where: { storeId } })).toBe(0);
+  });
+
+  it("aggregates authored size without returning images and restricts it to the merchant", async () => {
+    const owner = await prisma.store.findUniqueOrThrow({where: {id: storeId}});
+    const projects = app.get(SourceProjectsService);
+    const size = await projects.authoredSize(owner.merchantId, storeId, 5);
+    expect(size).toBe('<h1>Shop</h1>'.length + 'index.html'.length + 32);
+    expect(await projects.authoredSize('foreign', storeId, 5)).toBe(0);
+    expect(await projects.current(owner.merchantId, storeId)).toMatchObject({revision: 5, slug});
+  });
+
+  it("serializes active generations and settles usage in the same transaction as a revision", async () => {
+    const data = { storeId, activeStoreId: storeId, baseRevision: 5, requestedModel: 'auto', model: 'gpt-5.6-terra', maxCredits: 50 };
+    const run = await prisma.storeSourceGeneration.create({ data });
+    await expect(prisma.storeSourceGeneration.create({ data })).rejects.toMatchObject({ code: 'P2002' });
+    const owner = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+    const projects = app.get(SourceProjectsService);
+    await prisma.store.update({where: {id: storeId}, data: {checkoutMode: 'whatsapp'}});
+    const settlement = { id: run.id, enablePayments: true, data: { credits: 3, status: 'COMPLETED', activeStoreId: null, revision: 6, completedAt: new Date() } };
+    await expect(projects.save(owner.merchantId, storeId, source(4, 'Stale'), settlement)).rejects.toThrow('otra sesión');
+    expect(await prisma.storeSourceGeneration.findUnique({ where: { id: run.id } })).toMatchObject({ credits: 0, status: 'RUNNING' });
+    expect((await prisma.store.findUniqueOrThrow({where: {id: storeId}})).checkoutMode).toBe('whatsapp');
+    await projects.save(owner.merchantId, storeId, source(5, 'Generated'), settlement);
+    expect((await prisma.store.findUniqueOrThrow({where: {id: storeId}})).checkoutMode).toBe('payment');
+    expect(await prisma.storeSourceGeneration.findUnique({ where: { id: run.id } })).toMatchObject({ credits: 3, status: 'COMPLETED', revision: 6, activeStoreId: null });
+    const history = await request(app.getHttpServer()).get(`${route}/usage`).set(auth()).expect(200);
+    expect(history.body.runs[0]).toMatchObject({ credits: 3, revision: 6 });
+  });
+
+  it("saves motion as an owned revision without generation credits and rejects stale updates", async () => {
+    const input = source(6, 'Motion-ready');
+    input.files.push({path:'config.js',content:'window.PAGOSYA_CONFIG = {"slug":"test"};'});
+    await request(app.getHttpServer()).put(route).set(auth()).send(input).expect(200);
+    const usageBefore = await prisma.storeSourceGeneration.count({where:{storeId}});
+    await request(app.getHttpServer()).patch(`${route}/motion`).send({revision:7,motion:'subtle'}).expect(401);
+    await request(app.getHttpServer()).patch(`${route}/motion`).set(auth(foreignToken)).send({revision:7,motion:'subtle'}).expect(404);
+    await request(app.getHttpServer()).patch(`${route}/motion`).set(auth()).send({revision:7,motion:'invalid'}).expect(400);
+    await request(app.getHttpServer()).patch(`${route}/motion`).set(auth()).send({revision:7,motion:'off'}).expect(200);
+    await request(app.getHttpServer()).patch(`${route}/motion`).set(auth()).send({revision:7,motion:'expressive'}).expect(409);
+    const saved = await request(app.getHttpServer()).get(`${route}/versions/8`).set(auth()).expect(200);
+    expect(saved.body.snapshot.files.find((f:any)=>f.path==='config.js').content).toContain('"motion":"off"');
+    expect(saved.body.snapshot.files.find((f:any)=>f.path==='commerce.js').content).toContain('pagosya-motion:start');
+    expect(saved.body.snapshot.files.find((f:any)=>f.path==='index.html').content).toBe('<h1>Shop</h1>');
+    expect(await prisma.storeSourceGeneration.count({where:{storeId}})).toBe(usageBefore);
+  });
+
+  it('commits requested products with their source revision and rolls back every product if saving fails', async () => {
+    const owner = await prisma.store.findUniqueOrThrow({where:{id:storeId}});
+    const projects = app.get(SourceProjectsService);
+    const run = await prisma.storeSourceGeneration.create({data:{storeId,activeStoreId:storeId,baseRevision:8,requestedModel:'auto',model:'gpt-5.6-terra',maxCredits:50}});
+    const settlement = {id:run.id,products:[{name:'Matcha frío',amount:3500,currency:'BOB',description:'Matcha con hielo'}],data:{status:'COMPLETED',activeStoreId:null,revision:9}};
+    const input = source(8,'Con Matcha');
+    input.files.push({path:'config.js',content:'window.PAGOSYA_CONFIG = {"data":{"items":[]}};'});
+    const before = await prisma.paymentLink.count({where:{storeId}});
+    // A cancelled generation fails after catalog insertion; the database must roll everything back.
+    await prisma.storeSourceGeneration.update({where:{id:run.id},data:{status:'INTERRUPTED',activeStoreId:null}});
+    await expect(projects.save(owner.merchantId,storeId,input,settlement)).rejects.toThrow('expiró');
+    expect(await prisma.paymentLink.count({where:{storeId}})).toBe(before);
+    expect((await projects.current(owner.merchantId,storeId)).revision).toBe(8);
+    await prisma.storeSourceGeneration.update({where:{id:run.id},data:{status:'RUNNING',activeStoreId:storeId}});
+    const saved = await projects.save(owner.merchantId,storeId,input,settlement);
+    expect(saved.createdProducts).toHaveLength(1);
+    const product = await prisma.paymentLink.findUniqueOrThrow({where:{id:saved.createdProducts[0].id}});
+    expect(product).toMatchObject({storeId,name:'Matcha frío',amount:3500,status:'ACTIVE'});
+    const version = await projects.version(owner.merchantId,storeId,9);
+    expect(JSON.stringify(version.snapshot)).toContain(product.id);
+    await expect(projects.save(owner.merchantId,storeId,input,settlement)).rejects.toThrow('otra sesión');
+    expect(await prisma.paymentLink.count({where:{storeId}})).toBe(before+1);
+  });
+
+  it('persists chat combinations and enforces their identity, price and stock in checkout', async()=>{
+    const owner=await prisma.store.findUniqueOrThrow({where:{id:storeId}});
+    const projects=app.get(SourceProjectsService);
+    const revision=(await projects.current(owner.merchantId,storeId)).revision;
+    const instruction='Crea producto Camisa por Bs 120, color Negro talla M, color Blanco talla L +Bs 20, 5 de cada una';
+    const variant={name:null,options:[{name:'Color',value:'Negro'},{name:'Talla',value:'M'}],amount:null,priceText:null,stock:5,stockText:'5 de cada una',imageUrl:null};
+    const products=requestedSourceProducts([{name:'Camisa',description:'',amount:12000,currency:'BOB',priceText:'Bs 120',imageUrls:[],variants:[variant,{...variant,options:[{name:'Color',value:'Blanco'},{name:'Talla',value:'L'}],amount:14000,priceText:'+Bs 20'}]}],instruction,new Set());
+    const run=await prisma.storeSourceGeneration.create({data:{storeId,activeStoreId:storeId,baseRevision:revision,requestedModel:'auto',model:'test',maxCredits:50}});
+    const input=source(revision,'Combinaciones');input.files.push({path:'config.js',content:'window.PAGOSYA_CONFIG = {"data":{"items":[]}};'});
+    const saved=await projects.save(owner.merchantId,storeId,input,{id:run.id,products,data:{status:'COMPLETED',activeStoreId:null,revision:revision+1}});
+    const product=await prisma.paymentLink.findUniqueOrThrow({where:{id:saved.createdProducts[0].id}});
+    const variants=product.variants as any[];
+    expect(product).toMatchObject({amount:12000,stock:10});
+    expect(variants.map(v=>[v.name,v.amount,v.stock])).toEqual([['Negro / M',12000,5],['Blanco / L',14000,5]]);
+    const publicStore=await app.get(StoresService).getStorePublic(slug,{trackView:false,ownerMerchantId:owner.merchantId});
+    expect(publicStore.items.find(item=>item.id===product.id)?.variants[0]).toMatchObject({id:variants[0].id,options:variant.options,purchaseLimit:5});
+    const updates=requestedSourceProductOperations([{action:'update',productId:product.id,variantOperations:[{action:'update',variantId:variants[1].id,name:null,options:null,amount:null,priceText:null,stock:0,stockText:'agotado',imageUrl:null}]}], 'Marca la talla L como agotado',[{...product,variants} as any],new Set());
+    // A purchase changed a different combination after the model received context.
+    await prisma.paymentLink.update({where:{id:product.id},data:{variants:[{...variants[0],stock:4},variants[1]],stock:9}});
+    const editRun=await prisma.storeSourceGeneration.create({data:{storeId,activeStoreId:storeId,baseRevision:revision+1,requestedModel:'auto',model:'test',maxCredits:50}});
+    await projects.save(owner.merchantId,storeId,{...input,revision:revision+1},{id:editRun.id,productOperations:updates,data:{status:'COMPLETED',activeStoreId:null,revision:revision+2}});
+    const updated=await prisma.paymentLink.findUniqueOrThrow({where:{id:product.id}});
+    expect(updated.variants).toEqual([{...variants[0],stock:4},{...variants[1],stock:0}]);expect(updated.stock).toBe(4);
+    await prisma.merchant.update({where:{id:owner.merchantId},data:{status:'ACTIVE'}});
+    await prisma.store.update({where:{id:storeId},data:{status:'ACTIVE',sourcePublicationPaused:false}});
+    const checkout=app.get(StoresService);
+    await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,quantity:1}]},true)).rejects.toThrow(/opción/);
+    await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,variantId:'foreign',quantity:1}]},true)).rejects.toThrow();
+    await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,variantId:variants[1].id,quantity:1}]},true)).rejects.toThrow();
+    await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,variantId:variants[0].id,quantity:5}]},true)).rejects.toThrow();
+    const quote=await checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,variantId:variants[0].id,quantity:2}]},true);
+    expect(JSON.stringify(quote)).toContain('24000');
   });
 
 });

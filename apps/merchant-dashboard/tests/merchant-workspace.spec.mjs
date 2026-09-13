@@ -12,8 +12,14 @@ async function workspace(page, withSite = false) {
   const steps = ['business', 'logo', 'products', 'colors', 'review'];
   const prompt = step => ({ business: '¿Qué vendes y a quién?', logo: '¿Tienes un logo?', products: '¿Qué productos quieres destacar?', colors: '¿Qué colores representan tu marca?', review: '¿Creamos la primera versión?' })[step];
   const setup = step => ({ step, prompt: prompt(step), options: step === 'review' ? [{ label: 'Crear mi sitio', value: 'Crear mi sitio', action: 'generate' }] : [] });
-  await page.addInitScript(() => { sessionStorage.setItem('pagosya_merchant_session', 'workspace-test'); sessionStorage.setItem('pagosya_merchant_email', 'merchant@example.com'); });
-  await page.route('http://localhost:3001/v1/**', async route => {
+  await page.addInitScript(() => {
+    // Playwright also injects this into the opaque-origin storefront sandbox.
+    // Only the dashboard and its same-origin Studio need the merchant session.
+    if (location.protocol !== 'http:') return;
+    sessionStorage.setItem('pagosya_merchant_session', 'workspace-test');
+    sessionStorage.setItem('pagosya_merchant_email', 'merchant@example.com');
+  });
+  await page.context().route('http://localhost:3001/v1/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname.slice(3), method = request.method();
     requests.push({ path, method, body: request.postData() ? request.postDataJSON() : null });
     let body = [];
@@ -34,7 +40,7 @@ async function workspace(page, withSite = false) {
       conversation.messages.push(userMessage, assistantMessage);
       body = { userMessage, assistantMessage, setup: withSite ? null : setup(conversation.step) };
     } else if (path.endsWith('/payment_links')) {
-      if (method === 'POST') { const input = request.postDataJSON(); const product = { ...input, id: 'p1', status: 'ACTIVE', imageUrls: [], createdAt: new Date().toISOString() }; products.push(product); body = product; } else body = products;
+      if (method === 'POST') { const input = request.postDataJSON(); const product = { ...input, id: 'p1', currency: 'BOB', status: 'ACTIVE', imageUrls: [], createdAt: new Date().toISOString() }; products.push(product); body = product; } else body = products;
     } else if (path.endsWith('/visual-studio')) body = { proposals: [], versions: [] };
     else if (path === '/merchants/balance') body = { payableBalance: 0 };
     else if (path === '/merchants/kyc') body = { status: 'APPROVED' };
@@ -46,10 +52,28 @@ async function workspace(page, withSite = false) {
   await page.goto('/#dashboard-stores');
   await page.locator('.store-row[data-id="store_1"] .store-row-name').click();
   const editor = page.frameLocator('#merchantStudioFrame');
-  if (withSite) await expect(editor.frameLocator('iframe').getByRole('heading', { name: 'Mi café' })).toBeVisible();
+  if (withSite) await expect(editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Mi café' })).toBeVisible();
   else await expect(editor.locator('[data-setup-prompt]')).toHaveText(prompt('business'));
   return { editor, products, requests };
 }
+
+test('retired sections are absent and old view selections fall back to the overview', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const { requests } = await workspace(page);
+  for (const view of ['operations', 'growth', 'events']) {
+    await expect(page.locator(`[data-dashboard-view="${view}"], [data-dashboard-page="${view}"]`)).toHaveCount(0);
+    await page.evaluate(view => window.setDashboardView(view), view);
+    await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'overview');
+  }
+  expect(requests.some(request => request.path.startsWith('/events') || request.path.endsWith('/operations/hub'))).toBe(false);
+  await page.locator('#storeFullscreenNavHandle').click();
+  await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
+  await expect(page.locator('#paymentLinksSection')).toBeVisible();
+  expect(errors).toEqual([]);
+  await page.screenshot({ path: '.test-artifacts/retired-sections-desktop.png', fullPage: false });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: '.test-artifacts/retired-sections-mobile.png', fullPage: false });
+});
 
 test('store opens the shared editor; setup and an unsent message survive product management and reload', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -63,12 +87,13 @@ test('store opens the shared editor; setup and an unsent message survive product
   await expect(editor.locator('#source-store')).not.toBeVisible();
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Café de especialidad para el barrio'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('[data-setup-prompt]')).toContainText('logo');
-  await page.reload(); await expect(editor.locator('[data-setup-prompt]')).toContainText('logo');
+  await expect(editor.locator('.remote-agent-note').last()).toContainText('logo');
+  await page.reload(); await expect(editor.locator('.remote-agent-note').last()).toContainText('logo');
   await composer.fill('Usar solo mi nombre'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('[data-setup-prompt]')).toContainText('productos');
+  await expect(editor.locator('.remote-agent-note').last()).toContainText('productos');
   await composer.fill('Destacar el café en grano');
-  await editor.getByRole('button', { name: 'Administrar productos' }).click();
+  await editor.locator('.store-readiness > summary').click();
+  await editor.getByRole('button', { name: 'Revisar productos', exact: true }).click();
 
   await expect(page.locator('#paymentLinksSection')).toBeVisible();
   await page.locator('#paymentLinkName').fill('Café en grano'); await page.locator('#paymentLinkAmount').fill('65');
@@ -79,9 +104,9 @@ test('store opens the shared editor; setup and an unsent message survive product
   await page.locator('#merchantStoreTabs [data-dashboard-view="workspace"]').click();
   await expect(composer).toHaveValue('Destacar el café en grano');
   await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.locator('[data-setup-prompt]')).toContainText('colores');
+  await expect(editor.locator('.remote-agent-note').last()).toContainText('colores');
   await composer.fill('Verde bosque y crema'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
-  await expect(editor.getByRole('button', { name: 'Crear mi sitio', exact: true })).toBeVisible();
+  await expect(editor.locator('.remote-agent-note').last()).toContainText('¿Creamos la primera versión?');
   expect(requests.filter(r => r.path.endsWith('/messages')).every(r => !r.body.setupAction)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: '.test-artifacts/merchant-workspace-desktop.png', fullPage: false });
@@ -91,6 +116,21 @@ test('store opens the shared editor; setup and an unsent message survive product
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: '.test-artifacts/merchant-workspace-mobile.png', fullPage: false });
+  expect(errors).toEqual([]);
+});
+
+test('AI setup opens the YAPI conversation without the retired four-step wizard', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const { editor, requests } = await workspace(page);
+  await page.locator('#storeFullscreenNavHandle').click();
+  await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'products');
+  await page.locator('#storeFullscreenNavHandle').click();
+  await page.locator('#aiSetupLaunch').click();
+  await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'workspace');
+  await expect(editor.locator('[data-setup-prompt]')).toBeVisible();
+  await expect(page.locator('#onboardingDialog')).toHaveCount(0);
+  expect(requests.some(req => req.method === 'POST' && /visual-proposals|agent-conversation/.test(req.path))).toBe(false);
   expect(errors).toEqual([]);
 });
 
@@ -115,19 +155,45 @@ test('switching stores protects unsent work and scopes the editor; untrusted mes
 
 test('saved site previews refresh the real catalog after product creation without a new source revision', async ({ page }) => {
   const { editor, products, requests } = await workspace(page, true);
+  await page.context().route('http://localhost:3001/v1/uploads/1111-aaaa.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') }));
   await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
   await page.locator('#paymentLinkName').fill('Café recién tostado');
   await page.locator('#paymentLinkAmount').fill('42');
   await page.locator('#paymentLinkSubmit').click();
   await expect.poll(() => products.length).toBe(1);
+  products[0].imageUrls = ['/v1/uploads/1111-aaaa.png'];
   await page.locator('#merchantStoreTabs [data-dashboard-view="workspace"]').click();
-  const preview = editor.frameLocator('iframe');
+  const preview = editor.frameLocator('iframe[title="Vista previa del sitio"]');
   await expect(preview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
   await expect(preview.locator('.menu-item__price')).toContainText('42');
+  await expect.poll(() => preview.locator('.menu-item__image').evaluate(image => image.naturalWidth)).toBe(1);
+  await preview.getByRole('button', { name: 'Ver detalle de Café recién tostado' }).click();
+  await expect(preview.getByRole('dialog', { name: 'Café recién tostado' })).toBeVisible();
+  await preview.getByRole('button', { name: 'Cerrar detalle del producto' }).click();
   await preview.getByRole('button', { name: 'Añadir Café recién tostado' }).click();
-  await preview.locator('.checkout-button').click();
-  await expect(preview.locator('[data-pagosya-status]')).toContainText('No se realizará ningún cobro');
+  await preview.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
+  await expect(preview.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
+  await preview.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
+  const payment = editor.getByRole('dialog', { name: 'Formulario de pago de pagosYa' });
+  await expect(payment).toBeVisible();
+  await expect(payment.locator('iframe')).toHaveAttribute('src', /source_payment_preview=1/);
+  await expect(payment.locator('iframe')).toHaveAttribute('src', /amount=4200/);
+  await payment.getByRole('button', { name: 'Volver al pedido' }).click();
+  await expect(payment).toHaveCount(0);
+  await expect(preview.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
   expect(requests.some(r => /cart-checkout|source-project\/file|source-project\/messages/.test(r.path))).toBe(false);
-  await expect(editor.locator('#source-revision')).toHaveValue('1');
+  await expect(editor.locator('.save-state')).toContainText('Diseño guardado');
+  const opened = page.waitForEvent('popup');
+  await editor.getByRole('button', { name: 'Ver en navegador', exact: true }).click();
+  const browser = await opened;
+  await expect(browser.getByText('Vista previa · Sin cobros', { exact: true })).toBeVisible();
+  expect(new URL(browser.url()).searchParams.get('revision')).toBe('1');
+  const fullPreview = browser.frameLocator('iframe');
+  await expect(fullPreview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
+  await expect.poll(() => fullPreview.locator('.menu-item__image').evaluate(image => image.naturalWidth)).toBe(1);
+  expect(await browser.evaluate(() => window.opener)).toBeNull();
+  await browser.reload();
+  await expect(fullPreview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
+  await browser.close();
 });

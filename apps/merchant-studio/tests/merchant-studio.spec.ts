@@ -98,7 +98,7 @@ test("connected mode signs in, uploads one three-image batch, reviews, and publi
     if (pathName === "/dashboard/logout") return route.fulfill({ status: 200, headers, json: { success: true } });
     return route.fulfill({ status: 404, headers, json: { message: `Unhandled ${request.method()} ${pathName}` } });
   });
-  await page.route("http://localhost:5174/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Store preview</title><main>Store preview</main>" }));
+  await page.route("http://localhost:5175/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Store preview</title><main>Store preview</main>" }));
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Entrar a Merchant Studio" })).toBeVisible();

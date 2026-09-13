@@ -647,11 +647,6 @@ export class StoreSiteSectionDto {
   @IsIn(SITE_SECTION_FAMILIES)
   family?: string;
 
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  eventId?: string;
-
   @IsString()
   @IsSafeText()
   @MaxLength(120)

@@ -1,6 +1,6 @@
 # Security hardening record
 
-Last reviewed: 2026-08-22
+Last reviewed: 2026-09-11
 
 This review treats pagosYa as a payment gateway with four primary trust boundaries: public browser/API traffic, merchant and ops credentials, inbound payment-provider callbacks, and outbound merchant webhooks. It is an engineering hardening record, not a regulatory certification or penetration-test attestation.
 
@@ -18,7 +18,10 @@ This review treats pagosYa as a payment gateway with four primary trust boundari
 - JSON input rejects unknown DTO properties, unsafe object keys, excessive depth/complexity, unexpected content types, and oversized bodies. Uploaded media must match supported file signatures, not merely a multipart MIME claim.
 - Authentication misses perform an Argon2 verification against a dummy hash to reduce account-timing enumeration. API-key verification narrows by prefix and last four before Argon2 to avoid linear CPU amplification.
 - Error logs remove request queries and redact bearer-shaped secrets. Public 500 responses from the static servers are generic.
+- API requests receive a bounded `X-Request-Id` (or a generated one) and unexpected-error logs carry the same identifier without echoing credentials. `/live` stays process-only while `/ready` verifies PostgreSQL for deployment probes.
 - Production rate limits use shared Redis state across API replicas; local development keeps the in-memory provider. Storefront view counters are coalesced per process before PostgreSQL updates, and Prisma pool size/timeouts are explicit deployment settings.
+- Active custom domains are revalidated periodically for both ownership TXT and storefront routing; a stale hostname is downgraded before it remains publicly resolvable.
+- Review moderation uses bounded cursor pagination and status counts instead of an unbounded merchant-side list. Automated email failures persist a redacted provider message, are visible in the merchant retention panel, and are included in the restricted ops delivery-failure report.
 - The local Docker database binds to loopback only. CI runs production dependency audits, uses read-only repository permissions, and Dependabot covers workspace packages, the separate Matcho lockfile, and GitHub Actions.
 
 The implementation follows the current [OWASP REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html), [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html), [NestJS security guidance](https://docs.nestjs.com/security/helmet), and [Express production security guidance](https://expressjs.com/en/advanced/best-practice-security/).
@@ -34,5 +37,7 @@ The implementation follows the current [OWASP REST Security Cheat Sheet](https:/
 7. Complete PCI scope analysis with the acquiring bank/QSA before enabling a real card rail. The current checkout accepts mock opaque tokens only; raw PAN/CVV must never transit or persist in this application unless the resulting PCI scope and controls are intentionally accepted.
 8. Move email verification and password-reset tokens from query-string links to fragment-to-POST exchanges in the public web application. The API logger now strips queries, but upstream proxy/email-scanner logs are outside this repository's control.
 9. Exercise restore procedures, credential rotation, provider-key compromise, webhook-secret compromise, refund reconciliation, and incident-response runbooks in a production-like environment.
+10. Configure and test the explicit review-request opt-in, Resend sender/domain verification, and a real delivered-order transition before enabling customer email automation. A passing local queue test does not prove provider acceptance or deliverability.
+11. Apply the `20260911120000_add_email_delivery_failure_reason` migration before deploying the email observability changes; alert on exhausted email deliveries and verify that the redacted error is sufficient for provider support without exposing recipient data.
 
 Until those items are closed, this codebase is materially safer but should not be represented as certified or ready to process unrestricted live funds.

@@ -37,6 +37,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const requestId = request.get?.("x-request-id") || "unknown";
 
     const isHttpException = exception instanceof HttpException;
     const isStateConflict = exception instanceof IllegalStateTransitionError;
@@ -54,7 +55,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if ((!isHttpException && !isStateConflict) || status >= 500) {
       const message = redactSecrets(exception instanceof Error ? exception.message : String(exception));
       const stack = exception instanceof Error && exception.stack ? redactSecrets(exception.stack) : undefined;
-      this.logger.error(`${request.method} ${requestPath(request)} -> ${status}: ${message}`, stack);
+      this.logger.error(`[${requestId}] ${request.method} ${requestPath(request)} -> ${status}: ${message}`, stack);
     }
 
     // A streaming/download response may already have committed its headers.

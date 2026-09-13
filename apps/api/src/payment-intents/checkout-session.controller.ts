@@ -42,6 +42,7 @@ export class CheckoutSessionController {
       status: intent.status,
       description: intent.description,
       merchantName: intent.merchant.name,
+      branding: await this.paymentIntents.checkoutBranding(intent),
       metadata: intent.metadata,
       recipient: await this.paymentIntents.checkoutRecipient(intent),
       trackingToken: await this.paymentIntents.trackingTokenForPaymentIntent(intent.id),

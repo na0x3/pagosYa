@@ -106,6 +106,14 @@ export class CreateAutomationDto {
 }
 
 export class CreateDeliveryZoneDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(250) @Matches(/^[A-Z]{2}$/, { each: true }) countryCodes?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(100) @Matches(/^[A-Z0-9]{1,12}$/, { each: true }) postalPrefixes?: string[];
+  @IsOptional() @IsIn(['BOB', 'USD']) currency?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(2147483647) freeAbove?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(2147483647) maximumOrder?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100000000) minimumWeightGrams?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100000000) maximumWeightGrams?: number;
+
   @IsString()
   @MaxLength(80)
   name!: string;

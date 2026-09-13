@@ -5,7 +5,7 @@ import { Script } from "node:vm";
 
 // This build copies static browser files. It never evaluates storefront scripts.
 const root = dirname(fileURLToPath(import.meta.url));
-const allowed = /\.(html|css|js|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf)$/i;
+const allowed = /\.(html|css|js|json|txt|xml|svg|png|jpe?g|webp|avif|gif|mp4|ico|woff2?|ttf|otf)$/i;
 async function copy(directory, relative = "") {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (["dist", "node_modules"].includes(entry.name) || entry.name.startsWith(".")) continue;

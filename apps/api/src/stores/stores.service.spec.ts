@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { MerchantStatus, PromoDiscountType, StoreStatus } from "@prisma/client";
 import { StoresService } from "./stores.service";
 
@@ -42,6 +42,33 @@ const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreS
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
 
 describe("StoresService.create", () => {
+  it.each([StoreStatus.ACTIVE, StoreStatus.ARCHIVED])("rejects a second store when the existing store is %s", async (status) => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue({ ...store, status });
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await expect(service.create("m_1", { name: "Otra tienda" } as any)).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.store.findFirst).toHaveBeenCalledWith({ where: { merchantId: "m_1" }, select: { id: true } });
+    expect(prisma.store.create).not.toHaveBeenCalled();
+  });
+
+  it("returns a conflict if another session creates the account's store after the initial check", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(null);
+    prisma.store.create.mockRejectedValue({ code: "P2002", meta: { target: ["merchantId"] } });
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await expect(service.create("m_1", { name: "Otra tienda" } as any)).rejects.toThrow("Tu cuenta ya tiene una tienda");
+    expect(prisma.store.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("still retries a public slug collision", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.create.mockRejectedValueOnce({ code: "P2002", meta: { target: ["slug"] } })
+      .mockResolvedValueOnce({ ...store, name: "Mi tienda" });
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await expect(service.create("m_1", { name: "Mi tienda" } as any)).resolves.toMatchObject({ id: store.id });
+    expect(prisma.store.create).toHaveBeenCalledTimes(2);
+  });
+
   it("starts a new store with an editable opening animation and contact/location at the end", async () => {
     const prisma = makeFakePrisma();
     prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
@@ -685,32 +712,6 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
 });
 
 describe("StoresService.getStorePublic — sold counts", () => {
-  it("returns upcoming connected events with live ticket availability", async () => {
-    const prisma = makeFakePrisma();
-    prisma.store.findUnique.mockResolvedValue({ ...store, name: "Casa Norte" });
-    prisma.paymentLink.findMany.mockResolvedValue([]);
-    prisma.event.findMany.mockResolvedValue([{
-      id: "event_1",
-      slug: "noche-norte",
-      name: "Noche Norte",
-      description: "Música en vivo",
-      publicityImageUrl: "",
-      startsAt: new Date("2026-10-10T00:00:00Z"),
-      endsAt: new Date("2026-10-10T04:00:00Z"),
-      doorsOpenAt: new Date("2026-10-09T23:00:00Z"),
-      timezone: "America/La_Paz",
-      venue: { name: "Patio Norte", city: "La Paz" },
-      ticketTypes: [{ id: "ticket_1", name: "General", price: 8000, currency: "BOB", inventory: 100, reservedQuantity: 7, soldQuantity: 43 }],
-    }]);
-
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
-    const result = await service.getStorePublic("abc123", { trackView: false });
-
-    expect(result.events).toEqual([expect.objectContaining({
-      id: "event_1",
-      ticketTypes: [expect.objectContaining({ id: "ticket_1", available: 50 })],
-    })]);
-  });
 
   it("returns the merchant-authored public location block", async () => {
     const prisma = makeFakePrisma();

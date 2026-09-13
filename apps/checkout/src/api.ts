@@ -1,7 +1,9 @@
+import { sourceVisitToken } from './source-attribution';
+import { storePartnerCode } from "./partner-referral";
 import { PaymentIntent, PaymentMethodType } from "@pagosya/shared-types";
 import type { StoreSiteDocument } from "./site-document";
 
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/v1";
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/v1";
 const API_ROOT_URL = API_BASE_URL.replace(/\/v1\/?$/, "");
 
 export interface CheckoutSession {
@@ -11,6 +13,7 @@ export interface CheckoutSession {
   status: string;
   description: string | null;
   merchantName: string;
+  branding?: import("@pagosya/shared-types").CheckoutBranding | null;
   metadata: Record<string, unknown> | null;
   recipient: {
     name: string | null;
@@ -55,6 +58,7 @@ export async function fetchSession(clientSecret: string, publishableKey?: string
  * customer buying several things adds them to one Cart and pays once.
  */
 export interface StoreItem {
+  fulfillmentType?: 'PHYSICAL' | 'DIGITAL';
   id: string;
   categoryId: string | null;
   name: string;
@@ -69,7 +73,7 @@ export interface StoreItem {
   // hidden from storefront copy, so the shopper still cannot exceed stock.
   purchaseLimit?: number | null;
   color: string | null;
-  variants: Array<{ id: string; name: string; amount: number; stock?: number | null; purchaseLimit?: number | null }>;
+  variants: Array<{ id: string; name: string; amount: number; options?: Array<{ name: string; value: string }>; imageUrl?: string; stock?: number | null; purchaseLimit?: number | null }>;
   extras: Array<{ id: string; name: string; amount: number; required: boolean; available: boolean; groupName?: string; freeAllowance?: number }>;
   amount: number;
   currency: string;
@@ -197,6 +201,7 @@ export interface StoreLocation {
 }
 
 export interface Store {
+  publishedSourceRevision?: number | null;
   storeId: string;
   storeName: string;
   tagline: string | null;
@@ -273,6 +278,11 @@ export interface Store {
   leadCaptureUrl: string | null;
   cartRecommendationsEnabled: boolean;
   cartRecommendationProductIds: string[];
+  creditsEnabled?: boolean;
+  digitalGoodsEnabled?: boolean;
+  shippingEnabled?: boolean;
+  shippingPickupEnabled?: boolean;
+  bundlesEnabled?: boolean;
   showLowStockToCustomers: boolean;
   appointmentOfferings?: AppointmentOffering[];
   links: StoreLink[];
@@ -305,10 +315,14 @@ export interface PublishedStoresResponse {
 
 /** Resolve a "/v1/uploads/..." path (product photo, store logo) against the API host. */
 export function assetUrl(path: string | null): string | null {
-  return path ? `${API_ROOT_URL}${path}` : null;
+  if (!path?.trim()) return null;
+  const value = path.trim();
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  return `${API_ROOT_URL}${value.startsWith("/") ? value : `/${value}`}`;
 }
 
 export async function fetchStore(slug: string, options: { preview?: boolean } = {}): Promise<Store> {
+  if (!options.preview) storePartnerCode(slug);
   const previewQuery = options.preview ? "?preview=1" : "";
   // A storefront is merchant-authored live data. Never reuse an earlier GET
   // after the merchant saves and then opens or reloads the public link.
@@ -371,6 +385,7 @@ export interface TrackedOrder {
   reference: string;
   storeName: string;
   items: Array<{
+    paymentLinkId?: string;
     name: string;
     variantName?: string;
     extras?: Array<{ name: string }>;
@@ -411,16 +426,26 @@ export async function quotePromoCode(slug: string, code: string): Promise<PromoC
 
 /** This call is what would otherwise be a merchant backend's own POST /v1/payment_intents —
  * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
+export type CartFulfillment = { shippingCountry?: string; shippingPostalCode?: string; creditCode?: string; locationId?: string; fulfillmentMethod?: "pickup" | "delivery"; shippingZoneId?: string; shippingAddress?: string };
+export type CartQuote = { creditAmount?: number; orderTotal?: number; subtotal: number; discountAmount: number; shippingAmount: number; amount: number; currency: string; shippingOptions: Array<{ id: string; name: string; amount: number; currency: string }> };
+export async function quoteCart(slug: string, items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[], promoCode?: string, fulfillment?: CartFulfillment): Promise<CartQuote> {
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/shipping/quote`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ items, ...(promoCode ? { promoCode } : {}), ...fulfillment }),
+  });
+  return parseOrThrow<CartQuote>(response);
+}
 export async function checkoutCart(
   slug: string,
   items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[],
   promoCode?: string,
-  fulfillment?: { locationId: string; fulfillmentMethod: "pickup" | "delivery" },
+  fulfillment?: CartFulfillment,
+  funnelToken?: string,
 ): Promise<CartCheckoutResult> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/cart-checkout`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ items, ...(promoCode ? { promoCode } : {}), ...fulfillment }),
+    body: JSON.stringify({ items, funnelToken, recoveryToken: (window as any).PAGOSYA_RETENTION_STATE?.slug === slug ? (window as any).PAGOSYA_RETENTION_STATE.token || undefined : undefined, sourceVisitToken: sourceVisitToken(slug), partnerCode: storePartnerCode(slug), ...(promoCode ? { promoCode } : {}), ...fulfillment }),
   });
   return parseOrThrow<CartCheckoutResult>(response);
 }

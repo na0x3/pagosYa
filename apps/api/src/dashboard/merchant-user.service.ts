@@ -5,6 +5,7 @@ import { customAlphabet } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "./tokens";
 import { EmailProvider } from "./interfaces/email-provider.interface";
+import { MerchantSessionService } from "./merchant-session.service";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
@@ -24,6 +25,7 @@ export class MerchantUserService {
     private readonly prisma: PrismaService,
     @Inject(EMAIL_PROVIDER) private readonly emailProvider: EmailProvider,
     private readonly config: ConfigService,
+    private readonly sessions: MerchantSessionService,
   ) {}
 
   /**
@@ -108,7 +110,10 @@ export class MerchantUserService {
    * existing session, since a password reset is often prompted by a
    * suspected compromise and old sessions shouldn't survive it.
    */
-  async resetPassword(token: string, newPassword: string): Promise<{ reset: boolean }> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ reset: boolean; session?: Awaited<ReturnType<MerchantSessionService["createSession"]>> }> {
     const candidates = await this.prisma.passwordResetToken.findMany({
       where: { expiresAt: { gt: new Date() } },
     });
@@ -116,7 +121,7 @@ export class MerchantUserService {
     for (const candidate of candidates) {
       if (await argon2.verify(candidate.hashedToken, token)) {
         const hashedPassword = await argon2.hash(newPassword);
-        await this.prisma.merchantUser.update({
+        const user = await this.prisma.merchantUser.update({
           where: { id: candidate.merchantUserId },
           data: { hashedPassword, emailVerifiedAt: new Date() },
         });
@@ -125,7 +130,12 @@ export class MerchantUserService {
           where: { merchantUserId: candidate.merchantUserId, revokedAt: null },
           data: { revokedAt: new Date() },
         });
-        return { reset: true };
+        // Consuming a valid one-time reset token already proves control of the
+        // mailbox, so this can safely log the merchant straight into a fresh
+        // session (issued after the revocation above, so it isn't revoked too)
+        // instead of making them type their new password again immediately.
+        const session = await this.sessions.createSession(user);
+        return { reset: true, session };
       }
     }
     return { reset: false };

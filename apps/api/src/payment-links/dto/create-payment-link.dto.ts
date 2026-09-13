@@ -23,7 +23,20 @@ import { IsSafeText } from "../../common/validation/safe-text.decorator";
 
 const PRODUCT_IMAGE_POSITION_PATTERN = /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/;
 
+export class ProductOptionValueDto {
+  @IsString() @IsSafeText() @Length(1, 40)
+  name!: string;
+
+  @IsString() @IsSafeText() @Length(1, 40)
+  value!: string;
+}
+
 export class ProductVariantDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(3) @ValidateNested({ each: true }) @Type(() => ProductOptionValueDto)
+  options?: ProductOptionValueDto[];
+
+  @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  imageUrl?: string;
   @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
   @IsOptional()
   @IsString()
@@ -33,7 +46,7 @@ export class ProductVariantDto {
   @ApiProperty({ example: "Grande" })
   @IsString()
   @IsSafeText()
-  @MaxLength(60)
+  @MaxLength(140)
   name!: string;
 
   @ApiProperty({ description: "Option price in minor units (centavos).", example: 6500 })
@@ -110,6 +123,7 @@ export class ProductExtraDto {
 }
 
 export class CreatePaymentLinkDto {
+  @IsOptional() @IsInt() @Min(0) @Max(100000000) shippingWeightGrams?: number;
   @ApiProperty({ example: "Corte de cabello" })
   @IsString()
   @IsSafeText()
@@ -187,7 +201,7 @@ export class CreatePaymentLinkDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(8)
+  @ArrayMaxSize(64)
   @ValidateNested({ each: true })
   @Type(() => ProductVariantDto)
   variants?: ProductVariantDto[];

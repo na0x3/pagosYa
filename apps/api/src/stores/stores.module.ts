@@ -1,3 +1,23 @@
+import { SourceAssetsController } from './source-assets.controller';
+import { SourceVisualReviewService } from './source-visual-review.service';
+import { SourceDesignPlanner } from './source-design-planner';
+import { StoreFunnelService } from './store-funnel.service';
+import { StoreFunnelController } from './store-funnel.controller';
+import { StoreSeoService } from './store-seo.service';
+import { StoreSeoController, StoreDiscoveryController } from './store-seo.controller';
+import { RetentionService } from './retention.service';
+import { RetentionController, RetentionPublicController, RetentionPaymentController } from './retention.controller';
+import { CommerceContentService } from './commerce-content.service';
+import { CommerceContentController, CommerceContentPublicController } from './commerce-content.controller';
+import { ShippingController } from './shipping.controller';
+import { BrandProfileController } from './brand-profile.controller';
+import { BrandProfileService } from './brand-profile.service';
+import { AiUsageService } from './ai-usage.service';
+import { SourcePublishingService } from './source-publishing.service';
+import { SourcePublishingController, SourceSiteController } from './source-publishing.controller';
+import { StoreGrowthController } from "./store-growth.controller";
+import { StoreGrowthService } from "./store-growth.service";
+import { SourceConversationService } from "./source-conversation.service";
 import { SourceChatService } from "./source-chat.service";
 import { Module } from "@nestjs/common";
 import { StoresService } from "./stores.service";
@@ -19,8 +39,8 @@ import { SourceGenerationService } from "./source-generation.service";
 
 @Module({
   imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule],
-  controllers: [StoresController, StoresPublicController, PromoCodesController, SourceProjectsController],
-  providers: [StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService, SourceChatService],
+  controllers: [SourceAssetsController, StoreFunnelController, StoreSeoController, StoreDiscoveryController, RetentionPaymentController, RetentionController, RetentionPublicController, CommerceContentController, CommerceContentPublicController, ShippingController, BrandProfileController, SourcePublishingController, SourceSiteController, StoreGrowthController, StoresController, StoresPublicController, PromoCodesController, SourceProjectsController],
+  providers: [SourceVisualReviewService, SourceDesignPlanner, StoreFunnelService, StoreSeoService, RetentionService, CommerceContentService, BrandProfileService, AiUsageService, SourcePublishingService, StoreGrowthService, StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService],
   exports: [StoresService],
 })
 export class StoresModule {}

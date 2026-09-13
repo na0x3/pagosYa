@@ -34,7 +34,7 @@ export class ResendEmailProvider implements EmailProvider {
       subject: req.subject,
       text: req.body,
       ...(req.replyTo ? { replyTo: req.replyTo } : {}),
-    });
+    }, req.idempotencyKey ? { idempotencyKey: req.idempotencyKey } : undefined);
     if (error) {
       // Matches the rest of the app's outbox/worker pattern: log and let the
       // caller's retry path (email verification can just be re-triggered by

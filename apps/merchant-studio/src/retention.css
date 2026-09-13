@@ -1,0 +1,16 @@
+.retention-dialog { width: min(760px, calc(100vw - 32px)); }
+.retention-eyebrow { margin: 0; text-transform: uppercase; font-size: 11px; letter-spacing: .06em; }
+.retention-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 16px 0; border-block: 2px solid currentColor; }
+.retention-summary strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.retention-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.retention-nav button[aria-pressed=true] { background: var(--ink, #11110f); color: var(--paper, #f4f4f5); }
+.retention-dialog .retention-toggle { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.retention-dialog .retention-toggle input { width: 20px; height: 20px; accent-color: #11110f; }
+.retention-section { padding: 24px 0; border-top: 1px solid currentColor; }
+.retention-message:empty { display: none; }
+.retention-message, .retention-notice { border: 1px solid currentColor; padding: 12px; background: #fff; }
+.retention-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #ccc; overflow-wrap: anywhere; }
+.retention-row p { margin: 4px 0; font-size: 12px; }
+.retention-preview { border: 2px solid currentColor; padding: 20px; margin: 20px 0; background: #fff; }
+.retention-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .retention-dialog { padding: 16px; } .retention-dialog h2 { font-size: 24px; } .retention-nav button { flex: 1; } }

@@ -1,0 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+/** Trusted code shared verbatim by the isolated compiler and portable Next export. */
+export const creativeRuntime = () => readFileSync(join(__dirname, 'source-kit/creative.tsx'), 'utf8');
+export const creativeTypes = `declare module 'lottie-web/build/player/lottie_light' { const player: typeof import('lottie-web').default; export default player; }`;
+export const SOURCE_CREATIVE_IMPORTS = ['react', 'motion/react', 'motion', '@pagosya/creative'];
+export const SOURCE_CREATIVE_TOOLS = `Creative tools are genuinely bundled in preview and export: import {motion, AnimatePresence, useScroll, useTransform, useSpring} from 'motion/react'; import {animate, stagger} from 'motion'; import {Lottie, useCreativeMotion} from '@pagosya/creative'. Lottie accepts vector-only animationData as an inline object, className, style, loop and autoplay; it supplies pause/resume and reduced-motion handling. No remote animation URLs or external images inside Lottie. Motion's components support HTML/SVG, layout transitions, gestures and scroll-linked scenes. The platform supplies MotionConfig; use useCreativeMotion() for custom loops and imperative animation (false when off/reduced), stop and clean up effects on unmount. Use initial={false} for meaningful content; decoration can enter, but purchasing must not wait for an entrance. Native CSS, SVG, Canvas and WAAPI are also available. These are tools, not a required aesthetic: choose none, one or several to fit the concept. All animation dependencies are local; do not import unlisted packages, premium Motion+ APIs or CDNs.`;

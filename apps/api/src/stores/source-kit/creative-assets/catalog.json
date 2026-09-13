@@ -1,0 +1,519 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "fluent-flat/sparkles",
+      "path": "assets/creative/fluent-flat/sparkles.svg",
+      "thumbnail": "assets/creative/fluent-flat/sparkles.svg",
+      "family": "fluent-flat",
+      "description": "Sparkles, flat vector illustration",
+      "tags": [
+        "shine",
+        "magic",
+        "celebration"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Sparkles/Flat/sparkles_flat.svg",
+      "bytes": 1752,
+      "sha256": "d5802877677464187a510c3fbb9d8c272dea164bcca2bf6a2270944e6cd2324e"
+    },
+    {
+      "id": "fluent-3d/sparkles",
+      "path": "assets/creative/fluent-3d/sparkles.png",
+      "thumbnail": "assets/creative/fluent-3d/sparkles.png",
+      "family": "fluent-3d",
+      "description": "Sparkles, dimensional cutout",
+      "tags": [
+        "shine",
+        "magic",
+        "celebration"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Sparkles/3D/sparkles_3d.png",
+      "bytes": 21948,
+      "sha256": "e4490c9ff74a3fd73a8f99c760d65b6ed51b8a3e4ad28da137fec050b77e1058"
+    },
+    {
+      "id": "fluent-flat/fire",
+      "path": "assets/creative/fluent-flat/fire.svg",
+      "thumbnail": "assets/creative/fluent-flat/fire.svg",
+      "family": "fluent-flat",
+      "description": "Fire, flat vector illustration",
+      "tags": [
+        "heat",
+        "grill",
+        "energy"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Fire/Flat/fire_flat.svg",
+      "bytes": 660,
+      "sha256": "00184d516421223782fc5efd67af64641ee8044af9613a3674ce5899cd38583d"
+    },
+    {
+      "id": "fluent-3d/fire",
+      "path": "assets/creative/fluent-3d/fire.png",
+      "thumbnail": "assets/creative/fluent-3d/fire.png",
+      "family": "fluent-3d",
+      "description": "Fire, dimensional cutout",
+      "tags": [
+        "heat",
+        "grill",
+        "energy"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Fire/3D/fire_3d.png",
+      "bytes": 26826,
+      "sha256": "d56355132d73df1741edcf37cb4e21ad54f1c46eeb76fa17224607abf4128c3f"
+    },
+    {
+      "id": "fluent-flat/sunflower",
+      "path": "assets/creative/fluent-flat/sunflower.svg",
+      "thumbnail": "assets/creative/fluent-flat/sunflower.svg",
+      "family": "fluent-flat",
+      "description": "Sunflower, flat vector illustration",
+      "tags": [
+        "flower",
+        "garden",
+        "natural"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Sunflower/Flat/sunflower_flat.svg",
+      "bytes": 3955,
+      "sha256": "af0f5db9816f1545121d2d4c80a145e8809d50830f8516fd99a631bca7702ea6"
+    },
+    {
+      "id": "fluent-3d/sunflower",
+      "path": "assets/creative/fluent-3d/sunflower.png",
+      "thumbnail": "assets/creative/fluent-3d/sunflower.png",
+      "family": "fluent-3d",
+      "description": "Sunflower, dimensional cutout",
+      "tags": [
+        "flower",
+        "garden",
+        "natural"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Sunflower/3D/sunflower_3d.png",
+      "bytes": 35269,
+      "sha256": "14eb41f2cb9afa1387e9b925a9458d8fc768be3bd32210e3064fb7f320e123ca"
+    },
+    {
+      "id": "fluent-flat/seedling",
+      "path": "assets/creative/fluent-flat/seedling.svg",
+      "thumbnail": "assets/creative/fluent-flat/seedling.svg",
+      "family": "fluent-flat",
+      "description": "Seedling, flat vector illustration",
+      "tags": [
+        "plant",
+        "organic",
+        "growth"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Seedling/Flat/seedling_flat.svg",
+      "bytes": 483,
+      "sha256": "69afa13809bd8192cb4599db991f7cedd3cea054efb5eb68f6f93d8bb19b3652"
+    },
+    {
+      "id": "fluent-3d/seedling",
+      "path": "assets/creative/fluent-3d/seedling.png",
+      "thumbnail": "assets/creative/fluent-3d/seedling.png",
+      "family": "fluent-3d",
+      "description": "Seedling, dimensional cutout",
+      "tags": [
+        "plant",
+        "organic",
+        "growth"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Seedling/3D/seedling_3d.png",
+      "bytes": 25324,
+      "sha256": "b16c51b1b36c68b87bc05b92841d3cbd25d93919911057bb0eb3648717615cc1"
+    },
+    {
+      "id": "fluent-flat/coffee",
+      "path": "assets/creative/fluent-flat/coffee.svg",
+      "thumbnail": "assets/creative/fluent-flat/coffee.svg",
+      "family": "fluent-flat",
+      "description": "Hot beverage, flat vector illustration",
+      "tags": [
+        "coffee",
+        "cafe",
+        "tea",
+        "warm"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Hot%20beverage/Flat/hot_beverage_flat.svg",
+      "bytes": 1702,
+      "sha256": "1fd0ed706ba85841193fffc9d2382c533486e41f7d1b9ec90d8eb6748c397183"
+    },
+    {
+      "id": "fluent-3d/coffee",
+      "path": "assets/creative/fluent-3d/coffee.png",
+      "thumbnail": "assets/creative/fluent-3d/coffee.png",
+      "family": "fluent-3d",
+      "description": "Hot beverage, dimensional cutout",
+      "tags": [
+        "coffee",
+        "cafe",
+        "tea",
+        "warm"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Hot%20beverage/3D/hot_beverage_3d.png",
+      "bytes": 44337,
+      "sha256": "edeaa3fca5eace5f2546efcd3b3e42ef1fd389a0c51d374dbf7863731db8f314"
+    },
+    {
+      "id": "fluent-flat/croissant",
+      "path": "assets/creative/fluent-flat/croissant.svg",
+      "thumbnail": "assets/creative/fluent-flat/croissant.svg",
+      "family": "fluent-flat",
+      "description": "Croissant, flat vector illustration",
+      "tags": [
+        "bakery",
+        "breakfast",
+        "pastry"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Croissant/Flat/croissant_flat.svg",
+      "bytes": 2280,
+      "sha256": "ae35174ffabb5610fd7ed0320f48c7bd759e18d4c9d1a06ff67f7597470fb9fd"
+    },
+    {
+      "id": "fluent-3d/croissant",
+      "path": "assets/creative/fluent-3d/croissant.png",
+      "thumbnail": "assets/creative/fluent-3d/croissant.png",
+      "family": "fluent-3d",
+      "description": "Croissant, dimensional cutout",
+      "tags": [
+        "bakery",
+        "breakfast",
+        "pastry"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Croissant/3D/croissant_3d.png",
+      "bytes": 40319,
+      "sha256": "e597c363b47377aaf24d96bce84ea47c1450b7c31ba6d4152bf344d747f16ba4"
+    },
+    {
+      "id": "fluent-flat/strawberry",
+      "path": "assets/creative/fluent-flat/strawberry.svg",
+      "thumbnail": "assets/creative/fluent-flat/strawberry.svg",
+      "family": "fluent-flat",
+      "description": "Strawberry, flat vector illustration",
+      "tags": [
+        "fruit",
+        "dessert",
+        "berry"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Strawberry/Flat/strawberry_flat.svg",
+      "bytes": 2048,
+      "sha256": "d8522f848f305fc81040dd9c5467f97df483fde5e2568429046e7f1ae1a23d91"
+    },
+    {
+      "id": "fluent-3d/strawberry",
+      "path": "assets/creative/fluent-3d/strawberry.png",
+      "thumbnail": "assets/creative/fluent-3d/strawberry.png",
+      "family": "fluent-3d",
+      "description": "Strawberry, dimensional cutout",
+      "tags": [
+        "fruit",
+        "dessert",
+        "berry"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Strawberry/3D/strawberry_3d.png",
+      "bytes": 29831,
+      "sha256": "446d640c24e146d03e8382c61ae52862848b11aadf74e7b47d200bc44d2f0223"
+    },
+    {
+      "id": "fluent-flat/lemon",
+      "path": "assets/creative/fluent-flat/lemon.svg",
+      "thumbnail": "assets/creative/fluent-flat/lemon.svg",
+      "family": "fluent-flat",
+      "description": "Lemon, flat vector illustration",
+      "tags": [
+        "citrus",
+        "fresh",
+        "summer"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Lemon/Flat/lemon_flat.svg",
+      "bytes": 713,
+      "sha256": "f3a924a7031fc0dd7c57a90e5f9794cf72859d860151dec321c4adc38605e4cc"
+    },
+    {
+      "id": "fluent-3d/lemon",
+      "path": "assets/creative/fluent-3d/lemon.png",
+      "thumbnail": "assets/creative/fluent-3d/lemon.png",
+      "family": "fluent-3d",
+      "description": "Lemon, dimensional cutout",
+      "tags": [
+        "citrus",
+        "fresh",
+        "summer"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Lemon/3D/lemon_3d.png",
+      "bytes": 27587,
+      "sha256": "b0919ced1b7ae879f8900af4a71a001491280dbd9a6592eca808ee4801c673dc"
+    },
+    {
+      "id": "fluent-flat/avocado",
+      "path": "assets/creative/fluent-flat/avocado.svg",
+      "thumbnail": "assets/creative/fluent-flat/avocado.svg",
+      "family": "fluent-flat",
+      "description": "Avocado, flat vector illustration",
+      "tags": [
+        "food",
+        "fresh",
+        "green"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Avocado/Flat/avocado_flat.svg",
+      "bytes": 1663,
+      "sha256": "81e6bdde887deddceedbd538ecc14876ab0f3873406632bcd3fd365741efe434"
+    },
+    {
+      "id": "fluent-3d/avocado",
+      "path": "assets/creative/fluent-3d/avocado.png",
+      "thumbnail": "assets/creative/fluent-3d/avocado.png",
+      "family": "fluent-3d",
+      "description": "Avocado, dimensional cutout",
+      "tags": [
+        "food",
+        "fresh",
+        "green"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Avocado/3D/avocado_3d.png",
+      "bytes": 37151,
+      "sha256": "526f16895dee591111aa502e6a07e3a8cd6262b4189be7f670c82a76e702f4d2"
+    },
+    {
+      "id": "fluent-flat/bread",
+      "path": "assets/creative/fluent-flat/bread.svg",
+      "thumbnail": "assets/creative/fluent-flat/bread.svg",
+      "family": "fluent-flat",
+      "description": "Bread, flat vector illustration",
+      "tags": [
+        "bakery",
+        "artisan",
+        "food"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Bread/Flat/bread_flat.svg",
+      "bytes": 3105,
+      "sha256": "ef08e033f63a4f215744a3067a9c0693411ebcfe57b36bf9d197495ecbccf156"
+    },
+    {
+      "id": "fluent-3d/bread",
+      "path": "assets/creative/fluent-3d/bread.png",
+      "thumbnail": "assets/creative/fluent-3d/bread.png",
+      "family": "fluent-3d",
+      "description": "Bread, dimensional cutout",
+      "tags": [
+        "bakery",
+        "artisan",
+        "food"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Bread/3D/bread_3d.png",
+      "bytes": 33316,
+      "sha256": "648d935809d028ce4b583a77a2206d11c54ff981d392703c7fb68dd5c90f0315"
+    },
+    {
+      "id": "fluent-flat/pizza",
+      "path": "assets/creative/fluent-flat/pizza.svg",
+      "thumbnail": "assets/creative/fluent-flat/pizza.svg",
+      "family": "fluent-flat",
+      "description": "Pizza, flat vector illustration",
+      "tags": [
+        "food",
+        "restaurant",
+        "slice"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Pizza/Flat/pizza_flat.svg",
+      "bytes": 955,
+      "sha256": "bd7804b29e91ecaf112656eadcd7d898e55500d92cde468dcb8b61f780110d89"
+    },
+    {
+      "id": "fluent-3d/pizza",
+      "path": "assets/creative/fluent-3d/pizza.png",
+      "thumbnail": "assets/creative/fluent-3d/pizza.png",
+      "family": "fluent-3d",
+      "description": "Pizza, dimensional cutout",
+      "tags": [
+        "food",
+        "restaurant",
+        "slice"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Pizza/3D/pizza_3d.png",
+      "bytes": 31368,
+      "sha256": "beb2d1ac000003d96711ea8364815641442523285fa59007dd5b589059c74b9a"
+    },
+    {
+      "id": "fluent-flat/heart",
+      "path": "assets/creative/fluent-flat/heart.svg",
+      "thumbnail": "assets/creative/fluent-flat/heart.svg",
+      "family": "fluent-flat",
+      "description": "Red heart, flat vector illustration",
+      "tags": [
+        "love",
+        "care",
+        "handmade"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Red%20heart/Flat/red_heart_flat.svg",
+      "bytes": 1153,
+      "sha256": "61846b9c946736481d65dbf244fe53792d06d50405c2d5f3e40a0a06cbfe5317"
+    },
+    {
+      "id": "fluent-3d/heart",
+      "path": "assets/creative/fluent-3d/heart.png",
+      "thumbnail": "assets/creative/fluent-3d/heart.png",
+      "family": "fluent-3d",
+      "description": "Red heart, dimensional cutout",
+      "tags": [
+        "love",
+        "care",
+        "handmade"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Red%20heart/3D/red_heart_3d.png",
+      "bytes": 29389,
+      "sha256": "7218cb9f08ed1ef38fcd83fe699a1125d07f50725f4c87a68cb7c9f4efb3c32b"
+    },
+    {
+      "id": "fluent-flat/rocket",
+      "path": "assets/creative/fluent-flat/rocket.svg",
+      "thumbnail": "assets/creative/fluent-flat/rocket.svg",
+      "family": "fluent-flat",
+      "description": "Rocket, flat vector illustration",
+      "tags": [
+        "space",
+        "launch",
+        "technology"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Rocket/Flat/rocket_flat.svg",
+      "bytes": 2376,
+      "sha256": "ea9423e32494b81bbdccc8970987d9fe2a85462610cd4b8ddd0b9e1a03fb2ebf"
+    },
+    {
+      "id": "fluent-3d/rocket",
+      "path": "assets/creative/fluent-3d/rocket.png",
+      "thumbnail": "assets/creative/fluent-3d/rocket.png",
+      "family": "fluent-3d",
+      "description": "Rocket, dimensional cutout",
+      "tags": [
+        "space",
+        "launch",
+        "technology"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Rocket/3D/rocket_3d.png",
+      "bytes": 36274,
+      "sha256": "4636925a1dfc76a45dc83c08b983699d39143a0978f794a4e2dfb6cbffdcd7ab"
+    },
+    {
+      "id": "fluent-flat/confetti",
+      "path": "assets/creative/fluent-flat/confetti.svg",
+      "thumbnail": "assets/creative/fluent-flat/confetti.svg",
+      "family": "fluent-flat",
+      "description": "Party popper, flat vector illustration",
+      "tags": [
+        "party",
+        "celebration",
+        "event"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Party%20popper/Flat/party_popper_flat.svg",
+      "bytes": 4395,
+      "sha256": "8128c958bfc06568aa49d03cd001556a6c6223660f43c657d381e638416c51f6"
+    },
+    {
+      "id": "fluent-3d/confetti",
+      "path": "assets/creative/fluent-3d/confetti.png",
+      "thumbnail": "assets/creative/fluent-3d/confetti.png",
+      "family": "fluent-3d",
+      "description": "Party popper, dimensional cutout",
+      "tags": [
+        "party",
+        "celebration",
+        "event"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Party%20popper/3D/party_popper_3d.png",
+      "bytes": 42512,
+      "sha256": "70a8e2f9daf1646be9e773751b7f3b6b281a2415cf29c3c3aeebd9c923cdc3e0"
+    },
+    {
+      "id": "fluent-flat/butterfly",
+      "path": "assets/creative/fluent-flat/butterfly.svg",
+      "thumbnail": "assets/creative/fluent-flat/butterfly.svg",
+      "family": "fluent-flat",
+      "description": "Butterfly, flat vector illustration",
+      "tags": [
+        "nature",
+        "beauty",
+        "wings"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Butterfly/Flat/butterfly_flat.svg",
+      "bytes": 4050,
+      "sha256": "118a7aee6fb3360fef0dcf86aeaac8e022c35c3f52529145750155a8893f50fc"
+    },
+    {
+      "id": "fluent-3d/butterfly",
+      "path": "assets/creative/fluent-3d/butterfly.png",
+      "thumbnail": "assets/creative/fluent-3d/butterfly.png",
+      "family": "fluent-3d",
+      "description": "Butterfly, dimensional cutout",
+      "tags": [
+        "nature",
+        "beauty",
+        "wings"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Butterfly/3D/butterfly_3d.png",
+      "bytes": 60804,
+      "sha256": "2ee52f94c6383dafdd29f471d04c17141563d7fff790d33e16781a751f72b397"
+    },
+    {
+      "id": "fluent-flat/dog",
+      "path": "assets/creative/fluent-flat/dog.svg",
+      "thumbnail": "assets/creative/fluent-flat/dog.svg",
+      "family": "fluent-flat",
+      "description": "Dog face, flat vector illustration",
+      "tags": [
+        "pet",
+        "animal",
+        "dog"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Dog%20face/Flat/dog_face_flat.svg",
+      "bytes": 2228,
+      "sha256": "2ccc82b870a9f6e5ddf64b2874f923890b526b77099feb05892e7839f14dfbe4"
+    },
+    {
+      "id": "fluent-3d/dog",
+      "path": "assets/creative/fluent-3d/dog.png",
+      "thumbnail": "assets/creative/fluent-3d/dog.png",
+      "family": "fluent-3d",
+      "description": "Dog face, dimensional cutout",
+      "tags": [
+        "pet",
+        "animal",
+        "dog"
+      ],
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Dog%20face/3D/dog_face_3d.png",
+      "bytes": 43188,
+      "sha256": "7db4c311218a47053e490ec53e7b3995bb83246b0d6992e135868a5220bb32e7"
+    }
+  ]
+}

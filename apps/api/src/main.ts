@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { json, type NextFunction, type Request, type Response } from "express";
+import { randomUUID } from "node:crypto";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
@@ -38,6 +39,14 @@ async function bootstrap() {
   const isProduction = config.get<string>("app.environment") === "production";
   const trustProxy = config.get<false | number | string>("app.trustProxy") ?? false;
   if (trustProxy !== false) app.set("trust proxy", trustProxy);
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const supplied = req.get("x-request-id");
+    const requestId = supplied && /^[A-Za-z0-9._-]{1,100}$/.test(supplied) ? supplied : `req_${randomUUID()}`;
+    req.headers["x-request-id"] = requestId;
+    res.setHeader("X-Request-Id", requestId);
+    next();
+  });
 
   app.use(
     helmet({

@@ -26,6 +26,7 @@ export interface SiatConfig {
 }
 
 export interface AppConfig {
+  sourceFramework: 'next' | 'static';
   environment: string;
   port: number;
   databaseUrl: string;
@@ -46,6 +47,7 @@ export interface AppConfig {
   banecoQr: BanecoQrConfig;
   uploadsDir: string;
   objectStorage: {
+    privateBucket?: string;
     bucket: string;
     region: string;
     endpoint: string;
@@ -53,9 +55,11 @@ export interface AppConfig {
     secretAccessKey: string;
     forcePathStyle: boolean;
   };
+  deepSeek: { apiKey: string; enabled: boolean };
   openAi: {
     apiKey: string;
     designModel: string;
+    conversationModel: string;
     inventoryModel: string;
     imageModel: string;
     enabled: boolean;
@@ -224,6 +228,7 @@ export default (): { app: AppConfig } => {
     // cwd. Set object storage in production for multi-instance durability.
     uploadsDir: process.env.UPLOADS_DIR ?? path.join(apiRootFromCwd(), "uploads"),
     objectStorage: {
+      privateBucket: process.env.PRIVATE_DOWNLOAD_BUCKET ?? "",
       bucket: process.env.OBJECT_STORAGE_BUCKET ?? "",
       region: process.env.OBJECT_STORAGE_REGION ?? "us-east-1",
       endpoint: process.env.OBJECT_STORAGE_ENDPOINT ?? "",
@@ -231,8 +236,11 @@ export default (): { app: AppConfig } => {
       secretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? "",
       forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE !== "false",
     },
+    sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
+    deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",
+      conversationModel: process.env.OPENAI_CONVERSATION_MODEL ?? "gpt-5.6-terra",
       designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-sol",
       inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-sol",
       imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2",

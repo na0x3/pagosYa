@@ -1,3 +1,4 @@
+import { MAX_SOURCE_VIDEO_BYTES, MAX_SOURCE_VIDEO_BASE64, sourceVideo } from './source-media';
 import { BadRequestException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { SaveSourceProjectDto, SourceProjectBriefDto } from "./dto/save-source-project.dto";
@@ -9,7 +10,7 @@ export interface SourceProjectSnapshot {
 }
 
 const MAX_BYTES = 8 * 1024 * 1024;
-const BINARY_EXTENSIONS = /\.(png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf)$/i;
+const BINARY_EXTENSIONS = /\.(png|jpe?g|webp|avif|gif|mp4|ico|woff2?|ttf|otf)$/i;
 const RESERVED_PATH = "pagosya-project.json";
 const PRIVATE_FILE = /^(?:\.env(?:\..+)?|\.npmrc|\.yarnrc(?:\.yml)?|\.netrc|id_rsa|id_ed25519|credentials(?:\.json)?|.*\.(?:pem|key|p12|pfx))$/i;
 const FORBIDDEN_DIRS = new Set([".git", ".ssh", ".aws", ".vercel", ".netlify", "node_modules", "dist", ".next"]);
@@ -32,9 +33,10 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     audience: text(input.brief.audience, "audience", 500),
     primaryAction: text(input.brief.primaryAction, "primary action", 500),
     visualDirection: text(input.brief.visualDirection, "visual direction", 2000),
+    ...(input.brief.businessInformation ? { businessInformation: text(input.brief.businessInformation, "business information", 80000) } : {}),
   };
   const paths = new Set<string>();
-  let total = 0;
+  let total = 0, videoTotal = 0;
   const files = input.files.map((file) => {
     if (!file || typeof file.path !== "string" || !/^[a-zA-Z0-9_@()[\]./-]{1,200}$/.test(file.path)) reject("Invalid source file path");
     const parts = file.path.split("/");
@@ -45,10 +47,15 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     if (key === RESERVED_PATH || paths.has(key)) reject("Duplicate or reserved source file path");
     paths.add(key);
     const encoding = file.encoding ?? "utf8";
-    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? 2_800_000 : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
-    if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image and font assets are supported");
+    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(home|product|checkout)\.js$/.test(file.path) ? 800_000 : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
+    if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image, MP4 and font assets are supported");
     if (encoding === "utf8" && (file.content.includes("\0") || SECRET.test(file.content))) reject("Source files cannot contain NUL characters or recognized private credentials");
-    total += Buffer.byteLength(file.content, encoding === "base64" ? "base64" : "utf8");
+    if (sourceVideo(file.path)) {
+      const bytes = Buffer.from(file.content, 'base64');
+      if (encoding !== 'base64' || bytes.length < 12 || bytes.subarray(4, 8).toString('ascii') !== 'ftyp') reject('Invalid MP4 asset');
+      videoTotal += bytes.length;
+      if (videoTotal > MAX_SOURCE_VIDEO_BYTES) reject('Los videos del proyecto superan 20 MB en total.');
+    } else total += Buffer.byteLength(file.content, encoding === "base64" ? "base64" : "utf8");
     if (total > MAX_BYTES) reject("Source project exceeds the 8 MiB limit");
     return { path: file.path, content: file.content, encoding };
   }).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);

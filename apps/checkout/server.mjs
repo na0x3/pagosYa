@@ -1,3 +1,4 @@
+import { createStorefrontSeo } from './storefront-seo.mjs';
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -37,10 +38,15 @@ function responsePath(pathname) {
   return candidate.startsWith(`${distDir}${path.sep}`) ? candidate : null;
 }
 
+const seo = createStorefrontSeo({ apiBase: process.env.INTERNAL_API_BASE_URL || process.env.VITE_API_BASE_URL || 'http://localhost:3001/v1', checkoutOrigin: process.env.CHECKOUT_ORIGIN || `http://localhost:${port}`, template: () => readFile(path.join(distDir, 'index.html'), 'utf8') });
+
 const server = createServer(async (request, response) => {
   // Delivery checkout may request location only after the buyer presses the
   // explicit consent button. Every other browser capability remains denied.
   applySecurityHeaders(response, { allowEmbedding: true, allowGeolocation: true });
+  let continueRequest = false;
+  await seo(request, response, () => { continueRequest = true; });
+  if (!continueRequest) return;
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
   if (url.pathname === "/stores" || url.pathname === "/stores/" || url.pathname === "/stores/index.html") {
     const destination = new URL(consumerAppOrigin);
@@ -48,6 +54,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(302, { location: destination.toString(), "cache-control": "no-cache" });
     return response.end();
   }
+  if (url.pathname.startsWith("/track/") || url.searchParams.has("client_secret") || url.searchParams.has("source_owner")) response.setHeader("X-Robots-Tag", "noindex, nofollow");
   const filePath = responsePath(url.pathname);
   if (!filePath) {
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });

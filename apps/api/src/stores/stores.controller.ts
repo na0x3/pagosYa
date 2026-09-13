@@ -18,8 +18,7 @@ import { StoreAgentService } from "./store-agent.service";
 import { SendStoreAgentMessageDto } from "./dto/send-store-agent-message.dto";
 import { SaveWebsiteDraftDto, WebsiteRevisionDto } from "./dto/save-website-draft.dto";
 
-/** Dashboard/backend-authenticated management of a merchant's stores — a merchant
- * can run several independent storefronts (separate slug/branding/catalog each).
+/** Dashboard/backend-authenticated management of the merchant account's single store.
  * See StoresPublicController for the customer-facing side, and
  * PaymentLinksController (nested under /v1/stores/:storeId/payment_links) for
  * managing a store's products. */

@@ -21,6 +21,23 @@ export function sourceFixture(): SaveSourceProjectDto {
 }
 
 describe("Independent source artifacts", () => {
+  it('exports MP4 bytes intact and enforces a separate video budget', () => {
+    const bytes = Buffer.alloc(3_000_000); bytes.write('ftyp', 4); bytes.write('isom', 8);
+    const video = { path: 'assets/clip.mp4', encoding: 'base64' as const, content: bytes.toString('base64') };
+    const snapshot = sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, video] });
+    expect(Buffer.from(snapshot.files.find(f => f.path === video.path)!.content, 'base64').equals(bytes)).toBe(true);
+    const directory = mkdtempSync(join(tmpdir(), 'pagosya-video-export-'));
+    try {
+      const archive = join(directory, 'source.zip');
+      writeFileSync(archive, sourceProjectArchive(snapshot, 1));
+      execFileSync('python3', ['-c', 'import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', archive, directory]);
+      writeFileSync(join(directory, 'build.mjs'), readFileSync(join(__dirname, 'source-kit/build.mjs')));
+      execFileSync(process.execPath, ['build.mjs'], { cwd: directory });
+      expect(readFileSync(join(directory, 'dist/assets/clip.mp4')).equals(bytes)).toBe(true);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { ...video, encoding: 'utf8', content: 'not a video' }] })).toThrow('Invalid MP4');
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...Array.from({ length: 7 }, (_, i) => ({ ...video, path: `assets/clip${i}.mp4` }))] })).toThrow('20 MB');
+  });
   it("canonicalizes file order and excludes extra/private input fields", () => {
     const input = sourceFixture();
     const snapshot = sourceProjectSnapshot({ ...input, merchantSecret: "must not be copied" } as SaveSourceProjectDto);

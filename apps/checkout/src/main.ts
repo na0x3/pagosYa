@@ -1,5 +1,18 @@
+import { productOptionGroups, matchingOptionVariant, optionValueAvailable } from './product-options';
+import { applyCheckoutBranding } from "./checkout-branding";
+import { createStoreFunnel } from './store-funnel';
+let activeStoreFunnel: ReturnType<typeof createStoreFunnel> | null = null;
+let funnelCartCount = 0;
+import { cartItemKey, parseCartItemKey, restoreCart, persistCart } from "./cart-state";
+import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
+import { privacy } from './privacy';
+import '../../api/src/stores/source-kit/retention.js';
+import { mountDigitalDownloads } from './digital-downloads';
+import { mountComebackCard } from './comeback-card';
+import { mountCartQuote } from './cart-quote';
 import { PaymentMethodType, resolveSiteSectionFamily } from "@pagosya/shared-types";
 import {
+  API_BASE_URL,
   assetUrl,
   cancelPaymentIntent,
   checkoutCart,
@@ -29,6 +42,7 @@ import {
   TrackedOrder,
 } from "./api";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
+import { readSourcePaymentPreview, closeSourcePaymentPreview, bindPreviewBranding } from './source-payment-preview';
 import { storePreviewExternalDestination } from "./preview-navigation";
 import {
   normalizeStorefrontSiteContentOrder,
@@ -430,7 +444,7 @@ function locationOpeningState(location: StoreLocation, now = new Date()): { isOp
 
 function locationCanFulfillCart(location: StoreLocation, lines: ReturnType<typeof cartLineEntries>): boolean {
   const requested = new Map<string, number>();
-  lines.forEach((line) => requested.set(line.product.id, (requested.get(line.product.id) || 0) + line.quantity));
+  lines.filter(line => line.product.fulfillmentType !== 'DIGITAL').forEach((line) => requested.set(line.product.id, (requested.get(line.product.id) || 0) + line.quantity));
   return [...requested].every(([paymentLinkId, quantity]) => {
     const stock = location.inventory.find((entry) => entry.paymentLinkId === paymentLinkId)?.stock ?? 0;
     return stock === null || stock >= quantity;
@@ -673,10 +687,68 @@ function trackingClaimUrl(token: string): string {
   return url.toString();
 }
 
+function trackedReviewHtml(order: TrackedOrder, token: string): string {
+  if (order.status !== "DELIVERED" || !order.store?.slug) return "";
+  const products = Array.isArray(order.items)
+    ? order.items.filter((item) => typeof item.paymentLinkId === "string").filter((item, index, list) => list.findIndex((candidate) => candidate.paymentLinkId === item.paymentLinkId) === index)
+    : [];
+  if (!products.length) return "";
+  return `<section class="tracking-review-section" aria-labelledby="tracking-review-title" data-review-section>
+    <h2 id="tracking-review-title" tabindex="-1">¿Cómo fue tu compra?</h2>
+    <p>Tu pedido ya fue entregado. Comparte una opinión honesta sobre cada producto; quedará pendiente de moderación antes de publicarse.</p>
+    <div class="tracking-review-list">${products.map((item) => `<form class="tracking-review-form" data-review-form data-product-id="${escapeHtml(item.paymentLinkId!)}">
+      <h3>${escapeHtml(item.name)}</h3>
+      <label>Tu nombre público<input name="displayName" maxlength="80" required autocomplete="name"></label>
+      <label>Calificación<select name="rating" required><option value="5">5 — Excelente</option><option value="4">4 — Muy buena</option><option value="3">3 — Buena</option><option value="2">2 — Regular</option><option value="1">1 — Mala</option></select></label>
+      <label>Tu reseña<textarea name="body" rows="4" minlength="3" maxlength="2000" required placeholder="¿Qué te pareció?"></textarea></label>
+      <button type="submit" class="tracking-review-submit">Enviar reseña</button>
+      <p class="tracking-review-status" role="status" aria-live="polite"></p>
+    </form>`).join("")}</div>
+  </section>`;
+}
+
+function bindTrackedReviewForms(order: TrackedOrder, token: string): void {
+  const slug = order.store?.slug;
+  if (!slug) return;
+  app.querySelectorAll<HTMLFormElement>("[data-review-form]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+      const status = form.querySelector<HTMLElement>(".tracking-review-status");
+      const values = new FormData(form);
+      if (!button || !status) return;
+      button.disabled = true;
+      status.textContent = "Enviando tu reseña…";
+      try {
+        const response = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/content/reviews`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "omit",
+          body: JSON.stringify({
+            trackingToken: token,
+            productId: form.dataset.productId,
+            displayName: String(values.get("displayName") || ""),
+            rating: Number(values.get("rating")),
+            body: String(values.get("body") || ""),
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(typeof payload?.message === "string" ? payload.message : "No pudimos enviar la reseña.");
+        form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>("input,select,textarea,button").forEach((control) => { control.disabled = true; });
+        status.textContent = "Gracias. Tu reseña quedó pendiente de moderación.";
+      } catch (error) {
+        button.disabled = false;
+        status.textContent = error instanceof Error ? error.message : "No pudimos enviar la reseña.";
+      }
+    });
+  });
+}
+
 function trackedOrderHtml(order: TrackedOrder, token: string): string {
   const logo = assetUrl(order.store?.logoUrl ?? null);
   const storeUrl = order.store?.slug ? `/s/${encodeURIComponent(order.store.slug)}` : null;
   const items = Array.isArray(order.items) ? order.items : [];
+  const reviewSection = trackedReviewHtml(order, token);
   const contact = order.store?.contactPhone || order.store?.contactEmail
     ? `<div class="tracking-support"><span>¿Necesitas ayuda con el pedido?</span><div>
         ${order.store.contactPhone ? `<a href="${escapeHtml(whatsAppLink(order.store.contactPhone))}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
@@ -702,6 +774,7 @@ function trackedOrderHtml(order: TrackedOrder, token: string): string {
       <div class="tracking-items">${items.map((item) => `<div class="tracking-item"><span class="tracking-item-quantity">${item.quantity || 1}×</span><span><strong>${escapeHtml(item.name)}</strong>${item.variantName ? `<small>${escapeHtml(item.variantName)}</small>` : ""}${item.extras?.length ? `<small>${item.extras.map((extra) => escapeHtml(extra.name)).join(" · ")}</small>` : ""}</span><strong>${formatAmount((item.unitAmount || 0) * (item.quantity || 1), order.currency)}</strong></div>`).join("") || '<p class="tracking-empty">El comercio no compartió el detalle de productos.</p>'}</div>
       ${contact}
     </section>
+    ${reviewSection}
     <section class="tracking-account-cta">
       <div><h2>Guárdalo en Mi pagosYa</h2><p>Ingresa con el mismo correo que usaste al pagar para reunir este pedido con tus próximas compras.</p></div>
       <a href="${escapeHtml(trackingClaimUrl(token))}">Agregar a mi cuenta${ICON_ARROW_RIGHT}</a>
@@ -722,6 +795,12 @@ async function renderOrderTracking(token: string): Promise<void> {
       const order = await fetchTrackedOrder(token);
       if (initial || !document.getElementById("tracking-status-region")) {
         app.innerHTML = trackedOrderHtml(order, token);
+        bindTrackedReviewForms(order, token);
+        if (new URLSearchParams(window.location.search).get("review") === "1") {
+          const reviewSection = app.querySelector<HTMLElement>("[data-review-section]");
+          reviewSection?.scrollIntoView({ block: "start" });
+          reviewSection?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+        }
       } else {
         const statusRegion = document.getElementById("tracking-status-region")!;
         statusRegion.innerHTML = trackingStatusRegionHtml(order);
@@ -733,6 +812,8 @@ async function renderOrderTracking(token: string): Promise<void> {
           statusRegion.addEventListener("animationend", () => statusRegion.classList.remove("is-updated"), { once: true });
         }
       }
+      if (initial || lastStatus !== order.status) void mountDigitalDownloads(app, token);
+      if (initial || lastStatus !== order.status) void mountComebackCard(app, token);
       lastStatus = order.status;
     } catch (error) {
       if (!initial) return;
@@ -755,10 +836,27 @@ async function renderOrderTracking(token: string): Promise<void> {
   }
 }
 
+const sourcePaymentPreview = new URLSearchParams(window.location.search).get('source_payment_preview') === '1';
+
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const fragmentParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   configureParentOrigin(fragmentParams.get("parent_origin"));
+  if (sourcePaymentPreview) {
+    document.body.classList.add('payment-page');
+    try {
+      const previewSession = readSourcePaymentPreview(window.location.hash);
+      renderForm(previewSession, '');
+      bindPreviewBranding(previewSession, () => { if (app.querySelector('#payment-form')) renderForm(previewSession, ''); });
+      const startAtTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      startAtTop();
+      if (document.readyState === 'complete') requestAnimationFrame(startAtTop);
+      else window.addEventListener('load', startAtTop, { once: true });
+      postToParent('CHECKOUT_READY', {});
+      observeResize(app);
+    } catch (error) { app.innerHTML = `<div class="status failed">${escapeHtml((error as Error).message)}</div>`; }
+    return;
+  }
   const retainedCheckout = (window.history.state as {
     pagosYaCheckout?: { clientSecret?: string; publishableKey?: string | null };
   } | null)?.pagosYaCheckout;
@@ -783,6 +881,7 @@ async function main() {
   // any navigation, referrer, screenshot, or client-side error report can
   // capture them; history state keeps same-tab refresh/back behavior working.
   if (clientSecret) {
+    markPrivateStorePage();
     params.delete("client_secret");
     params.delete("publishable_key");
     fragmentParams.delete("client_secret");
@@ -839,7 +938,17 @@ async function main() {
       const store = await fetchStore(linkSlug, { preview: suppressStoreViewForMerchant(linkSlug) });
       const proposalPatch = standaloneStorePreviewPatch();
       const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;
+      const routedProduct = renderedStore.items.find(item => item.id === productIdFromLocation());
+      // The shared options form handles variants/extras; the portable page links to it.
+      const needsOptionsForm = Boolean(routedProduct?.variants?.length || routedProduct?.extras?.length);
+      if (renderedStore.publishedSourceRevision && !proposalPatch && !needsOptionsForm) {
+        const { mountPublishedSource } = await import('./source-storefront');
+        if (await mountPublishedSource(app, linkSlug, renderedStore, enterPaymentFlow, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug))) return;
+      }
+      activeStoreFunnel = renderedStore.publishedSourceRevision ? createStoreFunnel(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug)) : null;
+      activeStoreFunnel?.track('visit');
       loadCart(renderedStore);
+      funnelCartCount = cartCount();
       renderStoreRoute(linkSlug, renderedStore);
       restoreCatalogScroll(0);
       observeResize(app);
@@ -986,6 +1095,7 @@ async function renderDebtCollection(slug: string) {
 }
 
 async function enterPaymentFlow(clientSecret: string) {
+  markPrivateStorePage();
   document.body.classList.remove("store-page", "product-detail-page", "debt-collection-page", "payment-success-page");
   document.body.classList.add("payment-page");
   let session: CheckoutSession;
@@ -997,6 +1107,7 @@ async function enterPaymentFlow(clientSecret: string) {
     return;
   }
 
+  applyCheckoutBranding(app, session.branding);
   const recipient = checkoutRecipientDetails(session);
   if (!isStoreCheckout(session) && recipient) {
     customerContact.name = recipient.name ?? "";
@@ -1006,7 +1117,8 @@ async function enterPaymentFlow(clientSecret: string) {
   }
 
   postToParent("CHECKOUT_READY", {});
-  renderForm(session, clientSecret);
+  if (session.status === "SUCCEEDED") renderSuccess(session);
+  else renderForm(session, clientSecret);
   observeResize(app);
 }
 
@@ -1016,10 +1128,9 @@ async function enterPaymentFlow(clientSecret: string) {
 const cart = new Map<string, number>();
 let appliedPromo: { storeId: string; code: string; discountType: "PERCENT" | "FIXED"; discountValue: number } | null = null;
 const selectedVariantByItem = new Map<string, string>();
+const selectedOptionsByItem = new Map<string, Record<string,string>>();
 const selectedExtraIdsByItem = new Map<string, Set<string>>();
 const selectedProductImageByItem = new Map<string, number>();
-const CART_VARIANT_SEPARATOR = "::";
-const CART_EXTRAS_SEPARATOR = "~~";
 
 function itemVariants(item: StoreItem): StoreItem["variants"] {
   return item.variants ?? [];
@@ -1027,19 +1138,6 @@ function itemVariants(item: StoreItem): StoreItem["variants"] {
 
 function itemExtras(item: StoreItem): StoreItem["extras"] {
   return item.extras ?? [];
-}
-
-function cartItemKey(paymentLinkId: string, variantId?: string, extraIds: string[] = []): string {
-  const base = variantId ? `${paymentLinkId}${CART_VARIANT_SEPARATOR}${variantId}` : paymentLinkId;
-  const normalizedExtras = [...new Set(extraIds)].sort();
-  return normalizedExtras.length ? `${base}${CART_EXTRAS_SEPARATOR}${normalizedExtras.join(",")}` : base;
-}
-
-function parseCartItemKey(key: string): { paymentLinkId: string; variantId?: string; extraIds: string[] } {
-  const [base, encodedExtras = ""] = key.split(CART_EXTRAS_SEPARATOR, 2);
-  const [paymentLinkId, variantId] = base.split(CART_VARIANT_SEPARATOR, 2);
-  const extraIds = encodedExtras.split(",").filter(Boolean);
-  return { paymentLinkId, ...(variantId ? { variantId } : {}), extraIds };
 }
 
 function selectedVariantFor(item: StoreItem): StoreItem["variants"][number] | undefined {
@@ -1414,60 +1512,16 @@ function itemMatchesSearch(item: StoreItem, query: string): boolean {
   return haystack.includes(query);
 }
 
-function cartStorageKey(storeId: string): string {
-  return `pagosya_cart_${storeId}`;
-}
-
 function loadCart(store: Store): void {
-  cart.clear();
-  selectedVariantByItem.clear();
-  selectedExtraIdsByItem.clear();
-  try {
-    const raw = localStorage.getItem(cartStorageKey(store.storeId));
-    if (!raw) return;
-    const saved = JSON.parse(raw) as Record<string, number>;
-    const loadedByProduct = new Map<string, number>();
-    const loadedByOption = new Map<string, number>();
-    for (const [key, qty] of Object.entries(saved)) {
-      // Drop entries for items archived/deleted since the cart was saved, and any
-      // corrupt values — a stale or tampered cart must never crash the storefront.
-      const { paymentLinkId, variantId, extraIds } = parseCartItemKey(key);
-      const item = store.items.find((candidate) => candidate.id === paymentLinkId);
-      if (!item || !Number.isInteger(qty) || qty <= 0) continue;
-      const variants = itemVariants(item);
-      if (variants.length > 0 && (!variantId || !variants.some((variant) => variant.id === variantId))) continue;
-      if (variants.length === 0 && variantId) continue;
-      const extras = itemExtras(item);
-      if (extraIds.some((id) => !extras.some((extra) => extra.id === id))) continue;
-      if (extras.some((extra) => extra.required && !extraIds.includes(extra.id))) continue;
-
-      const variant = variants.find((candidate) => candidate.id === variantId);
-      const optionKey = cartItemKey(item.id, variantId);
-      const cartKey = cartItemKey(item.id, variantId, extraIds);
-      const alreadyLoaded = loadedByProduct.get(item.id) ?? 0;
-      const alreadyLoadedForOption = loadedByOption.get(optionKey) ?? 0;
-      const productLimit = productStockLimit(item);
-      const productAvailable = productLimit === null ? qty : Math.max(0, productLimit - alreadyLoaded);
-      const availableForOption = optionStock(item, variant);
-      const optionAvailable = availableForOption === null ? qty : Math.max(0, availableForOption - alreadyLoadedForOption);
-      const clamped = Math.min(qty, productAvailable, optionAvailable);
-      if (clamped > 0) {
-        cart.set(cartKey, clamped);
-        loadedByProduct.set(item.id, alreadyLoaded + clamped);
-        loadedByOption.set(optionKey, alreadyLoadedForOption + clamped);
-        if (variantId && !selectedVariantByItem.has(item.id)) selectedVariantByItem.set(item.id, variantId);
-        if (!selectedExtraIdsByItem.has(item.id)) selectedExtraIdsByItem.set(item.id, new Set(extraIds));
-      }
-    }
-  } catch {
-    // Corrupt localStorage — fall back to an empty cart rather than throwing.
-  }
+  const saved = restoreCart(store, productStockLimit, optionStock);
+  cart.clear(); selectedVariantByItem.clear(); selectedExtraIdsByItem.clear();
+  saved.cart.forEach((value, key) => cart.set(key, value));
+  saved.selectedVariantByItem.forEach((value, key) => selectedVariantByItem.set(key, value));
+  saved.selectedExtraIdsByItem.forEach((value, key) => selectedExtraIdsByItem.set(key, value));
 }
-
 function saveCart(store: Store): void {
-  const key = cartStorageKey(store.storeId);
-  if (cart.size === 0) localStorage.removeItem(key);
-  else localStorage.setItem(key, JSON.stringify(Object.fromEntries(cart)));
+  const count = cartCount(); if (count > funnelCartCount) activeStoreFunnel?.track('add_to_cart');
+  funnelCartCount = count; persistCart(store.storeId, cart);
 }
 
 function cartTotal(items: StoreItem[]): number {
@@ -2085,10 +2139,12 @@ function sanitizeStorePreviewProduct(value: unknown, store: Store): StoreItem | 
   if (Array.isArray(source.variants)) {
     preview.variants = source.variants
       .filter((variant): variant is Record<string, unknown> => !!variant && typeof variant === "object" && !Array.isArray(variant))
-      .slice(0, 8)
+      .slice(0, 64)
       .map((variant, index) => ({
         id: typeof variant.id === "string" ? variant.id.slice(0, 200) : `preview-variant-${index}`,
-        name: typeof variant.name === "string" ? variant.name.slice(0, 120) : `Opción ${index + 1}`,
+        ...(Array.isArray(variant.options) && variant.options.length <= 3 && variant.options.every(option=>option && typeof option.name==='string' && typeof option.value==='string') ? {options:variant.options.map(option=>({name:option.name.slice(0,40),value:option.value.slice(0,40)}))}:{}),
+        ...(typeof variant.imageUrl==='string' ? {imageUrl:variant.imageUrl.slice(0,1000)}:{}),
+        name: typeof variant.name === "string" ? variant.name.slice(0, 140) : `Opción ${index + 1}`,
         amount: typeof variant.amount === "number" && Number.isInteger(variant.amount) && variant.amount >= 0 ? Math.min(variant.amount, 100_000_000_000) : 0,
         stock: variant.stock === null ? null : typeof variant.stock === "number" && Number.isInteger(variant.stock) && variant.stock >= 0 ? Math.min(variant.stock, 1_000_000) : null,
       }));
@@ -5639,7 +5695,7 @@ function cartRecommendationEntries(store: Store) {
 }
 
 function cartFulfillmentState(store: Store, lines = cartLineEntries(store)) {
-  const locations = publicStoreLocations(store).filter((location) => location.pickupEnabled || location.deliveryEnabled);
+  const locations = (lines.length && lines.every(line => line.product.fulfillmentType === 'DIGITAL') ? [] : publicStoreLocations(store)).map(location => ({ ...location, pickupEnabled: location.pickupEnabled && (!store.shippingEnabled || store.shippingPickupEnabled !== false) })).filter((location) => location.pickupEnabled || location.deliveryEnabled);
   if (!locations.length) return { locations, method: null, selectedLocation: null, available: [] as StoreLocation[] };
   const methods = (["pickup", "delivery"] as const).filter((method) =>
     locations.some((location) => method === "pickup" ? location.pickupEnabled : location.deliveryEnabled),
@@ -5662,6 +5718,7 @@ function cartFulfillmentState(store: Store, lines = cartLineEntries(store)) {
 }
 
 function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: Store): void {
+  const previousAddress = dialog.querySelector<HTMLInputElement>("[data-address]")?.value || "";
   const currency = store.items[0]?.currency || "BOB";
   const lines = cartLineEntries(store);
   const promo = activePromoForStore(store);
@@ -5699,7 +5756,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
         <div><h2 id="cart-review-title">Mi carrito</h2><p>${escapeHtml(cartModeNote(store, freeOrder))}</p></div>
         <button type="button" class="cart-review-close" aria-label="Cerrar carrito">${ICON_X}</button>
       </header>
-      <div class="cart-review-scroll">
+      <div class="cart-review-scroll" data-retention-cart-host>
         <div class="cart-review-lines">
           ${lines.map(({ key, product, variant, extras, quantity, unitAmount }) => {
             const image = assetUrl(product.imageUrls[0] || null);
@@ -5739,6 +5796,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
           </div>
         </section>` : ""}
         ${fulfillmentHtml}
+        ${store.checkoutMode === "payment" && !contactCheckout && (store.shippingEnabled || store.bundlesEnabled || store.creditsEnabled) ? '<section class="cart-fulfillment" data-cart-quote></section>' : ""}
         ${contactCheckout ? `<form class="lead-capture-form" id="store-lead-form">
           <div class="lead-capture-heading"><h3>${emailOnlyLeadCheckout ? "¿Cuál es tu Gmail o correo?" : "¿Cómo te contactamos?"}</h3><p>${emailOnlyLeadCheckout ? "La tienda recibirá este correo junto con tu selección. No se realizará ningún cobro." : `La tienda recibirá tus datos y el detalle de los productos que elegiste. ${freeOrder ? "El total es Bs 0 y no se abrirá una pantalla de pago." : "No se realizará ningún cobro."}`}</p></div>
           <div class="lead-capture-grid">
@@ -5757,6 +5815,15 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
       </footer>
     </div>`;
 
+  (window as any).PAGOSYA_RETENTION_REFRESH?.();
+  const quoteRoot = dialog.querySelector<HTMLElement>('[data-cart-quote]');
+  const quotedFulfillment = quoteRoot ? mountCartQuote(quoteRoot, {
+    slug, items: lines.map(line => ({ paymentLinkId: line.product.id, variantId: line.variant?.id, extraIds: line.extras.map(extra => extra.id), quantity: line.quantity })),
+    credits: store.creditsEnabled, promoCode: promo?.code, shipping: store.shippingEnabled === true && !lines.every(line => line.product.fulfillmentType === 'DIGITAL'), pickup: store.shippingPickupEnabled !== false,
+    fulfillment: fulfillment.selectedLocation && fulfillment.method ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method } : undefined,
+    address: previousAddress, money: formatAmount,
+    onQuote: quote => { const total = dialog.querySelector('.cart-review-total strong'); if (total) total.textContent = formatAmount(quote.amount, quote.currency); },
+  }) : undefined;
   dialog.querySelector<HTMLButtonElement>(".cart-review-close")?.addEventListener("click", () => dialog.close());
   dialog.querySelector<HTMLFormElement>("#promo-code-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -5924,16 +5991,11 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
         return { paymentLinkId: selected.paymentLinkId, ...(selected.variantId ? { variantId: selected.variantId } : {}), ...(selected.extraIds.length ? { extraIds: selected.extraIds } : {}), quantity };
       });
       const activePromo = activePromoForStore(store);
-      const selectedFulfillment = fulfillment.selectedLocation && fulfillment.method
+      const selectedFulfillment = quotedFulfillment ? quotedFulfillment() : fulfillment.selectedLocation && fulfillment.method
         ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method }
         : undefined;
-      const result = activePromo
-        ? selectedFulfillment
-          ? await checkoutCart(slug, items, activePromo.code, selectedFulfillment)
-          : await checkoutCart(slug, items, activePromo.code)
-        : selectedFulfillment
-          ? await checkoutCart(slug, items, undefined, selectedFulfillment)
-          : await checkoutCart(slug, items);
+      if (selectedFulfillment?.fulfillmentMethod) activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod);
+      const result = await checkoutCart(slug, items, activePromo?.code, selectedFulfillment, activeStoreFunnel?.token());
       customerContact.deliveryRequested = result.fulfillmentMethod === "delivery";
       activeOrderTrackingToken = result.trackingToken;
       linkHeader = { storeName: result.storeName, description: result.cartDescription, contactPhone: result.contactPhone, contactEmail: result.contactEmail };
@@ -5953,6 +6015,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
 
 function openCartReview(slug: string, store: Store, options: { preview?: boolean; allowEmpty?: boolean } = {}): void {
   if (cartCount() === 0 && !options.allowEmpty) return;
+  if (!options.preview) activeStoreFunnel?.track('checkout_started');
   document.querySelector(".cart-review-dialog")?.remove();
   const dialog = document.createElement("dialog");
   dialog.className = "cart-review-dialog";
@@ -5980,12 +6043,32 @@ function openCartReview(slug: string, store: Store, options: { preview?: boolean
 }
 
 function bindCartCheckout(slug: string, store: Store): void {
+  if (!storePreviewMode) void refreshStoreSeo(slug, storefrontRouteFromLocation().productId || undefined);
+  privacy.mount(slug, { preview: storeEditorMode || suppressStoreViewForMerchant(slug) });
+  const retentionWindow = window as any;
+  const currentRoot = app.firstElementChild;
+  void retentionWindow.PAGOSYA_RETENTION_MOUNT?.({
+    slug, apiBaseUrl: API_BASE_URL, preview: storeEditorMode || suppressStoreViewForMerchant(slug),
+    isCurrent: () => app.firstElementChild === currentRoot,
+    getCart: () => cartLineEntries(store).map(line => ({ paymentLinkId: line.product.id, variantId: line.variant?.id, extraIds: line.extras.map(extra => extra.id), quantity: line.quantity })),
+    restoreCart: (items: Array<{ paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }>) => {
+      cart.clear();
+      for (const item of items) {
+        const product = store.items.find(p => p.id === item.paymentLinkId);
+        if (!product || (item.variantId && !product.variants.some(v => v.id === item.variantId))) continue;
+        const quantity = Math.min(item.quantity, productStockLimit(product) ?? 99);
+        if (quantity > 0) cart.set(cartItemKey(item.paymentLinkId, item.variantId, item.extraIds), quantity);
+      }
+      saveCart(store); updateCartBar(store, store.items[0]?.currency || 'BOB');
+    },
+  });
   app.querySelectorAll<HTMLButtonElement>("#cart-pay, .store-header-cart").forEach((button) => {
     button.addEventListener("click", () => openCartReview(slug, store));
   });
 }
 
 function renderProductPage(slug: string, store: Store, productId: string): void {
+  if (store.items.some(item => item.id === productId)) activeStoreFunnel?.track('product_view');
   activeHeroCleanup?.();
   activeHeroCleanup = null;
   activeStoreExperienceCleanup?.();
@@ -6043,7 +6126,8 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   const atOptionLimit = selectedStock !== null && optionCartQuantity(item.id, selectedVariant?.id) >= selectedStock;
   const configurationComplete = productConfigurationComplete(item);
   const images = item.imageUrls.map(assetUrl).filter((url): url is string => !!url);
-  const rememberedImageIndex = selectedProductImageByItem.get(item.id) ?? 0;
+  const variantImageIndex = selectedVariant?.imageUrl ? images.indexOf(assetUrl(selectedVariant.imageUrl) || '') : 0;
+  const rememberedImageIndex = selectedProductImageByItem.get(item.id) ?? Math.max(variantImageIndex, 0);
   const selectedImageIndex = Math.min(Math.max(rememberedImageIndex, 0), Math.max(images.length - 1, 0));
   selectedProductImageByItem.set(item.id, selectedImageIndex);
   const itemCategory = store.categories.find((candidate) => candidate.id === item.categoryId);
@@ -6100,10 +6184,18 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
        }`
     : `<div class="product-detail-main-image-wrap product-detail-placeholder" aria-label="${escapeHtml(item.name)}"><span>${escapeHtml(initials(item.name))}</span></div>`;
 
+  const optionGroups = productOptionGroups(variants);
+  const optionSelection = selectedOptionsByItem.get(item.id) ?? Object.fromEntries((selectedVariant?.options || []).map(option=>[option.name,option.value]));
   const startingVariant = selectedVariant ?? variants
-    .filter(variant => optionStock(item, variant) !== 0)
+    .filter(variant => optionStock(item, variant) !== 0 && (!optionGroups.length || variant.options?.every(option => !optionSelection[option.name] || optionSelection[option.name] === option.value)))
     .sort((a, b) => a.amount - b.amount)[0];
-  const variantsHtml = variants.length
+  const variantsHtml = optionGroups.length ? optionGroups.map((group,groupIndex)=>`<fieldset class="product-detail-variants">
+    <legend>${escapeHtml(group.name)}</legend><div class="product-detail-option-list">
+    ${group.values.map((value,valueIndex)=>{
+      const selected = optionSelection[group.name] === value;
+      const available = optionValueAvailable(variants,optionSelection,group.name,value,variant=>optionStock(item,variant)!==0);
+      return `<button type="button" class="product-detail-option${selected?' active':''}" data-option-group="${groupIndex}" data-option-value="${valueIndex}" aria-pressed="${selected}" ${available || selected ? '' : 'disabled'}><span>${escapeHtml(value)}</span>${!available?'<small>No disponible</small>':''}</button>`;
+    }).join('')}</div></fieldset>`).join('') : variants.length
     ? `<fieldset class="product-detail-variants">
         <legend>Selecciona una versión</legend>
         <div class="product-detail-option-list">
@@ -6148,6 +6240,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         ${item.tags.length ? `<div class="store-item-tags">${item.tags.map((tag) => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <h1>${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" aria-hidden="true"></span>` : ""}${escapeHtml(item.name)}</h1>
         ${variantsHtml}
+        ${optionGroups.length && Object.keys(optionSelection).length ? '<button type="button" class="product-options-clear">Limpiar selección</button>' : ''}
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
         <div class="product-detail-purchase">
@@ -6210,11 +6303,36 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       app.querySelector<HTMLButtonElement>(`.product-detail-image-arrow.${step < 0 ? "previous" : "next"}`)?.focus();
     });
   });
-  app.querySelectorAll<HTMLButtonElement>(".product-detail-option").forEach((button) => {
+  app.querySelectorAll<HTMLButtonElement>(".product-detail-option[data-variant-id]").forEach((button) => {
     button.addEventListener("click", () => {
       selectedVariantByItem.set(item.id, button.dataset.variantId!);
       renderProductPage(slug, store, item.id);
       app.querySelector<HTMLButtonElement>(`.product-detail-option[data-variant-id="${button.dataset.variantId}"]`)?.focus();
+    });
+  });
+  app.querySelector<HTMLButtonElement>('.product-options-clear')?.addEventListener('click',()=>{
+    selectedOptionsByItem.delete(item.id); selectedVariantByItem.delete(item.id);
+    renderProductPage(slug,store,item.id);
+    app.querySelector<HTMLButtonElement>('[data-option-group]:not(:disabled)')?.focus();
+  });
+  app.querySelectorAll<HTMLButtonElement>('[data-option-group]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const group = optionGroups[Number(button.dataset.optionGroup)];
+      const value = group.values[Number(button.dataset.optionValue)];
+      const selection = {...optionSelection};
+      if (selection[group.name]===value) delete selection[group.name]; else selection[group.name]=value;
+      selectedOptionsByItem.set(item.id,selection);
+      const variant = matchingOptionVariant(variants,selection);
+      if (variant && optionStock(item,variant)!==0) {
+        selectedVariantByItem.set(item.id,variant.id);
+      } else selectedVariantByItem.delete(item.id);
+      const photoVariant = variant ?? variants.find(candidate=>candidate.imageUrl && candidate.options?.every(option=>!selection[option.name] || selection[option.name]===option.value));
+      if (photoVariant?.imageUrl && Object.keys(selection).length) {
+        const photoIndex = item.imageUrls.findIndex(url=>assetUrl(url)===assetUrl(photoVariant.imageUrl || null));
+        if (photoIndex>=0) selectedProductImageByItem.set(item.id,photoIndex);
+      }
+      renderProductPage(slug,store,item.id);
+      app.querySelector<HTMLButtonElement>(`[data-option-group="${button.dataset.optionGroup}"][data-option-value="${button.dataset.optionValue}"]`)?.focus();
     });
   });
   app.querySelectorAll<HTMLInputElement>(".product-detail-extra-toggle").forEach((input) => {
@@ -6260,6 +6378,27 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
     previewReadyAnnounced = true;
     postToParent("CHECKOUT_READY", { mode: "store-preview" });
   }
+}
+
+function bindStoreContactWidget(): void {
+  const widget = app.querySelector<HTMLElement>("[data-store-contact-widget]");
+  if (!widget) return;
+  const toggle = widget.querySelector<HTMLButtonElement>("[data-contact-toggle]");
+  const panel = widget.querySelector<HTMLElement>("[data-contact-panel]");
+  const close = widget.querySelector<HTMLButtonElement>("[data-contact-close]");
+  if (!toggle || !panel || !close) return;
+  const setOpen = (open: boolean, returnFocus = false) => {
+    widget.dataset.contactOpen = String(open);
+    toggle.setAttribute("aria-expanded", String(open));
+    panel.hidden = !open;
+    if (open) requestAnimationFrame(() => panel.querySelector<HTMLElement>("input, textarea, button[type=submit]")?.focus());
+    else if (returnFocus) toggle.focus();
+  };
+  toggle.addEventListener("click", () => setOpen(panel.hidden));
+  close.addEventListener("click", () => setOpen(false, true));
+  widget.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && widget.dataset.contactOpen === "true") setOpen(false, true);
+  });
 }
 
 function renderStore(slug: string, store: Store, options: { focusPromotion?: boolean } = {}) {
@@ -7153,17 +7292,24 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     : "";
 
   const contactHtml = store.contactFormEnabled === true
-    ? `<section class="store-contact-section" id="store-contact" aria-labelledby="store-contact-title">
-        <div class="store-contact-copy">
-          <h2 id="store-contact-title">${escapeHtml(siteSection("contact")?.title || store.contactTitle?.trim() || "¿Tienes una pregunta?")}</h2>
-          <p>${escapeHtml(siteSection("contact")?.body || store.contactSubtitle?.trim() || `Escríbele directamente al equipo de ${store.storeName}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.`)}</p>
-        </div>
-        <form class="store-contact-form" id="store-contact-form">
+    ? `<section class="store-contact-section store-contact-widget" id="store-contact" data-store-contact-widget aria-labelledby="store-contact-title">
+        <button class="store-contact-launcher" id="store-contact-toggle" type="button" data-contact-toggle aria-controls="store-contact-panel" aria-expanded="false" aria-label="Abrir formulario de contacto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 7.4 7.4 0 0 1-3.2-.72L5 19.5l1.22-3.15A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg><span>Contacto</span></button>
+        <div class="store-contact-panel" id="store-contact-panel" data-contact-panel hidden>
+          <div class="store-contact-heading">
+            <div class="store-contact-copy">
+              <h2 id="store-contact-title">${escapeHtml(siteSection("contact")?.title || store.contactTitle?.trim() || "¿Tienes una pregunta?")}</h2>
+              <p>${escapeHtml(siteSection("contact")?.body || store.contactSubtitle?.trim() || `Escríbele directamente al equipo de ${store.storeName}. La tienda recibirá tu pregunta desde pagosYa y podrá responder a tu correo.`)}</p>
+            </div>
+            <button class="store-contact-close" type="button" data-contact-close aria-label="Cerrar formulario de contacto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+          </div>
+          <form class="store-contact-form" id="store-contact-form">
           <div class="field"><label for="store-contact-name">Nombre <span class="store-contact-optional">(opcional)</span></label><input id="store-contact-name" name="name" autocomplete="name" maxlength="120" placeholder="Cómo te llamas"></div>
           <div class="field"><label for="store-contact-email">Tu Gmail o correo</label><input id="store-contact-email" name="email" type="email" autocomplete="email" maxlength="254" value="${escapeHtml(loadLeadEmail(store.storeId))}" placeholder="tunombre@gmail.com" aria-describedby="store-contact-email-help" required><small id="store-contact-email-help" class="store-contact-field-help">La tienda usará este correo para responderte.</small></div>
+          <div class="field"><label for="store-contact-phone">WhatsApp (opcional)</label><input id="store-contact-phone" name="phone" type="tel" autocomplete="tel" maxlength="40"></div>
           <div class="field store-contact-message"><label for="store-contact-message">Tu pregunta</label><textarea id="store-contact-message" name="message" maxlength="600" rows="5" placeholder="Escribe aquí lo que quieres consultar…" required></textarea></div>
           <div class="store-contact-actions"><button class="primary" type="submit">Enviar pregunta</button><span class="store-contact-status" role="status" aria-live="polite"></span></div>
-        </form>
+          </form>
+        </div>
       </section>`
     : "";
 
@@ -7411,6 +7557,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     ${selectedCatalogSection ? "" : promotionHtml}
   `;
   applyStoreSectionBackgrounds(store);
+  bindStoreContactWidget();
 
   const dragScrollCleanups = Array.from(app.querySelectorAll<HTMLElement>("[data-store-drag-scroll]")).map(bindHorizontalDragScroll);
   if (dragScrollCleanups.length) {
@@ -7495,6 +7642,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         ...(name ? { name } : {}),
         email,
         message: String(data.get("message") || "").trim(),
+        phone: String(data.get("phone") || "").trim() || undefined,
       }, []);
       saveLeadEmail(store.storeId, email);
       form.reset();
@@ -9160,12 +9308,30 @@ function updateCartBar(store: Store, currency: string): void {
   }
 }
 
+let fulfillmentSessionId = '';
 function renderForm(session: CheckoutSession, clientSecret: string) {
+  const brand = applyCheckoutBranding(app, session.branding);
   const tokens = TEST_TOKENS[selectedType];
   const storeCheckout = isStoreCheckout(session);
+  document.body.classList.toggle('store-payment-page', storeCheckout || sourcePaymentPreview);
   const recipient = checkoutRecipientDetails(session);
+  const fulfillment = session.metadata?.fulfillment as { method?: string; address?: string; locationName?: string } | undefined;
+  const shipping = session.metadata?.shipping as { address?: string } | undefined;
+  const confirmedMethod = shipping ? 'delivery' : fulfillment?.method;
+  if (fulfillmentSessionId !== session.id) {
+    fulfillmentSessionId = session.id;
+    if (confirmedMethod === 'delivery' || confirmedMethod === 'pickup') {
+      customerContact.deliveryRequested = confirmedMethod === 'delivery';
+      customerContact.deliveryAddress = shipping?.address || fulfillment?.address || '';
+    }
+  }
 
-  const headerHtml = linkHeader
+  const headerHtml = brand ? `
+      <div class="merchant-row">${brand.logoUrl ? `<img class="checkout-store-logo" src="${escapeHtml(brand.logoUrl)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="merchant-name">${escapeHtml(brand.name)}</div></div>
+      <p class="checkout-summary-label">Tu pedido</p>
+      <div class="amount">${formatAmount(session.amount, session.currency)}</div>
+      <div class="description">${escapeHtml(session.description || linkHeader?.description || 'Pago a ' + brand.name)}</div>
+    ` : linkHeader
     ? `
       <div class="merchant-header">${escapeHtml(linkHeader.storeName)}</div>
       <div class="amount">${formatAmount(session.amount, session.currency)}</div>
@@ -9185,8 +9351,8 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
   const invalid = (id: keyof typeof contactFieldErrors) => (contactFieldErrors[id] ? ' aria-invalid="true"' : "");
 
   app.innerHTML = `
-    <div class="payment-summary-panel">${headerHtml}</div>
-    <div class="payment-form-panel"><form id="payment-form" novalidate>
+    <div class="payment-summary-panel">${sourcePaymentPreview ? '<p class="checkout-preview-notice" role="status">Vista previa · Sin cobros ni pedidos reales</p>' : ''}${headerHtml}</div>
+    <div class="payment-form-panel">${storeCheckout || sourcePaymentPreview ? '<h1 class="payment-page-title">Completa tu pedido</h1>' : ''}<form id="payment-form" novalidate>
       ${storeCheckout
         ? `<div class="field">
             <label for="customerName">Nombre completo</label>
@@ -9205,11 +9371,11 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             <div class="hint">El comercio usará estos datos para contactarte sobre tu pedido.</div>
           </div>
           <section class="delivery-request${customerContact.deliveryRequested ? " is-open" : ""}" aria-labelledby="delivery-request-title">
-        <label class="delivery-request-toggle" for="deliveryRequested">
+        ${confirmedMethod === 'pickup' || confirmedMethod === 'delivery' ? `<div class="delivery-request-toggle"><span><strong id="delivery-request-title">${confirmedMethod === 'pickup' ? 'Recoger en tienda' : 'Entrega a domicilio'}</strong>${fulfillment?.locationName ? `<small>${escapeHtml(fulfillment.locationName)}</small>` : ''}</span></div>` : `<label class="delivery-request-toggle" for="deliveryRequested">
           <span class="delivery-request-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
           <span><strong id="delivery-request-title">Quiero solicitar entrega</strong><small>Comparte una dirección y, si quieres, tu ubicación actual.</small></span>
           <input id="deliveryRequested" type="checkbox" ${customerContact.deliveryRequested ? "checked" : ""}>
-        </label>
+        </label>`}
         <div class="delivery-request-fields" ${customerContact.deliveryRequested ? "" : "hidden"}>
           <div class="field">
             <label for="deliveryAddress">Dirección o referencia</label>
@@ -9237,7 +9403,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
           .join("")}
       </div>
       ${
-        import.meta.env.DEV
+        import.meta.env.DEV && !sourcePaymentPreview
           ? `<div class="field">
               <label for="token">Token de prueba (modo test)</label>
               <select id="token">
@@ -9247,7 +9413,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             </div>`
           : ""
       }
-      <button class="primary" type="submit" id="pay">Pagar ${formatAmount(session.amount, session.currency)}</button>
+      <button class="primary" type="submit" id="pay">${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${formatAmount(session.amount, session.currency)}</button>
       <button class="secondary" type="button" id="cancel">Cancelar pago</button>
     </form></div>
     <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
@@ -9349,6 +9515,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
 }
 
 async function cancelPayment(clientSecret: string) {
+  if (sourcePaymentPreview) { closeSourcePaymentPreview(); return; }
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
   const cancelButton = app.querySelector<HTMLButtonElement>("#cancel");
   if (payButton) payButton.disabled = true;
@@ -9382,6 +9549,10 @@ async function cancelPayment(clientSecret: string) {
 }
 
 async function submitPayment(session: CheckoutSession, clientSecret: string, token: string, customer: CustomerContact) {
+  if (sourcePaymentPreview) {
+    renderSuccess({ ...session, customerName: customer.name }, true);
+    return;
+  }
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
   if (payButton) {
     payButton.disabled = true;
@@ -9482,7 +9653,7 @@ function backToStoreHtml(): string {
   return `<a class="back-to-store" href="${escapeHtml(storeCatalogUrl(currentStoreSlug))}">Volver a la tienda</a>`;
 }
 
-function renderSuccess(order: OrderSummary) {
+function renderSuccess(order: OrderSummary, preview = false) {
   document.body.classList.add("payment-page", "payment-success-page");
   const cart = Array.isArray(order.metadata?.cart) ? order.metadata.cart as CartLine[] : null;
   const storeCheckout = Boolean(cart);
@@ -9493,7 +9664,7 @@ function renderSuccess(order: OrderSummary) {
   const periodLabel = appointment ? "Fecha de la cita" : subscription ? "Período cubierto" : null;
   const periodText = periodValue ? new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", dateStyle: "long", ...(appointment ? { timeStyle: "short" } : {}) }).format(new Date(periodValue)) : null;
 
-  const linesHtml = cart
+  const linesHtml = cart?.length
     ? cart
         .map(
           (line) => `
@@ -9505,14 +9676,14 @@ function renderSuccess(order: OrderSummary) {
         .join("")
     : `
       <div class="receipt-line">
-        <span>${linkHeader ? escapeHtml(linkHeader.description) : "Pago"}</span>
+        <span>${escapeHtml((order as CheckoutSession).description || linkHeader?.description || "Pago")}</span>
         <span>${formatAmount(order.amount, order.currency)}</span>
       </div>`;
 
   const receiptContentHtml = `
     <header class="receipt-brand">
       <span><img src="/logo-mark.png" alt=""><strong>pagosYa</strong></span>
-      <small>Comprobante de pago</small>
+      <small>${preview ? "Vista previa · Sin cobros" : "Comprobante de pago"}</small>
     </header>
     <div class="receipt-row">
       <span class="muted-label">${storeCheckout ? "N° de orden" : "N° de pago"}</span>
@@ -9525,6 +9696,7 @@ function renderSuccess(order: OrderSummary) {
       <span>${storeCheckout ? "Subtotal" : "Total"}</span>
       <strong>${formatAmount(order.amount, order.currency)}</strong>
     </div>
+    ${order.metadata?.storeCredit ? `<div class="receipt-row"><span>Saldo de tienda aplicado</span><strong>${formatAmount(Number((order.metadata.storeCredit as Record<string, unknown>).amount), order.currency)}</strong></div><div class="receipt-row"><span>Total del pedido</span><strong>${formatAmount(Number((order.metadata.storeCredit as Record<string, unknown>).orderTotal), order.currency)}</strong></div>` : ''}
     ${contactBlockHtml("¿Dudas o necesitas un reembolso?")}
   `;
   const trackingActionHtml = activeOrderTrackingToken
@@ -9533,33 +9705,36 @@ function renderSuccess(order: OrderSummary) {
   const printActionHtml = `<button class="secondary receipt-download receipt-print receipt-action" type="button">${ICON_PRINTER}<span><strong>Imprimir comprobante</strong><small>Abrir vista de impresión</small></span>${ICON_ARROW_RIGHT}</button>`;
   const machineSummaryHtml = `
     <div class="payment-printer-machine-order">
-      <span>${storeCheckout ? `${cart?.length ?? 0} ${(cart?.length ?? 0) === 1 ? "producto" : "productos"}` : "Comprobante"}</span>
+      <span>${preview ? "Pago de prueba" : storeCheckout ? `${cart?.length ?? 0} ${(cart?.length ?? 0) === 1 ? "producto" : "productos"}` : "Comprobante"}</span>
       <strong>${formatAmount(order.amount, order.currency)}</strong>
     </div>
     <div class="payment-printer-machine-meta">
-      <span>${escapeHtml(linkHeader?.storeName || "pagosYa")}</span>
+      <span>${escapeHtml((order as CheckoutSession).branding?.name || linkHeader?.storeName || "pagosYa")}</span>
       <code>${escapeHtml(order.id)}</code>
     </div>
   `;
 
   app.innerHTML = `
     <div class="payment-success-panel">
-      <div class="status success">${ICON_CHECK}<span>${storeCheckout ? "Pedido recibido" : "Pago confirmado"}</span></div>
+      <div class="status success">${ICON_CHECK}<span>${preview ? "Prueba completada" : storeCheckout ? "Pedido recibido" : "Pago confirmado"}</span></div>
       <article class="receipt">${receiptContentHtml}</article>
       <div class="payment-success-actions">${trackingActionHtml}${printActionHtml}</div>
-      ${backToStoreHtml()}
+      ${preview ? '<p>No se realizó ningún cobro ni se creó un pedido real.</p><button class="secondary" id="preview-back" type="button">Volver al pedido</button>' : backToStoreHtml()}
     </div>
   `;
+  app.querySelector('#preview-back')?.addEventListener('click', closeSourcePaymentPreview);
+  if (!preview && activeOrderTrackingToken) void mountDigitalDownloads(app.querySelector('.payment-success-panel')!, activeOrderTrackingToken);
+  if (!preview && activeOrderTrackingToken) void mountComebackCard(app.querySelector('.payment-success-panel')!, activeOrderTrackingToken, order.id);
   app.querySelector<HTMLButtonElement>(".receipt-print")?.addEventListener("click", () => window.print());
   launchPaymentPrinter(order.id, {
     receiptContentHtml,
     machineSummaryHtml,
     subject: storeCheckout ? "pedido" : "comprobante",
-    title: storeCheckout ? "Tu pedido está listo" : "Tu comprobante está listo",
+    title: preview ? "Prueba completada" : storeCheckout ? "Tu pedido está listo" : "Tu comprobante está listo",
     trackingActionHtml,
     printActionHtml,
   });
-  postToParent("PAYMENT_SUCCEEDED", { paymentIntentId: order.id, status: "succeeded" });
+  if (!preview) postToParent("PAYMENT_SUCCEEDED", { paymentIntentId: order.id, status: "succeeded" });
 }
 
 const celebratedPaymentIntentIds = new Set<string>();

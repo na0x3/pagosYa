@@ -1,3 +1,4 @@
+import { RetentionService } from './retention.service';
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ApiTags } from "@nestjs/swagger";
@@ -17,6 +18,7 @@ import { SubscribeStoreNewsletterDto } from "./dto/subscribe-store-newsletter.dt
 @Controller("v1/stores/public")
 export class StoresPublicController {
   constructor(
+    private readonly retention: RetentionService,
     private readonly stores: StoresService,
     private readonly customDomains: CustomDomainsService,
     private readonly promoCodes: PromoCodesService,
@@ -43,10 +45,16 @@ export class StoresPublicController {
     return this.stores.getStorePublic(slug, { trackView: preview !== "1" });
   }
 
+  @Post(':slug/shipping/quote')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  shippingQuote(@Param('slug') slug: string, @Body() dto: CartCheckoutDto) { return this.stores.createCartCheckout(slug, dto, true); }
+
   @Post(":slug/cart-checkout")
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  cartCheckout(@Param("slug") slug: string, @Body() dto: CartCheckoutDto) {
-    return this.stores.createCartCheckout(slug, dto);
+  async cartCheckout(@Param("slug") slug: string, @Body() dto: CartCheckoutDto) {
+    const result = await this.stores.createCartCheckout(slug, dto);
+    if (dto.recoveryToken && "id" in result) await this.retention.attachCheckout((await this.stores.findActiveBySlugPublic(slug)).id, dto.recoveryToken, result.id);
+    return result;
   }
 
   @Post(":slug/promo-code/quote")
@@ -65,7 +73,9 @@ export class StoresPublicController {
 
   @Post(":slug/newsletter")
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  subscribeNewsletter(@Param("slug") slug: string, @Body() dto: SubscribeStoreNewsletterDto) {
+  async subscribeNewsletter(@Param("slug") slug: string, @Body() dto: SubscribeStoreNewsletterDto) {
+    const store = await this.stores.findActiveBySlugPublic(slug);
+    if ((await this.retention.settings(store.id)).signupEnabled) return this.retention.subscribe(store, dto.email);
     return this.stores.subscribeNewsletter(slug, dto.email);
   }
 }

@@ -1,10 +1,10 @@
 import zlib from "node:zlib";
 
-// Quick manual QA fixture: creates ONE merchant running TWO separate stores
+// Quick manual QA fixture: creates TWO merchants, each running ONE store
 // (different slug/branding/catalog each) via the real REST API (POST
 // /v1/uploads, POST /v1/stores, POST /v1/stores/:id/payment_links, ...) —
 // the same calls a real merchant integration would make — then exercises
-// the multi-product cart checkout endpoint once per store so you can see a
+// the multi-product cart checkout endpoint once per account so you can see a
 // single PaymentIntent cover several different products in one payment,
 // scoped to just that store. Prints both storefront URLs to open in
 // apps/checkout (:5173) plus the merchant's sk_test_ key.
@@ -178,7 +178,7 @@ async function main() {
   });
   console.log(`\nMerchant:    ${merchant.name} (${merchant.id})`);
   console.log(`Secret key:  ${testKeys.secretKey}`);
-  console.log(`\nOne merchant, two separate stores — different slug/branding/catalog each:`);
+  console.log(`\nTwo accounts, one store per account:`);
 
   await createStore(testKeys.secretKey, {
     name: "Ropa Urbana",
@@ -211,7 +211,11 @@ async function main() {
     },
   });
 
-  await createStore(testKeys.secretKey, {
+  const cafeAccount = await api("/merchants", {
+    method: "POST",
+    body: { name: "Café Aroma Demo", email: `demo-cafe-${Date.now()}@pagosya.bo` },
+  });
+  await createStore(cafeAccount.testKeys.secretKey, {
     name: "Café Aroma",
     brandColor: "#78350f",
     backgroundColor: "#fffbeb",

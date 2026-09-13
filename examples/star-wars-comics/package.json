@@ -1,0 +1,1 @@
+{"name":"star-wars-comics-demo","version":"1.0.0","private":true,"type":"module","scripts":{"build":"node build.mjs","start":"node server.mjs"}}

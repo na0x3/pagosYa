@@ -1,3 +1,6 @@
+import { creditQuote, reserveCredit } from '../commerce-platform/credit-ledger';
+import { bestBundleDiscount, type Bundle } from './bundle-pricing';
+import { quoteShipping } from './shipping-rates';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
@@ -32,7 +35,7 @@ import { applySiteArtDirection, resolveSiteSectionFamily, siteSectionBlockSlotIs
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
 const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
-type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
+import type { ProductVariant } from '../payment-links/product-variants';
 type ProductExtra = {
   id: string;
   name: string;
@@ -980,8 +983,10 @@ export class StoresService implements OnModuleDestroy {
     };
   }
 
-  /** A merchant can run several independent stores under one account — each gets its own slug/branding/catalog. */
+  /** Each merchant account owns at most one store, including archived stores. */
   async create(merchantId: string, dto: CreateStoreDto) {
+    const existing = await this.prisma.store.findFirst({ where: { merchantId }, select: { id: true } });
+    if (existing) throw new ConflictException("Tu cuenta ya tiene una tienda. Administra la tienda existente.");
     if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
     const animations = (dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }]).map(normalizeAnimationMedia);
     const contentOrder = dto.contentOrder
@@ -1010,7 +1015,7 @@ export class StoresService implements OnModuleDestroy {
             backgroundImageUrl: null,
             contactPhone: dto.contactPhone,
             contactEmail: dto.contactEmail,
-            contactFormEnabled: dto.contactFormEnabled,
+            contactFormEnabled: dto.contactFormEnabled ?? false,
             contactFormEmail: dto.contactFormEmail,
             contactTitle: dto.contactTitle,
             contactSubtitle: dto.contactSubtitle,
@@ -1077,7 +1082,11 @@ export class StoresService implements OnModuleDestroy {
           },
         });
       } catch (err) {
-        const isUniqueSlugClash = (err as { code?: string })?.code === "P2002";
+        const uniqueError = err as { code?: string; meta?: { target?: string[] | string } };
+        if (uniqueError.code === "P2002" && uniqueError.meta?.target?.includes("merchantId")) {
+          throw new ConflictException("Tu cuenta ya tiene una tienda. Administra la tienda existente.");
+        }
+        const isUniqueSlugClash = uniqueError.code === "P2002" && uniqueError.meta?.target?.includes("slug");
         if (!isUniqueSlugClash || attempt === 4) throw err;
       }
     }
@@ -1317,6 +1326,7 @@ export class StoresService implements OnModuleDestroy {
       ...links.flatMap((l) => l.imageUrls),
     ];
 
+    if (store.creditsEnabled || store.digitalGoodsEnabled) throw new BadRequestException('Archiva esta tienda para conservar saldos y descargas de pedidos existentes.');
     await this.prisma.store.delete({ where: { id } });
     await this.uploads.deleteFiles(fileUrls);
     return { success: true };
@@ -1330,7 +1340,7 @@ export class StoresService implements OnModuleDestroy {
    */
   async findActiveBySlugPublic(slug: string) {
     const store = await this.prisma.store.findUnique({ where: { slug } });
-    if (!store || store.status !== StoreStatus.ACTIVE) throw new NotFoundException("Esta tienda ya no está disponible");
+    if (!store || store.status !== StoreStatus.ACTIVE || store.sourcePublicationPaused) throw new NotFoundException("Esta tienda ya no está disponible");
     return store;
   }
 
@@ -1340,6 +1350,7 @@ export class StoresService implements OnModuleDestroy {
     const term = search?.trim().slice(0, 80);
     const where: Prisma.StoreWhereInput = {
       status: StoreStatus.ACTIVE,
+      sourcePublicationPaused: false,
       merchant: { status: MerchantStatus.ACTIVE },
       paymentLinks: { some: { status: PaymentLinkStatus.ACTIVE } },
       ...(term ? {
@@ -1421,13 +1432,16 @@ export class StoresService implements OnModuleDestroy {
   }
 
   /** Public — no auth, called by the checkout page's landing view before any payment exists. */
-  async getStorePublic(slug: string, options: { trackView?: boolean } = {}) {
-    const store = await this.findActiveBySlugPublic(slug);
+  async getStorePublic(slug: string, options: { trackView?: boolean; ownerMerchantId?: string } = {}) {
+    const store = options.ownerMerchantId
+      ? await this.prisma.store.findFirst({ where: { slug, merchantId: options.ownerMerchantId } })
+      : await this.findActiveBySlugPublic(slug);
+    if (!store) throw new NotFoundException('Store not found');
     // Not deduplicated per visitor/session — a lightweight external-audience
     // counter for the merchant's Finanzas view, not full analytics. Checkout
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
-    const trackView = options.trackView !== false;
+    const trackView = !options.ownerMerchantId && options.trackView !== false;
     const [items, categories, links, productStats, appointmentOfferings] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
@@ -1471,7 +1485,9 @@ export class StoresService implements OnModuleDestroy {
     }));
     return {
       storeId: store.id,
+      publishedSourceRevision: store.publishedSourceRevision ?? null,
       storeName: store.name,
+      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, bundlesEnabled: store.bundlesEnabled,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
       bannerUrl: store.bannerUrl,
@@ -1550,6 +1566,7 @@ export class StoresService implements OnModuleDestroy {
       items: items.map((item) => ({
         id: item.id,
         categoryId: item.categoryId,
+        fulfillmentType: item.fulfillmentType,
         name: item.name,
         description: item.description,
         imageUrls: item.imageUrls,
@@ -1590,19 +1607,14 @@ export class StoresService implements OnModuleDestroy {
 
   /** Public — turns a cart (one or more items, from the same store as `slug`) into a
    * single PaymentIntent, i.e. one payment/one QR for the whole cart. */
-  async createCartCheckout(slug: string, dto: CartCheckoutDto) {
+  async createCartCheckout(slug: string, dto: CartCheckoutDto, quoteOnly = false) {
     const store = await this.findActiveBySlugPublic(slug);
     if (store.checkoutMode === "whatsapp" || store.checkoutMode === "external") {
       throw new BadRequestException("Esta tienda no tiene habilitados los pagos integrados");
     }
+    const funnelVisit = !quoteOnly && dto.funnelToken ? await this.prisma.storeFunnelVisit.findFirst({ where: { token: dto.funnelToken, storeId: store.id, createdAt: { gte: new Date(Date.now() - 86400000) } }, select: { id: true } }) : null;
+    const sourceVisit = dto.sourceVisitToken ? await this.prisma.storeSourceVisit.findFirst({ where: { token: dto.sourceVisitToken, createdAt: { gte: new Date(Date.now() - 30 * 86400000) }, experiment: { storeId: store.id } }, select: { id: true } }) : null;
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: store.merchantId } });
-    const locations = readStoreLocations(store.locations);
-    const fulfillmentLocation = locations.length ? locations.find((location) => location.id === dto.locationId) : undefined;
-    if (locations.length && !fulfillmentLocation) throw new BadRequestException("Elige una ubicación para tu pedido");
-    if (fulfillmentLocation && dto.fulfillmentMethod === "pickup" && !fulfillmentLocation.pickupEnabled) throw new BadRequestException("Esta ubicación no ofrece retiro");
-    if (fulfillmentLocation && dto.fulfillmentMethod === "delivery" && !fulfillmentLocation.deliveryEnabled) throw new BadRequestException("Esta ubicación no ofrece entrega");
-    if (fulfillmentLocation && !dto.fulfillmentMethod) throw new BadRequestException("Elige retiro o entrega");
-    const fulfillmentReadyAt = fulfillmentLocation ? nextStoreLocationOpenAt(fulfillmentLocation) : null;
 
     const quantityByLinkId = new Map<string, number>();
     for (const item of dto.items) {
@@ -1616,6 +1628,17 @@ export class StoresService implements OnModuleDestroy {
       throw new BadRequestException("Uno o más productos del carrito ya no están disponibles");
     }
 
+    const digitalOnly = links.every(link => link.fulfillmentType === 'DIGITAL');
+    const digitalAssets = store.digitalGoodsEnabled ? await this.prisma.digitalAsset.findMany({ where: { storeId: store.id, productId: { in: links.map(link => link.id) }, active: true }, select: { id: true, productId: true } }) : [];
+    for (const link of links) if (link.fulfillmentType === 'DIGITAL' && !digitalAssets.some(asset => asset.productId === link.id)) throw new BadRequestException(`El archivo de "${link.name}" no está disponible.`);
+    const locations = digitalOnly ? [] : readStoreLocations(store.locations);
+    const fulfillmentLocation = locations.length ? locations.find((location) => location.id === dto.locationId) : undefined;
+    if (locations.length && !fulfillmentLocation) throw new BadRequestException("Elige una ubicación para tu pedido");
+    if (fulfillmentLocation && dto.fulfillmentMethod === "pickup" && !fulfillmentLocation.pickupEnabled) throw new BadRequestException("Esta ubicación no ofrece retiro");
+    if (fulfillmentLocation && dto.fulfillmentMethod === "delivery" && !fulfillmentLocation.deliveryEnabled) throw new BadRequestException("Esta ubicación no ofrece entrega");
+    if (fulfillmentLocation && !dto.fulfillmentMethod) throw new BadRequestException("Elige retiro o entrega");
+    const fulfillmentReadyAt = fulfillmentLocation ? nextStoreLocationOpenAt(fulfillmentLocation) : null;
+
     const currency = links[0].currency;
     if (links.some((l) => l.currency !== currency)) {
       throw new BadRequestException("Todos los productos del carrito deben usar la misma moneda");
@@ -1627,7 +1650,7 @@ export class StoresService implements OnModuleDestroy {
     // stock go negative even if two carts race past this check.
     for (const l of links) {
       const requested = quantityByLinkId.get(l.id)!;
-      if (fulfillmentLocation) {
+      if (fulfillmentLocation && l.fulfillmentType !== 'DIGITAL') {
         const branchStock = readLocationStocks(l.locationStocks)[fulfillmentLocation.id] ?? 0;
         if (branchStock !== null && branchStock < requested) {
           throw new BadRequestException(`La ubicación ${fulfillmentLocation.name} no tiene suficiente stock de "${l.name}"`);
@@ -1651,6 +1674,7 @@ export class StoresService implements OnModuleDestroy {
         quantity: number;
         unitAmount: number;
         optionStock?: number | null;
+        digitalAssetIds?: string[];
       }
     >();
     for (const item of dto.items) {
@@ -1684,6 +1708,7 @@ export class StoresService implements OnModuleDestroy {
       else {
         selectedLines.set(lineKey, {
           paymentLinkId: link.id,
+          ...(link.fulfillmentType === 'DIGITAL' ? { digitalAssetIds: digitalAssets.filter(asset => asset.productId === link.id).map(asset => asset.id) } : {}),
           ...(variant && { variantId: variant.id, variantName: variant.name }),
           ...(variant && variant.stock !== undefined && { optionStock: variant.stock }),
           ...(selectedExtraIds.length && { extraIds: selectedExtraIds, extras: selectedExtras }),
@@ -1722,7 +1747,29 @@ export class StoresService implements OnModuleDestroy {
     const promoDiscountAmount = promo
       ? this.promoCodes!.discountAmount(subtotal, promo.discountType, promo.discountValue)
       : 0;
-    const amount = subtotal - promoDiscountAmount;
+    const bundles = store.bundlesEnabled ? await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true } }) : [];
+    const bundle = bestBundleDiscount(bundles as unknown as Bundle[], cartLines);
+    const discountAmount = Math.max(promoDiscountAmount, bundle.amount);
+    let shipping: { id: string; name: string; amount: number; currency: string } | null = null;
+    let shippingOptions: Array<{ id: string; name: string; amount: number; currency: string }> = [];
+    if (store.shippingEnabled && !digitalOnly) {
+      if (!quoteOnly && !dto.fulfillmentMethod) throw new BadRequestException('Elige retiro o envío.');
+      if (dto.fulfillmentMethod === 'pickup' && !store.shippingPickupEnabled) throw new BadRequestException('Esta tienda no ofrece retiro.');
+      const weightGrams = links.some(link => link.shippingWeightGrams == null) ? null : links.reduce((sum, link) => sum + link.shippingWeightGrams! * quantityByLinkId.get(link.id)!, 0);
+      const rates = await this.prisma.deliveryZone.findMany({ where: { storeId: store.id, isActive: true } });
+      const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams });
+      shippingOptions = quote.options;
+      if (dto.fulfillmentMethod === 'delivery') {
+        shipping = quote.selected;
+        if (!quoteOnly && (!shipping || !dto.shippingAddress?.trim())) throw new BadRequestException('Elige una opción de envío y escribe la dirección.');
+      }
+    } else if (dto.shippingZoneId && !digitalOnly) throw new BadRequestException('Esta tienda no tiene tarifas de envío activadas.');
+    const shippingAmount = shipping?.amount ?? 0;
+    const amount = subtotal - discountAmount + shippingAmount;
+    if (dto.creditCode && !store.creditsEnabled) throw new BadRequestException('Esta tienda no acepta códigos de saldo.');
+    const creditAmount = dto.creditCode ? (await creditQuote(this.prisma, store.id, dto.creditCode, currency, amount)).amount : 0;
+    if (quoteOnly) return { orderTotal: amount, creditAmount, subtotal, discountAmount, shippingAmount, amount: amount - creditAmount, currency, shippingOptions, shippingEnabled: store.shippingEnabled && !digitalOnly, pickupEnabled: store.shippingPickupEnabled };
+
 
     let description = cartLines
       .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}`)
@@ -1731,17 +1778,23 @@ export class StoresService implements OnModuleDestroy {
       description = description.slice(0, MAX_DESCRIPTION_LENGTH - 1) + "…";
     }
 
+    // Snapshot the server-owned rate on the order; later edits cannot change it.
+    const partner = dto.partnerCode ? await this.prisma.storePartner.findFirst({
+      where: { storeId: store.id, code: dto.partnerCode, active: true },
+    }) : null;
     const livemode = merchant.status === MerchantStatus.ACTIVE;
     const checkout = await this.prisma.$transaction(async (tx) => {
-      const created = await this.paymentIntents.createInTransaction(tx, store.merchantId, livemode, {
+      let created = await this.paymentIntents.createInTransaction(tx, store.merchantId, livemode, {
         amount,
         currency,
         description,
         metadata: {
           cart: cartLines,
           storeId: store.id,
-          ...(fulfillmentLocation ? { fulfillment: { locationId: fulfillmentLocation.id, locationName: fulfillmentLocation.name, method: dto.fulfillmentMethod, ...(fulfillmentReadyAt ? { readyAt: fulfillmentReadyAt.toISOString() } : {}) } } : {}),
-          ...(promo ? {
+          ...(shipping ? { shipping: { ...shipping, address: dto.shippingAddress!.trim(), ...(dto.shippingCountry ? { country: dto.shippingCountry } : {}), ...(dto.shippingPostalCode ? { postalCode: dto.shippingPostalCode } : {}) }, subtotal } : {}),
+          ...(fulfillmentLocation ? { fulfillment: { locationId: fulfillmentLocation.id, locationName: fulfillmentLocation.name, method: dto.fulfillmentMethod, ...(dto.fulfillmentMethod === 'delivery' && dto.shippingAddress?.trim() ? { address: dto.shippingAddress.trim() } : {}), ...(fulfillmentReadyAt ? { readyAt: fulfillmentReadyAt.toISOString() } : {}) } } : {}),
+          ...(bundle.amount > promoDiscountAmount ? { bundle: { id: bundle.id, name: bundle.name, discountAmount: bundle.amount }, subtotal } : {}),
+          ...(promo && promoDiscountAmount >= bundle.amount ? {
             promoCode: promo.code,
             promoDiscountType: promo.discountType,
             promoDiscountValue: promo.discountValue,
@@ -1750,12 +1803,20 @@ export class StoresService implements OnModuleDestroy {
           } : {}),
         },
       });
+      if (dto.creditCode) {
+        const applied = await reserveCredit(tx, created.id, store.id, dto.creditCode, currency, amount);
+        created = await tx.paymentIntent.update({ where: { id: created.id }, data: { amount: amount - applied, metadata: { ...(created.metadata as Prisma.JsonObject), storeCredit: { amount: applied, orderTotal: amount } } } });
+      }
       const order = await tx.storeOrder.create({
         data: {
           paymentIntentId: created.id,
+          ...(sourceVisit ? { sourceVisitId: sourceVisit.id } : {}),
+          ...(funnelVisit ? { funnelVisitId: funnelVisit.id } : {}),
+          ...(partner ? { partnerId: partner.id, partnerCommissionBps: partner.commissionBps } : {}),
           merchantId: store.merchantId,
           storeId: store.id,
           storeName: store.name,
+          ...(!fulfillmentLocation && store.shippingEnabled && !digitalOnly ? { fulfillmentMethod: dto.fulfillmentMethod } : {}),
           ...(fulfillmentLocation ? {
             fulfillmentLocationId: fulfillmentLocation.id,
             fulfillmentLocationName: fulfillmentLocation.name,
@@ -1768,6 +1829,8 @@ export class StoresService implements OnModuleDestroy {
           statusEvents: { create: { status: OrderFulfillmentStatus.AWAITING_PAYMENT } },
         },
       });
+      if (shipping) await tx.deliveryAssignment.create({ data: { merchantId: store.merchantId, storeId: store.id, orderId: order.id, zoneId: shipping.id, fee: shipping.amount, address: dto.shippingAddress!.trim() } });
+      if (created.amount === 0 && dto.creditCode) created = await this.paymentIntents.completeCreditPaymentInTransaction(tx, created.id);
       return { intent: created, orderId: order.id };
     });
 
@@ -1780,6 +1843,7 @@ export class StoresService implements OnModuleDestroy {
       cartDescription: description,
       contactPhone: store.contactPhone,
       contactEmail: store.contactEmail,
+      ...(!fulfillmentLocation && store.shippingEnabled && !digitalOnly ? { fulfillmentMethod: dto.fulfillmentMethod } : {}),
       ...(fulfillmentLocation ? { fulfillmentLocationName: fulfillmentLocation.name, fulfillmentMethod: dto.fulfillmentMethod } : {}),
     };
   }
@@ -1789,7 +1853,6 @@ export class StoresService implements OnModuleDestroy {
    * from this store so the notification cannot be used to spoof its catalog. */
   async submitLead(slug: string, dto: SubmitStoreLeadDto) {
     const store = await this.findActiveBySlugPublic(slug);
-    if (!this.emailProvider) throw new BadRequestException("El correo de interesados todavía no está disponible");
 
     const isContactMessage = dto.items.length === 0;
     if (isContactMessage && !store.contactFormEnabled) {
@@ -1946,15 +2009,6 @@ export class StoresService implements OnModuleDestroy {
           "Este mensaje fue enviado por pagosYa. Responde al correo indicado por el cliente.",
         ].join("\n");
 
-    await this.emailProvider.send({
-      to: recipient,
-      subject: isContactMessage
-        ? `Nuevo mensaje para ${store.name}: ${customerName}`
-        : `Nuevo interesado en ${store.name}: ${dto.name?.trim() || customerEmail}`,
-      body,
-      replyTo: customerEmail,
-      failLoudly: true,
-    });
     const lead = await this.prisma.storeLead.create({
       data: {
         merchantId: store.merchantId,
@@ -1969,6 +2023,15 @@ export class StoresService implements OnModuleDestroy {
       },
       select: { id: true },
     });
+    await this.emailProvider?.send({
+      to: recipient,
+      subject: isContactMessage
+        ? `Nuevo mensaje para ${store.name}: ${customerName}`
+        : `Nuevo interesado en ${store.name}: ${dto.name?.trim() || customerEmail}`,
+      body,
+      replyTo: customerEmail,
+      failLoudly: true,
+    }).catch(() => this.logger.warn("Lead saved; email notification failed"));
     return { submitted: true, leadId: lead.id };
   }
 

@@ -603,7 +603,8 @@ export class OperationsService {
 
   async createDeliveryZone(merchantId: string, storeId: string, dto: CreateDeliveryZoneDto) {
     await this.ownedStore(merchantId, storeId);
-    return this.prisma.deliveryZone.create({ data: { merchantId, storeId, name: dto.name.trim(), fee: dto.fee, minimumOrder: dto.minimumOrder ?? 0, radiusKm: dto.radiusKm, estimatedMinutes: dto.estimatedMinutes } });
+    if (dto.maximumOrder !== undefined && dto.maximumOrder < (dto.minimumOrder ?? 0) || dto.maximumWeightGrams !== undefined && dto.maximumWeightGrams < (dto.minimumWeightGrams ?? 0)) throw new BadRequestException('Revisa los límites de importe y peso.');
+    return this.prisma.deliveryZone.create({ data: { countryCodes: dto.countryCodes, postalPrefixes: dto.postalPrefixes, currency: dto.currency ?? 'BOB', freeAbove: dto.freeAbove, maximumOrder: dto.maximumOrder, minimumWeightGrams: dto.minimumWeightGrams, maximumWeightGrams: dto.maximumWeightGrams, merchantId, storeId, name: dto.name.trim(), fee: dto.fee, minimumOrder: dto.minimumOrder ?? 0, radiusKm: dto.radiusKm, estimatedMinutes: dto.estimatedMinutes } });
   }
 
   async createCourier(merchantId: string, storeId: string, dto: CreateCourierDto) {
