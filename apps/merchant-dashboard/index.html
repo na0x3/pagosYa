@@ -12,9 +12,9 @@
 <script>
   try {
     const savedDashboardTheme = localStorage.getItem("pagosya_dashboard_theme");
-    document.documentElement.dataset.dashboardTheme = savedDashboardTheme === "light" ? "light" : "dark";
+    document.documentElement.dataset.dashboardTheme = savedDashboardTheme === "dark" ? "dark" : "light";
   } catch {
-    document.documentElement.dataset.dashboardTheme = "dark";
+    document.documentElement.dataset.dashboardTheme = "light";
   }
 </script>
 <style>
@@ -3640,6 +3640,7 @@
   body[data-dashboard-view="products"] #productPreviewMount { display: none; }
   body[data-dashboard-view="products"] .product-editor-studio { grid-template-columns: minmax(0, 1fr); }
 </style>
+<link rel="stylesheet" href="/src/workspace-design.css">
 </head>
 <body>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
@@ -3789,20 +3790,25 @@
         <div class="dashboard-sidebar-head">
           <span class="dashboard-sidebar-kicker">Espacio de trabajo</span>
           <div class="dashboard-sidebar-title">
-            <strong>Gestión del comercio</strong>
             <button class="dashboard-sidebar-toggle" id="dashboardSidebarToggle" type="button" aria-controls="dashboardNav" aria-expanded="true" aria-label="Contraer Gestión del comercio" title="Contraer menú">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M21 4v16"/></svg>
             </button>
           </div>
         </div>
+        <label class="sidebar-store-picker" for="sidebarStorePicker">Tienda activa<select id="sidebarStorePicker" aria-label="Tienda activa"><option value="">Selecciona una tienda</option></select></label>
         <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
           <span class="dashboard-nav-label">Principal</span>
           <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
           <a class="dashboard-nav-button" href="#dashboard-progress" data-dashboard-view="progress"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Progreso</a>
           <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Mi tienda</a>
-          <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
+
           <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
+          <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
           <a class="dashboard-nav-button" href="#dashboard-workspace" data-dashboard-view="workspace"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Diseñar sitio</a>
+          <a class="dashboard-nav-button" href="#dashboard-media" data-dashboard-view="media"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span>Medios</a>
+          <a class="dashboard-nav-button" href="#dashboard-marketing" data-dashboard-view="marketing"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></svg></span>Correos y marketing</a>
+          <a class="dashboard-nav-button" href="#dashboard-experiments" data-dashboard-view="experiments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-6 10a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2L14 9V3M7 15h10"/></svg></span>Pruebas A/B</a>
+          <a class="dashboard-nav-button" href="#dashboard-integrations" data-dashboard-view="integrations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v9h9"/></svg></span>Integraciones</a>
           <span class="dashboard-nav-label" style="padding-top:12px">Operaciones</span>
 
 
@@ -3818,8 +3824,8 @@
           <span>Configurar sitio con IA<small id="aiSetupLaunchStatus">Diseñar con YAPI</small></span>
         </button>
         <div class="dashboard-sidebar-foot">
-          <strong>Conexión protegida</strong>
-          <p>Las credenciales y operaciones sensibles permanecen en el backend.</p>
+          <strong>Tu negocio, a tu manera.</strong>
+          <p>Diseña, organiza y vende desde un mismo lugar.</p>
         </div>
       </aside>
       <button class="store-fullscreen-nav-handle" id="storeFullscreenNavHandle" type="button" aria-controls="dashboardNav" aria-expanded="false" aria-label="Mostrar secciones del panel" title="Secciones del panel">
@@ -4125,12 +4131,17 @@
       <div class="panel">
         <div class="section-head">
           <h2>Mi tienda</h2>
-          <p class="muted" style="margin:4px 0 0">Una tienda por cuenta, con su propio enlace y catálogo.</p>
+          <p class="muted" style="margin:4px 0 0">Todos tus negocios en un perfil. Cada tienda conserva su diseño, enlace y catálogo.</p>
         </div>
-        <form class="inline" id="createStoreForm" hidden>
-          <div><label for="createStoreName">Nombre de tu tienda</label><input id="createStoreName" name="name" placeholder="Mi Tienda de Ropa" required></div>
-          <button class="primary" type="submit">Crear tienda</button>
-        </form>
+        <div class="store-library-tools"><label><span class="sr-only">Buscar tiendas</span><input id="storeLibrarySearch" type="search" placeholder="Buscar tiendas" autocomplete="off"></label><label><span class="sr-only">Estado de las tiendas</span><select id="storeLibraryStatus"><option value="">Todos los estados</option><option value="published">Publicadas</option><option value="draft">Borradores</option><option value="archived">Archivadas</option></select></label><span id="storeLibraryCount" aria-live="polite"></span></div>
+        <dialog id="createStoreDialog" class="create-store-dialog" aria-labelledby="createStoreTitle">
+          <form class="inline" id="createStoreForm">
+            <header><h2 id="createStoreTitle">Crea otra tienda</h2><p>Un nuevo espacio para tu negocio, dentro de tu perfil.</p></header>
+            <div><label for="createStoreName">Nombre de tu tienda</label><input id="createStoreName" name="name" placeholder="Mi Tienda de Ropa" required maxlength="120"></div>
+            <p id="createStoreError" role="alert" hidden></p>
+            <footer><button class="ghost" id="cancelCreateStore" type="button">Cancelar</button><button class="primary" type="submit">Crear tienda</button></footer>
+          </form>
+        </dialog>
         <p class="faint" id="checkoutOriginRow" style="margin:10px 0 0">
           Página de pago:
           <input id="checkoutOrigin" style="width:220px;display:inline-block" value="http://localhost:5175">
@@ -4266,18 +4277,11 @@
       </div>
     </section>
 
-    <section class="block" id="paymentLinksSection" data-dashboard-page="products">
-      <div class="panel">
-        <div class="section-head">
-          <h2>Productos</h2>
-          <p class="muted" style="margin:4px 0 0">Administra el catálogo de la tienda seleccionada.</p>
-        </div>
-        <p class="current-store-banner" id="currentStoreBanner">
-          Link de <strong id="currentStoreLabel">esta tienda</strong>:
-          <input readonly id="currentStoreLink" onclick="this.select()">
-          <button class="ghost" type="button" id="copyCurrentStoreLink">Copiar</button>
-          <button class="ghost" type="button" id="shareCurrentStoreLink">Compartir</button>
-        </p>
+    <section class="block marketing-workspace" data-dashboard-page="marketing" hidden>
+      <nav class="marketing-tabs" id="marketingTabs" aria-label="Herramientas de marketing" data-tab="templates"><button type="button" data-marketing-tab="templates" aria-pressed="true">Plantillas</button><button type="button" data-marketing-tab="flows" aria-pressed="false">Flujos</button><button type="button" data-marketing-tab="staff" aria-pressed="false">Equipo</button><button type="button" data-marketing-tab="domain" aria-pressed="false">Dominio</button><button type="button" data-marketing-tab="logs" aria-pressed="false">Registros</button><button type="button" data-marketing-tab="program" aria-pressed="false">Comeback Card</button><button type="button" data-marketing-tab="campaigns" aria-pressed="false">Campañas</button><button type="button" data-marketing-tab="customers" aria-pressed="false">Clientes</button><button type="button" data-marketing-tab="promotions" aria-pressed="false">Códigos promocionales</button></nav>
+      <iframe id="storeMarketingFrame" title="Correos y marketing de la tienda" class="store-resource-frame"></iframe>
+      <p data-resource-empty="marketing" hidden>Selecciona una tienda para configurar su marketing.</p>
+      <div id="marketingPromotions" hidden><div class="panel">
         <section class="promo-code-studio" aria-labelledby="promoCodeTitle">
           <header class="promo-code-head">
             <div><h3 id="promoCodeTitle">Códigos promocionales</h3><p>Crea un código para compartir con clientes. Elige porcentaje o un monto fijo y apágalo cuando termine la promoción.</p></div>
@@ -4292,6 +4296,23 @@
           </form>
           <div class="promo-code-list" id="promoCodeList"></div>
         </section>
+    </div></div></section>
+    <section class="block store-library-page" data-dashboard-page="integrations"><iframe id="storeIntegrationsFrame" title="Integraciones de la tienda" class="store-resource-frame"></iframe><p data-resource-empty="integrations" hidden>Selecciona una tienda para ver sus integraciones.</p></section>
+    <section class="block store-library-page" data-dashboard-page="experiments"><iframe id="storeExperimentsFrame" title="Pruebas A/B de la tienda" class="store-resource-frame"></iframe><p data-resource-empty="experiments" hidden>Selecciona una tienda para comparar diseños.</p></section>
+    <section class="block store-library-page" data-dashboard-page="media"><iframe id="storeMediaFrame" title="Medios de la tienda" class="store-resource-frame"></iframe><p data-resource-empty="media" hidden>Selecciona una tienda para ver sus medios.</p></section>
+    <section class="block" id="paymentLinksSection" data-dashboard-page="products">
+      <div class="panel">
+        <div class="section-head">
+          <h2>Productos</h2>
+          <p class="muted" style="margin:4px 0 0">Administra el catálogo de la tienda seleccionada.</p>
+        </div>
+        <p class="current-store-banner" id="currentStoreBanner">
+          Link de <strong id="currentStoreLabel">esta tienda</strong>:
+          <input readonly id="currentStoreLink" onclick="this.select()">
+          <button class="ghost" type="button" id="copyCurrentStoreLink">Copiar</button>
+          <button class="ghost" type="button" id="shareCurrentStoreLink">Compartir</button>
+        </p>
+        <details class="catalog-import-disclosure" id="catalogImportDisclosure"><summary>Importar inventario</summary>
         <section class="inventory-importer" id="inventoryImporter" aria-labelledby="inventoryImportTitle">
           <div class="inventory-import-head">
             <div>
@@ -4366,6 +4387,9 @@
             </div>
           </div>
         </section>
+        </details>
+        <section class="product-yapi-guide" aria-label="Crear productos con YAPI"><header><div><strong>YAPI · Tu asistente de productos</strong><p>Una pregunta a la vez. Tú eliges cada detalle.</p></div><button type="button" class="primary" id="startProductGuide">Añadir producto con YAPI</button></header><iframe id="productGuideFrame" title="Añadir producto con YAPI" hidden></iframe></section>
+        <details class="product-create-disclosure" id="productCreateDisclosure" hidden><summary>Editar producto</summary>
         <div class="product-editor-studio">
         <form class="inline" id="paymentLinkForm">
           <div class="product-form-intro">
@@ -4388,6 +4412,17 @@
             <span class="faint">La primera será la portada. Después puedes ordenar las fotos y ajustar su encuadre.</span>
           </div>
           <div class="image-gallery-preview" id="paymentLinkImagesPreview"></div>
+              <div class="product-options-switch">
+                <span class="checkbox-row">
+                  <input type="checkbox" id="paymentLinkOptionsToggle">
+                  <label for="paymentLinkOptionsToggle" style="margin:0;color:var(--pg-text)">El cliente elige opciones de este producto</label>
+                </span>
+                <span class="faint">Crea tus propias opciones: talla, color, material, sabor o acabado. Cada combinación tiene su precio, foto y stock.</span>
+              </div>
+              <div class="product-options-panel" id="paymentLinkOptionsPanel" hidden>
+                <div id="productCombinationEditor"></div>
+                <div id="paymentLinkVariantRows" hidden></div>
+              </div>
           <details class="product-form-more" id="productAdvancedOptions">
             <summary><strong>Más opciones para vender este producto</strong><span>Versiones, personalizaciones, descuentos, etiquetas, SKU, color y facturación SIN.</span></summary>
             <div class="product-form-more-fields">
@@ -4410,18 +4445,6 @@
                   <div><label for="paymentLinkDiscountEndsAt">Termina</label><input id="paymentLinkDiscountEndsAt" name="discountEndsAt" type="datetime-local"></div>
                 </div>
               </section>
-              <div class="product-options-switch">
-                <span class="checkbox-row">
-                  <input type="checkbox" id="paymentLinkOptionsToggle">
-                  <label for="paymentLinkOptionsToggle" style="margin:0;color:var(--pg-text)">Tiene tamaños, sabores o presentaciones</label>
-                </span>
-                <span class="faint">Actívalo cuando cada versión tenga su propio precio o stock. Ejemplo: Pequeño, Mediano y Grande.</span>
-              </div>
-              <div class="product-options-panel" id="paymentLinkOptionsPanel" hidden>
-                <p class="product-options-copy faint"><strong>Versiones del producto.</strong> Agrega entre 2 y 8. Indica el precio final de cada una y deja el stock vacío si no tiene límite.</p>
-                <div class="product-variant-rows" id="paymentLinkVariantRows"></div>
-                <button type="button" class="ghost product-options-add" id="paymentLinkVariantAdd">Agregar otra versión</button>
-              </div>
               <section class="product-extras-panel" aria-labelledby="paymentLinkExtrasTitle">
                 <h4 id="paymentLinkExtrasTitle">Extras que el cliente puede elegir</h4>
                 <p class="product-options-copy faint">Agrega complementos como queso extra, envoltura de regalo o un servicio adicional. Puedes decidir si son obligatorios.</p>
@@ -4467,14 +4490,15 @@
           </header>
         </div>
         </div>
+        </details>
         <div class="payment-link-catalog-tools">
           <div class="payment-link-catalog-copy">
             <h3>Tu catálogo</h3>
             <p id="paymentLinkSearchSummary" aria-live="polite">Los productos más nuevos aparecen primero.</p>
-            <div class="payment-link-catalog-actions">
+            <details class="catalog-bulk-disclosure"><summary>Descuentos en lote</summary><div class="payment-link-catalog-actions">
               <button class="ghost bulk-discount-launch" type="button" id="bulkDiscountOpen">Programar descuento para varios</button>
               <button class="ghost bulk-discount-clear-all" type="button" id="bulkDiscountClearAll" disabled>Quitar todos los descuentos</button>
-            </div>
+            </div></details>
           </div>
           <div class="payment-link-search">
             <label for="paymentLinkSearch">Buscar productos</label>
@@ -4635,6 +4659,8 @@
               <button type="button" class="ghost custom-domain-toggle" id="customDomainToggle">Mostrar</button>
             </div>
           </div>
+          <section class="domain-shop" id="domainShop" aria-label="Comprar un dominio"></section>
+          <h4>Ya tengo un dominio</h4>
           <form class="custom-domain-form" id="customDomainForm">
             <label for="customDomainHostname">Dominio
               <input id="customDomainHostname" name="hostname" inputmode="url" autocomplete="url" placeholder="www.mitienda.bo" required maxlength="300" aria-describedby="customDomainStatus">
@@ -5402,6 +5428,14 @@
     window.__rejectPagosYaStoreEditor = reject;
   });
 </script>
+<aside class="workspace-yapi" aria-label="YAPI, asistente de tu tienda">
+  <div class="workspace-yapi-heading"><strong>✳ YAPI</strong><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
+  <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar hoy?" required></textarea><button class="primary" type="submit">Abrir con YAPI ↗</button></form>
+  <p class="workspace-yapi-status" id="workspaceYapiStatus" role="status"></p>
+</aside>
+<link rel="stylesheet" href="/src/product-options.css">
+<link rel="stylesheet" href="/src/domain-shop.css">
+<script src="/src/product-options.js"></script>
 <script type="module" src="./src/store-editor/bootstrap.js"></script>
 <script>
   window.PagosYaStoreEditorReady.then((storeEditorStateModule) => {
@@ -5415,6 +5449,7 @@
     dashboardThemeButtons.forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.dashboardThemeValue === nextTheme));
     });
+    document.getElementById("merchantStudioFrame")?.contentWindow?.postMessage({ type: "pagosya:workspace-theme", theme: nextTheme }, location.origin);
     if (remember) {
       try {
         localStorage.setItem(DASHBOARD_THEME_KEY, nextTheme);
@@ -6708,6 +6743,7 @@
   let categoryOrderSaveTimer = null;
   let categoryOrderSaveVersion = 0;
   let dashboardRefreshVersion = 0;
+  let domainShop = null;
   let currentStoreId = sessionStorage.getItem("pagosya_current_store_id") || null;
   let debtLinkStatusTab = "ACTIVE";
   const DEFAULT_OPEN_SECTIONS = new Set(["storesSection", "paymentLinksSection"]);
@@ -6963,9 +6999,14 @@
   const DASHBOARD_VIEW_COPY = {
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
     progress: ["Progreso", "Convierte la actividad real de tu tienda en niveles, estrellas y nuevos compañeros."],
-    stores: ["Mi tienda", "Administra la tienda de tu cuenta."],
+    stores: ["Mi tienda", "Tus tiendas, sus diseños y sus catálogos. Todo desde un mismo perfil."],
     categories: ["Categorías", "Organiza el catálogo en el orden que verán tus clientes."],
-    products: ["Productos", "Gestiona productos, precios, inventario y enlaces de pago."],
+    discounts: ["Correos y marketing", "Cuida a tus clientes y haz que vuelvan."],
+    marketing: ["Correos y marketing", "Mensajes, Comeback y promociones para la tienda seleccionada."],
+    experiments: ["Pruebas A/B", "Compara dos diseños y descubre cuál convierte más visitas en compras."],
+    integrations: ["Integraciones", "Conecta las herramientas que tu tienda necesita."],
+    products: ["Productos", "Tu catálogo y YAPI: añade productos paso a paso."],
+    media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     appearance: ["Apariencia", "Personaliza la identidad visual y revisa los cambios en vivo."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
@@ -6974,18 +7015,84 @@
     compliance: ["Cumplimiento y credenciales", "Completa KYC, facturación electrónica y credenciales de producción."],
   };
 
-  function canLeaveMerchantStudio() {
+  let pendingStudioAction = null;
+  function deliverStudioAction() {
     const frame = document.getElementById("merchantStudioFrame");
-    try { return frame.contentWindow?.pagosyaStudioCanLeave?.() ?? true; } catch { return false; }
+    if (pendingStudioAction?.storeId === currentStoreId && frame.dataset.ready === "true") frame.contentWindow?.postMessage({ type: "pagosya:studio-action", storeId: currentStoreId, ...pendingStudioAction }, location.origin);
   }
+  document.getElementById("workspaceYapiForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const field = document.getElementById("workspaceYapiDraft");
+    if (!field.value.trim()) return;
+    if (!currentStoreId) { document.getElementById("workspaceYapiStatus").textContent = "Selecciona o crea una tienda para conversar con YAPI."; return; }
+    pendingStudioAction = { action: "compose", text: field.value.trim(), storeId: currentStoreId };
+    history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); deliverStudioAction();
+  });
+  function canLeaveMerchantStudio() {
+    try { return ["merchantStudioFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].every(id => document.getElementById(id).contentWindow?.pagosyaStudioCanLeave?.() ?? true); } catch { return false; }
+  }
+  document.getElementById("marketingTabs").addEventListener("click", event => {
+    const button = event.target.closest("[data-marketing-tab]"); if (!button) return;
+    const frame = document.getElementById("storeMarketingFrame");
+    if (frame.contentWindow?.pagosyaStudioCanLeave && !frame.contentWindow.pagosyaStudioCanLeave()) return;
+    document.getElementById("marketingTabs").dataset.tab = button.dataset.marketingTab;
+    document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab === button)));
+    document.getElementById("marketingPromotions").hidden = button.dataset.marketingTab !== "promotions";
+    frame.removeAttribute("src"); syncStoreResourceViews("marketing");
+  });
+  function syncStoreResourceViews(view) {
+    for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
+      const frame = document.getElementById(id);
+      if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; }
+      if (view !== kind) continue;
+      frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && document.getElementById("marketingTabs").dataset.tab === "promotions";
+      const empty = document.querySelector(`[data-resource-empty="${kind}"]`); if (empty) empty.hidden = Boolean(currentStoreId && sessionToken);
+      if (!frame.hidden && !frame.getAttribute("src")) {
+        sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
+        frame.dataset.storeId = currentStoreId;
+        frame.src = `/studio/?embedded=1&${kind === "products" ? "productGuide=1" : `library=${kind}${kind === "marketing" ? `&tab=${document.getElementById("marketingTabs").dataset.tab}` : ""}`}&store=${encodeURIComponent(currentStoreId)}`;
+      }
+    }
+  }
+  document.getElementById("startProductGuide").addEventListener("click", () => {
+    syncStoreResourceViews("products");
+    document.getElementById("productGuideFrame").scrollIntoView({ block: "center", behavior: "smooth" });
+    document.getElementById("productGuideFrame").contentWindow?.postMessage({type:"pagosya:product-guide-new"}, location.origin);
+  });
+  window.addEventListener("message", event => {
+    if (event.origin !== location.origin) return;
+    const frame = ["storeMediaFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
+    if (!frame || frame.dataset.storeId !== currentStoreId || event.data?.storeId !== currentStoreId) return;
+    if (event.data.type === "pagosya:workspace" && ["marketing", "integrations", "experiments", "workspace"].includes(event.data.view)) {
+      if (!canLeaveMerchantStudio()) return;
+      if (event.data.view === "marketing" && ["program", "templates"].includes(event.data.tab)) {
+        document.getElementById("marketingTabs").dataset.tab = event.data.tab;
+        document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab.dataset.marketingTab === event.data.tab)));
+        document.getElementById("marketingPromotions").hidden = true;
+        document.getElementById("storeMarketingFrame").removeAttribute("src");
+      }
+      history.pushState(null, "", `#dashboard-${event.data.view}`); setDashboardView(event.data.view); return;
+    }
+    if (event.data.type === "pagosya:source-publication-changed") { void refresh(); return; }
+    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(4000, Math.max(340, event.data.height))}px`;
+    if (event.data.type === "pagosya:product-guide-ready") {
+      frame.dataset.ready = "true";
+      if (frame.dataset.pendingProduct) { frame.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId:currentStoreId, product:JSON.parse(frame.dataset.pendingProduct)}, location.origin); delete frame.dataset.pendingProduct; }
+    }
+    if (event.data.type === "pagosya:product-saved") {
+      for (const id of ["storeMediaFrame"]) document.getElementById(id).removeAttribute("src");
+      void refresh();
+    }
+  });
   function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
+    syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
     const views = ["workspace", "products", "categories", "charge-links", "payments", "compliance"];
     document.getElementById("merchantStoreTabs").hidden = !store || !views.includes(view);
     document.getElementById("merchantWorkspaceStoreName").textContent = store?.name || "Mi tienda";
     const frame = document.getElementById("merchantStudioFrame");
     if (!sessionToken || !store || frame.dataset.storeId && frame.dataset.storeId !== store.id) {
-      frame.removeAttribute("src"); delete frame.dataset.storeId;
+      frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready;
     }
     frame.hidden = !store;
     document.getElementById("merchantStudioEmpty").hidden = Boolean(store);
@@ -7008,11 +7115,22 @@
       }
       syncStoreDraftUi(); return;
     }
+    if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; frame.contentWindow?.postMessage({ type: "pagosya:workspace-theme", theme: document.documentElement.dataset.dashboardTheme }, location.origin); deliverStudioAction(); return; }
+    if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
+      if (pendingStudioAction?.action === "compose") document.getElementById("workspaceYapiDraft").value = "";
+      pendingStudioAction = null; return;
+    }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
-    if (event.data?.type === "pagosya:workspace" && ["products", "categories", "charge-links"].includes(event.data.view)) {
+    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "categories", "charge-links", "marketing", "integrations", "experiments"].includes(event.data.view)) {
+      if (event.data.view === "marketing" && event.data.tab === "program") {
+        document.getElementById("marketingTabs").dataset.tab = "program";
+        document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab.dataset.marketingTab === "program")));
+        document.getElementById("marketingPromotions").hidden = true;
+        document.getElementById("storeMarketingFrame").removeAttribute("src");
+      }
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
-      document.getElementById("merchantStoreTabs").scrollIntoView({ block: "start" });
+      document.getElementById("dashboardWorkspace").scrollIntoView({ block: "start" });
     }
   });
 
@@ -7036,6 +7154,8 @@
   }
 
   function setDashboardView(view, { remember = true } = {}) {
+    if (view === "content") view = "workspace";
+    if (view === "discounts") { view = "marketing"; document.getElementById("marketingTabs").dataset.tab = "promotions"; document.getElementById("marketingPromotions").hidden = false; document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed",String(tab.dataset.marketingTab === "promotions"))); }
     const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
     if (nextView !== "appearance" && storePreviewFullscreen) setStorePreviewFullscreen(false);
     const viewChanged = document.body.dataset.dashboardView !== nextView;
@@ -7056,12 +7176,13 @@
       });
     }
     document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
-      if (button.dataset.dashboardView === nextView) button.setAttribute("aria-current", "page");
+      if (button.dataset.dashboardView === nextView && !button.dataset.studioTool) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
     const [title, description] = DASHBOARD_VIEW_COPY[nextView];
     document.getElementById("workspaceTitle").textContent = title;
     document.getElementById("workspaceDescription").textContent = description;
+    if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     if (nextView === "appearance" && dashboardSections.get("storeSettingsSection")?.toggle.getAttribute("aria-expanded") !== "true") {
       setDashboardSectionExpanded("storeSettingsSection", true, false);
     }
@@ -7088,7 +7209,12 @@
       event.preventDefault();
       setAssistantOpen(false, false, false);
       history.pushState(null, "", button.href);
+      pendingStudioAction = button.dataset.studioTool ? { action: button.dataset.studioTool, storeId: currentStoreId } : pendingStudioAction;
       setDashboardView(button.dataset.dashboardView);
+      if (button.dataset.studioTool) {
+        document.querySelectorAll('#dashboardNav [data-dashboard-view="workspace"]').forEach(link => link.removeAttribute("aria-current"));
+        button.setAttribute("aria-current", "page"); deliverStudioAction();
+      }
       document.querySelector(".dashboard-sidebar")?.classList.remove("is-store-nav-pinned", "is-store-nav-peeking");
       const menuHandle = document.getElementById("storeFullscreenNavHandle");
       menuHandle?.setAttribute("aria-expanded", "false");
@@ -7230,7 +7356,6 @@
   let pendingProductVariants = [];
   let pendingProductExtras = [];
   let editingLinkId = null;
-  const MAX_PRODUCT_VARIANTS = 64;
   const MAX_PRODUCT_EXTRAS = 12;
   const inventoryCsvInputEl = document.getElementById("inventoryCsvInput");
   const inventoryImagesInputEl = document.getElementById("inventoryImagesInput");
@@ -7700,58 +7825,23 @@
     await loadSiatProducts(link.codigoProductoSin || "");
   }
 
+  let productCombinationEditor = null;
   function renderProductVariants() {
     const enabled = paymentLinkOptionsToggleEl.checked;
     paymentLinkOptionsPanelEl.hidden = !enabled;
     paymentLinkBasePriceEl.hidden = enabled;
     paymentLinkBaseStockEl.hidden = enabled;
     paymentLinkAmountEl.required = !enabled;
-    paymentLinkVariantRowsEl.innerHTML = pendingProductVariants
-      .map(
-        (variant, index) => `<div class="product-variant-row" data-index="${index}">
-          <div><label for="variantName${index}">Versión ${index + 1}</label><input id="variantName${index}" class="variant-name" maxlength="140" ${variant.options?.length ? 'readonly title="Edita los colores y tallas desde YAPI"' : ''} placeholder="${index === 0 ? "Ej. Pequeña" : index === 1 ? "Ej. Grande" : "Nombre de la versión"}" value="${esc(variant.name)}"></div>
-          <div><label for="variantAmount${index}">Precio final (Bs)</label><input id="variantAmount${index}" class="variant-amount" type="number" min="0" step="0.01" placeholder="0.00" value="${esc(variant.amount)}"></div>
-          <div><label for="variantStock${index}">Stock de esta versión${variant.legacySharedStock ? " (compartido)" : ""}</label><input id="variantStock${index}" class="variant-stock" type="number" min="0" max="1000000" step="1" placeholder="${variant.legacySharedStock ? "Usa el stock general" : "Ilimitado"}" value="${esc(variant.stock ?? "")}"></div>
-          <button type="button" class="ghost product-variant-remove" aria-label="Quitar versión ${index + 1}">Quitar</button>
-        </div>`,
-      )
-      .join("");
-
-    paymentLinkVariantRowsEl.querySelectorAll(".product-variant-row").forEach((row) => {
-      const index = Number(row.dataset.index);
-      row.querySelector(".variant-name").addEventListener("input", (event) => (pendingProductVariants[index].name = event.target.value));
-      row.querySelector(".variant-amount").addEventListener("input", (event) => (pendingProductVariants[index].amount = event.target.value));
-      row.querySelector(".variant-stock").addEventListener("input", (event) => {
-        pendingProductVariants[index].stock = event.target.value;
-        pendingProductVariants[index].legacySharedStock = false;
-      });
-      row.querySelector(".product-variant-remove").addEventListener("click", () => {
-        pendingProductVariants.splice(index, 1);
-        renderProductVariants();
-      });
-    });
+    const host = document.getElementById('productCombinationEditor');
+    host.replaceChildren();
+    productCombinationEditor = enabled ? PagosYaProductOptions.mount(host, {
+      variants: pendingProductVariants,
+      basePrice: () => paymentLinkAmountEl.value,
+      photos: () => pendingImageUrls,
+      onChange: rows => { pendingProductVariants = rows; },
+    }) : null;
   }
-
-  paymentLinkOptionsToggleEl.addEventListener("change", () => {
-    if (paymentLinkOptionsToggleEl.checked && pendingProductVariants.length === 0) {
-      pendingProductVariants = [
-        { name: "", amount: paymentLinkAmountEl.value || "", stock: "" },
-        { name: "", amount: "", stock: "" },
-      ];
-    }
-    renderProductVariants();
-    if (paymentLinkOptionsToggleEl.checked) paymentLinkVariantRowsEl.querySelector(".variant-name")?.focus();
-  });
-
-  document.getElementById("paymentLinkVariantAdd").addEventListener("click", () => {
-    if (pendingProductVariants.length >= MAX_PRODUCT_VARIANTS) {
-      errorEl.textContent = `Error: máximo ${MAX_PRODUCT_VARIANTS} opciones por producto`;
-      return;
-    }
-    pendingProductVariants.push({ name: "", amount: "", stock: "" });
-    renderProductVariants();
-    paymentLinkVariantRowsEl.querySelector(".product-variant-row:last-child .variant-name")?.focus();
-  });
+  paymentLinkOptionsToggleEl.addEventListener('change', renderProductVariants);
 
   function renderProductExtras() {
     const sharedPools = new Map();
@@ -7826,6 +7916,7 @@
   });
 
   function renderImageGalleryPreview() {
+    productCombinationEditor?.refreshPhotos();
     while (pendingImagePositions.length < pendingImageUrls.length) pendingImagePositions.push("50% 50%");
     pendingImagePositions = pendingImagePositions.slice(0, pendingImageUrls.length);
     paymentLinkImagesStatusEl.textContent = pendingImageUrls.length
@@ -15974,26 +16065,44 @@
       `<option value="">Sin categoría</option>` + categories.map((category) => `<option value="${esc(category.id)}">${esc(category.name)}</option>`).join("");
   }
 
+  function openCreateStore() {
+    document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
+    document.getElementById("createStoreError").hidden = true;
+    document.getElementById("createStoreDialog").showModal();
+    document.getElementById("createStoreName").focus();
+  }
+  document.getElementById("cancelCreateStore").addEventListener("click", () => document.getElementById("createStoreDialog").close());
+  document.getElementById("storeLibrarySearch").addEventListener("input", () => renderStoreRows(lastStores));
+  document.getElementById("storeLibraryStatus").addEventListener("change", () => renderStoreRows(lastStores));
+  document.getElementById("sidebarStorePicker").addEventListener("change", async event => {
+    const nextId = event.target.value;
+    if (nextId === currentStoreId) return;
+    if (!canLeaveMerchantStudio() || storeSettingsDirty && !confirm("Tienes cambios sin guardar. ¿Cambiar de tienda y descartarlos?")) { event.target.value = currentStoreId || ""; return; }
+    setStoreSettingsDirty(false); selectStore(nextId); await refresh();
+  });
+
   document.getElementById("createStoreForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     const submit = form.querySelector('button[type="submit"]');
-    if (submit.disabled || lastStores.length) return;
+    if (submit.disabled) return;
     const data = Object.fromEntries(new FormData(form));
     if (!canLeaveMerchantStudio()) return;
     setButtonBusy(submit, true, "Creando…");
     try {
       const store = await api("/stores", { method: "POST", body: JSON.stringify({ name: data.name }) });
       form.reset();
-      lastStores = [store];
-      form.hidden = true;
+      lastStores = [store, ...lastStores.filter(existing => existing.id !== store.id)];
+      document.getElementById("createStoreDialog").close();
       selectStore(store.id);
       await refresh();
       history.pushState(null, "", "#dashboard-workspace");
       setDashboardView("workspace");
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
-      // Another tab may have created the account's store in the meantime.
+      const createError = document.getElementById("createStoreError");
+      createError.textContent = err.message; createError.hidden = false;
+      // Refresh after a concurrent change while keeping the creation dialog usable.
       if (err.status === 409) {
         try { renderStoreRows(await api("/stores")); } catch { /* Keep the original error visible. */ }
       }
@@ -16191,6 +16300,7 @@
   function selectStore(storeId) {
     const storeChanged = storeId !== currentStoreId;
     currentStoreId = storeId;
+    domainShop?.setStore(storeId);
     if (storeId) sessionStorage.setItem("pagosya_current_store_id", storeId);
     else sessionStorage.removeItem("pagosya_current_store_id");
     if (storeChanged) {
@@ -16242,6 +16352,12 @@
     }
   }
 
+  import('/src/domain-shop.mjs').then(({ mountDomainShop }) => {
+    domainShop = mountDomainShop(document.getElementById('domainShop'), { api, onSupport: () => assistantSupportOpenEl.click(),
+      onConnected: (id) => { if (id === currentStoreId) refreshCurrentStoreDomains().catch(() => {}); } });
+    domainShop.setStore(currentStoreId);
+  }).catch(() => { document.getElementById('domainShop').textContent = 'No pudimos cargar la compra de dominios. Recarga la página para volver a intentar.'; });
+
   function setCustomDomainMessage(message, isError = false) {
     const status = document.getElementById("customDomainStatus");
     status.textContent = message;
@@ -16281,7 +16397,7 @@
           <strong>${esc(domain.hostname)}</strong>
           <span class="badge ${active ? "ACTIVE" : ownershipVerified ? "VERIFIED" : "PENDING"}">${verifiedLabel}</span>
         </div>
-        ${active ? `<p class="custom-domain-note">El dominio ya abre esta tienda. El certificado HTTPS puede tardar unos minutos más en aparecer después de la primera activación.</p>` : `
+        ${domain.managed ? `<p class="custom-domain-note">${active ? "Dominio conectado automáticamente con HTTPS." : "Estamos preparando este dominio. Consulta el progreso de tu compra arriba."}</p>` : active ? `<p class="custom-domain-note">El dominio ya abre esta tienda. El certificado HTTPS puede tardar unos minutos más en aparecer después de la primera activación.</p>` : `
           <div class="custom-domain-records" aria-label="Registros DNS para ${esc(domain.hostname)}">
             <div class="custom-domain-record-head" aria-hidden="true"><span>Tipo</span><span>Nombre / Host</span><span>Valor / Destino</span><span></span></div>
             <div class="custom-domain-record"><span data-label="Tipo">TXT</span><code data-label="Nombre / Host">${esc(domain.dns.verification.name)}</code><code data-label="Valor / Destino">${esc(domain.dns.verification.value)}</code><button class="ghost domain-copy" type="button" data-copy="${esc(domain.dns.verification.value)}">Copiar valor</button></div>
@@ -16289,8 +16405,8 @@
           </div>
           <p class="custom-domain-note">${ownershipVerified ? "La propiedad ya está verificada. Falta que el registro de enrutamiento llegue al destino indicado." : "Si conectas el dominio raíz sin “www”, tu proveedor puede llamar al segundo registro ALIAS, ANAME o CNAME aplanado. Usa el mismo destino."}</p>`}
         <div class="custom-domain-actions">
-          ${active ? `<a class="custom-domain-open" href="${esc(domain.url)}" target="_blank" rel="noopener noreferrer">Abrir dominio</a>` : `<button class="primary domain-verify" type="button">${ownershipVerified ? "Revisar enrutamiento" : "Ya agregué los registros"}</button>`}
-          <button class="ghost domain-remove" type="button">Desconectar</button>
+          ${domain.managed ? "" : active ? `<a class="custom-domain-open" href="${esc(domain.url)}" target="_blank" rel="noopener noreferrer">Abrir dominio</a>` : `<button class="primary domain-verify" type="button">${ownershipVerified ? "Revisar enrutamiento" : "Ya agregué los registros"}</button>`}
+          ${domain.managed ? "" : `<button class="ghost domain-remove" type="button">Desconectar</button>`}
         </div>
       </article>`;
     }).join("");
@@ -16851,29 +16967,35 @@
 
   function renderStoreRows(stores) {
     lastStores = stores;
-    document.getElementById("createStoreForm").hidden = stores.length > 0;
+    const picker = document.getElementById("sidebarStorePicker");
+    picker.innerHTML = stores.length ? stores.map(store => `<option value="${esc(store.id)}">${esc(store.name)}</option>`).join("") : '<option value="">Crea tu primera tienda</option>';
+    picker.disabled = !stores.length;
+
     // If the previously selected store is gone (or nothing was selected yet), fall back
     // to the first store so the Productos/Apariencia sections always show something usable.
     if (!stores.some((s) => s.id === currentStoreId)) {
       selectStore(stores[0] ? stores[0].id : null);
     }
 
-    document.getElementById("storeRows").innerHTML = stores
-      .map((store) => {
-        const logo = store.logoUrl ? `<img class="store-row-logo" src="${esc(dashboardAssetUrl(store.logoUrl))}" alt="">` : "";
-        const ownerUrl = publicStoreUrl(store);
-        return `<div class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
-          ${logo}
-          <span class="store-row-name">${esc(store.name)}</span>
-          <span class="badge ${esc(store.status)}">${esc(store.status)}</span>
-          <a class="store-row-open" href="${esc(ownerUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir tienda pública ${esc(store.name)}">
-            Abrir tienda
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
-          </a>
-          <button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}">Eliminar</button>
-        </div>`;
-      })
-      .join("") || `<p class="muted" style="margin:14px 0 0">Todavía no tienes una tienda. Crea la tuya para comenzar.</p>`;
+    picker.value = currentStoreId || "";
+    const search = document.getElementById("storeLibrarySearch").value.trim().toLocaleLowerCase();
+    const filter = document.getElementById("storeLibraryStatus").value;
+    const statusFor = store => store.status === "ARCHIVED" ? "archived" : (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
+    const visible = stores.filter(store => (!search || store.name.toLocaleLowerCase().includes(search)) && (!filter || statusFor(store) === filter));
+    document.getElementById("storeLibraryCount").textContent = `${visible.length} de ${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}`;
+    document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>Empieza desde cero</small></button>` + visible.map(store => {
+      const revision = store.sourceProject?.revision || store.publishedSourceRevision;
+      const cover = store.bannerUrl || store.heroSlides?.[0]?.imageUrl || store.publicityImageUrl;
+      const preview = revision ? `<iframe src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
+      const state = statusFor(store), stateLabel = { published: "Publicada", draft: "Borrador", archived: "Archivada" }[state];
+      return `<article class="store-row ${store.id === currentStoreId ? "active" : ""}" data-id="${esc(store.id)}">
+        <div class="store-card-preview">${preview}</div>
+        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === currentStoreId ? '<span class="store-card-current">Tienda actual</span>' : ''}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
+        <span class="store-card-edit">Abrir editor ↗</span>
+      </article>`;
+    }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
+    document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
+    document.querySelectorAll(".store-card-menu").forEach(menu => menu.addEventListener("click", event => event.stopPropagation()));
 
     document.querySelectorAll(".store-row").forEach((row) => {
       row.setAttribute("tabindex", "0");
@@ -17206,6 +17328,8 @@
 
   function resetPaymentLinkForm() {
     const wasEditingProduct = Boolean(editingLinkId);
+    document.getElementById("productCreateDisclosure").open = false;
+    document.getElementById("productCreateDisclosure").hidden = true;
     editingLinkId = null;
     document.getElementById("paymentLinkForm").reset();
     pendingImageUrls = [];
@@ -18418,7 +18542,17 @@
 
   function beginPaymentLinkEdit(link) {
     if (!link) return;
+    syncStoreResourceViews("products");
+    const guide = document.getElementById("productGuideFrame");
+    if (guide.dataset.ready === "true") guide.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId: currentStoreId, product: link}, location.origin);
+    else guide.dataset.pendingProduct = JSON.stringify(link);
+    guide.scrollIntoView({block:"center",behavior:"smooth"});
+  }
+  function beginAdvancedPaymentLinkEdit(link) {
+    if (!link) return;
+    document.getElementById("productCreateDisclosure").hidden = false;
     editingLinkId = link.id;
+    document.getElementById("productCreateDisclosure").open = true;
     productAdvancedOptionsEl.open = true;
     const form = document.getElementById("paymentLinkForm");
     form.name.value = link.name;
@@ -18620,6 +18754,7 @@
     }).join("");
 
     document.getElementById("emptyCatalogImport")?.addEventListener("click", () => {
+      document.getElementById("catalogImportDisclosure").open = true;
       const toggle = document.getElementById("inventoryImporterToggle");
       if (toggle.getAttribute("aria-expanded") !== "true") toggle.click();
       document.getElementById("inventoryImporter").scrollIntoView({ block: "start" });
@@ -19590,48 +19725,9 @@
     let amountBob = parseFloat(data.amount);
     let variants = [];
     if (paymentLinkOptionsToggleEl.checked) {
-      if (pendingProductVariants.length < 2 && !pendingProductVariants[0]?.options?.length) {
-        errorEl.textContent = "Error: agrega por lo menos 2 opciones o desactiva las opciones del producto";
-        return;
-      }
-      const optionNames = new Set();
-      const legacySharedOptions = pendingProductVariants.filter((variant) => variant.legacySharedStock && variant.stock === "");
-      if (legacySharedOptions.length > 0 && legacySharedOptions.length < pendingProductVariants.length) {
-        errorEl.textContent = "Error: asigna stock a todas las opciones para dejar de usar el stock compartido";
-        return;
-      }
-      for (const variant of pendingProductVariants) {
-        const name = variant.name.trim();
-        const variantAmount = parseFloat(variant.amount);
-        const keepsSharedStock = variant.legacySharedStock && variant.stock === "";
-        const variantStock = keepsSharedStock ? undefined : variant.stock === "" || variant.stock === undefined ? null : Number(variant.stock);
-        if (!name) {
-          errorEl.textContent = "Error: cada opción necesita un nombre";
-          return;
-        }
-        if (optionNames.has(name.toLocaleLowerCase("es"))) {
-          errorEl.textContent = `Error: la opción "${name}" está repetida`;
-          return;
-        }
-        if (!Number.isFinite(variantAmount) || variantAmount < 0) {
-          errorEl.textContent = `Error: ingresa un precio de 0 o mayor para "${name}"`;
-          return;
-        }
-        if (variantStock !== null && variantStock !== undefined && (!Number.isInteger(variantStock) || variantStock < 0 || variantStock > 1_000_000)) {
-          errorEl.textContent = `Error: usa un stock entero entre 0 y 1.000.000 para "${name}"`;
-          return;
-        }
-        optionNames.add(name.toLocaleLowerCase("es"));
-        variants.push({
-          ...(variant.options?.length ? {options:variant.options}:{}),
-          ...(variant.imageUrl ? {imageUrl:variant.imageUrl}:{}),
-          ...(variant.id ? { id: variant.id } : {}),
-          name,
-          amount: Math.round(variantAmount * 100),
-          ...(variantStock !== undefined ? { stock: variantStock } : {}),
-        });
-      }
-      amountBob = Math.min(...variants.map((variant) => variant.amount)) / 100;
+      try { variants = productCombinationEditor.values(); }
+      catch (cause) { errorEl.textContent = cause.message; return; }
+      amountBob = Math.min(...variants.map(variant => variant.amount)) / 100;
     } else if (!Number.isFinite(amountBob) || amountBob < 0) {
       errorEl.textContent = "Error: ingresa un precio de 0 o mayor";
       return;

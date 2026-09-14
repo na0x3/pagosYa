@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Producto — Mesa Clara</title>
+  <meta name="description" content="Conoce el producto, elige su formato y añádelo a tu pedido en Mesa Clara.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="product-page">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Mesa Clara, inicio"><span>Mesa</span> Clara</a>
+    <nav class="site-nav" aria-label="Navegación principal"><a href="index.html#pantry-catalog">Productos</a></nav>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span class="cart-count">(<span data-cart-count>0</span>)</span></button>
+  </header>
+  <main class="product-main">
+    <div class="back-row"><a href="index.html#pantry-catalog"><img src="assets/icons/arrow-left.svg" alt=""> Volver a la despensa</a></div>
+    <div data-pagosya-product-page></div>
+  </main>
+  <div data-pagosya-cart hidden></div>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <footer class="site-footer"><a class="wordmark" href="index.html"><span>Mesa</span> Clara</a><p>Jugo y granola para preparar el desayuno en casa.</p><a href="index.html#pantry-catalog">Todos los productos</a></footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

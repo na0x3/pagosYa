@@ -1,0 +1,117 @@
+{
+  "sourceDigest": "05a6e04a16eac29b1061f7479de7790219bf9c6838b71820e2c37b3cce257fea",
+  "evidenceRevision": 1,
+  "captures": [
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1326,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-0.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 241,
+      "pageHeight": 1326,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-1.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 482,
+      "pageHeight": 1326,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-2.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1354,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-3.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 255,
+      "pageHeight": 1354,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-4.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 510,
+      "pageHeight": 1354,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-5.jpg"
+    }
+  ],
+  "captureFailures": [],
+  "shopping": [
+    {
+      "width": 1280,
+      "productId": "cmu0erj2d00404gwz3k111a7o",
+      "status": "passed",
+      "variantId": "var_h542my80oz47"
+    },
+    {
+      "width": 1280,
+      "productId": "cmu0erj2e00424gwzs67isyf2",
+      "status": "passed",
+      "variantId": "var_aa8ytpblx4g8"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0erj2d00404gwz3k111a7o",
+      "status": "passed",
+      "variantId": "var_h542my80oz47"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0erj2e00424gwzs67isyf2",
+      "status": "passed",
+      "variantId": "var_aa8ytpblx4g8"
+    }
+  ]
+}

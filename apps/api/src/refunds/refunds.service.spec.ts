@@ -72,4 +72,15 @@ describe("RefundsService financial invariants", () => {
     ).rejects.toThrow("remaining refundable amount (200)");
     expect(test.rail.refund).not.toHaveBeenCalled();
   });
+  it.each([true, false])("queues refund mail only for a real store payment (livemode=%s)", async (livemode) => {
+    const test = harness();
+    test.prisma.$queryRaw.mockResolvedValue([{id:"pi_abc",amount:1000,currency:"BOB",status:PaymentIntentStatus.SUCCEEDED,livemode,customerEmail:"buyer@example.test",customerName:"Ana"}]);
+    test.prisma.storeOrder={findUnique:jest.fn().mockResolvedValue({id:"order-1",storeId:"store-a",storeName:"Tienda A"})};
+    test.prisma.storeRetention={findUnique:jest.fn().mockResolvedValue({settings:{emailWorkspace:{templates:{REFUND:{enabled:true,subject:"Reembolso {{store}}",body:"Importe: {{amount}}"}},staff:{enabled:false,recipients:[]}}}})};
+    test.prisma.storeEmailDelivery={upsert:jest.fn()};
+    await test.service.create("merchant_1",{paymentIntentId:"pi_abc",amount:300},"refund-mail-1");
+    expect(test.prisma.storeEmailDelivery.upsert).toHaveBeenCalledTimes(livemode ? 1 : 0);
+    if(livemode)expect(test.prisma.storeEmailDelivery.upsert).toHaveBeenCalledWith(expect.objectContaining({create:expect.objectContaining({storeId:"store-a",kind:"WORKSPACE_REFUND",body:"Importe: 3.00 BOB"})}));
+  });
+
 });

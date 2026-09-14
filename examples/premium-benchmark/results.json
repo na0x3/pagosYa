@@ -1,0 +1,5776 @@
+[
+  {
+    "id": "food-1-baseline",
+    "fixture": "food",
+    "repeat": 1,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ealoy000m4gwz76w8ynep",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 35,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 36995,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 15121,
+            "cachedInputTokens": 0,
+            "outputTokens": 2150,
+            "providerMicroUsd": 118602,
+            "cacheWriteTokens": 15118
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 61807,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23409,
+            "cachedInputTokens": 0,
+            "outputTokens": 6152,
+            "providerMicroUsd": 225331,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 362,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 98874,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 15121,
+          "outputTokens": 2150,
+          "cacheWriteTokens": 15118,
+          "providerMicroUsd": 118602,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 36995,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ealoy000m4gwz76w8ynep"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 23409,
+          "outputTokens": 6152,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 225331,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 61807,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 362,
+        "generationId": "cmu0ealoy000m4gwz76w8ynep"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "4cff5af61225ebc0b818c38cc92f818d2d392d02c64f5d2078c8f688bd8e82af",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1211,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 184,
+        "pageHeight": 1211,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 367,
+        "pageHeight": 1211,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1279,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 218,
+        "pageHeight": 1279,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 435,
+        "pageHeight": 1279,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ealni000k4gwzmxfdm99y",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ealni000k4gwzmxfdm99y",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      }
+    ]
+  },
+  {
+    "id": "food-1-candidate",
+    "fixture": "food",
+    "repeat": 1,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0eamhy000mt6nwsa8kti6y",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 37,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 49623,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 15114,
+            "cachedInputTokens": 0,
+            "outputTokens": 2169,
+            "providerMicroUsd": 118947,
+            "cacheWriteTokens": 15111
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 68320,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23359,
+            "cachedInputTokens": 0,
+            "outputTokens": 7027,
+            "providerMicroUsd": 242631,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 407,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 118003,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 15114,
+          "outputTokens": 2169,
+          "cacheWriteTokens": 15111,
+          "providerMicroUsd": 118947,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 49623,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0eamhy000mt6nwsa8kti6y"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 23359,
+          "outputTokens": 7027,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 242631,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 68320,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 407,
+        "generationId": "cmu0eamhy000mt6nwsa8kti6y"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": null,
+        "status": "FAILED",
+        "durationMs": 2298,
+        "responseStatus": "http_429",
+        "reasoningEffort": "medium",
+        "generationId": "cmu0eyqdh001jvjri8fd2gb1d"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5969,
+          "outputTokens": 296,
+          "providerUsage": {
+            "input_tokens": 5969,
+            "total_tokens": 6265,
+            "output_tokens": 296,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5966
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "cacheWriteTokens": 5966,
+          "providerMicroUsd": 18473,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0eyke5001dvjrinyfft673",
+      "status": "FAILED",
+      "stage": "REPAIR",
+      "error": "YAPI no puede continuar: la cuenta de IA del servidor agotó su saldo en OpenAI. El administrador debe recargar esa cuenta antes de reintentar. Tu sitio sigue guardado.",
+      "receipts": [
+        {
+          "id": "3e9820c7-6614-464e-92c0-f0dce08536a4",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:56:49.127Z",
+          "finishedAt": "2026-09-13T22:56:54.476Z",
+          "actualMicroUsd": 18473,
+          "reservedMicroUsd": 150000
+        },
+        {
+          "id": "88190b96-250e-4424-9633-ecf2d1d5979c",
+          "stage": "REPAIR",
+          "repair": 1,
+          "status": "unknown",
+          "startedAt": "2026-09-13T22:56:55.128Z",
+          "finishedAt": "2026-09-13T22:56:57.610Z",
+          "actualMicroUsd": null,
+          "reservedMicroUsd": 850000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La propuesta mantiene una identidad editorial cálida y una fotografía de catálogo consistente. La compra se entiende en general, pero en móvil el primer producto pierde contexto visual y la zona de acción duplica el mismo destino.",
+          "findings": [
+            {
+              "category": "layout",
+              "location": "Primer bloque de producto, alrededor de y=1380",
+              "severity": "major",
+              "viewport": "mobile",
+              "correction": "Mantener la imagen del jugo junto a su ficha en móvil —antes o inmediatamente después de los datos y acciones— y separar con mayor claridad el inicio de la ficha de granola.",
+              "observation": "La información del jugo aparece sin su imagen ni un rótulo visible de sección o producto en la parte superior de esta captura; la fotografía de granola comienza inmediatamente después de sus acciones. Esto hace que, durante el recorrido, la imagen parezca asociarse al jugo anterior."
+            },
+            {
+              "category": "consistency",
+              "location": "Acciones del jugo, alrededor de y=1380",
+              "severity": "minor",
+              "viewport": "mobile",
+              "correction": "Conservar una única llamada principal por producto; si se necesita una acción secundaria, diferenciarla por propósito y etiqueta.",
+              "observation": "Se muestran dos llamadas consecutivas con el mismo texto, «Elegir opciones»: una como enlace subrayado y otra como botón naranja. La duplicación resta claridad al siguiente paso principal."
+            }
+          ],
+          "preference": "uncertain",
+          "responseId": "resp_0377218a95866df5016aa72a31e41887d28746248aeb2b3b9f",
+          "regressions": [],
+          "providerMicroUsd": 18473
+        },
+        "findings": [
+          {
+            "category": "layout",
+            "location": "Primer bloque de producto, alrededor de y=1380",
+            "severity": "major",
+            "viewport": "mobile",
+            "correction": "Mantener la imagen del jugo junto a su ficha en móvil —antes o inmediatamente después de los datos y acciones— y separar con mayor claridad el inicio de la ficha de granola.",
+            "observation": "La información del jugo aparece sin su imagen ni un rótulo visible de sección o producto en la parte superior de esta captura; la fotografía de granola comienza inmediatamente después de sus acciones. Esto hace que, durante el recorrido, la imagen parezca asociarse al jugo anterior."
+          },
+          {
+            "category": "consistency",
+            "location": "Acciones del jugo, alrededor de y=1380",
+            "severity": "minor",
+            "viewport": "mobile",
+            "correction": "Conservar una única llamada principal por producto; si se necesita una acción secundaria, diferenciarla por propósito y etiqueta.",
+            "observation": "Se muestran dos llamadas consecutivas con el mismo texto, «Elegir opciones»: una como enlace subrayado y otra como botón naranja. La duplicación resta claridad al siguiente paso principal."
+          }
+        ],
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "e0f0f09b2691b5f246d28f6fa4cbb42bfd1f18f7acef0e682c5d0fb39808b80a",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 3307
+          },
+          {
+            "y": 1232,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 3307
+          },
+          {
+            "y": 2463,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 3307
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 3604
+          },
+          {
+            "y": 1380,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 3604
+          },
+          {
+            "y": 2760,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 3604
+          }
+        ]
+      },
+      "observedMicroUsd": 18473,
+      "reservedMicroUsd": 868473
+    },
+    "sourceDigest": "1769c1314e679fcdc6f81ed04761e954fc7d9de8adbf6bc6b91511c9ec782ae5",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 3307,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 1232,
+        "pageHeight": 3307,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 2463,
+        "pageHeight": 3307,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 3604,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1380,
+        "pageHeight": 3604,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 2760,
+        "pageHeight": 3604,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0eamgv000kt6nwod2ds7dn",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0eamgv000kt6nwod2ds7dn",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      }
+    ]
+  },
+  {
+    "id": "food-2-baseline",
+    "fixture": "food",
+    "repeat": 2,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ecq5k001e4gwzvajec3ry",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 39,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 41041,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 15124,
+            "cachedInputTokens": 0,
+            "outputTokens": 2226,
+            "providerMicroUsd": 120137,
+            "cacheWriteTokens": 15121
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 80311,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23457,
+            "cachedInputTokens": 0,
+            "outputTokens": 8016,
+            "providerMicroUsd": 262803,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 429,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 121386,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 15124,
+          "outputTokens": 2226,
+          "cacheWriteTokens": 15121,
+          "providerMicroUsd": 120137,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 41041,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ecq5k001e4gwzvajec3ry"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 23457,
+          "outputTokens": 8016,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 262803,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 80311,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 429,
+        "generationId": "cmu0ecq5k001e4gwzvajec3ry"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "0c759dc2e727dfdf7ade10b1983798de0b05eea404a6c3cd0d4cc45840ca9a10",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 4330,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 1743,
+        "pageHeight": 4330,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 3486,
+        "pageHeight": 4330,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 4760,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1958,
+        "pageHeight": 4760,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 3916,
+        "pageHeight": 4760,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ecq54001c4gwz2gyf2pa0",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ecq54001c4gwz2gyf2pa0",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      }
+    ]
+  },
+  {
+    "id": "food-2-candidate",
+    "fixture": "food",
+    "repeat": 2,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ed5pl001et6nwrr3d8tgw",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 37,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 48643,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 15122,
+            "cachedInputTokens": 0,
+            "outputTokens": 2182,
+            "providerMicroUsd": 119247,
+            "cacheWriteTokens": 15119
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 79142,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23450,
+            "cachedInputTokens": 0,
+            "outputTokens": 7326,
+            "providerMicroUsd": 248975,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 393,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 127819,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 15122,
+          "outputTokens": 2182,
+          "cacheWriteTokens": 15119,
+          "providerMicroUsd": 119247,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 48643,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ed5pl001et6nwrr3d8tgw"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 23450,
+          "outputTokens": 7326,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 248975,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 79142,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 393,
+        "generationId": "cmu0ed5pl001et6nwrr3d8tgw"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": null,
+        "status": "FAILED"
+      }
+    ],
+    "job": {
+      "id": "cmu0eys87001nvjriminfrd9o",
+      "status": "FAILED",
+      "stage": "REVIEW_BASELINE",
+      "error": "No se completó la evaluación visual.",
+      "receipts": [
+        {
+          "id": "3203f721-1616-4957-9225-fdf49d5e65a5",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "unknown",
+          "startedAt": "2026-09-13T22:56:59.859Z",
+          "finishedAt": "2026-09-13T22:57:01.180Z",
+          "actualMicroUsd": null,
+          "reservedMicroUsd": 150000
+        }
+      ],
+      "checkpoints": {
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "6dba98f0ba0653ea8e82d43a40afc23c0911ae352b50ee452115147c9fac685d",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1898
+          },
+          {
+            "y": 527,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1898
+          },
+          {
+            "y": 1054,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1898
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1674
+          },
+          {
+            "y": 415,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1674
+          },
+          {
+            "y": 830,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1674
+          }
+        ]
+      },
+      "observedMicroUsd": 0,
+      "reservedMicroUsd": 150000
+    },
+    "sourceDigest": "6295c4329ca05b50a3692f0e34f8f539c215eb11f2832a3cbdc6f8390bedb9be",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1898,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 527,
+        "pageHeight": 1898,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 1054,
+        "pageHeight": 1898,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1674,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 415,
+        "pageHeight": 1674,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 830,
+        "pageHeight": 1674,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ed5p6001ct6nw13j3nceo",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ed5p6001ct6nw13j3nceo",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      }
+    ]
+  },
+  {
+    "id": "food-3-baseline",
+    "fixture": "food",
+    "repeat": 3,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0efc2800264gwz0e5g2uv9",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 36,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 43537,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 15116,
+            "cachedInputTokens": 0,
+            "outputTokens": 1917,
+            "providerMicroUsd": 113917,
+            "cacheWriteTokens": 15113
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 67296,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23313,
+            "cachedInputTokens": 0,
+            "outputTokens": 6778,
+            "providerMicroUsd": 237467,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 358,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 110865,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 15116,
+          "outputTokens": 1917,
+          "cacheWriteTokens": 15113,
+          "providerMicroUsd": 113917,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 43537,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0efc2800264gwz0e5g2uv9"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 23313,
+          "outputTokens": 6778,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 237467,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 67296,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 358,
+        "generationId": "cmu0efc2800264gwz0e5g2uv9"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "1a4e107058b2d35c0efb38efa653ac654ea2543cc0456affabca522e82e97409",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 2973,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 1065,
+        "pageHeight": 2973,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 2129,
+        "pageHeight": 2973,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 3843,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1500,
+        "pageHeight": 3843,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 2999,
+        "pageHeight": 3843,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0efc1v00244gwz9xi8bmmx",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0efc1v00244gwz9xi8bmmx",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      }
+    ]
+  },
+  {
+    "id": "food-3-candidate",
+    "fixture": "food",
+    "repeat": 3,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0efwlw0026t6nwk1vq6itx",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 37,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 35681,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 15114,
+            "cachedInputTokens": 0,
+            "outputTokens": 2152,
+            "providerMicroUsd": 118607,
+            "cacheWriteTokens": 15111
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 1,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 73286,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23375,
+            "cachedInputTokens": 0,
+            "outputTokens": 7297,
+            "providerMicroUsd": 248095,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 814,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 109002,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 15114,
+          "outputTokens": 2152,
+          "cacheWriteTokens": 15111,
+          "providerMicroUsd": 118607,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 35681,
+        "selectedIndex": 1,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0efwlw0026t6nwk1vq6itx"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 23375,
+          "outputTokens": 7297,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 248095,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 73286,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 814,
+        "generationId": "cmu0efwlw0026t6nwk1vq6itx"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": null,
+        "status": "FAILED"
+      }
+    ],
+    "job": {
+      "id": "cmu0eyuzh001svjri5bwmws6f",
+      "status": "FAILED",
+      "stage": "REVIEW_BASELINE",
+      "error": "No se completó la evaluación visual.",
+      "receipts": [
+        {
+          "id": "3a709265-4197-46eb-905f-43ae19bf829a",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "unknown",
+          "startedAt": "2026-09-13T22:57:03.308Z",
+          "finishedAt": "2026-09-13T22:57:04.324Z",
+          "actualMicroUsd": null,
+          "reservedMicroUsd": 150000
+        }
+      ],
+      "checkpoints": {
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "2ff9db1de65cc0d4da02a7fd0cdc6192b2634b0dc52dd7485655bc0450c57d0c",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1356
+          },
+          {
+            "y": 256,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1356
+          },
+          {
+            "y": 512,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1356
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1722
+          },
+          {
+            "y": 439,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1722
+          },
+          {
+            "y": 878,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1722
+          }
+        ]
+      },
+      "observedMicroUsd": 0,
+      "reservedMicroUsd": 150000
+    },
+    "sourceDigest": "fd5f056859847a5e28577687803129b951464bb78e1b410226f77de755394de3",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1356,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 256,
+        "pageHeight": 1356,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 512,
+        "pageHeight": 1356,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1722,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 439,
+        "pageHeight": 1722,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 878,
+        "pageHeight": 1722,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0efwlh0024t6nw7pwuyt0u",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "status": "passed",
+        "variantId": "var_7na2baxzc1pu"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0efwlh0024t6nw7pwuyt0u",
+        "status": "passed",
+        "variantId": "var_aoxjeqkcy1qq"
+      }
+    ]
+  },
+  {
+    "id": "apparel-1-baseline",
+    "fixture": "apparel",
+    "repeat": 1,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ehpsp002k4gwz7g9j4yhn",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 27,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 36229,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4198,
+            "cachedInputTokens": 0,
+            "outputTokens": 1866,
+            "providerMicroUsd": 58307,
+            "cacheWriteTokens": 4195
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 75243,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 12017,
+            "cachedInputTokens": 0,
+            "outputTokens": 7628,
+            "providerMicroUsd": 209283,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 412,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 111514,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 4198,
+          "outputTokens": 1866,
+          "cacheWriteTokens": 4195,
+          "providerMicroUsd": 58307,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 36229,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ehpsp002k4gwz7g9j4yhn"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 12017,
+          "outputTokens": 7628,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 209283,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 75243,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 412,
+        "generationId": "cmu0ehpsp002k4gwz7g9j4yhn"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "552ccd6ed00c49ac9223a4893fc84b58ebfe68f9df78821948589ea64c5da614",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1711,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 434,
+        "pageHeight": 1711,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 867,
+        "pageHeight": 1711,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1707,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 432,
+        "pageHeight": 1707,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 863,
+        "pageHeight": 1707,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "status": "passed",
+        "variantId": "var_umhr9cmpv2iy"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ehprn002i4gwzpr4wuea8",
+        "status": "passed",
+        "variantId": "var_mn2s17s5bm71"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "status": "passed",
+        "variantId": "var_umhr9cmpv2iy"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ehprn002i4gwzpr4wuea8",
+        "status": "passed",
+        "variantId": "var_mn2s17s5bm71"
+      }
+    ]
+  },
+  {
+    "id": "apparel-1-candidate",
+    "fixture": "apparel",
+    "repeat": 1,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ei8w0002kt6nw3j6bawh5",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 28,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 29184,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4202,
+            "cachedInputTokens": 0,
+            "outputTokens": 1773,
+            "providerMicroUsd": 56467,
+            "cacheWriteTokens": 4199
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 79591,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11954,
+            "cachedInputTokens": 0,
+            "outputTokens": 7861,
+            "providerMicroUsd": 213691,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 781,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 108820,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 4202,
+          "outputTokens": 1773,
+          "cacheWriteTokens": 4199,
+          "providerMicroUsd": 56467,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 29184,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ei8w0002kt6nw3j6bawh5"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11954,
+          "outputTokens": 7861,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 213691,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 79591,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 781,
+        "generationId": "cmu0ei8w0002kt6nw3j6bawh5"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 22894,
+          "outputTokens": 624,
+          "cacheWriteTokens": 8427,
+          "providerMicroUsd": 112483,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 11191,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 451,
+        "generationId": "cmu0ex0ts0007vjria0vydg0t"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5962,
+          "outputTokens": 198,
+          "providerUsage": {
+            "input_tokens": 5962,
+            "total_tokens": 6160,
+            "output_tokens": 198,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5959
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "cacheWriteTokens": 5959,
+          "providerMicroUsd": 17280,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0ewv2e0001vjrirogts82y",
+      "status": "FAILED",
+      "stage": "REPAIR",
+      "error": "\nInvalid `this.prisma.storeSourceGeneration.updateMany()` invocation in\n/Users/saramia/pagosYa/apps/api/src/stores/source-generation.service.ts:552:65\n\n  549 const candidate = await this.projects.prepare({ ...saveInput, files: [...execution.snapshot.files.filter(file => !editable(file.path)), ...authored] });\n  550 assertSourceCommerceContract(candidate);\n  551 signal.throwIfAborted();\n→ 552 const completed = await this.prisma.storeSourceGeneration.updateMany(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23514\", message: \"new row for relation \\\"StoreSourceGeneration\\\" violates check constraint \\\"StoreS",
+      "receipts": [
+        {
+          "id": "96a81d89-f9eb-4372-9814-ab42742e1048",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:55:30.069Z",
+          "finishedAt": "2026-09-13T22:55:34.439Z",
+          "actualMicroUsd": 17280,
+          "reservedMicroUsd": 150000
+        },
+        {
+          "id": "8c5397ac-1b38-4186-892a-e1eba25089fd",
+          "stage": "REPAIR",
+          "repair": 1,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:55:35.491Z",
+          "finishedAt": "2026-09-13T22:55:46.783Z",
+          "actualMicroUsd": 112483,
+          "reservedMicroUsd": 850000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La propuesta mantiene una identidad editorial coherente y una jerarquía clara entre producto, precio y acción principal. El problema visible relevante aparece en la adaptación móvil de los enlaces secundarios.",
+          "findings": [
+            {
+              "category": "readability",
+              "location": "Enlaces secundarios «Ver prenda» de ambas tarjetas de producto",
+              "severity": "major",
+              "viewport": "mobile",
+              "correction": "Reservar suficiente ancho para mantener «Ver prenda» en una sola línea junto a la flecha, o replantear la fila de acciones para que el enlace ocupe una línea propia sin competir con el botón principal.",
+              "observation": "El ancho asignado al enlace es demasiado estrecho y divide el texto en tres líneas («Ver / prend / a»), mientras la flecha queda separada. Esto dificulta el escaneo y hace que la acción secundaria se perciba como un elemento roto."
+            }
+          ],
+          "preference": "uncertain",
+          "responseId": "resp_008b3384701eba90016aa729e32f3487d28868b28e651f42f2",
+          "regressions": [],
+          "providerMicroUsd": 17280
+        },
+        "findings": [
+          {
+            "category": "readability",
+            "location": "Enlaces secundarios «Ver prenda» de ambas tarjetas de producto",
+            "severity": "major",
+            "viewport": "mobile",
+            "correction": "Reservar suficiente ancho para mantener «Ver prenda» en una sola línea junto a la flecha, o replantear la fila de acciones para que el enlace ocupe una línea propia sin competir con el botón principal.",
+            "observation": "El ancho asignado al enlace es demasiado estrecho y divide el texto en tres líneas («Ver / prend / a»), mientras la flecha queda separada. Esto dificulta el escaneo y hace que la acción secundaria se perciba como un elemento roto."
+          }
+        ],
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "9317cdfe7ec4e7681d70a5832676e30415bad42a884f79a611da3af5a6d19ac8",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1363
+          },
+          {
+            "y": 260,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1363
+          },
+          {
+            "y": 519,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1363
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1591
+          },
+          {
+            "y": 374,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1591
+          },
+          {
+            "y": 747,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1591
+          }
+        ]
+      },
+      "observedMicroUsd": 129763,
+      "reservedMicroUsd": 129763
+    },
+    "sourceDigest": "64f880e0df2623b8553cf035ae271ba93ef343190628cd5ec2982096148dc102",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1363,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 260,
+        "pageHeight": 1363,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 519,
+        "pageHeight": 1363,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1591,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 374,
+        "pageHeight": 1591,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 747,
+        "pageHeight": 1591,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "status": "passed",
+        "variantId": "var_ulwclbmbdvgf"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ei8v8002it6nw4h3h06rc",
+        "status": "passed",
+        "variantId": "var_ktdjrmpah2sl"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "status": "passed",
+        "variantId": "var_ulwclbmbdvgf"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ei8v8002it6nw4h3h06rc",
+        "status": "passed",
+        "variantId": "var_ktdjrmpah2sl"
+      }
+    ]
+  },
+  {
+    "id": "apparel-2-baseline",
+    "fixture": "apparel",
+    "repeat": 2,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ek3wg002y4gwzhhjoqpmu",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 27,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 37334,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4202,
+            "cachedInputTokens": 0,
+            "outputTokens": 1811,
+            "providerMicroUsd": 57227,
+            "cacheWriteTokens": 4199
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 77874,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11909,
+            "cachedInputTokens": 0,
+            "outputTokens": 7619,
+            "providerMicroUsd": 208671,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 816,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 115247,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 4202,
+          "outputTokens": 1811,
+          "cacheWriteTokens": 4199,
+          "providerMicroUsd": 57227,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 37334,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ek3wg002y4gwzhhjoqpmu"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11909,
+          "outputTokens": 7619,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 208671,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 77874,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 816,
+        "generationId": "cmu0ek3wg002y4gwzhhjoqpmu"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "2b8d03e3bc9217317f8b97f4a79301ae270fdda222e2217a031b4caee302f7fe",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1376,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 266,
+        "pageHeight": 1376,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 532,
+        "pageHeight": 1376,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1283,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 220,
+        "pageHeight": 1283,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 439,
+        "pageHeight": 1283,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "status": "passed",
+        "variantId": "var_umhr9cmpv2iy"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ek3w7002w4gwzhl7pqx7g",
+        "status": "passed",
+        "variantId": "var_mn2s17s5bm71"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "status": "passed",
+        "variantId": "var_umhr9cmpv2iy"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ek3w7002w4gwzhl7pqx7g",
+        "status": "passed",
+        "variantId": "var_mn2s17s5bm71"
+      }
+    ]
+  },
+  {
+    "id": "apparel-2-candidate",
+    "fixture": "apparel",
+    "repeat": 2,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ekkxe002yt6nwex31wt84",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 27,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 44082,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4198,
+            "cachedInputTokens": 0,
+            "outputTokens": 1838,
+            "providerMicroUsd": 57747,
+            "cacheWriteTokens": 4195
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 79371,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11887,
+            "cachedInputTokens": 0,
+            "outputTokens": 7457,
+            "providerMicroUsd": 205343,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1191,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 123487,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 4198,
+          "outputTokens": 1838,
+          "cacheWriteTokens": 4195,
+          "providerMicroUsd": 57747,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 44082,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ekkxe002yt6nwex31wt84"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11887,
+          "outputTokens": 7457,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 205343,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 79371,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 1191,
+        "generationId": "cmu0ekkxe002yt6nwex31wt84"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5966,
+          "outputTokens": 68,
+          "providerUsage": {
+            "input_tokens": 5966,
+            "total_tokens": 6034,
+            "output_tokens": 68,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5963
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "cacheWriteTokens": 5963,
+          "providerMicroUsd": 15730,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0ex9j3000bvjrij6x90liw",
+      "status": "UNCHANGED",
+      "stage": "REVIEW_BASELINE",
+      "error": null,
+      "receipts": [
+        {
+          "id": "e918b12d-da67-4212-b558-b825d3d97c10",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:55:48.473Z",
+          "finishedAt": "2026-09-13T22:55:51.024Z",
+          "actualMicroUsd": 15730,
+          "reservedMicroUsd": 150000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La página mantiene una jerarquía de compra clara y una identidad coherente en escritorio y móvil: catálogo, precios y llamadas a la acción se distinguen con facilidad sin recurrir a fotografías no disponibles.",
+          "findings": [],
+          "preference": "uncertain",
+          "responseId": "resp_056957c56f4d657a016aa729f51ecc87d29bfa1ae073593923",
+          "regressions": [],
+          "providerMicroUsd": 15730
+        },
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "2e2c40f12dc14d464f9e041c56c970e693fece383c931627843f4bbc6de10d94",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1223
+          },
+          {
+            "y": 190,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1223
+          },
+          {
+            "y": 379,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1223
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1318
+          },
+          {
+            "y": 237,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1318
+          },
+          {
+            "y": 474,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1318
+          }
+        ]
+      },
+      "observedMicroUsd": 15730,
+      "reservedMicroUsd": 15730
+    },
+    "sourceDigest": "79571a5772bce697b22ab9830395f025bde97e074119b7845ebb837ae7a6e17e",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1223,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 190,
+        "pageHeight": 1223,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 379,
+        "pageHeight": 1223,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1318,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 237,
+        "pageHeight": 1318,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 474,
+        "pageHeight": 1318,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "status": "passed",
+        "variantId": "var_ulwclbmbdvgf"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ekkx6002wt6nw1k56mcbr",
+        "status": "passed",
+        "variantId": "var_ktdjrmpah2sl"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "status": "passed",
+        "variantId": "var_ulwclbmbdvgf"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ekkx6002wt6nw1k56mcbr",
+        "status": "passed",
+        "variantId": "var_ktdjrmpah2sl"
+      }
+    ]
+  },
+  {
+    "id": "apparel-3-baseline",
+    "fixture": "apparel",
+    "repeat": 3,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0emkxi003c4gwzacj2d6f4",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 28,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 33668,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4196,
+            "cachedInputTokens": 0,
+            "outputTokens": 1809,
+            "providerMicroUsd": 57157,
+            "cacheWriteTokens": 4193
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 89110,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11988,
+            "cachedInputTokens": 0,
+            "outputTokens": 8230,
+            "providerMicroUsd": 221207,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 937,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 122828,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 4196,
+          "outputTokens": 1809,
+          "cacheWriteTokens": 4193,
+          "providerMicroUsd": 57157,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 33668,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0emkxi003c4gwzacj2d6f4"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11988,
+          "outputTokens": 8230,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 221207,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 89110,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 937,
+        "generationId": "cmu0emkxi003c4gwzacj2d6f4"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "9f35ca5c5d6d609909de73e0e185ec3cf5b5273111eeabb0baaf068c340345e6",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1240,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 198,
+        "pageHeight": 1240,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 396,
+        "pageHeight": 1240,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1486,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 321,
+        "pageHeight": 1486,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 642,
+        "pageHeight": 1486,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "status": "passed",
+        "variantId": "var_umhr9cmpv2iy"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0emkw5003a4gwzon1p21y2",
+        "status": "passed",
+        "variantId": "var_mn2s17s5bm71"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "status": "passed",
+        "variantId": "var_umhr9cmpv2iy"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0emkw5003a4gwzon1p21y2",
+        "status": "passed",
+        "variantId": "var_mn2s17s5bm71"
+      }
+    ]
+  },
+  {
+    "id": "apparel-3-candidate",
+    "fixture": "apparel",
+    "repeat": 3,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0en89w003ct6nw1qqa0rtq",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 26,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 31874,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4200,
+            "cachedInputTokens": 0,
+            "outputTokens": 1850,
+            "providerMicroUsd": 57997,
+            "cacheWriteTokens": 4197
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 72059,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 12008,
+            "cachedInputTokens": 0,
+            "outputTokens": 7009,
+            "providerMicroUsd": 196867,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 516,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 103963,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 4200,
+          "outputTokens": 1850,
+          "cacheWriteTokens": 4197,
+          "providerMicroUsd": 57997,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 31874,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0en89w003ct6nw1qqa0rtq"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 12008,
+          "outputTokens": 7009,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 196867,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 72059,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 516,
+        "generationId": "cmu0en89w003ct6nw1qqa0rtq"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 22333,
+          "outputTokens": 275,
+          "cacheWriteTokens": 8427,
+          "providerMicroUsd": 103259,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 5952,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 121,
+        "generationId": "cmu0exk98000nvjri4baxcrj6"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5972,
+          "outputTokens": 531,
+          "providerUsage": {
+            "input_tokens": 5972,
+            "total_tokens": 6503,
+            "output_tokens": 531,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5969
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 344
+            }
+          },
+          "cacheWriteTokens": 5969,
+          "providerMicroUsd": 21301,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0excti000hvjrixmpiryo9",
+      "status": "FAILED",
+      "stage": "REPAIR",
+      "error": "\nInvalid `this.prisma.storeSourceGeneration.updateMany()` invocation in\n/Users/saramia/pagosYa/apps/api/src/stores/source-generation.service.ts:552:65\n\n  549 const candidate = await this.projects.prepare({ ...saveInput, files: [...execution.snapshot.files.filter(file => !editable(file.path)), ...authored] });\n  550 assertSourceCommerceContract(candidate);\n  551 signal.throwIfAborted();\n→ 552 const completed = await this.prisma.storeSourceGeneration.updateMany(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23514\", message: \"new row for relation \\\"StoreSourceGeneration\\\" violates check constraint \\\"StoreS",
+      "receipts": [
+        {
+          "id": "951633e1-637f-441f-99f2-6a32b6668ed8",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:55:52.092Z",
+          "finishedAt": "2026-09-13T22:56:00.165Z",
+          "actualMicroUsd": 21301,
+          "reservedMicroUsd": 150000
+        },
+        {
+          "id": "cde6a01c-51a5-4300-9fdf-4313f84209df",
+          "stage": "REPAIR",
+          "repair": 1,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:56:00.684Z",
+          "finishedAt": "2026-09-13T22:56:06.722Z",
+          "actualMicroUsd": 103259,
+          "reservedMicroUsd": 850000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La página mantiene una identidad editorial coherente y una jerarquía de compra clara en móvil. El principal desajuste visible aparece en la composición del catálogo de escritorio.",
+          "findings": [
+            {
+              "category": "layout",
+              "location": "Bloque de productos superior",
+              "severity": "major",
+              "viewport": "desktop",
+              "correction": "Equilibrar las columnas de las fichas —por ejemplo, con anchos equivalentes o una asimetría menos extrema— manteniendo la retícula, el tratamiento tipográfico y el acento azul actuales.",
+              "observation": "Las dos fichas del catálogo tienen anchuras muy desiguales: la primera domina gran parte del bloque, mientras la segunda queda notablemente comprimida. Esto hace que el segundo producto, su descripción y su acción principal tengan menor peso visual al comparar opciones."
+            }
+          ],
+          "preference": "uncertain",
+          "responseId": "resp_099fc88e9b1d6cc9016aa729f8e1e887d285d36fb02f9ab4e3",
+          "regressions": [],
+          "providerMicroUsd": 21301
+        },
+        "findings": [
+          {
+            "category": "layout",
+            "location": "Bloque de productos superior",
+            "severity": "major",
+            "viewport": "desktop",
+            "correction": "Equilibrar las columnas de las fichas —por ejemplo, con anchos equivalentes o una asimetría menos extrema— manteniendo la retícula, el tratamiento tipográfico y el acento azul actuales.",
+            "observation": "Las dos fichas del catálogo tienen anchuras muy desiguales: la primera domina gran parte del bloque, mientras la segunda queda notablemente comprimida. Esto hace que el segundo producto, su descripción y su acción principal tengan menor peso visual al comparar opciones."
+          }
+        ],
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "198a7c7f16f140501dbaaee2b613f797265f0947c4dc121663a183eefe5ef04f",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1389
+          },
+          {
+            "y": 273,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1389
+          },
+          {
+            "y": 545,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1389
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1461
+          },
+          {
+            "y": 309,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1461
+          },
+          {
+            "y": 617,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1461
+          }
+        ]
+      },
+      "observedMicroUsd": 124560,
+      "reservedMicroUsd": 124560
+    },
+    "sourceDigest": "358b4558b6c7fb4859c9bb66ab53bd5df9d0089b9bb04e4767eab434e47611a5",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1389,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 273,
+        "pageHeight": 1389,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 545,
+        "pageHeight": 1389,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1461,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 309,
+        "pageHeight": 1461,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 617,
+        "pageHeight": 1461,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "status": "passed",
+        "variantId": "var_ulwclbmbdvgf"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0en89l003at6nwwr04cqa8",
+        "status": "passed",
+        "variantId": "var_ktdjrmpah2sl"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "status": "passed",
+        "variantId": "var_ulwclbmbdvgf"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0en89l003at6nwwr04cqa8",
+        "status": "passed",
+        "variantId": "var_ktdjrmpah2sl"
+      }
+    ]
+  },
+  {
+    "id": "beauty-1-baseline",
+    "fixture": "beauty",
+    "repeat": 1,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ep7s7003q4gwzrxwo58m4",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 26,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 33683,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3916,
+            "cachedInputTokens": 0,
+            "outputTokens": 1907,
+            "providerMicroUsd": 57717,
+            "cacheWriteTokens": 3913
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 74154,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11753,
+            "cachedInputTokens": 0,
+            "outputTokens": 7138,
+            "providerMicroUsd": 198427,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1118,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 107868,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3916,
+          "outputTokens": 1907,
+          "cacheWriteTokens": 3913,
+          "providerMicroUsd": 57717,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 33683,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ep7s7003q4gwzrxwo58m4"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11753,
+          "outputTokens": 7138,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 198427,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 74154,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 1118,
+        "generationId": "cmu0ep7s7003q4gwzrxwo58m4"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "b0ea86af82083a92a2becbe01e6345809320bd34be728b532e0119a379584bf5",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1109,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 133,
+        "pageHeight": 1109,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 265,
+        "pageHeight": 1109,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1048,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 102,
+        "pageHeight": 1048,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 204,
+        "pageHeight": 1048,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "status": "passed",
+        "variantId": "var_h542my80oz47"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ep7rf003o4gwzpsd9ujcn",
+        "status": "passed",
+        "variantId": "var_aa8ytpblx4g8"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "status": "passed",
+        "variantId": "var_h542my80oz47"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ep7rf003o4gwzpsd9ujcn",
+        "status": "passed",
+        "variantId": "var_aa8ytpblx4g8"
+      }
+    ]
+  },
+  {
+    "id": "beauty-1-candidate",
+    "fixture": "beauty",
+    "repeat": 1,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0epgkx003qt6nwkl0hqyxo",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 26,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 37177,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3915,
+            "cachedInputTokens": 0,
+            "outputTokens": 1881,
+            "providerMicroUsd": 57192,
+            "cacheWriteTokens": 3912
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 73075,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11725,
+            "cachedInputTokens": 0,
+            "outputTokens": 7178,
+            "providerMicroUsd": 199115,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 777,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 110277,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3915,
+          "outputTokens": 1881,
+          "cacheWriteTokens": 3912,
+          "providerMicroUsd": 57192,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 37177,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0epgkx003qt6nwkl0hqyxo"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11725,
+          "outputTokens": 7178,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 199115,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 73075,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 777,
+        "generationId": "cmu0epgkx003qt6nwkl0hqyxo"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5980,
+          "outputTokens": 64,
+          "providerUsage": {
+            "input_tokens": 5980,
+            "total_tokens": 6044,
+            "output_tokens": 64,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5977
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "cacheWriteTokens": 5977,
+          "providerMicroUsd": 15717,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0exoxk000rvjrie6nj1r8o",
+      "status": "UNCHANGED",
+      "stage": "REVIEW_BASELINE",
+      "error": null,
+      "receipts": [
+        {
+          "id": "3f3b8b78-098d-4155-afa3-7aabc6e01aab",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:56:10.083Z",
+          "finishedAt": "2026-09-13T22:56:12.238Z",
+          "actualMicroUsd": 15717,
+          "reservedMicroUsd": 150000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La composición mantiene una identidad serena y contemporánea, con jerarquía clara de productos y llamadas a la acción. No se observan problemas visibles importantes que requieran corrección.",
+          "findings": [],
+          "preference": "uncertain",
+          "responseId": "resp_07b132600fd5f669016aa72a0abf4c87d2bb7c654aa73bf399",
+          "regressions": [],
+          "providerMicroUsd": 15717
+        },
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "b2af129f4c055d4e4a705f2554aeafdc25e714f46c5e6bfaa96b764c3326152d",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1896
+          },
+          {
+            "y": 526,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1896
+          },
+          {
+            "y": 1052,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1896
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1557
+          },
+          {
+            "y": 357,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1557
+          },
+          {
+            "y": 713,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1557
+          }
+        ]
+      },
+      "observedMicroUsd": 15717,
+      "reservedMicroUsd": 15717
+    },
+    "sourceDigest": "77701344b9154976c31269f2565a0f3b32b6c4566602d80db7d9328eedba0f98",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1896,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 526,
+        "pageHeight": 1896,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 1052,
+        "pageHeight": 1896,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1557,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 357,
+        "pageHeight": 1557,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 713,
+        "pageHeight": 1557,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "status": "passed",
+        "variantId": "var_gdnb27efe1as"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0epgk6003ot6nw4xlli7sf",
+        "status": "passed",
+        "variantId": "var_i23t8z07jp5n"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "status": "passed",
+        "variantId": "var_gdnb27efe1as"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0epgk6003ot6nw4xlli7sf",
+        "status": "passed",
+        "variantId": "var_i23t8z07jp5n"
+      }
+    ]
+  },
+  {
+    "id": "beauty-2-baseline",
+    "fixture": "beauty",
+    "repeat": 2,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0erj2n00444gwzlaltr5ze",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 26,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 32232,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3917,
+            "cachedInputTokens": 0,
+            "outputTokens": 1715,
+            "providerMicroUsd": 53882,
+            "cacheWriteTokens": 3914
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 71128,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11615,
+            "cachedInputTokens": 0,
+            "outputTokens": 7337,
+            "providerMicroUsd": 201855,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 878,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 103385,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3917,
+          "outputTokens": 1715,
+          "cacheWriteTokens": 3914,
+          "providerMicroUsd": 53882,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 32232,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0erj2n00444gwzlaltr5ze"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11615,
+          "outputTokens": 7337,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 201855,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 71128,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 878,
+        "generationId": "cmu0erj2n00444gwzlaltr5ze"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "05a6e04a16eac29b1061f7479de7790219bf9c6838b71820e2c37b3cce257fea",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1326,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 241,
+        "pageHeight": 1326,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 482,
+        "pageHeight": 1326,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1354,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 255,
+        "pageHeight": 1354,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 510,
+        "pageHeight": 1354,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "status": "passed",
+        "variantId": "var_h542my80oz47"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0erj2e00424gwzs67isyf2",
+        "status": "passed",
+        "variantId": "var_aa8ytpblx4g8"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "status": "passed",
+        "variantId": "var_h542my80oz47"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0erj2e00424gwzs67isyf2",
+        "status": "passed",
+        "variantId": "var_aa8ytpblx4g8"
+      }
+    ]
+  },
+  {
+    "id": "beauty-2-candidate",
+    "fixture": "beauty",
+    "repeat": 2,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ertqo0044t6nwgek1ykf3",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 27,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 35243,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3917,
+            "cachedInputTokens": 0,
+            "outputTokens": 1788,
+            "providerMicroUsd": 55342,
+            "cacheWriteTokens": 3914
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 82250,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11685,
+            "cachedInputTokens": 0,
+            "outputTokens": 7863,
+            "providerMicroUsd": 212655,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 957,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 117518,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3917,
+          "outputTokens": 1788,
+          "cacheWriteTokens": 3914,
+          "providerMicroUsd": 55342,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 35243,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ertqo0044t6nwgek1ykf3"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11685,
+          "outputTokens": 7863,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 212655,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 82250,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 957,
+        "generationId": "cmu0ertqo0044t6nwgek1ykf3"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5982,
+          "outputTokens": 64,
+          "providerUsage": {
+            "input_tokens": 5982,
+            "total_tokens": 6046,
+            "output_tokens": 64,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5979
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "cacheWriteTokens": 5979,
+          "providerMicroUsd": 15722,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0extxx000xvjrinn6qrd2t",
+      "status": "UNCHANGED",
+      "stage": "REVIEW_BASELINE",
+      "error": null,
+      "receipts": [
+        {
+          "id": "83a4b123-1068-45a9-a697-6a71b8ef22a9",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:56:14.800Z",
+          "finishedAt": "2026-09-13T22:56:17.476Z",
+          "actualMicroUsd": 15722,
+          "reservedMicroUsd": 150000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La página mantiene una identidad serena y contemporánea, con jerarquía clara en catálogo y llamadas a la acción. No se observan problemas visibles importantes que requieran corrección.",
+          "findings": [],
+          "preference": "uncertain",
+          "responseId": "resp_068380ffee0a7bdc016aa72a0f8cd887d2aa50afda0e5e1f5b",
+          "regressions": [],
+          "providerMicroUsd": 15722
+        },
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "42b12aa4d498fd1ff7cd9d4883745757743cba4f9a4984f3f540fcb689e74051",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1550
+          },
+          {
+            "y": 353,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1550
+          },
+          {
+            "y": 706,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1550
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1745
+          },
+          {
+            "y": 451,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1745
+          },
+          {
+            "y": 901,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1745
+          }
+        ]
+      },
+      "observedMicroUsd": 15722,
+      "reservedMicroUsd": 15722
+    },
+    "sourceDigest": "7aeca937f15d3fe70acef0d6092b9dfc2fd0d019bde18a6defbeff7eb640ac96",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1550,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 353,
+        "pageHeight": 1550,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 706,
+        "pageHeight": 1550,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1745,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 451,
+        "pageHeight": 1745,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 901,
+        "pageHeight": 1745,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "status": "passed",
+        "variantId": "var_gdnb27efe1as"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ertqg0042t6nw6d34k1fw",
+        "status": "passed",
+        "variantId": "var_i23t8z07jp5n"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "status": "passed",
+        "variantId": "var_gdnb27efe1as"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ertqg0042t6nw6d34k1fw",
+        "status": "passed",
+        "variantId": "var_i23t8z07jp5n"
+      }
+    ]
+  },
+  {
+    "id": "beauty-3-baseline",
+    "fixture": "beauty",
+    "repeat": 3,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0etqwh004i4gwz2jn1ndr4",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 28,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 38533,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3917,
+            "cachedInputTokens": 0,
+            "outputTokens": 1895,
+            "providerMicroUsd": 57482,
+            "cacheWriteTokens": 3914
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 88848,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11747,
+            "cachedInputTokens": 0,
+            "outputTokens": 8041,
+            "providerMicroUsd": 216463,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1276,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 127417,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3917,
+          "outputTokens": 1895,
+          "cacheWriteTokens": 3914,
+          "providerMicroUsd": 57482,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 38533,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0etqwh004i4gwz2jn1ndr4"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11747,
+          "outputTokens": 8041,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 216463,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 88848,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 1276,
+        "generationId": "cmu0etqwh004i4gwz2jn1ndr4"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "dad34f4283106274634de06eff6d9995de69ad6340bb9101308f9df0272916ce",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1163,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 160,
+        "pageHeight": 1163,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 319,
+        "pageHeight": 1163,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1467,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 312,
+        "pageHeight": 1467,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 623,
+        "pageHeight": 1467,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "status": "passed",
+        "variantId": "var_h542my80oz47"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0etqw9004g4gwz0aa9ehbm",
+        "status": "passed",
+        "variantId": "var_aa8ytpblx4g8"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "status": "passed",
+        "variantId": "var_h542my80oz47"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0etqw9004g4gwz0aa9ehbm",
+        "status": "passed",
+        "variantId": "var_aa8ytpblx4g8"
+      }
+    ]
+  },
+  {
+    "id": "beauty-3-candidate",
+    "fixture": "beauty",
+    "repeat": 3,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0eucir004it6nw9k9q8rtq",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 27,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 30612,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3916,
+            "cachedInputTokens": 0,
+            "outputTokens": 1853,
+            "providerMicroUsd": 56637,
+            "cacheWriteTokens": 3913
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 69470,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11627,
+            "cachedInputTokens": 0,
+            "outputTokens": 7434,
+            "providerMicroUsd": 203843,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 816,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 100110,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3916,
+          "outputTokens": 1853,
+          "cacheWriteTokens": 3913,
+          "providerMicroUsd": 56637,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 30612,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0eucir004it6nw9k9q8rtq"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11627,
+          "outputTokens": 7434,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 203843,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 69470,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 816,
+        "generationId": "cmu0eucir004it6nw9k9q8rtq"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 22227,
+          "outputTokens": 1288,
+          "cacheWriteTokens": 8427,
+          "providerMicroUsd": 123095,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 22379,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 866,
+        "generationId": "cmu0ey30o0019vjri5znjlnw5"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": {
+          "inputTokens": 5984,
+          "outputTokens": 308,
+          "providerUsage": {
+            "input_tokens": 5984,
+            "total_tokens": 6292,
+            "output_tokens": 308,
+            "input_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 5981
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "cacheWriteTokens": 5981,
+          "providerMicroUsd": 18655,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED"
+      }
+    ],
+    "job": {
+      "id": "cmu0exx820013vjri3qddhn9n",
+      "status": "FAILED",
+      "stage": "REPAIR",
+      "error": "\nInvalid `this.prisma.storeSourceGeneration.updateMany()` invocation in\n/Users/saramia/pagosYa/apps/api/src/stores/source-generation.service.ts:552:65\n\n  549 const candidate = await this.projects.prepare({ ...saveInput, files: [...execution.snapshot.files.filter(file => !editable(file.path)), ...authored] });\n  550 assertSourceCommerceContract(candidate);\n  551 signal.throwIfAborted();\n→ 552 const completed = await this.prisma.storeSourceGeneration.updateMany(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23514\", message: \"new row for relation \\\"StoreSourceGeneration\\\" violates check constraint \\\"StoreS",
+      "receipts": [
+        {
+          "id": "3963cc8a-4e02-4f90-a242-93cb073f93d7",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:56:19.030Z",
+          "finishedAt": "2026-09-13T22:56:23.953Z",
+          "actualMicroUsd": 18655,
+          "reservedMicroUsd": 150000
+        },
+        {
+          "id": "458a3743-c46f-4cbc-97d7-c62d00c02c2a",
+          "stage": "REPAIR",
+          "repair": 1,
+          "status": "completed",
+          "startedAt": "2026-09-13T22:56:25.001Z",
+          "finishedAt": "2026-09-13T22:56:47.457Z",
+          "actualMicroUsd": 123095,
+          "reservedMicroUsd": 850000
+        }
+      ],
+      "checkpoints": {
+        "review": {
+          "model": "gpt-5.6-terra",
+          "summary": "La identidad serena y contemporánea se mantiene de forma consistente, con catálogo y tipografía como protagonistas. La compra es clara dentro de cada ficha, pero la composición desperdicia mucho espacio vertical antes de los productos.",
+          "findings": [
+            {
+              "category": "layout",
+              "location": "Zona superior vacía de cada ficha de producto",
+              "severity": "major",
+              "viewport": "both",
+              "correction": "Reducir de forma sustancial la altura reservada antes del contenido de las fichas, manteniendo una separación vertical más contenida y uniforme para que nombres, volumen, precio y acción aparezcan antes.",
+              "observation": "Entre el separador bajo el encabezado del mostrador y el contenido de cada producto hay un bloque vacío muy alto. En móvil, esta separación hace que la primera ficha comience cerca de la mitad de la pantalla y alarga notablemente el recorrido entre productos."
+            },
+            {
+              "category": "layout",
+              "location": "Transición entre la primera y la segunda ficha de producto",
+              "severity": "minor",
+              "viewport": "mobile",
+              "correction": "Acercar el inicio de la segunda ficha al cierre de la primera o usar un espaciado intertarjeta más compacto y consistente con la jerarquía del mostrador.",
+              "observation": "Tras el borde inferior de la primera ficha se acumula otro espacio vacío amplio antes del rótulo de la segunda, por lo que los dos productos se perciben menos como parte de un mismo mostrador comparable."
+            }
+          ],
+          "preference": "uncertain",
+          "responseId": "resp_0ec880812647467d016aa72a13a86487d28b9d6add7f765352",
+          "regressions": [],
+          "providerMicroUsd": 18655
+        },
+        "findings": [
+          {
+            "category": "layout",
+            "location": "Zona superior vacía de cada ficha de producto",
+            "severity": "major",
+            "viewport": "both",
+            "correction": "Reducir de forma sustancial la altura reservada antes del contenido de las fichas, manteniendo una separación vertical más contenida y uniforme para que nombres, volumen, precio y acción aparezcan antes.",
+            "observation": "Entre el separador bajo el encabezado del mostrador y el contenido de cada producto hay un bloque vacío muy alto. En móvil, esta separación hace que la primera ficha comience cerca de la mitad de la pantalla y alarga notablemente el recorrido entre productos."
+          },
+          {
+            "category": "layout",
+            "location": "Transición entre la primera y la segunda ficha de producto",
+            "severity": "minor",
+            "viewport": "mobile",
+            "correction": "Acercar el inicio de la segunda ficha al cierre de la primera o usar un espaciado intertarjeta más compacto y consistente con la jerarquía del mostrador.",
+            "observation": "Tras el borde inferior de la primera ficha se acumula otro espacio vacío amplio antes del rótulo de la segunda, por lo que los dos productos se perciben menos como parte de un mismo mostrador comparable."
+          }
+        ],
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "521726c8c556f05a897ae604fcef43fbfe50d832772b8b6a9350ede85b66ae7d",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1314
+          },
+          {
+            "y": 235,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1314
+          },
+          {
+            "y": 470,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1314
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1851
+          },
+          {
+            "y": 504,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1851
+          },
+          {
+            "y": 1007,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1851
+          }
+        ]
+      },
+      "observedMicroUsd": 141750,
+      "reservedMicroUsd": 141750
+    },
+    "sourceDigest": "b226cc5742c18aa552cb47374d628800eefe75e80c4922e38c1ab36842c62ba0",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1314,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 235,
+        "pageHeight": 1314,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 470,
+        "pageHeight": 1314,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1851,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 504,
+        "pageHeight": 1851,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1007,
+        "pageHeight": 1851,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "status": "passed",
+        "variantId": "var_gdnb27efe1as"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0euci5004gt6nw3sf4i87a",
+        "status": "passed",
+        "variantId": "var_i23t8z07jp5n"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "status": "passed",
+        "variantId": "var_gdnb27efe1as"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0euci5004gt6nw3sf4i87a",
+        "status": "passed",
+        "variantId": "var_i23t8z07jp5n"
+      }
+    ]
+  },
+  {
+    "id": "technical-1-baseline",
+    "fixture": "technical",
+    "repeat": 1,
+    "arm": "baseline",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ewhbs004w4gwzmtnl65ii",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 28,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 40217,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3934,
+            "cachedInputTokens": 0,
+            "outputTokens": 1750,
+            "providerMicroUsd": 54667,
+            "cacheWriteTokens": 3931
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 82573,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11684,
+            "cachedInputTokens": 0,
+            "outputTokens": 8024,
+            "providerMicroUsd": 215871,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1257,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 122839,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3934,
+          "outputTokens": 1750,
+          "cacheWriteTokens": 3931,
+          "providerMicroUsd": 54667,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 40217,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ewhbs004w4gwzmtnl65ii"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11684,
+          "outputTokens": 8024,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 215871,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 82573,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 1257,
+        "generationId": "cmu0ewhbs004w4gwzmtnl65ii"
+      }
+    ],
+    "reviewUsage": [],
+    "sourceDigest": "993fa8e64bd9fd42d268f97b21b0627692a73250c83aec1803e7a165c3a524dd",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1557,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 357,
+        "pageHeight": 1557,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 713,
+        "pageHeight": 1557,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1863,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 510,
+        "pageHeight": 1863,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1019,
+        "pageHeight": 1863,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "status": "passed",
+        "variantId": "var_h1vhwo75g0t9"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ewhab004u4gwzz8ob4kky",
+        "status": "passed",
+        "variantId": "var_01uf8v3p2v6q"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "status": "passed",
+        "variantId": "var_h1vhwo75g0t9"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ewhab004u4gwzz8ob4kky",
+        "status": "passed",
+        "variantId": "var_01uf8v3p2v6q"
+      }
+    ]
+  },
+  {
+    "id": "technical-1-candidate",
+    "fixture": "technical",
+    "repeat": 1,
+    "arm": "candidate",
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ewhu9004wt6nwadl0t29x",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 28,
+      "maxCredits": 200,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 38185,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 3924,
+            "cachedInputTokens": 0,
+            "outputTokens": 1779,
+            "providerMicroUsd": 55197,
+            "cacheWriteTokens": 3921
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 80221,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11719,
+            "cachedInputTokens": 0,
+            "outputTokens": 8236,
+            "providerMicroUsd": 220251,
+            "cacheWriteTokens": 8655
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 743,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 118451,
+      "status": "COMPLETED"
+    },
+    "revision": 1,
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": {
+          "inputTokens": 3924,
+          "outputTokens": 1779,
+          "cacheWriteTokens": 3921,
+          "providerMicroUsd": 55197,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 38185,
+        "selectedIndex": 0,
+        "reasoningEffort": "low",
+        "selectionSource": "planner",
+        "generationId": "cmu0ewhu9004wt6nwadl0t29x"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "usage": {
+          "inputTokens": 11719,
+          "outputTokens": 8236,
+          "cacheWriteTokens": 8655,
+          "providerMicroUsd": 220251,
+          "cachedInputTokens": 0
+        },
+        "status": "COMPLETED",
+        "durationMs": 80221,
+        "responseStatus": "completed",
+        "reasoningEffort": "medium",
+        "reasoningTokens": 743,
+        "generationId": "cmu0ewhu9004wt6nwadl0t29x"
+      }
+    ],
+    "reviewUsage": [
+      {
+        "stage": "design-job-review",
+        "model": "gpt-5.6-terra",
+        "usage": null,
+        "status": "FAILED"
+      }
+    ],
+    "job": {
+      "id": "cmu0ez54h001xvjriay0gejtj",
+      "status": "FAILED",
+      "stage": "REVIEW_BASELINE",
+      "error": "No se completó la evaluación visual.",
+      "receipts": [
+        {
+          "id": "378dced2-3942-40bc-8aa3-0b31ec98f672",
+          "stage": "REVIEW_BASELINE",
+          "repair": 0,
+          "status": "unknown",
+          "startedAt": "2026-09-13T22:57:16.018Z",
+          "finishedAt": "2026-09-13T22:57:17.530Z",
+          "actualMicroUsd": null,
+          "reservedMicroUsd": 150000
+        }
+      ],
+      "checkpoints": {
+        "runtimeDigest": "18e32e10c9dfc95de47421253f238d40a52be9daac965157d0b75a73926912eb",
+        "baselineDigest": "a66d132aa6e3043bbb76f90da8e853dabbbd808554d139a587b1e6c8029c7c2e",
+        "baselineCoverage": [
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1381
+          },
+          {
+            "y": 269,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1381
+          },
+          {
+            "y": 537,
+            "state": "initial",
+            "width": 1280,
+            "height": 844,
+            "viewport": "desktop",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 1280,
+              "missingImages": 0
+            },
+            "pageHeight": 1381
+          },
+          {
+            "y": 0,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1769
+          },
+          {
+            "y": 463,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1769
+          },
+          {
+            "y": 925,
+            "state": "initial",
+            "width": 390,
+            "height": 844,
+            "viewport": "mobile",
+            "readiness": {
+              "fontsLoaded": true,
+              "scrollWidth": 390,
+              "missingImages": 0
+            },
+            "pageHeight": 1769
+          }
+        ]
+      },
+      "observedMicroUsd": 0,
+      "reservedMicroUsd": 150000
+    },
+    "sourceDigest": "88654929aed66dedef576dad8389607f0d5d251c0cedca9e2a25631f449f31d0",
+    "evidenceRevision": 1,
+    "captureFailures": [],
+    "captures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1381,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 269,
+        "pageHeight": 1381,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 537,
+        "pageHeight": 1381,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1769,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 463,
+        "pageHeight": 1769,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 925,
+        "pageHeight": 1769,
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "capture-5.jpg"
+      }
+    ],
+    "shopping": [
+      {
+        "width": 1280,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "status": "passed",
+        "variantId": "var_86ulmmehu3x9"
+      },
+      {
+        "width": 1280,
+        "productId": "cmu0ewht8004ut6nwvaz59fsm",
+        "status": "passed",
+        "variantId": "var_d0wtos1445na"
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "status": "failed",
+        "variantId": "var_86ulmmehu3x9",
+        "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Continuar al pago de prueba', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button data-pay=\"\" type=\"button\" class=\"checkout-button\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 "
+      },
+      {
+        "width": 390,
+        "productId": "cmu0ewht8004ut6nwvaz59fsm",
+        "status": "failed",
+        "variantId": "var_d0wtos1445na",
+        "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Continuar al pago de prueba', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button data-pay=\"\" type=\"button\" class=\"checkout-button\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 "
+      }
+    ],
+    "remediation": {
+      "method": "Codex runtime correction, no model generation",
+      "revision": 2,
+      "digest": "dfb723f3f2fd3f9486a79a04200d8c4810b920f1bd38c4382524085ca0e0e5f5",
+      "shopping": [
+        {
+          "width": 1280,
+          "productId": "cmu0ewht6004st6nwxy934apa",
+          "status": "passed",
+          "variantId": "var_86ulmmehu3x9"
+        },
+        {
+          "width": 1280,
+          "productId": "cmu0ewht8004ut6nwvaz59fsm",
+          "status": "passed",
+          "variantId": "var_d0wtos1445na"
+        },
+        {
+          "width": 390,
+          "productId": "cmu0ewht6004st6nwxy934apa",
+          "status": "passed",
+          "variantId": "var_86ulmmehu3x9"
+        },
+        {
+          "width": 390,
+          "productId": "cmu0ewht8004ut6nwvaz59fsm",
+          "status": "passed",
+          "variantId": "var_d0wtos1445na"
+        }
+      ],
+      "originalEvidence": "evidence.json",
+      "reason": "Authored !important fixed cart positioning obstructed the mobile checkout CTA. Shared checkout layout now overrides drawer positioning."
+    }
+  },
+  {
+    "id": "technical-2-baseline",
+    "fixture": "technical",
+    "repeat": 2,
+    "arm": "baseline",
+    "status": "failed",
+    "error": "No se completó la exploración visual. Tu revisión anterior sigue guardada.",
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": null,
+        "status": "FAILED",
+        "durationMs": 685,
+        "failureReason": "YAPI no puede continuar: la cuenta de IA del servidor agotó su saldo en OpenAI. El administrador debe recargar esa cuenta antes de reintentar. Tu sitio sigue guardado.",
+        "reasoningEffort": "low",
+        "generationId": "cmu0ez461005a4gwzvifm76sv"
+      }
+    ],
+    "reviewUsage": []
+  },
+  {
+    "id": "technical-2-candidate",
+    "fixture": "technical",
+    "repeat": 2,
+    "arm": "candidate",
+    "status": "failed",
+    "error": "No se completó la exploración visual. Tu revisión anterior sigue guardada.",
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": null,
+        "status": "FAILED",
+        "durationMs": 949,
+        "failureReason": "YAPI no puede continuar: la cuenta de IA del servidor agotó su saldo en OpenAI. El administrador debe recargar esa cuenta antes de reintentar. Tu sitio sigue guardado.",
+        "reasoningEffort": "low",
+        "generationId": "cmu0ez1ai005at6nw0xvyx2wl"
+      }
+    ],
+    "reviewUsage": []
+  },
+  {
+    "id": "technical-3-baseline",
+    "fixture": "technical",
+    "repeat": 3,
+    "arm": "baseline",
+    "status": "failed",
+    "error": "No se completó la exploración visual. Tu revisión anterior sigue guardada.",
+    "generationAttempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "usage": null,
+        "status": "FAILED",
+        "durationMs": 907,
+        "failureReason": "YAPI no puede continuar: la cuenta de IA del servidor agotó su saldo en OpenAI. El administrador debe recargar esa cuenta antes de reintentar. Tu sitio sigue guardado.",
+        "reasoningEffort": "low",
+        "generationId": "cmu0ez4pw005l4gwz7wdq0h25"
+      }
+    ],
+    "reviewUsage": []
+  },
+  {
+    "id": "technical-3-candidate",
+    "fixture": "technical",
+    "repeat": 3,
+    "arm": "candidate",
+    "status": "interrupted",
+    "error": "Stopped after OpenAI reported insufficient balance. No automatic replay.",
+    "generationAttempts": [],
+    "reviewUsage": []
+  },
+  {
+    "id": "home-1-baseline",
+    "fixture": "home",
+    "repeat": 1,
+    "arm": "baseline",
+    "status": "interrupted",
+    "error": "Stopped after OpenAI reported insufficient balance. No automatic replay.",
+    "generationAttempts": [],
+    "reviewUsage": []
+  },
+  {
+    "id": "home-1-candidate",
+    "fixture": "home",
+    "repeat": 1,
+    "arm": "candidate",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "home-2-baseline",
+    "fixture": "home",
+    "repeat": 2,
+    "arm": "baseline",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "home-2-candidate",
+    "fixture": "home",
+    "repeat": 2,
+    "arm": "candidate",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "home-3-baseline",
+    "fixture": "home",
+    "repeat": 3,
+    "arm": "baseline",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "home-3-candidate",
+    "fixture": "home",
+    "repeat": 3,
+    "arm": "candidate",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "single-1-baseline",
+    "fixture": "single",
+    "repeat": 1,
+    "arm": "baseline",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "single-1-candidate",
+    "fixture": "single",
+    "repeat": 1,
+    "arm": "candidate",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "single-2-baseline",
+    "fixture": "single",
+    "repeat": 2,
+    "arm": "baseline",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "single-2-candidate",
+    "fixture": "single",
+    "repeat": 2,
+    "arm": "candidate",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "single-3-baseline",
+    "fixture": "single",
+    "repeat": 3,
+    "arm": "baseline",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  },
+  {
+    "id": "single-3-candidate",
+    "fixture": "single",
+    "repeat": 3,
+    "arm": "candidate",
+    "status": "not_run",
+    "error": "Stopped after OpenAI reported insufficient balance."
+  }
+]

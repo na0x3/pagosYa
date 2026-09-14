@@ -1,0 +1,66 @@
+{
+  "concepts": [
+    {
+      "name": "Mesa de selección",
+      "premise": "La tienda se comporta como una página de producto premium desde el primer vistazo: galería generosa a la izquierda y un panel de configuración preciso a la derecha. Frente al catálogo compacto del concepto 2 y la portada fotográfica del 3, aquí una sola Botella Ritual ocupa toda la apertura y cada decisión —color, capacidad, cantidad— permanece reunida junto al precio.",
+      "opening": "Masthead blanco cálido y bajo con “Forma · Pilot 1”, enlace al producto y “Mi pedido (0)”. Debajo, composición 60/40: foto activa y miniaturas verticales; panel con Botella Ritual, precio dinámico desde Bs 89, swatches Salvia/Coral/Marfil, botones 500/750 ml, selector de cantidad y “Añadir al pedido”. En móvil, una imagen 1:1 seguida inmediatamente por nombre, precio y controles compactos; la compra queda dentro de 844 px.",
+      "flow": "La página de producto es el modelo del sistema. Inicio reutiliza su configurador completo como catálogo y añade solamente una franja editorial sobre acabado, tapa y uso cotidiano. Carrito y checkout usan filas limpias con miniatura de la variante, opciones legibles, cantidad editable, resumen fijo en escritorio y acción de pago directa; se indica recogida únicamente cuando el runtime la ofrezca. Movimiento sutil: fundido corto al cambiar variante, desactivado con reduced-motion.",
+      "typography": "Instrument Sans en toda la experiencia: nombre de producto 52/0.98 en escritorio y 34/1.02 en móvil; precio 24; encabezados secundarios 28; cuerpo 16/1.55; etiquetas y opciones 13–14 semibold. Espaciado abierto y letter-spacing mínimo de -0.025em en títulos para reforzar la precisión.",
+      "imagery": "assets/image-c9f5308636b1.jpg abre la galería con las tres botellas, crop 1:1 y foco central preservando SAVIA. assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg son vistas de variante Salvia, Coral y Marfil; crop 1:1 completo, sin recortar tapa ni marca. La miniatura y foto principal cambian con el swatch real.",
+      "mobile": "Header de 56 px con nombre abreviado visualmente mediante reflujo, no truncado, y “Mi pedido (0)” siempre visible. Galería horizontal con miniaturas táctiles debajo; panel de compra en flujo normal, swatches de 44 px y capacidad/cantidad en filas que envuelven sin desbordar. Barra inferior de compra solo aparece después de que el botón original sale del viewport y refleja variante y precio.",
+      "layout": {
+        "sections": [
+          "product-configurator",
+          "material-note"
+        ],
+        "catalogSection": "product-configurator",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Carta de color",
+      "premise": "Una tienda-catálogo densa y útil inspirada en una carta de muestras: el producto aparece en una fila panorámica con tres columnas cromáticas seleccionables. A diferencia del gran configurador del concepto 1 y del relato pausado del 3, prioriza comparación inmediata, alta densidad y una jerarquía tipográfica condensada.",
+      "opening": "Tras un masthead de 52 px, el catálogo comienza de inmediato con una línea contextual mínima y una fila comprable: miniatura de Botella Ritual, nombre, precio desde Bs 89, tres swatches rotulados, selector de capacidad y botón “Añadir”. En escritorio la fotografía grupal ocupa un tercio; en móvil se usa una franja recortada de 124 px y debajo una matriz compacta de opciones, manteniendo producto, precio y compra visibles sin scroll.",
+      "flow": "Inicio abre con el catálogo real y continúa con una banda comparativa de las tres variantes fotográficas, cuyos rótulos funcionan como selectores del mismo producto, no como productos ficticios. Después, una ficha técnica textual única resume acero inoxidable, acabado mate y tapa roscada. La página de producto expande esta gramática a una tabla visual de color/capacidad. Carrito y checkout adoptan divisores lineales, totales tabulados y controles pequeños; nada se encierra en tarjetas decoradas.",
+      "typography": "Oswald variable para títulos y cifras de precio —44/0.95 escritorio, 32/1 móvil— e Instrument Sans para opciones, descripciones y checkout. Etiquetas en mayúsculas moderadas de 12 px con tracking 0.08em; cuerpo 15/1.5. Los precios usan números alineados y alto contraste.",
+      "imagery": "assets/image-c9f5308636b1.jpg se recorta horizontalmente en la apertura, con las tres botellas completas y SAVIA visible. La banda posterior usa assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg en tres paneles verticales, foco centrado y proporciones iguales. Al seleccionar un color, su panel gana anchura mediante transición sutil; el fallback estático mantiene tres columnas iguales.",
+      "mobile": "Navegación visible y “Mi pedido (0)” fuera del menú. La fila panorámica se convierte en imagen corta más bloque de compra; swatches llevan color y texto para no depender solo del tono. La banda de variantes se vuelve carrusel manual con botones anterior/siguiente y sin autoavance. Checkout apila importes sin perder alineación ni reducir áreas táctiles de 44 px.",
+      "layout": {
+        "sections": [
+          "quick-catalog",
+          "color-comparison",
+          "product-spec"
+        ],
+        "catalogSection": "quick-catalog",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Tres tonos, un ritual",
+      "premise": "Una portada fotográfica editorial convierte la paleta real de SAVIA en identidad antes de vender. Es la opción más espaciosa y narrativa: frente a las aperturas comprables de los conceptos 1 y 2, comienza con una imagen de marca-producto y conduce después a un configurador concentrado, sin multiplicar fichas para un catálogo de una sola botella.",
+      "opening": "Imagen casi a sangre de las tres botellas con una banda de texto marfil superpuesta solo en el área despejada: “Un color para cada ritual” y un enlace ancla “Configurar la mía”. El encabezado flotante permanece sobrio, con Forma · Pilot 1 y “Mi pedido (0)”. No promete precio ni compra en el primer viewport móvil.",
+      "flow": "La portada conduce a una secuencia de tres retratos verticales —Salvia, Coral, Marfil— con nombres tipográficos grandes; al final aparece el configurador completo de Botella Ritual con galería, opciones reales, cantidad y compra. Una única nota de producto cierra el recorrido. La página de producto omite la portada y abre directamente en el configurador. Carrito y checkout mantienen fondos marfil, líneas verde tinta y acentos de la variante elegida, usando color solo para estado y selección.",
+      "typography": "Bricolage Grotesque variable como única familia: titular editorial 72/0.92 en escritorio y 42/0.96 en móvil; nombres de color 46; producto 38; cuerpo 16/1.6; controles 14 semibold. Contraste por escala y peso, con títulos a -0.035em y navegación compacta.",
+      "imagery": "assets/image-c9f5308636b1.jpg ocupa la portada con crop 4:3 en escritorio y 4:5 en móvil; foco central ajustado para conservar las tres botellas y su impresión SAVIA. assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg forman el capítulo cromático con botella completa, alternando alineación izquierda/derecha. Esas mismas imágenes alimentan la galería del configurador, sin duplicar descripciones.",
+      "mobile": "La portada conserva la fotografía como rasgo principal y coloca el texto en una banda inferior sólida para asegurar contraste. Los retratos pasan a una secuencia vertical corta; el configurador usa una galería deslizable manual y controles a ancho disponible. “Mi pedido (0)” permanece visible junto al nombre de tienda; no hay navegación de compra oculta ni animación necesaria para leer contenido.",
+      "layout": {
+        "sections": [
+          "ritual-cover",
+          "color-portraits",
+          "ritual-configurator",
+          "material-closing"
+        ],
+        "catalogSection": "ritual-configurator",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Mesa de selección” responde de forma más directa a la petición de diseñar primero una página de producto comprensible. El catálogo confirmado tiene un solo artículo, Botella Ritual, pero seis variantes reales por color y capacidad; por eso conviene dedicar la apertura al configurador en lugar de simular variedad. Las cuatro imágenes aportadas permiten una galería auténtica —una toma grupal y tres"
+  }
+}

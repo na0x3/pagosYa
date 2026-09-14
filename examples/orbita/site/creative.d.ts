@@ -1,0 +1,1 @@
+declare module 'lottie-web/build/player/lottie_light' { const player: typeof import('lottie-web').default; export default player; }

@@ -1,3 +1,4 @@
+import { queueStoreEmail } from '../stores/email-workspace.config';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -22,8 +23,9 @@ export class CommercePlatformService {
       this.prisma.storeRedirect.findMany({ where: { storeId }, orderBy: { fromPath: 'asc' }, take: 500 }),
     ]); return { storeSlug: store.slug, credits, files, products, redirects };
   }
-  async issueCredit(merchantId: string, storeId: string, input: { reference: string; label: string; kind: string; amount: number; currency: string; expiresAt?: string }) {
-    await this.owner(merchantId, storeId);
+  async issueCredit(merchantId: string, storeId: string, input: { reference: string; label: string; kind: string; amount: number; currency: string; expiresAt?: string; recipientEmail?: string; recipientName?: string }) {
+    const store = await this.owner(merchantId, storeId);
+    if (input.recipientEmail && (input.kind !== 'GIFT_CARD' || !this.config.get('app.email.resendApiKey'))) throw new BadRequestException('El correo de destinatario requiere una tarjeta de regalo y un proveedor de correo configurado.');
     const code = createHmac('sha256', this.secret()).update(`store-credit:${storeId}:${input.reference}`).digest('hex').slice(0, 32).toUpperCase();
     try {
       const credit = await this.prisma.$transaction(async tx => {
@@ -31,6 +33,10 @@ export class CommercePlatformService {
         if (prior) { if (prior.issuedAmount !== input.amount || prior.currency !== input.currency || prior.kind !== input.kind) throw new ConflictException('Esta referencia ya corresponde a otra emisión.'); return prior; }
         if (!input.label.trim() || input.expiresAt && new Date(input.expiresAt) <= new Date()) throw new BadRequestException('Escribe una referencia y, si corresponde, una fecha de vencimiento futura.');
         const row = await tx.storeCredit.create({ data: { storeId, reference: input.reference, label: input.label.trim(), kind: input.kind, issuedAmount: input.amount, balance: input.amount, currency: input.currency, codeHash: creditHash(code), expiresAt: input.expiresAt ? new Date(input.expiresAt) : null } });
+        if (input.recipientEmail) {
+          const queued = await queueStoreEmail(tx, storeId, 'GIFT_CARD', row.id, input.recipientEmail, {store:store.name,customer:input.recipientName?.trim() || 'cliente',amount:`${(input.amount / 100).toFixed(2)} ${input.currency}`,details:`Código: ${code.match(/.{8}/g)!.join('-')}\nSaldo: ${(input.amount / 100).toFixed(2)} ${input.currency}${input.expiresAt ? `\nVence: ${input.expiresAt}` : ''}`});
+          if (!queued) throw new BadRequestException('Activa la plantilla de tarjeta de regalo en Correos y marketing antes de enviarla por correo.');
+        }
         await tx.storeCreditEntry.create({ data: { creditId: row.id, reference: `issue:${row.id}`, delta: input.amount, kind: 'ISSUE' } });
         await tx.store.update({ where: { id: storeId }, data: { creditsEnabled: true } }); return row;
       });

@@ -1,0 +1,65 @@
+{
+  "concepts": [
+    {
+      "name": "Muestrario editorial",
+      "premise": "Una tienda-catálogo que abre como una mesa de selección: marca compacta a la izquierda y los dos productos inmediatamente comprables en una retícula editorial. Frente a los otros conceptos, elimina el preámbulo, concentra más información arriba y presenta ambas prendas en paralelo, sin fingir imágenes.",
+      "opening": "Masthead fino con «Trama», enlace a Catálogo y «Mi pedido · 0». Debajo comienza directamente el catálogo: título breve «Prendas para todos los días» y dos fichas tipográficas. Cada una muestra nombre, descripción, precio inicial, selectores de color/talla aplicables y «Añadir al pedido». El primer producto ocupa más ancho por su matriz de seis variantes; el segundo funciona como columna estrecha.",
+      "flow": "La compra ocurre en Inicio, con acceso secundario a una página individual más pausada. La ficha de producto convierte color y talla en una matriz legible, desactiva Azul/L o L cuando no hay disponibilidad y mantiene precio y botón unidos. Carrito y checkout retoman las líneas de tabla, el azul para estados activos y una síntesis clara de recogida antes del pago. Sin bloques testimoniales, beneficios ni políticas no suministradas.",
+      "typography": "Instrument Sans variable para navegación, cuerpo y controles; Instrument Serif para nombres de producto y precios grandes. H1 48–72 px, nombres 30–42 px, cuerpo 16–18 px y etiquetas 12–13 px en mayúsculas espaciadas. En móvil, título 38 px, producto 27 px y controles 16 px; tracking de displays entre -0.03em y -0.01em.",
+      "imagery": "No usa fotografías ni sustitutos ilustrados. La identidad nace de reglas de tinta, grandes campos de papel cálido, muestras cromáticas abstractas claramente decorativas y palabras «CRUDO»/«AZUL» impresas en el fondo, nunca presentadas como imágenes del producto.",
+      "mobile": "Cabecera de dos filas: Trama arriba y «Mi pedido · 0» siempre visible junto al menú. El catálogo empieza dentro de los primeros 260 px; la Camisa aparece primero con nombre, precio y acción visibles en 390×844. Los selectores pasan a botones de 44 px y la tabla de variantes se transforma en dos grupos, Color y Talla. A 320 px, precio y botón se apilan sin recorte.",
+      "layout": {
+        "sections": [
+          "catalogo",
+          "nota-material"
+        ],
+        "catalogSection": "catalogo",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Pliego cobalto",
+      "premise": "Una portada tipográfica espaciosa inspirada en un pliego de moda, seguida por un catálogo lineal. A diferencia del muestrario denso, retrasa la compra para establecer primero una voz de marca; frente al tercer concepto, evita interfaces de configuración y presenta cada prenda como una entrada editorial de ancho completo.",
+      "opening": "Una portada asimétrica de papel con un bloque cobalto vertical, el nombre «Trama» sobredimensionado y la frase «Colores y tallas para vestir lo cotidiano». Una línea inferior enlaza a «Ver las prendas». No hay fotografía ni producto falso: el espacio y la tipografía son el foco.",
+      "flow": "Tras la portada, cada producto ocupa una franja horizontal numerada solo por posición editorial, con nombre, composición factual, precio desde y enlace «Elegir opciones». La página de producto dispone el título y precio en una columna fija y las opciones en otra; el botón se activa al completar la selección. Carrito y checkout usan una hoja central de papel, resumen lateral en escritorio y resumen previo al pago en móvil.",
+      "typography": "Bricolage Grotesque variable como única familia: peso 250 para el wordmark y grandes titulares, 500 para cuerpo y 700 para acciones. Wordmark 112–180 px en escritorio, 64–78 px en móvil; títulos de producto 44–64/32 px, cuerpo 17 px y microtexto 12 px. La jerarquía depende del peso, la escala y la alineación, no de una pareja tipográfica convencional.",
+      "imagery": "Composición puramente tipográfica con tinta casi negra, papel hueso y un único plano cobalto. Las palabras se recortan mediante cambios de color y columnas, pero permanecen legibles. No aparecen siluetas de prendas, texturas fotográficas ni miniaturas vacías.",
+      "mobile": "La portada conserva el bloque cobalto como banda lateral y el wordmark se divide naturalmente en líneas si hiciera falta. Navegación visible con Catálogo y «Mi pedido · 0» fuera del menú. Las franjas de producto se apilan con precio y «Elegir opciones» juntos; opciones y pago mantienen objetivos táctiles de 44 px en 320 y 390 px.",
+      "layout": {
+        "sections": [
+          "portada-pliego",
+          "catalogo-lineal",
+          "cierre-trama"
+        ],
+        "catalogSection": "catalogo-lineal",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Mesa de variantes",
+      "premise": "Una experiencia centrada en decidir color y talla: el inicio funciona como un configurador dividido, con un índice de dos prendas y un panel de compra activo. Se diferencia del catálogo paralelo porque muestra una prenda a la vez y del pliego editorial porque la interacción, no el manifiesto, domina la apertura.",
+      "opening": "Bajo una cabecera compacta, una columna estrecha lista «Camisa de algodón» y «Camiseta esencial» como pestañas; el panel principal abre con la camisa, su descripción, precio dinámico, selector Color, selector Talla y «Añadir al pedido». Un gran campo cobalto lleva texto decorativo «AZUL / CRUDO» detrás del panel, sin representar el producto. La camiseta se selecciona sin abandonar la página.",
+      "flow": "El selector conserva cada combinación como una decisión explícita y anuncia los estados no disponibles. Debajo, una breve comparación factual resume «manga larga / cuello clásico» frente a «cuello redondo». La página individual amplía el mismo configurador; carrito y checkout convierten la selección en filas compactas con controles de cantidad, edición de variante y resumen de pago. La recogida aparece únicamente donde el flujo de cumplimiento la requiere.",
+      "typography": "Oswald variable para rótulos, precios y nombres condensados; Instrument Sans para descripciones, opciones y compra. Rótulo de fondo 120–210 px, título activo 46–68 px y cuerpo 16–18 px. En móvil, rótulo 74 px parcialmente contenido en su zona decorativa, título 34 px y opciones 16 px; tracking de titulares de -0.02em a 0.",
+      "imagery": "Sin medios fotográficos. El fondo utiliza únicamente texto de color a escala monumental, reglas y bloques planos con aria-hidden en lo decorativo. Las fichas reales quedan sobre papel sólido y nunca incorporan contenedores de imagen vacíos.",
+      "mobile": "La lista de prendas se vuelve un selector horizontal accesible bajo el masthead; «Mi pedido · 0» permanece visible. El panel activo comienza lo bastante arriba para mostrar nombre, precio y acción en 390×844. Color y talla se distribuyen en botones flexibles de mínimo 44 px; en 320 px el botón de añadir ocupa todo el ancho. El texto cobalto se reduce y queda en una banda propia para no invadir controles.",
+      "layout": {
+        "sections": [
+          "selector-catalogo",
+          "comparacion",
+          "final-pedido"
+        ],
+        "catalogSection": "selector-catalogo",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "«Muestrario editorial» encaja mejor con un catálogo real de solo dos prendas y con la acción prioritaria de elegir variantes y añadir. Permite comparar enseguida la camisa —dos colores, tres tallas y precios de Bs 140–150— con la camiseta —tres tallas y precios variables—, haciendo visibles también las combinaciones agotadas. Como no hay logo ni fotografías suministradas, sostiene la identidad con"
+  }
+}

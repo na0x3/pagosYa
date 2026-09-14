@@ -1,9 +1,10 @@
 import { SOURCE_MOTION_MODES, type SourceMotionMode } from '../source-motion';
 import { IsInt, Min, Max, IsIn as IsModelIn } from 'class-validator';
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../source-generation-policy';
-import { IsIn, ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsUUID, ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { SourceProjectRevisionDto } from './save-source-project.dto';
 export class SendSourceMessageDto extends SourceProjectRevisionDto {
+  @IsOptional() @IsUUID() requestId?: string;
   /** @deprecated Accepted only for older clients; never used for generation. */
   @IsOptional() @IsString() @MaxLength(80) themeId?: string;
   @IsOptional() @IsModelIn(SOURCE_MOTION_MODES) motion?: SourceMotionMode;

@@ -34,9 +34,9 @@ for (const mobile of [false, true]) test(`visual resources without AI review act
   const resources = page.getByRole('region', { name: 'Recursos visuales', exact: true });
   await expect(resources.getByRole('heading', { name: 'Recursos visuales' })).toBeFocused();
   await resources.getByRole('combobox', { name: 'Uso', exact: true }).selectOption('unused');
-  await expect(resources.getByRole('button', { name: 'Usar en indicación' })).toBeDisabled();
+  await expect(resources.getByRole('button', { name: 'Usar esta imagen' })).toBeDisabled();
   await resources.getByRole('combobox', { name: 'Uso', exact: true }).selectOption('product');
-  await expect(resources.getByRole('button', { name: 'Usar en indicación' })).toBeEnabled();
+  await expect(resources.getByRole('button', { name: 'Usar esta imagen' })).toBeEnabled();
   await resources.getByLabel('Descripción').fill('Café de la casa');
   await resources.getByRole('button', { name: 'Guardar usos' }).click();
   await expect.poll(() => revision).toBe(2);

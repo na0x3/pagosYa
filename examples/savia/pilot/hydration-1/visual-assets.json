@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/image-e23264b4bbe2.jpg",
+      "role": "reference",
+      "description": "Actual 1280x844 browser capture of THIS current homepage. Repair the observed defect; never embed this screenshot."
+    },
+    {
+      "path": "assets/image-9c350aaceaa8.jpg",
+      "role": "reference",
+      "description": "Actual 390x844 browser capture of THIS current homepage. Repair the observed defect; never embed this screenshot."
+    },
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "product",
+      "description": "Existing catalog product photography; retain its identity."
+    },
+    {
+      "path": "assets/image-d5b34d383f0c.jpg",
+      "role": "product",
+      "description": "Existing catalog product photography; retain its identity."
+    },
+    {
+      "path": "assets/image-9c4db2099869.jpg",
+      "role": "product",
+      "description": "Existing catalog product photography; retain its identity."
+    },
+    {
+      "path": "assets/image-dbdc2c596f17.jpg",
+      "role": "product",
+      "description": "Existing catalog product photography; retain its identity."
+    }
+  ]
+}

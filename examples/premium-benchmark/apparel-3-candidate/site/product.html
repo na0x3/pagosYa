@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Producto — Trama</title>
+  <meta name="description" content="Consulta colores, tallas, disponibilidad y precio de una prenda de Trama.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</head>
+<body class="product-page">
+<header class="site-header">
+  <div class="masthead">
+    <a class="wordmark" href="index.html">TRAMA</a>
+    <p>Prendas cotidianas<br>con colores y tallas</p>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span data-cart-count>0</span></button>
+  </div>
+  <nav class="site-nav" aria-label="Navegación principal">
+    <a href="index.html#catalogo-muestrario">Catálogo</a>
+    <a href="index.html#nota-trama">Sobre Trama</a>
+  </nav>
+</header>
+<main class="product-main">
+  <div class="page-kicker"><a href="index.html#catalogo-muestrario"><img src="assets/icons/arrow-left.svg" alt=""> Muestrario</a><span>Ficha de producto</span></div>
+  <div data-pagosya-product-page></div>
+</main>
+<div data-pagosya-status role="status" aria-live="polite"></div>
+<div data-pagosya-cart hidden></div>
+<footer class="site-footer"><a class="wordmark wordmark--small" href="index.html">TRAMA</a><p>Prendas cotidianas con colores y tallas.</p><button type="button" class="footer-cart" data-cart-open>Mi pedido <span data-cart-count>0</span></button></footer>
+</body>
+</html>

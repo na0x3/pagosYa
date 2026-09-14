@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Finalizar pedido — Bruma</title>
+  <meta name="description" content="Revisa tu pedido Bruma, indica los datos de recogida y continúa al pago disponible.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="checkout-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html" aria-label="Bruma, inicio" data-store-name>Bruma</a>
+      <button class="cart-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido</span>
+        <span class="cart-count" data-cart-count>0</span>
+      </button>
+    </div>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="index.html#catalogo">Productos</a>
+      <a href="index.html#criterio-volumen">Cómo elegir</a>
+    </nav>
+  </header>
+
+  <main class="checkout-main">
+    <a class="back-link" href="index.html#catalogo"><img src="assets/icons/arrow-left.svg" alt=""> Seguir comprando</a>
+    <div data-pagosya-checkout-page></div>
+  </main>
+
+  <div class="global-status" data-pagosya-status role="status" aria-live="polite"></div>
+
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html">Bruma</a>
+    <p>Cuidado cosmético diario en varios volúmenes.</p>
+    <a href="index.html#catalogo">Volver a productos</a>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

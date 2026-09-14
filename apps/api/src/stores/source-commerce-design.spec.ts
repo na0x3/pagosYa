@@ -59,9 +59,9 @@ it('styles inline options with merchant tokens and preserves text quick-add targ
   expect(options).toContain('var(--brand-background,var(--paper,Canvas))');
   expect(options).toContain('var(--brand-border,var(--line,currentColor))');
   expect(options).toContain('color:inherit');
-  expect(runtime).toContain('[data-product-option]:focus-visible{outline:3px solid var(--brand-accent,var(--accent,currentColor))');
+  expect(runtime).toContain('[data-product-option]:focus-visible{outline:3px solid var(--store-accent,var(--brand-accent,var(--accent,currentColor)))');
   const textAction = runtime.match(/\.menu-item:not\(\[data-custom-product\]\) button.menu-add\[data-product\]\{([^}]+)\}/)![1];
   expect(textAction).toContain('min-height:44px');
   expect(textAction).toContain('padding:10px 14px');
-  expect(textAction).toContain('border-radius:var(--brand-radius,0px)');
+  expect(textAction).toContain('border-radius:var(--store-radius,var(--brand-radius,0px))');
 });

@@ -1,0 +1,79 @@
+import { test, expect } from '@playwright/test';
+
+for (const mobile of [false, true]) test(`create product form saves directly and retains failed uploads (${mobile ? 'mobile' : 'desktop'})`, async ({ page }) => {
+  await page.setViewportSize({ width: mobile ? 390 : 1280, height: 844 });
+  let creates = 0, uploads = 0, aiMessages = 0, catalogReads = 0;
+  const version = { revision: 1, label: 'Tienda', snapshot: { schemaVersion: 1, brief: { businessType: 'Restaurante', audience: 'Vecinos', primaryAction: 'Pedir', visualDirection: 'Fotos' }, files: [
+    { path: 'index.html', content: '<html><head><title>Tienda</title></head><body><h1>Tienda</h1><div data-pagosya-catalog></div><script src="config.js"></script><script src="commerce.js"></script></body></html>' },
+    { path: 'config.js', content: 'window.PAGOSYA_CONFIG={"data":{"items":[]}};' }, { path: 'commerce.js', content: '' },
+  ] } };
+  await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    let body: any = {};
+    if (path.endsWith('/stores')) body = [{ id: 's1', name: 'Tienda', slug: 'tienda' }];
+    else if (path.endsWith('/conversation')) body = { messages: [] };
+    else if (path.endsWith('/catalog')) { catalogReads++; body = { items: [] }; }
+    else if (/\/versions\/\d+$/.test(path)) body = version;
+    else if (path.endsWith('/source-project')) body = { revision: 1, versions: [version] };
+    else if (path.endsWith('/estimate')) body = { estimate: { minCredits: 1, maxCredits: 3 } };
+    else if (path.endsWith('/messages')) aiMessages++;
+    else if (path.endsWith('/uploads')) { uploads++; body = { url: '/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp' }; }
+    else if (path.endsWith('/payment_links')) {
+      creates++;
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toEqual({ name: 'Hamburguesa de la casa', description: 'Carne 150 g, queso y pan artesanal.', amount: 3550, currency: 'BOB', stock: 12, imageUrls: ['/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp'] });
+      if (creates === 1) { await route.fulfill({ status: 503, json: { message: 'No se pudo guardar. Intenta otra vez.' } }); return; }
+      body = { id: 'p1', name: 'Hamburguesa de la casa' };
+    }
+    await route.fulfill({ json: body });
+  });
+  await page.goto('/?source=1');
+  const composer = page.locator('#agent-command');
+  await composer.fill('Conservar este mensaje sin enviar');
+  const trigger = page.getByRole('button', { name: 'Crear producto', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('region', { name: 'Nuevo producto', exact: true });
+  await expect(dialog.getByLabel('Nombre del producto', { exact: true })).toBeFocused();
+  await expect(composer).toHaveValue('Conservar este mensaje sin enviar');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(dialog.getByText('Paso 1 de 7')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
+  await dialog.getByLabel('Nombre del producto', { exact: true }).fill('Hamburguesa de la casa');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(dialog.getByText('Paso 2 de 7')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Volver al paso anterior' }).click();
+  await expect(dialog.getByLabel('Nombre del producto', { exact: true })).toHaveValue('Hamburguesa de la casa');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByLabel('Especificaciones del producto').fill('Carne 150 g, queso y pan artesanal.');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByLabel('Precio (Bs)', { exact: true }).fill('35.50');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByLabel(/Añadir fotos/).setInputFiles('tests/fixtures/retention-product.webp');
+  await expect(dialog.getByRole('img')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByLabel('Stock (opcional)').fill('12');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  const baselineReads = catalogReads;
+  await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Intenta otra vez');
+  await expect(dialog.getByLabel('Nombre del producto', { exact: true })).toHaveValue('Hamburguesa de la casa');
+  await expect(dialog.getByRole('img')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Producto creado', exact: true })).toBeVisible();
+  await expect.poll(() => catalogReads).toBeGreaterThan(baselineReads);
+  expect(uploads).toBe(1);
+  expect(creates).toBe(2);
+  expect(aiMessages).toBe(0);
+  await page.getByRole('button', { name: 'Continuar con YAPI', exact: true }).click();
+  await expect(trigger).toBeFocused();
+  await expect(composer).toHaveValue('Conservar este mensaje sin enviar');
+  await trigger.click();
+  await expect(dialog.getByLabel('Nombre del producto', { exact: true })).toHaveValue('');
+  await expect(dialog.getByRole('img')).toHaveCount(0);
+  await page.screenshot({ path: `/private/tmp/product-create-${mobile ? 'mobile' : 'desktop'}.png` });
+  await dialog.getByRole('button', { name: 'Cancelar creación de producto', exact: true }).click();
+  expect(creates).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

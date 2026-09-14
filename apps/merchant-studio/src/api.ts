@@ -1,9 +1,11 @@
+import type { SourceDesignJob } from './source-design-jobs';
 import type { AssetLibrary, VisualReport } from './source-visual-tools';
+import type { BuildProgress } from './source-build-progress';
 import type { BrandState } from './brand-profile';
 export const SESSION_STORAGE_KEY = "pagosya_merchant_session";
 
 const embedded = new URLSearchParams(location.search).get("embedded") === "1" && window.parent !== window;
-export const API_BASE_URL: string = embedded || new URLSearchParams(location.search).get("browser") === "1"
+export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "library", "productGuide"].some(key => new URLSearchParams(location.search).has(key))
   ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 function configuredCheckoutOrigin(): string {
@@ -146,6 +148,9 @@ export class MerchantStudioApi {
     return this.request("/stores");
   }
 
+  businessWorkspace(storeId: string, path = '', method = 'GET', body?: unknown): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/email-workspace${path}`, {method,...(body === undefined ? {} : {body:JSON.stringify(body)})}); }
+  integrationConnections(storeId: string): Promise<any[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations`); }
+  createIntegrationConnection(storeId: string, input: {kind:string;name:string}): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations`, {method:'POST',body:JSON.stringify(input)}); }
   retention(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention`); }
   writeRetention(storeId: string, path: string, method: string, body: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention${path ? '/' + path : ''}`, { method, body: JSON.stringify(body) }); }
   commercePlatform(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce`); }
@@ -186,16 +191,40 @@ export class MerchantStudioApi {
   reviewSourceVisuals(storeId: string, body: { revision: number; page: string; model?: SourceGenerationSettings['model']; maxCredits: number }): Promise<VisualReport> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-review`, { method: 'POST', body: JSON.stringify(body) });
   }
+  latestSourceDesignJob(storeId: string): Promise<{ enabled: boolean; job: SourceDesignJob | null }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/design-jobs`);
+  }
+  startSourceDesignJob(storeId: string, body: { requestId: string; revision: number; page: string; productId?: string; maxCredits: number; maxRepairs: number }): Promise<SourceDesignJob> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/design-jobs`, { method: 'POST', body: JSON.stringify(body) });
+  }
+  cancelSourceDesignJob(storeId: string, id: string): Promise<SourceDesignJob> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/design-jobs/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: '{}' });
+  }
+  resumeSourceDesignJob(storeId: string, id: string): Promise<SourceDesignJob> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/design-jobs/${encodeURIComponent(id)}/resume`, { method: 'POST', body: '{}' });
+  }
   sourceCatalog(storeId: string): Promise<JsonRecord> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
+  }
+
+  createProduct(storeId: string, input: { name: string; description: string | null; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}> }): Promise<{ id: string; name: string }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
+  }
+
+  updateProduct(storeId: string, productId: string, input: Partial<Parameters<MerchantStudioApi['createProduct']>[1]>): Promise<{ id: string; name: string }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify(input) });
   }
 
   sourceConversation(storeId: string): Promise<ConversationResponse> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[]): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}) }) });
+  sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string): Promise<{ setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/messages`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}) }) });
+  }
+
+  sourceProgress(storeId: string, requestId: string, signal?: AbortSignal): Promise<{ progress: BuildProgress | null }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/progress?requestId=${encodeURIComponent(requestId)}`, { signal });
   }
 
   estimateSource(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; assetUrls: string[] }): Promise<SourceGenerationEstimate> {

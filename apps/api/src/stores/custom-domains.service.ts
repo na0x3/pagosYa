@@ -111,6 +111,7 @@ export class CustomDomainsService {
     hostname: string;
     status: CustomDomainStatus;
     verificationToken: string;
+    domainOrderId?: string | null;
     verifiedAt: Date | null;
     lastCheckedAt: Date | null;
     createdAt: Date;
@@ -119,6 +120,7 @@ export class CustomDomainsService {
     const target = this.targetHostname();
     return {
       id: domain.id,
+      managed: Boolean(domain.domainOrderId),
       hostname: domain.hostname,
       status: domain.status,
       verifiedAt: domain.verifiedAt,
@@ -160,26 +162,29 @@ export class CustomDomainsService {
       throw new BadRequestException("Ese dominio pertenece a la infraestructura de pagosYa.");
     }
 
-    const count = await this.prisma.customDomain.count({ where: { storeId } });
-    if (count >= MAX_DOMAINS_PER_STORE) {
-      throw new BadRequestException(`Cada tienda puede conectar hasta ${MAX_DOMAINS_PER_STORE} dominios.`);
-    }
-
-    try {
-      const domain = await this.prisma.customDomain.create({
-        data: {
-          storeId,
-          hostname,
-          verificationToken: randomBytes(24).toString("base64url"),
-        },
-      });
-      return this.response(domain);
-    } catch (error) {
-      if ((error as { code?: string }).code === "P2002") {
-        throw new ConflictException("Ese dominio ya está conectado a una tienda.");
+    return this.prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`store-domains:${storeId}`}))`;
+      const count = await tx.customDomain.count({ where: { storeId } });
+      if (count >= MAX_DOMAINS_PER_STORE) {
+        throw new BadRequestException(`Cada tienda puede conectar hasta ${MAX_DOMAINS_PER_STORE} dominios.`);
       }
-      throw error;
-    }
+
+      try {
+        const domain = await tx.customDomain.create({
+          data: {
+            storeId,
+            hostname,
+            verificationToken: randomBytes(24).toString("base64url"),
+          },
+        });
+        return this.response(domain);
+      } catch (error) {
+        if ((error as { code?: string }).code === "P2002") {
+          throw new ConflictException("Ese dominio ya está conectado a una tienda.");
+        }
+        throw error;
+      }
+    });
   }
 
   async verify(merchantId: string, storeId: string, domainId: string) {
@@ -187,6 +192,7 @@ export class CustomDomainsService {
     const domain = await this.prisma.customDomain.findFirst({ where: { id: domainId, storeId } });
     if (!domain) throw new NotFoundException("Domain not found");
 
+    if (domain.domainOrderId) throw new BadRequestException("La conexión de este dominio se verifica automáticamente.");
     const checkedAt = new Date();
     if (!(await this.hasVerificationRecord(domain))) {
       await this.prisma.customDomain.update({ where: { id: domain.id }, data: { lastCheckedAt: checkedAt } });
@@ -209,7 +215,7 @@ export class CustomDomainsService {
   @Interval("custom-domain-reconciliation", 15 * 60 * 1000)
   async reconcileActiveDomains() {
     const domains = await this.prisma.customDomain.findMany({
-      where: { status: CustomDomainStatus.ACTIVE },
+      where: { status: CustomDomainStatus.ACTIVE, domainOrderId: null },
       select: { id: true, hostname: true, verificationToken: true },
       take: 200,
     });
@@ -225,6 +231,8 @@ export class CustomDomainsService {
 
   async remove(merchantId: string, storeId: string, domainId: string) {
     await this.ownedStore(merchantId, storeId);
+    const managed = await this.prisma.customDomain.findFirst({ where: { id: domainId, storeId, domainOrderId: { not: null } } });
+    if (managed) throw new BadRequestException("Este dominio fue comprado en pagosYa. Contacta a soporte para transferirlo o cambiar su conexión.");
     const result = await this.prisma.customDomain.deleteMany({ where: { id: domainId, storeId } });
     if (!result.count) throw new NotFoundException("Domain not found");
     return { success: true };
@@ -235,6 +243,7 @@ export class CustomDomainsService {
     const domain = await this.prisma.customDomain.findUnique({
       where: { hostname },
       include: {
+        domainOrder: { select: { status: true, expiresAt: true, sandbox: true } },
         store: {
           select: {
             slug: true,
@@ -247,6 +256,7 @@ export class CustomDomainsService {
     if (
       !domain ||
       domain.status !== CustomDomainStatus.ACTIVE ||
+      (domain.domainOrder && (domain.domainOrder.sandbox || domain.domainOrder.status !== 'ACTIVE' || !domain.domainOrder.expiresAt || domain.domainOrder.expiresAt <= new Date())) ||
       domain.store.status !== StoreStatus.ACTIVE ||
       domain.store.merchant.status !== MerchantStatus.ACTIVE
     ) {

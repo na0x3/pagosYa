@@ -66,7 +66,8 @@ test('retired sections are absent and old view selections fall back to the overv
     await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'overview');
   }
   expect(requests.some(request => request.path.startsWith('/events') || request.path.endsWith('/operations/hub'))).toBe(false);
-  await page.locator('#storeFullscreenNavHandle').click();
+  if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
+  if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
   await expect(page.locator('#paymentLinksSection')).toBeVisible();
   expect(errors).toEqual([]);
@@ -81,7 +82,7 @@ test('store opens the shared editor; setup and an unsent message survive product
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'workspace');
   await expect(page.locator('#onboardingDialog')).not.toBeVisible();
   await expect(page.locator('#merchantStoreTabs')).not.toBeVisible();
-  await expect(page.locator('#storeFullscreenNavHandle')).toBeVisible();
+  await expect(page.locator('.dashboard-sidebar')).not.toBeVisible();
   const bounds = await page.locator('#merchantStudioFrame').boundingBox();
   expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize() });
   await expect(editor.locator('#source-store')).not.toBeVisible();
@@ -96,12 +97,13 @@ test('store opens the shared editor; setup and an unsent message survive product
   await editor.getByRole('button', { name: 'Revisar productos', exact: true }).click();
 
   await expect(page.locator('#paymentLinksSection')).toBeVisible();
+  await page.locator('#productCreateDisclosure > summary').click();
   await page.locator('#paymentLinkName').fill('Café en grano'); await page.locator('#paymentLinkAmount').fill('65');
   await page.locator('#paymentLinkSubmit').click();
   await expect.poll(() => products.length).toBe(1);
   expect(products[0].amount).toBe(6500);
   expect(requests.find(r => r.method === 'POST' && r.path.endsWith('/payment_links')).path).toBe('/stores/store_1/payment_links');
-  await page.locator('#merchantStoreTabs [data-dashboard-view="workspace"]').click();
+  await page.locator('#dashboardNav [data-dashboard-view="workspace"]:not([data-studio-tool])').click();
   await expect(composer).toHaveValue('Destacar el café en grano');
   await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
   await expect(editor.locator('.remote-agent-note').last()).toContainText('colores');
@@ -122,10 +124,12 @@ test('store opens the shared editor; setup and an unsent message survive product
 test('AI setup opens the YAPI conversation without the retired four-step wizard', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const { editor, requests } = await workspace(page);
-  await page.locator('#storeFullscreenNavHandle').click();
+  if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
+  if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'products');
-  await page.locator('#storeFullscreenNavHandle').click();
+  if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
+  if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#aiSetupLaunch').click();
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'workspace');
   await expect(editor.locator('[data-setup-prompt]')).toBeVisible();
@@ -138,7 +142,8 @@ test('switching stores protects unsent work and scopes the editor; untrusted mes
   const { editor } = await workspace(page);
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Un mensaje sin enviar');
-  await page.locator('#storeFullscreenNavHandle').click();
+  if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
+  if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#dashboardNav [data-dashboard-view="stores"]').click();
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('.store-row[data-id="store_2"] .store-row-name').click();
@@ -156,14 +161,16 @@ test('switching stores protects unsent work and scopes the editor; untrusted mes
 test('saved site previews refresh the real catalog after product creation without a new source revision', async ({ page }) => {
   const { editor, products, requests } = await workspace(page, true);
   await page.context().route('http://localhost:3001/v1/uploads/1111-aaaa.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') }));
-  await page.locator('#storeFullscreenNavHandle').click();
+  if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
+  if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
+  await page.locator('#productCreateDisclosure > summary').click();
   await page.locator('#paymentLinkName').fill('Café recién tostado');
   await page.locator('#paymentLinkAmount').fill('42');
   await page.locator('#paymentLinkSubmit').click();
   await expect.poll(() => products.length).toBe(1);
   products[0].imageUrls = ['/v1/uploads/1111-aaaa.png'];
-  await page.locator('#merchantStoreTabs [data-dashboard-view="workspace"]').click();
+  await page.locator('#dashboardNav [data-dashboard-view="workspace"]:not([data-studio-tool])').click();
   const preview = editor.frameLocator('iframe[title="Vista previa del sitio"]');
   await expect(preview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
   await expect(preview.locator('.menu-item__price')).toContainText('42');
@@ -196,4 +203,65 @@ test('saved site previews refresh the real catalog after product creation withou
   await browser.reload();
   await expect(fullPreview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
   await browser.close();
+});
+
+async function retentionFixture(page) {
+  const settings = { revision: 1, comebackEnabled: true, visitsRequired: 5, rewardLabel: 'Un café gratis', timezone: 'America/La_Paz', signupEnabled: true, signupTitle: 'Nuestro club', signupBody: 'Novedades de la tienda', signupButton: 'Unirme', welcomeEnabled: false, welcomeSubject: 'Bienvenido', welcomeBody: 'Hola {{store}}', recoveryEnabled: false, recoveryHours: 24, reviewRequestsEnabled: false };
+  await page.route('**/stores/*/retention', route => route.fulfill({ json: { settings, cards: 12, subscriberCount: 7, carts: 3, campaigns: [{ id: 'c1', subject: 'Novedades de septiembre', body: 'Visítanos', _count: { deliveries: 0 } }], subscribers: [{ name: 'Ana', email: 'ana@example.com', createdAt: '2026-09-14T12:00:00Z' }], deliveries: [], emailConfigured: true } }));
+}
+
+test('Comeback, campaigns and customers show distinct pages with the current font', async ({ page }) => {
+  await retentionFixture(page);
+  await workspace(page, { withSite: true });
+  await expect(page.locator('[data-dashboard-view="content"], [data-dashboard-page="content"]')).toHaveCount(0);
+  await page.evaluate(() => window.setDashboardView('marketing'));
+  await page.locator('[data-marketing-tab="program"]').click();
+  const frame = page.frameLocator('#storeMarketingFrame');
+  await expect(frame.getByRole('heading', { name: 'Comeback Card', exact: true })).toBeVisible();
+  await expect(frame.locator('.comeback-card')).toBeVisible();
+  await expect(frame.locator('body')).not.toContainText('Cargando las herramientas');
+  expect(await frame.locator('.retention-dialog').evaluate(el => getComputedStyle(el).fontFamily)).toContain('Arial');
+  await page.screenshot({ path: '/tmp/pagosya-comeback-desktop.png', fullPage: true });
+  await page.locator('[data-marketing-tab="campaigns"]').click();
+  await expect(frame.locator('h2')).toHaveText('Campañas');
+  await expect(frame.locator('[data-campaign]')).toBeVisible();
+  await expect(frame.locator('[data-settings], [data-redeem], .comeback-card')).toHaveCount(0);
+  await page.locator('[data-marketing-tab="customers"]').click();
+  await expect(frame.locator('h2')).toHaveText('Clientes y canjes');
+  await expect(frame.getByText('ana@example.com', { exact: false })).toBeVisible();
+  await expect(frame.locator('[data-redeem]')).toBeVisible();
+  await expect(frame.locator('[data-campaign], [data-settings]')).toHaveCount(0);
+  await page.locator('[data-marketing-tab="program"]').click();
+  await expect(frame.locator('.comeback-card')).toBeVisible();
+  await frame.locator('[name=visitsRequired]').fill('8');
+  await frame.locator('[name=rewardLabel]').fill('Tu bebida favorita');
+  await expect(frame.locator('.comeback-stamps li')).toHaveCount(8);
+  await expect(frame.locator('.comeback-reward')).toHaveText('Tu bebida favorita');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(frame.locator('.comeback-card')).toBeVisible();
+  expect(await frame.locator('body').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: '/tmp/pagosya-comeback-mobile.png', fullPage: true });
+});
+
+test('integration logos load and provider details preserve the inventory draft', async ({ page }) => {
+  await retentionFixture(page);
+  await workspace(page, { withSite: true });
+  await page.evaluate(() => window.setDashboardView('integrations'));
+  const frame = page.frameLocator('#storeIntegrationsFrame');
+  await expect(frame.locator('.integration-card')).toHaveCount(17);
+  const logos = frame.locator('.integration-logo img');
+  for (const logo of await logos.all()) {
+    await logo.scrollIntoViewIfNeeded();
+    await expect(logo).toHaveJSProperty('complete', true);
+    expect(await logo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
+  }
+  await frame.locator('[name=name]').fill('Mi inventario');
+  await frame.locator('[data-open-integration=tiktok-ads]').click();
+  await expect(frame.locator('.integration-detail')).toContainText('Sin conectar a esta tienda');
+  await expect(frame.locator('.integration-detail a').first()).toHaveAttribute('href', 'https://ads.tiktok.com/');
+  await expect(frame.locator('[name=name]')).toHaveValue('Mi inventario');
+  await frame.locator('[data-close-integration]').click();
+  await expect(frame.locator('.integration-detail')).toHaveCount(0);
+  await expect(frame.locator('[data-open-integration=tiktok-ads]')).toBeFocused();
+  await page.screenshot({ path: '/tmp/pagosya-integrations.png', fullPage: true });
 });

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Producto — Trama</title>
+  <meta name="description" content="Consulta la prenda, elige sus opciones disponibles y añádela a tu pedido de Trama.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="product-page">
+  <a class="skip-link" href="#product-main">Ir al producto</a>
+  <header class="site-header">
+    <div class="header-brand-row"><a class="wordmark" href="index.html"><span data-store-name>Trama</span></a></div>
+    <div class="header-actions-row">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-navigation"><img src="assets/icons/menu.svg" alt=""><span>Menú</span></button>
+      <nav class="site-nav" id="site-navigation" aria-label="Navegación principal"><a href="index.html">Inicio</a><a href="index.html#catalogo">Catálogo</a></nav>
+      <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span aria-hidden="true">·</span><span data-cart-count>0</span></button>
+    </div>
+  </header>
+  <main id="product-main" class="product-main">
+    <a class="back-link" href="index.html#catalogo"><img src="assets/icons/arrow-left.svg" alt=""> Volver al muestrario</a>
+    <div data-pagosya-product-page></div>
+  </main>
+  <div data-pagosya-cart hidden></div>
+  <div class="global-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <footer class="site-footer"><a class="wordmark wordmark--footer" href="index.html">Trama</a><p>Prendas cotidianas con colores y tallas.</p><button class="footer-order" type="button" data-cart-open>Mi pedido · <span data-cart-count>0</span></button></footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

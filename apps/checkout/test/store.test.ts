@@ -110,11 +110,13 @@ describe("storefront routes", () => {
       {id:'white-l',name:'Blanco / L',amount:14000,stock:3,options:[{name:'Color',value:'Blanco'},{name:'Talla',value:'L'}],imageUrl:'/white.jpg'},
     ];
     const checkoutCart=vi.fn();
-    vi.doMock('../src/api',()=>({API_BASE_URL:'https://api.example/v1',fetchStore:vi.fn().mockResolvedValue({...baseStoreFields,storeName:'FHASIN',items:[{...baseItem,name:'Camisa',amount:12000,stock:4,variants,imageUrls:['/black.jpg','/white.jpg']}]}),assetUrl:(url:string|null)=>url,checkoutCart}));
+    vi.doMock('../src/api',()=>({API_BASE_URL:'https://api.example/v1',fetchStore:vi.fn().mockResolvedValue({...baseStoreFields,storeName:'FHASIN',items:[{...baseItem,name:'Camisa',amount:12000,stock:4,variants,imageUrls:['/black.jpg']}]}),assetUrl:(url:string|null)=>url,checkoutCart}));
     await loadCheckout('/s/fhasin/p/link_1');
     const option=(group:number,value:number)=>document.querySelector<HTMLButtonElement>(`[data-option-group="${group}"][data-option-value="${value}"]`)!;
     await vi.waitFor(()=>expect(option(0,0)).toBeTruthy());
     expect(document.querySelector<HTMLButtonElement>('.product-add')!.disabled).toBe(true);
+    expect(document.querySelectorAll('.product-detail-color-swatch')).toHaveLength(2);
+    expect(document.querySelectorAll('.product-detail-thumbnail')).toHaveLength(2);
     option(0,0).click();
     expect(option(1,1).disabled).toBe(true);
     option(1,0).click();
@@ -137,6 +139,26 @@ describe("storefront routes", () => {
     await loadCheckout('/s/fhasin/p/link_1');
     await vi.waitFor(()=>expect(document.querySelector<HTMLImageElement>('.product-detail-main-image')?.getAttribute('src')).toBe('/white.jpg'));
     expect(document.querySelector('.product-detail-price')?.textContent).toContain('140.00');
+  });
+  it('groups product extras by their saved name and updates the selection and price', async () => {
+    vi.doMock('../src/api', () => ({
+      API_BASE_URL: 'https://api.example/v1', assetUrl: (url: string | null) => url,
+      fetchStore: vi.fn().mockResolvedValue({ ...baseStoreFields, storeName: 'Café', items: [{ ...baseItem, amount: 5000, extras: [
+        { id: 'box', name: 'Caja de regalo', amount: 1000, required: true, available: true, groupName: 'Presentación' },
+        { id: 'cream', name: 'Crema', amount: 500, required: false, available: true, groupName: 'Complementos' },
+        { id: 'cocoa', name: 'Cacao', amount: 500, required: false, available: false, groupName: 'Complementos' },
+      ] }] }),
+    }));
+    await loadCheckout('/s/cafe/p/link_1');
+    expect([...document.querySelectorAll('.product-detail-extras legend')].map(el => el.textContent)).toEqual(['Presentación', 'Complementos']);
+    expect(document.querySelector<HTMLButtonElement>('.product-add')!.disabled).toBe(true);
+    document.querySelector<HTMLInputElement>('[data-extra-id="box"]')!.click();
+    document.querySelector<HTMLInputElement>('[data-extra-id="cream"]')!.click();
+    expect(document.querySelector('.product-detail-price')!.textContent).toContain('65.00');
+    expect(document.querySelector('.product-detail-selection-summary')!.textContent).toContain('Caja de regalo');
+    expect(document.querySelector<HTMLInputElement>('[data-extra-id="cocoa"]')!.disabled).toBe(true);
+    document.querySelector<HTMLButtonElement>('.product-add')!.click();
+    expect(JSON.parse(localStorage.getItem('pagosya_cart_store_1') || '{}')).toEqual({ 'link_1~~box,cream': 1 });
   });
   beforeEach(() => {
     localStorage.clear();
@@ -413,6 +435,7 @@ describe("storefront routes", () => {
       assetUrl: (p: string | null) => p,
     }));
 
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ published: false }) }));
     await loadCheckout("/s/taller-norte/p/link_1");
 
     expect(document.querySelectorAll(".product-detail-thumbnail")).toHaveLength(2);
@@ -1318,7 +1341,7 @@ describe("storefront routes", () => {
     expect(document.body.classList.contains("product-detail-page")).toBe(true);
     expect(document.querySelector(".product-detail-content h1")?.textContent).toBe("Corte editorial");
     expect(document.querySelector(".product-detail-description")?.textContent).toBe("La descripción que el comercio está escribiendo.");
-    expect(document.querySelector(".product-detail-layout")?.children).toHaveLength(3);
+    expect(document.querySelector(".product-detail-layout")?.children).toHaveLength(2);
     expect(document.querySelector(".product-detail-information details[open] summary")?.textContent).toContain("El producto");
     expect(document.querySelector(".product-detail-price")?.textContent).toContain("72.50");
     await vi.waitFor(() => expect(previewScrollTo).toHaveBeenCalledWith({ top: 0, behavior: "auto" }));

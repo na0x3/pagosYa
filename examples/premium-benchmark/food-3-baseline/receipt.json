@@ -1,0 +1,67 @@
+{
+  "id": "food-3-baseline",
+  "arm": "baseline",
+  "fixture": "food",
+  "repeat": 3,
+  "merchantId": "cmu0efc1h001k4gwzoz5v3s0u",
+  "storeId": "cmu0efc1j001m4gwznn576h5k",
+  "slug": "w50r6fhd",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:41:50.264Z",
+  "assets": [
+    "/v1/uploads/4910fd92-61e5-4897-b046-2577d01eda76.jpg",
+    "/v1/uploads/6577ad58-e43a-4b45-b00d-2422805fca13.jpg",
+    "/v1/uploads/cc04b86d-ebe0-4f2e-b5d5-9774c4833d88.jpg",
+    "/v1/uploads/5c0d8f54-8a7b-43a8-8d38-dc907c0dca73.jpg",
+    "/v1/uploads/d205bac4-2399-4eeb-a3fd-32cd11b5e8f6.jpg",
+    "/v1/uploads/48827de3-7d33-4c43-af88-4f598c570aaa.jpg",
+    "/v1/uploads/98af20cc-c546-453e-afef-844411028bb8.jpg"
+  ],
+  "generation": {
+    "id": "cmu0efc2800264gwz0e5g2uv9",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 36,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 43537,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 15116,
+          "cachedInputTokens": 0,
+          "outputTokens": 1917,
+          "providerMicroUsd": 113917,
+          "cacheWriteTokens": 15113
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 67296,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 23313,
+          "cachedInputTokens": 0,
+          "outputTokens": 6778,
+          "providerMicroUsd": 237467,
+          "cacheWriteTokens": 8655
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 358,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 110865,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "digest": "846aa48e75a722bcdb8d91392bc6e648fa8ddf46dae556c917c35c63f3529600",
+  "elapsedMs": 111075
+}

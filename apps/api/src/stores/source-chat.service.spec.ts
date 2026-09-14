@@ -14,6 +14,15 @@ function setup(messages: any[] = []) {
   return { service: new SourceChatService(prisma, projects, generation, dialogue), prisma, projects, generation, dialogue, messages };
 }
 const request = { revision: 1, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
+it('retains accepted photo roles through an unrelated section edit', async () => {
+  const photo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+  const { service, dialogue, generation, messages } = setup([{ role:'ASSISTANT', metadata:{sourceRevision:1,sourceSetup:{assetUrls:[],imageUses:[{url:photo,role:'business',description:'Portada aprobada'}]}} }]);
+  dialogue.decide.mockResolvedValue({action:'generate',reply:'',summary:'Remove reference photos',generationInstruction:'Replace photos with drawings',imageUses:[]});
+  await service.send('m','s',{...request,instruction:'Añade una sección de preparación orgánica'});
+  expect(generation.generate.mock.calls[0][4]).toContainEqual(expect.objectContaining({url:photo,role:'business'}));
+  expect(messages.at(-1).metadata.sourceSetup.imageUses).toContainEqual(expect.objectContaining({url:photo,role:'business'}));
+  expect(generation.generate.mock.calls[0][2].instruction).toContain('no amplían el pedido actual');
+});
 it('completes a pending product request with a stock reply and clears it after saving',async()=>{
   const {service,dialogue,generation,messages}=setup();
   dialogue.decide.mockResolvedValueOnce({action:'reply',reply:'¿Cuántas unidades hay de cada combinación?',summary:'Camisa Bs 120, Negro y Blanco, M y L.',generationInstruction:'',imageUses:[]});
@@ -363,5 +372,42 @@ describe('Store from a single product photo', () => {
     dialogue.decide.mockResolvedValue({action:'reply',reply:'No distingo el producto. ¿Puedes subir una foto más clara?',summary:'Foto poco clara.',generationInstruction:'',imageUses:[{url:photo,role:'unknown',description:''}]});
     const result = await service.send('m','s',{revision:0,instruction:'Crear tienda',setupAction:'product-photo',assetUrls:[photo]});
     expect(result.assistantMessage.content).toContain('foto más clara'); expect(generation.generate).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('build progress', () => {
+  it('persists request-scoped progress and attaches the completed activity to the reply', async () => {
+    const {service,prisma,generation,messages}=setup();
+    prisma.storeAgentMessage.update=jest.fn().mockResolvedValue({});
+    generation.generate.mockImplementation(async (...args: any[]) => {
+      await args[5]('building');
+      await args[5]('validating');
+      await args[5]('saving');
+      return {revision:2,label:'Cambios'};
+    });
+    await service.send('m','s',{...request,requestId:'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'});
+    const writes=prisma.storeAgentMessage.update.mock.calls.map((call:any[])=>call[0].data.metadata);
+    expect(writes[0].requestId).toBe('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa');
+    expect(writes[0].progress.steps[0].stage).toBe('interpreting');
+    expect(writes.at(-1).progress.status).toBe('completed');
+    expect(messages.at(-1).metadata.progress.steps.map((step:any)=>step.stage)).toEqual(['interpreting','building','validating','saving']);
+  });
+  it('checks store ownership before looking up request progress', async () => {
+    const {service,prisma}=setup();
+    prisma.store.findFirst.mockResolvedValue(null);
+    prisma.storeAgentMessage.findFirst=jest.fn();
+    await expect(service.progress('other','s','id')).rejects.toThrow('Store not found');
+    expect(prisma.storeAgentMessage.findFirst).not.toHaveBeenCalled();
+  });
+  it('marks a failed generation without adding a successful saving step', async () => {
+    const {service,prisma,generation,messages}=setup();
+    prisma.storeAgentMessage.update=jest.fn().mockResolvedValue({});
+    generation.generate.mockImplementation(async (...args:any[])=>{await args[5]('building');throw new Error('Failed');});
+    await expect(service.send('m','s',{...request,requestId:'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'})).rejects.toThrow('Failed');
+    const progress=messages.at(-1).metadata.progress;
+    expect(progress.status).toBe('failed');
+    expect(progress.steps.at(-1)).toMatchObject({stage:'building',status:'failed'});
+    expect(progress.steps.some((step:any)=>step.stage==='saving')).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import { prepareSourceLocations } from './source-location';
+import { compactPreviewImageData } from './source-preview-media';
 import videoLoopRuntime from '../../api/src/stores/source-kit/video.js?raw';
 import privacyRuntime from '../../api/src/stores/source-kit/privacy.js?raw';
 import commerceRuntime from '../../api/src/stores/source-kit/commerce.js?raw';
@@ -12,11 +13,11 @@ const mediaTypes: Record<string, string> = { mp4: "video/mp4", svg: "image/svg+x
 function base64(value: string): string { const bytes = new TextEncoder().encode(value); let binary = ""; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary); }
 
 /** Inline a static revision into an opaque-origin iframe. Never inject source into Studio's DOM. */
-export interface PreviewNavigation { page: string; fragment?: string; query?: string; newTab?: boolean; cart?: Array<{ id: string; quantity: number }> }
+export interface PreviewNavigation { page: string; fragment?: string; query?: string; newTab?: boolean; theme?: 'light' | 'dark'; cart?: Array<{ id: string; quantity: number }> }
 export function receivePreviewNavigation(event: MessageEvent, frame: HTMLIFrameElement | null, snapshot?: SourceSnapshot): PreviewNavigation | null {
   const data = event.data;
   if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-navigate' || !snapshot?.files.some(f => f.path === data.page && f.path.endsWith('.html'))) return null;
-  return { page: data.page, newTab: data.newTab === true, query: typeof data.query === 'string' && data.query.startsWith('?') ? data.query.slice(0, 2000) : '', fragment: typeof data.fragment === 'string' && data.fragment.startsWith('#') ? data.fragment.slice(0, 1000) : '',
+  return { page: data.page, theme: data.theme === 'light' || data.theme === 'dark' ? data.theme : undefined, newTab: data.newTab === true, query: typeof data.query === 'string' && data.query.startsWith('?') ? data.query.slice(0, 2000) : '', fragment: typeof data.fragment === 'string' && data.fragment.startsWith('#') ? data.fragment.slice(0, 1000) : '',
     cart: Array.isArray(data.cart) ? data.cart.slice(0, 100).filter((item: any) => typeof item?.id === 'string' && item.id.length <= 200 && Number.isInteger(item.quantity) && item.quantity > 0 && item.quantity <= 99) : [] };
 }
 export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; hosted?: boolean } = {}): string {
@@ -33,6 +34,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     const file = resolve(path, base); return file ? `url("${data(file)}")` : 'url("")';
   });
   const doc = new DOMParser().parseFromString(entry.content, "text/html");
+  if (navigation.theme === 'light' || navigation.theme === 'dark') doc.documentElement.dataset.theme = navigation.theme;
   doc.querySelectorAll("base,object,embed,meta[http-equiv],link[rel=preload],link[rel=prefetch]").forEach((el) => el.remove());
   const locationSources = prepareSourceLocations(doc);
   const layoutFile = snapshot.files.find(f => f.path === 'source-next-layout.json');
@@ -48,6 +50,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     if (file.path === "commerce.js") content = `${privacyRuntime}\n${commerceRuntime}\n${retentionRuntime}`;
     if (file.path === "config.js") {
       for (const asset of snapshot.files.filter((f) => f.encoding === "base64")) content = content.split(JSON.stringify(asset.path)).join(JSON.stringify(data(asset)));
+      content = compactPreviewImageData(content);
     }
     el.src = data(file, content); el.removeAttribute("integrity"); el.removeAttribute("crossorigin");
   });
@@ -81,6 +84,10 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   const encoded = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
   const mediaAssets = Object.fromEntries(snapshot.files.filter(file => /\.(png|jpe?g|webp|avif|gif|svg|mp4)$/i.test(file.path)).map(file => [file.path, data(file)]));
   flag.textContent = `${previewAssetsRuntime}(${encoded(mediaAssets)},${encoded(page)});\nwindow.PAGOSYA_PREVIEW=true;window.PAGOSYA_HOSTED=${navigation.hosted === true};window.PAGOSYA_PREVIEW_PAGE=${encoded(page)};window.PAGOSYA_PREVIEW_QUERY=${encoded(navigation.query || "")};window.PAGOSYA_PREVIEW_CART=${encoded(navigation.cart || [])};
+    new MutationObserver(() => {
+      const theme = document.documentElement.dataset.theme;
+      if (theme === 'light' || theme === 'dark') parent.postMessage({type:'pagosya:source-theme', theme}, '*');
+    }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
     if (${navigation.hosted === true}) {
       let sequence = 0;
       window.PAGOSYA_HOSTED_REQUEST = (action, body) => new Promise((resolve, reject) => {
@@ -106,15 +113,16 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       const link = event.target.closest('a[href]'); if (!link) return;
       const href = link.getAttribute('href'); if (!href) return;
       if (href.startsWith('#')) {
-        // Native srcdoc anchors resolve against the host URL and leave the preview.
-        // Updating this document's hash also preserves authored hashchange handlers.
+        // Scroll real section anchors without navigating the opaque srcdoc URL.
+        // Hash-only application routes (such as checkout) still dispatch hashchange.
         event.preventDefault();
-        window.location.hash = href;
         try {
           const id = decodeURIComponent(href.slice(1));
-          if (!id) window.scrollTo({ top: 0 });
-          else (document.getElementById(id) || document.getElementsByName(id)[0])?.scrollIntoView();
+          if (!id) { window.scrollTo({ top: 0 }); return; }
+          const target = document.getElementById(id) || document.getElementsByName(id)[0];
+          if (target) { target.scrollIntoView(); return; }
         } catch {}
+        window.location.hash = href;
         return;
       }
       const url = new URL(href, ${encoded(`https://source.invalid/${page}`)});
@@ -123,7 +131,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       if (url.origin !== 'https://source.invalid' || !${encoded(snapshot.files.filter(f => f.path.endsWith('.html')).map(f => f.path))}.includes(path)) return;
       event.preventDefault();
       const state = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail: state }));
-      parent.postMessage({ type: 'pagosya:source-navigate', page: path, query: url.search, fragment: url.hash, newTab: link.target === '_blank' || link.dataset.previewNewTab === 'true' || event.ctrlKey || event.metaKey, cart: state.items }, '*');
+      parent.postMessage({ type: 'pagosya:source-navigate', page: path, query: url.search, fragment: url.hash, theme: document.documentElement.dataset.theme, newTab: link.target === '_blank' || link.dataset.previewNewTab === 'true' || event.ctrlKey || event.metaKey, cart: state.items }, '*');
     }, true);
     window.addEventListener('load', function() {
       const fragment = ${encoded(navigation.fragment || '')};

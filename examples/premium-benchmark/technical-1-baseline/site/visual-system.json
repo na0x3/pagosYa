@@ -1,0 +1,113 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans variable en toda la interfaz. Nombre de marca 700; títulos 650 de 44–64 px; nombres de producto 600 de 22–28 px; metadatos y precios con cifras tabulares de 13–18 px. Mayúsculas pequeñas y espaciadas para rótulos; titulares con tracking de -0.03em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-tecnico",
+      "comparacion-esencial",
+      "cierre-punto"
+    ],
+    "catalogSection": "catalogo-tecnico",
+    "mobileRule": "Cabecera de dos niveles muy compacta: Punto arriba y «Mi pedido · 0» siempre visible junto al icono local de bolsa; navegación debajo, sin ocultar la compra. Los productos pasan a una sola columna y el primero muestra nombre, precio, variante y botón dentro del primer viewport. Selectores y botones ocupan todo el ancho con 44 px mínimos; la comparación se convierte en pares etiqueta/valor."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f3f3ec",
+      "resolved": "#f3f3ec",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#181a16",
+      "resolved": "#181a16",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#c8ff35",
+      "resolved": "#c8ff35",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#11130f",
+      "resolved": "#11130f",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fafaf5",
+      "resolved": "#fafaf5",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#bfc2b8",
+      "resolved": "#bfc2b8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

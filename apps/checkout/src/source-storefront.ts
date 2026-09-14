@@ -1,3 +1,4 @@
+import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
@@ -14,6 +15,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (!response.ok) throw new Error('No pudimos abrir esta tienda. Actualiza para intentar de nuevo.');
   const site = await response.json();
   if (!site.published) return false;
+  const productRoute = /\/p\/([^/]+)\/?$/.exec(location.pathname)?.[1];
+  const routedProduct = productRoute ? store.items.find(item => item.id === decodeURIComponent(productRoute)) : undefined;
+  if (routedProduct && (!sourceCanConfigureProduct(routedProduct) || routedProduct.variants?.length && !site.snapshot?.files?.some((file: { path: string; content: string }) => file.path === 'commerce.js' && file.content.includes(SOURCE_PRODUCT_OPTIONS_MARKER)))) return false;
   rememberSourceVisit(slug, site.visitToken);
   const snapshot: SourceSnapshot = site.snapshot;
   const config = snapshot.files.find(f => f.path === 'config.js');
@@ -24,17 +28,19 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const prepared = await createPreviewImageLoader(API_BASE_URL)(snapshot);
   if (!document.querySelector('link[rel=canonical]')) document.title = store.storeName;
   const frame = document.createElement('iframe');
-  frame.title = store.storeName; frame.sandbox.add('allow-scripts', 'allow-forms'); frame.referrerPolicy = 'no-referrer';
+  frame.title = store.storeName; frame.setAttribute('sandbox', 'allow-scripts allow-forms'); frame.referrerPolicy = 'no-referrer';
   frame.style.cssText = 'display:block;width:100%;height:100dvh;border:0;background:white';
   app.replaceChildren(frame);
   document.body.classList.add('source-store-page');
   const cartKey = `pagosya:source-cart:${slug}`;
+  const themeKey = `pagosya:source-theme:${slug}`;
   let recoveryToken: string | undefined;
   try { recoveryToken = sessionStorage.getItem(`pagosya:recovery:${slug}`) || undefined; } catch {}
   const initialQuery = new URLSearchParams(location.search);
   const routeProduct = /\/p\/([^/]+)\/?$/.exec(location.pathname)?.[1];
   if (routeProduct) initialQuery.set('id', decodeURIComponent(routeProduct));
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
+  try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   try { navigation.cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch {}
   const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true }); };
   const funnel = createStoreFunnel(slug, merchantPreview);
@@ -46,8 +52,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     if (event.source !== frame.contentWindow || event.origin !== 'null' || !frame.isConnected) return;
     const next = receivePreviewNavigation(event, frame, prepared);
     if (next) {
-      navigation = next;
+      navigation = { ...next, theme: next.theme || navigation.theme };
       try { sessionStorage.setItem(cartKey, JSON.stringify(next.cart || [])); } catch {}
+      try { if (navigation.theme) sessionStorage.setItem(themeKey, navigation.theme); } catch {}
       if (!merchantPreview) {
         const destination = new URL(location.href); const params = new URLSearchParams(next.query || '');
         const product = next.page === (settings.productPage || 'product.html') ? params.get('id') : null;
@@ -64,6 +71,13 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       show(next.page); return;
     }
     const data = event.data;
+    if (data?.type === 'pagosya:source-theme') {
+      if (data.theme === 'light' || data.theme === 'dark') {
+        navigation.theme = data.theme;
+        try { sessionStorage.setItem(themeKey, data.theme); } catch {}
+      }
+      return;
+    }
     if (data?.type === 'pagosya:funnel') { funnel.track(data.event, data.method); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
       try {

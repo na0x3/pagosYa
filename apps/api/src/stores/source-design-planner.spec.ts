@@ -12,7 +12,7 @@ it('keeps selection out of exploration and accounts for the planning call in the
   const result = await new SourceDesignPlanner().explore(request);
   expect(result.selected).toBe(2);
   const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
-  expect(body.text.format.schema.required).toEqual(['concepts']);
+  expect(body.text.format.schema.required).toEqual(['concepts', 'selection']);
   expect(body.input[0].content[0].text).not.toContain('Use concept index');
   expect(body.input[0].content[0].text).toContain(SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS);
   expect(request.attempts[0]).toMatchObject({ phase: 'design', status: 'COMPLETED', usage: { inputTokens: 1500, outputTokens: 1200 } });
@@ -42,4 +42,29 @@ it('stops after the single planning repair also fails', async () => {
   const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: '{}' }] }] })));
   await expect(new SourceDesignPlanner().explore(input())).rejects.toThrow('tres composiciones');
   expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+function planningResponse(selection: unknown) {
+  return new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts, selection }) }] }] }));
+}
+it('chooses the planner best fit when no explicit index is supplied and records its reason', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(planningResponse({ index: 1, rationale: 'The supplied photos support the image-led window.' }));
+  const request = { ...input(), selected: undefined };
+  const design = await new SourceDesignPlanner().explore(request);
+  expect(design).toMatchObject({ selected: 1, selection: { source: 'planner', rationale: 'The supplied photos support the image-led window.' } });
+  expect(request.attempts[0]).toMatchObject({ selectedIndex: 1, selectionSource: 'planner' });
+});
+it('does not attach the planner rationale to a different forced choice', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(planningResponse({ index: 0, rationale: 'Fits the catalog.' }));
+  expect(await new SourceDesignPlanner().explore(input())).toMatchObject({ selected: 2, selection: { source: 'forced', rationale: null } });
+});
+it('repairs an invalid selected index once', async () => {
+  const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(planningResponse({ index: 3, rationale: 'Invalid.' })).mockResolvedValueOnce(planningResponse({ index: 0, rationale: 'Fits the catalog.' }));
+  expect((await new SourceDesignPlanner().explore({ ...input(), selected: undefined })).selected).toBe(0);
+  expect(mock).toHaveBeenCalledTimes(2);
+});
+it('drops malformed rationale without spending another provider call', async () => {
+  const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(planningResponse({ index: 1, rationale: 'x'.repeat(500) }));
+  expect((await new SourceDesignPlanner().explore({ ...input(), selected: undefined })).selection?.rationale).toBeNull();
+  expect(mock).toHaveBeenCalledTimes(1);
 });

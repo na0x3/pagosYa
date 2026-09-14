@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Fraunces variable para nombres y precios, con contraste elegante y tamaños de 68/52/38/32 px; Instrument Sans para navegación, variantes y acciones en 15–16 px. Titulares con espaciado de -0.035em, etiquetas en versales pequeñas y cifras tabulares. Tinta #171714, papel #F3EFE5 y cobalto #1847D7 reservado para selección, foco y compra.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-muestrario",
+      "nota-trama"
+    ],
+    "catalogSection": "catalogo-muestrario",
+    "mobileRule": "Cabecera de dos líneas con marca y botón visible «Mi pedido 0»; navegación secundaria compacta, no oculta la compra. Las fichas pasan a una secuencia vertical: nombre y precio, descripción, opciones y botón de al menos 44 px. La primera ficha comienza bajo el masthead y mantiene producto, precio y añadir antes del pliegue a 390 px; a 320 px los selectores se apilan sin recorte."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f3efe5",
+      "resolved": "#f3efe5",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#171714",
+      "resolved": "#171714",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#1847d7",
+      "resolved": "#1847d7",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#ece5d7",
+      "resolved": "#ece5d7",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#171714",
+      "resolved": "#171714",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0",
+      "resolved": "0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Instrument,Arial,sans-serif",
+      "resolved": "Instrument,Arial,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Fraunces,serif",
+      "resolved": "Fraunces,serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

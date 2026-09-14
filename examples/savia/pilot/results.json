@@ -1,0 +1,1529 @@
+[
+  {
+    "id": "pantry-1",
+    "merchantId": "cmu0c2uen0000v2kj87cnzvwg",
+    "storeId": "cmu0c2ues0002v2kjaily6i8r",
+    "slug": "eqgkajxq",
+    "productIds": [
+      "cmu0c2uf3000gv2kj0vmhnqhh",
+      "cmu0c2uf6000iv2kjk4al2k8i"
+    ],
+    "maxCredits": 300,
+    "status": "completed",
+    "generation": {
+      "id": "cmu0c2ug5000kv2kj7pb4xdib",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 35,
+      "maxCredits": 300,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 48627,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 14957,
+            "cachedInputTokens": 0,
+            "outputTokens": 2063,
+            "providerMicroUsd": 116042,
+            "cacheWriteTokens": 14954
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 83042,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23100,
+            "cachedInputTokens": 0,
+            "outputTokens": 6591,
+            "providerMicroUsd": 232843,
+            "cacheWriteTokens": 8623
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 379,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 131732,
+      "status": "COMPLETED"
+    },
+    "design": {
+      "concepts": [
+        {
+          "name": "La mesa de las dos cosas",
+          "premise": "Una despensa compacta y directamente comprable: el catálogo abre como una mesa editorial dividida entre jugo y granola. A diferencia de los otros conceptos, elimina el hero independiente, muestra ambas familias en paralelo y prioriza comparar variantes desde el primer vistazo.",
+          "opening": "Masthead bajo con “Nido · Pilot 1”, descriptor y “Mi pedido (0)”. Inmediatamente debajo, una franja breve “Dos básicos para cada mañana” comparte espacio con el inicio del catálogo. En escritorio aparecen los dos productos lado a lado; en móvil abre el jugo con nombre, precio desde Bs 18 y acción de añadir antes del pliegue.",
+          "flow": "Inicio: catálogo inmediato, seguido por una pareja de fotografías de uso y una nota compacta sobre la selección. Producto: galería de tres imágenes a la izquierda y panel fijo a la derecha con nombre, descripción única, selectores segmentados para tamaño/presentación o sabor/peso, precio actualizado, cantidad y añadir. Carrito y checkout reutilizan filas horizontales, divisores finos y resumen fijo; solo se informa retiro, sin inventar condiciones.",
+          "typography": "Instrument Sans en todo el sistema: títulos 58/60 en escritorio y 36/38 en móvil; nombres de producto 27/30 y 23/26; cuerpo 16/24; etiquetas 12/16 en mayúsculas moderadas. Jerarquía clara y funcional, con cifras tabulares para precios y cantidades.",
+          "imagery": "El jugo usa assets/image-f1220ebdbbf1.jpg como imagen horizontal principal, recortada hacia las botellas y cítricos del sector derecho; assets/image-06465dbb2877.jpg como retrato de producto; assets/image-d7afdd1c26f9.jpg como escena de consumo. La granola usa assets/image-e2dc7f4f02d3.jpg como imagen cálida de apertura, assets/image-5d185857f7d9.jpg para el frasco frontal y assets/image-ceff3979a97c.jpg para el bol. Se conserva íntegra la marca SAVIA impresa y no se superpone texto sobre sus rÓ",
+          "mobile": "Cabecera de una línea con menú, nombre abreviado visualmente sin alterar el texto accesible y “Mi pedido (0)” siempre visible. Catálogo en una sola columna; foto 4:3, compra compacta debajo y selectores con áreas táctiles de 44 px. La galería de producto se vuelve carrusel manual con miniaturas, sin autoplay. El resumen de checkout permanece en flujo, no flotante.",
+          "layout": {
+            "sections": [
+              "catalogo-mesa",
+              "pareja-cotidiana",
+              "nota-despensa"
+            ],
+            "catalogSection": "catalogo-mesa",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Sol de desayuno",
+          "premise": "Una apertura fotográfica inmersiva convierte la luz, el vidrio y el cítrico en identidad antes de comprar. Se distancia del catálogo inmediato mediante una portada asimétrica de gran escala, productos presentados después como capítulos verticales y una jerarquía serif más sensorial.",
+          "opening": "Composición dividida: a la derecha, assets/image-f1220ebdbbf1.jpg ocupa cerca de dos tercios y mantiene las tres botellas como foco; a la izquierda, sobre marfil, aparecen el nombre de la tienda, “Despensa de jugos y granola” y el enlace “Ver la despensa”. Una banda cítrica estrecha marca la transición al catálogo sin cubrir la fotografía.",
+          "flow": "Inicio: portada, catálogo en dos capítulos alternados —jugo con imagen apaisada y granola con retrato— y cierre con las dos escenas de desayuno. Producto: título y selector encima de una galería editorial; al desplazarse, el módulo de compra queda visible de forma discreta en escritorio. Variantes se eligen en dos pasos explícitos y el precio responde a la combinación. Carrito y checkout se sienten como una hoja de pedido sobre marfil, con miniaturas, cantidades y total bien alineados.",
+          "typography": "Instrument Serif para títulos expresivos de 76/72 en escritorio y 45/44 en móvil; Instrument Sans para navegación, producto y compra. Nombres de producto 38/40; cuerpo 16/25; microtexto 12/16. El serif solo guía la narrativa; selectores y precios permanecen nítidos en sans.",
+          "imagery": "Portada con assets/image-f1220ebdbbf1.jpg, crop horizontal centrado en las botellas sin perder naranja y jengibre. El capítulo de jugo combina assets/image-06465dbb2877.jpg y assets/image-d7afdd1c26f9.jpg; el de granola abre con assets/image-e2dc7f4f02d3.jpg y continúa con assets/image-5d185857f7d9.jpg. El cierre empareja assets/image-d7afdd1c26f9.jpg con assets/image-ceff3979a97c.jpg mediante crops cuadrados. Las etiquetas SAVIA permanecen legibles y sin modificaciones.",
+          "mobile": "La portada se recompone con texto primero y fotografía 4:5 debajo, manteniendo “Mi pedido (0)” fuera del menú. El catálogo usa capítulos apilados con nombre, precio y añadir inmediatamente después de cada imagen. En producto, galería con scroll-snap manual y barra de compra en flujo; los selectores pasan a rejillas de dos columnas y luego a una si el ancho lo exige.",
+          "layout": {
+            "sections": [
+              "portada-sol",
+              "catalogo-capitulos",
+              "mesa-compartida"
+            ],
+            "catalogSection": "catalogo-capitulos",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        },
+        {
+          "name": "Índice de la mañana",
+          "premise": "Una tienda con gramática de carta de despensa: densa, tipográfica y ordenada por decisiones reales —qué producto, qué formato y cuánto—, con fotografías como láminas numeradas por título, no como fondos. Frente a la portada inmersiva y la mesa de tarjetas, propone una navegación lateral y filas de compra horizontales.",
+          "opening": "Tras una cabecera compacta, una columna lateral fija en escritorio presenta “Jugo / Granola / Mi pedido”; el área principal abre con “Elige tu mañana” y dos filas de producto. Cada fila reúne miniatura, nombre, descripción breve, precio inicial y añadir; ambas opciones son visibles en 1280 px. En móvil, el índice se convierte en dos pestañas ancladas y la primera fila comprable queda en apertura.",
+          "flow": "Inicio: índice-catálogo, luego una tira de seis láminas agrupadas por producto y un cierre exclusivamente informativo con “Retiro” y acceso al pedido. Producto: encabezado tipo ficha, gran imagen principal, miniaturas verticales y una tabla clara de opciones; tamaño/sabor y presentación/peso son controles reales, seguidos por stepper de cantidad y añadir. Carrito y checkout adoptan la misma lógica de tabla, con columnas que se apilan semánticamente en móvil.",
+          "typography": "Bricolage Grotesque variable como familia única: encabezado 64/62 en escritorio y 39/39 en móvil; producto 30/32; cuerpo 15/22; navegación y etiquetas 13/18. Pesos 450–700 crean contraste sin recurrir a serif; precios grandes pero no dominantes.",
+          "imagery": "Las filas usan assets/image-06465dbb2877.jpg para el jugo y assets/image-5d185857f7d9.jpg para la granola, con crops cuadrados centrados en cada envase. La tira alterna assets/image-f1220ebdbbf1.jpg, assets/image-d7afdd1c26f9.jpg y assets/image-06465dbb2877.jpg para jugo; assets/image-e2dc7f4f02d3.jpg, assets/image-ceff3979a97c.jpg y assets/image-5d185857f7d9.jpg para granola. Bordes rectos, pies de foto funcionales y ningún tratamiento que altere envases o marca impresa.",
+          "mobile": "Cabecera con menú y “Mi pedido (0)” visible; navegación por anclas bajo ella. Las filas se vuelven módulos de dos columnas —miniatura y datos—, con selectores y acción ocupando todo el ancho debajo. A 320 px pasan a una columna sin ocultar controles. La galería de producto conserva miniaturas como tira horizontal y el checkout elimina columnas decorativas.",
+          "layout": {
+            "sections": [
+              "catalogo-indice",
+              "archivo-fotografico",
+              "retiro-pedido"
+            ],
+            "catalogSection": "catalogo-indice",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        }
+      ],
+      "selected": 0,
+      "selection": {
+        "source": "planner",
+        "rationale": "Es la opción más adecuada para un catálogo real de solo dos productos y para la acción principal de elegir variantes y añadir. Aprovecha las tres imágenes disponibles por cada producto, mantiene visibles nombre, precio y compra desde la apertura en escritorio y móvil, y convierte las opciones confirmadas —330/750 ml, individual/pack y Original/Cacao, 250/500 g— en el centro del sistema de producto"
+      }
+    },
+    "visualSystem": {
+      "version": 3,
+      "typography": {
+        "display": "Instrument Sans en todo el sistema: títulos 58/60 en escritorio y 36/38 en móvil; nombres de producto 27/30 y 23/26; cuerpo 16/24; etiquetas 12/16 en mayúsculas moderadas. Jerarquía clara y funcional, con cifras tabulares para precios y cantidades.",
+        "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+      },
+      "iconography": {
+        "family": "lucide-local",
+        "vocabulary": [
+          "shopping-bag",
+          "shopping-cart",
+          "arrow-right",
+          "arrow-left",
+          "chevron-down",
+          "chevron-right",
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "search",
+          "menu",
+          "map-pin",
+          "clock",
+          "phone",
+          "mail",
+          "truck",
+          "package",
+          "heart",
+          "shield-check",
+          "credit-card",
+          "calendar",
+          "utensils",
+          "coffee"
+        ]
+      },
+      "motion": {
+        "mode": "subtle",
+        "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+      },
+      "layout": {
+        "sectionOrder": [
+          "catalogo-mesa",
+          "pareja-cotidiana",
+          "nota-despensa"
+        ],
+        "catalogSection": "catalogo-mesa",
+        "mobileRule": "Cabecera de una línea con menú, nombre abreviado visualmente sin alterar el texto accesible y “Mi pedido (0)” siempre visible. Catálogo en una sola columna; foto 4:3, compra compacta debajo y selectores con áreas táctiles de 44 px. La galería de producto se vuelve carrusel manual con miniaturas, sin autoplay. El resumen de checkout permanece en flujo, no flotante."
+      },
+      "assets": [
+        {
+          "path": "assets/image-f1220ebdbbf1.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-e2dc7f4f02d3.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-06465dbb2877.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-5d185857f7d9.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-d7afdd1c26f9.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-ceff3979a97c.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        }
+      ],
+      "invariants": [
+        "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+        "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+        "Keep product names, prices and purchase actions legible and associated.",
+        "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+        "Keep payment, cart, stock and checkout behavior platform-owned."
+      ],
+      "tokens": {
+        "background": {
+          "authored": "#f5f0e6",
+          "resolved": "#f5f0e6",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "foreground": {
+          "authored": "#183c2b",
+          "resolved": "#183c2b",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent": {
+          "authored": "#df681d",
+          "resolved": "#df681d",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent-foreground": {
+          "authored": "#fffaf2",
+          "resolved": "#fffaf2",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "surface": {
+          "authored": "#fffaf1",
+          "resolved": "#fffaf1",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "border": {
+          "authored": "#c9c0af",
+          "resolved": "#c9c0af",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "radius": {
+          "authored": "6px",
+          "resolved": "6px",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "body-font": {
+          "authored": "Instrument,sans-serif",
+          "resolved": "Instrument,sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "heading-font": {
+          "authored": "Instrument,sans-serif",
+          "resolved": "Instrument,sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        }
+      }
+    },
+    "elapsedMs": 131900
+  },
+  {
+    "id": "pantry-2",
+    "merchantId": "cmu0c5o73000qv2kj9qmxct9u",
+    "storeId": "cmu0c5o75000sv2kjfvf4bmig",
+    "slug": "7g82se6z",
+    "productIds": [
+      "cmu0c5o7g0016v2kjh37eknzl",
+      "cmu0c5o7h0018v2kj8oma1qhi"
+    ],
+    "maxCredits": 300,
+    "status": "completed",
+    "generation": {
+      "id": "cmu0c5o7u001av2kj3w5cdb5w",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 38,
+      "maxCredits": 300,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 34828,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 14959,
+            "cachedInputTokens": 0,
+            "outputTokens": 1861,
+            "providerMicroUsd": 112012,
+            "cacheWriteTokens": 14956
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 2,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 131480,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 23048,
+            "cachedInputTokens": 0,
+            "outputTokens": 8060,
+            "providerMicroUsd": 262015,
+            "cacheWriteTokens": 8623
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1349,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 166345,
+      "status": "COMPLETED"
+    },
+    "design": {
+      "concepts": [
+        {
+          "name": "La mesa de la mañana",
+          "premise": "Una apertura fotográfica y editorial convierte los dos productos SAVIA en una escena de desayuno cotidiana. A diferencia de los conceptos de catálogo inmediato, primero crea atmósfera con una composición panorámica; después alterna fichas amplias de jugo y granola, con poca densidad y abundante superficie mineral.",
+          "opening": "Masthead crema con “Nido · Pilot 2”, enlaces Inicio/Despensa y “Mi pedido 0”. Debajo, assets/image-f1220ebdbbf1.jpg ocupa cerca de dos tercios del ancho, recortada para conservar las tres botellas, naranjas y etiqueta SAVIA; una columna estrecha presenta “Despensa para todos los días”, la categoría y un enlace ancla “Ver la despensa”. Sin afirmaciones añadidas.",
+          "flow": "La escena conduce al catálogo de dos fichas horizontales. Cada ficha agrupa nombre, descripción, precio desde BOB, acceso a opciones y añadir. La página de producto mantiene una galería 2+1, selectores reales por Tamaño/Presentación o Sabor/Peso, precio reactivo, cantidad y compra. Carrito y checkout usan listas limpias, resumen fijo en escritorio y selección de retiro sin inventar condiciones.",
+          "typography": "Instrument Serif para titulares de 64/54 px en escritorio y 42/36 px en móvil; Instrument Sans para navegación, cuerpo, precios y controles. Etiquetas en mayúsculas pequeñas y espaciadas, sin imitar el logotipo impreso.",
+          "imagery": "Jugo: assets/image-f1220ebdbbf1.jpg como escena principal, assets/image-06465dbb2877.jpg como retrato de botella y assets/image-d7afdd1c26f9.jpg como detalle servido. Granola: assets/image-e2dc7f4f02d3.jpg como ficha de color coral, assets/image-5d185857f7d9.jpg como retrato del frasco y assets/image-ceff3979a97c.jpg como escena de desayuno. Recortes cálidos, sin recolorear ni cubrir etiquetas SAVIA.",
+          "mobile": "La escena se vuelve una fotografía 4:3 seguida del titular; la navegación secundaria cabe en una fila desplazable, mientras “Mi pedido 0” permanece visible. Las fichas pasan a imagen, nombre/precio, opciones y acción; la galería de producto usa una imagen principal y miniaturas accesibles. Resumen de compra no tapa selectores.",
+          "layout": {
+            "sections": [
+              "morning-table",
+              "pantry-catalog",
+              "pickup-note"
+            ],
+            "catalogSection": "pantry-catalog",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        },
+        {
+          "name": "Despensa a la vista",
+          "premise": "Una tienda compacta, útil y casi tipográfica que abre directamente con los dos productos comprables. Se distingue de la escena editorial por eliminar el hero y de la composición por capítulos por mostrar jugo y granola simultáneamente en una retícula de mostrador.",
+          "opening": "Header de 72 px y, de inmediato, el bloque “Hoy en la despensa” con una línea contextual corta. Dos filas compactas comienzan antes de los primeros 320 px: miniatura, nombre, precio, selector inicial y botón “Añadir”. En 390 px, la primera fila muestra nombre, precio y añadir dentro del primer viewport.",
+          "flow": "El catálogo funciona como una hoja de pedido premium: jugo y granola tienen filas expansibles para revelar todas las opciones sin abandonar Inicio. El clic en el nombre abre una página de producto más detallada con galería, grupos de opciones segmentados, cantidad y compra. Carrito y checkout conservan la lógica de tabla, separadores finos y totales alineados; retiro aparece solo como método disponible.",
+          "typography": "Bricolage Grotesque en toda la interfaz: 52 px para el rótulo de sección, 22–28 px para productos y 15–17 px para controles. Jerarquía lograda con peso y anchura, no con una segunda familia; cifras tabulares para precios y cantidades.",
+          "imagery": "Miniaturas recortadas con foco estricto en el envase: assets/image-06465dbb2877.jpg para el jugo y assets/image-5d185857f7d9.jpg para la granola. Las demás imágenes forman las galerías de producto, respetando el orden de cada producto. Fondo marfil, tinta verde profunda y naranja cítrico reservado para selección, foco y confirmación de añadido.",
+          "mobile": "Header de dos líneas muy compacto: nombre arriba; Menú y “Mi pedido 0” abajo, siempre visibles. Las filas se reorganizan en miniatura de 88 px junto a nombre/precio y una segunda línea de selectores más añadir; todos los controles miden al menos 44 px y envuelven sin recorte. No depende de animación.",
+          "layout": {
+            "sections": [
+              "counter-catalog",
+              "ingredient-index"
+            ],
+            "catalogSection": "counter-catalog",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Dos rituales",
+          "premise": "La portada se construye como un díptico: “Servir” para el jugo y “Acompañar” para la granola. A diferencia del catálogo denso, cada mitad tiene escala de cartel y compra enfocada; a diferencia de la mesa editorial, los productos y sus opciones son la apertura, no una introducción separada.",
+          "opening": "Debajo de un masthead fino, dos paneles asimétricos comparten la pantalla. El jugo ocupa un panel arena más ancho con assets/image-06465dbb2877.jpg; la granola aparece sobre coral apagado con assets/image-e2dc7f4f02d3.jpg. Cada panel incluye nombre, precio desde, una opción resumida y “Elegir opciones”. En escritorio ambos son visibles; en móvil el jugo completo abre la secuencia y la granola asoma como siguiente capítulo.",
+          "flow": "Cada panel expande su configurador dentro del catálogo: opciones reales, cantidad y añadir, sin repetir descripciones. Después, una franja cruzada muestra las dos escenas de consumo como transición visual. En producto, una galería vertical comparte pantalla con un configurador adhesivo; en móvil el configurador sigue a la primera imagen. Carrito y checkout retoman el díptico mediante columnas crema/coral y un resumen compacto, no mediante tarjetas genéricas.",
+          "typography": "Oswald para palabras de capítulo y titulares altos de 72/48 px; Instrument Sans para nombres completos, descripciones, variantes y compra. El contraste condensado/claro produce una identidad de despensa rotulada sin competir con SAVIA.",
+          "imagery": "assets/image-06465dbb2877.jpg y assets/image-e2dc7f4f02d3.jpg son retratos de apertura con envases completos y etiquetas intactas. assets/image-d7afdd1c26f9.jpg y assets/image-ceff3979a97c.jpg forman la franja “Así llega a la mesa”; assets/image-f1220ebdbbf1.jpg y assets/image-5d185857f7d9.jpg completan las galerías. Bordes rectos con radios mínimos, evitando cajas decorativas.",
+          "mobile": "Los capítulos se apilan con alturas diferentes para conservar el ritmo del díptico; el primer producto mantiene nombre, precio y acción en el viewport inicial. “Mi pedido 0” queda fijado visualmente en el header, fuera del menú. Los selectores pasan a una retícula de dos columnas y a una sola a 320 px; las imágenes usan recortes centrados en botella o frasco.",
+          "layout": {
+            "sections": [
+              "ritual-catalog",
+              "table-pairing"
+            ],
+            "catalogSection": "ritual-catalog",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        }
+      ],
+      "selected": 2,
+      "selection": {
+        "source": "planner",
+        "rationale": "“Dos rituales” aprovecha que el catálogo real tiene exactamente dos productos y que ambos cuentan con tres fotografías confirmadas, incluyendo retratos claros de sus envases SAVIA. Permite elegir variantes reales desde la apertura, conserva visible la compra en 390 px y traslada naturalmente la galería, opciones, cantidad y retiro al producto y checkout, tal como solicita el brief."
+      }
+    },
+    "visualSystem": {
+      "version": 3,
+      "typography": {
+        "display": "Oswald para palabras de capítulo y titulares altos de 72/48 px; Instrument Sans para nombres completos, descripciones, variantes y compra. El contraste condensado/claro produce una identidad de despensa rotulada sin competir con SAVIA.",
+        "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+      },
+      "iconography": {
+        "family": "lucide-local",
+        "vocabulary": [
+          "shopping-bag",
+          "shopping-cart",
+          "arrow-right",
+          "arrow-left",
+          "chevron-down",
+          "chevron-right",
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "search",
+          "menu",
+          "map-pin",
+          "clock",
+          "phone",
+          "mail",
+          "truck",
+          "package",
+          "heart",
+          "shield-check",
+          "credit-card",
+          "calendar",
+          "utensils",
+          "coffee"
+        ]
+      },
+      "motion": {
+        "mode": "subtle",
+        "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+      },
+      "layout": {
+        "sectionOrder": [
+          "ritual-catalog",
+          "table-pairing"
+        ],
+        "catalogSection": "ritual-catalog",
+        "mobileRule": "Los capítulos se apilan con alturas diferentes para conservar el ritmo del díptico; el primer producto mantiene nombre, precio y acción en el viewport inicial. “Mi pedido 0” queda fijado visualmente en el header, fuera del menú. Los selectores pasan a una retícula de dos columnas y a una sola a 320 px; las imágenes usan recortes centrados en botella o frasco."
+      },
+      "assets": [
+        {
+          "path": "assets/image-f1220ebdbbf1.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-e2dc7f4f02d3.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-06465dbb2877.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-5d185857f7d9.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-d7afdd1c26f9.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-ceff3979a97c.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        }
+      ],
+      "invariants": [
+        "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+        "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+        "Keep product names, prices and purchase actions legible and associated.",
+        "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+        "Keep payment, cart, stock and checkout behavior platform-owned."
+      ],
+      "tokens": {
+        "background": {
+          "authored": "#f3eadc",
+          "resolved": "#f3eadc",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "foreground": {
+          "authored": "#173d2b",
+          "resolved": "#173d2b",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent": {
+          "authored": "#d9663f",
+          "resolved": "#d9663f",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent-foreground": {
+          "authored": "#fffaf0",
+          "resolved": "#fffaf0",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "surface": {
+          "authored": "#fbf5ea",
+          "resolved": "#fbf5ea",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "border": {
+          "authored": "#947f68",
+          "resolved": "#947f68",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "radius": {
+          "authored": "2px",
+          "resolved": "2px",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "body-font": {
+          "authored": "'Instrument Sans',sans-serif",
+          "resolved": "'Instrument Sans',sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "heading-font": {
+          "authored": "'Oswald',sans-serif",
+          "resolved": "'Oswald',sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        }
+      }
+    },
+    "elapsedMs": 166546
+  },
+  {
+    "id": "hydration-1",
+    "merchantId": "cmu0c98pt001gv2kjtii1t1ph",
+    "storeId": "cmu0c98px001iv2kjd6e81jqq",
+    "slug": "bg6r7wiy",
+    "productIds": [
+      "cmu0c98qm001sv2kj7bfsixi8"
+    ],
+    "maxCredits": 300,
+    "status": "completed",
+    "generation": {
+      "id": "cmu0c98rf001uv2kj7i8a87ml",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 37,
+      "maxCredits": 300,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 41528,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11372,
+            "cachedInputTokens": 0,
+            "outputTokens": 2020,
+            "providerMicroUsd": 97257,
+            "cacheWriteTokens": 11369
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 122572,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 19436,
+            "cachedInputTokens": 0,
+            "outputTokens": 9013,
+            "providerMicroUsd": 266627,
+            "cacheWriteTokens": 8623
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1642,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 164137,
+      "status": "COMPLETED"
+    },
+    "design": {
+      "concepts": [
+        {
+          "name": "Mesa de selección",
+          "premise": "La tienda se comporta como una página de producto premium desde el primer vistazo: galería generosa a la izquierda y un panel de configuración preciso a la derecha. Frente al catálogo compacto del concepto 2 y la portada fotográfica del 3, aquí una sola Botella Ritual ocupa toda la apertura y cada decisión —color, capacidad, cantidad— permanece reunida junto al precio.",
+          "opening": "Masthead blanco cálido y bajo con “Forma · Pilot 1”, enlace al producto y “Mi pedido (0)”. Debajo, composición 60/40: foto activa y miniaturas verticales; panel con Botella Ritual, precio dinámico desde Bs 89, swatches Salvia/Coral/Marfil, botones 500/750 ml, selector de cantidad y “Añadir al pedido”. En móvil, una imagen 1:1 seguida inmediatamente por nombre, precio y controles compactos; la compra queda dentro de 844 px.",
+          "flow": "La página de producto es el modelo del sistema. Inicio reutiliza su configurador completo como catálogo y añade solamente una franja editorial sobre acabado, tapa y uso cotidiano. Carrito y checkout usan filas limpias con miniatura de la variante, opciones legibles, cantidad editable, resumen fijo en escritorio y acción de pago directa; se indica recogida únicamente cuando el runtime la ofrezca. Movimiento sutil: fundido corto al cambiar variante, desactivado con reduced-motion.",
+          "typography": "Instrument Sans en toda la experiencia: nombre de producto 52/0.98 en escritorio y 34/1.02 en móvil; precio 24; encabezados secundarios 28; cuerpo 16/1.55; etiquetas y opciones 13–14 semibold. Espaciado abierto y letter-spacing mínimo de -0.025em en títulos para reforzar la precisión.",
+          "imagery": "assets/image-c9f5308636b1.jpg abre la galería con las tres botellas, crop 1:1 y foco central preservando SAVIA. assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg son vistas de variante Salvia, Coral y Marfil; crop 1:1 completo, sin recortar tapa ni marca. La miniatura y foto principal cambian con el swatch real.",
+          "mobile": "Header de 56 px con nombre abreviado visualmente mediante reflujo, no truncado, y “Mi pedido (0)” siempre visible. Galería horizontal con miniaturas táctiles debajo; panel de compra en flujo normal, swatches de 44 px y capacidad/cantidad en filas que envuelven sin desbordar. Barra inferior de compra solo aparece después de que el botón original sale del viewport y refleja variante y precio.",
+          "layout": {
+            "sections": [
+              "product-configurator",
+              "material-note"
+            ],
+            "catalogSection": "product-configurator",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Carta de color",
+          "premise": "Una tienda-catálogo densa y útil inspirada en una carta de muestras: el producto aparece en una fila panorámica con tres columnas cromáticas seleccionables. A diferencia del gran configurador del concepto 1 y del relato pausado del 3, prioriza comparación inmediata, alta densidad y una jerarquía tipográfica condensada.",
+          "opening": "Tras un masthead de 52 px, el catálogo comienza de inmediato con una línea contextual mínima y una fila comprable: miniatura de Botella Ritual, nombre, precio desde Bs 89, tres swatches rotulados, selector de capacidad y botón “Añadir”. En escritorio la fotografía grupal ocupa un tercio; en móvil se usa una franja recortada de 124 px y debajo una matriz compacta de opciones, manteniendo producto, precio y compra visibles sin scroll.",
+          "flow": "Inicio abre con el catálogo real y continúa con una banda comparativa de las tres variantes fotográficas, cuyos rótulos funcionan como selectores del mismo producto, no como productos ficticios. Después, una ficha técnica textual única resume acero inoxidable, acabado mate y tapa roscada. La página de producto expande esta gramática a una tabla visual de color/capacidad. Carrito y checkout adoptan divisores lineales, totales tabulados y controles pequeños; nada se encierra en tarjetas decoradas.",
+          "typography": "Oswald variable para títulos y cifras de precio —44/0.95 escritorio, 32/1 móvil— e Instrument Sans para opciones, descripciones y checkout. Etiquetas en mayúsculas moderadas de 12 px con tracking 0.08em; cuerpo 15/1.5. Los precios usan números alineados y alto contraste.",
+          "imagery": "assets/image-c9f5308636b1.jpg se recorta horizontalmente en la apertura, con las tres botellas completas y SAVIA visible. La banda posterior usa assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg en tres paneles verticales, foco centrado y proporciones iguales. Al seleccionar un color, su panel gana anchura mediante transición sutil; el fallback estático mantiene tres columnas iguales.",
+          "mobile": "Navegación visible y “Mi pedido (0)” fuera del menú. La fila panorámica se convierte en imagen corta más bloque de compra; swatches llevan color y texto para no depender solo del tono. La banda de variantes se vuelve carrusel manual con botones anterior/siguiente y sin autoavance. Checkout apila importes sin perder alineación ni reducir áreas táctiles de 44 px.",
+          "layout": {
+            "sections": [
+              "quick-catalog",
+              "color-comparison",
+              "product-spec"
+            ],
+            "catalogSection": "quick-catalog",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Tres tonos, un ritual",
+          "premise": "Una portada fotográfica editorial convierte la paleta real de SAVIA en identidad antes de vender. Es la opción más espaciosa y narrativa: frente a las aperturas comprables de los conceptos 1 y 2, comienza con una imagen de marca-producto y conduce después a un configurador concentrado, sin multiplicar fichas para un catálogo de una sola botella.",
+          "opening": "Imagen casi a sangre de las tres botellas con una banda de texto marfil superpuesta solo en el área despejada: “Un color para cada ritual” y un enlace ancla “Configurar la mía”. El encabezado flotante permanece sobrio, con Forma · Pilot 1 y “Mi pedido (0)”. No promete precio ni compra en el primer viewport móvil.",
+          "flow": "La portada conduce a una secuencia de tres retratos verticales —Salvia, Coral, Marfil— con nombres tipográficos grandes; al final aparece el configurador completo de Botella Ritual con galería, opciones reales, cantidad y compra. Una única nota de producto cierra el recorrido. La página de producto omite la portada y abre directamente en el configurador. Carrito y checkout mantienen fondos marfil, líneas verde tinta y acentos de la variante elegida, usando color solo para estado y selección.",
+          "typography": "Bricolage Grotesque variable como única familia: titular editorial 72/0.92 en escritorio y 42/0.96 en móvil; nombres de color 46; producto 38; cuerpo 16/1.6; controles 14 semibold. Contraste por escala y peso, con títulos a -0.035em y navegación compacta.",
+          "imagery": "assets/image-c9f5308636b1.jpg ocupa la portada con crop 4:3 en escritorio y 4:5 en móvil; foco central ajustado para conservar las tres botellas y su impresión SAVIA. assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg forman el capítulo cromático con botella completa, alternando alineación izquierda/derecha. Esas mismas imágenes alimentan la galería del configurador, sin duplicar descripciones.",
+          "mobile": "La portada conserva la fotografía como rasgo principal y coloca el texto en una banda inferior sólida para asegurar contraste. Los retratos pasan a una secuencia vertical corta; el configurador usa una galería deslizable manual y controles a ancho disponible. “Mi pedido (0)” permanece visible junto al nombre de tienda; no hay navegación de compra oculta ni animación necesaria para leer contenido.",
+          "layout": {
+            "sections": [
+              "ritual-cover",
+              "color-portraits",
+              "ritual-configurator",
+              "material-closing"
+            ],
+            "catalogSection": "ritual-configurator",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        }
+      ],
+      "selected": 0,
+      "selection": {
+        "source": "planner",
+        "rationale": "“Mesa de selección” responde de forma más directa a la petición de diseñar primero una página de producto comprensible. El catálogo confirmado tiene un solo artículo, Botella Ritual, pero seis variantes reales por color y capacidad; por eso conviene dedicar la apertura al configurador en lugar de simular variedad. Las cuatro imágenes aportadas permiten una galería auténtica —una toma grupal y tres"
+      }
+    },
+    "visualSystem": {
+      "version": 3,
+      "typography": {
+        "display": "Instrument Sans en toda la experiencia: nombre de producto 52/0.98 en escritorio y 34/1.02 en móvil; precio 24; encabezados secundarios 28; cuerpo 16/1.55; etiquetas y opciones 13–14 semibold. Espaciado abierto y letter-spacing mínimo de -0.025em en títulos para reforzar la precisión.",
+        "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+      },
+      "iconography": {
+        "family": "lucide-local",
+        "vocabulary": [
+          "shopping-bag",
+          "shopping-cart",
+          "arrow-right",
+          "arrow-left",
+          "chevron-down",
+          "chevron-right",
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "search",
+          "menu",
+          "map-pin",
+          "clock",
+          "phone",
+          "mail",
+          "truck",
+          "package",
+          "heart",
+          "shield-check",
+          "credit-card",
+          "calendar",
+          "utensils",
+          "coffee"
+        ]
+      },
+      "motion": {
+        "mode": "subtle",
+        "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+      },
+      "layout": {
+        "sectionOrder": [
+          "product-configurator",
+          "material-note"
+        ],
+        "catalogSection": "product-configurator",
+        "mobileRule": "Header de 56 px con nombre abreviado visualmente mediante reflujo, no truncado, y “Mi pedido (0)” siempre visible. Galería horizontal con miniaturas táctiles debajo; panel de compra en flujo normal, swatches de 44 px y capacidad/cantidad en filas que envuelven sin desbordar. Barra inferior de compra solo aparece después de que el botón original sale del viewport y refleja variante y precio."
+      },
+      "assets": [
+        {
+          "path": "assets/image-c9f5308636b1.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-d5b34d383f0c.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-9c4db2099869.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-dbdc2c596f17.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        }
+      ],
+      "invariants": [
+        "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+        "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+        "Keep product names, prices and purchase actions legible and associated.",
+        "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+        "Keep payment, cart, stock and checkout behavior platform-owned."
+      ],
+      "tokens": {
+        "background": {
+          "authored": "#f5f1e8",
+          "resolved": "#f5f1e8",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "foreground": {
+          "authored": "#1d2a23",
+          "resolved": "#1d2a23",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent": {
+          "authored": "#314a3b",
+          "resolved": "#314a3b",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent-foreground": {
+          "authored": "#fffdf8",
+          "resolved": "#fffdf8",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "surface": {
+          "authored": "#fffdf8",
+          "resolved": "#fffdf8",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "border": {
+          "authored": "#d8d2c5",
+          "resolved": "#d8d2c5",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "radius": {
+          "authored": "3px",
+          "resolved": "3px",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "body-font": {
+          "authored": "'Instrument Sans',sans-serif",
+          "resolved": "'Instrument Sans',sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "heading-font": {
+          "authored": "'Instrument Sans',sans-serif",
+          "resolved": "'Instrument Sans',sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        }
+      }
+    },
+    "elapsedMs": 164250
+  },
+  {
+    "id": "hydration-2",
+    "merchantId": "cmu0ccrh80020v2kjxny423c6",
+    "storeId": "cmu0ccrhg0022v2kjhf4czhy6",
+    "slug": "ceerm39j",
+    "productIds": [
+      "cmu0ccrho002cv2kj9y6829va"
+    ],
+    "maxCredits": 300,
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ccrih002ev2kjk4wafcac",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 32,
+      "maxCredits": 300,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 41409,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11379,
+            "cachedInputTokens": 0,
+            "outputTokens": 1889,
+            "providerMicroUsd": 94672,
+            "cacheWriteTokens": 11376
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 88895,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 19420,
+            "cachedInputTokens": 0,
+            "outputTokens": 6511,
+            "providerMicroUsd": 216523,
+            "cacheWriteTokens": 8623
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 613,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 130333,
+      "status": "COMPLETED"
+    },
+    "design": {
+      "concepts": [
+        {
+          "name": "Mesa de selección SAVIA",
+          "premise": "Una tienda-producto: la única Botella Ritual se presenta como un objeto configurable, no como una tarjeta de catálogo. Abre con una mesa de compra dividida —galería generosa a la izquierda y controles precisos a la derecha— y se diferencia de los otros conceptos por permitir comprar de inmediato, mantener alta densidad funcional y hacer que la fotografía cambie con el color elegido.",
+          "opening": "Tras un masthead corto de “Forma · Pilot 2”, la galería muestra la botella seleccionada mientras el panel contiguo reúne Botella Ritual, precio desde Bs 89, color, capacidad, cantidad y “Añadir al pedido”. En escritorio todo queda sobre el pliegue; en móvil aparece primero una imagen cuadrada compacta y enseguida nombre, precio y controles, conservando visible la compra a 390×844.",
+          "flow": "Selección y compra → breve descripción y materiales confirmados → franja visual con los tres colores. La página de producto amplía la misma mesa con miniaturas, selector Salvia/Coral/Marfil, 500/750 ml, cantidad y precio reactivo. Carrito y checkout reutilizan filas limpias, swatch de variante, resumen compacto y énfasis en retiro, sin promesas adicionales.",
+          "typography": "Instrument Sans variable en toda la interfaz: nombre del producto 48/52 px en escritorio y 32/35 px en móvil; precio 24/28; cuerpo 16/24; etiquetas y navegación 12/16 en mayúsculas con tracking moderado. Números tabulares para precios y cantidades. Jerarquía técnica y legible, sin serif ornamental.",
+          "imagery": "La galería usa assets/image-d5b34d383f0c.jpg para Salvia, assets/image-9c4db2099869.jpg para Coral y assets/image-dbdc2c596f17.jpg para Marfil, con crop 1:1, botella completa centrada y suficiente suelo visible; assets/image-c9f5308636b1.jpg funciona como cierre panorámico con las tres botellas y foco central. Nunca se recorta ni altera la marca SAVIA impresa.",
+          "mobile": "Header de una línea con nombre abreviado visualmente pero accesible, enlace “Inicio” y botón persistente “Mi pedido · 0”. La galería usa una imagen principal y miniaturas de 52 px; swatches con nombre textual, capacidades segmentadas y stepper de 44 px. El panel deja de ser sticky y sigue el orden natural. Sin movimiento continuo; solo transición sutil al cambiar variante y alternativa instantánea con reduced-motion.",
+          "layout": {
+            "sections": [
+              "product-studio",
+              "material-note",
+              "color-lineup"
+            ],
+            "catalogSection": "product-studio",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Tres tonos, un ritual",
+          "premise": "Una apertura editorial basada en la fotografía de grupo convierte Salvia, Coral y Marfil en el lenguaje visual de la marca antes de vender. Frente a la mesa funcional del primer concepto, usa una introducción independiente, más espaciosa y narrativa; frente al tercero, evita la estructura de ficha técnica y privilegia una secuencia fotográfica vertical.",
+          "opening": "La foto assets/image-c9f5308636b1.jpg ocupa una composición casi a pantalla completa, con “Botella Ritual” y “Tres tonos para todos los días” en un bloque marfil superpuesto fuera de las botellas. Un enlace “Elegir la mía” baja al configurador; el producto no se promete completo sobre el primer pliegue.",
+          "flow": "Imagen-manifiesto → configurador horizontal de un solo producto → tríptico cromático → descripción breve. En producto, la galería es protagonista y los controles viven en una banda inferior sticky solo en escritorio. Carrito y checkout abandonan la escala fotográfica, pero conservan márgenes amplios, líneas finas y pequeños acentos del color elegido.",
+          "typography": "Fraunces variable para titulares suaves y amplios —72/72 px en escritorio, 43/44 px en móvil— e Instrument Sans para navegación, opciones y compra. El nombre SAVIA visible en las fotos actúa como detalle gráfico; Forma · Pilot 2 permanece como denominación sobria del storefront.",
+          "imagery": "assets/image-c9f5308636b1.jpg abre a ancho completo con crop 4:3, preservando las tres botellas y la vegetación inferior izquierda. El tríptico usa assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg con crops verticales consistentes y foco en tapa, silueta y palabra SAVIA. Los controles cambian la imagen principal sin recolorear fotografías.",
+          "mobile": "La imagen inicial se vuelve 4:5 y mantiene visibles las tres botellas; el bloque tipográfico pasa debajo para no tapar la marca impresa. “Mi pedido · 0” continúa visible en el header. El configurador apila imagen, nombre/precio, swatches, capacidad, cantidad y compra; no hay carrusel obligatorio ni gestos ocultos.",
+          "layout": {
+            "sections": [
+              "ritual-intro",
+              "ritual-catalog",
+              "three-finishes",
+              "daily-object"
+            ],
+            "catalogSection": "ritual-catalog",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        },
+        {
+          "name": "Ficha 01 · Botella Ritual",
+          "premise": "Un sistema de catálogo industrial premium trata la botella como una pieza bien resuelta: retícula, reglas, códigos de color y datos reales. Se diferencia del concepto editorial por su apertura compacta y tipografía condensada; frente a la mesa de selección, separa la vista general del catálogo y una ficha comparativa de variantes, con más ritmo informativo y menos superficie fotográfica por bloque.",
+          "opening": "Masthead mínimo seguido inmediatamente por una franja de catálogo: “Ficha 01”, Botella Ritual, desde Bs 89, selector rápido de color, capacidad y añadir. A la derecha aparece la fotografía Salvia como recorte cuadrado. El catálogo comienza dentro de los primeros 320 px y nombre, precio y compra quedan visibles tanto en escritorio como en móvil.",
+          "flow": "Compra rápida → matriz comparativa de 500 ml/Bs 89 y 750 ml/Bs 109 → galería de acabados → nota de objeto cotidiano. La página de producto desarrolla una retícula 7/5 con galería, descripción única y controles agrupados. Carrito y checkout parecen hojas de pedido refinadas: divisores, cantidades alineadas, variante escrita y total dominante.",
+          "typography": "Oswald variable para encabezados condensados y numeración funcional —64/66 px escritorio, 40/42 móvil—; Instrument Sans para todo texto y control. Etiquetas de 11/14 px, nombres de 26/30 y precios tabulares. Paleta base hueso, grafito y acero, con salvia/coral/marfil reservados exclusivamente para swatches, estados y pequeñas reglas.",
+          "imagery": "assets/image-d5b34d383f0c.jpg lidera la ficha con crop 1:1 y botella centrada. assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg aparecen junto a Salvia en una galería modular de acabados; assets/image-c9f5308636b1.jpg cierra en una banda 3:1 enfocada en el conjunto, ajustándose a 4:3 en móvil. La palabra SAVIA siempre queda legible y sin overlays.",
+          "mobile": "Retícula convertida en una ficha de una columna: encabezado de producto, miniimagen de 124 px, precio y compra aparecen antes de 844 px; opciones en dos filas con hit areas de 44 px. La tabla de capacidades se transforma en dos filas clave/valor, no en scroll horizontal. Header con menú etiquetado y “Mi pedido · 0” siempre fuera del menú. Movimiento limitado a estados de selección.",
+          "layout": {
+            "sections": [
+              "quick-sheet",
+              "capacity-matrix",
+              "finish-index",
+              "object-note"
+            ],
+            "catalogSection": "quick-sheet",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        }
+      ],
+      "selected": 0,
+      "selection": {
+        "source": "planner",
+        "rationale": "La tienda tiene un solo producto con seis variantes reales, dos capacidades, tres fotos individuales y una foto conjunta. “Mesa de selección SAVIA” aprovecha ese catálogo corto para priorizar exactamente la galería, las opciones, la cantidad y la compra solicitadas, mostrando desde el inicio el precio y la acción sin inventar contenido. Además, vincula cada color con su imagen aportada y traslada"
+      }
+    },
+    "visualSystem": {
+      "version": 3,
+      "typography": {
+        "display": "Instrument Sans variable en toda la interfaz: nombre del producto 48/52 px en escritorio y 32/35 px en móvil; precio 24/28; cuerpo 16/24; etiquetas y navegación 12/16 en mayúsculas con tracking moderado. Números tabulares para precios y cantidades. Jerarquía técnica y legible, sin serif ornamental.",
+        "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+      },
+      "iconography": {
+        "family": "lucide-local",
+        "vocabulary": [
+          "shopping-bag",
+          "shopping-cart",
+          "arrow-right",
+          "arrow-left",
+          "chevron-down",
+          "chevron-right",
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "search",
+          "menu",
+          "map-pin",
+          "clock",
+          "phone",
+          "mail",
+          "truck",
+          "package",
+          "heart",
+          "shield-check",
+          "credit-card",
+          "calendar",
+          "utensils",
+          "coffee"
+        ]
+      },
+      "motion": {
+        "mode": "subtle",
+        "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+      },
+      "layout": {
+        "sectionOrder": [
+          "product-studio",
+          "material-note",
+          "color-lineup"
+        ],
+        "catalogSection": "product-studio",
+        "mobileRule": "Header de una línea con nombre abreviado visualmente pero accesible, enlace “Inicio” y botón persistente “Mi pedido · 0”. La galería usa una imagen principal y miniaturas de 52 px; swatches con nombre textual, capacidades segmentadas y stepper de 44 px. El panel deja de ser sticky y sigue el orden natural. Sin movimiento continuo; solo transición sutil al cambiar variante y alternativa instantánea con reduced-motion."
+      },
+      "assets": [
+        {
+          "path": "assets/image-c9f5308636b1.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-d5b34d383f0c.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-9c4db2099869.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        },
+        {
+          "path": "assets/image-dbdc2c596f17.jpg",
+          "role": "unknown",
+          "description": "",
+          "kind": "image"
+        }
+      ],
+      "invariants": [
+        "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+        "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+        "Keep product names, prices and purchase actions legible and associated.",
+        "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+        "Keep payment, cart, stock and checkout behavior platform-owned."
+      ],
+      "tokens": {
+        "background": {
+          "authored": "#f7f3ea",
+          "resolved": "#f7f3ea",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "foreground": {
+          "authored": "#20251e",
+          "resolved": "#20251e",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent": {
+          "authored": "#344d37",
+          "resolved": "#344d37",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent-foreground": {
+          "authored": "#fffdf7",
+          "resolved": "#fffdf7",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "surface": {
+          "authored": "#fffaf1",
+          "resolved": "#fffaf1",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "border": {
+          "authored": "#c9c7b9",
+          "resolved": "#c9c7b9",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "radius": {
+          "authored": "3px",
+          "resolved": "3px",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "body-font": {
+          "authored": "Instrument,sans-serif",
+          "resolved": "Instrument,sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "heading-font": {
+          "authored": "Instrument,sans-serif",
+          "resolved": "Instrument,sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        }
+      }
+    },
+    "elapsedMs": 130454
+  },
+  {
+    "id": "cafe-1",
+    "merchantId": "cmu0cfk5f002kv2kjgaq3b9e5",
+    "storeId": "cmu0cfk5h002mv2kjr4608igh",
+    "slug": "rm450e3j",
+    "productIds": [
+      "cmu0cfk5k002ov2kjt9zgl9qr",
+      "cmu0cfk5l002qv2kjelj6aofs",
+      "cmu0cfk5m002sv2kjmf92picw"
+    ],
+    "maxCredits": 300,
+    "status": "completed",
+    "generation": {
+      "id": "cmu0cfk5t002uv2kj9h789o5p",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 26,
+      "maxCredits": 300,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 34596,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4076,
+            "cachedInputTokens": 0,
+            "outputTokens": 1845,
+            "providerMicroUsd": 57277,
+            "cacheWriteTokens": 4073
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 81404,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11878,
+            "cachedInputTokens": 0,
+            "outputTokens": 7301,
+            "providerMicroUsd": 202155,
+            "cacheWriteTokens": 8623
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 911,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 116050,
+      "status": "COMPLETED"
+    },
+    "design": {
+      "concepts": [
+        {
+          "name": "La barra tipográfica",
+          "premise": "Una carta compacta que se comporta como el tablero de una cafetería contemporánea: el catálogo abre la página y las tres bebidas se leen en filas, no en tarjetas. Frente a los otros conceptos, prioriza compra inmediata, alta densidad y una jerarquía tipográfica casi monocroma, sin introducción independiente ni recursos gráficos que finjan fotografías.",
+          "opening": "Masthead bajo en papel claro con “Lumbre · Pilot 1”, enlace a Carta y botón siempre visible “Mi pedido · 0”. Debajo, el catálogo comienza antes de 320 px: una línea de contexto —“Preparado al momento · Para recoger”— y la primera fila completa de Café filtrado con nombre, precio desde Bs 15, selector 250/350 ml, cantidad y Añadir visibles tanto en escritorio como en móvil.",
+          "flow": "Inicio funciona como carta directa: elegir bebida, tamaño y cantidad sin abandonar la lista. Cada nombre abre una página de producto con el mismo formato de comanda: sin galería cuando no existen imágenes, descripción única, tamaños reales, precio actualizado, stepper y compra. Carrito y checkout continúan como una hoja de pedido con artículos editables, resumen y recogida; sin bloques de envío ni promesas inventadas.",
+          "typography": "Bricolage Grotesque variable en todo el sistema. Marca 26/28, títulos de bebida 42/42 en escritorio y 30/31 en móvil, precios 22/24, cuerpo 16/23 y metadatos 12/16 en mayúsculas con espaciado amplio. Los tamaños usan cifras tabulares; titulares con letter-spacing de -0.025em.",
+          "imagery": "No usa imágenes ni ilustraciones sustitutivas. La identidad nace de filetes berenjena, puntos de registro, abreviaturas de volumen y grandes palabras recortadas solo dentro de bandas decorativas. Papel marfil cálido, tinta berenjena y un acento cobre oscuro reservado para estados seleccionados.",
+          "mobile": "Cabecera de dos líneas: marca y “Mi pedido · 0” quedan visibles; Carta puede ir como ancla secundaria, no dentro de un menú obligatorio. Cada bebida se convierte en una fila vertical compacta con nombre/precio juntos, botones segmentados de 44 px para volumen, stepper y Añadir de ancho disponible. La primera compra permanece dentro de 390×844 y todo funciona estáticamente con movimiento reducido.",
+          "layout": {
+            "sections": [
+              "carta-directa",
+              "nota-de-barra"
+            ],
+            "catalogSection": "carta-directa",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Tres pedidos, tres ritmos",
+          "premise": "Una portada editorial dividida en tres franjas verticales, una por bebida, que convierte la carta breve en el rasgo visual principal. A diferencia de la lista densa del primer concepto, presenta productos como grandes capítulos; frente al tercero, mantiene los tres productos simultáneamente visibles y usa una sans condensada, no una secuencia narrativa serif.",
+          "opening": "Introducción independiente de altura contenida: nombre alineado a la izquierda, la frase “Tres bebidas. Dos tamaños. Para recoger.” en gran escala y una línea que conduce a la carta. En escritorio, la siguiente sección despliega tres columnas de diferente anchura; en móvil, se vuelve un carrusel horizontal con scroll nativo y una tarjeta parcial como pista, conservando controles de compra claros.",
+          "flow": "La portada establece el sistema y conduce a un tríptico comprable. Cada columna reúne nombre, descripción, selector 250/350 ml, precio, cantidad y Añadir. La página de producto amplía una sola franja: nombre vertical en escritorio, panel de opciones a la derecha y ausencia total de galería cuando no hay medios. El carrito apila franjas numeradas por artículo y checkout reduce el lenguaje a una columna ordenada de contacto, recogida, pago y resumen.",
+          "typography": "Oswald variable para marca, nombres y precios: titulares 72/70 en escritorio, 45/44 en móvil; Instrument Sans para cuerpo y controles a 16/23. Etiquetas de 12/16 y cifras tabulares. Contraste entre nombres condensados muy grandes y formularios sobrios, sin condensar textos largos ni forzar títulos a una sola línea.",
+          "imagery": "Composición enteramente tipográfica. Cada bebida recibe una trama lineal CSS distinta —vertical para filtrado, concéntrica para latte y retícula cerrada para chocolate— usada solo como fondo abstracto, nunca como representación del producto. Berenjena dominante, papel claro y variaciones de tinta al 8–16% para separar franjas sin cajas gratuitas.",
+          "mobile": "La cabecera mantiene “Mi pedido · 0” junto a la marca; el menú solo contiene anclas secundarias. El tríptico conserva su identidad mediante paneles de 84vw con scroll-snap no obligatorio y botones de 44 px; también incluye enlaces “Siguiente bebida” para teclado. Sin animación automática y sin ocultar información fuera del carrusel.",
+          "layout": {
+            "sections": [
+              "manifiesto-tres",
+              "triptico-carta",
+              "recogida-clara"
+            ],
+            "catalogSection": "triptico-carta",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        },
+        {
+          "name": "Comanda de barrio",
+          "premise": "Una experiencia secuencial inspirada en una comanda impresa: primero sitúa la intención de recogida y después permite construir el pedido bebida por bebida. Se distingue del catálogo tabular y del tríptico simultáneo por su ritmo espacioso, producto destacado único, serif expresiva y progresión guiada hacia un resumen persistente.",
+          "opening": "Portada asimétrica con “Lumbre” en Fraunces, una columna estrecha de contexto y una gran composición de texto: “¿Qué preparamos?”. Un enlace con flecha baja a la carta. No promete productos completos en el primer viewport; usa el espacio para identidad y para explicar únicamente el dato confirmado de preparación al momento y recogida.",
+          "flow": "El catálogo alterna tres bloques de lado a lado: nombre y descripción en una columna, compra en la otra, con el precio anclado junto a tamaño y cantidad. Un resumen de pedido discreto permanece en el borde derecho en escritorio y pasa a una barra inferior no obstructiva en móvil. En producto, el nombre ocupa la cabecera, seguido inmediatamente por opciones, cantidad y Añadir; no se reserva espacio de galería. Carrito adopta apariencia de recibo y checkout usa pasos visibles sin inventar horarios",
+          "typography": "Fraunces variable para marca y títulos, 84/82 en escritorio y 48/48 en móvil, con ejes suaves y letter-spacing de -0.03em. Instrument Sans para precios, formularios y navegación: 16/23; precio 28/30; etiquetas 12/16. La mezcla crea una voz más cálida y narrativa que los otros dos sistemas.",
+          "imagery": "Sin fotografías ni falsas miniaturas. Líneas perforadas, reglas de recibo y pequeños círculos de selección construidos con CSS forman el motivo recurrente. Fondo papel avena, berenjena profundo y tinta gris cálida; un rojo arcilla aparece únicamente para el total y los estados activos.",
+          "mobile": "La apertura se reduce para mostrar el inicio de la carta cerca del pliegue, pero conserva el gran interrogante tipográfico. “Mi pedido · 0” permanece en la cabecera fuera del menú y el resumen inferior aparece solo tras añadir. Los bloques alternos se reordenan siempre como nombre, descripción, opciones, precio y acción; ningún adorno comparte espacio con los controles.",
+          "layout": {
+            "sections": [
+              "pregunta-de-apertura",
+              "comanda-progresiva",
+              "cierre-de-recogida"
+            ],
+            "catalogSection": "comanda-progresiva",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        }
+      ],
+      "selected": 0,
+      "selection": {
+        "source": "planner",
+        "rationale": "“La barra tipográfica” encaja mejor con una carta real de solo tres productos, todos con dos tamaños y sin fotografías disponibles. Da prioridad inmediata a elegir y añadir para recogida, cumple la dirección confirmada de berenjena sobre papel claro y evita inventar imágenes —incluidas imágenes SAVIA, ya que no se suministró ningún archivo—. Su catálogo primero también aprovecha mejor el tamaño de"
+      }
+    },
+    "visualSystem": {
+      "version": 3,
+      "typography": {
+        "display": "Bricolage Grotesque variable en todo el sistema. Marca 26/28, títulos de bebida 42/42 en escritorio y 30/31 en móvil, precios 22/24, cuerpo 16/23 y metadatos 12/16 en mayúsculas con espaciado amplio. Los tamaños usan cifras tabulares; titulares con letter-spacing de -0.025em.",
+        "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+      },
+      "iconography": {
+        "family": "lucide-local",
+        "vocabulary": [
+          "shopping-bag",
+          "shopping-cart",
+          "arrow-right",
+          "arrow-left",
+          "chevron-down",
+          "chevron-right",
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "search",
+          "menu",
+          "map-pin",
+          "clock",
+          "phone",
+          "mail",
+          "truck",
+          "package",
+          "heart",
+          "shield-check",
+          "credit-card",
+          "calendar",
+          "utensils",
+          "coffee"
+        ]
+      },
+      "motion": {
+        "mode": "subtle",
+        "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+      },
+      "layout": {
+        "sectionOrder": [
+          "carta-directa",
+          "nota-de-barra"
+        ],
+        "catalogSection": "carta-directa",
+        "mobileRule": "Cabecera de dos líneas: marca y “Mi pedido · 0” quedan visibles; Carta puede ir como ancla secundaria, no dentro de un menú obligatorio. Cada bebida se convierte en una fila vertical compacta con nombre/precio juntos, botones segmentados de 44 px para volumen, stepper y Añadir de ancho disponible. La primera compra permanece dentro de 390×844 y todo funciona estáticamente con movimiento reducido."
+      },
+      "assets": [],
+      "invariants": [
+        "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+        "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+        "Keep product names, prices and purchase actions legible and associated.",
+        "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+        "Keep payment, cart, stock and checkout behavior platform-owned."
+      ],
+      "tokens": {
+        "background": {
+          "authored": "#f4eddd",
+          "resolved": "#f4eddd",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "foreground": {
+          "authored": "#32162f",
+          "resolved": "#32162f",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent": {
+          "authored": "#8b452c",
+          "resolved": "#8b452c",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent-foreground": {
+          "authored": "#fffaf0",
+          "resolved": "#fffaf0",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "surface": {
+          "authored": "#fbf6e9",
+          "resolved": "#fbf6e9",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "border": {
+          "authored": "#5a3654",
+          "resolved": "#5a3654",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "radius": {
+          "authored": "2px",
+          "resolved": "2px",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "body-font": {
+          "authored": "\"Bricolage Grotesque\",sans-serif",
+          "resolved": "\"Bricolage Grotesque\",sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "heading-font": {
+          "authored": "\"Bricolage Grotesque\",sans-serif",
+          "resolved": "\"Bricolage Grotesque\",sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        }
+      }
+    },
+    "elapsedMs": 116133
+  },
+  {
+    "id": "cafe-2",
+    "merchantId": "cmu0ci1rl0030v2kjlmjusa28",
+    "storeId": "cmu0ci1rn0032v2kjb57nzovo",
+    "slug": "jjco1ope",
+    "productIds": [
+      "cmu0ci1rp0034v2kj47pgy9x8",
+      "cmu0ci1rr0036v2kjpfb85x5j",
+      "cmu0ci1rs0038v2kjb7dm5ge6"
+    ],
+    "maxCredits": 300,
+    "status": "completed",
+    "generation": {
+      "id": "cmu0ci1sm003av2kjy0i84zda",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 28,
+      "maxCredits": 300,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "design",
+          "durationMs": 36409,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 4081,
+            "cachedInputTokens": 0,
+            "outputTokens": 1853,
+            "providerMicroUsd": 57462,
+            "cacheWriteTokens": 4078
+          },
+          "reasoningEffort": "low",
+          "selectedIndex": 0,
+          "selectionSource": "planner"
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 99658,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 11878,
+            "cachedInputTokens": 0,
+            "outputTokens": 8023,
+            "providerMicroUsd": 216595,
+            "cacheWriteTokens": 8623
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1766,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 136106,
+      "status": "COMPLETED"
+    },
+    "design": {
+      "concepts": [
+        {
+          "name": "La barra tipográfica",
+          "premise": "Una carta compacta que funciona como la barra del café: nombre, tamaño, precio y acción se leen de izquierda a derecha en líneas continuas. A diferencia de los otros conceptos, abre directamente con los tres productos en una lista densa, sin portada ni tarjetas; prioriza la elección inmediata y convierte las reglas, subrayados y columnas en la identidad.",
+          "opening": "Masthead bajo con «Lumbre · Pilot 2», una breve línea «Café preparado al momento · para recoger» y «Mi pedido (0)». El catálogo comienza dentro de los primeros 240 px. La primera fila muestra Café filtrado, selector 250/350 ml, precio actualizado, cantidad y «Añadir» sin desplazamiento en escritorio y móvil.",
+          "flow": "Inicio: carta completa → nota breve sobre preparación y recogida → pie. Cada producto abre una ficha con el mismo renglón editorial ampliado: nombre, descripción única, opciones reales, precio, control de cantidad y compra; al no existir imágenes, no aparece galería ni espacio reservado. Carrito y checkout repiten la tabla de pedido, con variantes y cantidades claramente editables, y concentran el cierre en recogida y pago sin inventar instrucciones.",
+          "typography": "Bricolage Grotesque variable como única familia. Marca 700, 30–36 px; títulos de producto 650, 32–48 px; precios 700; texto y controles 16–18 px. En móvil, marca 24 px y productos 27–30 px. Mayúsculas pequeñas y espaciadas solo para etiquetas; encabezados con tracking de -0.025em.",
+          "imagery": "No usa fotografías ni falsos thumbnails. La expresión procede de líneas berenjena de distintos grosores, pequeños puntos de preparación y números de precio alineados como una carta impresa. Fondo papel marfil con textura CSS extremadamente sutil; el producto siempre permanece puramente tipográfico.",
+          "mobile": "Cabecera fija y baja con marca abreviada legible, botón de menú y «Mi pedido (0)» siempre visible. Cada producto se reordena en tres franjas: nombre/precio, tamaños y cantidad/añadir; controles de al menos 44 px y sin desplazamiento horizontal. La primera compra queda visible en 390×844. En checkout, el resumen pasa a filas apiladas sin perder variante ni edición.",
+          "layout": {
+            "sections": [
+              "carta-barra",
+              "nota-recogida"
+            ],
+            "catalogSection": "carta-barra",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        },
+        {
+          "name": "Pliego de sobremesa",
+          "premise": "Una apertura espaciosa inspirada en un pequeño pliego de menú doblado: marca y frase ocupan una mitad, mientras la otra anticipa los tres nombres y precios. Después, el catálogo se presenta como tres capítulos amplios. Frente a la barra compacta, ralentiza la entrada y da más protagonismo editorial a cada bebida; frente al tercer concepto, usa serif y composición asimétrica en vez de una matriz utilitaria.",
+          "opening": "Portada autónoma en dos columnas sobre papel claro. A la izquierda, «Lumbre» en gran escala y el subtítulo de cafetería de barrio; a la derecha, un índice real con Café filtrado, Latte y Chocolate caliente y sus precios desde Bs 15, Bs 22 y Bs 20, enlazados al catálogo. Un trazo vertical berenjena simula el pliegue. El pedido permanece accesible en el masthead, aunque los botones de añadir aparecen al llegar a la carta.",
+          "flow": "Inicio: pliego introductorio → carta en capítulos → cierre de recogida. Los capítulos alternan alineación y escala, pero mantienen juntos nombre, descripción, tamaños, precio, cantidad y compra. La ficha de producto convierte un capítulo en página completa, sin galería vacía, con opciones como pestañas editoriales. Carrito y checkout adoptan el formato de recibo sobrio sobre una columna central.",
+          "typography": "Instrument Serif para marca y títulos, con curvas cálidas; Instrument Sans para navegación, precios, opciones y compra. Marca 76–112 px en escritorio y 50–62 px en móvil; productos 44–64 px/34–42 px; cuerpo 17 px. Tracking de títulos -0.03em y etiquetas sans en 13 px con espaciado amplio.",
+          "imagery": "Composición enteramente tipográfica. Líneas de pliegue, filetes y numerales sobredimensionados funcionan como estructura, no como ilustraciones de producto. Berenjena profundo sobre marfil, con un único acento arcilla reservado para estado seleccionado y confirmación de añadido.",
+          "mobile": "La portada se convierte en un pliego vertical compacto: palabra Lumbre, subtítulo e índice enlazado; no intenta forzar el producto completo sobre el primer pantallazo. «Mi pedido (0)» queda fuera del menú. Los capítulos dejan de alternar lados y usan sangrías variables para conservar el ritmo editorial; opciones y compra ocupan filas separadas y cómodas.",
+          "layout": {
+            "sections": [
+              "pliego-intro",
+              "capitulos-carta",
+              "cierre-recogida"
+            ],
+            "catalogSection": "capitulos-carta",
+            "standaloneIntro": true,
+            "productsInOpening": false
+          }
+        },
+        {
+          "name": "Pizarra de tres columnas",
+          "premise": "Una interfaz de pedido organizada como una pizarra contemporánea, pero sin imitar tiza: tres columnas visibles, una por bebida, y una banda inferior que resume el pedido. Se diferencia del primer concepto por su presentación simultánea en paneles verticales y jerarquía condensada; del segundo, por abrir con compra real y por su densidad operativa, sin portada narrativa.",
+          "opening": "Tras un masthead de 64–72 px, una franja breve indica «Preparado al momento · para recoger» y da paso inmediato a tres columnas. Cada columna muestra nombre, descripción corta, botones 250/350 ml, precio, cantidad y «Añadir». Los tres productos caben en escritorio; en 390 px aparece completa la primera columna antes del pliegue.",
+          "flow": "Inicio: matriz de pedido → franja de funcionamiento de la carta → pie compacto. La ficha de producto amplía una columna en una composición 60/40: información a la izquierda y panel de selección a la derecha, que colapsa en móvil; no reserva galería al no haber imágenes. Carrito se presenta como banda/listado y checkout como formulario modular con resumen persistente, conservando bordes rectos y etiquetas condensadas.",
+          "typography": "Oswald variable para marca, nombres y precios, compensado con Instrument Sans en descripciones y controles. Marca 34–42 px; nombres 38–54 px; precios 28–34 px; cuerpo 16 px. En móvil, nombres 34 px. Los titulares son estrechos pero permiten salto natural, con tracking de -0.015em.",
+          "imagery": "Sin imágenes. La matriz usa bordes finos berenjena, fondos de papel alternados apenas perceptibles y grandes iniciales tipográficas recortadas dentro de cada columna como decoración no comercial. Los estados elegidos se resuelven con inversión berenjena/marfil, no con cajas de colores arbitrarias.",
+          "mobile": "La matriz se transforma en una secuencia vertical con un indicador textual «1 de 3 bebidas» no interactivo y navegación por anclas, sin carrusel ni gesto oculto. La barra superior conserva menú y «Mi pedido (0)». Nombre, precio y compra permanecen unidos; selectores envuelven correctamente a 320 px y todos los controles alcanzan 44 px.",
+          "layout": {
+            "sections": [
+              "matriz-pedido",
+              "ritual-recogida"
+            ],
+            "catalogSection": "matriz-pedido",
+            "standaloneIntro": false,
+            "productsInOpening": true
+          }
+        }
+      ],
+      "selected": 0,
+      "selection": {
+        "source": "planner",
+        "rationale": "La barra tipográfica encaja mejor con una cafetería de barrio orientada a recoger, un catálogo real de solo tres bebidas y dos tamaños por producto. Como no hay fotografías ni logo confirmado, convierte la tipografía y las líneas en identidad sin inventar contenido, y permite que nombre, precio, variante y acción aparezcan inmediatamente tanto en 1280 como en 390 px."
+      }
+    },
+    "visualSystem": {
+      "version": 3,
+      "typography": {
+        "display": "Bricolage Grotesque variable como única familia. Marca 700, 30–36 px; títulos de producto 650, 32–48 px; precios 700; texto y controles 16–18 px. En móvil, marca 24 px y productos 27–30 px. Mayúsculas pequeñas y espaciadas solo para etiquetas; encabezados con tracking de -0.025em.",
+        "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+      },
+      "iconography": {
+        "family": "lucide-local",
+        "vocabulary": [
+          "shopping-bag",
+          "shopping-cart",
+          "arrow-right",
+          "arrow-left",
+          "chevron-down",
+          "chevron-right",
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "search",
+          "menu",
+          "map-pin",
+          "clock",
+          "phone",
+          "mail",
+          "truck",
+          "package",
+          "heart",
+          "shield-check",
+          "credit-card",
+          "calendar",
+          "utensils",
+          "coffee"
+        ]
+      },
+      "motion": {
+        "mode": "subtle",
+        "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+      },
+      "layout": {
+        "sectionOrder": [
+          "carta-barra",
+          "nota-recogida"
+        ],
+        "catalogSection": "carta-barra",
+        "mobileRule": "Cabecera fija y baja con marca abreviada legible, botón de menú y «Mi pedido (0)» siempre visible. Cada producto se reordena en tres franjas: nombre/precio, tamaños y cantidad/añadir; controles de al menos 44 px y sin desplazamiento horizontal. La primera compra queda visible en 390×844. En checkout, el resumen pasa a filas apiladas sin perder variante ni edición."
+      },
+      "assets": [],
+      "invariants": [
+        "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+        "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+        "Keep product names, prices and purchase actions legible and associated.",
+        "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+        "Keep payment, cart, stock and checkout behavior platform-owned."
+      ],
+      "tokens": {
+        "background": {
+          "authored": "#f4eddd",
+          "resolved": "#f4eddd",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "foreground": {
+          "authored": "#291325",
+          "resolved": "#291325",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent": {
+          "authored": "#5f214d",
+          "resolved": "#5f214d",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "accent-foreground": {
+          "authored": "#fffaf0",
+          "resolved": "#fffaf0",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "surface": {
+          "authored": "#fbf6e9",
+          "resolved": "#fbf6e9",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "border": {
+          "authored": "#6d315a",
+          "resolved": "#6d315a",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "radius": {
+          "authored": "3px",
+          "resolved": "3px",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "body-font": {
+          "authored": "Bricolage,system-ui,sans-serif",
+          "resolved": "Bricolage,system-ui,sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        },
+        "heading-font": {
+          "authored": "Bricolage,system-ui,sans-serif",
+          "resolved": "Bricolage,system-ui,sans-serif",
+          "source": "authored",
+          "path": "styles.css"
+        }
+      }
+    },
+    "elapsedMs": 136207
+  }
+]

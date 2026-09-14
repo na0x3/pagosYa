@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mesa Clara | Jugo y granola para desayunos en casa</title>
+<meta name="description" content="Elige jugo de naranja con jengibre y granola de la casa en formatos individuales o packs.">
+<link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+<header class="site-header">
+  <div class="header-top"><a class="wordmark" href="index.html" aria-current="page"><span data-store-name>Mesa Clara</span></a><button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span class="cart-count" data-cart-count>0</span></button></div>
+  <nav class="site-nav" aria-label="Navegación principal"><a href="#despensa">Productos</a><a href="#momento-de-mesa">La mesa</a></nav>
+</header>
+<main>
+<section id="despensa" aria-labelledby="despensa-title">
+  <div class="catalog-intro"><p class="eyebrow">Despensa para desayunos</p><h1 id="despensa-title">Dos maneras de poner la mesa.</h1></div>
+  <div data-pagosya-catalog aria-live="polite"></div>
+</section>
+<section id="momento-de-mesa" aria-labelledby="mesa-title">
+  <p class="eyebrow">El momento de mesa</p><h2 id="mesa-title">Jugo para servir.<br>Granola para acompañar.</h2><p>Elige cada producto y su formato por separado, según lo que quieras preparar en casa.</p><a class="text-link" href="#despensa">Volver a los productos <img src="assets/icons/arrow-right.svg" alt=""></a>
+</section>
+</main>
+<footer class="site-footer"><a class="wordmark" href="index.html">Mesa Clara</a><p>Despensa de jugo y granola en formatos individuales y packs.</p><button type="button" class="footer-cart" data-cart-open>Ver mi pedido (<span data-cart-count>0</span>)</button></footer>
+<template data-pagosya-product-template><article class="table-product">
+  <a class="product-media menu-item__details" data-product-link><span data-product-media><img data-product-field="image" alt=""></span></a>
+  <div class="product-copy"><p class="product-kicker">Para tu desayuno</p><a class="product-title-link menu-item__details" data-product-link><h2 data-product-field="name"></h2></a><div class="product-price" data-product-field="price"></div><div class="catalog-options" data-product-field="options"></div><div class="product-actions"><button class="menu-add" type="button" data-product-add>Añadir al pedido</button><a class="details-link menu-item__details" data-product-link>Ver detalle</a></div></div>
+</article></template>
+<div data-pagosya-cart hidden></div><div class="site-status" data-pagosya-status role="status" aria-live="polite"></div><div data-pagosya-contact hidden></div>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body></html>

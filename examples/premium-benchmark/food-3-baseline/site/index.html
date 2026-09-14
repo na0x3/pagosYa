@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mesa Clara | Jugo y granola para el desayuno</title>
+<meta name="description" content="Despensa de Mesa Clara: jugo de naranja con jengibre y granola de la casa en formatos individuales y packs.">
+<link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+<header class="site-header">
+<a class="wordmark" href="index.html" aria-label="Mesa Clara, inicio">Mesa Clara</a>
+<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+<nav id="site-nav" class="site-nav" aria-label="Navegación principal"><a href="#despensa-dos-capitulos">Despensa</a><a href="#formatos-y-recogida">Recogida</a></nav>
+<button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span> (<span data-cart-count>0</span>)</button>
+</header>
+<main>
+<section id="amanecer-editorial" aria-labelledby="titulo-inicio">
+<div class="dawn-photo"><img src="assets/image-f1220ebdbbf1.jpg" alt="Botellas de jugo de naranja y jengibre junto a cítricos sobre una mesa"></div>
+<div class="dawn-copy"><p class="eyebrow">La mesa a primera luz</p><h1 id="titulo-inicio">Desayunos para poner la mesa en claro</h1><a class="primary-link" href="#despensa-dos-capitulos">Ver la despensa <img src="assets/icons/arrow-right.svg" alt=""></a></div>
+</section>
+<section id="despensa-dos-capitulos" aria-labelledby="titulo-despensa">
+<header class="section-heading"><p class="eyebrow">Dos capítulos para elegir</p><h2 id="titulo-despensa">La despensa</h2><p>Jugo y granola en los formatos disponibles para tu mesa.</p></header>
+<div data-pagosya-categories></div><div data-pagosya-catalog></div>
+<template data-pagosya-product-template><article class="pantry-item"><a class="pantry-media menu-item__details" data-product-link><span data-product-media><img data-product-field="image" alt=""></span></a><div class="pantry-copy"><p class="chapter">De la despensa</p><a class="product-name-link" data-product-link><h3 data-product-field="name"></h3></a><p class="product-description" data-product-field="description"></p><div class="card-options" data-product-field="options"></div><div class="pantry-purchase"><strong data-product-field="price"></strong><button type="button" data-product-add><span>Añadir</span><img src="assets/icons/plus.svg" alt=""></button></div><a class="detail-link menu-item__details" data-product-link>Ver producto <img src="assets/icons/arrow-right.svg" alt=""></a></div></article></template>
+</section>
+<section id="formatos-y-recogida" aria-labelledby="titulo-formatos">
+<div><p class="eyebrow">Para elegir con claridad</p><h2 id="titulo-formatos">Formatos y recogida</h2></div>
+<div class="fact"><span>01</span><h3>Jugo</h3><p>330 ml o 750 ml, individual o pack de 3.</p></div>
+<div class="fact"><span>02</span><h3>Granola</h3><p>Original o Cacao, en 250 g y 500 g. Contiene almendras.</p></div>
+<div class="fact"><img src="assets/icons/package.svg" alt=""><h3>Recogida</h3><p>Elige la opción disponible al completar tu pedido.</p></div>
+</section>
+</main>
+<div data-pagosya-status role="status" aria-live="polite"></div><aside data-pagosya-cart aria-label="Mi pedido"></aside><div data-pagosya-contact hidden></div>
+<footer class="site-footer"><a class="wordmark" href="index.html">Mesa Clara</a><p>Jugo y granola para desayunos en casa.</p><button type="button" data-cart-open>Revisar mi pedido (<span data-cart-count>0</span>)</button></footer>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body></html>

@@ -548,6 +548,7 @@ model PaymentIntent {
   invoice              Invoice?
   debtRecords          DebtRecord[]
   storeOrder           StoreOrder?
+  domainOrder          DomainOrder?
 
   @@index([merchantId, createdAt])
   @@index([consumerUserId, createdAt])
@@ -602,7 +603,7 @@ model Store {
   websiteDraft                 Json?
   websiteRevision              Int                              @default(0)
   websitePublishedRevision     Int                              @default(0)
-  merchantId                   String                           @unique
+  merchantId                   String
   merchant                     Merchant                         @relation(fields: [merchantId], references: [id])
   slug                         String                           @unique
   debtPortalSlug               String?                          @unique
@@ -780,8 +781,10 @@ model Store {
   sourceExperiments            StoreSourceExperiment[]
   sourceProject                StoreSourceProject?
   sourceGenerations            StoreSourceGeneration[]
+  sourceDesignJobs             StoreSourceDesignJob[]
   agentThread                  StoreAgentThread?
   customDomains                CustomDomain[]
+  domainOrders                 DomainOrder[]
   leads                        StoreLead[]
   retention StoreRetention?
   comebackCards ComebackCard[]
@@ -810,12 +813,49 @@ model CustomDomain {
   hostname          String             @unique
   status            CustomDomainStatus @default(PENDING)
   verificationToken String             @unique
+  domainOrderId     String?
+  domainOrder       DomainOrder?       @relation(fields: [domainOrderId], references: [id], onDelete: Restrict)
+  hostingId         String?
   verifiedAt        DateTime?
   lastCheckedAt     DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
   @@index([storeId, createdAt])
+  @@index([domainOrderId])
+}
+
+// Financial records survive storefront edits. Hostname claims live in CustomDomain.
+model DomainOrder {
+  id                    String   @id @default(uuid())
+  storeId               String
+  store                 Store    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  hostname              String
+  status                String   @default("QUOTED")
+  sandbox               Boolean
+  providerPriceUsd      Decimal  @db.Decimal(12, 2)
+  amount                Int
+  renewalAmount         Int
+  currency              String   @default("BOB")
+  quoteExpiresAt        DateTime
+  paymentIntentId       String?  @unique
+  paymentIntent         PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+  registrant            Json?
+  acceptedAt            DateTime?
+  registrationStartedAt DateTime?
+  providerOrderId       String?
+  expiresAt             DateTime?
+  contactVerified       Boolean  @default(false)
+  leaseUntil            DateTime?
+  nextAttemptAt         DateTime @default(now())
+  attempts              Int      @default(0)
+  message               String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  domains               CustomDomain[]
+
+  @@index([storeId, createdAt])
+  @@index([status, nextAttemptAt])
 }
 
 // Payment status and fulfillment status are separate. Item snapshots survive
@@ -1072,6 +1112,52 @@ model StoreSourceGeneration {
   createdAt      DateTime @default(now())
   completedAt    DateTime?
   @@index([storeId, createdAt])
+}
+
+// Private, revision-bound design candidates. Never changes publication itself.
+model StoreSourceDesignJob {
+  id                String @id @default(cuid())
+  storeId           String
+  store             Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  requestId         String
+  requestDigest     String
+  activeStoreId     String? @unique
+  revision          Int
+  sourceDigest      String
+  contextDigest     String
+  status            String @default("QUEUED")
+  stage             String @default("CAPTURE_BASELINE")
+  leaseToken        String?
+  leaseUntil        DateTime?
+  availableAt       DateTime @default(now())
+  cancelRequested   Boolean @default(false)
+  maxCredits        Int
+  reservedMicroUsd  Int @default(0)
+  settledMicroUsd   Int @default(0)
+  repairs           Int @default(0)
+  input             Json
+  checkpoints       Json @default("{}")
+  receipts          Json @default("[]")
+  error             String?
+  resultRevision    Int?
+  artifacts         StoreSourceDesignArtifact[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([storeId, requestId])
+  @@index([status, createdAt])
+  @@index([status, availableAt])
+  @@index([storeId, createdAt])
+}
+
+model StoreSourceDesignArtifact {
+  jobId String
+  job StoreSourceDesignJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  key String
+  digest String
+  data Json
+  createdAt DateTime @default(now())
+  @@id([jobId, key])
 }
 
 model StoreSourceProject {

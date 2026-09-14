@@ -14,3 +14,33 @@
 .retention-preview { border: 2px solid currentColor; padding: 20px; margin: 20px 0; background: #fff; }
 .retention-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .retention-dialog { padding: 16px; } .retention-dialog h2 { font-size: 24px; } .retention-nav button { flex: 1; } }
+
+/* Match the merchant workspace while preserving each storefront's card typography. */
+.retention-dialog { font: 14px/1.6 Arial, sans-serif; }
+.retention-dialog :is(button, input, textarea, select) { font-family: inherit; }
+.retention-dialog > header p { color: var(--resource-muted, #61625b); }
+.retention-dialog .retention-eyebrow { font-size: 11px; letter-spacing: 1.5px; }
+.retention-summary { gap: 24px 48px; margin: 16px 0 24px; padding: 20px 0; border-block: 1px solid var(--resource-line, #d8d9ce); }
+.retention-summary > span { display: grid; gap: 2px; color: var(--resource-muted, #61625b); font-size: 12px; }
+.retention-summary strong { font-size: 30px; line-height: 1.2; color: var(--resource-ink, #20211e); }
+.retention-dialog .retention-section { padding: 24px 0; border-color: var(--resource-line, #d8d9ce); }
+.retention-dialog .retention-section p { color: var(--resource-muted, #61625b); }
+.retention-card-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr); gap: 36px; align-items: start; margin-bottom: 28px; }
+.retention-card-layout > .retention-section { border-top: 0; padding-top: 0; }
+.retention-card-preview { min-width: 0; padding: 24px; border: 1px solid var(--resource-line, #d8d9ce); border-radius: 12px; background: var(--resource-soft, #f0f0e7); }
+.retention-preview-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.retention-preview-heading span, .retention-preview-caption { font-size: 12px; color: var(--resource-muted, #61625b); }
+.retention-card-preview .comeback-wrap { width: 100%; margin: 0; }
+.retention-card-preview .comeback-heading, .retention-card-preview .comeback-note { display: none; }
+.retention-card-preview .comeback-card { padding: 24px; }
+.retention-card-preview .comeback-brand strong { font-size: 22px; }
+.retention-card-preview .comeback-stamps { gap: 7px; }
+.retention-card-preview .comeback-stamps li { min-width: 0; }
+.retention-embedded :is(input, textarea, select) { border: 1px solid var(--resource-line, #d8d9ce); border-radius: 6px; background: var(--resource-surface, #fff); color: inherit; }
+.retention-embedded .retention-toggle input { flex: none; accent-color: #857197; }
+.retention-embedded label { font-weight: 500; }
+.retention-embedded :is(.retention-notice, .retention-message, .retention-preview) { background: var(--resource-surface, #fff); border: 1px solid var(--resource-line, #d8d9ce); border-radius: 8px; }
+.retention-embedded .retention-row { border-color: var(--resource-line, #d8d9ce); }
+.retention-embedded .button--publish { background: #f3f36b; color: #20211e; border: 1px solid #20211e; border-radius: 6px; box-shadow: 2px 2px 0 #20211e; }
+@media (max-width: 800px) { .retention-card-layout { grid-template-columns: 1fr; gap: 20px; } .retention-card-preview { max-width: 520px; width: 100%; } }
+@media (max-width: 480px) { .retention-card-preview { padding: 16px; } .retention-card-preview .comeback-card { padding: 18px; } }

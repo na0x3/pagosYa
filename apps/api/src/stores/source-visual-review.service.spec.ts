@@ -57,3 +57,10 @@ it('does not attach a review to a newer revision', async () => {
   await expect(service.review('m', 's', input)).rejects.toThrow('cambió durante');
   expect(prisma.storeAgentMessage.create).not.toHaveBeenCalled();
 });
+it('rejects an empty product review as a catalog input error before capture or a provider call', async () => {
+  const { service, projects } = setup();
+  projects.version.mockResolvedValue({ snapshot: { brief: {}, files: [{ path: 'product.html', content: '<main data-pagosya-product-page></main>', encoding: 'utf8' }] } });
+  const request = jest.spyOn(globalThis, 'fetch');
+  await expect(service.review('m', 's', { ...input, page: 'product.html' })).rejects.toMatchObject({ status: 400 });
+  expect(capture).not.toHaveBeenCalled(); expect(request).not.toHaveBeenCalled();
+});

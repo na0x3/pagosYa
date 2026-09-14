@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand."
+    },
+    {
+      "path": "assets/image-d5b34d383f0c.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand."
+    },
+    {
+      "path": "assets/image-9c4db2099869.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand."
+    },
+    {
+      "path": "assets/image-dbdc2c596f17.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "fonts": "loaded",
+    "scrollWidth": 320,
+    "smallControls": [],
+    "visibleImagesReady": true,
+    "width": 320
+  },
+  {
+    "fonts": "loaded",
+    "scrollWidth": 768,
+    "smallControls": [],
+    "visibleImagesReady": true,
+    "width": 768
+  },
+  {
+    "fonts": "loaded",
+    "scrollWidth": 1280,
+    "smallControls": [],
+    "visibleImagesReady": true,
+    "width": 1280
+  }
+]

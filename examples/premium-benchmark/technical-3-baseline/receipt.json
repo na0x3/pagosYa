@@ -1,0 +1,15 @@
+{
+  "id": "technical-3-baseline",
+  "arm": "baseline",
+  "fixture": "technical",
+  "repeat": 3,
+  "merchantId": "cmu0ez4pa005d4gwzvvo9aabs",
+  "storeId": "cmu0ez4pe005f4gwzvmltissp",
+  "slug": "b2by1sm8",
+  "status": "failed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:57:13.877Z",
+  "assets": [],
+  "elapsedMs": 923,
+  "error": "No se completó la exploración visual. Tu revisión anterior sigue guardada."
+}

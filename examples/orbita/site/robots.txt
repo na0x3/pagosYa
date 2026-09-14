@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /checkout.html
+Disallow: /*?*recover=
+Disallow: /*?*comeback=
+Disallow: /*?*unsubscribe=
+Sitemap: http://localhost:5175/s/dl7xxazz/sitemap.xml

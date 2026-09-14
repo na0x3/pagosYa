@@ -6,6 +6,7 @@ export function requestsImageContent(instruction: string) {
   if (/\b(reference|references|referencia|referencias|inspiration|inspiracion|moodboard)\b/.test(text)
     || /\b(?:don't|do not|dont|no|never|without|sin)\s+(?:use|uses|usar|include|incluyas|show|muestres|add|agregues|anadas)\b/.test(text)) return false;
   return /\b(?:use|include|show|display|add|place|put)\s+(?:all\s+(?:of\s+)?)?(?:these|those|my|the|attached|uploaded)\s+(?:uploaded\s+|attached\s+)?(?:photos|pictures|images)\b/.test(text)
+    || /\b(?:crea\w*|haz|genera\w*|build|create|make)\b.{0,60}\b(?:con|with|using)\s+(?:estas?|mis|las|these|my|the|attached)\s+(?:fotos|imagenes|photos|pictures|images)\b/.test(text)
     || /\b(?:usa|usar|utiliza|incluye|muestra|agrega|anade|pon)\s+(?:todas?\s+)?(?:estas?|esas?|mis|las|los)\s+(?:fotos|imagenes)\b/.test(text);
 }
 

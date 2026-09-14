@@ -1,0 +1,158 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Fraunces variable para titulares cálidos de 72–88 px en escritorio, 48 px en tablet y 38–42 px en móvil; Instrument Sans para navegación, opciones, precios y cuerpo de 16–18 px. Etiquetas en mayúsculas pequeñas con tracking abierto. Marfil, tinta verde oliva y naranja intenso reservado para precio seleccionado, foco y acción principal.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "portada-mesa",
+      "atajo-despensa",
+      "catalogo-capitulos",
+      "detalle-ingredientes",
+      "cierre-claro"
+    ],
+    "catalogSection": "catalogo-capitulos",
+    "mobileRule": "La portada pasa a titular corto seguido de una foto 4:3, sin sacrificar la etiqueta central. El header conserva “Mi pedido (0)” fuera del menú. Cada capítulo apila imagen, nombre, precio, selectores de botones anchos y “Añadir al pedido” de 44 px mínimo. En la página de producto la compra deja de ser lateral y aparece inmediatamente después de la primera imagen; miniaturas pasan a carrusel horizontal accesible. Checkout usa una sola columna y resumen desplegable visible."
+  },
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-06465dbb2877.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7afdd1c26f9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-5d185857f7d9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-ceff3979a97c.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-6039f6dfd423.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f5efdf",
+      "resolved": "#f5efdf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#263721",
+      "resolved": "#263721",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#e85f16",
+      "resolved": "#e85f16",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#a9aa8c",
+      "resolved": "#a9aa8c",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0",
+      "resolved": "0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "'Instrument Sans',sans-serif",
+      "resolved": "'Instrument Sans',sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "'Fraunces',serif",
+      "resolved": "'Fraunces',serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "technical-3-candidate",
+  "arm": "candidate",
+  "fixture": "technical",
+  "repeat": 3,
+  "merchantId": "cmu0ez215005dt6nwulrhd58d",
+  "storeId": "cmu0ez219005ft6nw1qmufsgl",
+  "slug": "7m3l7fxl",
+  "status": "interrupted",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:57:10.417Z",
+  "assets": [],
+  "error": "Stopped after OpenAI reported insufficient balance. No automatic replay."
+}

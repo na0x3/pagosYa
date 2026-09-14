@@ -8,8 +8,8 @@ const key = (value: string) => value.trim().normalize('NFD').replace(/[\u0300-\u
 
 export function normalizeProductVariants(variants: ProductVariantDto[] | undefined, existing: ProductVariant[] | null = null): ProductVariant[] {
   if (!variants?.length) return [];
-  if (variants.length > 64) throw new BadRequestException('Usa hasta 64 combinaciones por producto.');
-  if (variants.length < 2 && !variants[0].options?.length) throw new BadRequestException('Agrega por lo menos 2 opciones o elimina las opciones del producto');
+  if (variants.length > 256) throw new BadRequestException('Usa hasta 256 combinaciones por producto.');
+  if (variants.length < 2 && !(variants[0].options ?? existing?.find(v => v.id === variants[0].id)?.options)?.length) throw new BadRequestException('Agrega por lo menos 2 opciones o elimina las opciones del producto');
   const names = new Set<string>(), ids = new Set<string>(), combinations = new Set<string>();
   let dimensions: string | undefined;
   let dimensionNames: string[] = [];
@@ -20,7 +20,7 @@ export function normalizeProductVariants(variants: ProductVariantDto[] | undefin
     const options = variant.options ?? previous?.options;
     const selected = options?.map(option => ({ name: option.name.trim(), value: option.value.trim() }));
     if (selected?.length) {
-      if (selected.length > 3 || selected.some(option => !option.name || !option.value || option.name.length > 40 || option.value.length > 40)
+      if (selected.length > 6 || selected.some(option => !option.name || !option.value || option.name.length > 40 || option.value.length > 40)
         || new Set(selected.map(option => key(option.name))).size !== selected.length) throw new BadRequestException('Cada combinación necesita grupos únicos y valores completos.');
       const groupKey = JSON.stringify(selected.map(option => key(option.name)));
       if (dimensions === undefined) { dimensions = groupKey; dimensionNames = selected.map(option=>option.name); }
@@ -36,17 +36,20 @@ export function normalizeProductVariants(variants: ProductVariantDto[] | undefin
       combinations.add(combination);
     }
     const name = selected?.length ? selected.map(option => option.value).join(' / ') : variant.name.trim();
-    if (!name || name.length > 140 || names.has(key(name))) throw new BadRequestException(`La opción "${name}" está vacía o repetida`);
+    if (!name || name.length > 260 || names.has(key(name))) throw new BadRequestException(`La opción "${name}" está vacía o repetida`);
     if (!Number.isSafeInteger(variant.amount) || variant.amount < 0 || variant.amount > 2147483647) throw new BadRequestException('Revisa el precio de cada opción.');
     names.add(key(name));
     const id = previous?.id || `var_${variantIdPart()}`;
     if (ids.has(id)) throw new BadRequestException('Una opción aparece más de una vez.');
     ids.add(id);
+    const imageUrl = variant.imageUrl !== undefined ? variant.imageUrl : previous?.imageUrl;
     const result: ProductVariant = { id, name, amount: variant.amount,
       ...(selected?.length ? { options: selected } : {}),
-      ...((variant.imageUrl ?? previous?.imageUrl) ? { imageUrl: variant.imageUrl ?? previous?.imageUrl } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
     };
-    if (existing === null || 'stock' in variant) result.stock = variant.stock ?? null;
+    // DTO instances may contain own fields set to undefined. Only an explicit
+    // number or null changes stock; omitted fields retain current inventory.
+    if (!previous || variant.stock !== undefined) result.stock = variant.stock ?? null;
     else if (previous && 'stock' in previous) result.stock = previous.stock;
     if (result.stock !== undefined && result.stock !== null && (!Number.isInteger(result.stock) || result.stock < 0 || result.stock > 1000000)) throw new BadRequestException('Revisa el stock de cada combinación.');
     return result;

@@ -1,0 +1,67 @@
+{
+  "concepts": [
+    {
+      "name": "Edición de uso diario",
+      "premise": "Una portada-catálogo de densidad editorial: las dos prendas se presentan como una pequeña colección numerada por nombre, no como tarjetas repetidas. A diferencia de los otros conceptos, abre directamente con compra, concentra toda la oferta en una sola vista y usa una jerarquía sans compacta, práctica y urbana.",
+      "opening": "Masthead de tinta con Trama, enlace «Prendas» y «Mi pedido (0)». Debajo, una línea breve de contexto y la primera prenda ya muestra nombre, precio desde Bs 140, selectores Color/Talla y «Añadir al pedido»; el catálogo empieza dentro de los primeros 320 px.",
+      "flow": "La camisa ocupa una franja amplia y la camiseta una franja más compacta, dando jerarquía sin fotografías. Los selectores muestran combinaciones y estados agotados con claridad. La página de producto amplía descripción, variantes y cantidad en una composición de dos columnas; carrito y checkout conservan reglas finas, resumen lateral y botón cobalto. Cierra únicamente con retiro y navegación esencial, sin inventar políticas.",
+      "typography": "Bricolage Grotesque en toda la tienda: logotipo 700, nombres de producto 600 y texto 400. Escala desktop 64/34/18/15 px; móvil 40/27/17/14 px. Cifras y precios grandes, etiquetas pequeñas en mayúsculas con espaciado amplio.",
+      "imagery": "Sin fotografías ni sustitutos figurativos. La identidad se construye con papel cálido, tinta casi negra, reglas de imprenta, grandes campos tipográficos y el azul cobalto reservado para selección y compra. Los círculos de color aparecen solo como controles reales de variante.",
+      "mobile": "Masthead de dos líneas con «Mi pedido (0)» siempre visible. Cada producto se convierte en una ficha vertical sin columna de imagen; nombre, precio, opciones y botón permanecen juntos. Selectores de 44 px, acciones a ancho completo y reglas que preservan el ritmo editorial a 320 px.",
+      "layout": {
+        "sections": [
+          "catalogo-editorial",
+          "nota-retiro"
+        ],
+        "catalogSection": "catalogo-editorial",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Trama en gran formato",
+      "premise": "Una experiencia tipográfica espaciosa que presenta primero el carácter de la marca y luego una pasarela textual de dos prendas. Se diferencia del catálogo inmediato por su introducción autónoma, su ritmo pausado y una mezcla serif/sans; la compra llega después de una portada memorable, no en el primer pantallazo.",
+      "opening": "Una portada de papel casi vacío con «TRAMA» ocupando el ancho, cortado en tres líneas editoriales: «Prendas / cotidianas / con colores y tallas». Una regla cobalto conduce al enlace «Ver las dos prendas». No se simulan siluetas ni fotografías.",
+      "flow": "Tras la portada, un índice de colección enlaza a cada producto. La camisa aparece como composición asimétrica con descripción y matriz Color × Talla; la camiseta invierte la alineación y usa tallas en una fila contundente. En producto, el título domina arriba y las opciones quedan en una banda fija dentro del flujo. Carrito y checkout reducen la escala, usando tablas limpias y un resumen cobalto sobrio.",
+      "typography": "Instrument Serif para el nombre de marca y titulares; Instrument Sans para navegación, variantes, precios y compra. Escala desktop 112/58/22/16 px; móvil 58/38/19/15 px. Titulares con interlineado cerrado y letter-spacing de -0.035em; controles nítidos y neutrales.",
+      "imagery": "La palabra y el espacio son el contenido visual. Fondo marfil, tinta azul-negra y una sola línea cobalto que cambia de posición entre secciones. No hay marcos de imagen, ilustraciones de prendas ni muestras decorativas que puedan confundirse con el producto.",
+      "mobile": "La portada conserva el salto deliberado de tres líneas y termina antes de desbordar a 320 px. Navegación compacta con «Mi pedido (0)» fuera del menú. El índice pasa a una columna; matrices de variantes se vuelven grupos apilados y el bloque de compra queda inmediatamente después de las opciones.",
+      "layout": {
+        "sections": [
+          "portada-tipografica",
+          "indice-coleccion",
+          "catalogo-pasarela",
+          "cierre-trama"
+        ],
+        "catalogSection": "catalogo-pasarela",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Archivo de prendas",
+      "premise": "La tienda funciona como un archivo de especificaciones contemporáneo: cada prenda tiene una ficha legible, con materiales, disponibilidad y variantes como protagonistas. Frente a la portada espaciosa y al catálogo editorial, este concepto usa una apertura dividida, mayor densidad informativa y tipografía condensada de etiqueta técnica.",
+      "opening": "A la izquierda, el nombre Trama y la frase «Dos prendas para todos los días»; a la derecha, un índice real con «Camisa 01» y «Camiseta 02», precios iniciales y enlaces ancla. Una banda cobalto inferior marca «Colección actual · 2 prendas» sin convertir la introducción en catálogo falso.",
+      "flow": "Una sección breve explica únicamente los hechos disponibles: algodón, cuello clásico, manga larga, colores y tallas de la camisa; cuello redondo y tallas de la camiseta. Después, el catálogo presenta cada producto como expediente horizontal: identidad y descripción, selector central y compra al extremo. La página de producto adopta una tabla de variantes; carrito y checkout parecen hojas de pedido ordenadas, con total y retiro claramente jerarquizados.",
+      "typography": "Oswald para marca, índices y títulos; Instrument Sans para descripciones, selectores y checkout. Escala desktop 86/46/20/15 px; móvil 50/34/18/14 px. Numeración condensada, etiquetas alineadas y precios en sans para máxima lectura.",
+      "imagery": "Sistema puramente tipográfico con cuadrícula visible, filetes negros, papel gris muy claro y pestañas cobalto. Las únicas marcas cromáticas asociadas al producto son controles auténticos de Color; no se crean dibujos, fotografías ni iconos de prendas.",
+      "mobile": "La apertura dividida se reordena como cabecera, índice compacto y banda cobalto. «Mi pedido (0)» permanece visible junto al botón de menú. Los expedientes dejan la retícula horizontal para agrupar nombre, datos, variantes, precio y acción en ese orden; tablas anchas se convierten en filas etiquetadas sin desplazamiento lateral.",
+      "layout": {
+        "sections": [
+          "indice-archivo",
+          "datos-coleccion",
+          "catalogo-expedientes",
+          "banda-final"
+        ],
+        "catalogSection": "catalogo-expedientes",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "Es la opción más adecuada para un catálogo real de solo dos productos y una acción principal explícita de elegir variantes y añadir. Hace visible de inmediato la camisa desde Bs 140 con sus dos colores y tres tallas, mantiene la camiseta desde Bs 85 cercana, y no depende de fotografías porque no se suministró ninguna. El papel, la tinta y el acento cobalto responden directamente a la dirección de‌"
+  }
+}

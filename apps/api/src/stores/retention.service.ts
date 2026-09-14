@@ -1,3 +1,4 @@
+import { workspaceMail, workspaceSender, renderEmailText } from './email-workspace.config';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
@@ -58,7 +59,7 @@ export class RetentionService {
         const prior = await this.settings(storeId, tx);
         if (prior.revision && prior.timezone !== dto.timezone) throw new BadRequestException('La zona horaria de las compras queda fijada al crear el programa.');
         if (!revision) return tx.storeRetention.create({ data: { storeId, settings } });
-        const result = await tx.storeRetention.updateMany({ where: { storeId, revision }, data: { settings, revision: { increment: 1 } } });
+        const result = await tx.storeRetention.updateMany({ where: { storeId, revision }, data: { settings: { ...settings, ...((prior as any).emailWorkspace ? { emailWorkspace: (prior as any).emailWorkspace } : {}) }, revision: { increment: 1 } } });
         if (!result.count) throw new ConflictException('La configuración cambió. Vuelve a abrir esta sección.');
         return { saved: true };
       });
@@ -322,9 +323,16 @@ export class RetentionService {
           const order = await this.prisma.storeOrder.findUnique({ where: { id: row.sourceId || '' }, select: { status: true, paymentIntent: { select: { status: true, livemode: true } } } });
           allowed = allowed && settings.reviewRequestsEnabled && order?.status === 'DELIVERED' && order.paymentIntent.status === 'SUCCEEDED' && order.paymentIntent.livemode;
         }
+        const mail = workspaceMail(settings);
+        // A receipt already queued at payment time remains due even if its template is later disabled.
+        if (row.kind.startsWith('WORKSPACE_') && row.kind !== 'WORKSPACE_ORDER_CONFIRMATION') allowed = allowed && Boolean(mail.templates[row.kind.slice(10)]?.enabled);
+        if (row.kind.startsWith('STAFF_')) allowed = allowed && mail.staff.enabled && mail.staff.recipients.some(recipient => recipient.email === row.email && recipient.events.includes(row.kind.slice(6)));
         if (!allowed) { await this.prisma.storeEmailDelivery.update({ where: { id: row.id }, data: { status: 'CANCELED' } }); continue; }
-        const unsubscribe = row.kind !== 'CARD' && subscriber ? `\n\nDejar de recibir correos de esta tienda:\n${this.link(row.store.slug, 'unsubscribe', subscriber.unsubscribeToken)}` : '';
-        await this.email.send({ to: row.email, subject: row.subject, body: row.body + unsubscribe, replyTo: row.store.contactEmail || undefined, failLoudly: true, idempotencyKey: `retention/${row.id}` });
+        const unsubscribe = ['CAMPAIGN','WELCOME','RECOVERY','REVIEW_REQUEST'].includes(row.kind) && subscriber ? `\n\nDejar de recibir correos de esta tienda:\n${this.link(row.store.slug, 'unsubscribe', subscriber.unsubscribeToken)}` : '';
+        const configured = ['RECOVERY','REVIEW_REQUEST'].includes(row.kind) ? mail.templates[row.kind] : undefined;
+        const subject = configured ? renderEmailText(configured.subject, {store:row.store.name}) : row.subject;
+        const body = configured ? renderEmailText(configured.body, {store:row.store.name}) + '\n\n' + row.body : row.body;
+        await this.email.send({ from: workspaceSender(settings), to: row.email, subject, body: body + unsubscribe, replyTo: row.store.contactEmail || undefined, failLoudly: true, idempotencyKey: `retention/${row.id}` });
         await this.prisma.$transaction(async tx => {
           await tx.storeEmailDelivery.update({ where: { id: row.id }, data: { status: 'SENT', sentAt: new Date(), lastError: null } });
           if (row.kind === 'RECOVERY') await tx.storeSavedCart.update({ where: { id: row.sourceId! }, data: { sentAt: new Date() } });

@@ -1,0 +1,114 @@
+{
+  "method": "pagosYa REST source-project AI messages API",
+  "model": "gpt-5.6-sol",
+  "storefrontHandAuthored": false,
+  "revisions": [
+    {
+      "revision": 1,
+      "label": "ÓRBITA — Manual de Campo 001",
+      "generation": {
+        "id": "cmu1uifdd004zwh56wmkmvb7w",
+        "requestedModel": "gpt-5.6-sol",
+        "model": "gpt-5.6-sol",
+        "credits": 68,
+        "maxCredits": 500,
+        "attempts": [
+          {
+            "model": "gpt-5.6-sol",
+            "phase": "design",
+            "durationMs": 63280,
+            "status": "COMPLETED",
+            "usage": {
+              "inputTokens": 52666,
+              "cachedInputTokens": 0,
+              "outputTokens": 2313,
+              "providerMicroUsd": 309587,
+              "cacheWriteTokens": 52663
+            },
+            "reasoningEffort": "low",
+            "selectedIndex": 0,
+            "selectionSource": "planner"
+          },
+          {
+            "model": "gpt-5.6-sol",
+            "phase": "source",
+            "durationMs": 122129,
+            "status": "COMPLETED",
+            "usage": {
+              "inputTokens": 60223,
+              "cachedInputTokens": 7991,
+              "outputTokens": 7426,
+              "providerMicroUsd": 360645
+            },
+            "reasoningEffort": "medium",
+            "reasoningTokens": 630,
+            "responseStatus": "completed"
+          }
+        ],
+        "durationMs": 186132,
+        "status": "COMPLETED"
+      }
+    },
+    {
+      "revision": 2,
+      "label": "Refinar ÓRBITA tras revisión visual",
+      "generation": {
+        "id": "cmu1uqyx1005fwh56fnw4upn3",
+        "requestedModel": "gpt-5.6-sol",
+        "model": "gpt-5.6-sol",
+        "credits": 35,
+        "maxCredits": 500,
+        "attempts": [
+          {
+            "model": "gpt-5.6-sol",
+            "phase": "source",
+            "durationMs": 47616,
+            "status": "COMPLETED",
+            "usage": {
+              "inputTokens": 71319,
+              "cachedInputTokens": 0,
+              "outputTokens": 2673,
+              "providerMicroUsd": 346147,
+              "cacheWriteTokens": 7411
+            },
+            "reasoningEffort": "medium",
+            "reasoningTokens": 1180,
+            "responseStatus": "completed"
+          }
+        ],
+        "durationMs": 48314,
+        "status": "COMPLETED"
+      }
+    },
+    {
+      "revision": 3,
+      "label": "Pulido CSS final para catálogo, checkout y líneas de pedido de ÓRBITA",
+      "generation": {
+        "id": "cmu1uvelf005twh56atjxs0oi",
+        "requestedModel": "gpt-5.6-sol",
+        "model": "gpt-5.6-sol",
+        "credits": 33,
+        "maxCredits": 500,
+        "attempts": [
+          {
+            "model": "gpt-5.6-sol",
+            "phase": "source",
+            "durationMs": 54667,
+            "status": "COMPLETED",
+            "usage": {
+              "inputTokens": 71948,
+              "cachedInputTokens": 7411,
+              "outputTokens": 3361,
+              "providerMicroUsd": 328333
+            },
+            "reasoningEffort": "medium",
+            "reasoningTokens": 1330,
+            "responseStatus": "completed"
+          }
+        ],
+        "durationMs": 55443,
+        "status": "COMPLETED"
+      }
+    }
+  ]
+}

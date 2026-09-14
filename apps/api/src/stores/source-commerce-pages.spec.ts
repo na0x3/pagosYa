@@ -78,7 +78,9 @@ describe('Inline storefront product options', () => {
     if (!fullPage) click('.menu-add');
     expect(query('[data-pagosya-product]').querySelectorAll('fieldset legend').length).toBe(2);
     expect(query('[data-variant-add]').disabled).toBe(true);
+    expect(query('.product-detail__swatch').style.getPropertyValue('--swatch')).toBe('#b5443f');
     choose(0, 'Rojo');
+    expect(query('[data-product-selection="0"]').textContent).toBe('Rojo');
     expect(choose(1, 'M').disabled).toBe(true);
     choose(1, 'S');
     expect(query('[data-variant-add]').disabled).toBe(false);
@@ -93,6 +95,45 @@ describe('Inline storefront product options', () => {
     expect(query('[data-product-image="1"]').getAttribute('aria-pressed')).toBe('true');
     click('[data-product-prev]');
     expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+  });
+
+  it('previews an unambiguous color photo before size selection without enabling purchase', async () => {
+    const { query, choose } = await shop({ fullPage: true });
+    choose(0, 'Azul');
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
+    expect(query('[data-variant-add]').disabled).toBe(true);
+    expect(query('[data-product-selection="1"]').textContent).toBe('');
+  });
+
+  it.each([undefined, 'https://shop.test/different.jpg'])('does not imply a specific photo when compatible sizes disagree (%s)', async otherImage => {
+    const p = product();
+    p.variants.push({ ...variant('blue-s', 'Azul', 'S'), imageUrl: otherImage } as any);
+    const { query, choose } = await shop({ fullPage: true, items: [p] });
+    choose(0, 'Azul');
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+    choose(1, 'M');
+    expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
+  });
+
+  it('shows the merchant description once, omits single-photo navigation and never invents delivery details', async () => {
+    const description = 'Una camisa de algodón con botones de madera.';
+    const { query, w } = await shop({ fullPage: true, items: [{ ...product(), variants: [], description, tags: ['Algodón', 'Algodón', '<strong>Madera</strong>'] }] });
+    expect(w.document.querySelector('[data-pagosya-product]').textContent.split(description)).toHaveLength(2);
+    expect(query('.product-detail__navigation').hidden).toBe(true);
+    expect(query('[data-product-tab="delivery"]')).toBeNull();
+    expect(query('.product-detail__facts').children).toHaveLength(2);
+    expect(query('.product-detail__facts strong')).toBeNull();
+    expect(query('.product-detail__facts').textContent).toContain('<strong>Madera</strong>');
+  });
+
+  it('keeps delivery tabs and keyboard navigation usable after removing duplicate description', async () => {
+    const { query, click, w } = await shop({ fullPage: true, items: [{ ...product(), tags: ['Algodón'] }], settings: { shippingPickupEnabled: true } });
+    click('[data-product-delivery]');
+    expect(query('[data-product-tab="delivery"]').getAttribute('aria-selected')).toBe('true');
+    expect(query('#product-delivery-panel').hidden).toBe(false);
+    query('[data-product-tab="delivery"]').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(query('[data-product-tab="description"]').getAttribute('aria-selected')).toBe('true');
+    expect(query('#product-delivery-panel').hidden).toBe(true);
   });
 
   it('keeps different variants as distinct priced cart lines and enforces hidden stock and shared product limits', async () => {
@@ -138,6 +179,20 @@ describe('Inline storefront product options', () => {
     expect(calls.some(([action]: any[]) => action === 'checkout')).toBe(true);
     for (const [, payload] of calls) expect(payload.items).toEqual([{ paymentLinkId: 'shirt', variantId: 'blue-m', quantity: 1 }]);
     expect(w.fetch).not.toHaveBeenCalled();
+  });
+
+  it('shows a failed payment next to its action and allows a retry without losing the variant', async () => {
+    const { w, click, choose, query, serialize } = await shop({ mode: 'hosted' });
+    w.PAGOSYA_HOSTED_REQUEST.mockResolvedValue({ ok: false, body: { message: 'No se pudo conectar. Vuelve a intentarlo.' } });
+    click('.menu-add'); choose(0, 'Azul'); choose(1, 'M'); click('[data-variant-add]');
+    click('[data-product-close]'); click('[data-checkout]'); click('[data-pay]');
+    await new Promise(resolve => setImmediate(resolve));
+    const feedback = query('.checkout-review__fields [data-pagosya-checkout-status]');
+    expect(feedback.hidden).toBe(false);
+    expect(feedback.textContent).toContain('No se pudo conectar');
+    expect(query('[data-pay]').disabled).toBe(false);
+    expect(query('[data-pay]').hasAttribute('aria-busy')).toBe(false);
+    expect(serialize()).toEqual([{ id: 'shirt', variantId: 'blue-m', quantity: 1 }]);
   });
 
   it('restores legacy simple lines and variants, rejecting invalid selections and clamping aggregate stock', async () => {
@@ -216,9 +271,10 @@ describe('Inline storefront product options', () => {
   it('keeps focus on option controls and does not hijack their arrow keys for gallery navigation', async () => {
     const { query, click, choose, w } = await shop();
     click('.menu-add'); const button = choose(0, 'Azul'); button.focus();
+    const photoBeforeArrow = query('.product-detail__photo').src;
     button.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(w.document.activeElement).toBe(button);
-    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+    expect(query('.product-detail__photo').src).toBe(photoBeforeArrow);
     choose(1, 'M'); expect(query('[data-variant-add]').disabled).toBe(false);
   });
 
@@ -230,9 +286,40 @@ describe('Inline storefront product options', () => {
     click('.merchant-buy'); expect(query('[data-variant-add]')).not.toBeNull();
   });
 
+  it('adds the selected quantity, clamps it to variant stock and leaves cart increments at one', async () => {
+    const { query, click, choose, serialize } = await shop({ fullPage: true });
+    expect(query('[data-product-quantity="1"]').disabled).toBe(true);
+    choose(0, 'Rojo'); choose(1, 'S');
+    click('[data-product-quantity="1"]');
+    expect(query('[data-product-quantity-value]').textContent).toBe('2');
+    expect(query('[data-product-subtotal]').textContent).toMatch(/50[,.]00/);
+    expect(query('[data-product-quantity="1"]').disabled).toBe(true);
+    click('[data-variant-add]');
+    expect(serialize()).toEqual([{ id: 'shirt', variantId: 'red-s', quantity: 2 }]);
+    expect(query('[data-variant-add]').disabled).toBe(true);
+    click('.order-items [data-remove]');
+    click('.order-items [data-add]');
+    expect(serialize()[0].quantity).toBe(2);
+    choose(0, 'Azul'); choose(1, 'M');
+    expect(query('[data-product-quantity-value]').textContent).toBe('1');
+  });
+
+  it('updates simple-product quantity and shows only active discounts', async () => {
+    const { query, click, serialize } = await shop({ fullPage: true, items: [{ ...product(), variants: [], stock: 3, discountPercent: 10 }] });
+    expect(query('.product-detail__original').textContent).toMatch(/20[,.]00/);
+    expect(query('.product-detail__price').textContent).toMatch(/18[,.]00/);
+    click('[data-product-quantity="1"]'); click('[data-product-quantity="1"]');
+    expect(query('[data-product-subtotal]').textContent).toMatch(/54[,.]00/);
+    click('.product-detail__buy');
+    expect(serialize()).toEqual([{ id: 'shirt', quantity: 3 }]);
+    expect(query('[data-product-quantity="1"]').disabled).toBe(true);
+    const expired = await shop({ fullPage: true, items: [{ ...product(), variants: [], discountPercent: 10, discountEndsAt: '2000-01-01' }] });
+    expect(expired.query('.product-detail__saving')).toBeNull();
+  });
+
   it('supports legacy named variants and image-only variants without product photos', async () => {
     const { query, click, choose } = await shop({ items: [{ ...product(), imageUrls: [], variants: [{ id: 'large', name: 'Grande', amount: 5000, imageUrl: 'https://shop.test/large.jpg' }] }] });
-    click('.menu-add'); expect(query('legend').textContent).toBe('Opción'); choose(0, 'Grande');
+    click('.menu-add'); expect(query('legend').textContent).toContain('Opción'); choose(0, 'Grande');
     expect(query('[data-variant-add]').disabled).toBe(false);
     expect(query('.product-detail__photo').src).toBe('https://shop.test/large.jpg');
   });

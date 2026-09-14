@@ -29,7 +29,7 @@ export class ResendEmailProvider implements EmailProvider {
   async send(req: SendEmailRequest): Promise<void> {
     this.resend ??= new Resend(this.apiKey);
     const { error } = await this.resend.emails.send({
-      from: this.fromAddress,
+      from: req.from || this.fromAddress,
       to: req.to,
       subject: req.subject,
       text: req.body,

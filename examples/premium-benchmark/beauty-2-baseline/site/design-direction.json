@@ -1,0 +1,67 @@
+{
+  "concepts": [
+    {
+      "name": "El tocador esencial",
+      "premise": "Una tienda catálogo primero, compacta y serena, donde los dos productos aparecen como una única mesa de elección. Se diferencia de las otras propuestas por abrir directamente con compra, usar filas editoriales en vez de tarjetas y concentrar la historia en microcopy funcional.",
+      "opening": "Masthead claro con Bruma, enlaces a Productos y Recogida, y “Mi pedido (0)” siempre visible. Debajo, una franja breve con el lema comparte los primeros 320 px con el inicio del catálogo. Crema de manos y Jabón líquido muestran nombre, descripción, precio inicial, selector de volumen y “Añadir” sin desplazamiento en escritorio y móvil.",
+      "flow": "Catálogo completo → nota breve sobre elección de formatos para casa y viaje → explicación concisa de recogida durante el checkout. Cada ficha de producto amplía la selección de volumen, mantiene precio y acción juntos y evita contenido no confirmado. Carrito y checkout reproducen las filas, con resumen de volumen, cantidad, subtotal y recogida.",
+      "typography": "Instrument Sans en toda la experiencia: wordmark de peso 600 con espaciado amplio; nombres de producto grandes y sobrios; precios con cifras tabulares; cuerpo de 16–18 px. En móvil, Bruma 26 px, productos 30 px y controles 16 px. Ciruela para títulos, lavanda para divisores y marfil frío de fondo.",
+      "imagery": "Sin fotografías, ilustraciones ni falsos envases. La identidad surge de grandes campos tipográficos, filetes finos lavanda, números de volumen sobredimensionados como información real y pequeños puntos tipográficos que separan variantes.",
+      "mobile": "Header de dos líneas muy compacto: Bruma arriba y “Mi pedido (0)” visible a la derecha; navegación secundaria accesible mediante menú. Cada producto se convierte en un bloque vertical con selector segmentado 30/60 ml o 250/500 ml, precio dinámico y botón de 44 px. Sin columnas vacías ni desplazamiento horizontal.",
+      "layout": {
+        "sections": [
+          "catalogo-esencial",
+          "nota-formatos",
+          "recogida"
+        ],
+        "catalogSection": "catalogo-esencial",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Bruma en dos medidas",
+      "premise": "Una portada tipográfica espaciosa que convierte la elección de volumen en el argumento visual antes de presentar productos. A diferencia del catálogo inmediato, separa identidad y compra; frente al tercer concepto, emplea una secuencia vertical pausada, serif expresiva y fichas individuales de producto.",
+      "opening": "Una portada marfil con el wordmark Bruma en gran escala, el lema en una columna estrecha y las parejas “30 / 60” y “250 / 500” compuestas como datos editoriales, claramente rotuladas en ml. Un enlace “Ver productos” conduce al catálogo; “Mi pedido (0)” permanece en el masthead.",
+      "flow": "Portada tipográfica → catálogo de dos fichas amplias → bloque comparativo de volúmenes disponibles → cierre de recogida. La página de producto conserva mucho aire, sitúa descripción y etiqueta “Sin perfume” solo en Crema de manos, y reúne variante, precio, cantidad y añadir en un panel estable. Checkout más compacto, con resumen editorial y acción de pago dominante.",
+      "typography": "Fraunces para Bruma y titulares, con Instrument Sans para navegación, opciones y compra. Wordmark fluido de 88–150 px en escritorio; titulares de producto de 48 px; móvil con wordmark de 58 px y títulos de 34 px. Contraste de ciruela profunda, lavanda empolvada y fondo hueso.",
+      "imagery": "Composición exclusivamente tipográfica. Los volúmenes reales funcionan como protagonistas gráficos, sin siluetas de envases ni imágenes simuladas. Líneas verticales y amplios márgenes aportan ritmo; las superficies de compra permanecen claras y sin decoración superflua.",
+      "mobile": "La portada reduce su altura para mostrar el enlace al catálogo dentro de la primera pantalla, pero los productos quedan después del bloque introductorio. Wordmark y cifras se reordenan sin solaparse. Header fijo y delgado con Bruma, menú y “Mi pedido (0)” visible; selectores y botón ocupan el ancho disponible a 320 px.",
+      "layout": {
+        "sections": [
+          "portada-medidas",
+          "catalogo-pausado",
+          "guia-volumen",
+          "cierre-recogida"
+        ],
+        "catalogSection": "catalogo-pausado",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Díptico cotidiano",
+      "premise": "Una interfaz de comparación de alta utilidad: los dos productos forman un díptico asimétrico y el comprador decide primero qué cuidado necesita y después el volumen. Se distingue por su apertura dividida, mayor densidad informativa, tipografía condensada y un recorrido comparativo en lugar de narrativo.",
+      "opening": "Tras un masthead ciruela con wordmark claro y “Mi pedido (0)”, el catálogo comienza de inmediato en dos columnas desiguales: Crema de manos ocupa una columna algo mayor y Jabón líquido la segunda. Cada lado incluye descripción, precio inicial, variantes y añadir. Una línea superior discreta identifica “Casa / viaje” como contexto de elección, no como beneficio.",
+      "flow": "Díptico comprable → tabla tipográfica de productos y volúmenes → banda final de recogida. En producto, una columna lateral enumera únicamente nombre, descripción y etiquetas confirmadas; la columna principal contiene opciones y compra. Carrito y checkout usan una retícula de recibo, con partidas separadas por reglas y resumen siempre legible.",
+      "typography": "Oswald para wordmark, rótulos y cifras de volumen; Instrument Sans para textos, selectores y acciones. Titulares estrechos de 54 px y volúmenes de 72 px en escritorio; 38 px y 48 px en móvil. Fondo lavanda muy pálido, bloques marfil, texto ciruela y acentos lavanda saturada solo en estados seleccionados.",
+      "imagery": "No utiliza imágenes. La identidad se construye con retícula, reglas de distinto grosor, alineaciones desplazadas y cifras reales. No hay iconografía decorativa; únicamente iconos Lucide locales y semánticos para menú, carrito, cantidades y navegación.",
+      "mobile": "El díptico se transforma en una secuencia compacta: cada producto presenta nombre, precio y selector antes de cualquier texto secundario, manteniendo ambos productos en la primera pantalla con sus acciones. El encabezado conserva “Mi pedido (0)” fuera del menú. La tabla comparativa pasa a filas apiladas con etiquetas explícitas.",
+      "layout": {
+        "sections": [
+          "catalogo-diptico",
+          "comparador-volumen",
+          "franja-recogida"
+        ],
+        "catalogSection": "catalogo-diptico",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“El tocador esencial” encaja mejor con un catálogo real de solo dos productos, ambos sin fotografías y con dos variantes de volumen. Prioriza la acción solicitada —elegir producto y añadir— desde la primera pantalla, comunica con claridad los precios desde Bs 45 y Bs 38, y aprovecha la paleta pedida de lavanda, ciruela y fondo claro sin inventar envases, beneficios ni contenido adicional."
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Producto — Bruma</title>
+  <meta name="description" content="Consulta el producto, elige su volumen y añádelo a tu pedido Bruma.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="product-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html">Bruma</a>
+      <button class="cart-control" type="button" data-cart-open aria-label="Abrir mi pedido"><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido · <span data-cart-count>0</span></span></button>
+    </div>
+    <div class="header-secondary">
+      <p>Cuidado cosmético diario en varios volúmenes</p>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt=""><span>Menú</span></button>
+      <nav id="site-nav" class="site-nav" aria-label="Navegación principal">
+        <a href="index.html#catalogo-carta" aria-current="page">Productos</a>
+        <a href="index.html#recogida-breve">Recogida</a>
+      </nav>
+    </div>
+  </header>
+  <main class="product-main">
+    <a class="back-link" href="index.html#catalogo-carta"><img src="assets/icons/arrow-left.svg" alt=""> Volver a productos</a>
+    <div data-pagosya-product-page></div>
+  </main>
+  <footer class="site-footer"><a class="footer-mark" href="index.html">Bruma</a><p>Cuidado cosmético diario.</p></footer>
+  <div data-pagosya-cart hidden></div>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-contact hidden></div>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+{
+  "concepts": [
+    {
+      "name": "Mesa de selección SAVIA",
+      "premise": "Una tienda-producto: la única Botella Ritual se presenta como un objeto configurable, no como una tarjeta de catálogo. Abre con una mesa de compra dividida —galería generosa a la izquierda y controles precisos a la derecha— y se diferencia de los otros conceptos por permitir comprar de inmediato, mantener alta densidad funcional y hacer que la fotografía cambie con el color elegido.",
+      "opening": "Tras un masthead corto de “Forma · Pilot 2”, la galería muestra la botella seleccionada mientras el panel contiguo reúne Botella Ritual, precio desde Bs 89, color, capacidad, cantidad y “Añadir al pedido”. En escritorio todo queda sobre el pliegue; en móvil aparece primero una imagen cuadrada compacta y enseguida nombre, precio y controles, conservando visible la compra a 390×844.",
+      "flow": "Selección y compra → breve descripción y materiales confirmados → franja visual con los tres colores. La página de producto amplía la misma mesa con miniaturas, selector Salvia/Coral/Marfil, 500/750 ml, cantidad y precio reactivo. Carrito y checkout reutilizan filas limpias, swatch de variante, resumen compacto y énfasis en retiro, sin promesas adicionales.",
+      "typography": "Instrument Sans variable en toda la interfaz: nombre del producto 48/52 px en escritorio y 32/35 px en móvil; precio 24/28; cuerpo 16/24; etiquetas y navegación 12/16 en mayúsculas con tracking moderado. Números tabulares para precios y cantidades. Jerarquía técnica y legible, sin serif ornamental.",
+      "imagery": "La galería usa assets/image-d5b34d383f0c.jpg para Salvia, assets/image-9c4db2099869.jpg para Coral y assets/image-dbdc2c596f17.jpg para Marfil, con crop 1:1, botella completa centrada y suficiente suelo visible; assets/image-c9f5308636b1.jpg funciona como cierre panorámico con las tres botellas y foco central. Nunca se recorta ni altera la marca SAVIA impresa.",
+      "mobile": "Header de una línea con nombre abreviado visualmente pero accesible, enlace “Inicio” y botón persistente “Mi pedido · 0”. La galería usa una imagen principal y miniaturas de 52 px; swatches con nombre textual, capacidades segmentadas y stepper de 44 px. El panel deja de ser sticky y sigue el orden natural. Sin movimiento continuo; solo transición sutil al cambiar variante y alternativa instantánea con reduced-motion.",
+      "layout": {
+        "sections": [
+          "product-studio",
+          "material-note",
+          "color-lineup"
+        ],
+        "catalogSection": "product-studio",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Tres tonos, un ritual",
+      "premise": "Una apertura editorial basada en la fotografía de grupo convierte Salvia, Coral y Marfil en el lenguaje visual de la marca antes de vender. Frente a la mesa funcional del primer concepto, usa una introducción independiente, más espaciosa y narrativa; frente al tercero, evita la estructura de ficha técnica y privilegia una secuencia fotográfica vertical.",
+      "opening": "La foto assets/image-c9f5308636b1.jpg ocupa una composición casi a pantalla completa, con “Botella Ritual” y “Tres tonos para todos los días” en un bloque marfil superpuesto fuera de las botellas. Un enlace “Elegir la mía” baja al configurador; el producto no se promete completo sobre el primer pliegue.",
+      "flow": "Imagen-manifiesto → configurador horizontal de un solo producto → tríptico cromático → descripción breve. En producto, la galería es protagonista y los controles viven en una banda inferior sticky solo en escritorio. Carrito y checkout abandonan la escala fotográfica, pero conservan márgenes amplios, líneas finas y pequeños acentos del color elegido.",
+      "typography": "Fraunces variable para titulares suaves y amplios —72/72 px en escritorio, 43/44 px en móvil— e Instrument Sans para navegación, opciones y compra. El nombre SAVIA visible en las fotos actúa como detalle gráfico; Forma · Pilot 2 permanece como denominación sobria del storefront.",
+      "imagery": "assets/image-c9f5308636b1.jpg abre a ancho completo con crop 4:3, preservando las tres botellas y la vegetación inferior izquierda. El tríptico usa assets/image-d5b34d383f0c.jpg, assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg con crops verticales consistentes y foco en tapa, silueta y palabra SAVIA. Los controles cambian la imagen principal sin recolorear fotografías.",
+      "mobile": "La imagen inicial se vuelve 4:5 y mantiene visibles las tres botellas; el bloque tipográfico pasa debajo para no tapar la marca impresa. “Mi pedido · 0” continúa visible en el header. El configurador apila imagen, nombre/precio, swatches, capacidad, cantidad y compra; no hay carrusel obligatorio ni gestos ocultos.",
+      "layout": {
+        "sections": [
+          "ritual-intro",
+          "ritual-catalog",
+          "three-finishes",
+          "daily-object"
+        ],
+        "catalogSection": "ritual-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Ficha 01 · Botella Ritual",
+      "premise": "Un sistema de catálogo industrial premium trata la botella como una pieza bien resuelta: retícula, reglas, códigos de color y datos reales. Se diferencia del concepto editorial por su apertura compacta y tipografía condensada; frente a la mesa de selección, separa la vista general del catálogo y una ficha comparativa de variantes, con más ritmo informativo y menos superficie fotográfica por bloque.",
+      "opening": "Masthead mínimo seguido inmediatamente por una franja de catálogo: “Ficha 01”, Botella Ritual, desde Bs 89, selector rápido de color, capacidad y añadir. A la derecha aparece la fotografía Salvia como recorte cuadrado. El catálogo comienza dentro de los primeros 320 px y nombre, precio y compra quedan visibles tanto en escritorio como en móvil.",
+      "flow": "Compra rápida → matriz comparativa de 500 ml/Bs 89 y 750 ml/Bs 109 → galería de acabados → nota de objeto cotidiano. La página de producto desarrolla una retícula 7/5 con galería, descripción única y controles agrupados. Carrito y checkout parecen hojas de pedido refinadas: divisores, cantidades alineadas, variante escrita y total dominante.",
+      "typography": "Oswald variable para encabezados condensados y numeración funcional —64/66 px escritorio, 40/42 móvil—; Instrument Sans para todo texto y control. Etiquetas de 11/14 px, nombres de 26/30 y precios tabulares. Paleta base hueso, grafito y acero, con salvia/coral/marfil reservados exclusivamente para swatches, estados y pequeñas reglas.",
+      "imagery": "assets/image-d5b34d383f0c.jpg lidera la ficha con crop 1:1 y botella centrada. assets/image-9c4db2099869.jpg y assets/image-dbdc2c596f17.jpg aparecen junto a Salvia en una galería modular de acabados; assets/image-c9f5308636b1.jpg cierra en una banda 3:1 enfocada en el conjunto, ajustándose a 4:3 en móvil. La palabra SAVIA siempre queda legible y sin overlays.",
+      "mobile": "Retícula convertida en una ficha de una columna: encabezado de producto, miniimagen de 124 px, precio y compra aparecen antes de 844 px; opciones en dos filas con hit areas de 44 px. La tabla de capacidades se transforma en dos filas clave/valor, no en scroll horizontal. Header con menú etiquetado y “Mi pedido · 0” siempre fuera del menú. Movimiento limitado a estados de selección.",
+      "layout": {
+        "sections": [
+          "quick-sheet",
+          "capacity-matrix",
+          "finish-index",
+          "object-note"
+        ],
+        "catalogSection": "quick-sheet",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "La tienda tiene un solo producto con seis variantes reales, dos capacidades, tres fotos individuales y una foto conjunta. “Mesa de selección SAVIA” aprovecha ese catálogo corto para priorizar exactamente la galería, las opciones, la cantidad y la compra solicitadas, mostrando desde el inicio el precio y la acción sin inventar contenido. Además, vincula cada color con su imagen aportada y traslada"
+  }
+}

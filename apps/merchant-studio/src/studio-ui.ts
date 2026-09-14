@@ -55,12 +55,12 @@ export function studioModeNav(mode: 'website' | 'source', locked = false): strin
 
 export function renderStudioComposer(options: {
   busy: boolean; attachments?: string; instruction?: string; source?: boolean;
-  suggestions: Array<{ label: string; instruction: string }>;
+  suggestions: Array<{ label: string; instruction?: string; action?: 'create-product' }>;
 }): string {
   const uploadLabel = options.source ? 'Adjuntar hasta 24 imágenes o videos MP4' : 'Adjuntar hasta tres imágenes';
   return `<div class="composer-wrap connected-composer">
     ${options.attachments || ''}
-    <div class="suggestions" aria-label="Sugerencias">${options.suggestions.map(s => `<button type="button" data-suggestion="${escapeHtml(s.instruction)}" ${options.busy ? 'disabled' : ''}>${escapeHtml(s.label)}</button>`).join('')}</div>
+    <div class="suggestions" aria-label="Sugerencias">${options.suggestions.map(s => `<button type="button" ${s.action ? `data-composer-action="${escapeHtml(s.action)}"` : `data-suggestion="${escapeHtml(s.instruction || '')}"`} ${options.busy ? 'disabled' : ''}>${escapeHtml(s.label)}</button>`).join('')}</div>
     <form class="composer" data-composer>
       <label for="agent-command" class="sr-only">Indicación para YAPI</label>
       <textarea id="agent-command" name="command" rows="2" maxlength="${options.source ? 12000 : 8000}" placeholder="${options.source ? 'Cuéntame cómo quieres tu sitio…' : 'Describe qué quieres cambiar…'}" ${options.busy ? 'disabled' : ''}>${escapeHtml(options.instruction || '')}</textarea>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mesa Clara — Jugo y granola para el desayuno</title>
+  <meta name="description" content="Elige jugo de naranja con jengibre y granola de la casa en formatos individuales y packs para tus desayunos.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Mesa Clara, inicio"><span>Mesa</span> Clara</a>
+    <nav class="site-nav" aria-label="Navegación principal"><a href="#pantry-catalog">Productos</a></nav>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span class="cart-count">(<span data-cart-count>0</span>)</span></button>
+  </header>
+
+  <main>
+    <section id="morning-cover" aria-labelledby="cover-title">
+      <div class="cover-copy">
+        <p class="eyebrow">Despensa para el desayuno</p>
+        <h1 id="cover-title">Dos esenciales para empezar claro</h1>
+        <p>Jugo cítrico y granola de la casa, en el formato que mejor acompaña tu mañana.</p>
+        <a class="text-action" href="#pantry-catalog">Elegir desayuno <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+      <figure class="cover-photo"><img src="assets/image-f1220ebdbbf1.jpg" alt="Tres botellas de jugo de naranja y jengibre SAVIA junto a naranjas frescas"></figure>
+    </section>
+
+    <section id="pantry-catalog" aria-labelledby="catalog-title">
+      <header class="catalog-heading">
+        <p class="eyebrow">La despensa</p>
+        <h2 id="catalog-title">Elige tu manera de desayunar</h2>
+        <p>Dos protagonistas, distintos tamaños y presentaciones.</p>
+      </header>
+      <div data-pagosya-categories aria-label="Categorías"></div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+    </section>
+
+    <section id="formats-note" aria-labelledby="formats-title">
+      <p class="eyebrow">A tu medida</p>
+      <h2 id="formats-title">Una botella para hoy o un pack para varios desayunos.</h2>
+      <div class="format-lines">
+        <p><strong>Jugo</strong><span>330 ml o 750 ml · individual o pack de 3</span></p>
+        <p><strong>Granola</strong><span>Original o Cacao · 250 g o 500 g</span></p>
+      </div>
+    </section>
+  </main>
+
+  <template data-pagosya-product-template>
+    <article class="pantry-item">
+      <a class="pantry-media menu-item__details" data-product-link aria-label="Ver producto"><span data-product-media><img data-product-field="image" alt=""></span></a>
+      <div class="pantry-copy">
+        <p class="chapter-label">Para tu mesa</p>
+        <h3 data-product-field="name"></h3>
+        <p class="pantry-description" data-product-field="description"></p>
+        <div class="pantry-options" data-product-field="options"></div>
+        <div class="pantry-purchase">
+          <span class="menu-item__price" data-product-field="price"></span>
+          <div class="pantry-actions">
+            <a class="choice-link menu-item__details" data-product-link>Elegir opciones <img src="assets/icons/arrow-right.svg" alt=""></a>
+            <button class="menu-add" type="button" data-product-add>Añadir</button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <footer class="site-footer"><a class="wordmark" href="index.html"><span>Mesa</span> Clara</a><p>Jugo y granola para preparar el desayuno en casa.</p><a href="#pantry-catalog">Volver a productos</a></footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

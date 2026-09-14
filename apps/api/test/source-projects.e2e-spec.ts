@@ -247,6 +247,33 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     expect(await prisma.paymentLink.count({where:{storeId}})).toBe(before+1);
   });
 
+  it('creates merchant-defined combinations through HTTP and checks exact color-size inventory', async () => {
+    const dimensions = [{ name: 'Material', value: 'Algodón' }, { name: 'Corte', value: 'Recto' }, { name: 'Cuello', value: 'Redondo' }, { name: 'Manga', value: 'Larga' }];
+    const variants = [['Azul', 'S', 0], ['Blanco', 'S', 5], ['Azul', 'M', 1], ['Blanco', 'M', 0]].map(([color, size, stock]) => ({
+      name: '', amount: 12000, stock, options: [{ name: 'Color', value: color }, { name: 'Talla', value: size }, ...dimensions],
+    }));
+    const response = await request(app.getHttpServer()).post(`/v1/stores/${storeId}/payment_links`).set(auth()).send({ name: 'Camisa configurable', amount: 12000, currency: 'BOB', variants }).expect(201);
+    const product = await prisma.paymentLink.findUniqueOrThrow({ where: { id: response.body.id } });
+    const saved = product.variants as any[];
+    expect(saved.map(v => v.stock)).toEqual([0, 5, 1, 0]);
+    const owner = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+    await prisma.merchant.update({ where: { id: owner.merchantId }, data: { status: 'ACTIVE' } });
+    await prisma.store.update({ where: { id: storeId }, data: { status: 'ACTIVE', sourcePublicationPaused: false } });
+    const service = app.get(StoresService);
+    const publicStore = await service.getStorePublic(slug, { trackView: false, ownerMerchantId: owner.merchantId });
+    expect(publicStore.items.find(p => p.id === product.id)?.variants[1]).toMatchObject({ options: saved[1].options, purchaseLimit: 5 });
+    const quote = (variantId: string, quantity = 1) => service.createCartCheckout(slug, { items: [{ paymentLinkId: product.id, variantId, quantity }] }, true);
+    await expect(quote(saved[0].id)).rejects.toThrow();
+    await expect(quote(saved[1].id, 6)).rejects.toThrow();
+    await expect(quote('not-a-combination')).rejects.toThrow();
+    expect(await quote(saved[1].id, 2)).toMatchObject({ subtotal: 24000 });
+    // Another checkout changed White/S while the merchant was editing Blue/M.
+    await prisma.paymentLink.update({ where: { id: product.id }, data: { variants: saved.map((v, i) => i === 1 ? { ...v, stock: 4 } : v), stock: 5 } });
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/payment_links/${product.id}`).set(auth()).send({ variants: saved.map((v, i) => ({ id: v.id, name: v.name, amount: v.amount, options: v.options, ...(i === 2 ? { stock: 2 } : {}) })) }).expect(200);
+    const updated = await prisma.paymentLink.findUniqueOrThrow({ where: { id: product.id } });
+    expect((updated.variants as any[]).map(v => [v.id, v.stock])).toEqual(saved.map((v, i) => [v.id, [0, 4, 2, 0][i]]));
+  });
+
   it('persists chat combinations and enforces their identity, price and stock in checkout', async()=>{
     const owner=await prisma.store.findUniqueOrThrow({where:{id:storeId}});
     const projects=app.get(SourceProjectsService);

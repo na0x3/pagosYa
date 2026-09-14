@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nido · Pilot 2 | Jugos y granola SAVIA</title>
+  <meta name="description" content="Elige tamaño, presentación, sabor y peso para pedir jugo de naranja con jengibre y granola SAVIA.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Nido · Pilot 2, inicio"><strong data-store-name>Nido · Pilot 2</strong><span>Despensa cotidiana</span></a>
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a href="#ritual-catalog">Productos</a><a href="#table-pairing">A la mesa</a>
+    </nav>
+    <div class="header-actions">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><img src="assets/icons/menu.svg" alt="">Menú</button>
+      <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span data-cart-count>0</span></button>
+    </div>
+    <nav class="mobile-nav" id="mobile-menu" aria-label="Navegación móvil" hidden>
+      <a href="#ritual-catalog">Productos</a><a href="#table-pairing">A la mesa</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="ritual-catalog" aria-labelledby="ritual-title">
+      <div class="catalog-heading">
+        <p>Despensa SAVIA</p>
+        <h1 id="ritual-title">Dos rituales para empezar el día</h1>
+      </div>
+      <div data-pagosya-catalog aria-label="Catálogo de productos"></div>
+      <template data-pagosya-product-template>
+        <article class="ritual-product">
+          <div class="ritual-media" data-product-media><span class="chapter" aria-hidden="true"></span><img data-product-field="image" alt=""></div>
+          <div class="ritual-copy">
+            <div class="ritual-name"><p class="eyebrow">SAVIA · elección cotidiana</p><h2 data-product-field="name"></h2></div>
+            <div class="ritual-price"><span>Desde</span><strong data-product-field="price"></strong></div>
+            <div class="ritual-options" data-product-field="options"></div>
+            <div class="ritual-actions"><a class="details-link menu-item__details" data-product-link>Elegir opciones <img src="assets/icons/arrow-right.svg" alt=""></a><button class="menu-add" type="button" data-product-add>Añadir al pedido</button></div>
+          </div>
+        </article>
+      </template>
+    </section>
+
+    <section id="table-pairing" aria-labelledby="table-title">
+      <header><p>Después de elegir</p><h2 id="table-title">Así llega a la mesa</h2></header>
+      <div class="table-images">
+        <figure><img src="assets/image-d7afdd1c26f9.jpg" alt="Jugo SAVIA de naranja y jengibre servido junto a naranja fresca"><figcaption>Servir · naranja y jengibre</figcaption></figure>
+        <figure><img src="assets/image-ceff3979a97c.jpg" alt="Granola SAVIA acompañando un tazón de desayuno"><figcaption>Acompañar · granola de la casa</figcaption></figure>
+      </div>
+    </section>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+  <footer class="site-footer"><strong data-store-name>Nido · Pilot 2</strong><span>Despensa de jugos y granola</span><a href="#ritual-catalog">Volver a elegir</a></footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

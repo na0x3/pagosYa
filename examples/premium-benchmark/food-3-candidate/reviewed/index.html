@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mesa Clara — Jugo y granola para el desayuno</title>
+  <meta name="description" content="Elige jugo de naranja con jengibre y granola de la casa en formatos individuales o packs para tus desayunos.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Mesa Clara, inicio">Mesa Clara</a>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="#breakfast-catalog" aria-current="page">Despensa</a>
+      <button class="cart-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido · <span data-cart-count>0</span></span>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="breakfast-catalog" class="catalog-section" aria-labelledby="breakfast-title">
+      <div class="catalog-heading">
+        <p class="eyebrow">Mesa Clara · Despensa</p>
+        <h1 id="breakfast-title">Para el desayuno</h1>
+      </div>
+      <div data-pagosya-catalog aria-label="Productos para el desayuno"></div>
+    </section>
+
+    <section id="serving-diptych" class="serving-section" aria-labelledby="serving-title">
+      <div class="section-note">
+        <p class="eyebrow">Dos maneras de empezar</p>
+        <h2 id="serving-title">Cítrico en el vaso.<br>Granola en el bol.</h2>
+      </div>
+      <figure class="serving-photo serving-photo--juice">
+        <img src="assets/image-d7afdd1c26f9.jpg" alt="Botella de jugo de naranja y jengibre junto a un vaso y una naranja">
+      </figure>
+      <figure class="serving-photo serving-photo--granola">
+        <img src="assets/image-ceff3979a97c.jpg" alt="Bol con granola de la casa junto a su frasco">
+      </figure>
+    </section>
+
+    <section id="pickup-line" class="pickup-line" aria-labelledby="pickup-title">
+      <img src="assets/icons/package.svg" alt="">
+      <div>
+        <p class="eyebrow">Al completar tu pedido</p>
+        <h2 id="pickup-title">Elige retiro y revisa todo antes de pagar.</h2>
+      </div>
+      <a href="#breakfast-catalog">Volver a la despensa <img src="assets/icons/arrow-right.svg" alt=""></a>
+    </section>
+  </main>
+
+  <template data-pagosya-product-template>
+    <article class="breakfast-row">
+      <a class="product-media" data-product-link href="product.html">
+        <span data-product-media><img data-product-field="image" alt=""></span>
+      </a>
+      <div class="product-copy">
+        <a class="product-name-link" data-product-link href="product.html"><h2 data-product-field="name"></h2></a>
+        <p class="product-description" data-product-field="description"></p>
+      </div>
+      <div class="product-options" data-product-field="options"></div>
+      <div class="product-purchase">
+        <span class="menu-item__price" data-product-field="price"></span>
+        <button class="menu-add" type="button" data-product-add>
+          <span>Añadir</span><img src="assets/icons/plus.svg" alt="">
+        </button>
+        <a class="menu-item__details" data-product-link href="product.html">Ver producto</a>
+      </div>
+    </article>
+  </template>
+
+  <div data-pagosya-contact hidden></div>
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html">Mesa Clara</a>
+    <p>Jugo y granola en formatos individuales y packs.</p>
+    <button type="button" data-cart-open>Mi pedido · <span data-cart-count>0</span></button>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

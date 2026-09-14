@@ -1,0 +1,67 @@
+{
+  "id": "food-2-candidate",
+  "arm": "candidate",
+  "fixture": "food",
+  "repeat": 2,
+  "merchantId": "cmu0ed5op000st6nw6nmtt54y",
+  "storeId": "cmu0ed5or000ut6nwong7swa9",
+  "slug": "f0v010uw",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:40:08.716Z",
+  "assets": [
+    "/v1/uploads/614f5241-659d-4610-bb75-331d2cb92827.jpg",
+    "/v1/uploads/3c7dfa3d-f1fd-4cd0-b450-8de6b54c71a3.jpg",
+    "/v1/uploads/d532e7e1-d57b-4d70-b7df-52b6be2bf68b.jpg",
+    "/v1/uploads/1914f86e-3c87-4d80-b9a4-29ac97d7242a.jpg",
+    "/v1/uploads/e3cc0f6e-0db0-484a-bc51-f63caffbb65b.jpg",
+    "/v1/uploads/b8418da2-c6a4-45f9-ace9-c5c67fb814e4.jpg",
+    "/v1/uploads/16c82b6e-be4e-4067-959a-fb34ed51043d.jpg"
+  ],
+  "generation": {
+    "id": "cmu0ed5pl001et6nwrr3d8tgw",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 37,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 48643,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 15122,
+          "cachedInputTokens": 0,
+          "outputTokens": 2182,
+          "providerMicroUsd": 119247,
+          "cacheWriteTokens": 15119
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 79142,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 23450,
+          "cachedInputTokens": 0,
+          "outputTokens": 7326,
+          "providerMicroUsd": 248975,
+          "cacheWriteTokens": 8655
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 393,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 127819,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "digest": "d46178e4f2c2b0f231934ddb93b6b53f6ef82ed4b94bf39ccfeeaaa9cd18e939",
+  "elapsedMs": 128121
+}

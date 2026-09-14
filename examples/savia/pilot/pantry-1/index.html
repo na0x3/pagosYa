@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nido · Pilot 1 | Jugos y granola SAVIA</title>
+<meta name="description" content="Elige jugo de naranja con jengibre y granola SAVIA en sus presentaciones disponibles.">
+<link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+<header class="site-header">
+  <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+  <a class="wordmark" href="index.html" aria-label="Nido · Pilot 1, inicio"><span class="wordmark-full">Nido · Pilot 1</span><span class="wordmark-short" aria-hidden="true">Nido</span></a>
+  <nav id="site-nav" class="site-nav" aria-label="Navegación principal"><a href="index.html" aria-current="page">Inicio</a><a href="#catalogo-mesa">Despensa</a><a href="#nota-despensa">La selección</a></nav>
+  <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido (<span data-cart-count>0</span>)</button>
+</header>
+<main>
+<section id="catalogo-mesa" class="catalog-table" aria-labelledby="catalog-title">
+  <div class="catalog-intro"><p class="eyebrow">Despensa SAVIA</p><h1 id="catalog-title">Dos básicos para cada mañana</h1><p>Jugo y granola para armar tu pedido a tu manera.</p></div>
+  <div data-pagosya-catalog aria-label="Productos disponibles"></div>
+</section>
+<section id="pareja-cotidiana" class="daily-pair" aria-labelledby="daily-title">
+  <div class="pair-copy"><p class="eyebrow">En la mesa</p><h2 id="daily-title">Una pareja cotidiana</h2><p>Dos formas sencillas de acompañar el desayuno, presentadas tal como son.</p></div>
+  <figure><img src="assets/image-d7afdd1c26f9.jpg" alt="Botella SAVIA de naranja y jengibre junto a un vaso, naranja y jengibre"></figure>
+  <figure><img src="assets/image-ceff3979a97c.jpg" alt="Bol de granola y frasco SAVIA sobre una mesa cálida"></figure>
+</section>
+<section id="nota-despensa" class="pantry-note" aria-labelledby="note-title">
+  <p class="eyebrow">La selección</p><h2 id="note-title">Pocas cosas, bien elegidas.</h2><p>Escoge tamaño, presentación, sabor o peso directamente en cada producto. La granola contiene almendras.</p><a class="text-link" href="#catalogo-mesa">Volver a elegir <img src="assets/icons/arrow-right.svg" alt=""></a>
+</section>
+</main>
+<footer class="site-footer"><a class="wordmark" href="index.html">Nido · Pilot 1</a><p>Despensa de jugos y granola.</p><a href="#catalogo-mesa">Ver despensa</a></footer>
+<template data-pagosya-product-template><article class="table-product">
+  <a class="product-media menu-item__details" data-product-link><span data-product-media><img data-product-field="image" alt=""></span></a>
+  <div class="product-copy"><div><p class="product-kicker">SAVIA · Despensa</p><h2 data-product-field="name"></h2><p class="product-description" data-product-field="description"></p></div><div class="product-options" data-product-field="options"></div><div class="product-buy"><strong data-product-field="price"></strong><button type="button" data-product-add><span>Añadir</span><img src="assets/icons/plus.svg" alt=""></button></div><a class="details-link" data-product-link>Ver producto <img src="assets/icons/arrow-right.svg" alt=""></a></div>
+</article></template>
+<div data-pagosya-status role="status" aria-live="polite"></div><aside data-pagosya-cart hidden></aside><div data-pagosya-contact hidden></div>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body></html>

@@ -1,0 +1,67 @@
+{
+  "id": "food-1-candidate",
+  "arm": "candidate",
+  "fixture": "food",
+  "repeat": 1,
+  "merchantId": "cmu0eamge0000t6nw2uhptlyg",
+  "storeId": "cmu0eamgh0002t6nweycyw8al",
+  "slug": "8ri2kqcp",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:38:10.483Z",
+  "assets": [
+    "/v1/uploads/23daa6aa-2b3d-4f73-b47d-b1b3152e867b.jpg",
+    "/v1/uploads/35198367-38a0-4ae8-9d0b-3d170feb1416.jpg",
+    "/v1/uploads/603e52a5-87b1-40b0-84dd-87d92f9e6ab2.jpg",
+    "/v1/uploads/d71ee05d-dd01-4262-baac-e17af83b4f7c.jpg",
+    "/v1/uploads/82a6b204-b742-4cd3-a3f7-09d61740bd26.jpg",
+    "/v1/uploads/6cfbdb66-cd09-4310-8dd9-869b2373ba21.jpg",
+    "/v1/uploads/d94e105b-2e1f-4b23-b592-927f3c03330b.jpg"
+  ],
+  "generation": {
+    "id": "cmu0eamhy000mt6nwsa8kti6y",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 37,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 49623,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 15114,
+          "cachedInputTokens": 0,
+          "outputTokens": 2169,
+          "providerMicroUsd": 118947,
+          "cacheWriteTokens": 15111
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 68320,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 23359,
+          "cachedInputTokens": 0,
+          "outputTokens": 7027,
+          "providerMicroUsd": 242631,
+          "cacheWriteTokens": 8655
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 407,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 118003,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "digest": "3c1938d202ffa07380175e1d0e9eb1a81e49aa33b301a04d8a8e523990dbe304",
+  "elapsedMs": 118215
+}

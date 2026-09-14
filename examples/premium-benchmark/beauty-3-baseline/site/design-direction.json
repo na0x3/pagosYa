@@ -1,0 +1,66 @@
+{
+  "concepts": [
+    {
+      "name": "Mostrador de volúmenes",
+      "premise": "Una tienda compacta y serena que abre directamente con los dos productos, como un mostrador de cuidado diario. Se diferencia de las otras propuestas por su catálogo inmediato, alta densidad útil y controles de volumen integrados en cada línea, sin imágenes ni marcos que simulen envases.",
+      "opening": "Masthead bajo con Bruma, la frase «Cuidado diario, en el volumen que necesitas» y «Mi pedido 0». El catálogo comienza antes de 320 px: Crema de manos y Jabón líquido aparecen como dos franjas claras, con descripción, selector 30/60 ml o 250/500 ml, precio actualizado y botón «Añadir». En 390 px, el primer producto completo mantiene nombre, precio y acción a la vista.",
+      "flow": "Inicio: elegir volumen y añadir sin pasos intermedios; una nota breve aclara que el pedido se recoge. Producto: título grande, etiqueta «Sin perfume» solo para la crema, descripción confirmada, selector de volumen, precio y cantidad en una columna de compra fija visualmente. Carrito y checkout continúan como una lista editorial: producto, volumen, cantidad, subtotal y recogida, sin promesas ni bloques informativos inventados.",
+      "typography": "Instrument Sans variable en toda la experiencia. Marca a 28/30 px; titular 52/52 en escritorio, 34/36 en móvil; nombres 27/30 y 23/26; cuerpo 16/24; precio 19/22 seminegrita; etiquetas 12/16 en mayúsculas espaciadas. Ciruela #4B294B, lavanda #D9CDEA, fondo marfil frío #F7F5F2 y tinta #231F25.",
+      "imagery": "Sin fotografías, ilustraciones ni siluetas de producto. La identidad surge de reglas finas, campos tipográficos amplios y una banda lavanda que cambia de longitud según el volumen seleccionado, claramente decorativa y no presentada como envase. Iconos locales de bolsa, más, menos y chevron solo para acciones.",
+      "mobile": "Cabecera de dos filas: Bruma y «Mi pedido 0» siempre visibles; navegación textual breve debajo. Cada producto pasa a una pila compacta con selector segmentado de ancho completo y una fila precio/añadir que envuelve limpiamente a 320 px. La banda de volumen queda detrás de la etiqueta de opción, sin invadir texto. Checkout conserva resumen y acción principal visibles en flujo normal.",
+      "layout": {
+        "sections": [
+          "catalogo",
+          "recogida",
+          "criterio-volumen"
+        ],
+        "catalogSection": "catalogo",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Índice Bruma",
+      "premise": "Una composición tipográfica espaciosa que trata los dos artículos como entradas de un índice premium. A diferencia del mostrador, comienza con una introducción independiente y lleva la elección detallada a bloques de producto; frente al tercer concepto, usa ritmo vertical, mucho fondo claro y jerarquía editorial en lugar de una pantalla dividida.",
+      "opening": "Una portada breve, sin productos ni imágenes: «BRUMA» ocupa dos líneas de escala contrastada junto al subtítulo «Cuidado cosmético diario en varios volúmenes» y un enlace ancla «Ver los dos productos». Una regla ciruela conduce al catálogo inmediatamente posterior; no promete producto visible sin desplazamiento en móvil.",
+      "flow": "Tras la portada, cada producto ocupa una sección horizontal numerada mediante texto funcional («Crema» y «Jabón», no números decorativos repetidos): nombre, descripción, volúmenes disponibles y precio inicial. «Elegir volumen» abre su página cuidada, donde las variantes se presentan como una escala tipográfica y el botón cambia a «Añadir 30 ml», «Añadir 60 ml», etc. El cierre explica únicamente «Recogida» como modalidad disponible. Carrito y checkout emplean títulos grandes, divisores y un único",
+      "typography": "Bricolage Grotesque variable como única familia, aprovechando contraste de ancho y peso: palabra marca 84/78 px en escritorio y 50/46 en móvil; titulares de producto 44/46 y 32/34; cuerpo 17/26; metadatos 13/18; precios 22/24. Fondo #FAF8F6, ciruela profunda #41263E, lavanda pálida #E8E0EF y gris malva #756A75.",
+      "imagery": "Identidad completamente tipográfica. Las letras de BRUMA funcionan como masa visual, con cortes creados por reglas CSS y cambios de peso, nunca como ilustración de producto. No se reservan galerías. Pequeñas flechas locales señalan navegación; bolsa, más y menos conservan significado comercial.",
+      "mobile": "La portada se reduce a aproximadamente media pantalla y mantiene «Mi pedido 0» fuera del menú. Las entradas del índice apilan nombre, opciones y precio sin columnas vacías; en la página de producto las variantes son botones de 48 px de alto. El resumen de checkout aparece antes de la acción final, sin panel lateral rígido.",
+      "layout": {
+        "sections": [
+          "portada-indice",
+          "indice-productos",
+          "nota-recogida"
+        ],
+        "catalogSection": "indice-productos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Díptico casa / viaje",
+      "premise": "Una interfaz de elección comparativa inspirada en el comportamiento central del catálogo: escoger formato. Se distingue de ambas alternativas por una apertura dividida y asimétrica, navegación por contexto «Viaje / Casa» y productos presentados en una matriz comparativa, no como tarjetas ni entradas editoriales.",
+      "opening": "Debajo de una cabecera ciruela compacta, una pantalla clara se divide en dos campos: «Para llevar» agrupa 30 ml de crema y 250 ml de jabón; «Para casa» agrupa 60 ml y 500 ml. Cada opción muestra nombre real, volumen, precio y «Añadir» dentro del catálogo, por lo que hay compra visible sin desplazamiento en escritorio y móvil. Un conmutador accesible permite cambiar el campo prioritario sin ocultar el otro.",
+      "flow": "Inicio: comparar por uso y añadir la combinación deseada; después, una tabla textual reúne ambos productos por nombre para quien prefiera navegar por artículo. Página de producto: encabezado ciruela, nombre y descripción a la izquierda, selector de volumen y compra en un plano lavanda a la derecha; en móvil, compra precede al detalle secundario. Carrito organiza el pedido en «Para llevar» y «Para casa» según volumen, mientras checkout vuelve a una lista única y clara con recogida como entrega.",
+      "typography": "Oswald variable para marca, contexto y cifras de volumen; Instrument Sans para nombres, descripciones y controles. Marca 38/40; rótulos de contexto 64/62 en escritorio y 39/40 en móvil; producto 24/28; volúmenes 32/34; cuerpo 16/24. Ciruela #532D50, lavanda #D8C8E2, blanco cálido #FBF9F5 y acento gris uva #6D626C.",
+      "imagery": "Sin fotos ni dibujos de recipientes. El díptico se construye con dos planos de color, divisores centrales y cifras de volumen sobredimensionadas; los mililitros son el motivo visual auténtico. La crema conserva «Sin perfume» como etiqueta factual. Iconos locales de bolsa y controles de cantidad aparecen solo donde son accionables.",
+      "mobile": "El díptico se convierte en dos paneles consecutivos, pero un índice fijo bajo la cabecera salta a «Viaje» o «Casa». «Mi pedido 0» permanece visible junto a Bruma. Cada opción mantiene nombre, precio y botón de al menos 44 px; a 320 px la fila de compra se divide en dos líneas sin recortes. Producto y checkout abandonan la división lateral para un flujo vertical.",
+      "layout": {
+        "sections": [
+          "selector-contexto",
+          "comparacion-productos",
+          "recogida-final"
+        ],
+        "catalogSection": "selector-contexto",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "«Mostrador de volúmenes» encaja mejor con un catálogo real de solo dos productos, ambos con dos variantes y sin fotografías. Prioriza la acción solicitada —elegir volumen y añadir— desde el primer bloque, conserva la etiqueta confirmada «Sin perfume» únicamente en la crema y comunica la recogida sin inventar beneficios, políticas o destinos. Su sistema tipográfico único y sus franjas de volumen en"
+  }
+}

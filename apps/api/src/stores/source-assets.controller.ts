@@ -22,6 +22,7 @@ class AssetRolesDto extends SourceProjectRevisionDto {
   @IsArray() @ArrayMaxSize(80) @ValidateNested({ each: true }) @Type(() => AssetRoleDto) assets!: AssetRoleDto[];
 }
 class VisualReviewDto extends SourceProjectRevisionDto {
+  @IsOptional() @IsString() @MaxLength(120) productId?: string;
   @IsString() @MaxLength(200) page!: string;
   @IsOptional() @IsIn(SOURCE_MODEL_CHOICES) model?: SourceModelChoice;
   @IsOptional() @IsInt() @Min(1) @Max(20) maxCredits?: number;
@@ -56,7 +57,7 @@ export class SourceAssetsController {
   }
   @Get('visual-review')
   @Header('Cache-Control', 'private, no-store')
-  latestReview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('revision', ParseIntPipe) revision: number, @Query('page') page: string) {
-    return this.review.latest(merchant.id, storeId, revision, page);
+  latestReview(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('revision', ParseIntPipe) revision: number, @Query('page') page: string, @Query('productId') productId?: string) {
+    return this.review.latest(merchant.id, storeId, revision, page, productId);
   }
 }

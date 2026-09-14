@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Producto | Lumbre · Pilot 2</title>
+  <meta name="description" content="Elige el tamaño y la cantidad de tu café preparado al momento en Lumbre · Pilot 2.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="product-page">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Lumbre · Pilot 2, inicio"><span class="brand__full" data-store-name>Lumbre · Pilot 2</span><span class="brand__short" aria-hidden="true">Lumbre</span></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt=""><span class="sr-only">Abrir menú</span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegación principal"><a href="index.html#carta-barra">Carta</a><a href="index.html#nota-recogida">Recogida</a></nav>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span class="cart-count" data-cart-count>0</span></button>
+  </header>
+  <main class="commerce-main product-main">
+    <div data-pagosya-product-page></div>
+  </main>
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <footer class="site-footer"><a href="index.html#carta-barra">← Volver a la carta</a><span>Lumbre · Pilot 2</span></footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

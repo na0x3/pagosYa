@@ -1,0 +1,59 @@
+{
+  "id": "technical-1-baseline",
+  "arm": "baseline",
+  "fixture": "technical",
+  "repeat": 1,
+  "merchantId": "cmu0ewh9v004o4gwznmrcct0x",
+  "storeId": "cmu0ewha4004q4gwz6gf5qtcq",
+  "slug": "qi7nro36",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:55:10.206Z",
+  "assets": [],
+  "generation": {
+    "id": "cmu0ewhbs004w4gwzmtnl65ii",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 28,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 40217,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 3934,
+          "cachedInputTokens": 0,
+          "outputTokens": 1750,
+          "providerMicroUsd": 54667,
+          "cacheWriteTokens": 3931
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 82573,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 11684,
+          "cachedInputTokens": 0,
+          "outputTokens": 8024,
+          "providerMicroUsd": 215871,
+          "cacheWriteTokens": 8655
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 1257,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 122839,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "digest": "bdba93a25612044302cd9efb896ecb243dfb33b440a8f61ac454c51e15898a52",
+  "elapsedMs": 122945
+}

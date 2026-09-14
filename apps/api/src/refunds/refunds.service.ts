@@ -1,3 +1,4 @@
+import { queueStoreEmail } from '../stores/email-workspace.config';
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PaymentIntentStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { createHash } from "node:crypto";
@@ -23,9 +24,9 @@ export class RefundsService {
 
     const reservation = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
-        Array<{ id: string; amount: number; currency: string; status: PaymentIntentStatus }>
+        Array<{ id: string; amount: number; currency: string; status: PaymentIntentStatus; livemode: boolean; customerEmail: string | null; customerName: string | null; metadata?: { platformPurchase?: string } }>
       >`
-        SELECT id, amount, currency, status FROM "PaymentIntent"
+        SELECT id, amount, currency, status, livemode, "customerEmail", "customerName", metadata FROM "PaymentIntent"
         WHERE id = ${dto.paymentIntentId} AND "merchantId" = ${merchantId}
         FOR UPDATE
       `;
@@ -33,6 +34,10 @@ export class RefundsService {
       if (!intent) throw new NotFoundException("PaymentIntent not found");
       if (intent.status !== PaymentIntentStatus.SUCCEEDED) {
         throw new BadRequestException("Only succeeded PaymentIntents can be refunded");
+      }
+      if (intent.metadata?.platformPurchase === 'domain') {
+        const domain = await tx.domainOrder.findUnique({ where: { paymentIntentId: intent.id } });
+        if (domain?.registrationStartedAt) throw new BadRequestException('El registro de este dominio ya comenzó. Soporte debe conciliarlo con el registrador antes de reembolsar.');
       }
 
       const originalTransaction = await tx.transaction.findFirst({
@@ -106,6 +111,10 @@ export class RefundsService {
       });
 
       if (status === TransactionStatus.SUCCEEDED) {
+        if (reservation.intent.livemode && tx.storeOrder?.findUnique) {
+          const order = await tx.storeOrder.findUnique({where:{paymentIntentId:reservation.intent.id}});
+          if (order) await queueStoreEmail(tx,order.storeId,'REFUND',refundTransaction.id,reservation.intent.customerEmail,{store:order.storeName,order:order.id,customer:reservation.intent.customerName || 'cliente',amount:`${(refundTransaction.amount/100).toFixed(2)} ${reservation.intent.currency}`});
+        }
         const lines = this.ledger.buildRefundJournal({
           merchantId,
           transactionId: refundTransaction.id,

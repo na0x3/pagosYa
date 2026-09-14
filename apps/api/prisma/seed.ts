@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import * as argon2 from "argon2";
 import { ApiKeyMode, ApiKeyType, KycStatus, PrismaClient, SettlementMode } from "@prisma/client";
 import { ApiKeyService } from "../src/auth/api-key.service";
 import { KycService } from "../src/merchants/kyc.service";
@@ -25,6 +26,10 @@ async function main() {
     console.log(`  ops token:       ${created.fullToken}`);
   }
 
+  // Fixed so it's typeable at a login form without digging through logs.
+  // Local/dev only — see the NODE_ENV guard above.
+  const DASHBOARD_LOGIN_PASSWORD = "pagosYaDev123!";
+
   const merchants = [
     { name: "pagosYa Demo Store (Aggregator)", email: "demo-aggregator@pagosya.bo", settlementMode: SettlementMode.AGGREGATOR },
     { name: "pagosYa Demo Store (Facilitator)", email: "demo-facilitator@pagosya.bo", settlementMode: SettlementMode.FACILITATOR },
@@ -39,9 +44,21 @@ async function main() {
       create: { name: m.name, email: m.email, settlementMode: m.settlementMode },
     });
 
+    // Skips the real signup_passwordless -> emailed reset-link flow: seed data
+    // needs a dashboard login that works offline, with no mail provider.
+    const hashedPassword = await argon2.hash(DASHBOARD_LOGIN_PASSWORD);
+    await prisma.merchantUser.upsert({
+      where: { email: m.email },
+      update: { hashedPassword, emailVerifiedAt: new Date() },
+      create: { merchantId: merchant.id, email: m.email, hashedPassword, emailVerifiedAt: new Date() },
+    });
+    console.log(`\n${m.name} dashboard login`);
+    console.log(`  email:           ${m.email}`);
+    console.log(`  password:        ${DASHBOARD_LOGIN_PASSWORD}`);
+
     const existingKeys = await prisma.apiKey.count({ where: { merchantId: merchant.id } });
     if (existingKeys > 0) {
-      console.log(`\n${m.name} already seeded (merchant id: ${merchant.id}) — skipping key issuance.`);
+      console.log(`  (already seeded — skipping key issuance)`);
       continue;
     }
 

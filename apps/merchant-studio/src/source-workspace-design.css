@@ -1,0 +1,61 @@
+/* The connected editor uses the same Pagosnet surfaces as the merchant shell. */
+.studio-shell.source-mode {
+  --paper: #f8f8f2; --warm-paper: #f0f0e7; --surface: #fff; --ink: #20211e;
+  --muted: #61625b; --line: #d8d9ce; --line-firm: #20211e;
+  --amber: #f3f36b; --amber-ink: #20211e; --lavender: #e6dff4;
+  height: 100dvh; min-height: 0; overflow: hidden; background: var(--paper); color: var(--ink);
+  font-family: Arial,sans-serif;
+}
+.source-mode[data-workspace-theme="dark"] {
+  color-scheme: dark; --paper: #171815; --warm-paper: #262722; --surface: #20211e;
+  --ink: #f8f8f2; --muted: #c3c4b7; --line: #484a40; --line-firm: #85877a; --lavender: #463c55;
+}
+.studio-shell.source-mode .studio-workspace { display: grid; grid-template-columns: clamp(300px,28vw,390px) minmax(0,1fr); grid-template-rows: minmax(0,1fr); gap: 18px; min-height: 0; overflow: hidden; padding: 12px 18px 18px; }
+.source-mode .source-canvas { grid-column: 2; grid-row: 1; min-height: 0; height: 100%; border: 2px solid var(--line-firm); border-radius: 8px; box-shadow: 4px 4px 0 var(--line-firm); overflow: hidden; grid-template-rows: auto auto minmax(0,1fr) 26px; }
+.source-mode .source-frame-wrap iframe { min-height: 0; }
+.source-mode .agent-panel { position: relative; grid-column: 1; grid-row: 1; width: 100%; min-height: 0; height: 100%; max-height: none; display: grid; grid-template-rows: auto minmax(0,1fr) auto; border: 0; border-radius: 0; box-shadow: none; background: var(--paper); overflow: hidden; }
+.source-mode .agent-header { min-height: 52px; height: auto; padding: 8px 2px; border: 0; border-radius: 0; background: var(--paper); flex-wrap: wrap; gap: 8px; }
+.source-mode .agent-header .online { display: none; }
+.source-mode .agent-header-actions { display: flex; gap: 8px; }
+.source-mode .agent-header button { font: 12px Arial,sans-serif; min-height: 32px; height: 32px; width: auto; padding: 4px 8px; }
+.source-mode #source-chat-toggle { display: none; }
+.source-mode .agent-stream { display: block; position: static; padding: 18px 6px; min-height: 0; max-height: none; overflow: auto; background: transparent; border: 0; box-shadow: none; }
+.source-mode .conversation-welcome { display: flex; min-height: 100%; flex-direction: column; justify-content: center; align-items: flex-start; }
+.source-mode .source-compose-area { border: 2px solid var(--line-firm); border-radius: 10px; box-shadow: 3px 3px 0 var(--line-firm); background: var(--surface); margin: 4px 5px 5px 0; padding-top: 8px; }
+.source-mode .source-generation-controls { gap: 8px; padding: 2px 12px; border: 0; font-size: 11px; }
+.source-mode .source-generation-fields { flex: none; }
+.source-mode .source-generation-fields select { min-height: 28px; height: 28px; width: 165px; padding: 3px 6px; font: 11px Arial,sans-serif; border: 0; background: var(--paper); border-radius: 4px; }
+.source-mode .source-generation-controls .text-button { min-height: 28px; }
+.source-mode .source-credit-details > summary { min-height: 28px; }
+.source-mode .composer-wrap { padding: 0 12px 10px; background: transparent; border: 0; border-radius: 0 0 12px 12px; }
+.source-mode .suggestions { gap: 6px; margin: 3px 0 6px; flex-wrap: nowrap; overflow-x: auto; }
+.source-mode .suggestions button { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px; min-height: 26px; background: var(--paper); font: 11px Arial,sans-serif; }
+.source-mode .composer { border: 1px solid var(--line); border-radius: 6px; box-shadow: none; background: var(--surface); }
+.source-mode .composer textarea { min-height: 40px; height: 40px; max-height: 110px; padding: 10px 12px 2px; color: var(--ink); font: 14px/1.5 Arial,sans-serif; }
+.source-mode .composer__tools { padding: 2px 6px 5px; }
+.source-mode .composer__tools button { min-height: 30px; width: 32px; height: 30px; }
+.source-mode .send-button { background: var(--amber); color: var(--amber-ink); border: 1px solid var(--line-firm); border-radius: 5px; }
+.source-mode .canvas-toolbar { background: var(--paper); }
+.source-mode .button--publish { background: var(--amber); color: var(--amber-ink); border: 1px solid var(--line-firm); border-radius: 5px; box-shadow: 2px 2px 0 var(--line-firm); }
+.source-mode .source-visual-panel { position: fixed; top: 80px; right: 28px; z-index: 30; width: min(640px,calc(100% - 56px)); max-height: calc(100dvh - 110px); overflow: auto; border: 2px solid var(--line-firm); border-radius: 6px; box-shadow: 5px 5px 0 var(--line-firm); }
+.source-mode .agent-panel.is-creating-product { grid-column: 1; grid-row: 1; width: 100%; max-height: none; grid-template-rows: auto minmax(0,1fr); }
+.source-mode .agent-panel.is-creating-product .agent-stream { display: block; height: 100%; max-height: none; }
+.source-mode .agent-panel.is-creating-product .source-compose-area { display: none; }
+.source-mode .studio-workspace:has(.is-creating-product) { grid-template-columns: minmax(340px,38%) minmax(0,1fr); }
+.source-mode .source-revision-bar .source-publication { width: auto; margin-right: auto; }
+.source-mode .source-revision-bar { padding-block: 4px; }
+@media (max-width: 759px) {
+  .studio-shell.source-mode .studio-workspace { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; padding: 8px 10px 12px; gap: 10px; }
+  .source-mode .source-canvas { grid-column: 1; grid-row: 1; }
+  .source-mode .agent-panel { grid-column: 1; grid-row: 2; height: auto; overflow: visible; }
+  .source-mode .agent-header { min-height: 32px; padding: 0; }
+  .source-mode #source-chat-toggle { display: block; }
+  .source-mode .agent-stream { display: none; }
+  .source-mode .agent-panel.is-chat-expanded:not(.is-creating-product) .agent-stream { display: block; position: absolute; z-index: 24; bottom: 100%; left: 0; right: 0; max-height: 35dvh; border: 2px solid var(--line-firm); border-radius: 8px; background: var(--surface); }
+  .source-mode .source-generation-controls { padding-block: 0; }
+  .source-mode .canvas-toolbar { gap: 4px; max-height: 95px; overflow: auto; padding: 4px 8px; }
+  .source-mode .source-revision-bar { max-height: 76px; overflow: auto; }
+  .source-mode .studio-workspace:has(.is-creating-product) { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
+  .source-mode .agent-panel.is-creating-product { grid-column: 1; grid-row: 1; z-index: 20; height: 100%; }
+  .source-mode .studio-workspace:has(.is-creating-product) .source-canvas { visibility: hidden; }
+}

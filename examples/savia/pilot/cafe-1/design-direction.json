@@ -1,0 +1,65 @@
+{
+  "concepts": [
+    {
+      "name": "La barra tipográfica",
+      "premise": "Una carta compacta que se comporta como el tablero de una cafetería contemporánea: el catálogo abre la página y las tres bebidas se leen en filas, no en tarjetas. Frente a los otros conceptos, prioriza compra inmediata, alta densidad y una jerarquía tipográfica casi monocroma, sin introducción independiente ni recursos gráficos que finjan fotografías.",
+      "opening": "Masthead bajo en papel claro con “Lumbre · Pilot 1”, enlace a Carta y botón siempre visible “Mi pedido · 0”. Debajo, el catálogo comienza antes de 320 px: una línea de contexto —“Preparado al momento · Para recoger”— y la primera fila completa de Café filtrado con nombre, precio desde Bs 15, selector 250/350 ml, cantidad y Añadir visibles tanto en escritorio como en móvil.",
+      "flow": "Inicio funciona como carta directa: elegir bebida, tamaño y cantidad sin abandonar la lista. Cada nombre abre una página de producto con el mismo formato de comanda: sin galería cuando no existen imágenes, descripción única, tamaños reales, precio actualizado, stepper y compra. Carrito y checkout continúan como una hoja de pedido con artículos editables, resumen y recogida; sin bloques de envío ni promesas inventadas.",
+      "typography": "Bricolage Grotesque variable en todo el sistema. Marca 26/28, títulos de bebida 42/42 en escritorio y 30/31 en móvil, precios 22/24, cuerpo 16/23 y metadatos 12/16 en mayúsculas con espaciado amplio. Los tamaños usan cifras tabulares; titulares con letter-spacing de -0.025em.",
+      "imagery": "No usa imágenes ni ilustraciones sustitutivas. La identidad nace de filetes berenjena, puntos de registro, abreviaturas de volumen y grandes palabras recortadas solo dentro de bandas decorativas. Papel marfil cálido, tinta berenjena y un acento cobre oscuro reservado para estados seleccionados.",
+      "mobile": "Cabecera de dos líneas: marca y “Mi pedido · 0” quedan visibles; Carta puede ir como ancla secundaria, no dentro de un menú obligatorio. Cada bebida se convierte en una fila vertical compacta con nombre/precio juntos, botones segmentados de 44 px para volumen, stepper y Añadir de ancho disponible. La primera compra permanece dentro de 390×844 y todo funciona estáticamente con movimiento reducido.",
+      "layout": {
+        "sections": [
+          "carta-directa",
+          "nota-de-barra"
+        ],
+        "catalogSection": "carta-directa",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Tres pedidos, tres ritmos",
+      "premise": "Una portada editorial dividida en tres franjas verticales, una por bebida, que convierte la carta breve en el rasgo visual principal. A diferencia de la lista densa del primer concepto, presenta productos como grandes capítulos; frente al tercero, mantiene los tres productos simultáneamente visibles y usa una sans condensada, no una secuencia narrativa serif.",
+      "opening": "Introducción independiente de altura contenida: nombre alineado a la izquierda, la frase “Tres bebidas. Dos tamaños. Para recoger.” en gran escala y una línea que conduce a la carta. En escritorio, la siguiente sección despliega tres columnas de diferente anchura; en móvil, se vuelve un carrusel horizontal con scroll nativo y una tarjeta parcial como pista, conservando controles de compra claros.",
+      "flow": "La portada establece el sistema y conduce a un tríptico comprable. Cada columna reúne nombre, descripción, selector 250/350 ml, precio, cantidad y Añadir. La página de producto amplía una sola franja: nombre vertical en escritorio, panel de opciones a la derecha y ausencia total de galería cuando no hay medios. El carrito apila franjas numeradas por artículo y checkout reduce el lenguaje a una columna ordenada de contacto, recogida, pago y resumen.",
+      "typography": "Oswald variable para marca, nombres y precios: titulares 72/70 en escritorio, 45/44 en móvil; Instrument Sans para cuerpo y controles a 16/23. Etiquetas de 12/16 y cifras tabulares. Contraste entre nombres condensados muy grandes y formularios sobrios, sin condensar textos largos ni forzar títulos a una sola línea.",
+      "imagery": "Composición enteramente tipográfica. Cada bebida recibe una trama lineal CSS distinta —vertical para filtrado, concéntrica para latte y retícula cerrada para chocolate— usada solo como fondo abstracto, nunca como representación del producto. Berenjena dominante, papel claro y variaciones de tinta al 8–16% para separar franjas sin cajas gratuitas.",
+      "mobile": "La cabecera mantiene “Mi pedido · 0” junto a la marca; el menú solo contiene anclas secundarias. El tríptico conserva su identidad mediante paneles de 84vw con scroll-snap no obligatorio y botones de 44 px; también incluye enlaces “Siguiente bebida” para teclado. Sin animación automática y sin ocultar información fuera del carrusel.",
+      "layout": {
+        "sections": [
+          "manifiesto-tres",
+          "triptico-carta",
+          "recogida-clara"
+        ],
+        "catalogSection": "triptico-carta",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Comanda de barrio",
+      "premise": "Una experiencia secuencial inspirada en una comanda impresa: primero sitúa la intención de recogida y después permite construir el pedido bebida por bebida. Se distingue del catálogo tabular y del tríptico simultáneo por su ritmo espacioso, producto destacado único, serif expresiva y progresión guiada hacia un resumen persistente.",
+      "opening": "Portada asimétrica con “Lumbre” en Fraunces, una columna estrecha de contexto y una gran composición de texto: “¿Qué preparamos?”. Un enlace con flecha baja a la carta. No promete productos completos en el primer viewport; usa el espacio para identidad y para explicar únicamente el dato confirmado de preparación al momento y recogida.",
+      "flow": "El catálogo alterna tres bloques de lado a lado: nombre y descripción en una columna, compra en la otra, con el precio anclado junto a tamaño y cantidad. Un resumen de pedido discreto permanece en el borde derecho en escritorio y pasa a una barra inferior no obstructiva en móvil. En producto, el nombre ocupa la cabecera, seguido inmediatamente por opciones, cantidad y Añadir; no se reserva espacio de galería. Carrito adopta apariencia de recibo y checkout usa pasos visibles sin inventar horarios",
+      "typography": "Fraunces variable para marca y títulos, 84/82 en escritorio y 48/48 en móvil, con ejes suaves y letter-spacing de -0.03em. Instrument Sans para precios, formularios y navegación: 16/23; precio 28/30; etiquetas 12/16. La mezcla crea una voz más cálida y narrativa que los otros dos sistemas.",
+      "imagery": "Sin fotografías ni falsas miniaturas. Líneas perforadas, reglas de recibo y pequeños círculos de selección construidos con CSS forman el motivo recurrente. Fondo papel avena, berenjena profundo y tinta gris cálida; un rojo arcilla aparece únicamente para el total y los estados activos.",
+      "mobile": "La apertura se reduce para mostrar el inicio de la carta cerca del pliegue, pero conserva el gran interrogante tipográfico. “Mi pedido · 0” permanece en la cabecera fuera del menú y el resumen inferior aparece solo tras añadir. Los bloques alternos se reordenan siempre como nombre, descripción, opciones, precio y acción; ningún adorno comparte espacio con los controles.",
+      "layout": {
+        "sections": [
+          "pregunta-de-apertura",
+          "comanda-progresiva",
+          "cierre-de-recogida"
+        ],
+        "catalogSection": "comanda-progresiva",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“La barra tipográfica” encaja mejor con una carta real de solo tres productos, todos con dos tamaños y sin fotografías disponibles. Da prioridad inmediata a elegir y añadir para recogida, cumple la dirección confirmada de berenjena sobre papel claro y evita inventar imágenes —incluidas imágenes SAVIA, ya que no se suministró ningún archivo—. Su catálogo primero también aprovecha mejor el tamaño de"
+  }
+}

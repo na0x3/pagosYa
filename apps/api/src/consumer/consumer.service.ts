@@ -1,3 +1,4 @@
+import { queueStoreEmail } from '../stores/email-workspace.config';
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ConsumerAffiliationStatus, DebtRecordStatus, OrderFulfillmentStatus, Prisma, StoreStatus } from "@prisma/client";
@@ -310,7 +311,11 @@ export class ConsumerService {
     return this.prisma.$transaction(async (tx) => {
       const changed = await tx.storeOrder.updateMany({ where: { id: order.id, status: order.status }, data: { status } });
       if (changed.count !== 1) throw new BadRequestException("El pedido cambió mientras lo actualizabas; vuelve a cargarlo");
-      await tx.storeOrderStatusEvent.create({ data: { orderId: order.id, status } });
+      const statusEvent = await tx.storeOrderStatusEvent.create({ data: { orderId: order.id, status } });
+      if (['SHIPPED','DELIVERED','CANCELED'].includes(status) && tx.paymentIntent?.findUnique) {
+        const payment = await tx.paymentIntent.findUnique({where:{id:order.paymentIntentId}});
+        if (payment?.livemode) await queueStoreEmail(tx,order.storeId,status,statusEvent.id,payment.customerEmail,{store:order.storeName,order:order.id,customer:payment.customerName || 'cliente',amount:`${(order.amount/100).toFixed(2)} ${order.currency}`});
+      }
       return tx.storeOrder.findUniqueOrThrow({ where: { id: order.id } });
     });
   }

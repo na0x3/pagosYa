@@ -1,0 +1,138 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans variable en toda la interfaz: nombre del producto 48/52 px en escritorio y 32/35 px en móvil; precio 24/28; cuerpo 16/24; etiquetas y navegación 12/16 en mayúsculas con tracking moderado. Números tabulares para precios y cantidades. Jerarquía técnica y legible, sin serif ornamental.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "product-studio",
+      "material-note",
+      "color-lineup"
+    ],
+    "catalogSection": "product-studio",
+    "mobileRule": "Header de una línea con nombre abreviado visualmente pero accesible, enlace “Inicio” y botón persistente “Mi pedido · 0”. La galería usa una imagen principal y miniaturas de 52 px; swatches con nombre textual, capacidades segmentadas y stepper de 44 px. El panel deja de ser sticky y sigue el orden natural. Sin movimiento continuo; solo transición sutil al cambiar variante y alternativa instantánea con reduced-motion."
+  },
+  "assets": [
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d5b34d383f0c.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-9c4db2099869.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-dbdc2c596f17.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f7f3ea",
+      "resolved": "#f7f3ea",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#20251e",
+      "resolved": "#20251e",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#344d37",
+      "resolved": "#344d37",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffdf7",
+      "resolved": "#fffdf7",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fffaf1",
+      "resolved": "#fffaf1",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#c9c7b9",
+      "resolved": "#c9c7b9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "3px",
+      "resolved": "3px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Instrument,sans-serif",
+      "resolved": "Instrument,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Instrument,sans-serif",
+      "resolved": "Instrument,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

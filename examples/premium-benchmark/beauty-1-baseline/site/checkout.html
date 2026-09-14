@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Finalizar pedido — Bruma</title>
+  <meta name="description" content="Revisa tu pedido Bruma, completa los datos de recogida y continúa al pago.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="checkout-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html">Bruma</a>
+      <button class="cart-control" type="button" data-cart-open aria-label="Abrir mi pedido"><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido · <span data-cart-count>0</span></span></button>
+    </div>
+    <div class="header-secondary">
+      <p>Cuidado cosmético diario en varios volúmenes</p>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt=""><span>Menú</span></button>
+      <nav id="site-nav" class="site-nav" aria-label="Navegación principal">
+        <a href="index.html#catalogo-carta">Productos</a>
+        <a href="index.html#recogida-breve">Recogida</a>
+      </nav>
+    </div>
+  </header>
+  <main class="checkout-main">
+    <a class="back-link" href="index.html#catalogo-carta"><img src="assets/icons/arrow-left.svg" alt=""> Seguir comprando</a>
+    <div data-pagosya-checkout-page></div>
+  </main>
+  <footer class="site-footer"><a class="footer-mark" href="index.html">Bruma</a><p>Cuidado cosmético diario.</p></footer>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-contact hidden></div>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

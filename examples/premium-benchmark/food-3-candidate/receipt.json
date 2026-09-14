@@ -1,0 +1,67 @@
+{
+  "id": "food-3-candidate",
+  "arm": "candidate",
+  "fixture": "food",
+  "repeat": 3,
+  "merchantId": "cmu0efwk7001kt6nwwxwf9dcb",
+  "storeId": "cmu0efwkc001mt6nwutwatc7o",
+  "slug": "f0ls6sic",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:42:16.875Z",
+  "assets": [
+    "/v1/uploads/be36903d-be2c-45e1-a4d9-490bd106496b.jpg",
+    "/v1/uploads/1a292af7-e869-49a2-817f-01c530350e3a.jpg",
+    "/v1/uploads/1d4416f2-fb4c-419d-82f0-6351a91111b9.jpg",
+    "/v1/uploads/3ee78e42-e114-44f2-b7b5-e260680cbe99.jpg",
+    "/v1/uploads/79d155e4-570b-4fcf-b4f3-a97281ed5e5a.jpg",
+    "/v1/uploads/f14ce0e8-1328-483b-98fd-d83b5dd88ab4.jpg",
+    "/v1/uploads/b8471982-03e5-4e0d-bb92-165351ecec91.jpg"
+  ],
+  "generation": {
+    "id": "cmu0efwlw0026t6nwk1vq6itx",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 37,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 35681,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 15114,
+          "cachedInputTokens": 0,
+          "outputTokens": 2152,
+          "providerMicroUsd": 118607,
+          "cacheWriteTokens": 15111
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 1,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 73286,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 23375,
+          "cachedInputTokens": 0,
+          "outputTokens": 7297,
+          "providerMicroUsd": 248095,
+          "cacheWriteTokens": 8655
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 814,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 109002,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "digest": "6795ca91eafd45a2c5994b7f1f87364dbae2b511d9248adf1718da2c2c17893f",
+  "elapsedMs": 109205
+}

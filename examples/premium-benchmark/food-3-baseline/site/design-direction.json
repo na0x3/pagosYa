@@ -1,0 +1,67 @@
+{
+  "concepts": [
+    {
+      "name": "La mesa a primera luz",
+      "premise": "Una portada fotográfica editorial y pausada: primero sitúa el desayuno y luego abre una despensa de solo dos productos. Se diferencia de la propuesta 2, que empieza directamente con un menú compacto, y de la 3, que convierte la elección en una secuencia alternada y más gráfica.",
+      "opening": "Masthead marfil con “Mesa Clara”, enlaces a Despensa y Recogida, y “Mi pedido (0)” siempre visible. Debajo, una composición asimétrica: gran titular “Desayunos para poner la mesa en claro” sobre el margen vacío de assets/image-f1220ebdbbf1.jpg; un enlace “Ver la despensa” baja al catálogo. Sin promesas añadidas.",
+      "flow": "La fotografía ambiental establece el tono; el catálogo presenta jugo y granola como dos capítulos amplios. Una franja final resume únicamente formatos, ingredientes declarados y recogida. Producto: galería vertical a la izquierda y panel de selección fijo a la derecha, con opciones propias, precio actualizado y añadir. Carrito y checkout usan filas sobrias, resumen lateral y acentos cítricos solo en selección y acción principal.",
+      "typography": "Fraunces variable para titulares editoriales, Instrument Sans para navegación, opciones, precios y checkout. H1 78–104 px en escritorio, 46 px a 390 y 39 px a 320; H2 48/34/30 px; cuerpo 17/16 px. Titulares con tracking -0.025em y etiquetas en versales espaciadas.",
+      "imagery": "assets/image-f1220ebdbbf1.jpg abre en formato panorámico, con botellas y cítricos enfocados a la derecha y espacio de tela a la izquierda para texto. Jugo: assets/image-06465dbb2877.jpg como retrato principal y assets/image-d7afdd1c26f9.jpg como escena secundaria. Granola: assets/image-e2dc7f4f02d3.jpg como golpe coral, assets/image-5d185857f7d9.jpg para detalle frontal y assets/image-ceff3979a97c.jpg para contexto de desayuno. Nunca se recorta la etiqueta central.",
+      "mobile": "La apertura pasa a foto 4:3 arriba y titular debajo para no cubrir el producto; “Mi pedido (0)” permanece junto al nombre. El catálogo es de una columna, con selectores apilados y botones de 48 px. La página de producto usa galería deslizable natural y una barra de compra inferior no invasiva tras elegir variante.",
+      "layout": {
+        "sections": [
+          "amanecer-editorial",
+          "despensa-dos-capitulos",
+          "formatos-y-recogida"
+        ],
+        "catalogSection": "despensa-dos-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Carta de desayuno",
+      "premise": "Una tienda densa y útil inspirada en una carta de despensa: los dos productos, precios y controles aparecen de inmediato. Frente a la portada fotográfica de la 1, prioriza comparación; frente al recorrido alternado de la 3, concentra toda la decisión en una sola matriz compacta.",
+      "opening": "Cabecera de 64 px con wordmark tipográfico, enlace “Productos” y “Mi pedido (0)”. El catálogo comienza inmediatamente: una línea breve de contexto y dos filas comprables, Jugo y Granola, cada una con miniatura real, precio desde, selectores principales y “Añadir”. El catálogo empieza antes de 160 px del documento en escritorio y antes de 130 px en móvil.",
+      "flow": "La carta permite comparar de un vistazo. Tras las filas aparece un díptico fotográfico que amplía cada producto y enlaza a su ficha; cierra una nota funcional sobre recogida, sin políticas inventadas. Producto: encabezado compacto, gran imagen, nombre/precio/selectores juntos y descripción debajo. Carrito y checkout conservan el formato de recibo: líneas divisorias, cantidades claras y total destacado.",
+      "typography": "Bricolage Grotesque como única familia: 700 para el wordmark y nombres, 500 para controles, 400 para cuerpo. H1 contextual 34/27 px; nombres de producto 29/23 px; precio 22 px; cuerpo 16 px. Jerarquía por peso, sangría y reglas, no por cajas repetidas.",
+      "imagery": "Miniaturas cuadradas con crops centrados: assets/image-06465dbb2877.jpg para la botella y assets/image-5d185857f7d9.jpg para el frasco, manteniendo etiquetas completas. El díptico usa assets/image-d7afdd1c26f9.jpg y assets/image-ceff3979a97c.jpg con focos en botella/vaso y cuenco/frasco. Coral y naranja se muestrean visualmente como acentos separados, sobre papel avena y tinta verde oscura.",
+      "mobile": "La carta conserva ambas compras visibles: cada fila reduce la miniatura, muestra nombre, precio, dos selectores compactos y un botón de ancho completo. El primer producto completo —nombre, precio y añadir— queda sin scroll a 390×844. La navegación no se colapsa sobre “Mi pedido (0)”; detalles secundarios pasan debajo.",
+      "layout": {
+        "sections": [
+          "carta-comprable",
+          "mesa-en-dos",
+          "nota-de-recogida"
+        ],
+        "catalogSection": "carta-comprable",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Dos gestos de mañana",
+      "premise": "Un recorrido de dos escenas, una cítrica y otra cereal, tratado como secuencia editorial alternada. A diferencia de la matriz simultánea de la 2, invita a elegir producto por contexto; a diferencia de la 1, integra la compra dentro de cada escena y usa una jerarquía sans condensada más gráfica.",
+      "opening": "Una franja compacta de identidad y una primera escena de catálogo en split vertical: a la izquierda, foto del jugo; a la derecha, nombre, descripción breve, precio desde, tamaño, presentación y añadir. En escritorio todo el grupo es visible; en móvil se usa una miniatura horizontal de 108 px para mantener nombre, precio y acción antes del pliegue.",
+      "flow": "La primera compra conduce a una segunda escena invertida para Granola, con sabor y peso. Entre ambas, una línea tipográfica “Jugo para servir · granola para acompañar” funciona como bisagra, no como sección independiente. Después, una banda fotográfica conjunta y un cierre de recogida. Producto: portada inmersiva con media y compra lado a lado; detalles e ingredientes confirmados siguen en columnas. Checkout adopta el mismo eje alternado: formulario claro y resumen en bloque cítrico discreto.",
+      "typography": "Oswald para titulares altos y nombres de escena; Instrument Sans para lectura y comercio. H1/producto 72–88 px escritorio, 42 px a 390 y 36 px a 320; subtítulos 26/22 px; cuerpo 16–18 px. Oswald en caja mixta, Instrument Sans en controles; tracking nunca inferior a -0.02em.",
+      "imagery": "Primera escena con assets/image-d7afdd1c26f9.jpg, crop cuadrado centrado en botella, vaso y naranja. Segunda con assets/image-ceff3979a97c.jpg, foco en el cuenco y la etiqueta del frasco. La banda final enfrenta detalles de assets/image-06465dbb2877.jpg y assets/image-5d185857f7d9.jpg. Fondos marfil, verde hoja profundo y naranja exprimida; el coral queda reservado para la escena de granola.",
+      "mobile": "Las escenas dejan de alternar columnas y se convierten en bloques con cabecera fotográfica corta y compra inmediatamente debajo. Los selectores forman una cuadrícula 2×1 y cada acción mide al menos 48 px. “Mi pedido (0)” permanece en la cabecera; las galerías de producto muestran una imagen completa por vez sin movimiento automático.",
+      "layout": {
+        "sections": [
+          "gesto-jugo-catalogo",
+          "gesto-granola",
+          "banda-de-la-mesa",
+          "recogida-clara"
+        ],
+        "catalogSection": "gesto-jugo-catalogo",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "El catálogo tiene solo dos productos y siete fotografías reales suficientemente cuidadas para sostener una apertura editorial; assets/image-f1220ebdbbf1.jpg ofrece además espacio negativo útil y una escena reconocible de SAVIA. La dirección pide explícitamente fotografía real, calidez y color cítrico con propósito, mientras que las variantes de tamaño/presentación y sabor/peso pueden resolverse de"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "id": "cmu0eyke5001dvjrinyfft673",
+  "requestId": "cfff5904-f609-491a-8ab9-c4e5712fa60d",
+  "revision": 1,
+  "page": "index.html",
+  "status": "FAILED",
+  "stage": "REPAIR",
+  "maxCredits": 150,
+  "reservedCredits": 86.8473,
+  "observedCredits": 1.8473,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "3e9820c7-6614-464e-92c0-f0dce08536a4",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:56:49.127Z",
+      "finishedAt": "2026-09-13T22:56:54.476Z",
+      "actualMicroUsd": 18473,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "88190b96-250e-4424-9633-ecf2d1d5979c",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "unknown",
+      "startedAt": "2026-09-13T22:56:55.128Z",
+      "finishedAt": "2026-09-13T22:56:57.610Z",
+      "actualMicroUsd": null,
+      "reservedMicroUsd": 850000
+    }
+  ],
+  "error": "YAPI no puede continuar: la cuenta de IA del servidor agotó su saldo en OpenAI. El administrador debe recargar esa cuenta antes de reintentar. Tu sitio sigue guardado.",
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:56:47.550Z",
+  "updatedAt": "2026-09-13T22:56:57.610Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La propuesta mantiene una identidad editorial cálida y una fotografía de catálogo consistente. La compra se entiende en general, pero en móvil el primer producto pierde contexto visual y la zona de acción duplica el mismo destino.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Primer bloque de producto, alrededor de y=1380",
+        "severity": "major",
+        "viewport": "mobile",
+        "correction": "Mantener la imagen del jugo junto a su ficha en móvil —antes o inmediatamente después de los datos y acciones— y separar con mayor claridad el inicio de la ficha de granola.",
+        "observation": "La información del jugo aparece sin su imagen ni un rótulo visible de sección o producto en la parte superior de esta captura; la fotografía de granola comienza inmediatamente después de sus acciones. Esto hace que, durante el recorrido, la imagen parezca asociarse al jugo anterior."
+      },
+      {
+        "category": "consistency",
+        "location": "Acciones del jugo, alrededor de y=1380",
+        "severity": "minor",
+        "viewport": "mobile",
+        "correction": "Conservar una única llamada principal por producto; si se necesita una acción secundaria, diferenciarla por propósito y etiqueta.",
+        "observation": "Se muestran dos llamadas consecutivas con el mismo texto, «Elegir opciones»: una como enlace subrayado y otra como botón naranja. La duplicación resta claridad al siguiente paso principal."
+      }
+    ],
+    "preference": "uncertain",
+    "responseId": "resp_0377218a95866df5016aa72a31e41887d28746248aeb2b3b9f",
+    "regressions": [],
+    "providerMicroUsd": 18473
+  },
+  "resumeAvailable": false
+}

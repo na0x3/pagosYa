@@ -1,0 +1,27 @@
+{
+  "name": "storefront-dl7xxazz",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "node server.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "motion": "13.1.1",
+    "lottie-web": "5.13.0",
+    "next": "15.5.25",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^20.16.11",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "3.4.19",
+    "postcss": "8.5.25",
+    "autoprefixer": "^10.4.20"
+  }
+}

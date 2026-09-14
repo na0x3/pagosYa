@@ -1,0 +1,66 @@
+{
+  "concepts": [
+    {
+      "name": "Mesa de especificaciones",
+      "premise": "Una tienda-catálogo densa y directa, inspirada en una hoja técnica bien compuesta: los dos productos aparecen de inmediato en una tabla editorial, no en tarjetas. Se diferencia de los otros conceptos por abrir con compra real, máxima densidad útil y una jerarquía casi monoespacial, sin relato previo ni imágenes inventadas.",
+      "opening": "Masthead compacto con «Punto», descriptor y «Mi pedido (0)». Debajo, el catálogo comienza antes de 320 px: encabezado «Equipo de escritorio / 02 piezas» y dos franjas de producto. Cada franja reúne nombre, descripción, etiquetas, selector propio —Color para la lámpara, Tamaño para el soporte—, precio actualizado y botón «Añadir».",
+      "flow": "La portada funciona como una mesa de comparación: catálogo completo, una breve nota de criterio material basada solo en los datos disponibles y cierre con retiro coordinado. La ficha de producto amplía la misma matriz de información con selector, precio, cantidad y compra juntos; no reserva espacio para galería. Carrito y checkout continúan como formularios tabulados, con resumen persistente y retiro como única modalidad disponible.",
+      "typography": "Instrument Sans en toda la interfaz, 400–700. Marca 30/30, título 56/54 en escritorio y 36/36 en móvil, nombres 24/26, texto 16/24, metadatos 12/16 en mayúsculas con espaciado amplio. Números de precio alineados y muy legibles; ningún titular usa tracking menor de -0.03em.",
+      "imagery": "Sin fotografías, ilustraciones ni falsos thumbnails. La identidad surge de reglas de 1 px, columnas, grandes cifras tipográficas y pequeños campos verde lima para estados y selecciones. Fondo blanco, texto grafito y lima reservado para foco, opción activa y confirmación.",
+      "mobile": "El encabezado conserva «Punto» y «Mi pedido (0)» visibles; navegación secundaria bajo menú. Cada fila se convierte en una ficha lineal sin marco exterior: nombre, especificación, selector, precio y botón de 48 px. El primer producto completo, con nombre, precio y acción, queda visible en 390×844; a 320 px los controles ocupan todo el ancho y envuelven sin recorte.",
+      "layout": {
+        "sections": [
+          "catalogo-matriz",
+          "criterio-material",
+          "retiro-cierre"
+        ],
+        "catalogSection": "catalogo-matriz",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Punto de ajuste",
+      "premise": "Una experiencia tipográfica y secuencial centrada en la acción de elegir: primero presenta la idea de ajustar el escritorio y después divide el catálogo en dos capítulos horizontales. Frente a la matriz densa, ofrece más pausa; frente al índice lateral, usa una apertura monumental y fichas apaisadas con controles protagonistas.",
+      "opening": "Portada tipográfica de dos niveles: una pequeña línea «Accesorios de escritorio» cruza un enorme «Punto.» grafito, mientras una banda lima contiene «Elegir equipo». No simula producto ni promete prestaciones. Una flecha local conduce al catálogo inmediatamente posterior; «Mi pedido (0)» permanece en el masthead.",
+      "flow": "Tras la apertura, cada producto ocupa una banda apaisada alternando la posición del nombre y del módulo de compra. Las especificaciones confirmadas sustituyen la imagen: «USB-C / brazo ajustable / acabado mate» y «aluminio / dos tamaños». La ficha individual abre con nombre y precio en lados opuestos, seguida por descripción, opción, cantidad y añadir; carrito y checkout reducen la escala, mantienen la banda lima como indicador de etapa y presentan el resumen antes de los datos de pago.",
+      "typography": "Bricolage Grotesque variable como única familia. Wordmark 34/34; apertura 112/96 en escritorio, 72/66 en tableta y 52/48 en móvil; nombres 42/44 y 30/32; cuerpo 17/25; controles 15/20 seminegrita. Contraste por ancho, peso y escala, con tracking máximo de -0.04em.",
+      "imagery": "Composición exclusivamente tipográfica. El punto final de la marca se convierte en un motivo circular CSS plano —no representación de producto— usado una vez en la apertura y como pequeño marcador de etapa. Grafito dominante, blanco cálido y una única banda lima sólida; sin gradientes ni cajas decorativas repetidas.",
+      "mobile": "La palabra «Punto.» conserva protagonismo pero se parte de forma natural dentro del ancho. La banda de acción pasa debajo del título. Las fichas apaisadas se reordenan a especificaciones, selector, precio y botón de 48 px; el motivo circular queda en su propia franja y nunca solapa controles. «Mi pedido (0)» sigue visible fuera del menú.",
+      "layout": {
+        "sections": [
+          "portada-punto",
+          "catalogo-capitulos",
+          "nota-de-eleccion"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice de herramientas",
+      "premise": "Una interfaz de precisión inspirada en un índice de instrumentos: navegación vertical fija y un área de lectura que cambia entre los dos artículos. Se diferencia de las otras propuestas por su silueta partida, densidad intermedia, selección por índice y uso de serif para los nombres, sin una gran portada ni una tabla simultánea.",
+      "opening": "Una columna grafito ocupa cerca de un tercio del escritorio con marca, descriptor, enlaces «01 Lámpara» y «02 Soporte» y «Mi pedido (0)». A la derecha se abre una introducción breve —«Dos piezas. Opciones claras.»— seguida del producto seleccionado con nombre, datos, variante, precio y añadir. En móvil, el índice se vuelve una barra horizontal desplazable bajo el encabezado.",
+      "flow": "La portada alterna el artículo activo sin ocultar el acceso al otro y mantiene ambos productos dentro del catálogo real; después incluye una comparación compacta de alimentación/material, opciones y precios iniciales. La ficha de producto abandona el conmutador y conserva la división entre índice de datos y módulo de compra. Carrito y checkout reinterpretan la columna oscura como resumen fijo en escritorio y acordeón visible en móvil, con pasos de pago en el panel blanco.",
+      "typography": "Instrument Serif para marca, introducción y nombres; Oswald para precios, índices y rótulos; Instrument Sans para descripciones, selectores y formularios. Apertura 64/66 escritorio y 42/44 móvil; nombres 48/50 y 34/36; precio 34/36; cuerpo 16/24. La mezcla distingue lectura editorial, datos condensados y controles sin fingir un manual técnico.",
+      "imagery": "Sin medios de producto. El panel lateral, líneas de coordenada y bloques de texto constituyen la composición. Paleta grafito profundo, blanco frío y verde lima en el cursor de índice y el botón principal. Los únicos iconos son Lucide locales y semánticos para bolsa, menú y flechas.",
+      "mobile": "El panel lateral se transforma en masthead grafito compacto con marca y «Mi pedido (0)» siempre visibles. El índice 01/02 queda debajo como selector con botones de 44 px. El producto activo muestra nombre, precio y añadir dentro de la primera pantalla de 390×844; a 320 px selector y cantidad se apilan, sin columnas reservadas para imágenes ausentes.",
+      "layout": {
+        "sections": [
+          "indice-intro",
+          "catalogo-instrumentos",
+          "comparacion-esencial"
+        ],
+        "catalogSection": "catalogo-instrumentos",
+        "standaloneIntro": true,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "«Mesa de especificaciones» responde mejor al catálogo real de solo dos artículos, ambos sin fotografías y con variantes concretas: Color para la lámpara USB-C y Tamaño para el soporte de aluminio. Su apertura permite comparar y añadir inmediatamente, prioriza la acción solicitada y convierte el verde lima, grafito y blanco en un sistema técnico legible sin inventar imágenes, beneficios ni datos."
+  }
+}

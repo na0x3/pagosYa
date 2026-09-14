@@ -1,0 +1,119 @@
+{
+  "sourceDigest": "88654929aed66dedef576dad8389607f0d5d251c0cedca9e2a25631f449f31d0",
+  "evidenceRevision": 1,
+  "captures": [
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1381,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-0.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 269,
+      "pageHeight": 1381,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-1.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 537,
+      "pageHeight": 1381,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-2.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1769,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-3.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 463,
+      "pageHeight": 1769,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-4.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 925,
+      "pageHeight": 1769,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-5.jpg"
+    }
+  ],
+  "captureFailures": [],
+  "shopping": [
+    {
+      "width": 1280,
+      "productId": "cmu0ewht6004st6nwxy934apa",
+      "status": "passed",
+      "variantId": "var_86ulmmehu3x9"
+    },
+    {
+      "width": 1280,
+      "productId": "cmu0ewht8004ut6nwvaz59fsm",
+      "status": "passed",
+      "variantId": "var_d0wtos1445na"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0ewht6004st6nwxy934apa",
+      "status": "failed",
+      "variantId": "var_86ulmmehu3x9",
+      "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Continuar al pago de prueba', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button data-pay=\"\" type=\"button\" class=\"checkout-button\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 "
+    },
+    {
+      "width": 390,
+      "productId": "cmu0ewht8004ut6nwvaz59fsm",
+      "status": "failed",
+      "variantId": "var_d0wtos1445na",
+      "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Continuar al pago de prueba', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button data-pay=\"\" type=\"button\" class=\"checkout-button\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 "
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trama — Prendas cotidianas con colores y tallas</title>
+  <meta name="description" content="Explora la edición de uso diario de Trama y elige colores y tallas para añadir tus prendas al pedido.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html" aria-label="Trama, inicio">Trama</a>
+      <button class="cart-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido</span> <span class="cart-count">(<span data-cart-count>0</span>)</span>
+      </button>
+    </div>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="#catalogo-editorial" aria-current="page">Prendas</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="catalogo-editorial" aria-labelledby="catalog-title">
+      <div class="catalog-intro">
+        <p class="eyebrow">Edición de uso diario</p>
+        <h1 id="catalog-title">Prendas para elegir bien y usar seguido.</h1>
+        <p>Una colección breve de ropa informal con colores y tallas propias de cada prenda.</p>
+      </div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+      <template data-pagosya-product-template>
+        <article class="editorial-product">
+          <div class="edition-index" aria-hidden="true"></div>
+          <div class="editorial-product__body">
+            <div class="editorial-product__copy">
+              <p class="product-kicker">Trama / Uso diario</p>
+              <h2 data-product-field="name"></h2>
+              <p class="product-description" data-product-field="description"></p>
+              <a class="menu-item__details detail-link" data-product-link href="product.html">Ver detalle <span aria-hidden="true">→</span></a>
+            </div>
+            <div class="editorial-product__purchase">
+              <div class="menu-item__price" data-product-field="price"></div>
+              <div class="catalog-options" data-product-field="options"></div>
+              <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+              <span class="add-feedback" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+        </article>
+      </template>
+    </section>
+
+    <section id="nota-retiro" aria-labelledby="pickup-title">
+      <p class="eyebrow">Cómo recibirlo</p>
+      <div>
+        <h2 id="pickup-title">Retiro del pedido</h2>
+        <p>Selecciona la opción de retiro al completar tu pedido.</p>
+      </div>
+      <a class="text-link" href="#catalogo-editorial">Volver a las prendas <span aria-hidden="true">↑</span></a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <strong>Trama</strong>
+    <span>Prendas cotidianas con colores y tallas.</span>
+  </footer>
+
+  <div data-pagosya-cart hidden></div>
+  <div class="global-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-contact hidden></div>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

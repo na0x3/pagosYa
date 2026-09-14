@@ -563,7 +563,7 @@ export class PaymentLinksService {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: this.config.get<string>("app.openAi.inventoryModel") ?? "gpt-5.6-sol",
+          model: this.config.get<string>("app.openAi.inventoryModel") ?? "gpt-5.6-luna",
           input: [
             { role: "developer", content: [{ type: "input_text", text: prompt }] },
             { role: "user", content: imageContent.flat() },
@@ -664,7 +664,7 @@ export class PaymentLinksService {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: this.config.get<string>("app.openAi.inventoryModel") ?? "gpt-5.6-sol",
+            model: this.config.get<string>("app.openAi.inventoryModel") ?? "gpt-5.6-luna",
             input: [
               { role: "developer", content: [{ type: "input_text", text: prompt }] },
               { role: "user", content: [{ type: "input_text", text: [

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trama — Prendas cotidianas en colores y tallas</title>
+  <meta name="description" content="Explora la selección de prendas cotidianas de Trama, elige color y talla y añade tu elección al pedido.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <a class="skip-link" href="#catalogo">Ir al catálogo</a>
+  <header class="site-header">
+    <div class="header-brand-row">
+      <a class="wordmark" href="index.html" aria-current="page"><span data-store-name>Trama</span></a>
+    </div>
+    <div class="header-actions-row">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-navigation">
+        <img src="assets/icons/menu.svg" alt=""><span>Menú</span>
+      </button>
+      <nav class="site-nav" id="site-navigation" aria-label="Navegación principal">
+        <a href="index.html" aria-current="page">Inicio</a>
+        <a href="#catalogo">Catálogo</a>
+      </nav>
+      <button class="cart-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido</span><span aria-hidden="true">·</span><span data-cart-count>0</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section id="catalogo" class="catalog-section" aria-labelledby="catalog-title">
+      <div class="catalog-heading">
+        <p class="eyebrow">Muestrario 01</p>
+        <h1 id="catalog-title">Prendas para<br>todos los días</h1>
+        <p class="catalog-intro">Elige la prenda y configura sus opciones.</p>
+      </div>
+      <div data-pagosya-categories aria-label="Categorías"></div>
+      <div class="catalog-list" data-pagosya-catalog></div>
+    </section>
+
+    <section id="nota-material" class="material-note" aria-labelledby="note-title">
+      <p class="eyebrow">Selección Trama</p>
+      <h2 id="note-title">Dos básicos.<br>Las opciones precisas.</h2>
+      <p>Una selección breve de prendas informales, presentada para comparar tallas, colores y precios sin distracciones.</p>
+      <a class="text-link" href="#catalogo">Volver al muestrario <img src="assets/icons/arrow-right.svg" alt=""></a>
+    </section>
+  </main>
+
+  <div data-pagosya-contact hidden></div>
+  <div data-pagosya-comeback></div>
+  <div data-pagosya-subscribe></div>
+  <div data-pagosya-cart hidden></div>
+  <div class="global-status" data-pagosya-status role="status" aria-live="polite"></div>
+
+  <footer class="site-footer">
+    <a class="wordmark wordmark--footer" href="index.html">Trama</a>
+    <p>Prendas cotidianas con colores y tallas.</p>
+    <button class="footer-order" type="button" data-cart-open>Mi pedido · <span data-cart-count>0</span></button>
+  </footer>
+
+  <template data-pagosya-product-template>
+    <article class="catalog-product">
+      <div class="specimen-words" data-product-decoration aria-hidden="true"><span>CRUDO</span><span>AZUL</span></div>
+      <div class="product-index" aria-hidden="true"></div>
+      <div class="product-copy">
+        <h2 data-product-field="name"></h2>
+        <p data-product-field="description"></p>
+        <a class="product-detail-link menu-item__details" data-product-link href="product.html">Ver ficha <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+      <div class="product-options" data-product-field="options"></div>
+      <div class="product-purchase">
+        <div class="product-price" data-product-field="price"></div>
+        <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+{
+  "merchantId": "cmu08wutn00002uy0jmucbtro",
+  "storeId": "cmu08wutw00022uy00u1ieut7",
+  "slug": "xlixm44n",
+  "assets": {
+    "juice.jpg": "/v1/uploads/6b022d56-52b7-4b70-b5b4-670456ca73b7.jpg",
+    "granola.jpg": "/v1/uploads/6e911116-584d-4569-8869-1ff99a337478.jpg",
+    "bottles.jpg": "/v1/uploads/62e899bb-17fa-48d4-8c4b-8fc077b29823.jpg",
+    "juice-preparation.mp4": "/v1/uploads/e31432df-ff4c-44d2-9053-f1ce5bb98dab.mp4",
+    "reference.jpg": "/v1/uploads/9cdeecec-5ce8-4292-a096-9d2a208ae5c8.jpg"
+  },
+  "products": [
+    {
+      "id": "cmu08xizd000bwuqvkbj6xx2y",
+      "name": "Jugo naranja + jengibre"
+    },
+    {
+      "id": "cmu08xizi000dwuqvfmwbm85q",
+      "name": "Granola de la casa"
+    },
+    {
+      "id": "cmu08xizj000fwuqvzfhe2ikl",
+      "name": "Botella Ritual"
+    }
+  ],
+  "generation": {
+    "id": "cmu08xj1c000hwuqvdqwws709",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 35,
+    "maxCredits": 300,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 47792,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 13070,
+          "cachedInputTokens": 0,
+          "outputTokens": 1920,
+          "providerMicroUsd": 103747,
+          "cacheWriteTokens": 13067
+        },
+        "reasoningEffort": "low"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 72285,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 20529,
+          "cachedInputTokens": 0,
+          "outputTokens": 7430,
+          "providerMicroUsd": 238966,
+          "cacheWriteTokens": 8250
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 483,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 120129,
+    "status": "COMPLETED"
+  },
+  "revision": 5,
+  "demoUrl": "http://localhost:4326",
+  "premiumAssets": {
+    "bottle-salvia": "/v1/uploads/930e5665-a1d6-4f47-a88c-d1c43219040e.jpg",
+    "bottle-coral": "/v1/uploads/b3c09f08-fbc1-4ca0-870a-89f781026876.jpg",
+    "bottle-marfil": "/v1/uploads/4769f812-f28e-4747-b69f-7b28f1880fd1.jpg",
+    "juice-studio": "/v1/uploads/fef30d69-dc8c-4c23-9e6d-a92d7bf9acbc.jpg",
+    "juice-ritual": "/v1/uploads/f8f7e696-b609-44d9-8540-7afbd9e7908f.jpg",
+    "granola-studio": "/v1/uploads/c2038b1a-d15d-4e16-b243-11640f2a791b.jpg",
+    "granola-ritual": "/v1/uploads/68106c61-c982-4f62-b417-3fab01a69774.jpg",
+    "granola-cacao": "/v1/uploads/24c88ec2-98dd-404b-b661-cbec583db407.jpg"
+  },
+  "premiumDesign": {
+    "direction": "A",
+    "reviewedBy": [
+      "Codex",
+      "Claude"
+    ],
+    "assets": 8,
+    "savedAt": "2026-09-13T22:04:40.223Z"
+  },
+  "localPublication": {
+    "revision": 5,
+    "payments": "test",
+    "url": "http://localhost:5175/s/xlixm44n"
+  }
+}

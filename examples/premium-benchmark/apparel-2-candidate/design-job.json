@@ -1,0 +1,39 @@
+{
+  "id": "cmu0ex9j3000bvjrij6x90liw",
+  "requestId": "5d87bda1-5a68-47d8-b862-2907f7254987",
+  "revision": 1,
+  "page": "index.html",
+  "status": "UNCHANGED",
+  "stage": "REVIEW_BASELINE",
+  "maxCredits": 150,
+  "reservedCredits": 1.573,
+  "observedCredits": 1.573,
+  "repairs": 0,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "e918b12d-da67-4212-b558-b825d3d97c10",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:55:48.473Z",
+      "finishedAt": "2026-09-13T22:55:51.024Z",
+      "actualMicroUsd": 15730,
+      "reservedMicroUsd": 150000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:55:46.816Z",
+  "updatedAt": "2026-09-13T22:55:51.027Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La página mantiene una jerarquía de compra clara y una identidad coherente en escritorio y móvil: catálogo, precios y llamadas a la acción se distinguen con facilidad sin recurrir a fotografías no disponibles.",
+    "findings": [],
+    "preference": "uncertain",
+    "responseId": "resp_056957c56f4d657a016aa729f51ecc87d29bfa1ae073593923",
+    "regressions": [],
+    "providerMicroUsd": 15730
+  },
+  "resumeAvailable": false
+}

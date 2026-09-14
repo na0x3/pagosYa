@@ -1,0 +1,65 @@
+{
+  "concepts": [
+    {
+      "name": "La mesa de dos",
+      "premise": "Una portada-catálogo inmediata, construida como una mesa editorial partida entre los dos únicos productos. Es la opción más comercial y densa: frente al relato fotográfico del concepto 2 y al selector secuencial del concepto 3, permite comparar, configurar y añadir jugo o granola desde el primer encuadre.",
+      "opening": "Masthead crema muy compacto con «Mesa Clara», enlace «Productos» y «Mi pedido (0)». Debajo, el catálogo ocupa una retícula 7/5: el jugo abre con assets/image-f1220ebdbbf1.jpg en recorte horizontal y la granola con assets/image-e2dc7f4f02d3.jpg en recorte vertical. Cada lado muestra nombre, precio inicial, selectores propios y «Añadir al pedido» sin exigir desplazamiento en 1280 × 844 ni 390 × 844.",
+      "flow": "La compra sucede primero. Tras las dos fichas, una franja breve conecta ambos usos —jugo para servir, granola para acompañar— sin convertirlos en un pack inexistente. Las páginas de producto amplían la imagen principal con miniaturas reales, descripción, opciones y compra en una columna fija; carrito y checkout conservan divisiones finas, resumen compacto y énfasis explícito en retiro, sin inventar políticas.",
+      "typography": "Bricolage Grotesque 200–800 como única familia: marca en 700, títulos 52–72 px de trazo compacto, nombres de producto 28–38 px y texto/controles 15–17 px. En móvil, marca 22 px, títulos 34–40 px, producto 24–28 px y controles 16 px. Mayúsculas espaciadas solo para rótulos pequeños; titulares con tracking de -0.03em.",
+      "imagery": "Fotografía real como superficie principal, sin marcos decorativos. Para jugo: assets/image-f1220ebdbbf1.jpg con foco en las tres botellas y naranja; assets/image-06465dbb2877.jpg y assets/image-d7afdd1c26f9.jpg en la galería del producto. Para granola: assets/image-e2dc7f4f02d3.jpg con foco en frasco y cuenco; assets/image-5d185857f7d9.jpg y assets/image-ceff3979a97c.jpg en detalle. Marfil, verde hoja oscuro y naranja exprimida; coral reservado para Granola de la casa.",
+      "mobile": "Cabecera de dos filas: marca y «Mi pedido (0)» siempre visibles; navegación debajo. El catálogo comienza antes de 320 px y apila dos módulos compactos. Cada producto abre con una imagen horizontal de 116–132 px, seguida por nombre, precio, selectores de 44 px y botón ancho. Las miniaturas se vuelven una tira desplazable en producto; el resumen de pedido permanece al final del flujo, sin controles pegajosos que tapen contenido.",
+      "layout": {
+        "sections": [
+          "despensa",
+          "momento-de-mesa"
+        ],
+        "catalogSection": "despensa",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Luz de desayuno",
+      "premise": "Una entrada fotográfica espaciosa y cinematográfica que convierte la luz cálida de las imágenes SAVIA en identidad de Mesa Clara. Se diferencia del catálogo inmediato del concepto 1 por anteponer atmósfera y del concepto 3 por presentar después los productos como capítulos editoriales amplios, no como un configurador.",
+      "opening": "Una composición asimétrica de altura contenida: assets/image-f1220ebdbbf1.jpg ocupa dos tercios con foco a la derecha sobre las botellas; a la izquierda, sobre marfil, aparecen «Mesa Clara», el descriptor de despensa y el enlace «Ver la despensa». Una banda cítrica delgada enlaza visualmente con el catálogo, sin texto superpuesto sobre las etiquetas SAVIA.",
+      "flow": "Tras la apertura, Jugo naranja + jengibre y Granola de la casa aparecen como dos capítulos alternados, cada uno con fotografía grande, descripción exacta, precio inicial y acceso a «Elegir formato». El catálogo real reúne debajo los controles completos de ambos productos. La página de producto adopta una galería 60/40 y panel de compra sereno; carrito y checkout usan una columna narrativa para artículos y otra para totales y retiro.",
+      "typography": "Instrument Serif para marca y titulares editoriales; Instrument Sans 400–700 para navegación, precios, opciones y checkout. Escritorio: marca 26 px, h1 68–88 px, capítulos 48–64 px y cuerpo 17–19 px. Móvil: h1 42–48 px, capítulos 34–40 px y cuerpo 16 px. Tracking de titulares entre -0.025em y -0.01em; controles nítidos sin versalitas excesivas.",
+      "imagery": "La fotografía marca el ritmo. Apertura con assets/image-f1220ebdbbf1.jpg; capítulo de jugo con assets/image-d7afdd1c26f9.jpg, recorte cuadrado centrado en botella, vaso y naranja; capítulo de granola con assets/image-ceff3979a97c.jpg, foco en cuenco y frasco. assets/image-06465dbb2877.jpg y assets/image-5d185857f7d9.jpg sirven como retratos frontales en producto. Paleta de lino, cacao, verde oliva y naranja brillante usada solo en precios, selección y CTA.",
+      "mobile": "La apertura conserva la fotografía: imagen 4:3 arriba y bloque tipográfico debajo, con «Mi pedido (0)» visible en la cabecera. Los capítulos se apilan y alternan imagen/texto sin solapamientos. El catálogo completo llega después del relato; opciones se presentan como botones de ancho flexible y el CTA ocupa todo el contenedor. Producto y checkout pasan a una sola columna con totales legibles.",
+      "layout": {
+        "sections": [
+          "luz-de-la-manana",
+          "capitulos-del-desayuno",
+          "despensa-completa"
+        ],
+        "catalogSection": "despensa-completa",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Elige tu mañana",
+      "premise": "Una tienda guiada por decisiones: «¿Qué va primero?» abre un selector entre jugo y granola y conduce de inmediato a sus opciones reales. Frente a la mesa comparativa del concepto 1 y la narración fotográfica del concepto 2, usa una silueta vertical, tipografía funcional y fotografías como pruebas visuales dentro de un configurador.",
+      "opening": "Bajo una cabecera verde oscuro, una portada breve en dos bandas pregunta «¿Jugo o granola?». Cada elección es un ancla grande con nombre, precio inicial y un recorte real: assets/image-06465dbb2877.jpg para la botella y assets/image-5d185857f7d9.jpg para el frasco. No hay botón de añadir todavía: la promesa es elegir primero y configurar con claridad.",
+      "flow": "El catálogo se organiza como dos estaciones numeradas mediante rótulos tipográficos, no insignias repetidas. La estación Jugo muestra primero Tamaño y luego Presentación; Granola, Sabor y luego Peso. La imagen cambia con la variante cuando existe el recurso confirmado, incluido assets/image-6039f6dfd423.jpg para Cacao. Un resumen en línea reúne elección, precio y «Añadir al pedido». Producto replica el configurador con galería lateral; carrito y checkout convierten las selecciones en filas tipó",
+      "typography": "Oswald 300–700 para preguntas, nombres y precios de gran tamaño; Instrument Sans 400–700 para descripciones, controles y formularios. Escritorio: h1 72–96 px, estaciones 46–58 px y UI 16 px. Móvil: h1 44–52 px, estaciones 32–38 px y UI 16 px. Oswald usa tracking de -0.015em; Instrument Sans mantiene espaciado neutro para máxima claridad.",
+      "imagery": "Imágenes frontales como identificadores: assets/image-06465dbb2877.jpg y assets/image-5d185857f7d9.jpg en la elección inicial; assets/image-f1220ebdbbf1.jpg para pack de jugo, assets/image-d7afdd1c26f9.jpg como contexto, assets/image-e2dc7f4f02d3.jpg para granola Original y assets/image-6039f6dfd423.jpg exclusivamente cuando se elige Cacao. Fondo avena, tinta verde, divisores naranja y un acento arándano para la opción Cacao.",
+      "mobile": "La pregunta y las dos elecciones caben como bandas compactas, no como tarjetas altas; «Mi pedido (0)» permanece junto a la marca. Cada estación se convierte en un acordeón accesible abierto por defecto, preservando imagen, opciones y compra sin depender de animación. Selectores de al menos 44 px, resumen antes del botón y ninguna fila horizontal que pueda recortar acciones a 320 px.",
+      "layout": {
+        "sections": [
+          "eleccion-inicial",
+          "configura-tu-desayuno",
+          "resumen-de-la-despensa"
+        ],
+        "catalogSection": "configura-tu-desayuno",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "El catálogo confirmado tiene solo dos productos, ambos con cuatro variantes y fotografías reales suficientes para compararlos. «La mesa de dos» aprovecha esa escala, muestra nombre, precio, opciones y añadido desde el primer encuadre, y usa directamente las imágenes SAVIA suministradas. Es la respuesta más fiel a la prioridad explícita de compra clara, formatos individuales y packs, manteniendo el"
+  }
+}

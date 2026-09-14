@@ -6,7 +6,7 @@ import { AppModule } from "../src/app.module";
 import { AllExceptionsFilter } from "../src/common/filters/all-exceptions.filter";
 import { PrismaService } from "../src/prisma/prisma.service";
 
-describe("One store per account (HTTP + disposable PostgreSQL)", () => {
+describe("Multiple stores per account (HTTP + disposable PostgreSQL)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let token: string;
@@ -29,31 +29,39 @@ describe("One store per account (HTTP + disposable PostgreSQL)", () => {
 
   afterAll(async () => { await app?.close(); });
 
-  it("accepts only one of two concurrent creation requests", async () => {
+  it("creates two stores concurrently for the same profile with distinct public slugs", async () => {
     const results = await Promise.all(["Primera", "Segunda"].map(name =>
       request(app.getHttpServer()).post("/v1/stores").set(auth()).send({ name })));
-    expect(results.map(result => result.status).sort()).toEqual([201, 409]);
-    expect(results.find(result => result.status === 409)?.body.message).toContain("Tu cuenta ya tiene una tienda");
-    storeId = results.find(result => result.status === 201)!.body.id;
-    expect(await prisma.store.count({ where: { merchantId } })).toBe(1);
+    expect(results.map(result => result.status)).toEqual([201, 201]);
+    expect(new Set(results.map(result => result.body.slug)).size).toBe(2);
+    storeId = results[0].body.id;
+    expect(await prisma.store.count({ where: { merchantId } })).toBe(2);
   });
 
-  it("also enforces the limit for direct database writes and archived stores", async () => {
-    await expect(prisma.store.create({ data: { merchantId, name: "Bypass", slug: "single-store-bypass" } }))
-      .rejects.toMatchObject({ code: "P2002", meta: { target: ["merchantId"] } });
+  it("retains archived stores while creating another store and keeps catalogs independent", async () => {
     await prisma.store.update({ where: { id: storeId }, data: { status: "ARCHIVED" } });
-    await request(app.getHttpServer()).post("/v1/stores").set(auth()).send({ name: "Otra" }).expect(409);
+    const created = await request(app.getHttpServer()).post("/v1/stores").set(auth()).send({ name: "Tercera" }).expect(201);
+    await request(app.getHttpServer()).post(`/v1/stores/${created.body.id}/payment_links`).set(auth())
+      .send({ name: "Solo en tercera", amount: 12000, currency: "BOB", stock: 3 }).expect(201);
+    const catalog = await request(app.getHttpServer()).get(`/v1/stores/${created.body.id}/payment_links`).set(auth()).expect(200);
+    expect(catalog.body).toHaveLength(1);
+    const originalCatalog = await request(app.getHttpServer()).get(`/v1/stores/${storeId}/payment_links`).set(auth()).expect(200);
+    expect(originalCatalog.body).toHaveLength(0);
+    expect(await prisma.store.count({ where: { merchantId } })).toBe(3);
   });
 
-  it("allows another account its own store and allows replacement after deletion", async () => {
+  it("keeps ownership enforced and deleting one store preserves the other stores", async () => {
     const other = await request(app.getHttpServer()).post("/v1/merchants")
-      .send({ name: "Other account", email: "other-single-store@example.test" }).expect(201);
-    await request(app.getHttpServer()).post("/v1/stores")
-      .set({ Authorization: `Bearer ${other.body.testKeys.secretKey}` }).send({ name: "Su tienda" }).expect(201);
+      .send({ name: "Other account", email: "other-multiple-store@example.test" }).expect(201);
+    const otherAuth = { Authorization: `Bearer ${other.body.testKeys.secretKey}` };
+    await request(app.getHttpServer()).post("/v1/stores").set(otherAuth).send({ name: "Su tienda" }).expect(201);
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}`).set(otherAuth).send({ name: "Not mine" }).expect(404);
+    await request(app.getHttpServer()).delete(`/v1/stores/${storeId}`).set(otherAuth).expect(404);
+    const ownList = await request(app.getHttpServer()).get("/v1/stores").set(otherAuth).expect(200);
+    expect(ownList.body).toHaveLength(1);
+    expect(ownList.body[0].name).toBe("Su tienda");
     await request(app.getHttpServer()).delete(`/v1/stores/${storeId}`).set(auth()).expect(200);
-    await request(app.getHttpServer()).post("/v1/stores").set(auth()).send({ name: "Reemplazo" }).expect(201);
     const list = await request(app.getHttpServer()).get("/v1/stores").set(auth()).expect(200);
-    expect(list.body).toHaveLength(1);
-    expect(list.body[0].name).toBe("Reemplazo");
+    expect(list.body.map((s: { name: string }) => s.name).sort()).toEqual(["Segunda", "Tercera"]);
   });
 });

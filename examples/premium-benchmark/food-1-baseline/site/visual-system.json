@@ -1,0 +1,155 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Bricolage Grotesque 200–800 como única familia: marca en 700, títulos 52–72 px de trazo compacto, nombres de producto 28–38 px y texto/controles 15–17 px. En móvil, marca 22 px, títulos 34–40 px, producto 24–28 px y controles 16 px. Mayúsculas espaciadas solo para rótulos pequeños; titulares con tracking de -0.03em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "despensa",
+      "momento-de-mesa"
+    ],
+    "catalogSection": "despensa",
+    "mobileRule": "Cabecera de dos filas: marca y «Mi pedido (0)» siempre visibles; navegación debajo. El catálogo comienza antes de 320 px y apila dos módulos compactos. Cada producto abre con una imagen horizontal de 116–132 px, seguida por nombre, precio, selectores de 44 px y botón ancho. Las miniaturas se vuelven una tira desplazable en producto; el resumen de pedido permanece al final del flujo, sin controles pegajosos que tapen contenido."
+  },
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-06465dbb2877.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7afdd1c26f9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-5d185857f7d9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-ceff3979a97c.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-6039f6dfd423.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f5efdf",
+      "resolved": "#f5efdf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#173f2a",
+      "resolved": "#173f2a",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#ef801d",
+      "resolved": "#ef801d",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#173f2a",
+      "resolved": "#173f2a",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#b9b09b",
+      "resolved": "#b9b09b",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0px",
+      "resolved": "0px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

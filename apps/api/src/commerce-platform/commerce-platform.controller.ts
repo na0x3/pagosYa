@@ -1,13 +1,15 @@
 import { Body, Controller, Get, Header, Param, Patch, Post, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { CommercePlatformService } from './commerce-platform.service';
 class CreditDto {
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(120) recipientName?: string;
+  @IsOptional() @IsEmail() @MaxLength(254) recipientEmail?: string;
   @IsUUID() reference!: string;
   @IsString() @MinLength(1) @MaxLength(120) label!: string;
   @IsIn(['GIFT_CARD', 'STORE_CREDIT']) kind!: string;

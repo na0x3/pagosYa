@@ -4,7 +4,9 @@ import { promises as dns } from "node:dns";
 import { CustomDomainsService, normalizeCustomDomainHostname } from "./custom-domains.service";
 
 function makePrisma() {
-  return {
+  const prisma = {
+    $executeRaw: jest.fn(),
+    $transaction: jest.fn(),
     store: { findFirst: jest.fn() },
     customDomain: {
       findMany: jest.fn(),
@@ -16,6 +18,8 @@ function makePrisma() {
       deleteMany: jest.fn(),
     },
   };
+  prisma.$transaction.mockImplementation(fn => fn(prisma));
+  return prisma;
 }
 
 function makeConfig() {

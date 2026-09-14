@@ -147,6 +147,6 @@ export class SourcePublishingService {
     // Always use the trusted current commerce runtime; authored scripts stay isolated.
     const { files } = await currentSourceRuntime(snapshot);
     // Export tooling is private. Only the selected public revision's browser assets leave the API.
-    return { published: true, revision, visitToken, analyticsAvailable: true, snapshot: { ...snapshot, brief: {}, files: files.filter(f => /\.(html|css|js|png|jpe?g|webp|gif|avif|woff2?|ttf)$/i.test(f.path) && !['server.mjs', 'build.mjs'].includes(f.path)) } };
+    return { published: true, revision, visitToken, analyticsAvailable: true, snapshot: { ...snapshot, brief: {}, files: files.filter(f => /\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) && !['server.mjs', 'build.mjs'].includes(f.path)) } };
   }
 }

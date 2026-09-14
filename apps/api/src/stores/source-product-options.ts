@@ -9,16 +9,16 @@ import { validateProductSubscriptions, type ProductSubscriptionOperation } from 
 
 const nullable = (schema: object) => ({ anyOf: [schema, { type: 'null' }] });
 const properties = {
-  name: nullable({ type: 'string', maxLength: 140 }),
-  options: nullable({ type: 'array', maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['name','value'], properties: { name: { type: 'string', maxLength: 40 }, value: { type: 'string', maxLength: 40 } } } }),
+  name: nullable({ type: 'string', maxLength: 260 }),
+  options: nullable({ type: 'array', maxItems: 6, items: { type: 'object', additionalProperties: false, required: ['name','value'], properties: { name: { type: 'string', maxLength: 40 }, value: { type: 'string', maxLength: 40 } } } }),
   amount: nullable({ type: 'integer', minimum: 0, maximum: 2147483647 }),
   priceText: nullable({ type: 'string', description: 'Exact current merchant price quote, or a surcharge such as +Bs 20. Null inherits the product price for a new combination, or preserves an existing price.' }),
   stock: nullable({ type: 'integer', minimum: 0, maximum: 1000000 }),
   stockText: nullable({ type: 'string', description: 'Exact current stock quote, such as 5 de cada una, sold out, or sin límite. Required for new combinations. Null preserves existing stock; stock:null with an explicit unlimited quote disables tracking.' }),
   imageUrl: nullable({ type: 'string', description: 'Original uploaded product-photo URL; null preserves an existing assignment.' }),
 };
-export const sourceVariantsSchema = { type: 'array', maxItems: 64, items: { type: 'object', additionalProperties: false, required: Object.keys(properties), properties } };
-export const sourceVariantOperationsSchema = { type: 'array', maxItems: 64, items: { type: 'object', additionalProperties: false,
+export const sourceVariantsSchema = { type: 'array', maxItems: 256, items: { type: 'object', additionalProperties: false, required: Object.keys(properties), properties } };
+export const sourceVariantOperationsSchema = { type: 'array', maxItems: 256, items: { type: 'object', additionalProperties: false,
   required: ['action','variantId',...Object.keys(properties)], properties: { action: { type: 'string', enum: ['add','update','delete'] }, variantId: nullable({ type: 'string' }), ...properties } } };
 export type SourceVariantOperation = { action: 'add' | 'update' | 'delete'; variantId?: string; changes?: Partial<ProductVariantDto> };
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -149,7 +149,7 @@ function changes(raw: any, instruction: string, baseAmount: number, currency: st
   const amount = price(raw,instruction,baseAmount,currency,creating);
   if (amount !== undefined) result.amount = amount;
   if (raw.options != null) {
-    if (!Array.isArray(raw.options) || !raw.options.length || raw.options.length > 3 || raw.options.some((option: any) => !option || typeof option.name !== 'string' || typeof option.value !== 'string' || !option.value.trim() || !normalize(instruction).includes(normalize(option.value.trim())))) throw new BadRequestException('Usa solo los colores, tallas u opciones indicados por el comercio.');
+    if (!Array.isArray(raw.options) || !raw.options.length || raw.options.length > 6 || raw.options.some((option: any) => !option || typeof option.name !== 'string' || typeof option.value !== 'string' || !option.value.trim() || !normalize(instruction).includes(normalize(option.value.trim())))) throw new BadRequestException('Usa solo los colores, tallas u opciones indicados por el comercio.');
     result.options = raw.options;
     result.name = raw.options.map((option: any)=>option.value.trim()).join(' / ');
   } else if (raw.name != null) {
@@ -167,7 +167,7 @@ function changes(raw: any, instruction: string, baseAmount: number, currency: st
 
 export function requestedSourceVariants(value: unknown, instruction: string, amount: number, currency: string, images: Set<string>): ProductVariantDto[] | undefined {
   if (value == null) return undefined;
-  if (!Array.isArray(value) || value.length > 64) throw new BadRequestException('Usa hasta 64 combinaciones por producto.');
+  if (!Array.isArray(value) || value.length > 256) throw new BadRequestException('Usa hasta 256 combinaciones por producto.');
   if (!value.length) return undefined;
   if (!sourceOptionRequest(instruction)) throw new BadRequestException('Pide las opciones explícitamente.');
   const variants = value.map(raw => changes(raw,instruction,amount,currency,images,true) as ProductVariantDto);
@@ -177,7 +177,7 @@ export function requestedSourceVariants(value: unknown, instruction: string, amo
 
 export function requestedVariantOperations(value: unknown, instruction: string, product: { variants?: ProductVariant[]; amount?: number; currency?: string }, images: Set<string>): SourceVariantOperation[] {
   if (value == null) return [];
-  if (!Array.isArray(value) || value.length > 64) throw new BadRequestException('Cambia hasta 64 combinaciones por mensaje.');
+  if (!Array.isArray(value) || value.length > 256) throw new BadRequestException('Cambia hasta 256 combinaciones por mensaje.');
   if (value.length && !sourceOptionRequest(instruction)) throw new BadRequestException('Pide el cambio de opciones explícitamente.');
   const touched = new Set<string>();
   return value.map(raw => {
@@ -212,6 +212,6 @@ export function applyVariantOperations(existing: ProductVariant[], operations: S
   return normalizeProductVariants(next,existing);
 }
 
-export const SOURCE_PRODUCT_OPTIONS = `Product options are real catalog data. Use variants for new products and variantOperations (add/update/delete by stable variantId) for existing products. Each purchasable combination has options [{name:"Color",value:"Negro"},{name:"Talla",value:"M"}], one full price, its own stock and optionally a product imageUrl. Up to 3 ordered groups and 64 actual combinations. Keep the same group names/order for every combination. Never model colors/sizes as additive extras or hardcode selectors in generated HTML. Ask which combinations exist and their stock when unspecified; never silently assume all cross-products or unlimited inventory. Support "same price for all", "five of each", explicit unlimited stock and sold-out combinations. New amount/priceText null inherits the confirmed product price; existing null means unchanged. For a surcharge use an exact quote like +Bs 20 and the resulting total price. stockText must quote the current instruction (including sold out / sin límite); no stockText preserves existing stock. On a follow-up, resolve the exact product and variant IDs from the current catalog; ask if ambiguous. Return only changed combinations and fields; never copy all variants or their old stock on a rename/price edit. Keep untouched IDs, prices and stock. Review the requested combination count, price exceptions and stock in your reply. For product-only work preserve page design and use empty source edits. Existing checkout renders real options and enforces their price and availability.
+export const SOURCE_PRODUCT_OPTIONS = `Product options are real catalog data. Use variants for new products and variantOperations (add/update/delete by stable variantId) for existing products. Each purchasable combination has options [{name:"Color",value:"Negro"},{name:"Talla",value:"M"}], one full price, its own stock and optionally a product imageUrl. Up to 6 ordered groups and 256 actual combinations. Keep the same group names/order for every combination. Never model colors/sizes as additive extras or hardcode selectors in generated HTML. Ask which combinations exist and their stock when unspecified; never silently assume all cross-products or unlimited inventory. Support "same price for all", "five of each", explicit unlimited stock and sold-out combinations. New amount/priceText null inherits the confirmed product price; existing null means unchanged. For a surcharge use an exact quote like +Bs 20 and the resulting total price. stockText must quote the current instruction (including sold out / sin límite); no stockText preserves existing stock. On a follow-up, resolve the exact product and variant IDs from the current catalog; ask if ambiguous. Return only changed combinations and fields; never copy all variants or their old stock on a rename/price edit. Keep untouched IDs, prices and stock. Review the requested combination count, price exceptions and stock in your reply. For product-only work preserve page design and use empty source edits. Existing checkout renders real options and enforces their price and availability.
 
 ${SOURCE_PRODUCT_SUBSCRIPTIONS}`;

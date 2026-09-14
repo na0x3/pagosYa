@@ -1,0 +1,58 @@
+{
+  "id": "cmu0excti000hvjrixmpiryo9",
+  "requestId": "3e3b01bf-b23f-4141-b0f3-c3ea6ad15847",
+  "revision": 1,
+  "page": "index.html",
+  "status": "FAILED",
+  "stage": "REPAIR",
+  "maxCredits": 150,
+  "reservedCredits": 12.456,
+  "observedCredits": 12.456,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "951633e1-637f-441f-99f2-6a32b6668ed8",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:55:52.092Z",
+      "finishedAt": "2026-09-13T22:56:00.165Z",
+      "actualMicroUsd": 21301,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "cde6a01c-51a5-4300-9fdf-4313f84209df",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:56:00.684Z",
+      "finishedAt": "2026-09-13T22:56:06.722Z",
+      "actualMicroUsd": 103259,
+      "reservedMicroUsd": 850000
+    }
+  ],
+  "error": "\nInvalid `this.prisma.storeSourceGeneration.updateMany()` invocation in\n/Users/saramia/pagosYa/apps/api/src/stores/source-generation.service.ts:552:65\n\n  549 const candidate = await this.projects.prepare({ ...saveInput, files: [...execution.snapshot.files.filter(file => !editable(file.path)), ...authored] });\n  550 assertSourceCommerceContract(candidate);\n  551 signal.throwIfAborted();\n→ 552 const completed = await this.prisma.storeSourceGeneration.updateMany(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23514\", message: \"new row for relation \\\"StoreSourceGeneration\\\" violates check constraint \\\"StoreS",
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:55:51.078Z",
+  "updatedAt": "2026-09-13T22:56:06.723Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La página mantiene una identidad editorial coherente y una jerarquía de compra clara en móvil. El principal desajuste visible aparece en la composición del catálogo de escritorio.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Bloque de productos superior",
+        "severity": "major",
+        "viewport": "desktop",
+        "correction": "Equilibrar las columnas de las fichas —por ejemplo, con anchos equivalentes o una asimetría menos extrema— manteniendo la retícula, el tratamiento tipográfico y el acento azul actuales.",
+        "observation": "Las dos fichas del catálogo tienen anchuras muy desiguales: la primera domina gran parte del bloque, mientras la segunda queda notablemente comprimida. Esto hace que el segundo producto, su descripción y su acción principal tengan menor peso visual al comparar opciones."
+      }
+    ],
+    "preference": "uncertain",
+    "responseId": "resp_099fc88e9b1d6cc9016aa729f8e1e887d285d36fb02f9ab4e3",
+    "regressions": [],
+    "providerMicroUsd": 21301
+  },
+  "resumeAvailable": false
+}

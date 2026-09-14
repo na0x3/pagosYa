@@ -1,3 +1,5 @@
+import { DesignRetryableConflict } from './source-design-errors';
+import { savedSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
 import { compileNextPreview, isNextSource, nextSourceFile, nextProjectExport } from './source-next';
 import { normalizeProductVariants, totalVariantStock, type ProductVariant } from '../payment-links/product-variants';
 import { applyVariantOperations } from './source-product-options';
@@ -69,15 +71,29 @@ export class SourceProjectsService {
     return version;
   }
 
-  async save(merchantId: string, storeId: string, input: SaveSourceProjectDto, generation?: GenerationSave) {
-    await this.ownedStore(merchantId, storeId);
+  async prepare(input: SaveSourceProjectDto) {
     let snapshot = sourceProjectSnapshot({ ...input, files: applySourceLayoutBaseline(await withSourceFonts(input.files)) });
     if (isNextSource(snapshot.files)) {
       const compiled = await compileNextPreview(snapshot.files.filter(f => nextSourceFile(f.path)));
       const paths = new Set(compiled.map(f => f.path));
       snapshot = sourceProjectSnapshot({ ...input, files: [...snapshot.files.filter(f => !paths.has(f.path) && !f.path.startsWith('_compiled/')), ...compiled] });
     }
-    return this.append(storeId, input.revision, input.label, snapshot, null, generation);
+    const system = savedSourceVisualSystem(snapshot.files);
+    if (system?.version === 3) snapshot = { ...snapshot, files: snapshot.files.map(file => file.path === SOURCE_VISUAL_SYSTEM_FILE ? { ...file, content: JSON.stringify(withSourceStyleTokens(system, snapshot.files), null, 2) + '\n' } : file) };
+    return snapshot;
+  }
+
+  async save(merchantId: string, storeId: string, input: SaveSourceProjectDto, generation?: GenerationSave, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {
+    await this.ownedStore(merchantId, storeId);
+    return this.append(storeId, input.revision, input.label, await this.prepare(input), null, generation, undefined, fence);
+  }
+
+  /** Apply the exact normalized bytes that were reviewed, without recompiling. */
+  async applyPrepared(merchantId: string, storeId: string, revision: number, snapshot: SourceProjectSnapshot, digest: string, fence: (tx: Prisma.TransactionClient) => Promise<void>) {
+    await this.ownedStore(merchantId, storeId);
+    const checked = sourceProjectSnapshot({ ...snapshot, revision, label: 'Mejora visual verificada' });
+    if (sourceProjectDigest(checked) !== digest) throw new ConflictException('La propuesta ya no coincide con la revisión visual.');
+    return this.append(storeId, revision, 'Mejora visual verificada', checked, null, undefined, undefined, fence);
   }
 
   async setContactForm(merchantId: string, storeId: string, revision: number, enabled: boolean) {
@@ -128,12 +144,13 @@ export class SourceProjectsService {
       files: snapshot.files.map((entry) => entry.path === input.path ? { ...entry, content: input.content } : entry) });
   }
 
-  private async append(storeId: string, revision: number, label: string, snapshot: SourceProjectSnapshot, restoredFrom: number | null = null, generation?: GenerationSave, contactFormEnabled?: boolean) {
+  private async append(storeId: string, revision: number, label: string, snapshot: SourceProjectSnapshot, restoredFrom: number | null = null, generation?: GenerationSave, contactFormEnabled?: boolean, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {
     if (!Number.isInteger(revision) || revision < 0 || revision >= 2_147_483_647) throw new BadRequestException("Invalid project revision");
     if (typeof label !== "string" || !label.trim() || label.trim().length > 120) throw new BadRequestException("Invalid revision label");
     const deletedImageUrls: string[] = [];
     try {
       const result = await this.prisma.$transaction(async (tx) => {
+        await fence?.(tx);
         await tx.storeSourceProject.upsert({ where: { storeId }, create: { storeId }, update: {} });
         const updated = await tx.storeSourceProject.updateMany({ where: { storeId, revision }, data: { revision: { increment: 1 } } });
         if (updated.count !== 1) throw new ConflictException("El proyecto cambió en otra sesión. Recarga la revisión antes de guardar.");
@@ -216,10 +233,11 @@ export class SourceProjectsService {
           snapshot: snapshot as unknown as Prisma.InputJsonValue, restoredFrom,
         }, select: summarySelect });
         return { ...saved, createdProducts: createdProducts.map(p => ({ id: p.id, name: p.name })), updatedProducts, deletedProducts, ...(optionChanges.length ? { optionChanges } : {}) };
-      });
+      }, fence ? { isolationLevel: Prisma.TransactionIsolationLevel.Serializable } : undefined);
       if (deletedImageUrls.length) await this.uploads?.deleteFiles(deletedImageUrls);
       return result;
     } catch (error) {
+      if (fence && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") throw new DesignRetryableConflict("La transacción se reintentará con la misma revisión.");
       if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
         throw new ConflictException("El proyecto cambió en otra sesión. Recarga la revisión antes de guardar.");
       }

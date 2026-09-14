@@ -32,11 +32,11 @@ export class ProductOptionValueDto {
 }
 
 export class ProductVariantDto {
-  @IsOptional() @IsArray() @ArrayMaxSize(3) @ValidateNested({ each: true }) @Type(() => ProductOptionValueDto)
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => ProductOptionValueDto)
   options?: ProductOptionValueDto[];
 
   @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
-  imageUrl?: string;
+  imageUrl?: string | null;
   @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
   @IsOptional()
   @IsString()
@@ -46,7 +46,7 @@ export class ProductVariantDto {
   @ApiProperty({ example: "Grande" })
   @IsString()
   @IsSafeText()
-  @MaxLength(140)
+  @MaxLength(260)
   name!: string;
 
   @ApiProperty({ description: "Option price in minor units (centavos).", example: 6500 })
@@ -201,7 +201,7 @@ export class CreatePaymentLinkDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(64)
+  @ArrayMaxSize(256)
   @ValidateNested({ each: true })
   @Type(() => ProductVariantDto)
   variants?: ProductVariantDto[];

@@ -1,4 +1,5 @@
-import { productOptionGroups, matchingOptionVariant, optionValueAvailable } from './product-options';
+import { sourceCanConfigureProduct } from './source-product-capabilities';
+import { productOptionGroups, matchingOptionVariant, optionValueAvailable, productOptionKind, productOptionColor } from './product-options';
 import { applyCheckoutBranding } from "./checkout-branding";
 import { createStoreFunnel } from './store-funnel';
 let activeStoreFunnel: ReturnType<typeof createStoreFunnel> | null = null;
@@ -939,8 +940,8 @@ async function main() {
       const proposalPatch = standaloneStorePreviewPatch();
       const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;
       const routedProduct = renderedStore.items.find(item => item.id === productIdFromLocation());
-      // The shared options form handles variants/extras; the portable page links to it.
-      const needsOptionsForm = Boolean(routedProduct?.variants?.length || routedProduct?.extras?.length);
+      // Keep supported product choices in the merchant’s authored storefront.
+      const needsOptionsForm = Boolean(routedProduct && !sourceCanConfigureProduct(routedProduct));
       if (renderedStore.publishedSourceRevision && !proposalPatch && !needsOptionsForm) {
         const { mountPublishedSource } = await import('./source-storefront');
         if (await mountPublishedSource(app, linkSlug, renderedStore, enterPaymentFlow, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug))) return;
@@ -2142,7 +2143,7 @@ function sanitizeStorePreviewProduct(value: unknown, store: Store): StoreItem | 
       .slice(0, 64)
       .map((variant, index) => ({
         id: typeof variant.id === "string" ? variant.id.slice(0, 200) : `preview-variant-${index}`,
-        ...(Array.isArray(variant.options) && variant.options.length <= 3 && variant.options.every(option=>option && typeof option.name==='string' && typeof option.value==='string') ? {options:variant.options.map(option=>({name:option.name.slice(0,40),value:option.value.slice(0,40)}))}:{}),
+        ...(Array.isArray(variant.options) && variant.options.length <= 6 && variant.options.every(option=>option && typeof option.name==='string' && typeof option.value==='string') ? {options:variant.options.map(option=>({name:option.name.slice(0,40),value:option.value.slice(0,40)}))}:{}),
         ...(typeof variant.imageUrl==='string' ? {imageUrl:variant.imageUrl.slice(0,1000)}:{}),
         name: typeof variant.name === "string" ? variant.name.slice(0, 140) : `Opción ${index + 1}`,
         amount: typeof variant.amount === "number" && Number.isInteger(variant.amount) && variant.amount >= 0 ? Math.min(variant.amount, 100_000_000_000) : 0,
@@ -6125,7 +6126,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   const atProductLimit = productLimit !== null && productCartQuantity(item.id) >= productLimit;
   const atOptionLimit = selectedStock !== null && optionCartQuantity(item.id, selectedVariant?.id) >= selectedStock;
   const configurationComplete = productConfigurationComplete(item);
-  const images = item.imageUrls.map(assetUrl).filter((url): url is string => !!url);
+  const images = [...new Set([...item.imageUrls, ...variants.flatMap(variant => variant.imageUrl ? [variant.imageUrl] : [])].map(assetUrl).filter((url): url is string => !!url))];
   const variantImageIndex = selectedVariant?.imageUrl ? images.indexOf(assetUrl(selectedVariant.imageUrl) || '') : 0;
   const rememberedImageIndex = selectedProductImageByItem.get(item.id) ?? Math.max(variantImageIndex, 0);
   const selectedImageIndex = Math.min(Math.max(rememberedImageIndex, 0), Math.max(images.length - 1, 0));
@@ -6189,12 +6190,13 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   const startingVariant = selectedVariant ?? variants
     .filter(variant => optionStock(item, variant) !== 0 && (!optionGroups.length || variant.options?.every(option => !optionSelection[option.name] || optionSelection[option.name] === option.value)))
     .sort((a, b) => a.amount - b.amount)[0];
-  const variantsHtml = optionGroups.length ? optionGroups.map((group,groupIndex)=>`<fieldset class="product-detail-variants">
-    <legend>${escapeHtml(group.name)}</legend><div class="product-detail-option-list">
+  const variantsHtml = optionGroups.length ? optionGroups.map((group,groupIndex)=>`<fieldset class="product-detail-variants" data-option-kind="${productOptionKind(group.name)}">
+    <legend>${escapeHtml(group.name)} <span class="product-detail-selection">${escapeHtml(optionSelection[group.name] || 'Elige una opción')}</span></legend><div class="product-detail-option-list">
     ${group.values.map((value,valueIndex)=>{
       const selected = optionSelection[group.name] === value;
-      const available = optionValueAvailable(variants,optionSelection,group.name,value,variant=>optionStock(item,variant)!==0);
-      return `<button type="button" class="product-detail-option${selected?' active':''}" data-option-group="${groupIndex}" data-option-value="${valueIndex}" aria-pressed="${selected}" ${available || selected ? '' : 'disabled'}><span>${escapeHtml(value)}</span>${!available?'<small>No disponible</small>':''}</button>`;
+      const available = optionValueAvailable(variants,optionSelection,group.name,value,variant=>remainingStock(item,variant)!==0);
+      const color = productOptionColor(group.name, value);
+      return `<button type="button" class="product-detail-option${selected?' active':''}" data-option-group="${groupIndex}" data-option-value="${valueIndex}" aria-pressed="${selected}" ${available || selected ? '' : 'disabled'}>${color ? `<i class="product-detail-color-swatch" style="--option-color:${color}" aria-hidden="true"></i>` : ''}<span>${escapeHtml(value)}</span>${!available?'<small>No disponible</small>':''}</button>`;
     }).join('')}</div></fieldset>`).join('') : variants.length
     ? `<fieldset class="product-detail-variants">
         <legend>Selecciona una versión</legend>
@@ -6215,16 +6217,25 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
        </fieldset>`
     : "";
 
-  const courtesyCopy = extrasCourtesyCopy(item);
-  const extrasHtml = itemExtras(item).length
-    ? `<fieldset class="product-detail-extras">
-        <legend>Personaliza tu producto</legend>
-        <p>${courtesyCopy ? `${escapeHtml(courtesyCopy)}. Las selecciones adicionales se cobran al precio mostrado.` : "Marca solo lo que quieras agregar. Los elementos obligatorios están identificados."}</p>
-        <div class="product-detail-extra-list">
-          ${itemExtras(item).map((extra) => { const displayAmount = extraDisplayAmount(item, extra, selectedExtras); return `<label><input type="checkbox" class="product-detail-extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some((selected) => selected.id === extra.id) ? "checked" : ""} ${extra.available ? "" : "disabled"}><span><strong>${escapeHtml(extra.name)}</strong>${extra.required ? `<small>Requerido</small>` : ""}${extra.available ? "" : `<small>Agotado</small>`}</span><b>${displayAmount === 0 ? "Incluido" : `+${formatAmount(displayAmount, item.currency)}`}</b></label>`; }).join("")}
-        </div>
-       </fieldset>`
-    : "";
+  const extraGroups = new Map<string, { name: string; extras: StoreItem['extras'] }>();
+  itemExtras(item).forEach(extra => {
+    const name = extra.groupName?.trim() || 'Complementos';
+    const key = name.toLocaleLowerCase('es');
+    if (!extraGroups.has(key)) extraGroups.set(key, { name, extras: [] });
+    extraGroups.get(key)!.extras.push(extra);
+  });
+  const extrasHtml = [...extraGroups.values()].map(({ name, extras }) => {
+    const allowance = extras[0].freeAllowance || 0;
+    return `<fieldset class="product-detail-extras"><legend>${escapeHtml(name)}</legend>
+      <p>${allowance ? `${allowance} ${allowance === 1 ? 'incluido' : 'incluidos'}; los adicionales tienen el precio indicado.` : 'Elige los complementos para tu producto.'}</p>
+      <div class="product-detail-extra-list">${extras.map(extra => {
+        const displayAmount = extraDisplayAmount(item, extra, selectedExtras);
+        return `<label><input type="checkbox" class="product-detail-extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some(selected => selected.id === extra.id) ? 'checked' : ''} ${extra.available ? '' : 'disabled'}><span><strong>${escapeHtml(extra.name)}</strong>${extra.required ? '<small>Requerido</small>' : ''}${extra.available ? '' : '<small>Agotado</small>'}</span><b>${displayAmount === 0 ? 'Incluido' : `+${formatAmount(displayAmount, item.currency)}`}</b></label>`;
+      }).join('')}</div></fieldset>`;
+  }).join('');
+  const priceHtml = `${variants.length && !selectedVariant ? '<span class="product-detail-from">Desde </span>' : ''}${salePriceHtml(item, selectedUnitAmount(item, startingVariant, selectedExtras), originalSelectedUnitAmount(item, startingVariant, selectedExtras), 'product-detail-price')}`;
+  const selectionLabels = [...(selectedVariant?.options?.map(option => option.value) || (selectedVariant ? [selectedVariant.name] : [])), ...selectedExtras.map(extra => extra.name)];
+  const deliveryLocations = (store.locations || []).filter(location => location.pickupEnabled || location.deliveryEnabled);
 
   app.innerHTML = `
     ${storefrontHeaderHtml(slug, store, { current: "catalog", catalogUrl })}
@@ -6239,13 +6250,16 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         ${detailSaleBanner}
         ${item.tags.length ? `<div class="store-item-tags">${item.tags.map((tag) => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <h1>${item.color ? `<span class="store-item-color" style="background:${escapeHtml(item.color)}" aria-hidden="true"></span>` : ""}${escapeHtml(item.name)}</h1>
+        <div class="product-detail-heading-price" aria-live="polite">${priceHtml}</div>
+        ${item.description ? `<p class="product-detail-intro">${escapeHtml(item.description.length > 180 ? item.description.slice(0, 177) + '…' : item.description)}</p>` : ''}
         ${variantsHtml}
         ${optionGroups.length && Object.keys(optionSelection).length ? '<button type="button" class="product-options-clear">Limpiar selección</button>' : ''}
         ${extrasHtml}
         ${!configurationComplete ? `<div class="product-configuration-note" role="status">Selecciona todas las opciones requeridas para continuar.</div>` : ""}
         <div class="product-detail-purchase">
           <div>
-            ${variants.length && !selectedVariant ? '<span>Desde </span>' : ''}${salePriceHtml(item, selectedUnitAmount(item, startingVariant, selectedExtras), originalSelectedUnitAmount(item, startingVariant, selectedExtras), "product-detail-price")}
+            <span class="product-detail-selection-title">${selectionLabels.length ? 'Tu selección' : 'Tu producto'}</span>
+            <div class="product-detail-selection-summary">${selectionLabels.length ? selectionLabels.map(label => `<span>${escapeHtml(label)}</span>`).join('') : escapeHtml(item.name)}</div>
             ${unavailableRequiredExtra ? `<div class="product-detail-stock out">${escapeHtml(unavailableRequiredExtra.name)} agotado</div>` : visibleStock ? `<div class="product-detail-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</div>` : ""}
           </div>
           ${
@@ -6260,7 +6274,6 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
                   </div>`
           }
         </div>
-      </section>
       <aside class="product-detail-information" aria-label="Información de ${escapeHtml(item.name)}">
         <details open>
           <summary>El producto<span aria-hidden="true"></span></summary>
@@ -6272,9 +6285,10 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
         </details>
         <details>
           <summary>Entrega y retiro<span aria-hidden="true"></span></summary>
-          <div class="product-detail-information-copy"><p>Las opciones disponibles para tu pedido se muestran antes de completar la compra.</p></div>
+          <div class="product-detail-information-copy">${deliveryLocations.length ? deliveryLocations.map(location => `<p><strong>${escapeHtml(location.name)}</strong>${location.address ? `<br>${escapeHtml(location.address)}` : ''}<br>${[location.pickupEnabled && 'Retiro en tienda', location.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ')}</p>`).join('') : '<p>Las opciones disponibles para tu pedido se muestran antes de completar la compra.</p>'}</div>
         </details>
       </aside>
+      </section>
     </main>
     ${relatedProductsHtml}
     <div class="cart-bar product-detail-cart-bar">
@@ -6328,7 +6342,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       } else selectedVariantByItem.delete(item.id);
       const photoVariant = variant ?? variants.find(candidate=>candidate.imageUrl && candidate.options?.every(option=>!selection[option.name] || selection[option.name]===option.value));
       if (photoVariant?.imageUrl && Object.keys(selection).length) {
-        const photoIndex = item.imageUrls.findIndex(url=>assetUrl(url)===assetUrl(photoVariant.imageUrl || null));
+        const photoIndex = images.indexOf(assetUrl(photoVariant.imageUrl || null) || '');
         if (photoIndex>=0) selectedProductImageByItem.set(item.id,photoIndex);
       }
       renderProductPage(slug,store,item.id);
@@ -9310,6 +9324,8 @@ function updateCartBar(store: Store, currency: string): void {
 
 let fulfillmentSessionId = '';
 function renderForm(session: CheckoutSession, clientSecret: string) {
+  const domainPurchase = session.metadata?.platformPurchase === "domain";
+  if (domainPurchase) selectedType = PaymentMethodType.QR;
   const brand = applyCheckoutBranding(app, session.branding);
   const tokens = TEST_TOKENS[selectedType];
   const storeCheckout = isStoreCheckout(session);
@@ -9396,6 +9412,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
           </div>`}
       <div class="tabs">
         ${Object.values(PaymentMethodType)
+          .filter(type => !domainPurchase || type === PaymentMethodType.QR)
           .map(
             (type) =>
               `<button type="button" class="tab ${type === selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,

@@ -11,3 +11,7 @@ it('keeps product roles and unrelated reference images intact', () => {
   const other = '/v1/uploads/old.jpg';
   expect(honorImageContent('use these pictures', [photo], [{url:photo,role:'product',description:'Confirmed shirt'}, {url:other,role:'reference',description:'Earlier reference'}])).toEqual([{url:photo,role:'product',description:'Confirmed shirt'}, {url:other,role:'reference',description:'Earlier reference'}]);
 });
+it('recognizes creation with supplied images as content authorization', () => {
+  expect(requestsImageContent('créame un sitio con estas imágenes')).toBe(true);
+  expect(requestsImageContent('crea una tienda con estas imágenes de referencia')).toBe(false);
+});

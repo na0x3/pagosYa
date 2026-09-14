@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SAVIA — Pequeños rituales. Días más vivos.</title>
+  <meta name="description" content="Descubre los jugos, granola y botellas reutilizables de SAVIA. Elige tus opciones y arma tu pedido.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div class="announcement">Pequeños rituales. Días más vivos.</div>
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="SAVIA, inicio">SAVIA</a>
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a href="#chapter-catalog">Productos</a><a href="#ritual-film">El ritual</a>
+    </nav>
+    <div class="header-actions">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><img src="assets/icons/menu.svg" alt="">Menú</button>
+      <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido (<span data-cart-count>0</span>)</span></button>
+    </div>
+    <nav class="mobile-nav" id="mobile-menu" aria-label="Navegación móvil" hidden>
+      <a href="#chapter-catalog">Productos</a><a href="#ritual-film">El ritual</a>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <section id="immersive-cover" aria-labelledby="cover-title">
+      <img class="cover-photo" src="assets/image-f1220ebdbbf1.jpg" alt="Botellas de jugo de naranja y jengibre SAVIA junto a naranjas frescas">
+      <div class="cover-panel">
+        <p class="eyebrow">SAVIA · rituales cotidianos</p>
+        <h1 id="cover-title">Pequeños rituales.<br>Días más vivos.</h1>
+        <p class="cover-description">Algo fresco. Algo rico. Algo que te acompaña. Encuentra tu próxima pequeña costumbre.</p>
+        <a class="primary-link" href="#chapter-catalog">Explorar productos <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+      <p class="cover-label">Jugo naranja + jengibre</p>
+    </section>
+
+    <section id="chapter-catalog" aria-labelledby="catalog-title">
+      <header class="catalog-intro">
+        <div><p class="eyebrow">La colección cotidiana</p><h2 id="catalog-title">Buenos días empiezan aquí.</h2></div>
+        <p>Tres esenciales, muchas formas de hacerlos tuyos. Elige tu sabor, tamaño o color.</p>
+      </header>
+      <div data-pagosya-categories aria-label="Categorías"></div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+    </section>
+
+    <section id="ritual-film" aria-labelledby="film-title">
+      <div class="film-copy">
+        <p class="eyebrow">Preparar · servir · disfrutar</p>
+        <h2 id="film-title">El ritual empieza aquí</h2>
+        <p>Una mirada al momento de preparar el jugo: color, pausa y una mesa lista para comenzar.</p>
+      </div>
+      <video controls playsinline preload="metadata" poster="assets/image-f1220ebdbbf1.jpg" aria-label="Video: preparación de jugo de naranja">
+        <source src="assets/video-d2f1f17e3310.mp4" type="video/mp4">
+        Tu navegador no puede reproducir este video.
+      </video>
+    </section>
+
+    <section id="closing-manifesto" aria-labelledby="closing-title">
+      <div><p class="eyebrow">A tu ritmo</p><h2 id="closing-title">Haz espacio para lo que te hace bien.</h2></div>
+      <a href="#chapter-catalog">Elegir un producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+      
+    </section>
+  </main>
+
+  <template data-pagosya-product-template>
+    <article class="ritual-product">
+      <a class="product-media menu-item__details" data-product-link aria-label="Ver y configurar producto">
+        
+        <span data-product-media><img data-product-field="image" alt=""></span>
+      </a>
+      <div class="product-copy">
+        <p class="product-kind" data-product-field="options"></p>
+        <h3><a data-product-link data-product-field="name"></a></h3>
+        <p class="product-description" data-product-field="description"></p>
+        <div class="purchase-row">
+          <p class="menu-item__price" data-product-field="price"></p>
+          <button class="menu-add" type="button" data-product-add>Agregar <img src="assets/icons/plus.svg" alt=""></button>
+        </div>
+        <a class="configure-link" data-product-link>Ver opciones <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+    </article>
+  </template>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+  <footer class="site-footer">
+    <a class="footer-mark" href="index.html">SAVIA</a>
+    <p>Pequeños rituales. Días más vivos.</p>
+    <a href="#chapter-catalog">Productos</a><a href="#ritual-film">El ritual</a>
+  <p class="demo-note">Savia es una tienda de demostración. Productos y precios de ejemplo · Sin cobros reales.</p></footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

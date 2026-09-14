@@ -1,3 +1,4 @@
+import { sourceStyleTokens, SOURCE_STYLE_TOKEN_CONTRACT, type SourceStyleTokens } from './source-style-tokens';
 import { BadGatewayException } from '@nestjs/common';
 import { SOURCE_ICON_NAMES, type SourceAsset } from './source-asset-library';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
@@ -5,12 +6,13 @@ import type { SourceDesign } from './source-design';
 import type { SourceMotionMode } from './source-motion';
 
 export const SOURCE_VISUAL_SYSTEM_FILE = 'visual-system.json';
-export const SOURCE_VISUAL_SYSTEM_VERSION = 2 as const;
+export const SOURCE_VISUAL_SYSTEM_VERSION = 3 as const;
 
 /** Per-project guidance. Colors, fonts and geometry belong to the authored site,
  * not a server preset. Version 1 manifests remain in historical snapshots only. */
 export type SourceVisualSystem = {
-  version: typeof SOURCE_VISUAL_SYSTEM_VERSION;
+  version: 2 | typeof SOURCE_VISUAL_SYSTEM_VERSION;
+  tokens?: SourceStyleTokens;
   typography: { display: string; rule: string };
   iconography: { family: 'lucide-local'; vocabulary: string[] };
   motion: { mode: SourceMotionMode; reducedMotion: string };
@@ -48,16 +50,16 @@ export function buildSourceVisualSystem(mode: SourceMotionMode, assets: SourceAs
 export function sourceVisualSystemContext(system: SourceVisualSystem): string {
   return `Project-specific design guidance derived from the current concept and available assets:
 ${JSON.stringify(system)}
-There are no theme presets or default palettes, fonts, spacing scales, corner radii or page compositions. Choose these from the current merchant request, confirmed brand, supplied references and selected concept. Define shared CSS variables for this site's own decisions when useful. For local edits, the actual authored source is the visual baseline; a saved manifest never overrides an explicit current request. Use available local icons consistently. Existing theme names or preset metadata are historical context, not binding instructions.`;
+There are no theme presets or default palettes, fonts, spacing scales, corner radii or page compositions. Choose these from the current merchant request, confirmed brand, supplied references and selected concept. ${SOURCE_STYLE_TOKEN_CONTRACT} For local edits, the actual authored source is the visual baseline; a saved manifest never overrides an explicit current request. Use available local icons consistently. Existing theme names or preset metadata are historical context, not binding instructions.`;
 }
 
-export const SOURCE_VISUAL_SYSTEM_CONTRACT = `Design each storefront for its own merchant brief and supplied assets. Choose composition, typography, palette, spacing, geometry and imagery for that project; do not fall back to a preset or make every business look alike. Carry the chosen identity coherently through product, cart and checkout. Current explicit requests override earlier design guidance for the requested scope. Preserve unrelated design and commerce behavior during local edits.`;
+export const SOURCE_VISUAL_SYSTEM_CONTRACT = `Design each storefront for its own merchant brief and supplied assets. Choose composition, typography, palette, spacing, geometry and imagery for that project; do not fall back to a preset or make every business look alike. Carry the chosen identity coherently through product, cart and checkout. Current explicit requests override earlier design guidance for the requested scope. Preserve unrelated design and commerce behavior during local edits. ${SOURCE_STYLE_TOKEN_CONTRACT}`;
 
 export function savedSourceVisualSystem(files: SourceProjectFileDto[] = []): SourceVisualSystem | null {
   try {
     const raw = files.find(file => file.path === SOURCE_VISUAL_SYSTEM_FILE && file.encoding !== 'base64')?.content;
     const value = raw ? JSON.parse(raw) : null;
-    if (!value || value.version !== SOURCE_VISUAL_SYSTEM_VERSION || !value.typography || !value.iconography || !value.layout || !value.motion || !Array.isArray(value.assets)) return null;
+    if (!value || ![2, SOURCE_VISUAL_SYSTEM_VERSION].includes(value.version) || !value.typography || !value.iconography || !value.layout || !value.motion || !Array.isArray(value.assets)) return null;
     return value as SourceVisualSystem;
   } catch { return null; }
 }
@@ -70,4 +72,8 @@ export function validateSourceVisualSystem(files: SourceProjectFileDto[]): void 
   const iconPaths = [...source.matchAll(/assets\/icons\/([a-z0-9-]+)\.svg/gi)].map(match => match[1]);
   const unknownIcons = [...new Set(iconPaths)].filter(name => !SOURCE_ICON_NAMES.includes(name));
   if (unknownIcons.length) throw new BadGatewayException(`El sistema visual usa iconos no disponibles: ${unknownIcons.slice(0, 4).join(', ')}.`);
+}
+
+export function withSourceStyleTokens(system: SourceVisualSystem, files: SourceProjectFileDto[]): SourceVisualSystem {
+  return { ...system, version: SOURCE_VISUAL_SYSTEM_VERSION, tokens: sourceStyleTokens(files) };
 }

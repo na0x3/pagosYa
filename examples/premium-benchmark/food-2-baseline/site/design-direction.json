@@ -1,0 +1,70 @@
+{
+  "concepts": [
+    {
+      "name": "La mesa de la mañana",
+      "premise": "Una apertura editorial y fotográfica convierte el desayuno doméstico en el territorio propio de Mesa Clara. A diferencia del catálogo inmediato del concepto 2 y la composición tipográfica del concepto 3, aquí la historia comienza con una escena real de producto y después alterna dos capítulos de compra amplios, uno cítrico y otro cereal.",
+      "opening": "Masthead fino sobre fondo marfil, con “Mesa Clara” como wordmark tipográfico, enlace a Productos y botón visible “Mi pedido (0)”. Debajo, una portada dividida: el titular “Dos cosas claras para empezar el día” ocupa el tercio izquierdo y assets/image-f1220ebdbbf1.jpg llena el resto. La foto se recorta en horizontal conservando las tres botellas, naranjas y etiquetas SAVIA; una pestaña cítrica conduce a “Elegir jugo”. No se superpone texto sobre las etiquetas.",
+      "flow": "Tras la portada aparece una franja breve con los dos productos y sus precios iniciales. El catálogo se desarrolla como dos capítulos distintos: el jugo usa imagen apaisada, selectores Tamaño/Presentación y compra junto al nombre; la granola invierte la composición con imagen cuadrada, selectores Sabor/Peso y aviso visible “Contiene almendras”. La página de producto mantiene una galería editorial lateral, resumen y compra fija dentro de la columna de información. Carrito y checkout usan una lista",
+      "typography": "Fraunces variable para titulares cálidos de 72–88 px en escritorio, 48 px en tablet y 38–42 px en móvil; Instrument Sans para navegación, opciones, precios y cuerpo de 16–18 px. Etiquetas en mayúsculas pequeñas con tracking abierto. Marfil, tinta verde oliva y naranja intenso reservado para precio seleccionado, foco y acción principal.",
+      "imagery": "assets/image-f1220ebdbbf1.jpg abre con recorte horizontal y foco en las botellas centrales. assets/image-d7afdd1c26f9.jpg acompaña el capítulo del jugo, preservando botella, vaso, naranja y jengibre. assets/image-e2dc7f4f02d3.jpg abre el capítulo de granola con el frasco completo sobre coral; assets/image-ceff3979a97c.jpg muestra el uso en bol. En producto, assets/image-06465dbb2877.jpg y assets/image-5d185857f7d9.jpg funcionan como vistas limpias de envase. Sin ilustraciones añadidas ni filtros",
+      "mobile": "La portada pasa a titular corto seguido de una foto 4:3, sin sacrificar la etiqueta central. El header conserva “Mi pedido (0)” fuera del menú. Cada capítulo apila imagen, nombre, precio, selectores de botones anchos y “Añadir al pedido” de 44 px mínimo. En la página de producto la compra deja de ser lateral y aparece inmediatamente después de la primera imagen; miniaturas pasan a carrusel horizontal accesible. Checkout usa una sola columna y resumen desplegable visible.",
+      "layout": {
+        "sections": [
+          "portada-mesa",
+          "atajo-despensa",
+          "catalogo-capitulos",
+          "detalle-ingredientes",
+          "cierre-claro"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Despensa en dos líneas",
+      "premise": "Una tienda compacta, útil y casi de mostrador: los dos productos y sus decisiones aparecen de inmediato. Frente a la portada narrativa del concepto 1 y el recorrido alternado del concepto 3, concentra más densidad, elimina el hero y presenta el catálogo como una tabla premium de despensa.",
+      "opening": "Header de 72 px con Mesa Clara, ancla “Despensa” y “Mi pedido (0)”. El catálogo empieza inmediatamente debajo y antes de los primeros 150 px del documento: una línea contextual pequeña y una cuadrícula de dos columnas. Cada columna muestra nombre, precio desde, recorte de producto, primeros selectores y botón “Añadir al pedido”; a 390 px, la primera ficha comienza de inmediato y su nombre, precio y acción quedan visibles antes del pliegue mediante una composición horizontal compacta.",
+      "flow": "La primera ficha usa assets/image-06465dbb2877.jpg como retrato estrecho de botella; la segunda, assets/image-5d185857f7d9.jpg como frasco limpio. Los selectores cambian precio e imagen de variante sin abandonar la cuadrícula. Debajo, dos bandas fotográficas de contexto explican únicamente formatos y formas de servir ya confirmadas por el catálogo. Producto individual adopta una ficha técnica editorial: galería, descripción, opciones y compra; carrito y checkout se presentan como recibos orden",
+      "typography": "Bricolage Grotesque como única familia: nombre de tienda en 700, productos en 600 y cuerpo en 400. Titulares de 46–56 px en escritorio y 30–34 px en móvil; cifras de precio grandes y tabulares. Fondo avena, texto casi negro, líneas verde bosque y naranja brillante solo en selección y botón de compra. Esquinas de 4 px y divisores finos, sin colección de tarjetas coloreadas.",
+      "imagery": "Imágenes de envase aislado con recortes verticales y fondo intacto: assets/image-06465dbb2877.jpg para jugo y assets/image-5d185857f7d9.jpg para granola. Las bandas inferiores usan assets/image-d7afdd1c26f9.jpg y assets/image-ceff3979a97c.jpg con recortes panorámicos centrados en el servicio. Las fotos secundarias de packs o cacao se reservan para el cambio real de variante y las galerías de producto.",
+      "mobile": "Header de dos líneas muy compacto: marca a la izquierda y “Mi pedido (0)” siempre visible a la derecha. El catálogo se convierte en lista; miniatura de 104 px junto a nombre y precio, selectores debajo y botón de ancho completo. No hay carrusel obligatorio ni contenido previo a la compra. El recibo de carrito mantiene cantidades, variantes y totales legibles a 320 px, con acciones que envuelven sin recortarse.",
+      "layout": {
+        "sections": [
+          "catalogo-despensa",
+          "formatos-jugo",
+          "formas-granola"
+        ],
+        "catalogSection": "catalogo-despensa",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Claro / Cítrico / Tostado",
+      "premise": "Una portada tipográfica en tres ritmos organiza la tienda por sensaciones materiales: claridad marfil, golpe naranja y tono tostado. Se diferencia del relato fotográfico continuo del concepto 1 y de la tabla comercial del concepto 2 mediante una apertura de palabras grandes seguida por un recorrido alternado donde cada producto ocupa una franja completa.",
+      "opening": "Bajo un masthead verde oscuro, el nombre “Mesa Clara” aparece enorme sobre marfil, acompañado por tres palabras apiladas: “Claro. Cítrico. Tostado.” Una ventana fotográfica vertical incrusta assets/image-06465dbb2877.jpg entre las palabras, enfocando botella y etiqueta. Un índice lateral enlaza a Jugo y Granola; la compra comienza después de esta introducción, no dentro de ella.",
+      "flow": "El jugo se presenta en una franja naranja pálida con galería vertical a la izquierda y un configurador blanco a la derecha. Una transición estrecha de texto conduce a la granola, que aparece sobre un campo avena con imagen de uso dominante y panel de compra superpuesto en flujo, sin tapar el producto. Un cierre comparativo reúne únicamente tamaños, presentaciones, sabores y pesos confirmados. Las páginas de producto adoptan el color material correspondiente; carrito y checkout vuelven a marfil,",
+      "typography": "Oswald variable para palabras de portada y numerales de precio, con escala de 96–132 px en escritorio, 68 px en tablet y 48–56 px en móvil. Instrument Sans para nombres de producto, cuerpo y controles. Jerarquía de alto contraste y alineaciones cambiantes; naranja, coral tostado, marfil y verde profundo aparecen en grandes campos con función clara, no como cajas repetidas.",
+      "imagery": "assets/image-06465dbb2877.jpg se usa como ventana vertical en la apertura con la botella completa. assets/image-f1220ebdbbf1.jpg abre la franja del jugo con foco en el conjunto de tres botellas, reforzando la opción pack. assets/image-ceff3979a97c.jpg domina la franja de granola con foco en el bol; assets/image-e2dc7f4f02d3.jpg aporta la vista de envase. assets/image-6039f6dfd423.jpg aparece únicamente cuando se selecciona Cacao en la página de producto o catálogo.",
+      "mobile": "Las palabras de portada se reducen y la fotografía pasa entre “Cítrico” y “Tostado”, conservando el gesto tipográfico sin solapes. El índice se vuelve una barra de dos anclas. Cada franja apila foto y configurador; el panel deja de superponerse y mantiene selectores de 44 px. “Mi pedido (0)” permanece en el header junto a un menú rotulado. Los campos cromáticos continúan en producto, carrito y checkout como bandas de estado y acciones, no como fondos que comprometan contraste.",
+      "layout": {
+        "sections": [
+          "manifiesto-claro",
+          "capitulo-jugo",
+          "pausa-formatos",
+          "capitulo-granola",
+          "resumen-despensa"
+        ],
+        "catalogSection": "capitulo-jugo",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "Es la opción más ajustada a la solicitud explícita de un lenguaje editorial cálido apoyado en fotografía real. El catálogo tiene solo dos productos, por lo que puede tratarlos como capítulos amplios sin volver lenta la elección. Además, las siete imágenes disponibles cubren escenas de ambiente, envases y variantes de jugo y granola; esta estructura aprovecha esa variedad, conserva visibles las bot"
+  }
+}

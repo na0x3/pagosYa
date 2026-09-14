@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-06465dbb2877.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-d7afdd1c26f9.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-5d185857f7d9.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-ceff3979a97c.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-6039f6dfd423.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    }
+  ]
+}

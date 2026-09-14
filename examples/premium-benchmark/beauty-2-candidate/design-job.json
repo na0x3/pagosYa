@@ -1,0 +1,39 @@
+{
+  "id": "cmu0extxx000xvjrinn6qrd2t",
+  "requestId": "dce04982-2ff3-4820-9d53-b958e84e7c98",
+  "revision": 1,
+  "page": "index.html",
+  "status": "UNCHANGED",
+  "stage": "REVIEW_BASELINE",
+  "maxCredits": 150,
+  "reservedCredits": 1.5722,
+  "observedCredits": 1.5722,
+  "repairs": 0,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "83a4b123-1068-45a9-a697-6a71b8ef22a9",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:56:14.800Z",
+      "finishedAt": "2026-09-13T22:56:17.476Z",
+      "actualMicroUsd": 15722,
+      "reservedMicroUsd": 150000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:56:13.269Z",
+  "updatedAt": "2026-09-13T22:56:17.479Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La página mantiene una identidad serena y contemporánea, con jerarquía clara en catálogo y llamadas a la acción. No se observan problemas visibles importantes que requieran corrección.",
+    "findings": [],
+    "preference": "uncertain",
+    "responseId": "resp_068380ffee0a7bdc016aa72a0f8cd887d2aa50afda0e5e1f5b",
+    "regressions": [],
+    "providerMicroUsd": 15722
+  },
+  "resumeAvailable": false
+}

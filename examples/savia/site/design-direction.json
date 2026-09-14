@@ -1,0 +1,69 @@
+{
+  "concepts": [
+    {
+      "name": "Mesa de mañana",
+      "premise": "Una portada editorial cálida que convierte la fotografía del jugo en una mesa de desayuno a gran escala. A diferencia de los otros conceptos, abre con una composición horizontal, serena y cinematográfica; después presenta el catálogo como tres paneles amplios, cada uno con ritmo y color propios, antes del video.",
+      "opening": "Masthead crema y hero dividido 40/60: a la izquierda, “Pequeños rituales. Días más vivos.”, texto breve y CTA “Ver productos”; a la derecha, la fotografía del jugo a sangre. Una pestaña coral superpuesta identifica “Jugo naranja + jengibre · desde Bs 18”.",
+      "flow": "Hero fotográfico → catálogo de tres productos → pieza editorial con video “El ritual empieza aquí” → nota de demostración y pie. Las tarjetas enlazan a la configuración real. Product.html usa galería generosa izquierda y panel crema fijo visualmente a la derecha, con opciones, cantidad y subtotal del runtime; checkout continúa con superficies cálidas, resumen lateral y controles verde bosque.",
+      "typography": "Fraunces variable para titulares editoriales (h1 76/72 px, h2 52/48, h3 30/32) e Instrument Sans para navegación, precios y controles (16/24). En móvil: h1 45/45, h2 36/38, h3 25/28; etiquetas 12 px en versales espaciadas. Titulares con tracking -0.035em.",
+      "imagery": "assets/image-f1220ebdbbf1.jpg ocupa el hero con recorte panorámico y foco en las botellas centrales; en móvil usa recorte 4:5 conservando botella, naranja y jengibre. assets/image-e2dc7f4f02d3.jpg y assets/image-c9f5308636b1.jpg aparecen completas en tarjetas 4:5; el jugo reutiliza su imagen en el catálogo con un recorte más cerrado. assets/video-d2f1f17e3310.mp4 es contenido editorial con controles, playsinline y poster assets/image-f1220ebdbbf1.jpg. assets/image-7f7a1768a2f5.jpg queda fuera:只是",
+      "mobile": "Cabecera compacta con marca, menú y “Mi pedido (0)” siempre visible. El hero apila texto sobre una ventana fotográfica de 62vh, sin cubrir el producto. Las tarjetas se vuelven bloques completos con imagen, nombre, descripción, precio y “Configurar”. En producto, fotografía primero y configurador inmediatamente después; botones de variantes y cantidad tienen 44 px mínimos.",
+      "layout": {
+        "sections": [
+          "morning-hero",
+          "ritual-catalog",
+          "editorial-film",
+          "demo-note"
+        ],
+        "catalogSection": "ritual-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Tríptico Savia",
+      "premise": "Una portada más gráfica, densa y orientada a comprar: el catálogo ocupa la primera escena como un tríptico de fotografías y paneles de configuración resumida. Se distingue de “Mesa de mañana” porque no hay hero independiente, y de “Ritual en capítulos” porque muestra los tres productos simultáneamente con una jerarquía sans condensada.",
+      "opening": "Tras una cabecera de baja altura, una franja compacta contiene el lema y el acceso “Explorar los tres”. Debajo —dentro de los primeros 320 px— comienza el catálogo real: tres columnas, cada una con fotografía, nombre, descripción breve, precio y acción “Elegir opciones”. El jugo domina ligeramente el ancho, sin convertirse en introducción disfrazada.",
+      "flow": "Catálogo-tríptico inmediato → banda tipográfica del lema → video editorial con texto lateral → pie coral compacto. Product.html conserva el 55/45 solicitado, pero trata el panel como una ficha impresa: líneas finas, grupos de opciones visibles, muestras de color etiquetadas y barra de subtotal. Carrito y checkout usan la misma retícula disciplinada y bloques cromáticos.",
+      "typography": "Oswald variable para grandes titulares y nombres de producto (h1 66/64 px, nombres 34/36) e Instrument Sans para lectura y compra (15/22, precio 22/24). En móvil: h1 42/42, nombres 29/31 y cuerpo 15/22. La condensación permite alta densidad sin reducir controles; tracking de display -0.02em.",
+      "imagery": "assets/image-f1220ebdbbf1.jpg encabeza la columna principal con recorte 3:2 y foco en la botella frontal; assets/image-e2dc7f4f02d3.jpg y assets/image-c9f5308636b1.jpg usan recortes cuadrados centrados en sus envases. No hay filtros que alteren colores reales. assets/video-d2f1f17e3310.mp4 se presenta en marco verde bosque, con controles, playsinline y poster del jugo. La captura assets/image-7f7a1768a2f5.jpg se usa solo como referencia de densidad y nunca se muestra.",
+      "mobile": "Cabecera de dos filas muy compactas: marca y “Mi pedido (0)” arriba, navegación accesible debajo. El tríptico se convierte en carril vertical, comenzando por el jugo; su nombre, Bs 18 y acción quedan visibles en la primera pantalla. No se usa carrusel horizontal. En product.html, imagen 4:5 y panel continuo sin pestañas ocultas; opciones envuelven en dos columnas y pasan a una cuando sea necesario.",
+      "layout": {
+        "sections": [
+          "shop-triptych",
+          "living-type-band",
+          "film-counter",
+          "compact-demo-note"
+        ],
+        "catalogSection": "shop-triptych",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Savia · Rituales cotidianos",
+      "premise": "Warm photographic color, a continuous quiet surface and clear product choices. Selected after actual desktop/mobile A/B review with Claude.",
+      "opening": "Hero de altura amplia con assets/image-f1220ebdbbf1.jpg a sangre. Un panel crema en la esquina inferior izquierda contiene SAVIA, el lema y “Descubrir el ritual”; una etiqueta naranja indica “Jugo naranja + jengibre”. La fotografía permanece protagonista y el texto nunca tapa las botellas.",
+      "flow": "Portada inmersiva → catálogo narrado en tres capítulos alternos: jugo, granola y botella → video a ancho completo “El ritual empieza aquí” → cierre tipográfico y nota de demostración. Cada capítulo combina imagen grande con una ficha de compra clara. Product.html adopta una galería izquierda casi museográfica y un panel coral/salvia según producto; checkout reduce la expresividad y prioriza legibilidad sin abandonar el marco editorial.",
+      "typography": "Bricolage: moderate 500-weight headings, readable body and compact labeled controls.",
+      "imagery": "Coordinated warm limestone studio and ritual photography; original product-specific galleries and mapped bottle colors.",
+      "mobile": "Full-width gallery with horizontal thumbnails, then title, price and choices. Keep 20px margins, visible cart, and 44px controls.",
+      "layout": {
+        "sections": [
+          "immersive-cover",
+          "chapter-catalog",
+          "ritual-film",
+          "closing-manifesto"
+        ],
+        "catalogSection": "chapter-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 2,
+  "selection": {
+    "source": "forced",
+    "rationale": "Candidate A selected by Codex after independent Claude critique of actual desktop and mobile screenshots."
+  }
+}

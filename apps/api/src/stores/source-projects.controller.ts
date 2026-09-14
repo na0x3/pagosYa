@@ -4,7 +4,7 @@ import { IsBoolean } from 'class-validator';
 import { SourceMotionDto } from './dto/source-motion.dto';
 import { SourceChatService } from "./source-chat.service";
 import { SendSourceMessageDto } from "./dto/send-source-message.dto";
-import { BadRequestException, Body, Controller, Get, Header, Param, ParseIntPipe, Patch, Post, Put, Query, StreamableFile, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Put, Query, StreamableFile, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -49,6 +49,12 @@ export class SourceProjectsController {
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
   message(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SendSourceMessageDto) {
     return this.chat.send(merchant.id, storeId, input);
+  }
+
+  @Get('progress')
+  @Header('Cache-Control', 'private, no-store')
+  progress(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('requestId', new ParseUUIDPipe()) requestId: string) {
+    return this.chat.progress(merchant.id, storeId, requestId);
   }
 
   @Post('estimate')

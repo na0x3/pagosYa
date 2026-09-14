@@ -983,10 +983,8 @@ export class StoresService implements OnModuleDestroy {
     };
   }
 
-  /** Each merchant account owns at most one store, including archived stores. */
+  /** Stores keep independent catalogs and designs under the authenticated merchant. */
   async create(merchantId: string, dto: CreateStoreDto) {
-    const existing = await this.prisma.store.findFirst({ where: { merchantId }, select: { id: true } });
-    if (existing) throw new ConflictException("Tu cuenta ya tiene una tienda. Administra la tienda existente.");
     if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
     const animations = (dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }]).map(normalizeAnimationMedia);
     const contentOrder = dto.contentOrder
@@ -1083,9 +1081,6 @@ export class StoresService implements OnModuleDestroy {
         });
       } catch (err) {
         const uniqueError = err as { code?: string; meta?: { target?: string[] | string } };
-        if (uniqueError.code === "P2002" && uniqueError.meta?.target?.includes("merchantId")) {
-          throw new ConflictException("Tu cuenta ya tiene una tienda. Administra la tienda existente.");
-        }
         const isUniqueSlugClash = uniqueError.code === "P2002" && uniqueError.meta?.target?.includes("slug");
         if (!isUniqueSlugClash || attempt === 4) throw err;
       }
@@ -1100,6 +1095,7 @@ export class StoresService implements OnModuleDestroy {
       // Links ride along so the dashboard's store editor can populate its
       // link rows without a second request per store.
       include: {
+        sourceProject: { select: { revision: true } },
         links: { orderBy: { sortOrder: "asc" } },
         customDomains: {
           orderBy: { createdAt: "asc" },
@@ -1326,6 +1322,10 @@ export class StoresService implements OnModuleDestroy {
       ...links.flatMap((l) => l.imageUrls),
     ];
 
+    if (this.prisma.domainOrder && await this.prisma.domainOrder.count({ where: { storeId: id, status: { not: 'QUOTED' } } })) {
+      throw new BadRequestException('Archiva esta tienda para conservar el registro y los pagos de sus dominios.');
+    }
+    if (this.prisma.domainOrder) await this.prisma.domainOrder.deleteMany({ where: { storeId: id, status: 'QUOTED' } });
     if (store.creditsEnabled || store.digitalGoodsEnabled) throw new BadRequestException('Archiva esta tienda para conservar saldos y descargas de pedidos existentes.');
     await this.prisma.store.delete({ where: { id } });
     await this.uploads.deleteFiles(fileUrls);

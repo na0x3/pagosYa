@@ -1,0 +1,43 @@
+:root[data-resource-theme="dark"] { color-scheme:dark; --resource-paper:#171815; --resource-surface:#20211e; --resource-ink:#f8f8f2; --resource-line:#484a40; --resource-soft:#262722; --resource-muted:#c3c4b7; }
+body.store-resource-body { display:block; margin:0; padding:4px; min-height:0; height:auto; background:var(--resource-paper,#f8f8f2); color:var(--resource-ink,#20211e); font:14px/1.6 Arial,sans-serif; overflow:auto; }
+.store-resource-body #app { height:auto; min-height:0; }
+.store-resource-body * { box-sizing:border-box; }
+.store-resource-body button,.store-resource-body input,.store-resource-body select { font:inherit; color:inherit; border:1px solid var(--resource-line,#d8d9ce); border-radius:6px; padding:10px 12px; background:var(--resource-surface,white); min-height:44px; }
+.store-resource-body button { cursor:pointer; }
+.resource-heading,.resource-tools { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+.resource-heading { justify-content:space-between; }
+.resource-heading strong { font-size:20px; }
+.resource-tools label { display:grid; gap:6px; }
+.resource-tools input { width:280px; max-width:100%; }
+.resource-tools [data-count] { margin-left:auto; color:var(--resource-muted,#61625b); }
+.resource-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:22px; }
+.resource-card { min-width:0; overflow:hidden; background:var(--resource-surface,white); border:1px solid var(--resource-line,#d8d9ce); border-radius:8px; }
+.resource-cover { aspect-ratio:1.35; display:flex; align-items:center; justify-content:center; background:var(--resource-soft,#f0f0e7); border-bottom:1px solid var(--resource-line,#d8d9ce); }
+.resource-cover img,.resource-cover video { width:100%; height:100%; max-height:280px; object-fit:contain; }
+.resource-cover audio { width:100%; }
+.resource-copy { padding:16px; overflow-wrap:anywhere; }
+.resource-copy p { font-size:12px; color:var(--resource-muted,#61625b); }
+.resource-copy a { color:#5b4679; font-weight:600; }
+.resource-empty { padding:32px; border:1px dashed #a5a799; border-radius:8px; grid-column:1/-1; }
+.content-pages { display:grid; gap:18px; }
+.content-page { padding:20px; border:1px solid var(--resource-line,#d8d9ce); border-radius:8px; background:var(--resource-surface,white); overflow-wrap:anywhere; }
+.content-page summary { cursor:pointer; }
+.content-page summary span { float:right; color:var(--resource-muted,#61625b); font-size:12px; }
+.content-page > div { border-top:1px solid var(--resource-line,#d8d9ce); margin-top:16px; }
+.product-guide-body .product-create-panel { padding:20px; max-width:820px; margin:auto; }
+.product-yapi-badge { display:inline-block; background:#e6dff4; border-radius:5px; padding:4px 9px; font-weight:700; margin-bottom:12px; }
+.product-create-panel .product-step-track { grid-template-columns:repeat(7,1fr); }
+.product-create-panel .product-step-track .is-current { background:#857197; }
+.product-yapi-question { font-size:19px; font-weight:600; line-height:1.5; margin:20px 0; }
+.product-answer-history { display:grid; gap:7px; }
+.product-create-panel .product-answer-history button { display:flex; align-items:center; gap:12px; text-align:left; min-height:36px; background:var(--resource-soft,#f0f0e7); padding:7px 10px; overflow-wrap:anywhere; }
+.product-answer-history small { width:72px; flex:none; color:var(--resource-muted,#61625b); }
+.product-answer-history span:last-child { margin-left:auto; }
+.product-create-panel .product-next { background:#f3f36b; color:var(--resource-ink,#20211e); border:1px solid var(--resource-ink,#20211e); box-shadow:2px 2px 0 var(--resource-ink,#20211e); }
+.product-review { padding:18px; border:1px solid var(--resource-line,#d8d9ce); border-radius:8px; background:var(--resource-surface,white); }
+@media(max-width:500px) { .resource-tools label,.resource-tools input { width:100%; } .resource-grid { grid-template-columns:minmax(0,1fr); } .product-guide-body .product-create-panel { padding:12px; } .resource-tools [data-count] { margin-left:0; } }
+
+.store-resource-body .product-create-panel {color:var(--resource-ink,#20211e)}
+.product-create-panel .product-next {color:#20211e}
+.store-resource-body .product-create-panel :is(input,textarea) {background:var(--resource-surface,white);color:var(--resource-ink,#20211e);border-color:var(--resource-line,#d8d9ce)}
+html:has(body.store-resource-body), .store-resource-body, .store-resource-body #app { min-width:0; }

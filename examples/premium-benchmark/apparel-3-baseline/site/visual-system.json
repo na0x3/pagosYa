@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans variable para navegación, cuerpo y controles; Instrument Serif para nombres de producto y precios grandes. H1 48–72 px, nombres 30–42 px, cuerpo 16–18 px y etiquetas 12–13 px en mayúsculas espaciadas. En móvil, título 38 px, producto 27 px y controles 16 px; tracking de displays entre -0.03em y -0.01em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo",
+      "nota-material"
+    ],
+    "catalogSection": "catalogo",
+    "mobileRule": "Cabecera de dos filas: Trama arriba y «Mi pedido · 0» siempre visible junto al menú. El catálogo empieza dentro de los primeros 260 px; la Camisa aparece primero con nombre, precio y acción visibles en 390×844. Los selectores pasan a botones de 44 px y la tabla de variantes se transforma en dos grupos, Color y Talla. A 320 px, precio y botón se apilan sin recorte."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f1ecdf",
+      "resolved": "#f1ecdf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#171816",
+      "resolved": "#171816",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#1747d1",
+      "resolved": "#1747d1",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#f8f4e9",
+      "resolved": "#f8f4e9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#24241f",
+      "resolved": "#24241f",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0px",
+      "resolved": "0px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "'Instrument Sans',sans-serif",
+      "resolved": "'Instrument Sans',sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "'Instrument Serif',serif",
+      "resolved": "'Instrument Serif',serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "concepts": [
+    {
+      "name": "La mesa de las dos cosas",
+      "premise": "Una despensa compacta y directamente comprable: el catálogo abre como una mesa editorial dividida entre jugo y granola. A diferencia de los otros conceptos, elimina el hero independiente, muestra ambas familias en paralelo y prioriza comparar variantes desde el primer vistazo.",
+      "opening": "Masthead bajo con “Nido · Pilot 1”, descriptor y “Mi pedido (0)”. Inmediatamente debajo, una franja breve “Dos básicos para cada mañana” comparte espacio con el inicio del catálogo. En escritorio aparecen los dos productos lado a lado; en móvil abre el jugo con nombre, precio desde Bs 18 y acción de añadir antes del pliegue.",
+      "flow": "Inicio: catálogo inmediato, seguido por una pareja de fotografías de uso y una nota compacta sobre la selección. Producto: galería de tres imágenes a la izquierda y panel fijo a la derecha con nombre, descripción única, selectores segmentados para tamaño/presentación o sabor/peso, precio actualizado, cantidad y añadir. Carrito y checkout reutilizan filas horizontales, divisores finos y resumen fijo; solo se informa retiro, sin inventar condiciones.",
+      "typography": "Instrument Sans en todo el sistema: títulos 58/60 en escritorio y 36/38 en móvil; nombres de producto 27/30 y 23/26; cuerpo 16/24; etiquetas 12/16 en mayúsculas moderadas. Jerarquía clara y funcional, con cifras tabulares para precios y cantidades.",
+      "imagery": "El jugo usa assets/image-f1220ebdbbf1.jpg como imagen horizontal principal, recortada hacia las botellas y cítricos del sector derecho; assets/image-06465dbb2877.jpg como retrato de producto; assets/image-d7afdd1c26f9.jpg como escena de consumo. La granola usa assets/image-e2dc7f4f02d3.jpg como imagen cálida de apertura, assets/image-5d185857f7d9.jpg para el frasco frontal y assets/image-ceff3979a97c.jpg para el bol. Se conserva íntegra la marca SAVIA impresa y no se superpone texto sobre sus rÓ",
+      "mobile": "Cabecera de una línea con menú, nombre abreviado visualmente sin alterar el texto accesible y “Mi pedido (0)” siempre visible. Catálogo en una sola columna; foto 4:3, compra compacta debajo y selectores con áreas táctiles de 44 px. La galería de producto se vuelve carrusel manual con miniaturas, sin autoplay. El resumen de checkout permanece en flujo, no flotante.",
+      "layout": {
+        "sections": [
+          "catalogo-mesa",
+          "pareja-cotidiana",
+          "nota-despensa"
+        ],
+        "catalogSection": "catalogo-mesa",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Sol de desayuno",
+      "premise": "Una apertura fotográfica inmersiva convierte la luz, el vidrio y el cítrico en identidad antes de comprar. Se distancia del catálogo inmediato mediante una portada asimétrica de gran escala, productos presentados después como capítulos verticales y una jerarquía serif más sensorial.",
+      "opening": "Composición dividida: a la derecha, assets/image-f1220ebdbbf1.jpg ocupa cerca de dos tercios y mantiene las tres botellas como foco; a la izquierda, sobre marfil, aparecen el nombre de la tienda, “Despensa de jugos y granola” y el enlace “Ver la despensa”. Una banda cítrica estrecha marca la transición al catálogo sin cubrir la fotografía.",
+      "flow": "Inicio: portada, catálogo en dos capítulos alternados —jugo con imagen apaisada y granola con retrato— y cierre con las dos escenas de desayuno. Producto: título y selector encima de una galería editorial; al desplazarse, el módulo de compra queda visible de forma discreta en escritorio. Variantes se eligen en dos pasos explícitos y el precio responde a la combinación. Carrito y checkout se sienten como una hoja de pedido sobre marfil, con miniaturas, cantidades y total bien alineados.",
+      "typography": "Instrument Serif para títulos expresivos de 76/72 en escritorio y 45/44 en móvil; Instrument Sans para navegación, producto y compra. Nombres de producto 38/40; cuerpo 16/25; microtexto 12/16. El serif solo guía la narrativa; selectores y precios permanecen nítidos en sans.",
+      "imagery": "Portada con assets/image-f1220ebdbbf1.jpg, crop horizontal centrado en las botellas sin perder naranja y jengibre. El capítulo de jugo combina assets/image-06465dbb2877.jpg y assets/image-d7afdd1c26f9.jpg; el de granola abre con assets/image-e2dc7f4f02d3.jpg y continúa con assets/image-5d185857f7d9.jpg. El cierre empareja assets/image-d7afdd1c26f9.jpg con assets/image-ceff3979a97c.jpg mediante crops cuadrados. Las etiquetas SAVIA permanecen legibles y sin modificaciones.",
+      "mobile": "La portada se recompone con texto primero y fotografía 4:5 debajo, manteniendo “Mi pedido (0)” fuera del menú. El catálogo usa capítulos apilados con nombre, precio y añadir inmediatamente después de cada imagen. En producto, galería con scroll-snap manual y barra de compra en flujo; los selectores pasan a rejillas de dos columnas y luego a una si el ancho lo exige.",
+      "layout": {
+        "sections": [
+          "portada-sol",
+          "catalogo-capitulos",
+          "mesa-compartida"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice de la mañana",
+      "premise": "Una tienda con gramática de carta de despensa: densa, tipográfica y ordenada por decisiones reales —qué producto, qué formato y cuánto—, con fotografías como láminas numeradas por título, no como fondos. Frente a la portada inmersiva y la mesa de tarjetas, propone una navegación lateral y filas de compra horizontales.",
+      "opening": "Tras una cabecera compacta, una columna lateral fija en escritorio presenta “Jugo / Granola / Mi pedido”; el área principal abre con “Elige tu mañana” y dos filas de producto. Cada fila reúne miniatura, nombre, descripción breve, precio inicial y añadir; ambas opciones son visibles en 1280 px. En móvil, el índice se convierte en dos pestañas ancladas y la primera fila comprable queda en apertura.",
+      "flow": "Inicio: índice-catálogo, luego una tira de seis láminas agrupadas por producto y un cierre exclusivamente informativo con “Retiro” y acceso al pedido. Producto: encabezado tipo ficha, gran imagen principal, miniaturas verticales y una tabla clara de opciones; tamaño/sabor y presentación/peso son controles reales, seguidos por stepper de cantidad y añadir. Carrito y checkout adoptan la misma lógica de tabla, con columnas que se apilan semánticamente en móvil.",
+      "typography": "Bricolage Grotesque variable como familia única: encabezado 64/62 en escritorio y 39/39 en móvil; producto 30/32; cuerpo 15/22; navegación y etiquetas 13/18. Pesos 450–700 crean contraste sin recurrir a serif; precios grandes pero no dominantes.",
+      "imagery": "Las filas usan assets/image-06465dbb2877.jpg para el jugo y assets/image-5d185857f7d9.jpg para la granola, con crops cuadrados centrados en cada envase. La tira alterna assets/image-f1220ebdbbf1.jpg, assets/image-d7afdd1c26f9.jpg y assets/image-06465dbb2877.jpg para jugo; assets/image-e2dc7f4f02d3.jpg, assets/image-ceff3979a97c.jpg y assets/image-5d185857f7d9.jpg para granola. Bordes rectos, pies de foto funcionales y ningún tratamiento que altere envases o marca impresa.",
+      "mobile": "Cabecera con menú y “Mi pedido (0)” visible; navegación por anclas bajo ella. Las filas se vuelven módulos de dos columnas —miniatura y datos—, con selectores y acción ocupando todo el ancho debajo. A 320 px pasan a una columna sin ocultar controles. La galería de producto conserva miniaturas como tira horizontal y el checkout elimina columnas decorativas.",
+      "layout": {
+        "sections": [
+          "catalogo-indice",
+          "archivo-fotografico",
+          "retiro-pedido"
+        ],
+        "catalogSection": "catalogo-indice",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "Es la opción más adecuada para un catálogo real de solo dos productos y para la acción principal de elegir variantes y añadir. Aprovecha las tres imágenes disponibles por cada producto, mantiene visibles nombre, precio y compra desde la apertura en escritorio y móvil, y convierte las opciones confirmadas —330/750 ml, individual/pack y Original/Cacao, 250/500 g— en el centro del sistema de producto"
+  }
+}

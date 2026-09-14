@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lumbre · Pilot 2 | Café preparado para recoger</title>
+  <meta name="description" content="Carta breve de café preparado al momento. Elige el tamaño y añade tu pedido para recoger en Lumbre · Pilot 2.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Lumbre · Pilot 2, inicio">
+      <span class="brand__full" data-store-name>Lumbre · Pilot 2</span>
+      <span class="brand__short" aria-hidden="true">Lumbre</span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <img src="assets/icons/menu.svg" alt=""><span class="sr-only">Abrir menú</span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+      <a href="#carta-barra" aria-current="page">Carta</a>
+      <a href="#nota-recogida">Recogida</a>
+    </nav>
+    <button class="cart-trigger" type="button" data-cart-open>
+      <img src="assets/icons/shopping-bag.svg" alt="">
+      <span>Mi pedido</span><span class="cart-count" data-cart-count>0</span>
+    </button>
+  </header>
+
+  <main>
+    <section id="carta-barra" class="menu-board" aria-labelledby="menu-title">
+      <div class="menu-intro">
+        <div>
+          <p class="eyebrow">Carta breve · para recoger</p>
+          <h1 id="menu-title">Café preparado al momento</h1>
+        </div>
+        <p class="menu-key"><span aria-hidden="true"></span> Elige tamaño y añade.</p>
+      </div>
+
+      <div class="column-key" aria-hidden="true">
+        <span>Café</span><span>Tamaño</span><span>Precio y pedido</span>
+      </div>
+      <div class="catalog" data-pagosya-catalog aria-live="polite"></div>
+
+      <template data-pagosya-product-template>
+        <article class="bar-item">
+          <div class="bar-item__identity">
+            <a class="bar-item__name menu-item__details" data-product-link data-product-field="name"></a>
+            <span class="bar-item__dot" aria-hidden="true"></span>
+            <span class="bar-item__price" data-product-field="price"></span>
+          </div>
+          <div class="bar-item__choices">
+            <span class="choice-label">Tamaño</span>
+            <div class="choice-values" data-product-field="options"></div>
+          </div>
+          <div class="bar-item__actions">
+            <a class="detail-link menu-item__details" data-product-link>Ver detalle <img src="assets/icons/arrow-right.svg" alt=""></a>
+            <button class="menu-add" type="button" data-product-add>Añadir</button>
+          </div>
+        </article>
+      </template>
+    </section>
+
+    <section id="nota-recogida" class="pickup-note" aria-labelledby="pickup-title">
+      <p class="eyebrow">Preparación</p>
+      <h2 id="pickup-title">Al momento.<br>Para recoger.</h2>
+      <p>Selecciona tu café, elige el tamaño y revisa todo en Mi pedido antes de continuar al pago.</p>
+      <a href="#carta-barra">Volver a la carta <img src="assets/icons/arrow-right.svg" alt=""></a>
+    </section>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+
+  <footer class="site-footer">
+    <strong>Lumbre · Pilot 2</strong>
+    <span>Cafetería de barrio · carta breve</span>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

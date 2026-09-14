@@ -42,22 +42,14 @@ const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreS
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
 
 describe("StoresService.create", () => {
-  it.each([StoreStatus.ACTIVE, StoreStatus.ARCHIVED])("rejects a second store when the existing store is %s", async (status) => {
+  it.each([StoreStatus.ACTIVE, StoreStatus.ARCHIVED])("allows another store when an existing store is %s", async (status) => {
     const prisma = makeFakePrisma();
     prisma.store.findFirst.mockResolvedValue({ ...store, status });
+    prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_2", ...data }));
     const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
-    await expect(service.create("m_1", { name: "Otra tienda" } as any)).rejects.toBeInstanceOf(ConflictException);
-    expect(prisma.store.findFirst).toHaveBeenCalledWith({ where: { merchantId: "m_1" }, select: { id: true } });
-    expect(prisma.store.create).not.toHaveBeenCalled();
-  });
-
-  it("returns a conflict if another session creates the account's store after the initial check", async () => {
-    const prisma = makeFakePrisma();
-    prisma.store.findFirst.mockResolvedValue(null);
-    prisma.store.create.mockRejectedValue({ code: "P2002", meta: { target: ["merchantId"] } });
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
-    await expect(service.create("m_1", { name: "Otra tienda" } as any)).rejects.toThrow("Tu cuenta ya tiene una tienda");
+    await expect(service.create("m_1", { name: "Otra tienda" } as any)).resolves.toMatchObject({ id: "store_2", merchantId: "m_1", name: "Otra tienda" });
     expect(prisma.store.create).toHaveBeenCalledTimes(1);
+    expect(prisma.store.delete).not.toHaveBeenCalled();
   });
 
   it("still retries a public slug collision", async () => {

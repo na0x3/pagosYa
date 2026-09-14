@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans variable en toda la interfaz. Bruma en 48–72 px y peso 600; nombres de producto en 30–42 px; precios con cifras amplias en 24–30 px; cuerpo 16–18 px. Etiquetas y encabezados funcionales en 12–13 px, mayúsculas espaciadas. En móvil, marca 30 px, producto 28 px y controles 16 px; letter-spacing de titulares entre -0.03em y -0.01em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-carta",
+      "recogida-breve"
+    ],
+    "catalogSection": "catalogo-carta",
+    "mobileRule": "Encabezado de dos líneas muy compacto: Bruma y “Mi pedido · 0” siempre visibles; menú para enlaces secundarios. Cada producto se convierte en una ficha abierta sin marco, con nombre, descripción, selector segmentado de 44 px, precio y botón ancho. El primer producto y su acción quedan visibles antes del pliegue a 390 px; a 320 px los selectores envuelven sin recortar."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#fbf9fc",
+      "resolved": "#fbf9fc",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#2d1831",
+      "resolved": "#2d1831",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#5d275f",
+      "resolved": "#5d275f",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#f1eaf5",
+      "resolved": "#f1eaf5",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#bca8c2",
+      "resolved": "#bca8c2",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Instrument,sans-serif",
+      "resolved": "Instrument,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Instrument,sans-serif",
+      "resolved": "Instrument,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

@@ -9,7 +9,7 @@ const design = {
 describe('source visual system foundation', () => {
   it('derives guidance from the project concept, motion and assets without preset styling', () => {
     const system = buildSourceVisualSystem('expressive', [{ path: 'assets/photo.webp', role: 'product', description: 'Product photo', references: [], kind: 'image', bytes: 10 }], design);
-    expect(system.version).toBe(2);
+    expect(system.version).toBe(3);
     expect(system).not.toHaveProperty('themeId');
     expect(system).not.toHaveProperty('tokens');
     expect(system.typography.display).toBe('Friendly');

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Finalizar pedido | Forma · Pilot 2</title>
+  <meta name="description" content="Revisa y completa tu pedido de Forma · Pilot 2.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="checkout-page">
+<header class="site-header">
+  <a class="wordmark" href="index.html" aria-label="Forma · Pilot 2, inicio"><span class="wordmark-long">Forma · Pilot 2</span><span class="wordmark-short" aria-hidden="true">Forma · P2</span></a>
+  <nav aria-label="Navegación principal"><a href="index.html">Inicio</a><a href="product.html">Producto</a></nav>
+  <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido · <span data-cart-count>0</span></button>
+</header>
+<main class="checkout-main">
+  <a class="back-link" href="index.html"><img src="assets/icons/arrow-left.svg" alt=""> Seguir comprando</a>
+  <div data-pagosya-checkout-page></div>
+</main>
+<div class="runtime-status" data-pagosya-status role="status" aria-live="polite"></div>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

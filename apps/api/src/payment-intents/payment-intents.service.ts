@@ -1,3 +1,4 @@
+import { queueStoreEmail } from '../stores/email-workspace.config';
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
@@ -90,10 +91,15 @@ export class PaymentIntentsService {
   private readonly logger = new Logger(PaymentIntentsService.name);
 
   async checkoutBranding(intent: { merchantId: string; metadata: unknown }) {
-    // Merchant identity comes from the authenticated intent, never metadata or URL input.
-    const store = await this.prisma.store.findUnique({ where: { merchantId: intent.merchantId }, select: {
+    // A store hint must still belong to the authenticated intent's merchant.
+    // Unscoped API payments can use a sole store; never choose arbitrarily across stores.
+    const metadata = intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+      ? intent.metadata as Record<string, unknown> : {};
+    const storeId = typeof metadata.storeId === "string" ? metadata.storeId : undefined;
+    const matches = await this.prisma.store.findMany({ where: { merchantId: intent.merchantId, ...(storeId !== undefined && { id: storeId }) }, take: 2, select: {
       id: true, name: true, logoUrl: true, backgroundColor: true, accentColor: true, fontStyle: true, publishedSourceRevision: true,
     } });
+    const store = matches.length === 1 ? matches[0] : null;
     if (!store) return null;
     const version = store.publishedSourceRevision == null ? null : await this.prisma.storeSourceVersion.findUnique({
       where: { storeId_revision: { storeId: store.id, revision: store.publishedSourceRevision } }, select: { snapshot: true },
@@ -292,6 +298,9 @@ export class PaymentIntentsService {
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
 
+      if ((current.metadata as Prisma.JsonObject)?.platformPurchase === "domain" && dto.paymentMethod.type !== "QR") {
+        throw new BadRequestException("La compra de dominios se paga con QR bancario.");
+      }
       const confirmedStatus = transition(current.status, PaymentIntentEvent.CONFIRM);
 
       if ((current.metadata as Prisma.JsonObject)?.storeCredit) await ensureCreditReservation(tx, paymentIntentId);
@@ -299,6 +308,12 @@ export class PaymentIntentsService {
       const locationStockReserved = await this.reserveLocationStockForCart(tx, current.metadata);
       const paymentMethod = await this.paymentMethods.findOrCreate(tx, current.merchantId, dto.paymentMethod);
       const rail = this.railRegistry.getForMethodType(paymentMethod.type);
+      if ((current.metadata as Prisma.JsonObject)?.platformPurchase === 'domain') {
+        const order = await tx.domainOrder.findUnique({ where: { paymentIntentId } });
+        if (!order || order.status !== 'AWAITING_PAYMENT' || rail.railId !== (order.sandbox ? 'mock_qr' : 'baneco_qr')) {
+          throw new BadRequestException('El método de pago no está disponible para esta compra de dominio.');
+        }
+      }
       const processingStatus = transition(confirmedStatus, PaymentIntentEvent.AUTHORIZE_START);
       const debt = (current.metadata as {
         debt?: { customerName?: string; customerDocument?: string; customerEmail?: string; customerPhone?: string };
@@ -477,6 +492,7 @@ export class PaymentIntentsService {
         },
       });
 
+      let receiptQueued = false;
       if (result.status === "succeeded") {
         const lines = this.ledger.buildCaptureJournal({
           merchantId,
@@ -500,7 +516,13 @@ export class PaymentIntentsService {
         });
         await this.decrementStockForCart(tx, current.metadata);
         await this.recordProductStats(tx, merchantId, current.metadata);
-        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, status: true } });
+        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true } });
+        if (order?.storeId && updated.livemode) {
+          const cart = (updated.metadata as {cart?:CartInventoryLine[]} | null)?.cart;
+          const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, updated.currency)}`).join('\n');
+          const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
+          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}\nSigue tu pedido: ${tracking}`});
+        }
         if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
           await tx.storeOrder.update({
             where: { id: order.id },
@@ -531,6 +553,11 @@ export class PaymentIntentsService {
           data: { status: "CONFIRMED", holdExpiresAt: null },
         });
       } else if (result.status === "failed") {
+        if (updated.livemode && tx.subscriptionInvoice?.findFirst && tx.customerSubscription?.findUnique) {
+          const invoice = await tx.subscriptionInvoice.findFirst({where:{paymentIntentId}});
+          const subscription = invoice && await tx.customerSubscription.findUnique({where:{id:invoice.subscriptionId}});
+          if (invoice && subscription) await queueStoreEmail(tx,invoice.storeId,'SUBSCRIPTION_FAILED',updated.id,subscription.customerEmail,{store:merchant.name,order:invoice.id,customer:subscription.customerName,amount:formatAmount(invoice.amount,invoice.currency)});
+        }
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.failed", {
           id: updated.id,
           amount: updated.amount,
@@ -540,14 +567,14 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
     // webhook/invoice enqueues above, which just write an outbox row), so it
     // must never hold a DB row lock open while it runs.
     if (outcome.railResult.status === "succeeded") {
-      await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
+      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
 
@@ -565,6 +592,7 @@ export class PaymentIntentsService {
    */
   private async sendReceiptEmail(
     intent: {
+      livemode?: boolean;
       id: string;
       amount: number;
       currency: string;
@@ -587,7 +615,7 @@ export class PaymentIntentsService {
             .join("\n") + "\n"
         : "";
 
-      const order = await this.prisma.storeOrder.findUnique({ where: { paymentIntentId: intent.id }, select: { id: true } });
+      const order = await this.prisma.storeOrder.findUnique({ where: { paymentIntentId: intent.id }, select: { id: true, storeId: true } });
       const trackingLine = order
         ? `\nSigue tu pedido aquí:\n${(this.config?.get<string>("app.checkoutOrigin") ?? "http://localhost:5174").replace(/\/$/, "")}/track/${createOrderTrackingToken(order.id, this.config?.get<string>("app.orderTrackingSecret") ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}\n`
         : "";
@@ -604,6 +632,7 @@ export class PaymentIntentsService {
 
   private async sendDebtPaymentNotification(
     intent: {
+      livemode?: boolean;
       id: string;
       amount: number;
       currency: string;

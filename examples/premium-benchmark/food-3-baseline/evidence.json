@@ -1,0 +1,117 @@
+{
+  "sourceDigest": "1a4e107058b2d35c0efb38efa653ac654ea2543cc0456affabca522e82e97409",
+  "evidenceRevision": 1,
+  "captures": [
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 2973,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-0.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 1065,
+      "pageHeight": 2973,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-1.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 2129,
+      "pageHeight": 2973,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-2.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 3843,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-3.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 1500,
+      "pageHeight": 3843,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-4.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 2999,
+      "pageHeight": 3843,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-5.jpg"
+    }
+  ],
+  "captureFailures": [],
+  "shopping": [
+    {
+      "width": 1280,
+      "productId": "cmu0efc1u00224gwz2o8a0kwk",
+      "status": "passed",
+      "variantId": "var_7na2baxzc1pu"
+    },
+    {
+      "width": 1280,
+      "productId": "cmu0efc1v00244gwz9xi8bmmx",
+      "status": "passed",
+      "variantId": "var_aoxjeqkcy1qq"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0efc1u00224gwz2o8a0kwk",
+      "status": "passed",
+      "variantId": "var_7na2baxzc1pu"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0efc1v00244gwz9xi8bmmx",
+      "status": "passed",
+      "variantId": "var_aoxjeqkcy1qq"
+    }
+  ]
+}

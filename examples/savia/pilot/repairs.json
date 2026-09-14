@@ -1,0 +1,78 @@
+[
+  {
+    "id": "pantry-1",
+    "fromRevision": 1,
+    "screenshots": [
+      "/Users/saramia/pagosYa/examples/savia/review/pilot-pantry-1-desktop.jpg",
+      "/Users/saramia/pagosYa/examples/savia/review/pilot-pantry-1-mobile.jpg"
+    ],
+    "instruction": "Corrige exclusivamente los problemas observados de la apertura de Inicio, conservando su identidad, contenido factual, fotografía, estructura elegida y funcionamiento de compra. NO rediseñes toda la tienda. Datos medidos en el navegador, con fuentes e imágenes cargadas: [{\"viewport\":\"desktop\",\"width\":1280,\"height\":844,\"catalogY\":224.65625,\"firstProduct\":{\"buy\":{\"bottom\":885.1328125,\"width\":155.296875,\"x\":460.203125,\"y\":839.1328125},\"name\":\"Jugo naranja + jengibre\",\"price\":{\"bottom\":877.8828125,\"width\":84.484375,\"x\":116.1953125,\"y\":846.3828125}},\"scrollWidth\":1280,\"promise\":{\"sections\":[\"catalogo-mesa\",\"pareja-cotidiana\",\"nota-despensa\"],\"catalogSection\":\"catalogo-mesa\",\"standaloneIntro\":false,\"productsInOpening\":true}},{\"viewport\":\"mobile\",\"width\":390,\"height\":844,\"catalogY\":797,\"firstProduct\":{\"buy\":{\"bottom\":1307,\"width\":155.296875,\"x\":205.703125,\"y\":1261},\"name\":\"Jugo naranja + jengibre\",\"price\":{\"bottom\":1299.75,\"width\":84.484375,\"x\":29,\"y\":1268.25}},\"scrollWidth\":390,\"promise\":{\"sections\":[\"catalogo-mesa\",\"pareja-cotidiana\",\"nota-despensa\"],\"catalogSection\":\"catalogo-mesa\",\"standaloneIntro\":false,\"productsInOpening\":true}}]. La composición seleccionada prometió catálogo antes de 320px y producto, precio y compra antes de 844px en escritorio y móvil. Haz que cumpla esa promesa con ajustes concretos y moderados de las columnas, altura de fotografía y espaciado. En las capturas busca columnas de texto demasiado estrechas, letras apiladas y espacio vacío excesivo; usa minmax(0,1fr) y una composición móvil legible. No escondas productos, precios, descripciones significativas ni controles para aprobar. No cambies los flags del plan. Elimina expresiones de implementación como “opciones reales” de la interfaz; usa lenguaje natural de compra. Revisa los estilos exactos y repara la causa, no la tapes con overflow hidden.",
+    "status": "completed",
+    "revision": 2,
+    "generation": {
+      "id": "cmu0clmrs0005n2tq1g0qi4sj",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 19,
+      "maxCredits": 100,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 43652,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 32300,
+            "cachedInputTokens": 0,
+            "outputTokens": 2456,
+            "providerMicroUsd": 186747,
+            "cacheWriteTokens": 8427
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1937,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 43688,
+      "status": "COMPLETED"
+    }
+  },
+  {
+    "id": "hydration-1",
+    "fromRevision": 1,
+    "screenshots": [
+      "/Users/saramia/pagosYa/examples/savia/review/pilot-hydration-1-desktop.jpg",
+      "/Users/saramia/pagosYa/examples/savia/review/pilot-hydration-1-mobile.jpg"
+    ],
+    "instruction": "Corrige exclusivamente los problemas observados de la apertura de Inicio, conservando su identidad, contenido factual, fotografía, estructura elegida y funcionamiento de compra. NO rediseñes toda la tienda. Datos medidos en el navegador, con fuentes e imágenes cargadas: [{\"viewport\":\"desktop\",\"width\":1280,\"height\":844,\"catalogY\":89.59375,\"firstProduct\":{\"buy\":{\"bottom\":503.671875,\"width\":329.9453125,\"x\":911.65625,\"y\":452.875},\"name\":\"Botella Ritual\",\"price\":{\"bottom\":254.3359375,\"width\":461.9453125,\"x\":779.65625,\"y\":225.5390625}},\"scrollWidth\":1280,\"promise\":{\"sections\":[\"product-configurator\",\"material-note\"],\"catalogSection\":\"product-configurator\",\"standaloneIntro\":false,\"productsInOpening\":true}},{\"viewport\":\"mobile\",\"width\":390,\"height\":844,\"catalogY\":68,\"firstProduct\":{\"buy\":{\"bottom\":869.0078125,\"width\":231,\"x\":143,\"y\":818.2109375},\"name\":\"Botella Ritual\",\"price\":{\"bottom\":657.171875,\"width\":358,\"x\":16,\"y\":630.7734375}},\"scrollWidth\":390,\"promise\":{\"sections\":[\"product-configurator\",\"material-note\"],\"catalogSection\":\"product-configurator\",\"standaloneIntro\":false,\"productsInOpening\":true}}]. La composición seleccionada prometió catálogo antes de 320px y producto, precio y compra antes de 844px en escritorio y móvil. Haz que cumpla esa promesa con ajustes concretos y moderados de las columnas, altura de fotografía y espaciado. En las capturas busca columnas de texto demasiado estrechas, letras apiladas y espacio vacío excesivo; usa minmax(0,1fr) y una composición móvil legible. No escondas productos, precios, descripciones significativas ni controles para aprobar. No cambies los flags del plan. Elimina expresiones de implementación como “opciones reales” de la interfaz; usa lenguaje natural de compra. Revisa los estilos exactos y repara la causa, no la tapes con overflow hidden.",
+    "status": "completed",
+    "revision": 2,
+    "generation": {
+      "id": "cmu0cmkmv000en2tqynk17ju5",
+      "requestedModel": "gpt-5.6-sol",
+      "model": "gpt-5.6-sol",
+      "credits": 19,
+      "maxCredits": 100,
+      "attempts": [
+        {
+          "model": "gpt-5.6-sol",
+          "phase": "source",
+          "durationMs": 49558,
+          "status": "COMPLETED",
+          "usage": {
+            "inputTokens": 31699,
+            "cachedInputTokens": 0,
+            "outputTokens": 2334,
+            "providerMicroUsd": 181903,
+            "cacheWriteTokens": 8427
+          },
+          "reasoningEffort": "medium",
+          "reasoningTokens": 1845,
+          "responseStatus": "completed"
+        }
+      ],
+      "durationMs": 49577,
+      "status": "COMPLETED"
+    }
+  }
+]

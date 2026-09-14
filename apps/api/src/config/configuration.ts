@@ -1,4 +1,5 @@
 import * as path from "path";
+import type { DomainCommerceConfig } from '../stores/domains/domain-commerce.config';
 
 export interface BanecoQrConfig {
   enabled: boolean;
@@ -26,7 +27,9 @@ export interface SiatConfig {
 }
 
 export interface AppConfig {
+  domainCommerce: DomainCommerceConfig;
   sourceFramework: 'next' | 'static';
+  sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
   databaseUrl: string;
@@ -206,6 +209,18 @@ export default (): { app: AppConfig } => {
     ]),
     exposeDocs: process.env.EXPOSE_API_DOCS ? process.env.EXPOSE_API_DOCS === "true" : environment !== "production",
     trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+    domainCommerce: {
+      enabled: process.env.DOMAIN_COMMERCE_ENABLED === 'true',
+      sandbox: process.env.DOMAIN_REGISTRAR_SANDBOX !== 'false',
+      username: process.env.NAMECOM_USERNAME ?? '',
+      token: process.env.NAMECOM_API_TOKEN ?? '',
+      platformMerchantId: process.env.DOMAIN_PLATFORM_MERCHANT_ID ?? '',
+      bobPerUsd: Number(process.env.DOMAIN_BOB_PER_USD ?? 0),
+      markupPercent: Number(process.env.DOMAIN_MARKUP_PERCENT ?? 0),
+      cloudflareToken: process.env.DOMAIN_CLOUDFLARE_API_TOKEN ?? '',
+      cloudflareZoneId: process.env.DOMAIN_CLOUDFLARE_ZONE_ID ?? '',
+      target: process.env.CUSTOM_DOMAIN_CNAME_TARGET ?? 'stores.pagosya.bo',
+    },
     customDomains: {
       // All verified merchant hostnames route to the same storefront app. The
       // deployment edge must accept this target and provision TLS for the
@@ -237,6 +252,7 @@ export default (): { app: AppConfig } => {
       forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE !== "false",
     },
     sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
+    sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
     deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",

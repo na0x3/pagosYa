@@ -16,18 +16,27 @@ describe('checkout store identity', () => {
     expect(brand.foreground).toBe('#ffffff');expect(brand.surface).toBe('#111111');expect(brand.accentForeground).toBe('#171717');
     expect(brand.logoUrl).toBeNull();expect(brand.bodyFont).toBe('system-ui, sans-serif');expect(brand.fonts).toEqual([]);
   });
-  it('resolves only the intent merchant and the published revision, ignoring metadata and newer drafts', async () => {
-    const prisma={store:{findUnique:jest.fn().mockResolvedValue({id:'store-owned',name:'Published shop',publishedSourceRevision:3})},storeSourceVersion:{findUnique:jest.fn().mockResolvedValue({snapshot:{files:[{path:'site.css',content:'body{background:#123123;color:#ffffff}'}]}})}};
+  it('resolves the selected owned store and its published revision, ignoring draft revisions', async () => {
+    const prisma={store:{findMany:jest.fn().mockResolvedValue([{id:'store-owned',name:'Published shop',publishedSourceRevision:3}])},storeSourceVersion:{findUnique:jest.fn().mockResolvedValue({snapshot:{files:[{path:'site.css',content:'body{background:#123123;color:#ffffff}'}]}})}};
     const service=Object.create(PaymentIntentsService.prototype);service.prisma=prisma;
-    const brand=await service.checkoutBranding({merchantId:'owner',metadata:{storeId:'another-store',revision:99}});
-    expect(prisma.store.findUnique.mock.calls[0][0].where).toEqual({merchantId:'owner'});
+    const brand=await service.checkoutBranding({merchantId:'owner',metadata:{storeId:'store-owned',revision:99}});
+    expect(prisma.store.findMany.mock.calls[0][0].where).toEqual({merchantId:'owner',id:'store-owned'});
     expect(prisma.storeSourceVersion.findUnique.mock.calls[0][0].where).toEqual({storeId_revision:{storeId:'store-owned',revision:3}});
     expect(brand).toMatchObject({name:'Published shop',background:'#123123'});
   });
   it('never reads a draft for an unpublished store, and leaves merchants without a store unchanged', async () => {
-    const prisma={store:{findUnique:jest.fn().mockResolvedValueOnce({id:'s',name:'Tienda',publishedSourceRevision:null}).mockResolvedValueOnce(null)},storeSourceVersion:{findUnique:jest.fn()}};
+    const prisma={store:{findMany:jest.fn().mockResolvedValueOnce([{id:'s',name:'Tienda',publishedSourceRevision:null}]).mockResolvedValueOnce([])},storeSourceVersion:{findUnique:jest.fn()}};
     const service=Object.create(PaymentIntentsService.prototype);service.prisma=prisma;
     expect((await service.checkoutBranding({merchantId:'owner'})).name).toBe('Tienda');
     expect(await service.checkoutBranding({merchantId:'no-store'})).toBeNull();expect(prisma.storeSourceVersion.findUnique).not.toHaveBeenCalled();
   });
+  it('does not borrow another store brand for unscoped or foreign-store payments', async () => {
+    const prisma = { store: { findMany: jest.fn().mockResolvedValueOnce([{id:'a'},{id:'b'}]).mockResolvedValueOnce([]) }, storeSourceVersion: { findUnique: jest.fn() } };
+    const service = Object.create(PaymentIntentsService.prototype); service.prisma = prisma;
+    expect(await service.checkoutBranding({merchantId:'owner',metadata:{}})).toBeNull();
+    expect(await service.checkoutBranding({merchantId:'owner',metadata:{storeId:'foreign-store'}})).toBeNull();
+    expect(prisma.store.findMany.mock.calls[1][0].where).toEqual({merchantId:'owner',id:'foreign-store'});
+    expect(prisma.storeSourceVersion.findUnique).not.toHaveBeenCalled();
+  });
+
 });

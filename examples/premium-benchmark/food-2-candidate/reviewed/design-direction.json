@@ -1,0 +1,67 @@
+{
+  "concepts": [
+    {
+      "name": "La despensa en dos gestos",
+      "premise": "Inicio editorial y directamente comprable: una franja de contexto mínima conduce a dos grandes líneas de producto, jugo y granola, visibles como una mesa puesta. A diferencia de los otros conceptos, abre con el catálogo real, concentra toda la decisión en una sola composición y evita una portada independiente.",
+      "opening": "Masthead crema de 72 px con “Mesa Clara”, enlace “Productos” y “Mi pedido (0)”. Debajo, el catálogo comienza de inmediato con el rótulo “Dos esenciales para la mañana” y dos fichas horizontales asimétricas. En escritorio, el jugo ocupa 55% y la granola 45%; nombre, precio inicial, selectores y “Añadir” quedan junto a cada fotografía. En móvil, la primera ficha compacta muestra Jugo naranja + jengibre, Bs 18 y su acción antes del pliegue.",
+      "flow": "La compra sucede en la apertura. Cada ficha permite escoger las dos opciones propias del producto: Tamaño + Presentación para el jugo; Sabor + Peso para la granola. Tras el catálogo aparece una breve banda “Para desayunos en casa” que relaciona ambos sin inventar beneficios, y luego información concisa de recojo. La página de producto amplía la misma estructura con galería, descripción, selectores, precio y compra en una columna fija; carrito y checkout usan filas editoriales, resumen nítido y “",
+      "typography": "Fraunces variable para títulos con contraste suave y Instrument Sans para navegación, opciones, precios y checkout. Escala: 68/64 px en títulos editoriales de escritorio, 42/42 en tablet, 36/37 en móvil; producto 30/32 y cuerpo 16/24. Mayúsculas pequeñas y espaciadas sólo para rótulos, nunca para textos largos.",
+      "imagery": "El jugo usa assets/image-f1220ebdbbf1.jpg como imagen principal panorámica, recorte 4:3 con las tres botellas y cítricos anclados a la derecha; assets/image-06465dbb2877.jpg y assets/image-d7afdd1c26f9.jpg forman la galería de producto, preservando botella y etiqueta SAVIA. La granola usa assets/image-e2dc7f4f02d3.jpg con recorte vertical centrado en frasco y cuenco; assets/image-5d185857f7d9.jpg, assets/image-ceff3979a97c.jpg y la variante assets/image-6039f6dfd423.jpg aparecen sólo donde el í­",
+      "mobile": "Header de 60 px con marca tipográfica, botón de menú y “Mi pedido (0)” siempre visible. Las fichas dejan de ser columnas: imagen 128 px de alto, nombre, precio, selectores de 44 px y botón ancho. El color cítrico se limita a selección activa, precio y botón; el resto mantiene fondo avena. La galería de producto pasa a carrusel horizontal con controles accesibles, y el resumen del pedido permanece después de los artículos, sin barras flotantes que tapen opciones.",
+      "layout": {
+        "sections": [
+          "catalogo-mesa",
+          "ritual-domestico",
+          "recogida-clara"
+        ],
+        "catalogSection": "catalogo-mesa",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Luz de las ocho",
+      "premise": "Una portada fotográfica atmosférica convierte la luz de desayuno y la botella de vidrio en la firma de Mesa Clara antes de comprar. Se diferencia del concepto uno por separar introducción y catálogo, y del tercero por usar una secuencia espaciosa de escenas fotográficas en vez de un índice tipográfico denso.",
+      "opening": "Composición de 74vh dividida: assets/image-f1220ebdbbf1.jpg ocupa dos tercios, con foco en botellas y naranja a la derecha; una columna marfil superpuesta al borde izquierdo presenta “Mesa Clara”, la frase “La mañana, servida con claridad” y el enlace “Ver la despensa”. Una banda naranja fina enlaza visualmente con el jugo sin teñir toda la interfaz. El catálogo comienza en el bloque siguiente, por lo que no promete compra dentro del primer pliegue.",
+      "flow": "Después de la portada, cada producto recibe un capítulo: primero jugo sobre fondo piedra con galería lateral y configurador; luego granola sobre fondo avena con fotografía de desayuno y configurador invertido. Un cierre breve reúne ambos bajo el texto confirmado de la despensa y conduce al pedido. Las páginas de producto conservan el tratamiento de capítulo, con imagen dominante y panel de compra; checkout elimina la escala fotográfica pero retiene líneas finas, marfil cálido y acentos cítricos.",
+      "typography": "Instrument Serif para titulares amplios y serenos; Bricolage Grotesque para toda la interfaz y cifras. Titular de portada 82/78 px en escritorio, 58/58 en tablet y 44/43 en móvil; capítulos 54/55, producto 34/36, cuerpo 17/26. Los precios usan Bricolage semibold y números tabulares.",
+      "imagery": "Portada con assets/image-f1220ebdbbf1.jpg, recorte panorámico conservando el grupo de botellas y dejando aire textil a la izquierda. Capítulo de jugo: assets/image-d7afdd1c26f9.jpg, foco central en botella, vaso y naranja. Capítulo de granola: assets/image-ceff3979a97c.jpg, foco en cuenco y frasco; assets/image-e2dc7f4f02d3.jpg y assets/image-5d185857f7d9.jpg completan la galería. assets/image-6039f6dfd423.jpg se reserva para la variante Cacao si corresponde, sin alterar el aspecto real.",
+      "mobile": "La portada se recompone como fotografía 52vh arriba y bloque de título debajo, sin texto sobre zonas complejas. Header compacto con “Mesa Clara”, “Productos” y “Mi pedido (0)” visible; el menú secundario puede colapsar. En los capítulos, la compra precede a las miniaturas secundarias para reducir recorrido. Selectores pasan a una cuadrícula de dos columnas cuando caben y a una sola a 320 px.",
+      "layout": {
+        "sections": [
+          "portada-luz",
+          "capitulo-jugo",
+          "capitulo-granola",
+          "cierre-despensa"
+        ],
+        "catalogSection": "capitulo-jugo",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice de mañana",
+      "premise": "Una despensa gráfica inspirada en una hoja de pedido doméstica: compacta, tipográfica y muy útil, con las dos familias visibles como filas configurables y fotografías usadas como ampliaciones editoriales. Frente al concepto uno, cambia las grandes fichas por una tabla; frente al dos, antepone comparación y velocidad a la inmersión fotográfica.",
+      "opening": "Bajo un encabezado verde oliva, un índice crema abre con “Jugo / Granola” en dos filas de gran escala. Cada fila integra nombre, descripción breve, precio desde, selectores y “Añadir”; una miniatura cuadrada se expande al pasar el foco o tocar “Ver imagen”. El catálogo empieza inmediatamente y ambos productos caben en el primer pliegue de escritorio, mientras en móvil se garantiza completa la compra del jugo.",
+      "flow": "El índice resuelve la compra rápida; debajo, una franja fotográfica alterna detalles reales de botella y cuenco para dar materialidad sin repetir tarjetas. Sigue una guía de elección puramente factual: formatos del jugo y sabores/pesos de la granola. La página de producto usa una cuadrícula de especificaciones a la izquierda y fotografía vertical a la derecha; carrito y checkout adoptan el formato de lista, con cantidades, variantes y totales alineados como una cuenta de despensa.",
+      "typography": "Oswald para el gran índice y nombres de sección; Instrument Sans para descripción, controles y transacciones. Índice 72/72 px en escritorio, 48/50 en tablet y 38/40 en móvil; nombres de producto 34/36, cuerpo 15/22 y precios 20/22. La condensación permite densidad sin abreviar nombres ni impedir su ajuste.",
+      "imagery": "Miniatura del jugo: assets/image-06465dbb2877.jpg, recorte cuadrado centrado en la botella completa. Miniatura de granola: assets/image-5d185857f7d9.jpg, frasco centrado. La franja material usa assets/image-d7afdd1c26f9.jpg con foco en naranja, vaso y jengibre, y assets/image-ceff3979a97c.jpg con foco en el cuenco; se muestran como dos recortes 3:2 contiguos. Las demás imágenes quedan para sus galerías de producto y variantes confirmadas.",
+      "mobile": "El índice deja de parecer tabla y se vuelve una lista con divisores gruesos, no tarjetas. Cada producto mantiene nombre, precio, opciones y botón en un bloque continuo de ancho completo; la miniatura aparece como banda lateral de 88 px sólo cuando no compromete los controles. Header fijo compacto con marca y “Mi pedido (0)” rotulado fuera del menú. A 320 px, cada selector y acción ocupa una fila de al menos 44 px.",
+      "layout": {
+        "sections": [
+          "indice-comprable",
+          "doble-materia",
+          "formatos-disponibles"
+        ],
+        "catalogSection": "indice-comprable",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "Es la opción más ajustada a un catálogo de sólo dos productos con variantes propias y a la acción principal de elegir y añadir. Aprovecha desde la apertura las siete fotografías reales suministradas —incluidas las escenas SAVIA que deben preservarse—, mantiene visibles nombre, precio y compra en escritorio y móvil, y usa el color cítrico con función en estados y acciones. También responde al tono”"
+  }
+}

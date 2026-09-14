@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bruma — Cuidado diario en distintos volúmenes</title>
+  <meta name="description" content="Crema de manos y jabón líquido Bruma en volúmenes para casa y viaje. Elige tu formato y prepara tu pedido para recogida.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html" aria-label="Bruma, inicio" data-store-name>Bruma</a>
+      <button class="cart-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido</span>
+        <span class="cart-count" data-cart-count>0</span>
+      </button>
+    </div>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="#catalogo" aria-current="page">Productos</a>
+      <a href="#criterio-volumen">Cómo elegir</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="catalogo" class="catalog-section">
+      <div class="catalog-heading">
+        <div>
+          <p class="eyebrow">Cuidado cosmético diario</p>
+          <h1>Cuidado diario, en el volumen que necesitas</h1>
+        </div>
+        <a class="quiet-link" href="#recogida">Pedido para recogida <span aria-hidden="true">↓</span></a>
+      </div>
+
+      <template data-pagosya-product-template>
+        <article class="volume-product">
+          <div class="product-heading">
+            <div class="product-title-group">
+              <p class="product-kicker">Bruma / cuidado diario</p>
+              <h2 data-product-field="name"></h2>
+            </div>
+            <a class="menu-item__details" data-product-link href="product.html">Ver producto <span aria-hidden="true">→</span></a>
+          </div>
+          <p class="product-description" data-product-field="description"></p>
+          <div class="volume-choice">
+            <span class="choice-label">Volumen</span>
+            <div data-product-field="options"></div>
+            <div class="volume-meter" aria-hidden="true"><span></span></div>
+          </div>
+          <div class="product-purchase">
+            <strong class="menu-item__price" data-product-field="price"></strong>
+            <button class="menu-add" type="button" data-product-add>
+              <img src="assets/icons/plus.svg" alt="">
+              <span>Añadir</span>
+            </button>
+            <span class="add-note" aria-live="polite"></span>
+          </div>
+        </article>
+      </template>
+      <div class="catalog-list" data-pagosya-catalog aria-label="Catálogo de Bruma"></div>
+    </section>
+
+    <section id="recogida" class="pickup-note">
+      <p class="eyebrow">Tu pedido</p>
+      <h2>Elige aquí. Recoge después.</h2>
+      <p>Los productos añadidos se reúnen en “Mi pedido”. En el checkout podrás continuar con la opción de recogida habilitada por Bruma.</p>
+      <button class="text-cart-link" type="button" data-cart-open>Revisar mi pedido <span data-cart-count>0</span> <span aria-hidden="true">→</span></button>
+    </section>
+
+    <section id="criterio-volumen" class="volume-note">
+      <div>
+        <p class="eyebrow">El criterio Bruma</p>
+        <h2>El volumen forma parte de la elección.</h2>
+      </div>
+      <p>Cada producto muestra únicamente sus formatos disponibles. Al cambiar el volumen, el precio se actualiza antes de añadirlo al pedido.</p>
+    </section>
+  </main>
+
+  <div data-pagosya-contact hidden></div>
+  <div data-pagosya-cart hidden></div>
+  <div class="global-status" data-pagosya-status role="status" aria-live="polite"></div>
+
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html">Bruma</a>
+    <p>Cuidado cosmético diario en varios volúmenes.</p>
+    <a href="#catalogo">Volver a productos ↑</a>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

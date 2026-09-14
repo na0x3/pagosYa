@@ -6,6 +6,8 @@
  * for a real sender (SES, Postmark, etc.) without touching either caller.
  */
 export interface SendEmailRequest {
+  /** Internal, verified store sender. Never accept this directly from a customer. */
+  from?: string;
   idempotencyKey?: string;
   to: string;
   subject: string;
