@@ -1318,6 +1318,7 @@ model PaymentLink {
   tags               String[]          @default([])
   // Ordered [{ label, value }] rows shown as the product's specification sheet.
   specifications     Json              @default("[]")
+  highlights         Json              @default("[]")
   // Ordered product ids chosen by the merchant for the recommendation shelf
   // on this product's detail page. The service validates that every id belongs
   // to the same store and never allows the product to recommend itself.

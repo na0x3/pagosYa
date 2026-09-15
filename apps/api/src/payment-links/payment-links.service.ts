@@ -1,4 +1,5 @@
 import { normalizeProductVariants, type ProductVariant } from './product-variants';
+import { normalizeProductHighlights } from "./product-highlights";
 import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PaymentLinkStatus, Prisma } from "@prisma/client";
@@ -434,6 +435,7 @@ export class PaymentLinksService {
         imagePositions: this.normalizeImagePositions(dto.imageUrls ?? [], dto.imagePositions),
         tags: dto.tags ?? [],
         specifications: normalizeProductSpecifications(dto.specifications) as unknown as Prisma.InputJsonValue,
+        highlights: normalizeProductHighlights(dto.highlights) as unknown as Prisma.InputJsonValue,
         recommendedProductIds: dto.recommendedProductIds ?? [],
         stock: variants.length ? this.totalVariantStock(variants) : dto.stock,
         color: dto.color,
@@ -881,6 +883,7 @@ export class PaymentLinksService {
         ...(imagePositions !== undefined && { imagePositions }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
         ...(dto.specifications !== undefined && { specifications: normalizeProductSpecifications(dto.specifications) as unknown as Prisma.InputJsonValue }),
+        ...(dto.highlights !== undefined && { highlights: normalizeProductHighlights(dto.highlights) as unknown as Prisma.InputJsonValue }),
         ...(dto.recommendedProductIds !== undefined && { recommendedProductIds: dto.recommendedProductIds }),
         ...(dto.shippingWeightGrams !== undefined && { shippingWeightGrams: dto.shippingWeightGrams }),
         ...(variants !== undefined && variants.length > 0 && variants.every((variant) => variant.stock !== undefined)

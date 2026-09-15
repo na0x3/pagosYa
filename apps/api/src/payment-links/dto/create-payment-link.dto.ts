@@ -5,6 +5,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -20,6 +21,7 @@ import {
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
+import { PRODUCT_HIGHLIGHT_ICONS } from "../product-highlights";
 
 const PRODUCT_IMAGE_POSITION_PATTERN = /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/;
 
@@ -37,6 +39,18 @@ export class ProductSpecificationDto {
 
   @IsString() @IsSafeText() @Length(1, 120)
   value!: string;
+}
+
+export class ProductHighlightDto {
+  @ApiProperty({ description: "Icon name drawn by the storefront.", enum: PRODUCT_HIGHLIGHT_ICONS })
+  @IsIn(PRODUCT_HIGHLIGHT_ICONS as unknown as string[])
+  icon!: string;
+
+  @IsString() @IsSafeText() @Length(1, 24)
+  label!: string;
+
+  @IsOptional() @IsString() @IsSafeText() @Length(1, 40)
+  detail?: string;
 }
 
 export class ProductVariantDto {
@@ -185,6 +199,14 @@ export class CreatePaymentLinkDto {
   @ValidateNested({ each: true })
   @Type(() => ProductSpecificationDto)
   specifications?: ProductSpecificationDto[];
+
+  @ApiPropertyOptional({ description: "Up to four approved highlights with an icon shown on the product page.", type: [ProductHighlightDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => ProductHighlightDto)
+  highlights?: ProductHighlightDto[];
 
   @ApiPropertyOptional({
     description: "Ordered Payment Link ids shown as recommendations on this product's detail page.",
