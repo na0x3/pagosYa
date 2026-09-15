@@ -28,6 +28,7 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
     else if(p.endsWith('/alternative')){const v=structuredClone(versions[0]);v.revision=2;v.label='Beneficios claros';v.snapshot.files[0].content=v.snapshot.files[0].content.replace('Mi tienda','Beneficios claros');versions.unshift(v);body=v;}
     else if(p.endsWith('/experiments')){expect(route.request().postDataJSON()).toEqual({revision:2,publicationVersion:1});publication={...publication,version:2,experiment:{id:'e1',controlRevision:1,variantRevision:2,status:'RUNNING',startedAt:new Date().toISOString(),evidence:{winner:null,reason:'Recopilando datos'},variants:['A','B'].map((variant,i)=>({variant,revision:i+1,visitors:0,buyers:0,conversionRate:0,revenue:[]}))}};body=publication;}
     else if(p.endsWith('/experiments/finish')){expect(route.request().postDataJSON()).toEqual({experimentId:'e1',publicationVersion:2,apply:false});publication={...publication,version:3,experiment:{...publication.experiment,status:'STOPPED'}};body=publication;}
+    else if(p.endsWith('/design-jobs'))body={enabled:false,job:null};
     else throw new Error(p);
     await route.fulfill({json:body});
   });
@@ -48,11 +49,15 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
   await expect(page.locator('.source-publication-details')).not.toHaveAttribute('open');
   await expect(page.locator('.source-publication-details > summary')).toBeFocused();
   await page.screenshot({path:`.test-artifacts/source-layout-${width}.png`,fullPage:true});
+  // The readiness steps sit at the top of the chat stream; phones show the stream only after opening the conversation.
+  if (width <= 900) await page.getByRole('button',{name:'Ver conversación',exact:true}).click();
+  await page.locator('[data-agent-stream]').evaluate(el => el.scrollTo({ top: 0 }));
   await page.locator('.store-readiness > summary').click();
   await expect(page.locator('[data-readiness-step=payments]')).toContainText('Integración pendiente');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({path:`/tmp/pagosya-readiness-integrated-${width}.png`,fullPage:true});
   await page.locator('.store-readiness > summary').click();
+  if (width <= 900) await page.getByRole('button',{name:'Ocultar conversación',exact:true}).click();
   await publish.click();
   await expect(page.locator('.source-publication > strong')).toContainText('Publicado');
   await page.getByText('Publicación y pruebas',{exact:true}).click();
@@ -92,6 +97,7 @@ test('published source navigates in isolation, submits real forms and hands chec
     if(p.endsWith('/funnel')) return route.fulfill({json:{token:'f'.repeat(32)}});
     if(p.endsWith('/leads')){lead=route.request().postDataJSON();return route.fulfill({json:{submitted:true}});}
     if(p.endsWith('/cart-checkout')){checkout=route.request().postDataJSON();return route.fulfill({json:{clientSecret:'test-checkout-secret'}});}
+    if(p.endsWith('/retention')) return route.fulfill({json:{}});
     throw new Error(p);
   });
   await page.addInitScript(() => localStorage.setItem('pagosya:privacy:test', JSON.stringify({version:1,analytics:true,expires:Date.now()+86400000})));
@@ -111,8 +117,11 @@ test('published source navigates in isolation, submits real forms and hands chec
   await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { source: window, origin: 'null', data: { type:'pagosya:hosted-request', id:1000, action:'checkout', body:{items:[]} } })));
   const frame=page.frameLocator('iframe');await expect(frame.getByRole('heading',{name:'Mi tienda'})).toBeVisible();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox','allow-scripts allow-forms');
+  await frame.getByRole('button',{name:'Abrir formulario de contacto'}).click();
   await frame.getByLabel('Nombre',{exact:true}).fill('Cliente');await frame.getByLabel('Correo',{exact:true}).fill('cliente@example.com');await frame.getByLabel('Tu mensaje').fill('Consulta real');await frame.getByRole('button',{name:'Enviar consulta'}).click();
   await expect(frame.locator('[data-contact-status]')).toContainText('Consulta recibida');expect(lead).toMatchObject({name:'Cliente',message:'Consulta real'});
+  // The floating contact panel stays open after sending; close it before shopping.
+  await frame.getByRole('button',{name:'Cerrar formulario de contacto'}).click();
   await frame.getByRole('button',{name:'Añadir Café',exact:true}).click();await frame.getByRole('button',{name:/^Pedido/}).click();await frame.getByRole('button',{name:'Continuar con mi pedido',exact:true}).click();
   await expect(frame.getByRole('heading',{name:'Tu pedido, a tu ritmo',exact:true})).toBeVisible();
   await expect(frame.getByRole('navigation',{name:'Tienda'})).toBeVisible();

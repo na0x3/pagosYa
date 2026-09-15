@@ -39,7 +39,7 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   await page.locator('[data-source-checks] summary').click();
   const prepare = page.getByRole('button', { name: clipped ? 'Preparar correcciones' : 'Preparar ajustes de diseño' });
   await expect(prepare).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('status', { name: 'Comprobación del navegador' })).toContainText(clipped ? 'necesita correcciones' : 'detalles visuales');
+  await expect(page.getByRole('status', { name: 'Comprobación del navegador' })).toContainText(clipped ? 'correcciones pendientes' : 'detalles visuales');
   await prepare.click();
   const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
   await expect(composer).toHaveValue(clipped ? /Controles de compra completos/ : /Sección incompleta para revisar/);
@@ -96,14 +96,15 @@ test('source studio generates, previews commerce, edits a file, restores and dow
     else if(/\/versions\/\d+$/.test(pathname))body=versions.find(v=>v.revision===Number(pathname.split('/').at(-1)));
     else if(pathname.endsWith('/catalog'))body=structuredClone(snapshotCatalog);
     else if(pathname.endsWith('/source-project'))body={revision,versions,nextBefore:null};
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${method} ${pathname}`);
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
   });
   await page.goto('/?source=1');await page.getByLabel('Correo',{exact:true}).fill('test@example.com');await page.getByLabel('Contraseña').fill('test-password');await page.getByRole('button',{name:'Entrar al Studio',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Un sitio que se sienta tuyo.'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Tu negocio, tu sitio.'})).toBeVisible();
   await page.getByRole('textbox',{name:'Indicación para YAPI'}).fill('Crea una cafetería con una carta clara y pedido visible');await page.getByRole('button',{name:'Enviar a YAPI'}).click();
   const frame=page.frameLocator('iframe[title="Vista previa del sitio"]');await expect(frame.getByRole('heading',{name:'Un buen día empieza aquí.'})).toBeVisible();
-  expect(generated.motion).toBe('subtle');expect(generated.revision).toBe(0);expect(generated.instruction).toContain('cafetería');expect(generated).not.toHaveProperty('brief');
+  expect(generated.motion).toBe('auto');expect(generated.revision).toBe(0);expect(generated.instruction).toContain('cafetería');expect(generated).not.toHaveProperty('brief');
   await page.reload();await expect(page.getByText('Preparé la carta. Dime qué ajustamos.',{exact:true})).toBeVisible();
   await expect(page.locator('iframe[title="Vista previa del sitio"]')).toHaveAttribute('sandbox','allow-scripts');
   await frame.getByRole('button',{name:'Añadir Café americano',exact:true}).click();
@@ -165,7 +166,8 @@ test('failed chat generation preserves the request and permits retry', async ({ 
       revision = 1;
       body = { revision: saved, userMessage: { id: 'u', role: 'USER', content: route.request().postDataJSON().instruction }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Tu revisión está lista.', metadata: { sourceRevision: 1 } } };
       messages.push(body.userMessage, body.assistantMessage);
-    } else throw new Error(`Unexpected route ${pathname}`);
+    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    else throw new Error(`Unexpected route ${pathname}`);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   await page.goto('/?source=1');
@@ -197,6 +199,7 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [saved], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = saved;
     else if (pathname.endsWith('/catalog')) body = catalog;
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -248,7 +251,8 @@ test('free conversation is the default and model plus credit cap reach generatio
     else if (pathname.endsWith('/messages')) {
       sent = route.request().postDataJSON();
       await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ message: 'No consumió créditos. Vuelve a intentarlo.' }) }); return;
-    } else throw new Error(`Unexpected request ${pathname}`);
+    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    else throw new Error(`Unexpected request ${pathname}`);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
   await page.goto('/?source=1');
@@ -293,6 +297,7 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [{ revision: 1, label: 'Catalog' }], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = { revision: 1, label: 'Catalog', snapshot: sample };
     else if (pathname.endsWith('/estimate')) body = { model: 'gpt-5.6-terra', reason: 'Diseño', maxCredits: 50, estimate: { minCredits: 4, maxCredits: 16 } };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(pathname);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -337,7 +342,8 @@ test('motion changes save a revision without AI generation and persist after rel
       const data=JSON.parse(config.content.slice(config.content.indexOf('=')+1).trim().replace(/;$/,''));
       config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion})+';';
       versions.unshift(next); body=next;
-    } else throw new Error('Unexpected request '+pathname);
+    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    else throw new Error('Unexpected request '+pathname);
     await route.fulfill({json:body});
   });
   await page.goto('/?source=1');

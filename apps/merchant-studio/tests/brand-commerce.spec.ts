@@ -113,6 +113,7 @@ test('hosted source passes shipping through its confined parent bridge', async (
     if (path.endsWith('/source-site')) return route.fulfill({ json: { published: true, revision: 1, snapshot } });
     if (path.endsWith('/shipping/quote')) return route.fulfill({ json: { subtotal: 10000, shippingAmount: 1500, amount: 11500, currency: 'BOB', shippingOptions: [{ id: 'r1', name: 'La Paz', amount: 1500, currency: 'BOB' }] } });
     if (path.endsWith('/cart-checkout')) { checkout = route.request().postDataJSON(); return route.fulfill({ json: { clientSecret: 'test-only-secret' } }); }
+    if (path.endsWith('/retention')) return route.fulfill({ json: {} });
     throw new Error(path);
   });
   await page.goto('/?demo=1');
