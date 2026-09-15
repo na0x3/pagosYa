@@ -193,7 +193,8 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         if (drawer) {
           const bounds = drawer.getBoundingClientRect();
           add('Proporciones del carrito', bounds.width <= (innerWidth >= 768 ? innerWidth * .5 + 2 : innerWidth + 2));
-          const remove = [...drawer.querySelectorAll<HTMLButtonElement>('[data-remove]')].find(b => b.dataset.remove === buy.dataset.add && shown(b));
+          const added = buy.dataset.add;
+          const remove = [...drawer.querySelectorAll<HTMLButtonElement>('[data-remove]')].find(b => b.dataset.remove === added && shown(b));
           const before = cart().reduce((sum, item) => sum + item.quantity, 0);
           remove?.click(); await pause();
           add('Quitar un producto del pedido', Boolean(remove) && cart().reduce((sum, item) => sum + item.quantity, 0) === before - 1);
