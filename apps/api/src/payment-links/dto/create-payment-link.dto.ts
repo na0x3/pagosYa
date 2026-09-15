@@ -31,6 +31,14 @@ export class ProductOptionValueDto {
   value!: string;
 }
 
+export class ProductSpecificationDto {
+  @IsString() @IsSafeText() @Length(1, 40)
+  label!: string;
+
+  @IsString() @IsSafeText() @Length(1, 120)
+  value!: string;
+}
+
 export class ProductVariantDto {
   @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => ProductOptionValueDto)
   options?: ProductOptionValueDto[];
@@ -169,6 +177,14 @@ export class CreatePaymentLinkDto {
   @IsSafeText({ each: true })
   @MaxLength(24, { each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ description: "Ordered specification rows shown on the product page, e.g. Material: Algodón.", type: [ProductSpecificationDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @ValidateNested({ each: true })
+  @Type(() => ProductSpecificationDto)
+  specifications?: ProductSpecificationDto[];
 
   @ApiPropertyOptional({
     description: "Ordered Payment Link ids shown as recommendations on this product's detail page.",

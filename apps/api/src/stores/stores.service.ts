@@ -1572,6 +1572,7 @@ export class StoresService implements OnModuleDestroy {
         imageUrls: item.imageUrls,
         imagePositions: item.imagePositions,
         tags: item.tags,
+        specifications: Array.isArray(item.specifications) ? item.specifications : [],
         recommendedProductIds: item.recommendedProductIds,
         // null = unlimited/not tracked; 0 means genuinely sold out, both are
         // meaningfully different from "in stock" and the storefront needs to

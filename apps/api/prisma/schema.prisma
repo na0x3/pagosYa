@@ -1316,6 +1316,8 @@ model PaymentLink {
   // Free-form small labels the merchant types, e.g. "Nuevo", "Agotado" —
   // rendered as pill badges on the storefront. Not a controlled vocabulary.
   tags               String[]          @default([])
+  // Ordered [{ label, value }] rows shown as the product's specification sheet.
+  specifications     Json              @default("[]")
   // Ordered product ids chosen by the merchant for the recommendation shelf
   // on this product's detail page. The service validates that every id belongs
   // to the same store and never allows the product to recommend itself.

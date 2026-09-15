@@ -7,7 +7,22 @@ import '../../merchant-dashboard/src/product-options.js';
 import '../../merchant-dashboard/src/product-options.css';
 import type { VariantInput } from '../../merchant-dashboard/src/product-options';
 
-export type ProductGuideRecord = { id: string; name: string; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }> };
+export type ProductGuideRecord = { id: string; name: string; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[] };
+export type ProductSpecification = { label: string; value: string };
+
+/** "Nombre: valor" lines to specification rows, or a message for the first invalid line. */
+export function parseSpecificationLines(text: string): { rows: ProductSpecification[]; problem: string } {
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (lines.length > 8) return { rows: [], problem: 'Agrega hasta 8 datos en la ficha técnica.' };
+  const rows: ProductSpecification[] = [];
+  for (const line of lines) {
+    const colon = line.indexOf(':'), label = line.slice(0, colon).trim(), value = line.slice(colon + 1).trim();
+    if (colon <= 0 || !label || !value) return { rows: [], problem: `Escribe “${line.slice(0, 40)}” con el formato Nombre: valor.` };
+    if (label.length > 40 || value.length > 120) return { rows: [], problem: 'Cada nombre admite 40 caracteres y cada valor 120.' };
+    rows.push({ label, value });
+  }
+  return { rows, problem: '' };
+}
 
 /** Fixed YAPI questions. Keep answers, combinations and successful uploads on retry. */
 export function createProductForm(api: MerchantStudioApi, storeId: string, onSaved: () => void, onClose: () => void, initial?: ProductGuideRecord) {
@@ -21,7 +36,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     <form data-product-form novalidate><fieldset>
       <p class="product-yapi-question" data-product-question aria-live="polite"></p>
       <section data-guide-step="1"><label>Nombre del producto<input name="name" required maxlength="120" autocomplete="off" placeholder="Ej. Suéter Merino"></label></section>
-      <section data-guide-step="2" hidden><label>Especificaciones del producto<textarea name="description" rows="3" maxlength="500" placeholder="Material, medidas, ingredientes o características"></textarea></label><p class="product-step-help">Opcional. Puedes continuar y completar este detalle después.</p></section>
+      <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
       <section data-guide-step="3" hidden><label>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label></section>
       <section data-guide-step="4" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La primera será la portada. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div></section>
       <section data-guide-step="5" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p></section>
@@ -45,6 +60,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   if (initial) {
     nameInput.value = initial.name;
     (form.elements.namedItem('description') as HTMLTextAreaElement).value = initial.description || '';
+    (form.elements.namedItem('specifications') as HTMLTextAreaElement).value = (initial.specifications || []).map(row => `${row.label}: ${row.value}`).join('\n');
     priceInput.value = (initial.amount / 100).toFixed(2); stockInput.value = initial.stock == null ? '' : String(initial.stock);
     optionsToggle.checked = Boolean(initial.variants?.length); optionsHost.hidden = !optionsToggle.checked;
     stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked;
@@ -81,6 +97,10 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     const fields = dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`[data-guide-step="${step}"] input:not([type=file]), [data-guide-step="${step}"] textarea`);
     for (const field of fields) if (!field.disabled && !field.reportValidity()) return false;
     if (step === 1 && !nameInput.value.trim()) { showError('Escribe el nombre del producto.'); return false; }
+    if (step === 2) {
+      const { problem } = parseSpecificationLines((form.elements.namedItem('specifications') as HTMLTextAreaElement).value);
+      if (problem) { showError(problem); (form.elements.namedItem('specifications') as HTMLTextAreaElement).focus(); return false; }
+    }
     if (step === 5 && optionsToggle.checked) {
       try { optionEditor.values(); } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las opciones.'); return false; }
     }
@@ -125,6 +145,9 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       }
     } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las combinaciones.'); return; }
     const input = { name, description: String(data.get('description') || '').trim() || null, amount: variants ? Math.min(...variants.map(v => v.amount)) : Math.round(Number(data.get('price')) * 100), currency: initial?.currency || 'BOB', stock: variants ? initial && variants.some(v => v.stock === undefined) ? initial.stock ?? null : variants.some(v => v.stock == null) ? null : variants.reduce((n, v) => n + v.stock!, 0) : data.get('stock') === '' ? null : Number(data.get('stock')), imageUrls: [] as string[], ...(variants ? { variants } : {}) };
+    const specifications = parseSpecificationLines(String(data.get('specifications') || '')).rows;
+    // Only send the sheet when there is one to save or an existing one to clear.
+    if (specifications.length || initial?.specifications?.length) Object.assign(input, { specifications });
     setBusy(true); showError(''); status.textContent = photos.length ? 'Subiendo fotos…' : 'Guardando producto…';
     void (async () => {
       for (const photo of photos) {

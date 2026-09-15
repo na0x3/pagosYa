@@ -168,6 +168,14 @@ type AiInventoryProduct = {
   errors: string[];
 };
 
+/** Trimmed, non-empty, de-duplicated specification rows in merchant order (max 8). */
+export function normalizeProductSpecifications(rows: Array<{ label: string; value: string }> | null | undefined) {
+  const seen = new Set<string>();
+  return (rows ?? []).map((row) => ({ label: row.label.trim(), value: row.value.trim() }))
+    .filter((row) => row.label && row.value && !seen.has(row.label.toLocaleLowerCase()) && seen.add(row.label.toLocaleLowerCase()))
+    .slice(0, 8);
+}
+
 @Injectable()
 export class PaymentLinksService {
   private readonly logger = new Logger(PaymentLinksService.name);
@@ -425,6 +433,7 @@ export class PaymentLinksService {
         imageUrls: dto.imageUrls ?? [],
         imagePositions: this.normalizeImagePositions(dto.imageUrls ?? [], dto.imagePositions),
         tags: dto.tags ?? [],
+        specifications: normalizeProductSpecifications(dto.specifications) as unknown as Prisma.InputJsonValue,
         recommendedProductIds: dto.recommendedProductIds ?? [],
         stock: variants.length ? this.totalVariantStock(variants) : dto.stock,
         color: dto.color,
@@ -871,6 +880,7 @@ export class PaymentLinksService {
         ...(dto.imageUrls !== undefined && { imageUrls: dto.imageUrls }),
         ...(imagePositions !== undefined && { imagePositions }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.specifications !== undefined && { specifications: normalizeProductSpecifications(dto.specifications) as unknown as Prisma.InputJsonValue }),
         ...(dto.recommendedProductIds !== undefined && { recommendedProductIds: dto.recommendedProductIds }),
         ...(dto.shippingWeightGrams !== undefined && { shippingWeightGrams: dto.shippingWeightGrams }),
         ...(variants !== undefined && variants.length > 0 && variants.every((variant) => variant.stock !== undefined)

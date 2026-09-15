@@ -256,6 +256,10 @@
     [data-pagosya-product] .product-detail__rating a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:inherit;text-underline-offset:4px}
     [data-pagosya-product] .product-detail__stars{--rating:0;display:inline-block;letter-spacing:1px;line-height:1;background:linear-gradient(90deg,var(--product-accent) calc(var(--rating) * 20%),color-mix(in srgb,var(--product-ink) 22%,transparent) 0);-webkit-background-clip:text;background-clip:text;color:transparent}
     [data-pagosya-product] .product-detail__facts:has(.product-detail__fact){margin:0;padding:0}
+    [data-pagosya-product] .product-detail__specs{margin:0 0 16px;padding:0}
+    [data-pagosya-product] .product-detail__specs div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--product-line)}
+    [data-pagosya-product] .product-detail__specs dt{opacity:.72}
+    [data-pagosya-product] .product-detail__specs dd{margin:0;text-align:right;font-weight:600;overflow-wrap:anywhere}
     [data-pagosya-product] .product-detail__facts .product-detail__fact{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--product-line);list-style:none}
     [data-pagosya-product] .product-detail__fact span:first-child{opacity:.72}
     [data-pagosya-product] .product-detail__fact span:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}
@@ -511,7 +515,8 @@
     const delivery = (store.locations || []).map(l => `<li><strong>${escape(l.name)}</strong>${l.address ? `<br>${escape(l.address)}` : ''}<br>${[l.pickupEnabled && 'Retiro en tienda', l.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ') || 'Sin métodos de entrega disponibles'}</li>`).join('');
     const tags = Array.isArray(p.tags) ? [...new Set(p.tags.filter(tag => typeof tag === 'string' && tag.trim()))] : [];
     const panels = [];
-    if (tags.length) panels.push({ id: 'description', label: 'Detalles', content: `<ul class="product-detail__facts">${tags.map(tag => { const fact = tag.match(/^([^:]{1,40}):\s*(\S.*)$/); return fact ? `<li class="product-detail__fact"><span>${escape(fact[1].trim())}</span><span>${escape(fact[2])}</span></li>` : `<li>${escape(tag)}</li>`; }).join('')}</ul>` });
+    const specs = (Array.isArray(p.specifications) ? p.specifications : []).filter(row => row && typeof row.label === 'string' && typeof row.value === 'string' && row.label.trim() && row.value.trim()).slice(0, 8);
+    if (tags.length || specs.length) panels.push({ id: 'description', label: 'Detalles', content: `${specs.length ? `<dl class="product-detail__specs">${specs.map(row => `<div><dt>${escape(row.label.trim())}</dt><dd>${escape(row.value.trim())}</dd></div>`).join('')}</dl>` : ''}${tags.length ? `<ul class="product-detail__facts">${tags.map(tag => { const fact = tag.match(/^([^:]{1,40}):\s*(\S.*)$/); return fact ? `<li class="product-detail__fact"><span>${escape(fact[1].trim())}</span><span>${escape(fact[2])}</span></li>` : `<li>${escape(tag)}</li>`; }).join('')}</ul>` : ''}` });
     if (delivery || store.shippingEnabled || store.shippingPickupEnabled) panels.push({ id: 'delivery', label: 'Envíos y retiro', content: `${delivery ? `<ul class="product-delivery-list">${delivery}</ul>` : ''}<p>Elige la opción disponible al revisar tu pedido. El total final se confirma en pagosYa.</p>` });
     if (!panels.length) return '';
     return `<div class="product-tabs" role="tablist" aria-label="Información del producto">${panels.map((panel, index) => `<button type="button" role="tab" id="product-${panel.id}-tab" aria-controls="product-${panel.id}-panel" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}" data-product-tab="${panel.id}">${panel.label}</button>`).join('')}</div>${panels.map((panel, index) => `<div role="tabpanel" id="product-${panel.id}-panel" aria-labelledby="product-${panel.id}-tab" tabindex="0"${index ? ' hidden' : ''}>${panel.content}</div>`).join('')}`;

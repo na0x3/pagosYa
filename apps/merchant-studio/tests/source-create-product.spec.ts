@@ -45,9 +45,9 @@ for (const mobile of [false, true]) test(`create product form saves directly and
   await dialog.getByRole('button', { name: 'Volver al paso anterior' }).click();
   await expect(dialog.getByLabel('Nombre del producto', { exact: true })).toHaveValue('Hamburguesa de la casa');
   await dialog.getByRole('button', { name: 'Siguiente' }).click();
-  await dialog.getByLabel('Especificaciones del producto').fill('Carne 150 g, queso y pan artesanal.');
+  await dialog.getByLabel('Descripción del producto').fill('Carne 150 g, queso y pan artesanal.');
   await dialog.getByRole('button', { name: 'Siguiente' }).click();
-  await dialog.getByLabel('Precio (Bs)', { exact: true }).fill('35.50');
+  await dialog.locator('[data-guide-step="3"]').getByLabel('Precio (Bs)', { exact: true }).fill('35.50');
   await dialog.getByRole('button', { name: 'Siguiente' }).click();
   await dialog.getByLabel(/Añadir fotos/).setInputFiles('tests/fixtures/retention-product.webp');
   await expect(dialog.getByRole('img')).toHaveCount(1);
@@ -76,4 +76,41 @@ for (const mobile of [false, true]) test(`create product form saves directly and
   await dialog.getByRole('button', { name: 'Cancelar creación de producto', exact: true }).click();
   expect(creates).toBe(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('the product guide saves a specification sheet from Nombre: valor lines', async ({ page }) => {
+  let payload: any;
+  const version = { revision: 1, label: 'Tienda', snapshot: { schemaVersion: 1, brief: { businessType: 'Tecnología', audience: 'Oficinas', primaryAction: 'Comprar', visualDirection: 'Técnica' }, files: [
+    { path: 'index.html', content: '<html><head><title>Tienda</title></head><body><div data-pagosya-catalog></div></body></html>' },
+    { path: 'config.js', content: 'window.PAGOSYA_CONFIG={"data":{"items":[]}};' }, { path: 'commerce.js', content: '' },
+  ] } };
+  await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    let body: any = {};
+    if (path.endsWith('/stores')) body = [{ id: 's1', name: 'Tienda', slug: 'tienda' }];
+    else if (path.endsWith('/conversation')) body = { messages: [] };
+    else if (path.endsWith('/catalog')) body = { items: [] };
+    else if (/\/versions\/\d+$/.test(path)) body = version;
+    else if (path.endsWith('/source-project')) body = { revision: 1, versions: [version] };
+    else if (path.endsWith('/payment_links')) { payload = route.request().postDataJSON(); body = { id: 'p1', name: payload.name }; }
+    await route.fulfill({ json: body });
+  });
+  await page.goto('/?source=1');
+  await page.getByRole('button', { name: 'Crear producto', exact: true }).click();
+  const dialog = page.getByRole('region', { name: 'Nuevo producto', exact: true });
+  await dialog.getByLabel('Nombre del producto', { exact: true }).fill('Lámpara USB-C');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  const sheet = dialog.getByLabel('Ficha técnica (opcional)');
+  await sheet.fill('Material: Aluminio\nregulable');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Escribe “regulable” con el formato Nombre: valor.');
+  await expect(sheet).toBeFocused();
+  await sheet.fill('Material: Aluminio\n\nAlimentación: USB-C, 5 V');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.locator('[data-guide-step="3"]').getByLabel('Precio (Bs)', { exact: true }).fill('220');
+  for (let step = 3; step < 7; step++) await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Producto creado', exact: true })).toBeVisible();
+  expect(payload.specifications).toEqual([{ label: 'Material', value: 'Aluminio' }, { label: 'Alimentación', value: 'USB-C, 5 V' }]);
 });

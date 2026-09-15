@@ -308,7 +308,7 @@ describe('Inline storefront product options', () => {
     const related = { id: 'cap', name: 'Gorra', amount: 1500, currency: 'BOB', stock: 4, imageUrls: ['https://shop.test/cap.jpg'] };
     const soldOut = { id: 'sock', name: 'Medias', amount: 900, currency: 'BOB', stock: 0 };
     const content = { articles: [], bundles: [], reviews: [{ id: 'r1', productId: 'shirt', displayName: 'Ana <b>', rating: 4, body: 'Buena tela.' }, { id: 'r2', productId: 'cap', displayName: 'Luis', rating: 5, body: 'Otra.' }], reviewSummary: { shirt: { count: 140, average: 4.8 } } };
-    const { query, w } = await shop({ mode: 'hosted', fullPage: true, content, items: [{ ...product(), tags: ['Material: Algodón', 'Hecho en La Paz'], recommendedProductIds: ['cap', 'sock', 'shirt', 'missing'] }, related, soldOut] });
+    const { query, w } = await shop({ mode: 'hosted', fullPage: true, content, items: [{ ...product(), tags: ['Material: Algodón', 'Hecho en La Paz'], specifications: [{ label: 'Peso', value: '180 g/m²' }, { label: '<i>Origen</i>', value: 'Bolivia' }, { label: 'Vacío', value: ' ' }], recommendedProductIds: ['cap', 'sock', 'shirt', 'missing'] }, related, soldOut] });
     await new Promise(resolve => setImmediate(resolve));
     expect(query('[data-product-rating]').hidden).toBe(false);
     expect(query('[data-product-rating]').textContent).toContain('4,8 de 5 · 140 reseñas verificadas');
@@ -318,6 +318,8 @@ describe('Inline storefront product options', () => {
     expect(query('.product-detail__review-list b')).toBeNull();
     expect(query('.product-detail__fact').textContent).toBe('MaterialAlgodón');
     expect(query('.product-detail__facts').children).toHaveLength(2);
+    expect([...w.document.querySelectorAll('.product-detail__specs dt')].map((dt: any) => dt.textContent)).toEqual(['Peso', '<i>Origen</i>']);
+    expect(query('.product-detail__specs i')).toBeNull();
     const links = [...w.document.querySelectorAll('.product-detail__related a')] as any[];
     expect(links.map(link => link.textContent)).toEqual([expect.stringContaining('Gorra')]);
     expect(links[0].getAttribute('href')).toContain('?id=cap');
