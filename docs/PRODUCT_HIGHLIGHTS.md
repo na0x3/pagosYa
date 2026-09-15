@@ -27,7 +27,7 @@ Migration adds the column. The DTO, `normalizeProductHighlights`, create/update 
 
 ## 3. Suggestions
 
-`POST v1/stores/:storeId/products/highlight-suggestions` with `{ name, description, specifications, tags, options }`. The server calls the configured inventory model through the Responses API with a strict JSON schema whose `icon` field is an enum of the icon set, and returns up to 4 rows. It saves nothing.
+`POST v1/stores/:storeId/product-highlights/suggestions` with `{ name, description, specifications, tags }`. The server calls the configured inventory model through the Responses API with a strict JSON schema whose `icon` field is an enum of the icon set, and returns up to 4 rows. It saves nothing.
 
 The prompt allows only facts present in the request. It must not claim shipping speed, warranty, certifications, materials or performance the text does not state. Delivery and payment highlights come from store settings, which the kit already shows as assurances, so suggestions skip them. Usage is recorded with `AiUsageService.record(storeId, 'product-highlights', ...)`, like product scenes.
 
@@ -39,7 +39,7 @@ The kit bundles about 36 line icons drawn from Lucide paths (ISC, license alread
 |---|---|
 | Vehicles | car (rolls), fuel (drips), gauge (needle sweeps), gear (turns), seat (settles), road (lines stream) |
 | Delivery and time | truck (drives), package (bobs), clock (hand turns), calendar (page flips) |
-| Electronics | bolt (flickers), battery (fills), plug (nudges), wifi (arcs pulse), cpu (pulses), screen (glows) |
+| Electronics | bolt (flickers), battery (fills), plug (nudges), wifi (arcs pulse), chip (pulses), screen (glows) |
 | Home and materials | leaf (sways), ruler (slides), drop (drips), sun (rays pulse), flame (flickers), snowflake (turns) |
 | Apparel and beauty | shirt (sways), wash (drum turns), sparkle (twinkles), hand (waves), scissors (snips) |
 | Food and drink | cup (steam rises), wheat (sways), chef hat (bobs), bottle (tilts) |
@@ -52,13 +52,13 @@ Motion rules:
 
 ## 5. Owner flow
 
-The YAPI product guide in Studio (`source-create-product.ts`) gains a "Destacados" step after the description and specification sheet. On entering it, YAPI suggests highlights, shown as editable rows: an icon picker, label and detail inputs, and remove and reorder controls. The owner can also add rows by hand or skip the step. Editing an existing product loads its saved highlights and offers "Sugerir con YAPI" instead of suggesting automatically. The review step lists the highlights before saving.
+The YAPI product guide in Studio (`source-create-product.ts`) gains a "Destacados" step after the description and specification sheet. On entering it, YAPI suggests highlights once, shown as editable rows: an icon picker, label and detail inputs, and a remove button. The owner can also add rows by hand or skip the step. Editing an existing product loads its saved highlights and does not ask again. The review step lists the highlights before saving.
 
 ## 6. Storefront
 
 - **Editorial:** an icon row between the description and the choices, with icons centered above the label and detail, and thin rules above and below (as in the approved mockup).
-- Icons are drawn inline by the kit; nothing is fetched.
 - **Dense:** a grid of icon, label and detail between the buy button and the assurances.
+- Icons are drawn inline by the kit; nothing is fetched.
 - Products without highlights render nothing. The kit escapes all text. Icons are decorative (`aria-hidden`) and the row is a list with an accessible name.
 - The fold check from Part 1 still applies: the buy button stays visible at 1280×844 with 4 highlights in editorial.
 
