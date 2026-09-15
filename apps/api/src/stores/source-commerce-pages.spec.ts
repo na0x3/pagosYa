@@ -266,8 +266,10 @@ describe('Inline storefront product options', () => {
   });
 
   it('disables sold-out option groups while keeping the options visible', async () => {
-    const { query, click, w } = await shop({ items: [{ ...product(), stock: 0 }] });
-    click('.menu-add');
+    // A sold-out card offers no options to choose; its product page still shows them, disabled.
+    const { query, w } = await shop({ items: [{ ...product(), stock: 0 }], fullPage: true });
+    expect(query('.menu-add').disabled).toBe(true);
+    expect(query('.menu-add').textContent).toContain('Agotado');
     expect(query('[data-variant-add]').disabled).toBe(true);
     expect([...w.document.querySelectorAll('[data-product-option]')].every((b: any) => b.disabled)).toBe(true);
     expect(query('.product-detail__status').textContent).toContain('Sin disponibilidad');
