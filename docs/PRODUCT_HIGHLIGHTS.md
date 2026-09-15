@@ -1,6 +1,12 @@
 # Product highlights with animated icons
 
-Status: draft for owner approval, 2026-09-15. Part 2 of the product page work; Part 1 is `docs/PRODUCT_PAGE_KIT.md`.
+Status: implemented 2026-09-15 (`docs/PRODUCT_HIGHLIGHTS_PLAN.md`). Part 2 of the product page work; Part 1 is `docs/PRODUCT_PAGE_KIT.md`.
+
+Built as written, with these decisions made during the work:
+- The suggestion route lives with the stores module, where AI usage is recorded: `POST v1/stores/:storeId/product-highlights/suggestions`.
+- Studio keeps its own icon list with Spanish names (`src/product-highlight-icons.ts`); a unit test keeps it equal to the API list, and an API test keeps the kit's drawings equal to it.
+- The guide's Destacados step is step 4 of 8, right after the price.
+- On product pages without photos the kit splits the column; highlights stay in the purchase panel.
 
 ## 1. What it does
 
@@ -51,6 +57,7 @@ The YAPI product guide in Studio (`source-create-product.ts`) gains a "Destacado
 ## 6. Storefront
 
 - **Editorial:** an icon row between the description and the choices, with icons centered above the label and detail, and thin rules above and below (as in the approved mockup).
+- Icons are drawn inline by the kit; nothing is fetched.
 - **Dense:** a grid of icon, label and detail between the buy button and the assurances.
 - Products without highlights render nothing. The kit escapes all text. Icons are decorative (`aria-hidden`) and the row is a list with an accessible name.
 - The fold check from Part 1 still applies: the buy button stays visible at 1280×844 with 4 highlights in editorial.
