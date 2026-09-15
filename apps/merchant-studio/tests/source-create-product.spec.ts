@@ -114,3 +114,53 @@ test('the product guide saves a specification sheet from Nombre: valor lines', a
   await expect(page.getByRole('heading', { name: 'Producto creado', exact: true })).toBeVisible();
   expect(payload.specifications).toEqual([{ label: 'Material', value: 'Aluminio' }, { label: 'Alimentación', value: 'USB-C, 5 V' }]);
 });
+
+test('YAPI creates a styled scene from the uploaded product photo only after the merchant reviews it', async ({ page }) => {
+  let payload: any, sceneRequest: any, uploads = 0;
+  const version = { revision: 1, label: 'Tienda', snapshot: { schemaVersion: 1, brief: { businessType: 'Jugos', audience: 'Vecinos', primaryAction: 'Comprar', visualDirection: 'Fotos' }, files: [
+    { path: 'index.html', content: '<html><head><title>Tienda</title></head><body><div data-pagosya-catalog></div></body></html>' },
+    { path: 'config.js', content: 'window.PAGOSYA_CONFIG={"data":{"items":[]}};' }, { path: 'commerce.js', content: '' },
+  ] } };
+  const photo = 'tests/fixtures/retention-product.webp';
+  await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
+  await page.route('**/v1/uploads/*.jpg', route => route.fulfill({ path: photo, contentType: 'image/webp' }));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    let body: any = {};
+    if (path.endsWith('/stores')) body = [{ id: 's1', name: 'Tienda', slug: 'tienda' }];
+    else if (path.endsWith('/conversation')) body = { messages: [] };
+    else if (path.endsWith('/catalog')) body = { items: [] };
+    else if (/\/versions\/\d+$/.test(path)) body = version;
+    else if (path.endsWith('/source-project')) body = { revision: 1, versions: [version] };
+    else if (path.endsWith('/uploads')) { uploads++; body = { url: '/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp', assetId: 'a1' }; }
+    else if (path.endsWith('/product-scenes')) { sceneRequest = route.request().postDataJSON(); body = { url: '/v1/uploads/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.jpg', parentUrl: sceneRequest.imageUrl, kind: 'AI_DERIVED' }; }
+    else if (path.endsWith('/payment_links')) { payload = route.request().postDataJSON(); body = { id: 'p1', name: payload.name }; }
+    await route.fulfill({ json: body });
+  });
+  await page.goto('/?source=1');
+  await page.getByRole('button', { name: 'Crear producto', exact: true }).click();
+  const dialog = page.getByRole('region', { name: 'Nuevo producto', exact: true });
+  await dialog.getByLabel('Nombre del producto', { exact: true }).fill('Jugo naranja + jengibre');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.locator('[data-guide-step="3"]').getByLabel('Precio (Bs)', { exact: true }).fill('18');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByLabel(/Añadir fotos/).setInputFiles(photo);
+  await dialog.getByRole('button', { name: 'Crear escena con la foto 1' }).click();
+  await dialog.getByRole('radio', { name: 'Natural' }).check();
+  await dialog.getByLabel('Detalle opcional').fill('mesa de desayuno');
+  await dialog.locator('[data-scene-generate]').click();
+  await expect(dialog.getByRole('button', { name: 'Añadir a las fotos' })).toBeFocused();
+  await dialog.locator('[data-product-scene]').screenshot({ path: '.test-artifacts/product-scene-review.png' });
+  expect(sceneRequest).toMatchObject({ imageUrl: '/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp', productName: 'Jugo naranja + jengibre', setting: 'natural', note: 'mesa de desayuno' });
+  await expect(dialog.locator('[data-product-photos] img')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Añadir a las fotos' }).click();
+  await expect(dialog.locator('[data-product-photos] img')).toHaveCount(2);
+  await expect(dialog.locator('[data-product-photos]')).toContainText('Escena YAPI');
+  for (let step = 4; step < 7; step++) await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Producto creado', exact: true })).toBeVisible();
+  expect(uploads).toBe(1);
+  expect(payload.imageUrls).toEqual(['/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp', '/v1/uploads/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.jpg']);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

@@ -39,3 +39,18 @@
 .product-create-photos button { width: 100%; padding: 6px; font-size: 12px; }
 .product-create-panel :focus-visible { outline: 2px solid #333; outline-offset: 3px; }
 .product-create-panel .product-option-toggle{display:flex;align-items:center;gap:10px;font-size:13px;margin:18px 0}.product-create-panel .product-option-toggle input{width:18px;min-height:18px;height:18px;flex:none}.product-create-panel .variant-editor{margin:14px 0 24px}
+
+.product-create-photos button + button { margin-top: 4px; }
+.product-scene { display: grid; gap: 12px; margin-top: 16px; padding: 16px; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; }
+.product-scene h4, .product-scene p { margin: 0; }
+.product-scene p { font-size: 13px; line-height: 1.5; }
+.product-scene-settings { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.product-scene-settings legend { margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+.product-scene-settings label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid rgb(0 0 0 / .18); border-radius: 999px; font-size: 13px; cursor: pointer; }
+.product-scene-settings label:has(input:checked) { border-color: currentColor; font-weight: 600; }
+.product-scene-settings input { margin: 0; }
+.product-scene-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.product-scene-compare figure { margin: 0; }
+.product-scene-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.product-scene-compare figcaption { margin-top: 4px; font-size: 12px; }
+.product-scene-actions { display: flex; flex-wrap: wrap; gap: 8px; }

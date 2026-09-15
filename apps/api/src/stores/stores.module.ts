@@ -1,3 +1,5 @@
+import { ProductScenesController } from './product-scenes.controller';
+import { ProductScenesService } from './product-scenes.service';
 import { DomainCommerceController } from './domains/domain-commerce.controller';
 import { DomainCommerceService } from './domains/domain-commerce.service';
 import { NamecomProvider } from './domains/namecom.provider';
@@ -49,8 +51,8 @@ import { SourceGenerationService } from "./source-generation.service";
 
 @Module({
   imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule],
-  controllers: [DomainCommerceController, EmailWorkspaceController, SourceDesignJobsController, SourceAssetsController, StoreFunnelController, StoreSeoController, StoreDiscoveryController, RetentionPaymentController, RetentionController, RetentionPublicController, CommerceContentController, CommerceContentPublicController, ShippingController, BrandProfileController, SourcePublishingController, SourceSiteController, StoreGrowthController, StoresController, StoresPublicController, PromoCodesController, SourceProjectsController],
-  providers: [DomainCommerceService, NamecomProvider, CloudflareHostingProvider, EmailWorkspaceService, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, StoreFunnelService, StoreSeoService, RetentionService, CommerceContentService, BrandProfileService, AiUsageService, SourcePublishingService, StoreGrowthService, StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService],
+  controllers: [ProductScenesController, DomainCommerceController, EmailWorkspaceController, SourceDesignJobsController, SourceAssetsController, StoreFunnelController, StoreSeoController, StoreDiscoveryController, RetentionPaymentController, RetentionController, RetentionPublicController, CommerceContentController, CommerceContentPublicController, ShippingController, BrandProfileController, SourcePublishingController, SourceSiteController, StoreGrowthController, StoresController, StoresPublicController, PromoCodesController, SourceProjectsController],
+  providers: [ProductScenesService, DomainCommerceService, NamecomProvider, CloudflareHostingProvider, EmailWorkspaceService, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, StoreFunnelService, StoreSeoService, RetentionService, CommerceContentService, BrandProfileService, AiUsageService, SourcePublishingService, StoreGrowthService, StoresService, VisualStudioService, StoreAgentService, CustomDomainsService, PromoCodesService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService],
   exports: [StoresService],
 })
 export class StoresModule {}

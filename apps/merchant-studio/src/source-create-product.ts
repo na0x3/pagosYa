@@ -30,7 +30,9 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   dialog.className = 'product-create-panel';
   dialog.setAttribute('aria-labelledby', 'product-create-title');
   let busy = false, completed = false, step = 1;
-  const photos: Array<{ file?: File; preview: string; url?: string }> = [];
+  const photos: Array<{ file?: File; preview: string; url?: string; scene?: boolean }> = [];
+  const sceneSettings = [['auto', 'Automático'], ['studio', 'Estudio'], ['lifestyle', 'En uso'], ['natural', 'Natural'], ['editorial', 'Editorial']] as const;
+  const uploadedPreview = (url: string) => /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url;
   dialog.innerHTML = `<header><span class="product-yapi-badge">✳ YAPI</span><h2 id="product-create-title">Nuevo producto</h2><p data-product-step aria-live="polite">Paso 1 de 7</p><div class="product-step-track" aria-hidden="true">${Array.from({length:7}, () => '<span></span>').join('')}</div></header>
     <div class="product-answer-history" data-product-history aria-label="Tus respuestas"></div>
     <form data-product-form novalidate><fieldset>
@@ -38,7 +40,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <section data-guide-step="1"><label>Nombre del producto<input name="name" required maxlength="120" autocomplete="off" placeholder="Ej. Suéter Merino"></label></section>
       <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
       <section data-guide-step="3" hidden><label>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label></section>
-      <section data-guide-step="4" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La primera será la portada. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div></section>
+      <section data-guide-step="4" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La primera será la portada. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div></section>
       <section data-guide-step="5" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p></section>
       <section data-guide-step="6" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
       <section data-guide-step="7" hidden><div data-product-review class="product-review"></div></section>
@@ -111,12 +113,44 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   function drawPhotos() {
     optionEditor.refreshPhotos();
     const host = dialog.querySelector<HTMLElement>('[data-product-photos]')!;
-    host.innerHTML = photos.map((photo, index) => `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}</figcaption><button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
+    host.innerHTML = photos.map((photo, index) => `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}${photo.scene ? ' · Escena YAPI' : ''}</figcaption>${photo.scene ? '' : `<button type="button" class="button" data-scene-photo="${index}" aria-label="Crear escena con la foto ${index + 1}">Crear escena</button>`}<button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
+    host.querySelectorAll<HTMLButtonElement>('[data-scene-photo]').forEach(button => button.addEventListener('click', () => { if (!busy) openScene(Number(button.dataset.scenePhoto)); }));
     host.querySelectorAll<HTMLButtonElement>('[data-remove-photo]').forEach(button => button.addEventListener('click', () => {
       if (busy) return;
       const [removed] = photos.splice(Number(button.dataset.removePhoto), 1);
-      URL.revokeObjectURL(removed.preview); drawPhotos();
+      if (removed.file) URL.revokeObjectURL(removed.preview);
+      drawPhotos();
     }));
+  }
+  /** YAPI keeps the product from the merchant's photo and only generates its surroundings; nothing is added until the merchant accepts it. */
+  function openScene(index: number) {
+    const panel = dialog.querySelector<HTMLElement>('[data-product-scene]')!, source = photos[index];
+    if (!source) return;
+    panel.hidden = false;
+    panel.innerHTML = `<h4 id="product-scene-title">Escena con YAPI</h4><p>YAPI conserva tu producto tal como aparece en la foto y crea solo el entorno. Tú decides si la añades.</p><fieldset class="product-scene-settings"><legend>Entorno</legend>${sceneSettings.map(([value, label], i) => `<label><input type="radio" name="sceneSetting" value="${value}"${i ? '' : ' checked'}>${label}</label>`).join('')}</fieldset><label>Detalle opcional<input name="sceneNote" maxlength="200" placeholder="Ej. mesa de desayuno con luz de mañana" autocomplete="off"></label><div class="product-scene-actions"><button type="button" class="product-next" data-scene-generate>Crear escena</button><button type="button" class="button" data-scene-close>Cancelar</button></div>`;
+    panel.querySelector<HTMLButtonElement>('[data-scene-close]')!.onclick = () => { panel.hidden = true; panel.innerHTML = ''; };
+    panel.querySelector<HTMLButtonElement>('[data-scene-generate]')!.onclick = () => {
+      if (busy) return;
+      if (photos.length >= 10) { showError('Puedes añadir hasta 10 fotos. Quita una antes de crear otra escena.'); return; }
+      const setting = (panel.querySelector<HTMLInputElement>('[name=sceneSetting]:checked')?.value || 'auto') as (typeof sceneSettings)[number][0];
+      const note = panel.querySelector<HTMLInputElement>('[name=sceneNote]')!.value.trim() || null;
+      setBusy(true); showError(''); status.textContent = 'YAPI está creando la escena. Puede tardar hasta un minuto…';
+      void (async () => {
+        if (!source.url) source.url = (await api.upload(source.file!)).url;
+        const scene = await api.createProductScene(storeId, { imageUrl: source.url, productName: nameInput.value.trim() || 'Producto', description: (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || null, setting, note, aspect: 'square' });
+        const preview = uploadedPreview(scene.url);
+        panel.innerHTML = `<h4>Revisa la escena</h4><div class="product-scene-compare"><figure><img src="${escape(source.preview)}" alt="Tu foto original"><figcaption>Tu foto</figcaption></figure><figure><img src="${escape(preview)}" alt="Escena creada por YAPI"><figcaption>Escena YAPI</figcaption></figure></div><p>Añádela solo si tu producto se ve igual: forma, colores, etiqueta y cantidad.</p><div class="product-scene-actions"><button type="button" class="product-next" data-scene-accept>Añadir a las fotos</button><button type="button" class="button" data-scene-close>Descartar</button></div>`;
+        panel.querySelector<HTMLButtonElement>('[data-scene-accept]')!.onclick = () => {
+          if (busy || photos.length >= 10) return;
+          photos.push({ preview, url: scene.url, scene: true }); drawPhotos();
+          panel.hidden = true; panel.innerHTML = ''; status.textContent = 'Escena añadida a las fotos.';
+        };
+        panel.querySelector<HTMLButtonElement>('[data-scene-close]')!.onclick = () => { panel.hidden = true; panel.innerHTML = ''; };
+        status.textContent = '';
+      })().catch(cause => { status.textContent = ''; showError(cause instanceof Error ? cause.message : 'No se pudo crear la escena. Tu foto sigue intacta.'); })
+        .finally(() => { setBusy(false); panel.querySelector<HTMLButtonElement>('[data-scene-accept]')?.focus(); });
+    };
+    panel.querySelector<HTMLElement>('[name=sceneSetting]')!.focus();
   }
   picker.addEventListener('change', () => {
     const selected = Array.from(picker.files || []); picker.value = '';

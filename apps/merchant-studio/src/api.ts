@@ -211,6 +211,10 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 
+  createProductScene(storeId: string, input: { imageUrl: string; productName: string; description?: string | null; setting: 'auto' | 'studio' | 'lifestyle' | 'natural' | 'editorial'; note?: string | null; aspect?: 'square' | 'portrait' | 'landscape' }): Promise<{ url: string; parentUrl: string; kind: 'AI_DERIVED' }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/product-scenes`, { method: 'POST', body: JSON.stringify(input) });
+  }
+
   updateProduct(storeId: string, productId: string, input: Partial<Parameters<MerchantStudioApi['createProduct']>[1]>): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify(input) });
   }
