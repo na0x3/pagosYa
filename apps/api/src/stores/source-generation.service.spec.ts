@@ -383,6 +383,19 @@ describe('Independent source generation',()=>{
     expect(repair.input[0].content[1].text).toContain(`THIS attempt: ${repair.max_output_tokens} tokens`);
     expect(result.generation.attempts[0]).toMatchObject({ responseStatus:'incomplete', incompleteReason:'max_output_tokens', status:'FAILED' });
   });
+  it('keeps previously bundled photos valid when an edit leaves the page that shows them untouched', async () => {
+    const { service, projects } = setup();
+    projects.current.mockResolvedValue({ revision:1, slug:'cafe' });
+    const hero = { path:'assets/image-hero.jpg', content:'/9j/4AAQSkZJRgABAQAAAQABAAD/2Q==', encoding:'base64' };
+    const withHero = files().map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('<h1>Menú</h1>', '<h1>Menú</h1><img src="assets/image-hero.jpg" alt="Jugos en la mesa">') } : file);
+    projects.version.mockResolvedValue({ snapshot:{ files:[...withHero, hero] } });
+    const response = new Response(JSON.stringify({status:'completed',usage:{input_tokens:1000,output_tokens:200},output:[{content:[{type:'output_text',text:JSON.stringify({design: design(), label:'Movimiento',edits:[],files:[],appends:[{path:'site.js',content:'document.documentElement.dataset.ready = "1";'}]})}]}]}));
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response);
+    const result: any = await service.generate('m', 's', {...input,revision:1,instruction:'Añade una pequeña animación'});
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.generation.attempts.map((attempt: any) => attempt.failureReason).filter(Boolean)).toEqual([]);
+    expect(result.snapshot.files.some((file: any) => file.path === 'assets/image-hero.jpg')).toBe(true);
+  });
   it('validates appended JavaScript and repairs invalid syntax before saving', async () => {
     const { service, projects } = setup();
     projects.current.mockResolvedValue({ revision:1, slug:'cafe' });

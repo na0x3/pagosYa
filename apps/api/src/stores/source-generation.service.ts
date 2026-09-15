@@ -468,7 +468,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               validateGeneratedSource(generated.files);
               if (generated.design) validateSourceDesignImplementation(generated.design, generated.files);
             }
-            const preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...assets], previousFiles, assetLegend, imageUses));
+            // Check the same asset set the save carries forward: new uploads plus previously bundled assets.
+            const preflightAssets = [...assets, ...retainedAssets.filter(file => !assets.some(asset => asset.path === file.path) && !generated.files.some(generatedFile => generatedFile.path === file.path))];
+            const preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...preflightAssets], previousFiles, assetLegend, imageUses));
             validateSourcePreflight(preflightFiles, {
               requiredImagePaths: requestsImageContent(dto.instruction) ? assetLegend.filter(asset => !sourceVideo(asset.path) && imageUses.some(use => use.url === asset.original && !['reference', 'unused', 'unknown'].includes(use.role))).map(asset => asset.path) : [],
               catalogImagePaths: [
