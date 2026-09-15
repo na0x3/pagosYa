@@ -73,14 +73,14 @@ test('sending text and a photo clears the composer during upload and AI work, in
     await page.getByRole('button',{name:'Enviar a YAPI'}).click();
     await expect(composer).toHaveValue('');
     await expect(page.locator('.source-compose-area .batch-card')).toHaveCount(0);
-    await expect(page.locator('.source-pending-request')).toHaveText(text);
-    await expect(page.getByText('1 imagen adjunta',{exact:true})).toBeVisible();
+    await expect(page.locator('[data-pending-request] p')).toHaveText(text);
+    await expect(page.getByText('1 archivo adjunto',{exact:true})).toBeVisible();
     expect(messageRequests).toBe(0);
     upload.resolve();
     await expect.poll(() => messageRequests).toBe(1);
     await page.locator('#source-width').click();
     await expect(composer).toHaveValue('');
-    await expect(page.locator('.source-pending-request')).toHaveText(text);
+    await expect(page.locator('[data-pending-request] p')).toHaveText(text);
     await page.screenshot({path:'.test-artifacts/source-composer-pending-desktop.png',fullPage:true});
     await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:'.test-artifacts/source-composer-pending-mobile.png',fullPage:true});
@@ -88,7 +88,7 @@ test('sending text and a photo clears the composer during upload and AI work, in
     response.resolve();
     await expect(page.locator('.remote-agent-note')).toContainText('La usamos en la portada');
     await expect(page.locator('.message--remote-user')).toHaveCount(1);
-    await expect(page.locator('.source-pending-request')).toHaveCount(0);
+    await expect(page.locator('[data-pending-request]')).toHaveCount(0);
     await expect(composer).toHaveValue('');
     await expect(composer).toBeEnabled();
     await composer.fill('Ahora usa verde');

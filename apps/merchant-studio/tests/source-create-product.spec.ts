@@ -59,7 +59,8 @@ for (const mobile of [false, true]) test(`create product form saves directly and
   await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Intenta otra vez');
   await expect(dialog.getByLabel('Nombre del producto', { exact: true })).toHaveValue('Hamburguesa de la casa');
-  await expect(dialog.getByRole('img')).toHaveCount(1);
+  // The review step does not repeat photos; the uploaded photo stays in the photo step for the retry.
+  await expect(dialog.locator('[data-guide-step="4"] figure img')).toHaveCount(1);
   await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Producto creado', exact: true })).toBeVisible();
   await expect.poll(() => catalogReads).toBeGreaterThan(baselineReads);

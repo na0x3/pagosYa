@@ -102,7 +102,7 @@ test('merchant configures retention and reviews a campaign before explicit sendi
   await expect(page.getByRole('region', { name: 'Vista previa del correo' })).toContainText('Tenemos una nueva selección'); expect(sends).toBe(0);
   await page.getByRole('button', { name: 'Enviar a los suscriptores' }).click(); expect(sends).toBe(1);
   await expect(page.getByRole('status').filter({ hasText: 'Campaña en cola' })).toBeVisible();
-  await page.getByRole('button', { name: 'Configurar', exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 }); await page.locator('dialog').evaluate(el => el.scrollTop = 0);
+  await page.getByRole('button', { name: 'Comeback Card', exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 }); await page.locator('dialog').evaluate(el => el.scrollTop = 0);
   expect(await page.locator('dialog').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   await page.screenshot({ path: '.test-artifacts/retention-mobile.png' });
 });
