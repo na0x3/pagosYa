@@ -64,7 +64,7 @@ test('preview embeds uploaded catalogue photos and opens an accessible multi-pho
   await detail.getByRole('button', { name: 'Añadir al pedido' }).click();
   await expect(frame.locator('[data-cart-count]')).toHaveText('1');
   await expect(detail.getByRole('button', { name: 'Añadir al pedido' })).toBeDisabled();
-  await expect(detail.getByRole('status')).toContainText('añadido');
+  await expect(detail.locator('.product-detail__status')).toContainText('añadido');
   await page.screenshot({ path: '.test-artifacts/product-detail-desktop.png' });
   await page.keyboard.press('Escape');
   await expect(detail).not.toBeVisible();
