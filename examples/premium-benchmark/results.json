@@ -88,7 +88,6 @@
     "reviewUsage": [],
     "sourceDigest": "4cff5af61225ebc0b818c38cc92f818d2d392d02c64f5d2078c8f688bd8e82af",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -175,6 +174,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -200,7 +200,101 @@
         "status": "passed",
         "variantId": "var_aoxjeqkcy1qq"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1640,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 398,
+        "pageHeight": 1640,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 796,
+        "pageHeight": 1640,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 2115,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 636,
+        "pageHeight": 2115,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1271,
+        "pageHeight": 2115,
+        "productId": "cmu0ealnf000i4gwztc9fdowv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "food-1-candidate",
@@ -484,7 +578,6 @@
     },
     "sourceDigest": "1769c1314e679fcdc6f81ed04761e954fc7d9de8adbf6bc6b91511c9ec782ae5",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -571,6 +664,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -596,7 +690,101 @@
         "status": "passed",
         "variantId": "var_aoxjeqkcy1qq"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1651,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 404,
+        "pageHeight": 1651,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 807,
+        "pageHeight": 1651,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1911,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 534,
+        "pageHeight": 1911,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1067,
+        "pageHeight": 1911,
+        "productId": "cmu0eamgu000it6nw4xtutz1b",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "food-2-baseline",
@@ -687,7 +875,6 @@
     "reviewUsage": [],
     "sourceDigest": "0c759dc2e727dfdf7ade10b1983798de0b05eea404a6c3cd0d4cc45840ca9a10",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -774,6 +961,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -799,7 +987,101 @@
         "status": "passed",
         "variantId": "var_aoxjeqkcy1qq"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1725,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 441,
+        "pageHeight": 1725,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 881,
+        "pageHeight": 1725,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 2111,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 634,
+        "pageHeight": 2111,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1267,
+        "pageHeight": 2111,
+        "productId": "cmu0ecq52001a4gwzc9kp5irn",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "food-2-candidate",
@@ -1001,7 +1283,6 @@
     },
     "sourceDigest": "6295c4329ca05b50a3692f0e34f8f539c215eb11f2832a3cbdc6f8390bedb9be",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -1088,6 +1369,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -1113,7 +1395,101 @@
         "status": "passed",
         "variantId": "var_aoxjeqkcy1qq"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1557,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 357,
+        "pageHeight": 1557,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 713,
+        "pageHeight": 1557,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1735,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 446,
+        "pageHeight": 1735,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 891,
+        "pageHeight": 1735,
+        "productId": "cmu0ed5p5001at6nwvov8zzr5",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "food-3-baseline",
@@ -1204,7 +1580,6 @@
     "reviewUsage": [],
     "sourceDigest": "1a4e107058b2d35c0efb38efa653ac654ea2543cc0456affabca522e82e97409",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -1291,6 +1666,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -1316,7 +1692,101 @@
         "status": "passed",
         "variantId": "var_aoxjeqkcy1qq"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1748,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 452,
+        "pageHeight": 1748,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 904,
+        "pageHeight": 1748,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1984,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 570,
+        "pageHeight": 1984,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1140,
+        "pageHeight": 1984,
+        "productId": "cmu0efc1u00224gwz2o8a0kwk",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "food-3-candidate",
@@ -1518,7 +1988,6 @@
     },
     "sourceDigest": "fd5f056859847a5e28577687803129b951464bb78e1b410226f77de755394de3",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -1605,6 +2074,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -1630,7 +2100,101 @@
         "status": "passed",
         "variantId": "var_aoxjeqkcy1qq"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1675,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 416,
+        "pageHeight": 1675,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 831,
+        "pageHeight": 1675,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 2167,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 662,
+        "pageHeight": 2167,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 1323,
+        "pageHeight": 2167,
+        "productId": "cmu0efwle0022t6nw5dzrwrjq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "apparel-1-baseline",
@@ -1721,7 +2285,6 @@
     "reviewUsage": [],
     "sourceDigest": "552ccd6ed00c49ac9223a4893fc84b58ebfe68f9df78821948589ea64c5da614",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -1808,6 +2371,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -1833,7 +2397,101 @@
         "status": "passed",
         "variantId": "var_mn2s17s5bm71"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1670,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 413,
+        "pageHeight": 1670,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 826,
+        "pageHeight": 1670,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1577,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 367,
+        "pageHeight": 1577,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 733,
+        "pageHeight": 1577,
+        "productId": "cmu0ehpri002g4gwz4hh18yrz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "apparel-1-candidate",
@@ -2108,7 +2766,6 @@
     },
     "sourceDigest": "64f880e0df2623b8553cf035ae271ba93ef343190628cd5ec2982096148dc102",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -2195,6 +2852,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -2220,7 +2878,101 @@
         "status": "passed",
         "variantId": "var_ktdjrmpah2sl"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1638,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 397,
+        "pageHeight": 1638,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 794,
+        "pageHeight": 1638,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1693,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 425,
+        "pageHeight": 1693,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 849,
+        "pageHeight": 1693,
+        "productId": "cmu0ei8v7002gt6nw6e4xc6p6",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "apparel-2-baseline",
@@ -2311,7 +3063,6 @@
     "reviewUsage": [],
     "sourceDigest": "2b8d03e3bc9217317f8b97f4a79301ae270fdda222e2217a031b4caee302f7fe",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -2398,6 +3149,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -2423,7 +3175,101 @@
         "status": "passed",
         "variantId": "var_mn2s17s5bm71"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1723,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 440,
+        "pageHeight": 1723,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 879,
+        "pageHeight": 1723,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1647,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 402,
+        "pageHeight": 1647,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 803,
+        "pageHeight": 1647,
+        "productId": "cmu0ek3w5002u4gwzb8t0un9y",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "apparel-2-candidate",
@@ -2652,7 +3498,6 @@
     },
     "sourceDigest": "79571a5772bce697b22ab9830395f025bde97e074119b7845ebb837ae7a6e17e",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -2739,6 +3584,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -2764,7 +3610,101 @@
         "status": "passed",
         "variantId": "var_ktdjrmpah2sl"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1697,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 427,
+        "pageHeight": 1697,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 853,
+        "pageHeight": 1697,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1669,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 413,
+        "pageHeight": 1669,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 825,
+        "pageHeight": 1669,
+        "productId": "cmu0ekkx4002ut6nwt9nk5wxv",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "apparel-3-baseline",
@@ -2855,7 +3795,6 @@
     "reviewUsage": [],
     "sourceDigest": "9f35ca5c5d6d609909de73e0e185ec3cf5b5273111eeabb0baaf068c340345e6",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -2942,6 +3881,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -2967,7 +3907,101 @@
         "status": "passed",
         "variantId": "var_mn2s17s5bm71"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1573,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 365,
+        "pageHeight": 1573,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 729,
+        "pageHeight": 1573,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1755,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 456,
+        "pageHeight": 1755,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 911,
+        "pageHeight": 1755,
+        "productId": "cmu0emkw300384gwzlp1vavlh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "apparel-3-candidate",
@@ -3242,7 +4276,6 @@
     },
     "sourceDigest": "358b4558b6c7fb4859c9bb66ab53bd5df9d0089b9bb04e4767eab434e47611a5",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -3329,6 +4362,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -3354,7 +4388,101 @@
         "status": "passed",
         "variantId": "var_ktdjrmpah2sl"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1756,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 456,
+        "pageHeight": 1756,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 912,
+        "pageHeight": 1756,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1718,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 437,
+        "pageHeight": 1718,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 874,
+        "pageHeight": 1718,
+        "productId": "cmu0en89k0038t6nwdzr9c7jy",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "beauty-1-baseline",
@@ -3445,7 +4573,6 @@
     "reviewUsage": [],
     "sourceDigest": "b0ea86af82083a92a2becbe01e6345809320bd34be728b532e0119a379584bf5",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -3532,6 +4659,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -3557,7 +4685,101 @@
         "status": "passed",
         "variantId": "var_aa8ytpblx4g8"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1404,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 280,
+        "pageHeight": 1404,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 560,
+        "pageHeight": 1404,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1315,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 236,
+        "pageHeight": 1315,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 471,
+        "pageHeight": 1315,
+        "productId": "cmu0ep7re003m4gwzapl7mmul",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "beauty-1-candidate",
@@ -3786,7 +5008,6 @@
     },
     "sourceDigest": "77701344b9154976c31269f2565a0f3b32b6c4566602d80db7d9328eedba0f98",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -3873,6 +5094,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -3898,7 +5120,101 @@
         "status": "passed",
         "variantId": "var_i23t8z07jp5n"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1510,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 333,
+        "pageHeight": 1510,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 666,
+        "pageHeight": 1510,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1451,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 304,
+        "pageHeight": 1451,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 607,
+        "pageHeight": 1451,
+        "productId": "cmu0epgk5003mt6nw0hp653dl",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "beauty-2-baseline",
@@ -3989,7 +5305,6 @@
     "reviewUsage": [],
     "sourceDigest": "05a6e04a16eac29b1061f7479de7790219bf9c6838b71820e2c37b3cce257fea",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -4076,6 +5391,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -4101,7 +5417,101 @@
         "status": "passed",
         "variantId": "var_aa8ytpblx4g8"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1345,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 251,
+        "pageHeight": 1345,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 501,
+        "pageHeight": 1345,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1385,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 271,
+        "pageHeight": 1385,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 541,
+        "pageHeight": 1385,
+        "productId": "cmu0erj2d00404gwz3k111a7o",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "beauty-2-candidate",
@@ -4330,7 +5740,6 @@
     },
     "sourceDigest": "7aeca937f15d3fe70acef0d6092b9dfc2fd0d019bde18a6defbeff7eb640ac96",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -4417,6 +5826,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -4442,7 +5852,101 @@
         "status": "passed",
         "variantId": "var_i23t8z07jp5n"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1253,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 205,
+        "pageHeight": 1253,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 409,
+        "pageHeight": 1253,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1261,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 209,
+        "pageHeight": 1261,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 417,
+        "pageHeight": 1261,
+        "productId": "cmu0ertqf0040t6nwpeb6yhid",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "beauty-3-baseline",
@@ -4533,7 +6037,6 @@
     "reviewUsage": [],
     "sourceDigest": "dad34f4283106274634de06eff6d9995de69ad6340bb9101308f9df0272916ce",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -4620,6 +6123,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -4645,7 +6149,101 @@
         "status": "passed",
         "variantId": "var_aa8ytpblx4g8"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1377,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 267,
+        "pageHeight": 1377,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 533,
+        "pageHeight": 1377,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1439,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 298,
+        "pageHeight": 1439,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 595,
+        "pageHeight": 1439,
+        "productId": "cmu0etqw8004e4gwz4topthxq",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "beauty-3-candidate",
@@ -4936,7 +6534,6 @@
     },
     "sourceDigest": "b226cc5742c18aa552cb47374d628800eefe75e80c4922e38c1ab36842c62ba0",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -5023,6 +6620,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -5048,7 +6646,101 @@
         "status": "passed",
         "variantId": "var_i23t8z07jp5n"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1453,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 305,
+        "pageHeight": 1453,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 609,
+        "pageHeight": 1453,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1543,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 350,
+        "pageHeight": 1543,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 699,
+        "pageHeight": 1543,
+        "productId": "cmu0euci3004et6nwg4fwtlsz",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "technical-1-baseline",
@@ -5139,7 +6831,6 @@
     "reviewUsage": [],
     "sourceDigest": "993fa8e64bd9fd42d268f97b21b0627692a73250c83aec1803e7a165c3a524dd",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -5226,6 +6917,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -5251,7 +6943,101 @@
         "status": "passed",
         "variantId": "var_01uf8v3p2v6q"
       }
-    ]
+    ],
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1452,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 304,
+        "pageHeight": 1452,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 608,
+        "pageHeight": 1452,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
+        },
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1429,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 293,
+        "pageHeight": 1429,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 585,
+        "pageHeight": 1429,
+        "productId": "cmu0ewha7004s4gwzzu5jn7gh",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "technical-1-candidate",
@@ -5453,7 +7239,6 @@
     },
     "sourceDigest": "88654929aed66dedef576dad8389607f0d5d251c0cedca9e2a25631f449f31d0",
     "evidenceRevision": 1,
-    "captureFailures": [],
     "captures": [
       {
         "viewport": "desktop",
@@ -5540,6 +7325,7 @@
         "path": "capture-5.jpg"
       }
     ],
+    "captureFailures": [],
     "shopping": [
       {
         "width": 1280,
@@ -5568,39 +7354,100 @@
         "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Continuar al pago de prueba', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button data-pay=\"\" type=\"button\" class=\"checkout-button\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 "
       }
     ],
-    "remediation": {
-      "method": "Codex runtime correction, no model generation",
-      "revision": 2,
-      "digest": "dfb723f3f2fd3f9486a79a04200d8c4810b920f1bd38c4382524085ca0e0e5f5",
-      "shopping": [
-        {
-          "width": 1280,
-          "productId": "cmu0ewht6004st6nwxy934apa",
-          "status": "passed",
-          "variantId": "var_86ulmmehu3x9"
+    "productCaptures": [
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1398,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
         },
-        {
-          "width": 1280,
-          "productId": "cmu0ewht8004ut6nwvaz59fsm",
-          "status": "passed",
-          "variantId": "var_d0wtos1445na"
+        "path": "product-capture-0.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 277,
+        "pageHeight": 1398,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
         },
-        {
-          "width": 390,
-          "productId": "cmu0ewht6004st6nwxy934apa",
-          "status": "passed",
-          "variantId": "var_86ulmmehu3x9"
+        "path": "product-capture-1.jpg"
+      },
+      {
+        "viewport": "desktop",
+        "width": 1280,
+        "height": 844,
+        "y": 554,
+        "pageHeight": 1398,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 1280,
+          "missingImages": 0
         },
-        {
-          "width": 390,
-          "productId": "cmu0ewht8004ut6nwvaz59fsm",
-          "status": "passed",
-          "variantId": "var_d0wtos1445na"
-        }
-      ],
-      "originalEvidence": "evidence.json",
-      "reason": "Authored !important fixed cart positioning obstructed the mobile checkout CTA. Shared checkout layout now overrides drawer positioning."
-    }
+        "path": "product-capture-2.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 0,
+        "pageHeight": 1447,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-3.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 302,
+        "pageHeight": 1447,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-4.jpg"
+      },
+      {
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "y": 603,
+        "pageHeight": 1447,
+        "productId": "cmu0ewht6004st6nwxy934apa",
+        "state": "initial",
+        "readiness": {
+          "fontsLoaded": true,
+          "scrollWidth": 390,
+          "missingImages": 0
+        },
+        "path": "product-capture-5.jpg"
+      }
+    ],
+    "productCaptureFailures": [],
+    "productRuntime": "current"
   },
   {
     "id": "technical-2-baseline",
