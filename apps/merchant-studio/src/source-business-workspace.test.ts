@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn() }));
-vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', MerchantStudioApi: class {
+const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn() }));
+vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'http://localhost:3001/v1', MerchantStudioApi: class {
         businessWorkspace = mocks.workspace;
         retention = mocks.retention;
         sourceState = mocks.source;
         integrationConnections = mocks.connections;
         createIntegrationConnection = mocks.createConnection;
+        integrationMappings = mocks.mappings;
+        saveIntegrationMapping = mocks.saveMapping;
+        deleteIntegrationMapping = mocks.deleteMapping;
         startSourceTest = mocks.start;
         finishSourceTest = mocks.finish;
         sourceVersion = vi.fn().mockResolvedValue({ snapshot: { files: [] } });
@@ -75,6 +78,23 @@ describe('marketing workspaces', () => {
         expect(app.querySelectorAll('.integration-card')).toHaveLength(1);
         expect(app.textContent).toContain('Pendiente de la primera sincronización');
         expect(app.querySelector('.connection-row .is-ready')).toBeNull();
+    });
+    it('links a SKU per combination, removes cleared links and shows the last sync report', async () => {
+        mocks.connections.mockResolvedValue([{ id: 'conn', name: 'ERP', kind: 'CUSTOM_DATABASE', lastSyncAt: '2026-09-15T10:00:00Z', mappingCount: 1, lastRun: { status: 'SUCCEEDED', itemCount: 2, details: { skipped: [{ externalSku: 'NOPE', reason: 'SKU sin vincular a un producto en pagosYa' }] } } }]);
+        mocks.mappings.mockResolvedValue({ products: [{ id: 'lamp', name: 'Lámpara', stock: 24, variants: [{ id: 'negro', name: 'Negro', stock: 12 }, { id: 'marfil', name: 'Marfil', stock: 12 }] }, { id: 'mug', name: 'Taza', stock: null, variants: [] }], mappings: [{ id: 'map1', paymentLinkId: 'mug', variantId: null, externalSku: 'MUG-1' }] });
+        await mount('library=integrations');
+        expect(app.textContent).toContain('Cómo se combinan los datos');
+        expect(app.textContent).toContain('2 SKU actualizados · 1 sin aplicar');
+        expect(app.querySelector('.integration-skipped')!.textContent).toContain('SKU sin vincular a un producto en pagosYa (1): NOPE');
+        click('[data-link-connection=conn]');
+        await vi.waitFor(() => expect(app.querySelectorAll('[data-sku-row]')).toHaveLength(3));
+        expect(app.textContent).toContain('1 de 3 artículos vinculados');
+        input('[data-sku-row="lamp:negro"]', 'LAMP-NEGRO');
+        input('[data-sku-row="mug:"]', '');
+        click('[data-save-links]');
+        await vi.waitFor(() => expect(mocks.saveMapping).toHaveBeenCalledWith('store-a', 'conn', { paymentLinkId: 'lamp', variantId: 'negro', externalSku: 'LAMP-NEGRO' }));
+        await vi.waitFor(() => expect(mocks.deleteMapping).toHaveBeenCalledWith('store-a', 'conn', 'map1'));
+        await vi.waitFor(() => expect(app.textContent).toContain('Guardamos 1 vínculo y quitamos 1.'));
     });
     it('sends Comeback navigation to its specific marketing tab', async () => {
         const send = vi.spyOn(window.parent, 'postMessage');

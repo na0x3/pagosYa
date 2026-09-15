@@ -52,10 +52,13 @@ describe("OperationsService operational calendar", () => {
   it("lists only active stock connections for the owned store", async () => {
     const prisma = makePrisma();
     prisma.integrationConnection.findMany.mockResolvedValue([{ id: "integration_1", name: "Caja Café", status: "ACTIVE" }]);
+    (prisma as any).integrationProductMapping = { count: jest.fn().mockResolvedValue(4) };
+    (prisma as any).integrationSyncRun.findFirst = jest.fn().mockResolvedValue({ status: "SUCCEEDED", itemCount: 3, details: { skipped: [{ externalSku: "X", reason: "SKU sin vincular a un producto en pagosYa" }] } });
     const service = makeService(prisma);
 
+    // Each connection carries how many SKUs are linked and the last sync report.
     await expect(service.listIntegrations("merchant_1", "store_1")).resolves.toEqual([
-      { id: "integration_1", name: "Caja Café", status: "ACTIVE" },
+      { id: "integration_1", name: "Caja Café", status: "ACTIVE", mappingCount: 4, lastRun: expect.objectContaining({ itemCount: 3 }) },
     ]);
     expect(prisma.integrationConnection.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { merchantId: "merchant_1", storeId: "store_1", status: "ACTIVE" },

@@ -777,11 +777,42 @@ export class OperationsService {
 
   async listIntegrations(merchantId: string, storeId: string) {
     await this.ownedStore(merchantId, storeId);
-    return this.prisma.integrationConnection.findMany({
+    const connections = await this.prisma.integrationConnection.findMany({
       where: { merchantId, storeId, status: "ACTIVE" },
       select: { id: true, kind: true, name: true, status: true, lastSyncAt: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });
+    return Promise.all(connections.map(async (connection) => {
+      const [mappingCount, lastRun] = await Promise.all([
+        this.prisma.integrationProductMapping.count({ where: { connectionId: connection.id } }),
+        this.prisma.integrationSyncRun.findFirst({ where: { connectionId: connection.id }, orderBy: { startedAt: "desc" }, select: { direction: true, status: true, itemCount: true, errorMessage: true, details: true, startedAt: true } }),
+      ]);
+      return { ...connection, mappingCount, lastRun };
+    }));
+  }
+
+  /** Products and combinations with their linked SKUs, so the merchant can link every sellable item. */
+  async listProductMappings(merchantId: string, storeId: string, connectionId: string) {
+    await this.ownedStore(merchantId, storeId);
+    const connection = await this.prisma.integrationConnection.findFirst({ where: { id: connectionId, merchantId, storeId, status: "ACTIVE" }, select: { id: true } });
+    if (!connection) throw new NotFoundException("Integration not found");
+    const [products, mappings] = await Promise.all([
+      this.prisma.paymentLink.findMany({ where: { storeId, status: PaymentLinkStatus.ACTIVE }, select: { id: true, name: true, stock: true, variants: true }, orderBy: { name: "asc" }, take: 500 }),
+      this.prisma.integrationProductMapping.findMany({ where: { connectionId }, select: { id: true, paymentLinkId: true, variantId: true, externalSku: true } }),
+    ]);
+    return {
+      products: products.map((product) => ({ id: product.id, name: product.name, stock: product.stock, variants: readStockVariants(product.variants).map((variant) => ({ id: variant.id, name: variant.name, stock: variant.stock ?? null })) })),
+      mappings,
+    };
+  }
+
+  async deleteProductMapping(merchantId: string, storeId: string, connectionId: string, mappingId: string) {
+    await this.ownedStore(merchantId, storeId);
+    const connection = await this.prisma.integrationConnection.findFirst({ where: { id: connectionId, merchantId, storeId }, select: { id: true } });
+    if (!connection) throw new NotFoundException("Integration not found");
+    const deleted = await this.prisma.integrationProductMapping.deleteMany({ where: { id: mappingId, connectionId } });
+    if (!deleted.count) throw new NotFoundException("Mapping not found");
+    return { deleted: true };
   }
 
   async verifyIntegrationInbound(connectionId: string, secret: string) {
