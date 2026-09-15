@@ -1,0 +1,138 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Serif para Bruma y titulares editoriales; Instrument Sans para navegación, precios, selectores y textos. Escritorio: marca 34 px, h1 68–82 px, h2 44 px, cuerpo 17 px. Móvil: marca 27 px, h1 43 px, h2 33 px, cuerpo 16 px. Ciruela para texto principal, lavanda para acentos y marfil cálido como base.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "intro-ritual",
+      "catalogo-dos-gestos",
+      "nota-formatos"
+    ],
+    "catalogSection": "catalogo-dos-gestos",
+    "mobileRule": "La portada pasa a texto sobre una franja clara y fotografía 4:5 debajo; el producto sigue completo y el botón aparece antes de la imagen. Cada ficha apila fotografía, nombre, selector, precio y botón de 48 px. “Mi pedido (0)” permanece en el encabezado fuera del menú. En producto, la compra deja de ser lateral y queda inmediatamente después de la primera imagen."
+  },
+  "assets": [
+    {
+      "path": "assets/image-df8cb044d4b4.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-49363bd178b6.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e6ed32c54de5.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-f285b2310535.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f6f1e9",
+      "resolved": "#f6f1e9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#44283d",
+      "resolved": "#44283d",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#c8b4dc",
+      "resolved": "#c8b4dc",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#382037",
+      "resolved": "#382037",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#ede5dd",
+      "resolved": "#ede5dd",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#cfc1c6",
+      "resolved": "#cfc1c6",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "\"Instrument Serif\",serif",
+      "resolved": "\"Instrument Serif\",serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

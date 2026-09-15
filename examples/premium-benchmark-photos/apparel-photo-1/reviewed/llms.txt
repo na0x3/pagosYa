@@ -1,0 +1,14 @@
+# Trama
+
+> Sitio oficial y catálogo público.
+
+## Páginas
+
+- [Trama — Camisas y camisetas cotidianas](http://localhost:5175/s/whh80wia)
+
+## Productos
+
+- [Camisa de algodón de manga larga](http://localhost:5175/s/whh80wia/p/cmu2twcw4000a12goqrobenkl)
+- [Camiseta esencial](http://localhost:5175/s/whh80wia/p/cmu2ty1kv000i12gorecoc0uh)
+
+Consulta precios y disponibilidad actualizados en el sitio oficial.

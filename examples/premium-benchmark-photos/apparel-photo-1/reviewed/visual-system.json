@@ -1,0 +1,138 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans variable para toda la interfaz: marca 800 en 30 px, títulos de producto 600 en 28–44 px, precios 700, cuerpo 16/1.5 y etiquetas 12 px en mayúsculas espaciadas. En móvil: marca 24 px, títulos 25 px, cuerpo 15 px. El contraste procede de peso, escala y alineación, no de una segunda familia.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-muestrario",
+      "nota-de-coleccion",
+      "banda-cotidiana"
+    ],
+    "catalogSection": "catalogo-muestrario",
+    "mobileRule": "Cabecera de dos líneas muy contenida: Trama y “Mi pedido (0)” quedan siempre visibles; navegación secundaria mediante menú. El primer producto comienza antes de 320 px del documento y se presenta como imagen apaisada corta seguida inmediatamente por nombre, precio, selector y botón de 48 px. La cuadrícula editorial se convierte en una secuencia continua sin solapamientos."
+  },
+  "assets": [
+    {
+      "path": "assets/image-739dfea4fbd5.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-110f11deb8ee.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7f873aa0012.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-1d93eab93271.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f3f0e9",
+      "resolved": "#f3f0e9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#111923",
+      "resolved": "#111923",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#1748d3",
+      "resolved": "#1748d3",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fbfaf6",
+      "resolved": "#fbfaf6",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#a9aca7",
+      "resolved": "#a9aca7",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0px",
+      "resolved": "0px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Instrument,sans-serif",
+      "resolved": "Instrument,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Instrument,sans-serif",
+      "resolved": "Instrument,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}
