@@ -55,3 +55,47 @@ it('edits the selected product while preserving photos and unchanged variant sto
   expect(input.variants.every((variant:any)=>!('stock' in variant))).toBe(true);
   expect(guide.hasChanges).toBe(false);
 });
+
+describe('owner-friendly options editor', () => {
+  const editor = (variants?: any[]) => {
+    const host = document.createElement('div'); document.body.append(host);
+    const api = PagosYaProductOptions.mount(host, { variants, basePrice: () => '100' });
+    const type = (selector: string, value: string) => { const el = host.querySelector<HTMLInputElement>(selector)!; el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    const click = (selector: string) => host.querySelector<HTMLButtonElement>(selector)!.click();
+    return { host, api, type, click };
+  };
+  it('builds combinations on its own, labels them by option and uses the units chosen for new ones', async () => {
+    const e = editor();
+    e.click('[data-suggest="Color"]');
+    expect(e.host.querySelector<HTMLInputElement>('[data-group-name="0"]')!.value).toBe('Color');
+    e.type('[data-group-values="0"]', 'Azul, Negro');
+    e.click('[data-group-add]');
+    e.type('[data-group-name="1"]', 'Talla'); e.type('[data-default-stock]', '5'); e.type('[data-group-values="1"]', 'S, M');
+    expect(e.host.querySelector('[data-chips="1"]')!.textContent).toContain('2 valores');
+    await vi.waitFor(() => expect(e.host.querySelectorAll('[data-row]')).toHaveLength(4));
+    expect(e.host.querySelector('[data-row="0"] strong')!.textContent).toBe('Color: Azul · Talla: S');
+    expect(e.host.querySelector('[data-count]')!.textContent).toBe('4 combinaciones · 4 a la venta');
+    expect(e.api.values().map(v => [v.name, v.amount, v.stock])).toEqual([['Azul / S', 10000, 5], ['Azul / M', 10000, 5], ['Negro / S', 10000, 5], ['Negro / M', 10000, 5]]);
+    e.type('[data-row="0"] [data-field="stock"]', '1');
+    e.type('[data-default-stock]', '8');
+    expect(e.api.values().map(v => v.stock)).toEqual([1, 8, 8, 8]);
+  });
+  it('warns when one option was split into several and saves pending edits without an extra button', () => {
+    const e = editor();
+    e.type('[data-group-name="0"]', 'Opción 1'); e.type('[data-group-values="0"]', 'Azul, Beige');
+    e.click('[data-group-add]');
+    e.type('[data-group-name="1"]', 'Opción 2'); e.type('[data-group-values="1"]', 'Azul, Rojo');
+    const values = e.api.values();
+    expect(values).toHaveLength(4);
+    expect(values.every(v => v.stock === null)).toBe(true);
+    expect(e.host.querySelector('[data-warning]')!.textContent).toContain('«Azul» aparece en Opción 1 y en Opción 2');
+  });
+  it('still asks before removing saved combinations', () => {
+    const e = editor([{ id: 'a', name: 'Azul', amount: '100', stock: '2', options: [{ name: 'Color', value: 'Azul' }] }, { id: 'n', name: 'Negro', amount: '100', stock: '1', options: [{ name: 'Color', value: 'Negro' }] }]);
+    e.type('[data-group-values="0"]', 'Azul');
+    expect(() => e.api.values()).toThrow('Confirma qué combinaciones se retiran antes de guardar.');
+    expect(e.host.querySelector<HTMLButtonElement>('[data-generate]')!.hidden).toBe(false);
+    e.click('[data-generate]');
+    expect(e.api.values().map(v => v.id)).toEqual(['a']);
+  });
+});
