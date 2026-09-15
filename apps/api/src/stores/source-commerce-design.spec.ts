@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { PRODUCT_HIGHLIGHT_ICONS } from '../payment-links/product-highlights';
 import { join } from 'node:path';
 import { withSourceCommerceDesign } from './source-commerce-design';
 
@@ -49,6 +50,12 @@ describe('Shared storefront design', () => {
     expect(result.find(file => file.path === 'commerce-pages.css')!.content).toContain('.custom-detail{padding:40px}');
     expect(result.find(file => file.path === 'commerce-pages.css')!.content).toContain('@layer pagosya-commerce');
   });
+});
+
+it('draws every highlight icon the API can store', () => {
+  const runtime = kit('commerce.js');
+  const drawn = runtime.slice(runtime.indexOf('const highlightIcons = {'), runtime.indexOf('function highlightsMarkup'));
+  for (const name of PRODUCT_HIGHLIGHT_ICONS) expect(drawn).toContain(`${/-/.test(name) ? `'${name}'` : name}: { motion:`);
 });
 
 it('styles inline options with merchant tokens and preserves text quick-add targets', () => {
