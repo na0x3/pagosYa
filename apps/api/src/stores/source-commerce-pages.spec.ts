@@ -357,8 +357,9 @@ describe('Inline storefront product options', () => {
   it.each(['extras', 'groups', 'combinations', 'ambiguous'])('retains the hosted fallback for unsupported %s', async kind => {
     const p: any = product();
     if (kind === 'extras') p.extras = [{ id: 'gift', name: 'Regalo', required: true }];
-    if (kind === 'groups') p.variants.forEach((v: any) => v.options.push({ name: 'Formato', value: 'Uno' }, { name: 'Cadencia', value: 'Mes' }));
-    if (kind === 'combinations') p.variants = Array.from({ length: 65 }, (_, i) => ({ id: String(i), name: String(i), amount: 100 }));
+    // The platform supports up to 6 option groups and 256 variants per product.
+    if (kind === 'groups') p.variants.forEach((v: any) => v.options.push(...['Formato', 'Cadencia', 'Acabado', 'Empaque', 'Grabado'].map(name => ({ name, value: 'Uno' }))));
+    if (kind === 'combinations') p.variants = Array.from({ length: 257 }, (_, i) => ({ id: String(i), name: String(i), amount: 100 }));
     if (kind === 'ambiguous') p.variants.push({ ...p.variants[0], id: 'duplicate' });
     const { query, click } = await shop({ mode: 'hosted', items: [p] });
     expect(query('.menu-add').href).toBe('https://pay.test/s/marca/p/shirt');
