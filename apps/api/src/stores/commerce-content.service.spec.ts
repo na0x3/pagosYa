@@ -37,3 +37,23 @@ describe('CommerceContentService.reviews', () => {
     }));
   });
 });
+
+describe('CommerceContentService.publicContent', () => {
+  it('returns exact per-product published review totals beside the latest reviews', async () => {
+    const prisma = {
+      storeArticle: { findMany: jest.fn().mockResolvedValue([]) },
+      storeBundle: { findMany: jest.fn().mockResolvedValue([]) },
+      storeReview: {
+        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: jest.fn().mockResolvedValue([
+          { productId: 'product_1', _count: { _all: 140 }, _avg: { rating: 4.8571 } },
+          { productId: 'product_2', _count: { _all: 0 }, _avg: { rating: null } },
+        ]),
+      },
+    };
+    const service = new CommerceContentService(prisma as any, {} as any);
+    const result = await service.publicContent('store_1');
+    expect(result.reviewSummary).toEqual({ product_1: { count: 140, average: 4.9 } });
+    expect(prisma.storeReview.groupBy).toHaveBeenCalledWith(expect.objectContaining({ where: { storeId: 'store_1', status: 'PUBLISHED' } }));
+  });
+});

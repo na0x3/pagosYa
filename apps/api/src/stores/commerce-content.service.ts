@@ -75,10 +75,15 @@ export class CommerceContentService {
   }
   async publicContent(storeId: string, locale = 'es') {
     if (typeof locale !== 'string' || !/^[a-z]{2}(?:-[A-Z]{2})?$/.test(locale)) throw new BadRequestException('Idioma no válido.');
-    const [articles, reviews, bundles] = await Promise.all([
+    const [articles, reviews, bundles, ratings] = await Promise.all([
       this.prisma.storeArticle.findMany({ where: { storeId, locale, publishedAt: { lte: new Date() } }, orderBy: { publishedAt: 'desc' }, take: 100, select: { slug: true, locale: true, title: true, excerpt: true, body: true, author: true, publishedAt: true } }),
       this.prisma.storeReview.findMany({ where: { storeId, status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, productId: true, displayName: true, rating: true, body: true, createdAt: true } }),
       this.prisma.storeBundle.findMany({ where: { storeId, active: true }, take: 100, select: { id: true, name: true, kind: true, items: true, minimumQuantity: true, discountPercent: true } }),
-    ]); return { articles, reviews, bundles };
+      // Exact per-product totals; the review list above is only the latest page.
+      this.prisma.storeReview.groupBy({ by: ['productId'], where: { storeId, status: 'PUBLISHED' }, _count: { _all: true }, _avg: { rating: true } }),
+    ]);
+    const reviewSummary = Object.fromEntries((ratings as any[]).filter(row => row.productId && row._count._all > 0 && row._avg.rating !== null)
+      .map(row => [row.productId, { count: row._count._all, average: Math.round(row._avg.rating * 10) / 10 }]));
+    return { articles, reviews, bundles, reviewSummary };
   }
 }

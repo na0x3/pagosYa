@@ -38,7 +38,7 @@ const product = () => ({
 describe('Inline storefront product options', () => {
   const windows: any[] = [];
   const errors: Error[] = [];
-  async function shop({ items = [product()] as any[], mode = 'preview', fullPage = false, template = '', saved = [] as any[], settings = {}, refreshedItems = items, onStart }: { items?: any[]; mode?: string; fullPage?: boolean; template?: string; saved?: any[]; settings?: Record<string, unknown>; refreshedItems?: any[]; onStart?: (w: any) => void } = {}) {
+  async function shop({ items = [product()] as any[], mode = 'preview', fullPage = false, template = '', saved = [] as any[], settings = {}, refreshedItems = items, onStart, content }: { items?: any[]; mode?: string; fullPage?: boolean; template?: string; saved?: any[]; settings?: Record<string, unknown>; refreshedItems?: any[]; onStart?: (w: any) => void; content?: any } = {}) {
     const virtualConsole = new VirtualConsole();
     virtualConsole.on('jsdomError', (error: Error) => {
       // jsdom does not implement cascade layers; runtime and event errors still fail.
@@ -57,7 +57,7 @@ describe('Inline storefront product options', () => {
     w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: mode === 'demo', data };
     const quote = { subtotal: 4000, discountAmount: 0, amount: 4000, currency: 'BOB', shippingOptions: [] };
     w.fetch = jest.fn(async (url: string) => ({ ok: true, json: async () => url.endsWith('/store') ? { ...data, items: refreshedItems } : quote }));
-    w.PAGOSYA_HOSTED_REQUEST = jest.fn(async () => ({ ok: true, body: quote }));
+    w.PAGOSYA_HOSTED_REQUEST = jest.fn(async (action: string) => ({ ok: true, body: action === 'content' && content ? content : quote }));
     (mode === 'demo' ? w.sessionStorage : w.localStorage).setItem('pagosya:cart:marca', JSON.stringify(saved));
     w.eval(commerce);
     onStart?.(w);
@@ -302,6 +302,36 @@ describe('Inline storefront product options', () => {
     expect(serialize()[0].quantity).toBe(2);
     choose(0, 'Azul'); choose(1, 'M');
     expect(query('[data-product-quantity-value]').textContent).toBe('1');
+  });
+
+  it('shows exact verified review totals, recent reviews, specification rows and related products on the full page', async () => {
+    const related = { id: 'cap', name: 'Gorra', amount: 1500, currency: 'BOB', stock: 4, imageUrls: ['https://shop.test/cap.jpg'] };
+    const soldOut = { id: 'sock', name: 'Medias', amount: 900, currency: 'BOB', stock: 0 };
+    const content = { articles: [], bundles: [], reviews: [{ id: 'r1', productId: 'shirt', displayName: 'Ana <b>', rating: 4, body: 'Buena tela.' }, { id: 'r2', productId: 'cap', displayName: 'Luis', rating: 5, body: 'Otra.' }], reviewSummary: { shirt: { count: 140, average: 4.8 } } };
+    const { query, w } = await shop({ mode: 'hosted', fullPage: true, content, items: [{ ...product(), tags: ['Material: Algodón', 'Hecho en La Paz'], recommendedProductIds: ['cap', 'sock', 'shirt', 'missing'] }, related, soldOut] });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(query('[data-product-rating]').hidden).toBe(false);
+    expect(query('[data-product-rating]').textContent).toContain('4,8 de 5 · 140 reseñas verificadas');
+    expect(query('[data-product-reviews]').hidden).toBe(false);
+    expect(query('.product-detail__review-list').children).toHaveLength(1);
+    expect(query('.product-detail__review-list').textContent).toContain('Ana <b>');
+    expect(query('.product-detail__review-list b')).toBeNull();
+    expect(query('.product-detail__fact').textContent).toBe('MaterialAlgodón');
+    expect(query('.product-detail__facts').children).toHaveLength(2);
+    const links = [...w.document.querySelectorAll('.product-detail__related a')] as any[];
+    expect(links.map(link => link.textContent)).toEqual([expect.stringContaining('Gorra')]);
+    expect(links[0].getAttribute('href')).toContain('?id=cap');
+  });
+
+  it('never shows a rating without a published summary and never loads reviews in preview', async () => {
+    const hosted = await shop({ mode: 'hosted', fullPage: true, content: { articles: [], bundles: [], reviews: [{ id: 'r1', productId: 'shirt', displayName: 'Ana', rating: 5, body: 'Bien.' }], reviewSummary: {} } });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(hosted.query('[data-product-rating]').hidden).toBe(true);
+    expect(hosted.query('[data-product-reviews]').hidden).toBe(true);
+    const preview = await shop({ fullPage: true, content: { reviews: [], reviewSummary: { shirt: { count: 3, average: 5 } } } });
+    expect(preview.query('[data-product-rating]').hidden).toBe(true);
+    expect(preview.w.PAGOSYA_HOSTED_REQUEST).not.toHaveBeenCalledWith('content', expect.anything());
+    expect(preview.query('.product-detail__related')).toBeNull();
   });
 
   it('updates simple-product quantity and shows only active discounts', async () => {

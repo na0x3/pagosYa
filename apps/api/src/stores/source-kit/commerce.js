@@ -251,12 +251,35 @@
     [data-pagosya-product] [data-product-option][data-option-price]::after{content:attr(data-option-price);margin-left:auto;font-size:.92em;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
     [data-pagosya-product] [data-product-option]:disabled[data-option-price]::after{text-decoration:line-through}
     [data-pagosya-product] .product-detail__buy{gap:0}
+    /* Verified reviews, specification rows and related products use only published catalog data. */
+    [data-pagosya-product] .product-detail__rating{display:flex;align-items:center;gap:8px;margin:-4px 0 14px;font-size:13px}
+    [data-pagosya-product] .product-detail__rating a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:inherit;text-underline-offset:4px}
+    [data-pagosya-product] .product-detail__stars{--rating:0;display:inline-block;letter-spacing:1px;line-height:1;background:linear-gradient(90deg,var(--product-accent) calc(var(--rating) * 20%),color-mix(in srgb,var(--product-ink) 22%,transparent) 0);-webkit-background-clip:text;background-clip:text;color:transparent}
+    [data-pagosya-product] .product-detail__facts:has(.product-detail__fact){margin:0;padding:0}
+    [data-pagosya-product] .product-detail__facts .product-detail__fact{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--product-line);list-style:none}
+    [data-pagosya-product] .product-detail__fact span:first-child{opacity:.72}
+    [data-pagosya-product] .product-detail__fact span:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}
+    [data-pagosya-product] :is(.product-detail__related,.product-detail__reviews):not([hidden]){display:grid;gap:20px;margin:clamp(40px,6vw,72px) 0 0;padding-top:clamp(24px,4vw,40px);border-top:1px solid var(--product-line)}
+    [data-pagosya-product] :is(.product-detail__related,.product-detail__reviews) h2{margin:0 0 20px;font-size:clamp(22px,2.4vw,28px);line-height:1.2}
+    [data-pagosya-product] .product-detail__related ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:20px 16px;margin:0;padding:0;list-style:none}
+    [data-pagosya-product] .product-detail__related a{display:grid;gap:6px;color:inherit;text-decoration:none}
+    [data-pagosya-product] .product-detail__related img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--store-radius,var(--brand-radius,10px));background:var(--product-tint)}
+    [data-pagosya-product] .product-detail__related a:hover .product-detail__related-name{text-decoration:underline;text-underline-offset:4px}
+    [data-pagosya-product] .product-detail__related-name{font-weight:600;overflow-wrap:anywhere}
+    [data-pagosya-product] .product-detail__related-price{font-size:14px;opacity:.8;font-variant-numeric:tabular-nums}
+    [data-pagosya-product] .product-detail__reviews-summary{display:flex;align-items:center;gap:10px;margin:-8px 0 0}
+    [data-pagosya-product] .product-detail__review-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px}
+    [data-pagosya-product] .product-detail__review-list article{padding:18px;border:1px solid var(--product-line);border-radius:var(--store-radius,var(--brand-radius,10px));background:var(--product-tint)}
+    [data-pagosya-product] .product-detail__review-list p{margin:0;line-height:1.55;overflow-wrap:anywhere}
+    [data-pagosya-product] .product-detail__review-score{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    [data-pagosya-product] .product-detail__review-list .product-detail__review-meta{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px}
     [data-pagosya-product] .product-detail__buy-total{font-variant-numeric:tabular-nums}
     [data-pagosya-product] .product-detail__buy-total:not(:empty)::before{content:"·";margin:0 10px;opacity:.7}
     [data-pagosya-product] .product-detail__subtotal:empty{display:none}
     /* Gallery stage: photos keep their own proportion; the counter sits on the photo. */
     [data-pagosya-product] .product-detail__stage{position:relative;min-width:0}
     [data-pagosya-product][data-pagosya-product-page] .product-detail__photo{aspect-ratio:var(--product-photo-ratio,4/5)}
+    @media(min-width:641px){[data-pagosya-product][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:24px;align-self:start}}
     @media(min-width:1100px){[data-pagosya-product][data-pagosya-product-page] .product-detail__layout:has(.product-detail__gallery[data-rail]){grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}}
     [data-pagosya-product] .product-detail__stage .product-detail__navigation{position:absolute;right:12px;bottom:12px;gap:2px;margin:0;padding:0 2px;border-radius:999px;background:color-mix(in srgb,var(--product-paper) 88%,transparent);box-shadow:0 1px 8px #0000001a;font-variant-numeric:tabular-nums}
     [data-pagosya-product] .product-detail__stage .product-detail__navigation button{width:44px;min-height:44px;border:0;border-radius:50%;background:transparent;font-size:16px}
@@ -317,7 +340,35 @@
     detail.querySelectorAll('[data-product-total]').forEach(el => { el.textContent = total; });
     updateStickyBar();
   }
-  let stickyObserver = null, buyPassed = false;
+  let stickyObserver = null, buyPassed = false, commerceData = null;
+  const starsMarkup = rating => `<span class="product-detail__stars" style="--rating:${Math.max(0, Math.min(5, Number(rating) || 0))}" aria-hidden="true">★★★★★</span>`;
+  // Exact published totals come from the server summary, never from the latest-reviews page.
+  function decorateProductReviews() {
+    const p = selectedProduct, line = detail.querySelector('[data-product-rating]'), section = detail.querySelector('[data-product-reviews]');
+    if (!p || !line || !commerceData) return;
+    const summary = commerceData.reviewSummary?.[p.id];
+    if (!summary || !Number.isSafeInteger(summary.count) || summary.count < 1 || !(summary.average >= 1 && summary.average <= 5)) { line.hidden = true; if (section) section.hidden = true; return; }
+    const list = (Array.isArray(commerceData.reviews) ? commerceData.reviews : []).filter(review => review.productId === p.id && Number.isInteger(review.rating) && review.rating >= 1 && review.rating <= 5).slice(0, 6);
+    const authoredReviews = [...document.querySelectorAll('[data-pagosya-reviews]')].some(slot => !detail.contains(slot));
+    const label = `${summary.average.toLocaleString('es-BO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5 · ${summary.count} ${summary.count === 1 ? 'reseña verificada' : 'reseñas verificadas'}`;
+    const showSection = !!section && list.length > 0 && !authoredReviews;
+    line.innerHTML = showSection ? `<a href="#product-reviews">${starsMarkup(summary.average)}<span>${label}</span></a>` : `${starsMarkup(summary.average)}<span>${label}</span>`;
+    line.hidden = false;
+    if (!section) return;
+    section.hidden = !showSection;
+    section.innerHTML = showSection ? `<h2 id="product-reviews-title">Reseñas verificadas</h2><p class="product-detail__reviews-summary">${starsMarkup(summary.average)}<span>${label}</span></p><div class="product-detail__review-list">${list.map(review => `<article><p class="product-detail__review-meta">${starsMarkup(review.rating)}<span class="product-detail__review-score">${review.rating} de 5</span> <strong>${escape(review.displayName)}</strong></p><p>${escape(review.body)}</p></article>`).join('')}</div>` : '';
+  }
+  function relatedMarkup(p) {
+    const ids = Array.isArray(p.recommendedProductIds) ? p.recommendedProductIds : [];
+    const items = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(item => item && item.id !== p.id && limit(item) !== 0).slice(0, 4);
+    if (!items.length) return '';
+    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">Combínalo con</h2><ul>${items.map(item => {
+      const image = galleryImages(item)[0];
+      const amounts = item.variants?.length ? item.variants.map(v => price({ ...item, amount: v.amount })) : [price(item)];
+      const low = Math.min(...amounts);
+      return `<li><a href="${escape(pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id)))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy" />` : ''}<span class="product-detail__related-name">${escape(item.name)}</span><span class="product-detail__related-price">${amounts.some(amount => amount !== low) ? 'Desde ' : ''}${money(low, item.currency)}</span></a></li>`;
+    }).join('')}</ul></section>`;
+  }
   function updateStickyBar() {
     const bar = detail.querySelector('[data-product-sticky]');
     if (!bar || !selectedProduct) return;
@@ -433,7 +484,7 @@
     track('product_view');
     selectedProduct = p; selectedImage = 0; selectedOptions = []; selectedQuantity = 1; detailTrigger = trigger;
     const images = galleryImages(p), complex = p.variants?.length || p.extras?.length, groups = optionGroups(p);
-    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}><div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     showImage(0);
     // Frame full-page photos in their own proportion (portrait to 3:2 landscape), not a fixed crop box.
     const firstPhoto = fullProductPage && detail.querySelector('.product-detail__photo');
@@ -442,6 +493,7 @@
       if (firstPhoto.complete) frame(); else firstPhoto.addEventListener('load', frame, { once: true });
     }
     watchStickyBar();
+    decorateProductReviews();
     renderCart();
     if (!fullProductPage && !detail.open) { oldOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden"; detail.showModal(); }
     detail.querySelector("[data-product-close]")?.focus();
@@ -459,7 +511,7 @@
     const delivery = (store.locations || []).map(l => `<li><strong>${escape(l.name)}</strong>${l.address ? `<br>${escape(l.address)}` : ''}<br>${[l.pickupEnabled && 'Retiro en tienda', l.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ') || 'Sin métodos de entrega disponibles'}</li>`).join('');
     const tags = Array.isArray(p.tags) ? [...new Set(p.tags.filter(tag => typeof tag === 'string' && tag.trim()))] : [];
     const panels = [];
-    if (tags.length) panels.push({ id: 'description', label: 'Detalles', content: `<ul class="product-detail__facts">${tags.map(tag => `<li>${escape(tag)}</li>`).join('')}</ul>` });
+    if (tags.length) panels.push({ id: 'description', label: 'Detalles', content: `<ul class="product-detail__facts">${tags.map(tag => { const fact = tag.match(/^([^:]{1,40}):\s*(\S.*)$/); return fact ? `<li class="product-detail__fact"><span>${escape(fact[1].trim())}</span><span>${escape(fact[2])}</span></li>` : `<li>${escape(tag)}</li>`; }).join('')}</ul>` });
     if (delivery || store.shippingEnabled || store.shippingPickupEnabled) panels.push({ id: 'delivery', label: 'Envíos y retiro', content: `${delivery ? `<ul class="product-delivery-list">${delivery}</ul>` : ''}<p>Elige la opción disponible al revisar tu pedido. El total final se confirma en pagosYa.</p>` });
     if (!panels.length) return '';
     return `<div class="product-tabs" role="tablist" aria-label="Información del producto">${panels.map((panel, index) => `<button type="button" role="tab" id="product-${panel.id}-tab" aria-controls="product-${panel.id}-panel" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}" data-product-tab="${panel.id}">${panel.label}</button>`).join('')}</div>${panels.map((panel, index) => `<div role="tabpanel" id="product-${panel.id}-panel" aria-labelledby="product-${panel.id}-tab" tabindex="0"${index ? ' hidden' : ''}>${panel.content}</div>`).join('')}`;
@@ -1169,12 +1221,13 @@
   }
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
-    if (!slots.length) return;
+    if (!slots.length && !fullProductPage) return;
     if (preview || config.demo) { slots.forEach(slot => { slot.textContent = 'El contenido publicado del comercio aparecerá aquí en la tienda.'; }); return; }
     try {
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/content?locale=${encodeURIComponent(document.documentElement.lang || 'es')}`, { credentials: 'omit' });
       if (!response.ok) throw new Error('No se pudo cargar el contenido.');
       const data = await response.json();
+      commerceData = data; decorateProductReviews();
       slots.forEach(slot => {
         if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = data.articles.map(article => `<article id="articulo-${escape(article.slug)}"><h2>${escape(article.title)}</h2><p>${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p><p>${escape(article.excerpt)}</p><p><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p><details><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>';
         if (slot.hasAttribute('data-pagosya-reviews')) slot.innerHTML = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id).map(review => `<article><strong>${escape(review.displayName)}</strong><p>${review.rating} de 5 · Compra verificada</p><p>${escape(review.body)}</p></article>`).join('') || '<p>Todavía no hay reseñas publicadas.</p>';
