@@ -343,3 +343,29 @@ describe("PaymentIntentsService callback admission", () => {
     expect(test.applyRailResult).not.toHaveBeenCalled();
   });
 });
+
+describe("PaymentIntentsService sale records", () => {
+  it("records one ORDER movement per sold product or combination and sends mapped SKUs", async () => {
+    const service = makeService() as any;
+    service.webhooks = { enqueueEvent: jest.fn() };
+    const tx = {
+      paymentLink: { findMany: jest.fn().mockResolvedValue([
+        { id: "lamp", stock: 21, variants: [{ id: "negro", name: "Negro", amount: 100, stock: 9 }, { id: "marfil", name: "Marfil", amount: 100, stock: 12 }] },
+        { id: "mug", stock: 4, variants: [] },
+      ]) },
+      integrationProductMapping: { findMany: jest.fn().mockResolvedValue([{ paymentLinkId: "lamp", variantId: "negro", externalSku: "LAMP-NEGRO", connectionId: "conn_1" }]) },
+      inventoryMovement: { create: jest.fn() },
+    };
+    await service.recordCartSales(tx, "merchant_1", "pi_1", { storeId: "store_1", cart: [
+      { paymentLinkId: "lamp", variantId: "negro", variantName: "Negro", name: "Lámpara", quantity: 2, unitAmount: 100 },
+      { paymentLinkId: "lamp", variantId: "negro", variantName: "Negro", name: "Lámpara", quantity: 1, unitAmount: 100 },
+      { paymentLinkId: "mug", name: "Taza", quantity: 1, unitAmount: 50 },
+    ] });
+    expect(tx.inventoryMovement.create).toHaveBeenCalledTimes(2);
+    expect(tx.inventoryMovement.create).toHaveBeenCalledWith({ data: expect.objectContaining({ paymentLinkId: "lamp", variantId: "negro", quantityDelta: -3, stockAfter: 9, sourceType: "ORDER", sourceId: "pi_1" }) });
+    expect(service.webhooks.enqueueEvent).toHaveBeenCalledWith(tx, "merchant_1", "inventory.sold", { paymentIntentId: "pi_1", storeId: "store_1", items: [
+      expect.objectContaining({ productId: "lamp", variantId: "negro", quantity: 3, stockAfter: 9, skus: [{ connectionId: "conn_1", externalSku: "LAMP-NEGRO" }] }),
+      expect.objectContaining({ productId: "mug", variantId: null, quantity: 1, stockAfter: 4, skus: [] }),
+    ] });
+  });
+});

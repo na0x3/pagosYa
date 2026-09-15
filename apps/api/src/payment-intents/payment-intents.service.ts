@@ -161,6 +161,7 @@ export class PaymentIntentsService {
     const metadata = { ...(intent.metadata as Prisma.JsonObject), ...(locationStockReserved ? { locationStockReserved: true } : {}) };
     await finishCredit(tx, id, true);
     await this.decrementStockForCart(tx, metadata);
+    await this.recordCartSales(tx, intent.merchantId, id, metadata);
     await this.recordProductStats(tx, intent.merchantId, metadata);
     const updated = await tx.paymentIntent.update({ where: { id }, data: { status: 'SUCCEEDED', metadata } });
     await tx.storeOrder.update({ where: { id: order.id }, data: { status: 'PAID', statusEvents: { create: { status: 'PAID' } } } });
@@ -515,6 +516,7 @@ export class PaymentIntentsService {
           customerDocument: current.customerDocument,
         });
         await this.decrementStockForCart(tx, current.metadata);
+        await this.recordCartSales(tx, merchantId, updated.id, current.metadata);
         await this.recordProductStats(tx, merchantId, current.metadata);
         const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true } });
         if (order?.storeId && updated.livemode) {
@@ -963,6 +965,40 @@ export class PaymentIntentsService {
   /** Increment compact per-product totals in the same transaction that marks
    * the payment successful. This makes retries atomic and avoids rescanning
    * every historical PaymentIntent for storefront and finance reads. */
+  /**
+   * After stock was decremented, keep one auditable ORDER movement per sold
+   * product or combination and tell connected systems which SKUs sold. The
+   * movements also let an inbound stock count taken before these sales be
+   * reconciled instead of overwriting them.
+   */
+  private async recordCartSales(tx: Prisma.TransactionClient, merchantId: string, paymentIntentId: string, metadata: Prisma.JsonValue): Promise<void> {
+    const snapshot = metadata as { storeId?: string; cart?: CartInventoryLine[] } | null;
+    if (!snapshot?.storeId || !Array.isArray(snapshot.cart) || !snapshot.cart.length) return;
+    const sold = new Map<string, { paymentLinkId: string; variantId: string | null; name: string; variantName: string | null; quantity: number }>();
+    for (const line of snapshot.cart) {
+      const key = `${line.paymentLinkId}:${line.variantId ?? ""}`;
+      const current = sold.get(key);
+      sold.set(key, { paymentLinkId: line.paymentLinkId, variantId: line.variantId ?? null, name: line.name, variantName: line.variantName ?? null, quantity: (current?.quantity ?? 0) + line.quantity });
+    }
+    const ids = [...new Set([...sold.values()].map((line) => line.paymentLinkId))];
+    const [products, mappings] = await Promise.all([
+      tx.paymentLink.findMany({ where: { id: { in: ids }, storeId: snapshot.storeId }, select: { id: true, stock: true, variants: true } }),
+      tx.integrationProductMapping.findMany({ where: { paymentLinkId: { in: ids } }, select: { paymentLinkId: true, variantId: true, externalSku: true, connectionId: true } }),
+    ]);
+    const items = [];
+    for (const line of sold.values()) {
+      const product = products.find((candidate) => candidate.id === line.paymentLinkId);
+      if (!product) continue;
+      const stockAfter = line.variantId ? readProductVariants(product.variants).find((variant) => variant.id === line.variantId)?.stock ?? null : product.stock;
+      await tx.inventoryMovement.create({ data: { merchantId, storeId: snapshot.storeId, paymentLinkId: line.paymentLinkId, variantId: line.variantId, quantityDelta: -line.quantity, stockAfter, reason: "Venta en pagosYa", sourceType: "ORDER", sourceId: paymentIntentId } });
+      items.push({
+        productId: line.paymentLinkId, variantId: line.variantId, name: line.name, variantName: line.variantName, quantity: line.quantity, stockAfter,
+        skus: mappings.filter((mapping) => mapping.paymentLinkId === line.paymentLinkId && (mapping.variantId ?? null) === line.variantId).map((mapping) => ({ connectionId: mapping.connectionId, externalSku: mapping.externalSku })),
+      });
+    }
+    if (items.length) await this.webhooks.enqueueEvent(tx, merchantId, "inventory.sold", { paymentIntentId, storeId: snapshot.storeId, items });
+  }
+
   private async recordProductStats(tx: Prisma.TransactionClient, merchantId: string, metadata: Prisma.JsonValue): Promise<void> {
     const snapshot = metadata as { storeId?: string; cart?: CartInventoryLine[] } | null;
     if (!snapshot?.storeId || !Array.isArray(snapshot.cart)) return;

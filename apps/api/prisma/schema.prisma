@@ -1683,6 +1683,7 @@ model InventoryMovement {
   merchantId    String
   storeId       String
   paymentLinkId String
+  variantId     String?
   quantityDelta Int
   stockAfter    Int?
   reason        String
@@ -1692,6 +1693,7 @@ model InventoryMovement {
 
   @@index([storeId, createdAt])
   @@index([paymentLinkId, createdAt])
+  @@index([storeId, sourceType, createdAt])
 }
 
 model ReconciliationImport {
@@ -1808,13 +1810,15 @@ model IntegrationProductMapping {
   id            String   @id @default(cuid())
   connectionId  String
   paymentLinkId String
+  // Set for a product with option combinations: the SKU maps to that one combination.
+  variantId     String?
   externalSku   String
   externalName  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([connectionId, externalSku])
-  @@unique([connectionId, paymentLinkId])
+  @@unique([connectionId, paymentLinkId, variantId])
   @@index([paymentLinkId])
 }
 
@@ -1863,6 +1867,8 @@ model IntegrationSyncRun {
   status       String    @default("RUNNING")
   itemCount    Int       @default(0)
   errorMessage String?
+  // Per-item outcome, e.g. SKUs that matched nothing, so the merchant can fix them.
+  details      Json?
   startedAt    DateTime  @default(now())
   completedAt  DateTime?
 

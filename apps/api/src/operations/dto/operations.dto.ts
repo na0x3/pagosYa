@@ -420,6 +420,12 @@ export class CreateProductMappingDto {
   @IsString()
   paymentLinkId!: string;
 
+  @ApiPropertyOptional({ description: "Required when the product has option combinations: the combination this SKU counts." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  variantId?: string;
+
   @IsString()
   @MaxLength(120)
   externalSku!: string;
@@ -435,10 +441,24 @@ export class InboundStockItemDto {
   @MaxLength(120)
   externalSku!: string;
 
+  @ApiPropertyOptional({ description: "Absolute units counted by your system. Send stock or delta, not both." })
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1_000_000)
-  stock!: number;
+  stock?: number;
+
+  @ApiPropertyOptional({ description: "When your count was taken. pagosYa subtracts units it sold after this moment so they are not overwritten." })
+  @IsOptional()
+  @IsDateString()
+  asOf?: string;
+
+  @ApiPropertyOptional({ description: "Units to add (positive) or remove (negative), e.g. a delivery or an in-store sale." })
+  @IsOptional()
+  @IsInt()
+  @Min(-1_000_000)
+  @Max(1_000_000)
+  delta?: number;
 }
 
 export class InboundStockSyncDto {
