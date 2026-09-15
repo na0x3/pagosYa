@@ -1,0 +1,84 @@
+{
+  "id": "cmu2tbqbp000htxevzca1pq3h",
+  "requestId": "19e5e979-74c5-4fab-aadc-31eb0d0aa243",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 22.1236,
+  "observedCredits": 22.1236,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "b28a8755-e60f-416b-aeeb-34c53fa3d0d9",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:14:31.478Z",
+      "finishedAt": "2026-09-15T15:14:41.650Z",
+      "actualMicroUsd": 22681,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "d167afa8-537f-46b2-9384-27e22cae3131",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:14:42.714Z",
+      "finishedAt": "2026-09-15T15:15:39.968Z",
+      "actualMicroUsd": 160211,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "cfd3adff-7880-49ad-9d75-742dc971dbac",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:15:43.562Z",
+      "finishedAt": "2026-09-15T15:16:01.662Z",
+      "actualMicroUsd": 38344,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:14:28.741Z",
+  "updatedAt": "2026-09-15T15:16:01.666Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A es preferible: evita el enlace adicional de volver que B añade sobre la ruta de migas. La jerarquía tipográfica y las opciones son legibles, pero la composición y el cierre de compra aún requieren ajustes importantes.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Zona principal de producto, especialmente la mitad derecha en escritorio",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Dado que no hay fotografías disponibles, no inventar imágenes: recomponer la ficha en una sola columna o ampliar el bloque de compra para eliminar el gran vacío de escritorio. Mantener cualquier recurso visual limitado a material de catálogo confirmado.",
+        "observation": "La ficha ocupa una columna estrecha a la izquierda y deja una extensión vacía muy grande a la derecha. En móvil tampoco existe un bloque visual que compense esa ausencia, por lo que la página comienza como una ficha textual larga en vez de una presentación de producto equilibrada."
+      },
+      {
+        "category": "layout",
+        "location": "Cantidad y acción principal",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Agrupar visualmente cantidad y acción en un mismo bloque de compra y, cuando las opciones estén elegidas, mostrar el total correspondiente en o junto a la acción principal sin sustituir la denominación clara del botón.",
+        "observation": "El selector de cantidad y el botón de añadir están separados por líneas y espacio, y el botón solo nombra la acción. El importe total de la configuración no aparece integrado en la acción de compra."
+      },
+      {
+        "category": "consistency",
+        "location": "Opciones de color y talla",
+        "severity": "minor",
+        "viewport": "both",
+        "correction": "Aplicar un estado seleccionado consistente y visible a cada opción elegida, conservando el nombre, la muestra de color cuando corresponda y el precio completo dentro de cada etiqueta.",
+        "observation": "Las alternativas muestran precios, pero en la captura inicial no hay una indicación visual inequívoca del valor seleccionado para cada grupo; el color azul usa una muestra, mientras Crudo no tiene una señal equivalente."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_02544659d566c49d016aa96120a09487d2a73c1594203753b5",
+    "regressions": [],
+    "providerMicroUsd": 38344
+  },
+  "resumeAvailable": false
+}

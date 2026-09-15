@@ -1,0 +1,84 @@
+{
+  "id": "cmu2stm9x0001hrl9iz8ku61q",
+  "requestId": "5634cef3-016f-4b6a-b0b7-ef07a73090f3",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 22.7596,
+  "observedCredits": 22.7596,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "03a5115a-f276-4a8a-97e7-c33a12524bf5",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:00:26.682Z",
+      "finishedAt": "2026-09-15T15:00:42.829Z",
+      "actualMicroUsd": 24856,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "96c27610-a721-4ba2-8d2b-e7f79a136cde",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:00:43.191Z",
+      "finishedAt": "2026-09-15T15:01:46.527Z",
+      "actualMicroUsd": 164367,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "800f80d9-23dc-4642-ac9b-1babc06d72f7",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:01:50.685Z",
+      "finishedAt": "2026-09-15T15:02:09.204Z",
+      "actualMicroUsd": 38373,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:00:23.686Z",
+  "updatedAt": "2026-09-15T15:02:09.207Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A es preferible: conserva la jerarquía de compra y evita la franja adicional de navegación que B añade antes de las migas, especialmente costosa en móvil. La composición respeta la ausencia confirmada de fotografías sin inventar imágenes.",
+    "findings": [
+      {
+        "category": "readability",
+        "location": "Bloque de variantes, en particular TALLA",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Mostrar un precio inequívoco por cada variante cuando corresponda y actualizar una línea de total o el propio CTA tras seleccionar color y talla; evitar repetir «desde» dentro de opciones individuales si no aporta una diferencia real.",
+        "observation": "Las opciones de talla repiten precios expresados como «desde», aunque la ficha ya comunica un precio inicial y la variante L muestra un importe distinto. La presentación no deja suficientemente claro qué elección determina el total final."
+      },
+      {
+        "category": "layout",
+        "location": "Cantidad y acción principal",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Agrupar cantidad y CTA en un mismo bloque de compra, con el importe resultante visible en la acción o inmediatamente asociado a ella una vez elegidas las opciones.",
+        "observation": "El selector de cantidad y el botón principal quedan visualmente separados por reglas y espacio vertical, mientras que el botón no incorpora el total. Esto debilita la lectura inmediata de qué se añadirá al pedido."
+      },
+      {
+        "category": "layout",
+        "location": "Mitad derecha del cuerpo de la ficha",
+        "severity": "minor",
+        "viewport": "desktop",
+        "correction": "Reequilibrar la retícula de escritorio para que el bloque de producto aproveche mejor el ancho disponible —por ejemplo, ampliando moderadamente la columna de compra— sin añadir fotografía no disponible ni crear contenido no confirmado.",
+        "observation": "La columna de compra ocupa una fracción reducida del ancho y deja una superficie vacía muy amplia a la derecha durante casi toda la ficha inicial."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_001113f485071329016aa95de1339887d285cb22cb75130369",
+    "regressions": [],
+    "providerMicroUsd": 38373
+  },
+  "resumeAvailable": false
+}

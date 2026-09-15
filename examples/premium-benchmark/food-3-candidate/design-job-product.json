@@ -1,0 +1,76 @@
+{
+  "id": "cmu2tm0g8002ptxevms9w8dk5",
+  "requestId": "d99c3fb4-eb67-4a70-9b39-11d3589e6a68",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 19.2189,
+  "observedCredits": 19.2189,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "a83d913f-0ec4-4182-854a-154d7a427cb1",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:22:31.711Z",
+      "finishedAt": "2026-09-15T15:22:38.455Z",
+      "actualMicroUsd": 18936,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "1b37a08f-1aad-482b-b2ff-5be8b0b48863",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:22:39.527Z",
+      "finishedAt": "2026-09-15T15:22:59.710Z",
+      "actualMicroUsd": 136483,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "f9720b80-5be4-4cad-b6c1-6b2b8a2bb153",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:23:04.809Z",
+      "finishedAt": "2026-09-15T15:23:19.026Z",
+      "actualMicroUsd": 36770,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:22:28.424Z",
+  "updatedAt": "2026-09-15T15:23:19.028Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "B es preferible: elimina el enlace redundante de volver que duplicaba la ruta de migas, mantiene la fotografía, opciones y compra con una composición equivalente, y reduce ligeramente la altura total sin pérdida visible de contenido útil.",
+    "findings": [
+      {
+        "category": "imagery",
+        "location": "Galería principal, franja superior de la imagen",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Ajustar la proporción o el encuadre del contenedor para que la fotografía real ocupe el área principal desde su borde superior, preservando las botellas y las miniaturas completas.",
+        "observation": "El contenedor de la foto deja una banda vacía clara y alta por encima de la fotografía. En móvil ocupa una porción notable del primer bloque visual y retrasa el producto; en escritorio también rompe la continuidad de la galería."
+      },
+      {
+        "category": "layout",
+        "location": "Bloque de cantidad y botón “Añadir al pedido”",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Una vez elegidas las opciones, mostrar el importe correspondiente dentro de la acción principal o inmediatamente integrado en ese mismo bloque, sin desplazar la cantidad ni el botón.",
+        "observation": "La cantidad y la acción están agrupadas, pero el botón no comunica el total que resultaría de la selección. Esto deja el importe final fuera del punto de decisión, especialmente cuando las opciones modifican el precio."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_036d96a2828e6ae0016aa962d9998087d2906d0a5f36384700",
+    "regressions": [],
+    "providerMicroUsd": 36770
+  },
+  "resumeAvailable": false
+}

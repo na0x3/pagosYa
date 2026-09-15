@@ -1,0 +1,70 @@
+{
+  "id": "cmu2th3qf001otxevajlw84kw",
+  "requestId": "6fe029c2-7e76-423e-a280-330ec2f85dbb",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 23.5379,
+  "observedCredits": 23.5379,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "954e2019-3a90-44f0-9633-32dc33f6e5df",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:18:41.347Z",
+      "finishedAt": "2026-09-15T15:18:53.078Z",
+      "actualMicroUsd": 23238,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "48f2bf66-51b2-47c3-bc40-c2b368f8f148",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:18:53.196Z",
+      "finishedAt": "2026-09-15T15:19:59.843Z",
+      "actualMicroUsd": 174371,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "24500191-d3f1-4212-ae3a-81a3ddded7c1",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:20:03.724Z",
+      "finishedAt": "2026-09-15T15:20:18.949Z",
+      "actualMicroUsd": 37770,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:18:39.399Z",
+  "updatedAt": "2026-09-15T15:20:18.953Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "B mejora claramente la anatomía de compra: muestra una opción seleccionada, refleja el volumen elegido junto a su etiqueta y hace visible el total en la acción principal. También elimina el enlace de regreso duplicado frente a las migas. Mantiene una composición móvil ordenada y un reaseguro breve.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Panel lavanda a la derecha del bloque inicial de producto",
+        "severity": "minor",
+        "viewport": "desktop",
+        "correction": "Reducir la altura o la escala del texto del panel, o equilibrar su proporción con la columna de compra, manteniendo el recurso tipográfico y sin introducir fotografías ni ilustraciones de envases.",
+        "observation": "El panel ocupa una gran superficie, pero contiene únicamente una etiqueta pequeña y una línea de texto muy grande. Frente a la columna de compra estrecha, su peso visual desplaza la atención del nombre, las opciones y la acción principal."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_018119d9b9a753a8016aa96224fd2c87d2b5a31ff016ea1e38",
+    "regressions": [
+      "En escritorio, el ancho menor de la columna de compra en B hace que el nombre del producto se divida en dos líneas, mientras que en A cabe en una sola."
+    ],
+    "providerMicroUsd": 37770
+  },
+  "resumeAvailable": false
+}
