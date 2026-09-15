@@ -27,7 +27,14 @@ async function main() {
         let saved = await readFile(path, 'utf8').then(JSON.parse).catch(() => null);
         if (saved?.status && !['QUEUED', 'RUNNING'].includes(saved.status)) { finished++; continue; }
         if (!saved) {
-          saved = await jobs.create(run.merchantId, run.storeId, { requestId: randomUUID(), revision: run.revision, page: process.env.BENCHMARK_PAGE === 'product.html' ? 'product.html' : 'index.html', maxCredits: 150, maxRepairs: 1 });
+          // Review the store's latest revision; an earlier applied design job may have advanced it.
+          const latest = await projects.current(run.merchantId, run.storeId);
+          try {
+            saved = await jobs.create(run.merchantId, run.storeId, { requestId: randomUUID(), revision: latest.revision, page: process.env.BENCHMARK_PAGE === 'product.html' ? 'product.html' : 'index.html', maxCredits: 150, maxRepairs: 1 });
+          } catch (error) {
+            saved = { status: 'NOT_STARTED', error: error instanceof Error ? error.message : 'No se pudo iniciar.' };
+            await writeFile(path, JSON.stringify(saved, null, 2)); console.log(JSON.stringify({ id, ...saved })); finished++; continue;
+          }
           await writeFile(path, JSON.stringify(saved, null, 2)); console.log(`${id}: job ${saved.id}`);
         }
         let previous = '';
@@ -50,7 +57,10 @@ async function main() {
         }
         finished++;
       }
-      if (finished === 18) break;
+      // Candidates that never completed generation cannot be reviewed; stop once every reviewable one is done.
+      const candidates = (await readdir(folder)).filter(id => id.endsWith('-candidate'));
+      const reviewable = (await Promise.all(candidates.map(id => readFile(resolve(folder, id, 'receipt.json'), 'utf8').then(JSON.parse).catch(() => null)))).filter(run => run && ['completed', 'failed', 'interrupted'].includes(run.status)).length;
+      if (finished >= reviewable) break;
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
   } finally { await app.close(); }

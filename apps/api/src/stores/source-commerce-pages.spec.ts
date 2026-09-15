@@ -336,6 +336,32 @@ describe('Inline storefront product options', () => {
     expect(preview.query('.product-detail__related')).toBeNull();
   });
 
+  it('keeps quantity with the action, shows the starting price before choices and exact choice prices only', async () => {
+    const { query, choose, w } = await shop({ fullPage: true });
+    expect(query('.product-detail__purchase .product-detail__buy')).not.toBeNull();
+    expect(query('[data-product-total]').textContent).toMatch(/^desde .*25[,.]00/);
+    // Choice labels are exact prices, never "desde" ranges (sold-out combinations do not count).
+    const labels = () => [...w.document.querySelectorAll('[data-product-option]')].map((b: any) => b.dataset.optionPrice || '');
+    expect(labels().filter(Boolean).length).toBeGreaterThan(0);
+    expect(labels().some(label => label.includes('desde'))).toBe(false);
+    choose(0, 'Azul');
+    expect(query('[data-product-option="1"]:not([disabled])').textContent).toBe('M');
+    choose(1, 'M');
+    expect(query('[data-product-total]').textContent).toMatch(/40[,.]00/);
+    expect(query('[data-product-total]').textContent).not.toContain('desde');
+  });
+
+  it('splits a photo-less full page into details and a purchase panel in reading order', async () => {
+    const { query, w } = await shop({ fullPage: true, items: [{ ...product(), imageUrls: [], variants: product().variants.map(({ imageUrl, ...v }: any) => v), tags: ['Algodón'] }] });
+    const copy = query('.product-detail__copy');
+    expect(copy.hasAttribute('data-split')).toBe(true);
+    expect([...copy.children].map((child: any) => child.className)).toEqual(['product-detail__summary', 'product-detail__buybox', 'product-detail__details']);
+    expect(query('.product-detail__summary h1').textContent).toBe('Camisa');
+    expect(query('.product-detail__buybox .product-detail__options')).not.toBeNull();
+    expect(query('.product-detail__details [role=tabpanel]')).not.toBeNull();
+    expect(w.document.querySelectorAll('.product-detail__buy')).toHaveLength(1);
+  });
+
   it('updates simple-product quantity and shows only active discounts', async () => {
     const { query, click, serialize } = await shop({ fullPage: true, items: [{ ...product(), variants: [], stock: 3, discountPercent: 10 }] });
     expect(query('.product-detail__original').textContent).toMatch(/20[,.]00/);

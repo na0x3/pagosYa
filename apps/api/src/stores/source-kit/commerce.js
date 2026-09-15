@@ -244,13 +244,22 @@
     [data-pagosya-product] .product-detail__options legend{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
     [data-pagosya-product] [data-product-selection]{letter-spacing:0;text-transform:none;font-size:13px}
     [data-pagosya-product] .product-detail__values[data-priced]{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__layout[data-no-images] .product-detail__copy{width:100%;max-width:720px}
+    [data-pagosya-product][data-pagosya-product-page] .product-detail__copy[data-split]{width:100%;max-width:none}
+    @media(min-width:900px){
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__copy[data-split]{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);grid-template-rows:auto 1fr;column-gap:clamp(40px,6vw,96px);align-items:start}
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__summary{grid-column:1;grid-row:1}
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__details{grid-column:1;grid-row:2}
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__buybox{grid-column:2;grid-row:1 / span 2;position:sticky;top:24px;padding:clamp(20px,2.4vw,32px);border:1px solid var(--product-line);border-radius:var(--store-radius,var(--brand-radius,12px));background:var(--product-paper)}
+    }
     [data-pagosya-product] .product-detail__values[data-priced] [data-product-option]{justify-content:flex-start;width:100%;padding:12px 16px;text-align:left}
     /* Priced choices wrap the price under the label in narrow authored grids instead of crushing the label. */
     [data-pagosya-product] [data-product-option][data-option-price]{flex-wrap:wrap;column-gap:14px;row-gap:2px;overflow-wrap:normal}
     [data-pagosya-product] [data-product-option][data-option-price]::after{content:attr(data-option-price);margin-left:auto;font-size:.92em;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
     [data-pagosya-product] [data-product-option]:disabled[data-option-price]::after{text-decoration:line-through}
     [data-pagosya-product] .product-detail__buy{gap:0}
+    [data-pagosya-product] .product-detail__purchase .product-detail__buy{flex:1 1 100%;grid-column:1 / -1;width:100%;margin:0}
+    [data-pagosya-product] .product-detail__purchase .product-detail__quantity{justify-self:start;width:max-content;max-width:100%}
+    [data-pagosya-product] .product-detail__buy-total{white-space:nowrap}
     /* Verified reviews, specification rows and related products use only published catalog data. */
     [data-pagosya-product] .product-detail__rating{display:flex;align-items:center;gap:8px;margin:-4px 0 14px;font-size:13px}
     [data-pagosya-product] .product-detail__rating a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:inherit;text-underline-offset:4px}
@@ -325,8 +334,8 @@
     const amount = price(base), sale = amount < base.amount;
     return `<strong class="product-detail__price">${from ? 'Desde ' : ''}${money(amount, p.currency)}</strong>${sale ? `<del class="product-detail__original" aria-label="Precio anterior">${money(base.amount, p.currency)}</del><span class="product-detail__saving">${escape(p.discountPercent)}% de descuento</span>` : ''}`;
   }
-  function quantityMarkup() {
-    return '<div class="product-detail__purchase"><div class="product-detail__quantity" role="group" aria-label="Cantidad"><button type="button" data-product-quantity="-1" aria-label="Reducir cantidad" disabled>−</button><output data-product-quantity-value aria-live="polite" aria-label="Cantidad de unidades">1</output><button type="button" data-product-quantity="1" aria-label="Aumentar cantidad">+</button></div><span class="product-detail__subtotal" data-product-subtotal></span></div>';
+  function quantityMarkup(action = '') {
+    return '<div class="product-detail__purchase"><div class="product-detail__quantity" role="group" aria-label="Cantidad"><button type="button" data-product-quantity="-1" aria-label="Reducir cantidad" disabled>−</button><output data-product-quantity-value aria-live="polite" aria-label="Cantidad de unidades">1</output><button type="button" data-product-quantity="1" aria-label="Aumentar cantidad">+</button></div><span class="product-detail__subtotal" data-product-subtotal></span>' + action + '</div>';
   }
   function updateQuantity() {
     if (!selectedProduct || !detail.querySelector('[data-product-quantity-value]')) return;
@@ -338,9 +347,11 @@
       button.disabled = !ready || checkingOut || (Number(button.dataset.productQuantity) < 0 ? selectedQuantity <= 1 : selectedQuantity >= available);
     });
     const amount = price(variant ? { ...selectedProduct, amount: variant.amount } : selectedProduct);
-    const total = groups && !variant || !available ? '' : money(amount * selectedQuantity, selectedProduct.currency);
+    const pending = groups && !variant;
+    const startingAt = pending ? selectedProduct.variants.filter(v => remaining(selectedProduct, v) > 0 && variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value)).map(v => price({ ...selectedProduct, amount: v.amount })) : [];
+    const total = pending ? startingAt.length ? `desde ${money(Math.min(...startingAt), selectedProduct.currency)}` : '' : available ? money(amount * selectedQuantity, selectedProduct.currency) : '';
     // The action carries the live total; the subtotal line only adds information for several units.
-    detail.querySelector('[data-product-subtotal]').textContent = total && selectedQuantity > 1 ? `Subtotal ${total}` : '';
+    detail.querySelector('[data-product-subtotal]').textContent = !pending && total && selectedQuantity > 1 ? `Subtotal ${total}` : '';
     detail.querySelectorAll('[data-product-total]').forEach(el => { el.textContent = total; });
     updateStickyBar();
   }
@@ -402,7 +413,8 @@
       });
       // Only label choices when this group actually changes what the shopper pays.
       const distinct = new Set(prices.filter(Boolean).map(range => range.low + ':' + range.high));
-      return distinct.size > 1 ? prices.map(range => range ? `${range.low === range.high ? '' : 'desde '}${money(range.low, p.currency)}` : '') : null;
+      // Ranges ("desde") on every choice read as noise; label a group once each choice has one exact price.
+      return distinct.size > 1 && prices.every(range => !range || range.low === range.high) ? prices.map(range => range ? money(range.low, p.currency) : '') : null;
     });
   }
   const assuranceIcons = {
@@ -488,8 +500,14 @@
     track('product_view');
     selectedProduct = p; selectedImage = 0; selectedOptions = []; selectedQuantity = 1; detailTrigger = trigger;
     const images = galleryImages(p), complex = p.variants?.length || p.extras?.length, groups = optionGroups(p);
-    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     showImage(0);
+    if (fullProductPage && !images.length) {
+      // Mobile reads identity, purchase, then details; desktop places the purchase panel beside both.
+      const copy = detail.querySelector('.product-detail__copy'), [summary, buybox, details] = ['summary', 'buybox', 'details'].map(name => Object.assign(document.createElement('div'), { className: 'product-detail__' + name }));
+      for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
+      copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
+    }
     // Frame full-page photos in their own proportion (portrait to 3:2 landscape), not a fixed crop box.
     const firstPhoto = fullProductPage && detail.querySelector('.product-detail__photo');
     if (firstPhoto) {
