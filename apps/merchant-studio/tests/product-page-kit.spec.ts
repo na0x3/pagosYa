@@ -12,11 +12,11 @@ const cushion = { id: 'cushion', name: 'Funda de cojín', description: 'Funda de
   variants: [{ id: 'small', name: '40 × 40 cm', amount: 11000, stock: 10, options: [{ name: 'Tamaño', value: '40 × 40 cm' }] }, { id: 'large', name: '50 × 50 cm', amount: 11700, stock: 10, options: [{ name: 'Tamaño', value: '50 × 50 cm' }] }] };
 const shirt = { id: 'shirt', name: 'Camisa de algodón de manga larga con bolsillo', amount: 14000, currency: 'BOB', stock: 5, imageUrls: [photo] };
 
-async function open(page: Page, id: string, config: Record<string, unknown>, options: { items?: unknown[]; css?: string; wrap?: 'only' | 'shared' } = {}) {
+async function open(page: Page, id: string, config: Record<string, unknown>, options: { items?: unknown[]; css?: string; wrap?: 'only' | 'shared'; tokens?: boolean } = {}) {
   const data = { storeName: 'Prueba', shippingPickupEnabled: true, items: options.items || [lamp, cushion, shirt] };
   const mount = '<main data-pagosya-product-page></main>';
   const body = options.wrap === 'only' ? `<div class="product-main">${mount}</div>` : options.wrap === 'shared' ? `<div class="product-main"><p>Nota de la tienda</p>${mount}</div>` : mount;
-  await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}:root{--store-background:#f5efe6;--store-foreground:#2b211d;--store-accent:#5a4032;--store-accent-foreground:#ffffff}body{margin:0;font-family:Arial,sans-serif}${options.css || ''}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header>${body}<div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', ...config, data })}</script><script>${kit('commerce.js')}</script></body></html>` }));
+  await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}${options.tokens === false ? '' : ':root{--store-background:#f5efe6;--store-foreground:#2b211d;--store-accent:#5a4032;--store-accent-foreground:#ffffff}'}body{margin:0;font-family:Arial,sans-serif}${options.css || ''}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header>${body}<div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', ...config, data })}</script><script>${kit('commerce.js')}</script></body></html>` }));
   await page.goto(`https://kit.test/product.html?id=${id}`);
   await expect(page.locator('#pagosya-product-title')).toBeVisible();
 }
@@ -128,4 +128,10 @@ test('a wrapper holding only the product page stops painting panels beside it', 
   await expect(page.locator('.product-main')).toHaveCSS('padding-top', '40px');
   await open(page, 'cushion', { productPageStyle: 'editorial' }, { wrap: 'shared', css });
   await expect(page.locator('.product-main')).not.toHaveCSS('background-image', 'none');
+});
+
+test('stores without accent tokens keep the color of their authored action button', async ({ page }) => {
+  await open(page, 'cushion', { productPageStyle: 'dense' }, { tokens: false, css: '.checkout-button{background:#0750a4;color:#ffffff}' });
+  await expect(page.locator('.product-detail__buy')).toHaveCSS('background-color', 'rgb(7, 80, 164)');
+  await expect(page.locator('.product-detail__buy')).toHaveCSS('color', 'rgb(255, 255, 255)');
 });
