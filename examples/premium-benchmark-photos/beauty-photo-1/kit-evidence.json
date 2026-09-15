@@ -1,0 +1,106 @@
+{
+  "revision": 1,
+  "captures": [
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1160,
+      "productId": "cmu2u275c001012gowdxjzv8y",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "product": {
+        "buyBottom": 613,
+        "titleLines": 1,
+        "overflowingChoices": 0
+      },
+      "path": "kit-product-capture-0.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 158,
+      "pageHeight": 1160,
+      "productId": "cmu2u275c001012gowdxjzv8y",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "kit-product-capture-1.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 316,
+      "pageHeight": 1160,
+      "productId": "cmu2u275c001012gowdxjzv8y",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "kit-product-capture-2.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1514,
+      "productId": "cmu2u275c001012gowdxjzv8y",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "product": {
+        "buyBottom": 962,
+        "titleLines": 1,
+        "overflowingChoices": 0
+      },
+      "path": "kit-product-capture-3.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 335,
+      "pageHeight": 1514,
+      "productId": "cmu2u275c001012gowdxjzv8y",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "kit-product-capture-4.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 670,
+      "pageHeight": 1514,
+      "productId": "cmu2u275c001012gowdxjzv8y",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "kit-product-capture-5.jpg"
+    }
+  ],
+  "failures": []
+}
