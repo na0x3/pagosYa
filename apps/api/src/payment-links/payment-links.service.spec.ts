@@ -466,7 +466,7 @@ describe("PaymentLinksService inventory import", () => {
 
   it("accepts a headerless pipe-delimited product and gives Sol the selected image filenames", async () => {
     const { service, config } = makeService();
-    config.get.mockImplementation((key: string) => key === "app.openAi.apiKey" ? "server-key" : undefined);
+    config.get.mockImplementation((key: string) => ({ "app.openAi.apiKey": "server-key", "app.openAi.inventoryModel": "gpt-5.6-sol" } as Record<string, string>)[key]);
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
