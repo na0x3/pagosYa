@@ -8,7 +8,21 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { captureSourceVisuals, probeSourceShopping } from '../src/stores/source-visual-capture';
 import { designCaptureFailures } from '../src/stores/source-design-evaluator';
-import { sourceProjectSnapshot } from '../src/stores/source-project';
+import { sourceProjectSnapshot, type SourceProjectSnapshot } from '../src/stores/source-project';
+import { currentSourceRuntime } from '../src/stores/source-runtime';
+/** Product-page evidence renders with the current runtime so runtime PDP changes are measured on every stored revision. */
+async function captureProductPage(snapshot: SourceProjectSnapshot, folder: string) {
+  if (!snapshot.files.some(file => file.path === 'product.html')) return { productCaptureError: 'Sin product.html en esta revisión.' };
+  try {
+    const captures = await captureSourceVisuals(await currentSourceRuntime(snapshot), 'product.html');
+    const productCaptures = [];
+    for (let i = 0; i < captures.length; i++) {
+      const { image, ...capture } = captures[i]; const path = `product-capture-${i}.jpg`;
+      await writeFile(resolve(folder, path), Buffer.from(image.split(',')[1], 'base64')); productCaptures.push({ ...capture, path });
+    }
+    return { productCaptures, productCaptureFailures: designCaptureFailures(captures), productRuntime: 'current' };
+  } catch (error) { return { productCaptureError: error instanceof Error ? error.message : 'Capture failed' }; }
+}
 async function main() {
   const root = resolve(__dirname, '../../../examples/premium-benchmark');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
@@ -33,12 +47,21 @@ async function main() {
       }
       if (run.status === 'completed') {
         const existing = await readFile(resolve(folder, 'evidence.json'), 'utf8').then(JSON.parse).catch(() => null);
-        if (existing) Object.assign(result, existing);
-        else {
-          console.log(`Capturing ${id}`);
+        const snapshotFor = async () => {
           const project = await prisma.storeSourceProject.findUniqueOrThrow({ where: { storeId: run.storeId } });
           const version = await prisma.storeSourceVersion.findUniqueOrThrow({ where: { storeId_revision: { storeId: run.storeId, revision: project.revision } } });
-          const snapshot = sourceProjectSnapshot({ ...(version.snapshot as any), revision: version.revision, label: version.label });
+          return { version, snapshot: sourceProjectSnapshot({ ...(version.snapshot as any), revision: version.revision, label: version.label }) };
+        };
+        if (existing) {
+          Object.assign(result, existing);
+          if (!existing.productCaptures && !existing.productCaptureError) {
+            console.log(`Capturing product page ${id}`);
+            Object.assign(result, await captureProductPage((await snapshotFor()).snapshot, folder));
+            await writeFile(resolve(folder, 'evidence.json'), JSON.stringify({ ...existing, productCaptures: result.productCaptures, productCaptureFailures: result.productCaptureFailures, productRuntime: result.productRuntime, productCaptureError: result.productCaptureError }, null, 2));
+          }
+        } else {
+          console.log(`Capturing ${id}`);
+          const { version, snapshot } = await snapshotFor();
           result.sourceDigest = version.digest; result.evidenceRevision = version.revision;
           try {
             const captures = await captureSourceVisuals(snapshot, 'index.html');
@@ -49,8 +72,9 @@ async function main() {
               await writeFile(resolve(folder, path), Buffer.from(image.split(',')[1], 'base64')); result.captures.push({ ...capture, path });
             }
             result.shopping = await probeSourceShopping(snapshot);
+            Object.assign(result, await captureProductPage(snapshot, folder));
           } catch (error) { result.evidenceError = error instanceof Error ? error.message : 'Capture failed'; }
-          await writeFile(resolve(folder, 'evidence.json'), JSON.stringify({ sourceDigest: result.sourceDigest, evidenceRevision: result.evidenceRevision, captures: result.captures, captureFailures: result.captureFailures, shopping: result.shopping, evidenceError: result.evidenceError }, null, 2));
+          await writeFile(resolve(folder, 'evidence.json'), JSON.stringify({ sourceDigest: result.sourceDigest, evidenceRevision: result.evidenceRevision, captures: result.captures, captureFailures: result.captureFailures, shopping: result.shopping, productCaptures: result.productCaptures, productCaptureFailures: result.productCaptureFailures, productRuntime: result.productRuntime, productCaptureError: result.productCaptureError, evidenceError: result.evidenceError }, null, 2));
         }
       }
       results.push(result);

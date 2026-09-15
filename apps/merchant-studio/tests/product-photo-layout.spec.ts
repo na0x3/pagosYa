@@ -17,7 +17,9 @@ for (const width of [1024, 390]) for (const stock of [false, true]) test(`produc
   const layout = (await page.locator('.product-detail__layout').boundingBox())!;
   const copy = (await page.locator('.product-detail__copy').boundingBox())!;
   expect(media.width / layout.width).toBeGreaterThan(width > 640 ? 0.45 : 0.98);
-  expect(media.height).toBeGreaterThan(width > 640 ? 500 : 390);
+  // The square photo gets a square frame at full column width, not a viewport-height cap (viewport is 550px).
+  expect(media.height).toBeGreaterThan(width > 640 ? 440 : 330);
+  expect(media.height / media.width).toBeCloseTo(1, 1);
   if (width > 640) expect(copy.x).toBeGreaterThan(media.x + media.width);
   else expect(copy.y).toBeGreaterThan(media.y + media.height);
   await page.getByRole('button', { name: 'Ver foto 2', exact: true }).click();

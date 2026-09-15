@@ -23,11 +23,11 @@ async function main() {
         const run = await readFile(resolve(folder, id, 'receipt.json'), 'utf8').then(JSON.parse).catch(() => null);
         if (!run || !['completed', 'failed', 'interrupted'].includes(run.status)) continue;
         if (run.status !== 'completed') { finished++; continue; }
-        const path = resolve(folder, id, 'design-job.json');
+        const path = resolve(folder, id, process.env.BENCHMARK_PAGE === 'product.html' ? 'design-job-product.json' : 'design-job.json');
         let saved = await readFile(path, 'utf8').then(JSON.parse).catch(() => null);
         if (saved?.status && !['QUEUED', 'RUNNING'].includes(saved.status)) { finished++; continue; }
         if (!saved) {
-          saved = await jobs.create(run.merchantId, run.storeId, { requestId: randomUUID(), revision: run.revision, page: 'index.html', maxCredits: 150, maxRepairs: 1 });
+          saved = await jobs.create(run.merchantId, run.storeId, { requestId: randomUUID(), revision: run.revision, page: process.env.BENCHMARK_PAGE === 'product.html' ? 'product.html' : 'index.html', maxCredits: 150, maxRepairs: 1 });
           await writeFile(path, JSON.stringify(saved, null, 2)); console.log(`${id}: job ${saved.id}`);
         }
         let previous = '';

@@ -147,6 +147,14 @@
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
     [data-pagosya-product] .product-detail__layout[data-no-images]{grid-template-columns:minmax(0,1fr)!important}
     [data-pagosya-product] .product-detail__gallery[hidden],[data-pagosya-product] .product-detail__navigation[hidden]{display:none!important}
+    [data-pagosya-product] .product-detail__sticky button{background:var(--product-accent);color:var(--product-on-accent)}
+    /* The thumbnail rail owns its gallery grid on wide screens; authored two-column galleries would otherwise enlarge thumbnails. */
+    @media(min-width:1100px){
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail]{display:grid;grid-template-columns:clamp(64px,6vw,88px) minmax(0,1fr);gap:16px;align-items:start}
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__stage{grid-column:2;grid-row:1}
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails{grid-column:1;grid-row:1;flex-direction:column;max-height:min(80vh,680px);overflow:auto;padding:2px}
+      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails button{flex:0 0 auto;width:100%}
+    }
     @layer pagosya-commerce {
     [data-pagosya-product]{box-sizing:border-box;width:min(960px,calc(100% - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:0;border:1px solid var(--store-border,var(--brand-border,var(--line,currentColor)));border-radius:var(--store-radius,var(--brand-radius,0px));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));background:var(--store-background,var(--brand-background,var(--paper,Canvas)));font:inherit;box-shadow:0 16px 64px #0003;overflow:auto;overscroll-behavior:contain}
     [data-pagosya-product]::backdrop{background:#0009}[data-pagosya-product] *{box-sizing:border-box}
@@ -216,8 +224,13 @@
     [data-pagosya-product] .product-detail__subtotal{font-size:13px}
     [data-pagosya-product] .product-detail__buy{min-height:54px;background:var(--product-accent);color:var(--product-on-accent);border-radius:var(--store-radius,var(--brand-radius,8px));transition:filter .18s}
     [data-pagosya-product] .product-detail__buy:hover:not(:disabled){filter:brightness(.92)}
-    [data-pagosya-product] .product-detail__services{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-    [data-pagosya-product] .product-detail__services button{flex:1 1 140px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:12px;border:1px solid var(--product-line);border-radius:var(--store-radius,var(--brand-radius,8px));background:var(--product-tint);color:inherit;font-size:12px}
+    [data-pagosya-product] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px 20px;margin:20px 0 0;padding:18px 0 0;border-top:1px solid var(--product-line);list-style:none}
+    [data-pagosya-product] .product-detail__assurances li{display:flex;align-items:flex-start;gap:10px;min-width:0;font-size:12px;line-height:1.45}
+    [data-pagosya-product] .product-detail__assurances svg{flex:0 0 20px;margin-top:1px;color:var(--product-accent)}
+    [data-pagosya-product] .product-detail__assurances strong{display:block;font-size:13px;font-weight:600}
+    [data-pagosya-product] .product-detail__assurances span{display:block;opacity:.72;overflow-wrap:anywhere}
+    [data-pagosya-product] .product-detail__assurances button{display:flex;align-items:flex-start;gap:10px;min-height:44px;margin:-6px 0;padding:6px 0;border:0;background:transparent;color:inherit;font-size:inherit;text-align:left}
+    [data-pagosya-product] .product-detail__assurances button strong{text-decoration:underline;text-decoration-color:var(--product-line);text-underline-offset:4px}
     [data-pagosya-product] .product-detail__navigation{font-size:12px;color:var(--product-ink)}
     [data-pagosya-product] .product-detail__navigation button{border-color:var(--product-line);background:var(--product-paper)}
     [data-pagosya-product] .product-detail__thumbnails button{background:var(--product-tint)}
@@ -226,6 +239,37 @@
     [data-pagosya-product] .product-tabs button{font-size:14px}
     [data-pagosya-product] .product-tabs button[aria-selected=true]{color:var(--product-accent);border-color:var(--product-accent)}
     [data-pagosya-product] :is(button,a):focus-visible{outline:3px solid var(--product-accent);outline-offset:3px}
+    /* Purchase panel: small tracked labels, priced choices and the live total on the action. */
+    [data-pagosya-product] .product-detail__eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+    [data-pagosya-product] .product-detail__options legend{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+    [data-pagosya-product] [data-product-selection]{letter-spacing:0;text-transform:none;font-size:13px}
+    [data-pagosya-product] .product-detail__values[data-priced]{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+    [data-pagosya-product][data-pagosya-product-page] .product-detail__layout[data-no-images] .product-detail__copy{width:100%;max-width:720px}
+    [data-pagosya-product] .product-detail__values[data-priced] [data-product-option]{justify-content:flex-start;width:100%;padding:12px 16px;text-align:left}
+    /* Priced choices wrap the price under the label in narrow authored grids instead of crushing the label. */
+    [data-pagosya-product] [data-product-option][data-option-price]{flex-wrap:wrap;column-gap:14px;row-gap:2px;overflow-wrap:normal}
+    [data-pagosya-product] [data-product-option][data-option-price]::after{content:attr(data-option-price);margin-left:auto;font-size:.92em;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+    [data-pagosya-product] [data-product-option]:disabled[data-option-price]::after{text-decoration:line-through}
+    [data-pagosya-product] .product-detail__buy{gap:0}
+    [data-pagosya-product] .product-detail__buy-total{font-variant-numeric:tabular-nums}
+    [data-pagosya-product] .product-detail__buy-total:not(:empty)::before{content:"·";margin:0 10px;opacity:.7}
+    [data-pagosya-product] .product-detail__subtotal:empty{display:none}
+    /* Gallery stage: photos keep their own proportion; the counter sits on the photo. */
+    [data-pagosya-product] .product-detail__stage{position:relative;min-width:0}
+    [data-pagosya-product][data-pagosya-product-page] .product-detail__photo{aspect-ratio:var(--product-photo-ratio,4/5)}
+    @media(min-width:1100px){[data-pagosya-product][data-pagosya-product-page] .product-detail__layout:has(.product-detail__gallery[data-rail]){grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}}
+    [data-pagosya-product] .product-detail__stage .product-detail__navigation{position:absolute;right:12px;bottom:12px;gap:2px;margin:0;padding:0 2px;border-radius:999px;background:color-mix(in srgb,var(--product-paper) 88%,transparent);box-shadow:0 1px 8px #0000001a;font-variant-numeric:tabular-nums}
+    [data-pagosya-product] .product-detail__stage .product-detail__navigation button{width:44px;min-height:44px;border:0;border-radius:50%;background:transparent;font-size:16px}
+    /* Mobile purchase bar appears only after the shopper scrolls past the real action. */
+    [data-pagosya-product] .product-detail__sticky{display:none}
+    @media(max-width:640px){
+      [data-pagosya-product] .product-detail__sticky:not([hidden]){position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--product-line);background:var(--product-paper);color:var(--product-ink);box-shadow:0 -6px 24px #0000001a}
+      [data-pagosya-product] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
+      [data-pagosya-product] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      [data-pagosya-product] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--store-radius,var(--brand-radius,8px));background:var(--product-accent);color:var(--product-on-accent);font-weight:700}
+      [data-pagosya-product] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
+    }
+    [data-pagosya-product] .product-detail__sticky-space{display:none}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] *{transition:none!important;scroll-behavior:auto!important}}
   `;
   detailStyle.textContent += `
@@ -267,15 +311,68 @@
       button.disabled = !ready || checkingOut || (Number(button.dataset.productQuantity) < 0 ? selectedQuantity <= 1 : selectedQuantity >= available);
     });
     const amount = price(variant ? { ...selectedProduct, amount: variant.amount } : selectedProduct);
-    detail.querySelector('[data-product-subtotal]').textContent = groups && !variant ? 'Elige tus opciones' : `Subtotal ${money(amount * selectedQuantity, selectedProduct.currency)}`;
+    const total = groups && !variant || !available ? '' : money(amount * selectedQuantity, selectedProduct.currency);
+    // The action carries the live total; the subtotal line only adds information for several units.
+    detail.querySelector('[data-product-subtotal]').textContent = total && selectedQuantity > 1 ? `Subtotal ${total}` : '';
+    detail.querySelectorAll('[data-product-total]').forEach(el => { el.textContent = total; });
+    updateStickyBar();
   }
-  function deliveryMarkup() {
+  let stickyObserver = null, buyPassed = false;
+  function updateStickyBar() {
+    const bar = detail.querySelector('[data-product-sticky]');
+    if (!bar || !selectedProduct) return;
+    const groups = optionGroups(selectedProduct), variant = selectedVariant(), buy = detail.querySelector('.product-detail__buy');
+    const pending = groups && !variant;
+    bar.querySelector('[data-product-sticky-price]').textContent = detail.querySelector('.product-detail__price')?.textContent || '';
+    const jump = bar.querySelector('[data-product-jump]');
+    jump.textContent = pending ? 'Elegir opciones' : 'Añadir';
+    jump.disabled = !pending && (!buy || buy.disabled);
+    const show = buyPassed && matchMedia('(max-width: 640px)').matches;
+    bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show;
+  }
+  function watchStickyBar() {
+    stickyObserver?.disconnect(); buyPassed = false;
+    const buy = fullProductPage && detail.querySelector('.product-detail__buy');
+    if (!buy || typeof IntersectionObserver !== 'function') return;
+    stickyObserver = new IntersectionObserver(entries => { const entry = entries[entries.length - 1]; buyPassed = !entry.isIntersecting && entry.boundingClientRect.bottom <= 0; updateStickyBar(); });
+    stickyObserver.observe(buy);
+  }
+  function optionPrices(groups) {
+    const p = selectedProduct;
+    return groups.map((group, index) => {
+      const prices = group.values.map(value => {
+        const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : selectedOptions[i] === undefined || candidate === selectedOptions[i]));
+        const amounts = (matches.some(v => remaining(p, v) > 0) ? matches.filter(v => remaining(p, v) > 0) : matches).map(v => price({ ...p, amount: v.amount }));
+        return amounts.length ? { low: Math.min(...amounts), high: Math.max(...amounts) } : null;
+      });
+      // Only label choices when this group actually changes what the shopper pays.
+      const distinct = new Set(prices.filter(Boolean).map(range => range.low + ':' + range.high));
+      return distinct.size > 1 ? prices.map(range => range ? `${range.low === range.high ? '' : 'desde '}${money(range.low, p.currency)}` : '') : null;
+    });
+  }
+  const assuranceIcons = {
+    pickup: '<path d="M3 9.5 12 4l9 5.5"/><path d="M5 9v10h14V9"/><path d="M10 19v-5h4v5"/>',
+    delivery: '<path d="M3 6h11v10H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/>',
+    digital: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
+    payment: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  };
+  // Reassurance comes only from real store settings; nothing here is a marketing claim.
+  function deliveryMarkup(p) {
     const locations = store.locations || [];
-    const methods = [
-      (store.shippingPickupEnabled || locations.some(l => l.pickupEnabled)) && 'Retiro en tienda',
-      (store.shippingEnabled || locations.some(l => l.deliveryEnabled)) && 'Entrega a domicilio',
+    const icon = name => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${assuranceIcons[name]}</svg>`;
+    const pickupPlaces = locations.filter(l => l.pickupEnabled).length;
+    const items = p?.fulfillmentType === 'DIGITAL' ? [{ icon: 'digital', title: 'Entrega digital', detail: 'Descarga segura después del pago' }] : [
+      (store.shippingPickupEnabled || pickupPlaces) && { icon: 'pickup', title: 'Retiro en tienda', detail: pickupPlaces > 1 ? `${pickupPlaces} sucursales disponibles` : 'Lo eliges al revisar tu pedido', delivery: true },
+      (store.shippingEnabled || locations.some(l => l.deliveryEnabled)) && { icon: 'delivery', title: 'Entrega a domicilio', detail: 'El total se confirma al pagar', delivery: true },
     ].filter(Boolean);
-    return methods.length ? `<div class="product-detail__services" aria-label="Opciones de entrega">${methods.map(method => `<button type="button" data-product-delivery>${escape(method)} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>`).join('')}</div>` : '';
+    if (store.checkoutMode === 'whatsapp') items.push({ icon: 'chat', title: 'Pedido por WhatsApp', detail: 'Confirmas los detalles con la tienda' });
+    else if (store.checkoutMode !== 'external') items.push({ icon: 'payment', title: 'Pago seguro', detail: 'Procesado por pagosYa' });
+    const hasDeliveryTab = !!(locations.length || store.shippingEnabled || store.shippingPickupEnabled);
+    return items.length ? `<ul class="product-detail__assurances" aria-label="Entrega y pago">${items.map(item => {
+      const body = `${icon(item.icon)}<div><strong>${escape(item.title)}</strong><span>${escape(item.detail)}</span></div>`;
+      return `<li>${item.delivery && hasDeliveryTab ? `<button type="button" data-product-delivery>${body}</button>` : body}</li>`;
+    }).join('')}</ul>` : '';
   }
   function optionsMarkup(groups) {
     return `<div class="product-detail__options">${groups.map((group, index) => `<fieldset><legend>${escape(group.name)} <span data-product-selection="${index}"></span></legend><div class="product-detail__values">${group.values.map((value, valueIndex) => {
@@ -291,8 +388,12 @@
   function updateOptions() {
     const p = selectedProduct, groups = optionGroups(p);
     if (!groups) return;
+    const prices = optionPrices(groups);
+    detail.querySelectorAll('.product-detail__values').forEach((values, index) => { values.toggleAttribute('data-priced', !!prices[index] && groups[index].values.length <= 4); });
     detail.querySelectorAll('[data-product-option]').forEach(button => {
       const index = Number(button.dataset.productOption), value = groups[index].values[Number(button.dataset.optionValue)];
+      const optionPrice = prices[index]?.[Number(button.dataset.optionValue)];
+      if (optionPrice) button.dataset.optionPrice = optionPrice; else delete button.dataset.optionPrice;
       // Earlier groups constrain later ones. Changing an earlier choice clears
       // later choices, so sparse catalogs never trap shoppers in a combination.
       const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : i > index || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
@@ -332,8 +433,15 @@
     track('product_view');
     selectedProduct = p; selectedImage = 0; selectedOptions = []; selectedQuantity = 1; detailTrigger = trigger;
     const images = galleryImages(p), complex = p.variants?.length || p.extras?.length, groups = optionGroups(p);
-    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}>${images.length ? `<img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}><div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido</button>` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido</button>`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup()}${productInformation(p)}</section></div>`;
+    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}><div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup()}<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     showImage(0);
+    // Frame full-page photos in their own proportion (portrait to 3:2 landscape), not a fixed crop box.
+    const firstPhoto = fullProductPage && detail.querySelector('.product-detail__photo');
+    if (firstPhoto) {
+      const frame = () => { if (firstPhoto.naturalWidth && firstPhoto.naturalHeight) detail.querySelector('.product-detail__gallery').style.setProperty('--product-photo-ratio', String(Math.min(3 / 2, Math.max(4 / 5, firstPhoto.naturalWidth / firstPhoto.naturalHeight)))); };
+      if (firstPhoto.complete) frame(); else firstPhoto.addEventListener('load', frame, { once: true });
+    }
+    watchStickyBar();
     renderCart();
     if (!fullProductPage && !detail.open) { oldOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden"; detail.showModal(); }
     detail.querySelector("[data-product-close]")?.focus();
@@ -986,6 +1094,16 @@
     if (!button || button.disabled) return;
     if (button.hasAttribute('data-product-delivery')) {
       const tab = detail.querySelector('[data-product-tab="delivery"]'); selectProductTab(tab); tab.focus(); return;
+    }
+    if (button.hasAttribute('data-product-jump')) {
+      const groups = optionGroups(selectedProduct), buy = detail.querySelector('.product-detail__buy');
+      const missing = groups && groups.findIndex((group, index) => selectedOptions[index] === undefined);
+      if (groups && missing >= 0) {
+        const fieldset = detail.querySelectorAll('.product-detail__options fieldset')[missing];
+        fieldset.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        fieldset.querySelector('[data-product-option]:not(:disabled)')?.focus({ preventScroll: true });
+      } else if (buy && !buy.disabled) buy.click();
+      return;
     }
     if (button.hasAttribute('data-product-quantity')) {
       selectedQuantity += Number(button.dataset.productQuantity); updateQuantity(); return;

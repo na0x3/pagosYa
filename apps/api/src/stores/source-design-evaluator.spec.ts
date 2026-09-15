@@ -1,4 +1,4 @@
-import { designCaptureFailures } from './source-design-evaluator';
+import { designAssessmentInstructions, designCaptureFailures } from './source-design-evaluator';
 import { knownDesignSpend } from './source-design-job.worker';
 import type { VisualCapture } from './source-visual-capture';
 describe('Design evidence and provider accounting', () => {
@@ -14,5 +14,13 @@ describe('Design evidence and provider accounting', () => {
     expect(knownDesignSpend([{ usage: { providerMicroUsd: 1000 } }, { usage: null }])).toBeNull();
     expect(knownDesignSpend([])).toBeNull();
     expect(knownDesignSpend([{ usage: { providerMicroUsd: -1 } }])).toBeNull();
+  });
+});
+describe('Design assessment instructions', () => {
+  it('adds the purchase-page checklist only for product pages', () => {
+    expect(designAssessmentInstructions(true, false)).toContain('página de producto');
+    expect(designAssessmentInstructions(true, true)).toContain('Compara A y B');
+    expect(designAssessmentInstructions(false, false)).not.toContain('página de producto');
+    expect(designAssessmentInstructions(true, false)).toContain('Nunca pidas reseñas');
   });
 });
