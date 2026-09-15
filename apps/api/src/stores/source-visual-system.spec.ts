@@ -1,5 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
-import { buildSourceVisualSystem, savedSourceVisualSystem, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem } from './source-visual-system';
+import { buildSourceVisualSystem, savedSourceVisualSystem, SOURCE_VISUAL_SYSTEM_FILE, sourceProductPageStyle, sourceVisualSystemContext, validateSourceVisualSystem } from './source-visual-system';
 
 const design = {
   selected: 0,
@@ -35,5 +35,14 @@ describe('source visual system foundation', () => {
     const files = [{ path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(system) }];
     expect(savedSourceVisualSystem(files)).toEqual(system);
     expect(sourceVisualSystemContext(system)).toContain('Project-specific design guidance');
+  });
+  it('carries the product page style from the concept or the previous configuration', () => {
+    const dense = { ...design, concepts: [{ ...design.concepts[0], layout: { ...design.concepts[0].layout, productPage: 'dense' } }] };
+    expect(buildSourceVisualSystem('subtle', [], dense).productPage).toEqual({ style: 'dense' });
+    expect(buildSourceVisualSystem('subtle', [], design)).not.toHaveProperty('productPage');
+    expect(sourceProductPageStyle(buildSourceVisualSystem('subtle', [], dense), { productPageStyle: 'editorial' })).toBe('dense');
+    expect(sourceProductPageStyle(buildSourceVisualSystem('subtle', [], design), { productPageStyle: 'editorial' })).toBe('editorial');
+    expect(sourceProductPageStyle(buildSourceVisualSystem('subtle', [], design), { productPageStyle: 'loud' })).toBeUndefined();
+    expect(sourceProductPageStyle(buildSourceVisualSystem('subtle', [], design))).toBeUndefined();
   });
 });

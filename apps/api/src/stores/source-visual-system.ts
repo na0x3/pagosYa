@@ -2,7 +2,7 @@ import { sourceStyleTokens, SOURCE_STYLE_TOKEN_CONTRACT, type SourceStyleTokens 
 import { BadGatewayException } from '@nestjs/common';
 import { SOURCE_ICON_NAMES, type SourceAsset } from './source-asset-library';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
-import type { SourceDesign } from './source-design';
+import { SOURCE_PRODUCT_PAGE_STYLES, type SourceDesign, type SourceProductPageStyle } from './source-design';
 import type { SourceMotionMode } from './source-motion';
 
 export const SOURCE_VISUAL_SYSTEM_FILE = 'visual-system.json';
@@ -17,6 +17,7 @@ export type SourceVisualSystem = {
   iconography: { family: 'lucide-local'; vocabulary: string[] };
   motion: { mode: SourceMotionMode; reducedMotion: string };
   layout: { sectionOrder: string[]; catalogSection: string | null; mobileRule: string };
+  productPage?: { style: SourceProductPageStyle };
   assets: Array<{ path: string; role: SourceAsset['role']; description: string; kind: SourceAsset['kind'] }>;
   invariants: string[];
 };
@@ -36,6 +37,7 @@ export function buildSourceVisualSystem(mode: SourceMotionMode, assets: SourceAs
       catalogSection: selected?.layout?.catalogSection || null,
       mobileRule: selected?.mobile || 'Adapt the chosen composition to small screens with readable content and usable controls.',
     },
+    ...(selected?.layout?.productPage ? { productPage: { style: selected.layout.productPage } } : {}),
     assets: assets.filter(asset => asset.kind !== 'icon').map(({ path, role, description, kind }) => ({ path, role, description, kind })),
     invariants: [
       'Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.',
@@ -76,4 +78,10 @@ export function validateSourceVisualSystem(files: SourceProjectFileDto[]): void 
 
 export function withSourceStyleTokens(system: SourceVisualSystem, files: SourceProjectFileDto[]): SourceVisualSystem {
   return { ...system, version: SOURCE_VISUAL_SYSTEM_VERSION, tokens: sourceStyleTokens(files) };
+}
+
+/** The concept's style wins; edits that keep the concept keep the style already written to config.js. */
+export function sourceProductPageStyle(system: SourceVisualSystem, previousConfig: Record<string, unknown> = {}): SourceProductPageStyle | undefined {
+  const style = system.productPage?.style ?? previousConfig.productPageStyle;
+  return SOURCE_PRODUCT_PAGE_STYLES.includes(style as SourceProductPageStyle) ? style as SourceProductPageStyle : undefined;
 }

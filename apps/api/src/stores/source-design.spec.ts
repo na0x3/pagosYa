@@ -62,3 +62,14 @@ it('leaves composition to the concept while keeping navigation and purchasing us
   expect(SOURCE_DESIGN_CONTRACT).toContain('Navigation uses real anchors and state changes use buttons');
   expect(SOURCE_DESIGN_CONTRACT).toContain('Keep purchasing accessible');
 });
+
+it('keeps the chosen product page style and rejects unknown styles', () => {
+  const value = proposal() as any;
+  for (const concept of value.concepts) concept.layout = { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true, productPage: 'dense' };
+  expect(validateSourceDesign(value, 1, true).concepts[1].layout?.productPage).toBe('dense');
+  delete value.concepts[1].layout.productPage;
+  expect(validateSourceDesign(value, 1, true).concepts[1].layout).not.toHaveProperty('productPage');
+  value.concepts[1].layout.productPage = 'luxury';
+  expect(() => validateSourceDesign(value, 1, true)).toThrow('productPage');
+  expect(SOURCE_DESIGN_CONTRACT).toContain('layout.productPage');
+});

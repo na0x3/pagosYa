@@ -30,7 +30,7 @@ import { requestedSourceProductOperations, requestedSourceProducts, sourceProduc
 import { sourceCommerceRoutes } from './source-commerce-pages';
 import { withSourceCommerceDesign } from './source-commerce-design';
 import { sourceMotionMode, requestedSourceMotion, withSourceMotion } from './source-motion';
-import { buildSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
+import { buildSourceVisualSystem, sourceProductPageStyle, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
 import { validateSourcePreflight } from './source-preflight';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
@@ -527,7 +527,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
     const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
     const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
-    const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(useNext ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
+    const productPageStyle = sourceProductPageStyle(visualSystem, previousConfig);
+    const config = { ...sourceCommerceRoutes([...generated.files, ...kitFiles], previousConfig), ...(productPageStyle ? { productPageStyle } : {}), ...(useNext ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), demo: false, slug: owner.slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: this.config.get<string>("app.checkoutOrigin"), data };
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
