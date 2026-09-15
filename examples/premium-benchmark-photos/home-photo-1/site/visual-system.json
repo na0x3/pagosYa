@@ -1,0 +1,137 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Fraunces variable para títulos y precios, con cursivas suaves como acento; Instrument Sans para navegación, variantes y controles. H1 de 64–84 px en escritorio, 42 px en móvil; títulos de producto 30–44/28–34 px; cuerpo 16–18 px. Interletraje de display entre -0.03em y -0.015em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-editorial",
+      "textura-en-casa"
+    ],
+    "catalogSection": "catalogo-editorial",
+    "mobileRule": "La doble página se convierte en una secuencia editorial: ficha comprable de funda primero y manta inmediatamente después, sin carruseles obligatorios. Header de dos líneas máximo con “Mi pedido 0” siempre visible. Selectores y botones ocupan todo el ancho útil y mantienen 44 px de altura; las fotografías conservan recortes verticales y el bloque ambiental pasa a desplazamiento natural."
+  },
+  "assets": [
+    {
+      "path": "assets/image-bfa86d664066.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e58bfe385a7a.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-f5d075124660.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-f82f55029d51.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f4eee4",
+      "resolved": "#f4eee4",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#392431",
+      "resolved": "#392431",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#a94731",
+      "resolved": "#a94731",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf2",
+      "resolved": "#fffaf2",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#ead9d4",
+      "resolved": "#ead9d4",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#b99c91",
+      "resolved": "#b99c91",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Instrument,system-ui,sans-serif",
+      "resolved": "Instrument,system-ui,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Fraunces,serif",
+      "resolved": "Fraunces,serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

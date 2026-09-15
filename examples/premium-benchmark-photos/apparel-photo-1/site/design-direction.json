@@ -1,0 +1,66 @@
+{
+  "concepts": [
+    {
+      "name": "Muestrario Trama",
+      "premise": "Una tienda catálogo-first inspirada en un muestrario textil: compacta, útil y asimétrica. A diferencia de las otras propuestas, abre directamente con los dos productos, sus variantes y compra; la identidad nace de líneas finas, códigos cromáticos y amplias fotografías, no de un hero editorial.",
+      "opening": "Masthead bajo en tinta con “Trama”, enlace a Prendas y “Mi pedido (0)” siempre visible. Inmediatamente debajo, el catálogo ocupa una cuadrícula 7/5: la camisa domina con fotografía y la camiseta funciona como contrapunto compacto. Nombre, precio, selector disponible y botón “Añadir” aparecen sin desplazamiento en escritorio y móvil; el segundo producto continúa debajo en 390 px.",
+      "flow": "Inicio: elección inmediata, seguida por una breve nota de colección y una banda fotográfica secundaria. La ficha de producto amplía una imagen principal con la segunda toma al costado, mientras un panel fijo reúne descripción, color o talla, precio y cantidad. Carrito y checkout usan filas de pedido sobrias, resumen claro y recogida como modalidad disponible, sin promesas añadidas.",
+      "typography": "Instrument Sans variable para toda la interfaz: marca 800 en 30 px, títulos de producto 600 en 28–44 px, precios 700, cuerpo 16/1.5 y etiquetas 12 px en mayúsculas espaciadas. En móvil: marca 24 px, títulos 25 px, cuerpo 15 px. El contraste procede de peso, escala y alineación, no de una segunda familia.",
+      "imagery": "assets/image-739dfea4fbd5.jpg abre la camisa con recorte 4:5 centrado en cuello, tapeta y puño; assets/image-d7f873aa0012.jpg presenta la camiseta completa con aire uniforme. assets/image-110f11deb8ee.jpg y assets/image-1d93eab93271.jpg forman después una banda de contexto con recortes horizontales que conservan cada prenda completa como foco. En producto, ambas imágenes reales se muestran sin filtros ni alteración cromática.",
+      "mobile": "Cabecera de dos líneas muy contenida: Trama y “Mi pedido (0)” quedan siempre visibles; navegación secundaria mediante menú. El primer producto comienza antes de 320 px del documento y se presenta como imagen apaisada corta seguida inmediatamente por nombre, precio, selector y botón de 48 px. La cuadrícula editorial se convierte en una secuencia continua sin solapamientos.",
+      "layout": {
+        "sections": [
+          "catalogo-muestrario",
+          "nota-de-coleccion",
+          "banda-cotidiana"
+        ],
+        "catalogSection": "catalogo-muestrario",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Dos prendas, dos ritmos",
+      "premise": "Una portada fotográfica en díptico que trata el catálogo de dos piezas como una pequeña edición de moda. Se diferencia del muestrario por separar presentación y compra, y del tercer concepto por su silencio visual, grandes planos y serif expresiva en vez de una interfaz tipográfica densa.",
+      "opening": "Un díptico de altura contenida enfrenta assets/image-110f11deb8ee.jpg y assets/image-1d93eab93271.jpg, con “TRAMA” en tinta sobre una franja de papel y la frase “Prendas para el ritmo diario”. Un enlace “Ver las dos prendas” conduce al catálogo; no se superponen controles de compra sobre la fotografía.",
+      "flow": "Tras la apertura, cada producto recibe un capítulo horizontal distinto: imagen limpia, nombre, descripción factual, variantes y compra juntos. Una transición azul cobalto enlaza ambos capítulos sin convertirlos en tarjetas repetidas. La ficha usa galería 2/3 y compra 1/3; carrito y checkout continúan como pliegos de una publicación, con resumen lateral y divisores editoriales.",
+      "typography": "Instrument Serif para marca y titulares: wordmark 84 px, titulares 54 px, títulos de producto 40 px; Instrument Sans para navegación, precio, selectores y cuerpo 16/1.55. En móvil: wordmark 48 px, titular 38 px y producto 30 px. Etiquetas funcionales en 12 px/700; letter-spacing máximo negativo de -0.03em.",
+      "imagery": "El díptico emplea las tomas ambientales: assets/image-110f11deb8ee.jpg con foco en cuello y textura de mesa, y assets/image-1d93eab93271.jpg con foco central en la silueta completa. En catálogo se alternan assets/image-739dfea4fbd5.jpg y assets/image-d7f873aa0012.jpg como vistas limpias 1:1. En ficha, la toma limpia lidera y la ambiental conserva su encuadre como segunda imagen.",
+      "mobile": "La portada mantiene el díptico como dos bandas verticales 50/50 bajo una cabecera breve; “Mi pedido (0)” permanece visible junto a Trama. El catálogo alternado se vuelve lineal, pero cada nombre, precio, opción y botón queda agrupado inmediatamente después de su imagen. La segunda fotografía pasa a una galería deslizable accesible en la ficha.",
+      "layout": {
+        "sections": [
+          "portada-diptico",
+          "catalogo-capitulos",
+          "cierre-trama"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice cotidiano",
+      "premise": "Una interfaz de moda concebida como índice y ficha de archivo: tipografía condensada, numeración funcional mínima y navegación lateral en escritorio. Frente al díptico, reduce el protagonismo inicial de la imagen para acelerar la comparación; frente al muestrario, usa una apertura tipográfica independiente y una lista expandible en lugar de una cuadrícula de tarjetas.",
+      "opening": "Una portada de papel casi sin imagen muestra “TRAMA” a gran escala, una línea cobalto y un índice útil: “Camisa de algodón de manga larga — desde Bs 140” y “Camiseta esencial — desde Bs 85”. Cada nombre ancla su ficha dentro del catálogo. Una ventana fotográfica estrecha usa assets/image-739dfea4fbd5.jpg, centrada en cuello y botones.",
+      "flow": "El catálogo se organiza como dos filas de archivo expandibles, siempre montadas: al abrir una, fotografía, descripción, variantes, precio y botón forman una sola banda de compra. Una sección final yuxtapone las dos tomas ambientales como “En contexto”. La ficha de producto adopta una columna de datos fija y galería vertical; carrito y checkout conservan renglones, reglas y números grandes para cantidades y totales.",
+      "typography": "Oswald variable para el wordmark, índice y precios: 104 px en portada, 38 px en nombres y 28 px en importes. Instrument Sans para cuerpo y controles: 16/1.5, etiquetas 12 px/700. En móvil: wordmark 58 px, nombres 28 px y precios 24 px. La jerarquía es vertical, estrecha y de alto contraste, con espaciado nunca menor de -0.02em.",
+      "imagery": "assets/image-739dfea4fbd5.jpg aparece como ventana editorial inicial, no como fondo. Dentro de las filas, assets/image-739dfea4fbd5.jpg y assets/image-d7f873aa0012.jpg muestran las prendas completas en formato cuadrado; assets/image-110f11deb8ee.jpg y assets/image-1d93eab93271.jpg cierran en un díptico ambiental. No hay dibujos ni miniaturas inventadas.",
+      "mobile": "La navegación lateral se convierte en una franja de anclas bajo la cabecera; Trama y “Mi pedido (0)” permanecen visibles fuera del menú. La portada se acorta y la ventana fotográfica pasa debajo del índice. Cada fila de catálogo abre en acordeón accesible, con selector y botón de ancho completo y 48 px de alto; el contenido sigue visible en ausencia de movimiento.",
+      "layout": {
+        "sections": [
+          "indice-portada",
+          "catalogo-archivo",
+          "en-contexto"
+        ],
+        "catalogSection": "catalogo-archivo",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Muestrario Trama” responde mejor a la acción principal de elegir y añadir: el catálogo real tiene solo dos prendas y permite mostrar producto, precio y compra desde el inicio sin una portada redundante. También aprovecha las cuatro fotografías suministradas —vistas limpias y ambientales—, hace visibles las variantes reales de color y talla, y aplica de forma directa el contraste tinta/papel con c"
+  }
+}

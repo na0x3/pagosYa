@@ -1,0 +1,71 @@
+{
+  "id": "home-photo-1",
+  "fixture": "home",
+  "merchantId": "cmu2uc7wv002612go29kjrt9x",
+  "storeId": "cmu2uc7wx002812gozr6qhxug",
+  "slug": "lbhubh6d",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-15T15:42:51.155Z",
+  "assets": [
+    "/v1/uploads/cdd693eb-6ba0-4569-b9eb-1a387680c64d.jpg",
+    "/v1/uploads/a17a1351-3efb-48ff-8619-265f8b903306.jpg",
+    "/v1/uploads/aab72057-c657-41cd-bd10-ecf77ab75666.jpg",
+    "/v1/uploads/5fcb0869-a2f2-44f1-8968-caca1947d8db.jpg"
+  ],
+  "scenes": [
+    {
+      "product": "cojin",
+      "url": "/v1/uploads/a17a1351-3efb-48ff-8619-265f8b903306.jpg"
+    },
+    {
+      "product": "manta",
+      "url": "/v1/uploads/5fcb0869-a2f2-44f1-8968-caca1947d8db.jpg"
+    }
+  ],
+  "generation": {
+    "id": "cmu2ufgy6002q12goe9osr3y2",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 31,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 42202,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 9181,
+          "cachedInputTokens": 0,
+          "outputTokens": 1989,
+          "providerMicroUsd": 85682,
+          "cacheWriteTokens": 9178
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 69521,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 17224,
+          "cachedInputTokens": 0,
+          "outputTokens": 6883,
+          "providerMicroUsd": 215273,
+          "cacheWriteTokens": 8717
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 808,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 111774,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "elapsedMs": 266553
+}

@@ -1,0 +1,210 @@
+{
+  "revision": 1,
+  "digest": "0ee39112add700efe1608d8b9aff65a2fef791e294d29d433b811e66e8bad6f3",
+  "captures": [
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 2266,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-0.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 711,
+      "pageHeight": 2266,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-1.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 1422,
+      "pageHeight": 2266,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "capture-2.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 2638,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-3.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 897,
+      "pageHeight": 2638,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-4.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 1794,
+      "pageHeight": 2638,
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "capture-5.jpg"
+    }
+  ],
+  "captureFailures": [],
+  "productCaptures": [
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1443,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "product-capture-0.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 300,
+      "pageHeight": 1443,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "product-capture-1.jpg"
+    },
+    {
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 844,
+      "y": 599,
+      "pageHeight": 1443,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 1280,
+        "missingImages": 0
+      },
+      "path": "product-capture-2.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 0,
+      "pageHeight": 1726,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "product-capture-3.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 441,
+      "pageHeight": 1726,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "product-capture-4.jpg"
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "y": 882,
+      "pageHeight": 1726,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "state": "initial",
+      "readiness": {
+        "fontsLoaded": true,
+        "scrollWidth": 390,
+        "missingImages": 0
+      },
+      "path": "product-capture-5.jpg"
+    }
+  ],
+  "productCaptureFailures": [],
+  "shopping": [
+    {
+      "width": 1280,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "status": "passed",
+      "variantId": "var_6sv029cd3wa3"
+    },
+    {
+      "width": 1280,
+      "productId": "cmu2ufgwp002o12go26fiw3v5",
+      "status": "passed",
+      "variantId": "var_bwd8hjdc6ykq"
+    },
+    {
+      "width": 390,
+      "productId": "cmu2udvor002g12gohgcc6ne3",
+      "status": "passed",
+      "variantId": "var_6sv029cd3wa3"
+    },
+    {
+      "width": 390,
+      "productId": "cmu2ufgwp002o12go26fiw3v5",
+      "status": "passed",
+      "variantId": "var_bwd8hjdc6ykq"
+    }
+  ]
+}

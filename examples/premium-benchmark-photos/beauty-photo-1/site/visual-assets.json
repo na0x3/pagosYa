@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/image-df8cb044d4b4.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-49363bd178b6.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-e6ed32c54de5.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    },
+    {
+      "path": "assets/image-f285b2310535.jpg",
+      "role": "product",
+      "description": "Supplied product photography. Preserve packaging and factual product identity."
+    }
+  ]
+}

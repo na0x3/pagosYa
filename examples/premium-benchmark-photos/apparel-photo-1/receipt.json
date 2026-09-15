@@ -1,0 +1,71 @@
+{
+  "id": "apparel-photo-1",
+  "fixture": "apparel",
+  "merchantId": "cmu2tukzb000012goafzukzqj",
+  "storeId": "cmu2tukzg000212go2p70v7g7",
+  "slug": "whh80wia",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-15T15:29:08.287Z",
+  "assets": [
+    "/v1/uploads/4f940b0d-463a-408c-a5e7-6d1a773105fa.jpg",
+    "/v1/uploads/7e66eab4-ee4f-471d-a314-076702252a06.jpg",
+    "/v1/uploads/60d9af5c-977e-4525-b9bc-458cdb9f39ed.jpg",
+    "/v1/uploads/99d8407d-45be-4203-ab20-3abca3c2b8ef.jpg"
+  ],
+  "scenes": [
+    {
+      "product": "camisa",
+      "url": "/v1/uploads/7e66eab4-ee4f-471d-a314-076702252a06.jpg"
+    },
+    {
+      "product": "camiseta",
+      "url": "/v1/uploads/99d8407d-45be-4203-ab20-3abca3c2b8ef.jpg"
+    }
+  ],
+  "generation": {
+    "id": "cmu2ty1mr000k12go8nj9qgau",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 31,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 44773,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 9189,
+          "cachedInputTokens": 0,
+          "outputTokens": 1893,
+          "providerMicroUsd": 83802,
+          "cacheWriteTokens": 9186
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 67025,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 17244,
+          "cachedInputTokens": 0,
+          "outputTokens": 7018,
+          "providerMicroUsd": 218053,
+          "cacheWriteTokens": 8717
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 472,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 111898,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "elapsedMs": 276199
+}

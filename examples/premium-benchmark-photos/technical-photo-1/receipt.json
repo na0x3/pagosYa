@@ -1,0 +1,71 @@
+{
+  "id": "technical-photo-1",
+  "fixture": "technical",
+  "merchantId": "cmu2u6gtr001g12go3yon54q3",
+  "storeId": "cmu2u6gtu001i12goczltf6s4",
+  "slug": "q11qtonr",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-15T15:38:22.773Z",
+  "assets": [
+    "/v1/uploads/3e5c3b68-21cd-43e7-affe-e96923d2a765.jpg",
+    "/v1/uploads/8135eef3-965a-460b-94c9-31ca45526aa8.jpg",
+    "/v1/uploads/8f53b9e7-2439-44c3-bd46-6dfc20c90de3.jpg",
+    "/v1/uploads/1027f63d-e62a-4834-baf1-726084b02428.jpg"
+  ],
+  "scenes": [
+    {
+      "product": "lampara",
+      "url": "/v1/uploads/8135eef3-965a-460b-94c9-31ca45526aa8.jpg"
+    },
+    {
+      "product": "soporte",
+      "url": "/v1/uploads/1027f63d-e62a-4834-baf1-726084b02428.jpg"
+    }
+  ],
+  "generation": {
+    "id": "cmu2u9nex002012gor5mgj53d",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 32,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 46043,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 9163,
+          "cachedInputTokens": 0,
+          "outputTokens": 2150,
+          "providerMicroUsd": 88812,
+          "cacheWriteTokens": 9160
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 71068,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 17275,
+          "cachedInputTokens": 0,
+          "outputTokens": 7443,
+          "providerMicroUsd": 226677,
+          "cacheWriteTokens": 8717
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 568,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 117200,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "elapsedMs": 268383
+}

@@ -10,7 +10,9 @@ import { SourceDesignJobsService } from '../src/stores/source-design-jobs.servic
 import { SourceDesignJobWorker } from '../src/stores/source-design-job.worker';
 import { SourceProjectsService } from '../src/stores/source-projects.service';
 async function main() {
-  const folder = resolve(__dirname, '../../../examples/premium-benchmark');
+  // BENCHMARK_ROOT=premium-benchmark-photos reviews the photo-led fixtures.
+  const folder = resolve(__dirname, '../../../examples', process.env.BENCHMARK_ROOT === 'premium-benchmark-photos' ? 'premium-benchmark-photos' : 'premium-benchmark');
+  const reviewed = (id: string) => id.endsWith('-candidate') || /-photo-\d+$/.test(id);
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
   try {
     const config = app.get(ConfigService); config.set('app.sourceDesignJobsEnabled', true); config.set('app.sourceFramework', 'static'); config.set('app.port', 3001); config.set('app.checkoutOrigin', 'http://localhost:5175');
@@ -19,7 +21,7 @@ async function main() {
     const deadline = Date.now() + 3 * 60 * 60 * 1000;
     while (Date.now() < deadline) {
       let finished = 0;
-      for (const id of (await readdir(folder)).filter(id => id.endsWith('-candidate')).sort()) {
+      for (const id of (await readdir(folder)).filter(reviewed).sort()) {
         const run = await readFile(resolve(folder, id, 'receipt.json'), 'utf8').then(JSON.parse).catch(() => null);
         if (!run || !['completed', 'failed', 'interrupted'].includes(run.status)) continue;
         if (run.status !== 'completed') { finished++; continue; }
@@ -58,7 +60,7 @@ async function main() {
         finished++;
       }
       // Candidates that never completed generation cannot be reviewed; stop once every reviewable one is done.
-      const candidates = (await readdir(folder)).filter(id => id.endsWith('-candidate'));
+      const candidates = (await readdir(folder)).filter(reviewed);
       const reviewable = (await Promise.all(candidates.map(id => readFile(resolve(folder, id, 'receipt.json'), 'utf8').then(JSON.parse).catch(() => null)))).filter(run => run && ['completed', 'failed', 'interrupted'].includes(run.status)).length;
       if (finished >= reviewable) break;
       await new Promise(resolve => setTimeout(resolve, 5000));

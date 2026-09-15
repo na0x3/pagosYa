@@ -1,0 +1,71 @@
+{
+  "id": "beauty-photo-1",
+  "fixture": "beauty",
+  "merchantId": "cmu2u0i3i000q12goj6cuyuwd",
+  "storeId": "cmu2u0i3k000s12go9qycpllk",
+  "slug": "fty4d9uk",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-15T15:33:44.481Z",
+  "assets": [
+    "/v1/uploads/5254d5b6-9e44-465a-97b3-3a4a2af29914.jpg",
+    "/v1/uploads/07610881-8f5e-43ab-b39c-a9afdc464e7d.jpg",
+    "/v1/uploads/c9eef69d-3650-4c28-8d7b-91b5ee1fa8fc.jpg",
+    "/v1/uploads/900e4ef5-30c6-475b-b795-d32f1b4c624e.jpg"
+  ],
+  "scenes": [
+    {
+      "product": "crema",
+      "url": "/v1/uploads/07610881-8f5e-43ab-b39c-a9afdc464e7d.jpg"
+    },
+    {
+      "product": "jabon",
+      "url": "/v1/uploads/900e4ef5-30c6-475b-b795-d32f1b4c624e.jpg"
+    }
+  ],
+  "generation": {
+    "id": "cmu2u40x8001a12gomqrut4ad",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 32,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 37203,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 9153,
+          "cachedInputTokens": 0,
+          "outputTokens": 2139,
+          "providerMicroUsd": 88542,
+          "cacheWriteTokens": 9150
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 73894,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 17300,
+          "cachedInputTokens": 0,
+          "outputTokens": 7555,
+          "providerMicroUsd": 229017,
+          "cacheWriteTokens": 8717
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 778,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 111162,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "elapsedMs": 278288
+}
