@@ -154,6 +154,7 @@ test('the contact form is optional and keeps authored styling in preview and hos
   await page.goto('/?demo=1');
   await page.evaluate(async snapshot => {
     const {sourcePreviewDocument} = await import('/src/source-preview.ts');
+    document.body.innerHTML='';
     for (const hosted of [false,true]) for (const enabled of [false,true]) {
       const copy=structuredClone(snapshot);
       copy.files[0].content='<style>[data-pagosya-contact] button{background:rgb(15, 80, 160);border-radius:0;font-family:serif}</style><section data-pagosya-contact></section>'+copy.files[0].content;
@@ -166,7 +167,10 @@ test('the contact form is optional and keeps authored styling in preview and hos
     const hidden=page.frameLocator(`iframe[title="${hosted}-false"]`);
     await expect(hidden.locator('[data-pagosya-contact]')).toBeHidden();
     await expect(hidden.getByRole('button',{name:'Enviar consulta'})).toHaveCount(0);
-    const button=page.frameLocator(`iframe[title="${hosted}-true"]`).getByRole('button',{name:'Enviar consulta'});
+    // The form lives behind the floating Contacto launcher.
+    const shown=page.frameLocator(`iframe[title="${hosted}-true"]`);
+    await shown.getByRole('button',{name:'Abrir formulario de contacto'}).click();
+    const button=shown.getByRole('button',{name:'Enviar consulta'});
     await expect(button).toHaveCSS('background-color','rgb(15, 80, 160)');
     await expect(button).toHaveCSS('border-radius','0px');
   }
@@ -224,6 +228,7 @@ test('exported contact form submits to the store inbox and partner code follows 
   });
   await page.addInitScript(() => localStorage.setItem('pagosya:privacy:test', JSON.stringify({version:1,analytics:true,expires:Date.now()+86400000})));
   await page.goto('https://store.test/index.html?partner=partner_test_123');
+  await page.getByRole('button',{name:'Abrir formulario de contacto'}).click();
   await page.getByLabel('Nombre',{exact:true}).fill('Cliente de prueba');
   await page.getByLabel('Correo',{exact:true}).fill('prueba@example.com');
   await page.getByLabel('Tu mensaje',{exact:true}).fill('Información de entregas');
@@ -238,18 +243,24 @@ test('exported contact form submits to the store inbox and partner code follows 
   await expect(page).toHaveURL(/\/s\/test#client_secret/);
   expect(checkout).toMatchObject({partnerCode:'partner_test_123',items:[{paymentLinkId:'p1',quantity:1}]});
 });
-test('configurable-only catalogs check the trusted options handoff and disclose the simulation limit', async ({page}) => {
+test('catalogs with options buy on the page, while extras still check the trusted handoff', async ({page}) => {
   await page.goto('/');
+  const run = (snapshot: any) => page.evaluate(async snapshot => { const {checkSourceWebsite} = await import('/src/source-checks.ts'); return checkSourceWebsite(snapshot as any); }, snapshot);
   for (const template of ['', productTemplate]) {
-  const options = structuredClone(snapshot); options.files[0].content = template + options.files[0].content;
-  options.files[1].content = 'window.PAGOSYA_CONFIG = '+JSON.stringify({slug:'test',checkoutOrigin:'https://checkout.test',data:{storeName:'Prueba',items:[{id:'p1',name:'Café',amount:1200,currency:'BOB',stock:4,variants:[{id:'large',name:'Grande',amount:1500}]}]}})+';';
-  const checks = await page.evaluate(async snapshot => {
-    const {checkSourceWebsite} = await import('/src/source-checks.ts'); return checkSourceWebsite(snapshot as any);
-  }, options);
-  expect(checks.filter(row => row.status === 'failed')).toEqual([]);
-  expect(checks.filter(row => row.label.includes('Apertura de opciones')).map(row=>row.status)).toEqual(['passed','passed','passed','passed']);
-  expect(checks.filter(row=>row.label.includes('Apertura del formulario')).map(row=>row.status)).toEqual(['skipped','skipped','skipped','skipped']);
+    const options = structuredClone(snapshot); options.files[0].content = template + options.files[0].content;
+    options.files[1].content = 'window.PAGOSYA_CONFIG = '+JSON.stringify({slug:'test',checkoutOrigin:'https://checkout.test',data:{storeName:'Prueba',items:[{id:'p1',name:'Café',amount:1200,currency:'BOB',stock:4,variants:[{id:'large',name:'Grande',amount:1500}]}]}})+';';
+    const checks = await run(options);
+    expect(checks.filter(row => row.status === 'failed')).toEqual([]);
+    expect(checks.filter(row => row.label.includes('Opciones de producto disponibles')).map(row => row.status)).toEqual(['passed','passed','passed','passed']);
+    expect(checks.filter(row => row.label.includes('Apertura de opciones'))).toEqual([]);
+    expect(checks.filter(row => row.label.includes('Apertura del formulario')).map(row => row.status)).toEqual(['skipped','skipped','skipped','skipped']);
   }
+  const extras = structuredClone(snapshot);
+  extras.files[1].content = 'window.PAGOSYA_CONFIG = '+JSON.stringify({slug:'test',checkoutOrigin:'https://checkout.test',data:{storeName:'Prueba',items:[{id:'p1',name:'Café',amount:1200,currency:'BOB',stock:4,extras:[{id:'shot',name:'Carga extra',amount:300}]}]}})+';';
+  const handoff = await run(extras);
+  expect(handoff.filter(row => row.status === 'failed')).toEqual([]);
+  expect(handoff.filter(row => row.label.includes('Apertura de opciones')).map(row => row.status)).toEqual(['passed','passed','passed','passed']);
+  expect(handoff.filter(row => row.label.includes('Apertura del formulario')).map(row => row.status)).toEqual(['skipped','skipped','skipped','skipped']);
 });
 test('an empty catalog and a missing Pedido trigger cannot pass publishing checks', async ({page}) => {
   await page.goto('/');
