@@ -40,7 +40,7 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
     const layout = design?.concepts?.[design.selected]?.layout;
     if (layout && Array.isArray(layout.sections) && layout.sections.length <= 12 && layout.sections.every((id: unknown) => typeof id === 'string' && /^[a-z][a-z0-9-]{0,47}$/.test(id)) && typeof layout.catalogSection === 'string' && typeof layout.standaloneIntro === 'boolean' && typeof layout.productsInOpening === 'boolean') designLayout = layout;
   } catch { /* Legacy snapshots have no design contract. */ }
-  let productId = '', configuredCheckout = '', optionsId = '', optionsDestination = '';
+  let productId = '', productVariantId = '', configuredCheckout = '', optionsId = '', optionsDestination = '';
   let checkedSnapshot = snapshot;
   const htmlPages = snapshot.files.filter(f => f.path.endsWith('.html')).sort((a, b) => a.path === 'index.html' ? -1 : b.path === 'index.html' ? 1 : a.path.localeCompare(b.path));
   try {
@@ -48,9 +48,13 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
     const parsed = config ? JSON.parse(config[1]) : {};
     configuredCheckout = typeof parsed.checkoutPage === 'string' ? parsed.checkoutPage : '';
     const items = parsed.data?.items || [];
-    productId = items?.find((p: any) => p.stock !== 0 && p.purchaseLimit !== 0 && !p.variants?.length && !p.extras?.length)?.id || '';
+    // Variants are chosen on the storefront itself, so they follow the normal purchase path; only extras still hand off to the platform page.
+    const available = (p: any) => p.stock !== 0 && p.purchaseLimit !== 0;
+    productId = items?.find((p: any) => available(p) && !p.variants?.length && !p.extras?.length)?.id
+      || items?.find((p: any) => available(p) && p.variants?.length && !p.extras?.length && p.variants.some((v: any) => v?.stock !== 0))?.id || '';
+    productVariantId = items?.find((p: any) => p.id === productId)?.variants?.find((v: any) => v?.stock !== 0)?.id || '';
     if (!productId) {
-      optionsId = items.find((p: any) => p.stock !== 0 && p.purchaseLimit !== 0 && (p.variants?.length || p.extras?.length))?.id || '';
+      optionsId = items.find((p: any) => available(p) && p.extras?.length)?.id || '';
       if (optionsId) {
         const checkoutOrigin = parsed.checkoutOrigin || CHECKOUT_ORIGIN;
         optionsDestination = new URL(`/s/${encodeURIComponent(parsed.slug)}/p/${encodeURIComponent(optionsId)}`, checkoutOrigin).href;
@@ -92,7 +96,7 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
         };
         window.addEventListener('message', receive); signal?.addEventListener('abort', abort, { once: true });
         const isHome = file.path === 'index.html';
-        const doc = new DOMParser().parseFromString(sourcePreviewDocument(checkedSnapshot, file.path, { paymentForm: true, hosted: Boolean(optionsId), query: productId || optionsId ? `?id=${encodeURIComponent(productId || optionsId)}` : '', cart: !isHome && productId ? checkoutCart || [{ id: productId, quantity: 1 }] : [] }), 'text/html');
+        const doc = new DOMParser().parseFromString(sourcePreviewDocument(checkedSnapshot, file.path, { paymentForm: true, hosted: Boolean(optionsId), query: productId || optionsId ? `?id=${encodeURIComponent(productId || optionsId)}` : '', cart: !isHome && productId ? checkoutCart || [{ id: productId, quantity: 1, ...(productVariantId ? { variantId: productVariantId } : {}) }] : [] }), 'text/html');
         const script = doc.createElement('script'); script.textContent = `(${sourceShoppingProbe.toString()})(${JSON.stringify(isHome ? designLayout : null)?.replace(/</g, '\\u003c') || 'null'})`;
         doc.head.querySelector('meta[http-equiv]')!.after(script);
         frame.srcdoc = '<!doctype html>' + doc.documentElement.outerHTML;
@@ -101,7 +105,9 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
       results.push(...pageResults.filter(row => productId || optionsId || row.label !== 'Compra de producto').map(row => ({ ...row, label: `${viewportLabel} · ${file.path} · ${row.label}` })));
     }
     if (optionsId) results.push({ label: `${viewportLabel} · Apertura de opciones en la plataforma`, status: optionsOpened ? 'passed' : 'failed' });
-    if (productId || optionsId) results.push({ label: `${viewportLabel} · Apertura del formulario de pago`, status: productId ? paymentOpened ? 'passed' : 'failed' : optionsOpened ? 'skipped' : 'failed', detail: productId ? 'Verifica el paso al formulario en modo de prueba.' : 'La ruta al formulario compartido de opciones está comprobada. Revisa variantes y extras en una compra de prueba; este chequeo aislado no completa esa selección.' });
+    // Preview checkouts stop at the review for carts with combinations; the published store handles that payment.
+    if (productId && productVariantId && !paymentOpened) results.push({ label: `${viewportLabel} · Apertura del formulario de pago`, status: 'skipped', detail: 'Las combinaciones se revisan en el pedido. El pago con opciones se prueba en la tienda publicada.' });
+    else if (productId || optionsId) results.push({ label: `${viewportLabel} · Apertura del formulario de pago`, status: productId ? paymentOpened ? 'passed' : 'failed' : optionsOpened ? 'skipped' : 'failed', detail: productId ? 'Verifica el paso al formulario en modo de prueba.' : 'La ruta al formulario compartido de opciones está comprobada. Revisa variantes y extras en una compra de prueba; este chequeo aislado no completa esa selección.' });
   }
   return results;
 }

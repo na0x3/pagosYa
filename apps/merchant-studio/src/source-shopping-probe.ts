@@ -169,7 +169,14 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       }
       const pause = () => new Promise(resolve => setTimeout(resolve, 80));
       const visible = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)].find(shown);
-      const buy = visible('[data-pagosya-catalog] button[data-add]:not(:disabled),[data-pagosya-product] button[data-add]:not(:disabled)');
+      let buy = visible('[data-pagosya-catalog] button[data-add]:not(:disabled),[data-pagosya-product] button[data-add]:not(:disabled)');
+      // A product with options opens its configurator on the page; the first available combination is preselected.
+      const chooser = !buy ? visible('[data-pagosya-catalog] button.menu-add[data-product]:not(:disabled)') : null;
+      if (chooser) {
+        chooser.click(); await pause();
+        buy = visible('[data-pagosya-product] button[data-add]:not(:disabled)');
+        add('Opciones de producto disponibles', Boolean(buy));
+      }
       if (buy) {
         const before = cart().reduce((s, i) => s + i.quantity, 0);
         buy.click(); await pause();
@@ -191,7 +198,14 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
           remove?.click(); await pause();
           add('Quitar un producto del pedido', Boolean(remove) && cart().reduce((sum, item) => sum + item.quantity, 0) === before - 1);
           // Re-add through the catalog after closing the empty drawer.
-          (drawer as HTMLDialogElement).close(); buy.click(); opener?.click(); await pause();
+          (drawer as HTMLDialogElement).close();
+          // Closing the drawer also closed the configurator; reopen it so the combination is selected again.
+          if (chooser) {
+            chooser.click();
+            for (let attempt = 0; attempt < 10 && !visible('[data-pagosya-product] button[data-add]:not(:disabled)'); attempt++) await pause();
+            buy = visible('[data-pagosya-product] button[data-add]:not(:disabled)') || buy;
+          }
+          buy.click(); opener?.click(); await pause();
         }
       }
       if (cart().length) {
