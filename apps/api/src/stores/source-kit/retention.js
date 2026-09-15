@@ -174,7 +174,9 @@
     const preview = Boolean(config.preview || config.demo || (window.PAGOSYA_PREVIEW && !hosted));
     const query = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search);
     const key = `pagosya:recovery:${config.slug}`;
-    const state = window.PAGOSYA_RETENTION_STATE?.slug === config.slug ? window.PAGOSYA_RETENTION_STATE : { slug: config.slug, email: '', consent: false, token: '', processed: false };
+    // Reuse state only when a previous mount saved it for this same store; a missing slug must not match a missing state.
+    const saved = window.PAGOSYA_RETENTION_STATE;
+    const state = saved && saved.slug === config.slug ? saved : { slug: config.slug, email: '', consent: false, token: '', processed: false };
     window.PAGOSYA_RETENTION_STATE = state;
     if (!state.token && !hosted && !preview) { try { state.token = sessionStorage.getItem(key) || ''; } catch {} }
     const api = async (path, body) => {

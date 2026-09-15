@@ -877,6 +877,8 @@
     const id = link?.closest('[data-custom-product]')?.dataset.productId;
     if (config.productPage && id && products().some(product => product.id === id)) link.href = pageHref(config.productPage, '?id=' + encodeURIComponent(id));
   }, true);
+  // Sold out means no units for the product or for any of its combinations; a shopper cannot choose options that cannot be bought.
+  const soldOut = p => limit(p) === 0 || (Array.isArray(p.variants) && p.variants.length > 0 && p.variants.every(v => limit(v) === 0));
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
     if (!template || !template.content) return null;
@@ -926,13 +928,13 @@
     root.toggleAttribute('data-no-image', !image);
     root.querySelectorAll('[data-product-media]').forEach(media => { media.hidden = !image; });
     buy.classList.add('menu-add'); buy.type = 'button';
-    buy.dataset.add = p.id; buy.disabled = !ready || limit(p) === 0 || complex;
+    buy.dataset.add = p.id; buy.disabled = !ready || soldOut(p) || complex;
     buy.setAttribute('aria-label', `${complex ? 'Elegir opciones de' : 'Añadir'} ${p.name}`);
-    if (complex && optionGroups(p)) {
+    if (soldOut(p)) { buy.textContent = 'Agotado'; root.dataset.soldOut = 'true'; }
+    else if (complex && optionGroups(p)) {
       delete buy.dataset.add; buy.dataset.product = p.id; buy.disabled = false;
       buy.textContent = 'Elegir opciones';
     }
-    else if (limit(p) === 0) { buy.textContent = 'Agotado'; root.dataset.soldOut = 'true'; }
     else if (complex) {
       buy.textContent = 'Elegir opciones';
       if (!preview && !config.demo) {
@@ -984,7 +986,7 @@
         const complex = p.variants?.length || p.extras?.length;
         const custom = customProductCard(p, image, complex);
         if (custom) return custom;
-        return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${limit(p) === 0 ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
+        return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
       }).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       structureCatalog(el);
     });
