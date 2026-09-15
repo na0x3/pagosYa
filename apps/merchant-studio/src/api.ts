@@ -210,7 +210,11 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
   }
 
-  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}> }): Promise<{ id: string; name: string }> {
+  suggestProductHighlights(storeId: string, input: { name: string; description?: string | null; specifications?: Array<{ label: string; value: string }>; tags?: string[] }): Promise<{ highlights: Array<{ icon: string; label: string; detail?: string }> }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
+  }
+
+  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}> }): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 
