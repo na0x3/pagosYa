@@ -326,7 +326,8 @@
   detail.setAttribute("aria-labelledby", "pagosya-product-title");
   if (!fullProductPage) document.body.append(detail);
   // The product page is platform-rendered; authored rules aimed at its hooks would fight the kit layout.
-  const productHook = /\[data-pagosya-product|\.product-detail__/;
+  // Exactly the product page hooks; catalog hooks such as [data-pagosya-product-template] stay authored.
+  const productHook = /\[data-pagosya-product(?:-page)?(?=[\]~|^$*=\s])|\.product-detail__/;
   function splitSelectors(list) {
     const parts = []; let depth = 0, start = 0;
     for (let i = 0; i < list.length; i++) {

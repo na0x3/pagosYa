@@ -63,6 +63,14 @@ test('store CSS aimed at the product page is released while the rest of each rul
   expect(kept).not.toContain('product-detail__buy');
 });
 
+test('catalog hooks that only share the prefix keep their authored rules', async ({ page }) => {
+  await open(page, 'cushion', { productPageStyle: 'editorial' }, { css: '[data-pagosya-product-template]{color:red}[data-pagosya-products] .card{color:blue}[data-pagosya-product-page]{color:green}' });
+  const rules = await page.evaluate(() => [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]).map(rule => rule.cssText).join('\n'));
+  expect(rules).toContain('[data-pagosya-product-template]');
+  expect(rules).toContain('[data-pagosya-products] .card');
+  expect(rules).not.toContain('color: green');
+});
+
 for (const style of ['editorial', 'dense'] as const) test(`${style} page keeps photo and purchase side by side above the fold at 1280×844`, async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 844 });
   await open(page, style === 'dense' ? 'lamp' : 'cushion', { productPageStyle: style });
