@@ -22,6 +22,11 @@ export function designCaptureFailures(captures: VisualCapture[]) {
   for (const c of captures) {
     if (!c.readiness.fontsLoaded || c.readiness.missingImages) errors.push(`${c.viewport}: recursos sin cargar.`);
     if (c.readiness.scrollWidth > c.width + 1) errors.push(`${c.viewport}: contenido fuera del ancho de pantalla.`);
+    if (c.product) {
+      if (c.viewport === 'desktop' && c.product.buyBottom !== null && c.product.buyBottom > c.height) errors.push('desktop: el botón de compra no se ve sin desplazarse.');
+      if (c.product.titleLines > (c.viewport === 'desktop' ? 2 : 3)) errors.push(`${c.viewport}: el nombre del producto ocupa demasiadas líneas.`);
+      if (c.product.overflowingChoices) errors.push(`${c.viewport}: hay opciones con texto cortado.`);
+    }
   }
   return [...new Set(errors)];
 }

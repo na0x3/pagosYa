@@ -15,6 +15,17 @@ describe('Design evidence and provider accounting', () => {
     expect(knownDesignSpend([])).toBeNull();
     expect(knownDesignSpend([{ usage: { providerMicroUsd: -1 } }])).toBeNull();
   });
+  it('fails product pages whose purchase is below the fold, whose title wraps too far or whose choices overflow', () => {
+    const desktop = capture('desktop', 1280), mobile = capture('mobile', 390);
+    const good = { buyBottom: 700, titleLines: 2, overflowingChoices: 0 };
+    expect(designCaptureFailures([{ ...desktop, product: good }, { ...mobile, product: { ...good, buyBottom: 1400, titleLines: 3 } }])).toEqual([]);
+    expect(designCaptureFailures([{ ...desktop, product: { buyBottom: 900, titleLines: 3, overflowingChoices: 1 } }, mobile])).toEqual([
+      'desktop: el botón de compra no se ve sin desplazarse.',
+      'desktop: el nombre del producto ocupa demasiadas líneas.',
+      'desktop: hay opciones con texto cortado.',
+    ]);
+    expect(designCaptureFailures([{ ...desktop, product: { ...good, buyBottom: null } }, { ...mobile, product: { ...good, titleLines: 4 } }])).toEqual(['mobile: el nombre del producto ocupa demasiadas líneas.']);
+  });
 });
 describe('Design assessment instructions', () => {
   it('adds the purchase-page checklist only for product pages', () => {

@@ -3,7 +3,7 @@ import { sourceVisualState } from './source-visual-state';
 import { chromium, type BrowserContext } from 'playwright';
 import type { SourceProjectSnapshot } from './source-project';
 
-export type VisualCapture = { viewport: 'desktop' | 'mobile'; width: number; height: number; y: number; pageHeight: number; productId?: string; state: 'initial'; readiness: { fontsLoaded: boolean; missingImages: number; scrollWidth: number }; image: string };
+export type VisualCapture = { viewport: 'desktop' | 'mobile'; width: number; height: number; y: number; pageHeight: number; productId?: string; state: 'initial'; readiness: { fontsLoaded: boolean; missingImages: number; scrollWidth: number }; product?: { buyBottom: number | null; titleLines: number; overflowingChoices: number }; image: string };
 const origin = 'https://preview.invalid';
 const mime: Record<string, string> = { mp4: 'video/mp4', html: 'text/html', css: 'text/css', js: 'text/javascript', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', woff2: 'font/woff2', ttf: 'font/ttf' };
 
@@ -62,7 +62,19 @@ export async function captureSourceVisuals(snapshot: SourceProjectSnapshot, entr
         await page.evaluate(async () => { await Promise.all(Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }).map(i => i.decode().catch(() => {}))); });
         const image = await page.screenshot({ type: 'jpeg', quality: 75, animations: 'disabled', timeout: 7000 });
         const readiness = await page.evaluate(() => ({ fontsLoaded: document.fonts.status === 'loaded', scrollWidth: document.documentElement.scrollWidth, missingImages: Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && (!i.complete || !i.naturalWidth); }).length }));
-        captures.push({ viewport, width, height: 844, y, pageHeight, ...(state.productId ? { productId: state.productId } : {}), state: 'initial', readiness, image: `data:image/jpeg;base64,${image.toString('base64')}` });
+        // Purchase placement is measured once per viewport, at the top where shoppers land.
+        const product = y === 0 ? await page.evaluate(() => {
+          const detail = document.querySelector('[data-pagosya-product-page]'), title = detail?.querySelector('#pagosya-product-title');
+          if (!detail || !title) return undefined;
+          const buy = detail.querySelector('.product-detail__buy')?.getBoundingClientRect();
+          const style = getComputedStyle(title), lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+          return {
+            buyBottom: buy && buy.height ? Math.round(buy.bottom) : null,
+            titleLines: Math.round(title.getBoundingClientRect().height / lineHeight),
+            overflowingChoices: Array.from(detail.querySelectorAll('[data-product-option]')).filter(el => el.scrollWidth > el.clientWidth + 1).length,
+          };
+        }) : undefined;
+        captures.push({ viewport, width, height: 844, y, pageHeight, ...(state.productId ? { productId: state.productId } : {}), state: 'initial', readiness, ...(product ? { product } : {}), image: `data:image/jpeg;base64,${image.toString('base64')}` });
       }
       await page.close();
     }
