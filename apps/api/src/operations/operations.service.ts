@@ -873,8 +873,8 @@ export class OperationsService {
 
   /**
    * Merge rule: the connected system owns stock counts for mapped SKUs. An
-   * absolute count replaces pagosYa's number, minus units pagosYa sold after
-   * `asOf`; a delta adjusts the current number. Every change is an auditable
+   * absolute count replaces pagosYa's number, minus units pagosYa sold (online
+   * or in its POS) after `asOf`; a delta adjusts the current number. Every change is an auditable
    * movement, and every SKU that could not be applied is reported with a reason.
    */
   async syncStockInbound(connectionId: string, secret: string, dto: InboundStockSyncDto) {
@@ -916,7 +916,7 @@ export class OperationsService {
           } else {
             next = item.stock!;
             if (item.asOf) {
-              const sold = await tx.inventoryMovement.aggregate({ _sum: { quantityDelta: true }, where: { storeId: connection.storeId, paymentLinkId: product.id, variantId: mapping.variantId ?? null, sourceType: "ORDER", createdAt: { gt: new Date(item.asOf) } } });
+              const sold = await tx.inventoryMovement.aggregate({ _sum: { quantityDelta: true }, where: { storeId: connection.storeId, paymentLinkId: product.id, variantId: mapping.variantId ?? null, sourceType: { in: ["ORDER", "POS"] }, createdAt: { gt: new Date(item.asOf) } } });
               soldAfterCount = -(sold._sum.quantityDelta ?? 0);
               next = Math.max(0, next - soldAfterCount);
             }

@@ -358,7 +358,7 @@ describe("OperationsService inbound stock merge", () => {
     const result = await service.syncStockInbound("conn_1", "sync_secret", { items: [{ externalSku: "LAMP-NEGRO", stock: 7, asOf: "2026-09-15T10:00:00.000Z" }] } as any);
     expect(result).toMatchObject({ updated: 1, skipped: 0, results: [{ externalSku: "LAMP-NEGRO", variantId: "negro", stock: 5, soldAfterCount: 2 }] });
     expect(prisma.paymentLink.update).toHaveBeenCalledWith({ where: { id: "lamp" }, data: { variants: [{ ...lamp.variants[0], stock: 5 }, lamp.variants[1]], stock: 17 } });
-    expect(prisma.inventoryMovement.aggregate).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ variantId: "negro", sourceType: "ORDER" }) }));
+    expect(prisma.inventoryMovement.aggregate).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ variantId: "negro", sourceType: { in: ["ORDER", "POS"] } }) }));
     expect(prisma.inventoryMovement.create).toHaveBeenCalledWith({ data: expect.objectContaining({ variantId: "negro", quantityDelta: -7, stockAfter: 5 }) });
   });
 
