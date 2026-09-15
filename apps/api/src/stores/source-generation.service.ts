@@ -9,12 +9,12 @@ import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
-import { SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, validateSourcePresentation, type SourceDesign } from './source-design';
+import { adoptTrailingDesignSections, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, sourceProviderBody, isDeepSeek } from './source-provider';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
-import { compileNextPreview, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
+import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { SourceDesignPlanner } from './source-design-planner';
@@ -461,7 +461,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               try { check(); } catch (error) { validationErrors.push(error instanceof Error ? error.message : 'Invalid source'); }
             }
             if (validationErrors.length) throw new BadGatewayException(validationErrors.join('\n'));
-            if (committedDesign) generated.design = committedDesign;
+            if (committedDesign) generated.design = adoptTrailingDesignSections(committedDesign, useNext ? nextPageMarkup(generated.files, 'home') : generated.files.find(file => file.path === 'index.html')?.content || '');
             else delete generated.design;
             if (useNext) { compiledNext = await compileNextPreview(generated.files); if (generated.design) validateNextDesign(generated.files, generated.design); }
             else {

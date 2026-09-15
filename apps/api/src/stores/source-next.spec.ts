@@ -54,6 +54,30 @@ describe('Next.js storefront compilation', () => {
     files[1].content = files[1].content.replace('<div data-pagosya-catalog />', '');
     expect(() => validateNextSources(files)).toThrow('home necesita data-pagosya-catalog');
   });
+  it('reports every missing hook across pages so one repair can fix them all', () => {
+    const files = nextStoreFiles(); files[0].content = files[0].content.replace('data-cart-open', 'data-other');
+    let message = '';
+    try { validateNextSources(files); } catch (error) { message = (error as Error).message; }
+    expect(message).toContain('home necesita data-cart-open');
+    expect(message).toContain('product necesita data-cart-open');
+  });
+  it('sees hooks forwarded through prop spreads and children of shared components', () => {
+    const files = nextStoreFiles();
+    files[0].content = `function IconButton({ children, ...props }: any) { return <button className="icon" {...props}>{children}</button>; }
+export default function Header() { return <header><a href="index.html">Home</a><IconButton data-cart-open aria-label="Pedido">Pedido</IconButton></header>; }`;
+    files[2].content = `import Header from './Header'; const Shell = (props: any) => <><Header/>{props.children}</>; export default function Product() { return <Shell><main data-pagosya-product-page/><div data-pagosya-cart hidden/><p data-pagosya-status role="status"/></Shell>; }`;
+    expect(() => validateNextSources(files)).not.toThrow();
+    expect(nextPageMarkup(files, 'product')).toMatch(/<button[^>]*data-cart-open/);
+  });
+  it('renders reused tab panels each time with their forwarded ids', () => {
+    const files = nextStoreFiles();
+    files[1].content = `import { useState } from 'react'; import Header from './Header';
+const Panel = ({ children, ...rest }: any) => <section {...rest}>{children}</section>;
+export default function Home() { const [tab] = useState('portada'); return <><Header/><main><Panel id="portada" hidden={tab !== 'portada'}><h1>Hola</h1></Panel><Panel id="menu" hidden={tab !== 'menu'}><div data-pagosya-catalog /></Panel></main><div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/></>; }`;
+    const design: any = { selected: 0, concepts: [{ layout: { sections: ['portada', 'menu'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false } }] };
+    expect(() => validateNextSources(files)).not.toThrow();
+    expect(() => validateNextDesign(files, design)).not.toThrow();
+  });
   it('supports local components and a separately exported default component', () => {
     const files = nextStoreFiles();
     files[0].content = 'const Cart = () => <button data-cart-open>Pedido</button>; const Header = () => <header><a href="index.html">Home</a><Cart/></header>; export default Header;';

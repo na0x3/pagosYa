@@ -16,7 +16,7 @@ export const isNextSource = (files: SourceProjectFileDto[] = []) => files.some(f
 export const nextPages = [{ name: 'home', path: 'index.html' }, { name: 'product', path: 'product.html' }, { name: 'checkout', path: 'checkout.html' }] as const;
 
 export const SOURCE_NEXT_INSTRUCTIONS = `Generate a real Next.js storefront using React, TypeScript and Tailwind CSS 3. The platform supplies the trusted Next.js Pages Router scaffold, package.json, configuration, runtime and build tooling. Return ONLY components/**/*.tsx and styles/globals.css. Required default-export React components: components/home.tsx, components/product.tsx, components/checkout.tsx. Extract a shared Header, Footer and other reusable pieces into components/. Each page must reuse the same actual shared navigation, typography and brand. Use className with complete literal Tailwind utility names, responsive prefixes, arbitrary values and normal React event handlers/useState/useEffect for interaction. Use styles/globals.css for shared tokens, @font-face, runtime commerce selectors and custom animation. The platform adds @tailwind directives. ${SOURCE_CREATIVE_TOOLS} React and relative component imports are available; do not import remote resources, server modules, Next APIs or CSS from components. Do not output framework configuration, HTML files, site.js, styles.css or compiled bundles. Do not use dangerouslySetInnerHTML, eval, new Function, dynamic imports, script tags or authored fetch calls. Use ordinary anchors with index.html, product.html and checkout.html hrefs, because the same components run in isolated preview and Next.js static exports. The framework supplies document/head/scripts and SEO; components return page content, never html/head/body tags.
-The existing PagosYa commerce runtime owns products, prices, cart, checkout, forms, reviews, bundles, loyalty, privacy and payments. Homepage MUST render one empty data-pagosya-catalog mount, an empty hidden data-pagosya-cart mount, data-pagosya-status (role=status aria-live=polite), and a real button with data-cart-open. Product must render empty data-pagosya-product-page and data-pagosya-cart mounts plus data-pagosya-status. Checkout must render one empty data-pagosya-checkout-page and data-pagosya-status; do not duplicate payment fields/cart markup. The runtime starts after React mounts. Style its menu-item, menu-item__name, menu-item__desc, menu-item__price, menu-add, order-item, order-line, order-field, order-total, order-note, checkout-button, product-page and checkout-page classes in globals.css. It emits pagosya:ready for idempotent decoration; never write into an observed catalog subtree from a MutationObserver. Do not register custom purchase/payment implementations. Never render React children inside these runtime-owned mounts or remove them during unrelated state changes. Style runtime classes in globals.css; Tailwind utilities on the surrounding layout are encouraged. On product pages, let actual product photography lead: allocate roughly half the desktop content width to the main image with thumbnails below, and use full available width above the details on mobile. Keep the entire product visible with object-fit:contain and avoid viewport-height caps that shrink photos in the editor. Start with the product gallery and actual product name, price and purchase action; do not add an oversized generic introductory heading above this mount. Honor explicit merchant layout requests. Homepage and product need usable cart access; all pages need navigation back to index.html. Add the optional contact hook as an empty hidden data-pagosya-contact mount; the runtime owns whether it appears. Location iframes may be normal React JSX with a supported HTTPS map src, title, loading=lazy and responsive sizing. Uploaded assets use literal /assets/... paths. Do not copy reference-site assets or fabricate product photography. Read browser globals only in effects or event handlers so Next.js can prerender the page. Define main and its planned direct section IDs literally in components/home.tsx. Put runtime hooks in literal JSX with no children; do not hide them behind conditions. Native React/CSS/SVG motion is available with reduced-motion support. Respect the selected motion mode and confirmed brand tokens. Preserve unrelated components and CSS for local edits. A whole-site redesign can replace existing components; legacy HTML supplied during migration is reference material to reconstruct in React while preserving its business content and commerce behavior.
+The existing PagosYa commerce runtime owns products, prices, cart, checkout, forms, reviews, bundles, loyalty, privacy and payments. Homepage MUST render one empty data-pagosya-catalog mount, an empty hidden data-pagosya-cart mount, data-pagosya-status (role=status aria-live=polite), and a real button with data-cart-open. Product MUST render empty data-pagosya-product-page and data-pagosya-cart mounts, data-pagosya-status, and a real button with data-cart-open (product pages need the same cart access as the homepage). Checkout must render one empty data-pagosya-checkout-page and data-pagosya-status; do not duplicate payment fields/cart markup. The runtime starts after React mounts. Style its menu-item, menu-item__name, menu-item__desc, menu-item__price, menu-add, order-item, order-line, order-field, order-total, order-note, checkout-button, product-page and checkout-page classes in globals.css. It emits pagosya:ready for idempotent decoration; never write into an observed catalog subtree from a MutationObserver. Do not register custom purchase/payment implementations. Never render React children inside these runtime-owned mounts or remove them during unrelated state changes. Style runtime classes in globals.css; Tailwind utilities on the surrounding layout are encouraged. On product pages, let actual product photography lead: allocate roughly half the desktop content width to the main image with thumbnails below, and use full available width above the details on mobile. Keep the entire product visible with object-fit:contain and avoid viewport-height caps that shrink photos in the editor. Start with the product gallery and actual product name, price and purchase action; do not add an oversized generic introductory heading above this mount. Honor explicit merchant layout requests. Homepage and product need usable cart access; all pages need navigation back to index.html. Add the optional contact hook as an empty hidden data-pagosya-contact mount; the runtime owns whether it appears. Location iframes may be normal React JSX with a supported HTTPS map src, title, loading=lazy and responsive sizing. Uploaded assets use literal /assets/... paths. Do not copy reference-site assets or fabricate product photography. Read browser globals only in effects or event handlers so Next.js can prerender the page. Define main and its planned direct section IDs literally in components/home.tsx. For tabs, steps or other multi-view homepages, keep every planned section mounted as a literal direct child of main in plan order and switch views by toggling the hidden attribute, aria attributes or className from state; never wrap planned sections in conditionals, .map(), switch statements or {expressions}. Put runtime hooks in literal JSX with no children; do not hide them behind conditions. Native React/CSS/SVG motion is available with reduced-motion support. Respect the selected motion mode and confirmed brand tokens. Preserve unrelated components and CSS for local edits. A whole-site redesign can replace existing components; legacy HTML supplied during migration is reference material to reconstruct in React while preserving its business content and commerce behavior.
 Before returning source, perform a strict TypeScript scope pass: every uppercase JSX tag or referenced component name must be declared in that file or explicitly imported from a returned local components/*.tsx file. Shared Header, Footer and other primitives must have one concrete definition and matching imports in every page that uses them; never rely on a symbol existing in another file implicitly. Do not return a page that would produce Cannot find name, module-not-found or JSX intrinsic-element errors.
 Choose the homepage information architecture for this merchant: a narrative landing page, useful catalog, gallery, playful scene or a combination can work. Keep navigation and the primary customer action easy to find. Use anchors for destinations and buttons for actions/state changes. Additional pages are optional when the content earns them. Keep cart access visible on mobile.`;
 
@@ -56,23 +56,36 @@ export function validateNextSources(files: SourceProjectFileDto[]) {
     visit(source);
   }
   for (const path of ['components/home.tsx', 'components/product.tsx', 'components/checkout.tsx', 'styles/globals.css']) if (!files.some(f => f.path === path)) throw new BadGatewayException(`Falta ${path} en el proyecto Next.js.`);
+  // Report every missing hook at once; the bounded repair only sees this message.
+  const missing: string[] = [];
   for (const page of nextPages) {
     const markup = nextPageMarkup(files, page.name);
     const hooks = page.name === 'home' ? ['data-pagosya-catalog', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : page.name === 'product' ? ['data-pagosya-product-page', 'data-pagosya-cart', 'data-pagosya-status', 'data-cart-open'] : ['data-pagosya-checkout-page', 'data-pagosya-status'];
-    for (const hook of hooks) if (!new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup)) throw new BadGatewayException(`${page.name} necesita ${hook} en JSX visible.`);
+    for (const hook of hooks) if (!new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup)) missing.push(`${page.name} necesita ${hook} en JSX visible.`);
   }
+  if (missing.length) throw new BadGatewayException(missing.join('\n'));
 }
+
+type NextSlot = { children: string; attrs: Array<[string, string]>; childNames: Set<string>; propsNames: Set<string>; spreadNames: Set<string> };
 
 /** Conservative JSX structure inspection, never SSR or evaluation of merchant modules.
  * Literal page structure is required; rendered behavior is checked separately in Studio. */
 export function nextPageMarkup(files: SourceProjectFileDto[], name: string): string {
-  const seen = new Set<string>();
-  const renderFile = (path: string, exportName = 'default'): string => {
+  // A stack, not a seen-set: reused components (tab panels, buttons) render at every use; only recursion stops.
+  const active = new Set<string>();
+  const loaded = new Map<string, ((exportName: string, children: string, attrs: Array<[string, string]>) => string) | null>();
+  const renderFile = (path: string, exportName = 'default', children = '', attrs: Array<[string, string]> = []): string => {
     const key = `${path}#${exportName}`;
-    if (seen.has(key)) return '';
-    seen.add(key);
+    if (active.has(key)) return '';
+    if (!loaded.has(path)) loaded.set(path, loadFile(path));
+    const renderExport = loaded.get(path);
+    if (!renderExport) return '';
+    active.add(key);
+    try { return renderExport(exportName, children, attrs); } finally { active.delete(key); }
+  };
+  const loadFile = (path: string) => {
     const file = files.find(f => f.path === path);
-    if (!file) return '';
+    if (!file) return null;
     const source = ts.createSourceFile(path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const imports = new Map<string, { path: string; exported: string }>();
     const motionTags = new Set<string>();
@@ -122,33 +135,65 @@ export function nextPageMarkup(files: SourceProjectFileDto[], name: string): str
       }
     }
     const escape = (value: string) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
-    const render = (node: ts.Node): string => {
+    const literalAttrs = (opening: ts.JsxOpeningLikeElement): Array<[string, string]> => opening.attributes.properties.filter(ts.isJsxAttribute).map(a => {
+      const value = !a.initializer ? '' : ts.isStringLiteral(a.initializer) ? a.initializer.text : ts.isJsxExpression(a.initializer) && a.initializer.expression && ts.isStringLiteral(a.initializer.expression) ? a.initializer.expression.text : '';
+      return [a.name.getText(source), value];
+    });
+    // Props passed at a call site are only honored where the component structurally forwards them ({children}, {...props}).
+    const componentSlot = (component: ts.Node, children: string, attrs: Array<[string, string]>): NextSlot => {
+      const slot: NextSlot = { children, attrs, childNames: new Set(), propsNames: new Set(), spreadNames: new Set() };
+      let fn: ts.Node | undefined = ts.isCallExpression(component) ? component.arguments[0] : component;
+      if (fn && ts.isIdentifier(fn)) fn = declarations.get(fn.text);
+      const param = fn && (ts.isFunctionDeclaration(fn) || ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) ? fn.parameters[0]?.name : undefined;
+      if (param && ts.isIdentifier(param)) { slot.propsNames.add(param.text); slot.spreadNames.add(param.text); }
+      if (param && ts.isObjectBindingPattern(param)) for (const element of param.elements) {
+        if (!ts.isIdentifier(element.name)) continue;
+        if (element.dotDotDotToken) slot.spreadNames.add(element.name.text);
+        else if ((element.propertyName && ts.isIdentifier(element.propertyName) ? element.propertyName.text : element.name.text) === 'children') slot.childNames.add(element.name.text);
+      }
+      return slot;
+    };
+    const isChildren = (expression: ts.Expression, slot: NextSlot): boolean => ts.isParenthesizedExpression(expression) ? isChildren(expression.expression, slot)
+      : ts.isIdentifier(expression) ? slot.childNames.has(expression.text)
+      : ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression) && slot.propsNames.has(expression.expression.text) && expression.name.text === 'children';
+    const render = (node: ts.Node, slot: NextSlot): string => {
       if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
         const opening = ts.isJsxElement(node) ? node.openingElement : node;
+        const renderChildren = () => ts.isJsxElement(node) ? node.children.map(child => render(child, slot)).join('') : '';
         let tag = opening.tagName.getText(source);
-        if (transparent.has(tag)) return ts.isJsxElement(node) ? node.children.map(render).join('') : '';
+        if (transparent.has(tag)) return renderChildren();
         const animated = tag.match(/^([A-Za-z_$][\w$]*)\.([a-z][A-Za-z0-9]*)$/);
         if (animated && motionTags.has(animated[1])) tag = animated[2];
-        if (imports.has(tag)) { const imported = imports.get(tag)!; return renderFile(imported.path, imported.exported); }
+        if (imports.has(tag)) { const imported = imports.get(tag)!; return renderFile(imported.path, imported.exported, renderChildren(), literalAttrs(opening)); }
         if (/^[A-Z]/.test(tag) && declarations.has(tag)) {
-          const localKey = `${path}#local:${tag}`; if (seen.has(localKey)) return ''; seen.add(localKey);
-          return render(declarations.get(tag)!);
+          const localKey = `${path}#local:${tag}`; if (active.has(localKey)) return '';
+          const component = declarations.get(tag)!;
+          const componentChildren = renderChildren();
+          active.add(localKey);
+          try { return render(component, componentSlot(component, componentChildren, literalAttrs(opening))); } finally { active.delete(localKey); }
         }
         if (!/^[a-z]/.test(tag)) return '';
-        const attrs = opening.attributes.properties.filter(ts.isJsxAttribute).map(a => {
-          const value = !a.initializer ? '' : ts.isStringLiteral(a.initializer) ? a.initializer.text : ts.isJsxExpression(a.initializer) && a.initializer.expression && ts.isStringLiteral(a.initializer.expression) ? a.initializer.expression.text : '';
-          return ` ${a.name.getText(source)}="${escape(value)}"`;
-        }).join('');
-        const children = ts.isJsxElement(node) ? node.children.map(render).join('') : '';
+        const attrs = literalAttrs(opening);
+        if (slot.attrs.length && opening.attributes.properties.some(a => ts.isJsxSpreadAttribute(a) && ts.isIdentifier(a.expression) && slot.spreadNames.has(a.expression.text))) {
+          for (const forwarded of slot.attrs) if (!attrs.some(([attrName]) => attrName === forwarded[0])) attrs.push(forwarded);
+        }
+        const children = renderChildren();
         if (opening.attributes.properties.some(a => ts.isJsxAttribute(a) && /^data-pagosya-(catalog|cart|status|product-page|checkout-page|contact)$/.test(a.name.getText(source))) && ts.isJsxElement(node) && node.children.some(c => !ts.isJsxText(c) || c.text.trim())) throw new BadGatewayException('Los contenedores de comercio deben quedar vacíos; React no debe controlar sus hijos.');
-        return `<${tag}${attrs}>${children}</${tag}>`;
+        return `<${tag}${attrs.map(([attrName, value]) => ` ${attrName}="${escape(value)}"`).join('')}>${children}</${tag}>`;
       }
       if (ts.isJsxText(node)) return escape(node.text);
-      if (ts.isJsxExpression(node)) return ''; // Do not claim runtime expressions were verified.
-      let result = ''; ts.forEachChild(node, child => { result += render(child); }); return result;
+      if (ts.isJsxExpression(node)) {
+        const expression = node.expression;
+        if (expression && isChildren(expression, slot)) return slot.children;
+        if (expression && ts.isBinaryExpression(expression) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(expression.operatorToken.kind) && isChildren(expression.left, slot)) return slot.children || render(expression.right, slot);
+        return ''; // Do not claim other runtime expressions were verified.
+      }
+      let result = ''; ts.forEachChild(node, child => { result += render(child, slot); }); return result;
     };
-    const component = exports.get(exportName);
-    return component ? render(component) : '';
+    return (exportName: string, children: string, attrs: Array<[string, string]>) => {
+      const component = exports.get(exportName);
+      return component ? render(component, componentSlot(component, children, attrs)) : '';
+    };
   };
   return renderFile(`components/${name}.tsx`);
 }

@@ -1,4 +1,4 @@
-import { savedSourceDesign, sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation } from './source-design';
+import { adoptTrailingDesignSections, savedSourceDesign,sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation } from './source-design';
 
 const proposal = () => ({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
   name, premise: 'Handmade ceramics from La Paz', opening: name + ' opening', flow: name + ' flow',
@@ -42,6 +42,18 @@ it('rejects a catalog-first plan implemented as an extra hero, reordered section
   const menu = '<section id="menu"><div data-pagosya-catalog></div></section>', visit = '<aside id="visit">Visit</aside>';
   expect(() => check(`<main>${menu}${visit}<div data-pagosya-contact hidden></div></main>`)).not.toThrow();
   for (const html of [`<main><section id="hero">Hero</section>${menu}${visit}</main>`, `<main>${visit}${menu}</main>`, `<main>${menu.replace('<div data-pagosya-catalog></div>', '<template><div data-pagosya-catalog></div></template>')}${visit}</main>`]) expect(() => check(html)).toThrow('diseño elegido');
+});
+
+it('adopts extra blocks after the planned sequence (e.g. requested tabs) but never before or between it', () => {
+  const value = proposal() as any;
+  value.concepts[1].layout = { sections: ['hero', 'menu'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };
+  const menu = '<section id="menu"><div data-pagosya-catalog></div></section>';
+  const adopted = adoptTrailingDesignSections(value, `<main><section id="hero">Hi</section>${menu}<section id="residences"></section><section id="aviation"></section></main>`);
+  expect(adopted.concepts[1].layout!.sections).toEqual(['hero', 'menu', 'residences', 'aviation']);
+  expect(value.concepts[1].layout.sections).toEqual(['hero', 'menu']);
+  for (const html of [`<main><section id="intro"></section><section id="hero"></section>${menu}</main>`, `<main><section id="hero"></section><section id="x"></section>${menu}</main>`, `<main><section id="hero"></section>${menu}<section id="menu"></section></main>`]) {
+    expect(adoptTrailingDesignSections(value, html)).toBe(value);
+  }
 });
 
 it('leaves composition to the concept while keeping navigation and purchasing usable', () => {
