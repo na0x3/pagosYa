@@ -1,5 +1,5 @@
 import { SourceConversationFailure } from './source-conversation-failure';
-import { SourceChatService } from './source-chat.service';
+import { SourceChatService, referenceOnlyNotice } from './source-chat.service';
 import { SourceProviderQuotaException } from './source-provider-error';
 import * as websiteReference from './source-website-reference';
 function setup(messages: any[] = []) {
@@ -409,5 +409,19 @@ describe('build progress', () => {
     expect(progress.status).toBe('failed');
     expect(progress.steps.at(-1)).toMatchObject({stage:'building',status:'failed'});
     expect(progress.steps.some((step:any)=>step.stage==='saving')).toBe(false);
+  });
+});
+
+describe('referenceOnlyNotice', () => {
+  const photo = (n: number) => `/v1/uploads/0000000${n}-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp`;
+  it('tells the merchant when uploaded photos were kept only as style references', () => {
+    expect(referenceOnlyNotice([1, 2, 3].map(n => ({ url: photo(n), role: 'reference' })), [1, 2, 3].map(photo))).toContain('Usé tus 3 fotos solo como referencia de estilo, así que no aparecen en la tienda');
+    expect(referenceOnlyNotice([{ url: photo(1), role: 'reference' }, { url: photo(2), role: 'product' }], [photo(1), photo(2)])).toContain('Usé 1 de tus fotos solo como referencia');
+    expect(referenceOnlyNotice([{ url: photo(1), role: 'reference' }], [photo(1)])).toContain('«usa estas fotos en la tienda»');
+  });
+  it('stays silent when every upload is shown or none was attached in this request', () => {
+    expect(referenceOnlyNotice([{ url: photo(1), role: 'product' }], [photo(1)])).toBe('');
+    expect(referenceOnlyNotice([{ url: photo(1), role: 'reference' }], [])).toBe('');
+    expect(referenceOnlyNotice([{ url: '/v1/uploads/clip.mp4', role: 'reference' }], ['/v1/uploads/clip.mp4'])).toBe('');
   });
 });

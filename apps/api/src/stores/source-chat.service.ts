@@ -18,6 +18,15 @@ import { honorImageContent } from './source-image-intent';
 import { requestsImageChange } from './source-edit-scope';
 import { createSourceProgress } from './source-progress';
 
+/** Photos kept only as style references never appear on the site; say so instead of omitting them silently. */
+export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, attachedUrls: string[]): string {
+  const attached = new Set(attachedUrls.filter(url => /\.(?:png|jpe?g|webp)$/i.test(url)));
+  const count = uses.filter(use => attached.has(use.url) && use.role === 'reference').length;
+  if (!count) return '';
+  const all = count === attached.size;
+  return ` ${all ? (count === 1 ? 'Usé tu foto' : `Usé tus ${count} fotos`) : count === 1 ? 'Usé 1 de tus fotos' : `Usé ${count} de tus fotos`} solo como referencia de estilo, así que no ${count === 1 ? 'aparece' : 'aparecen'} en la tienda (por ejemplo, porque ${count === 1 ? 'muestra' : 'muestran'} otra marca). Si quieres mostrarlas, dime «usa estas fotos en la tienda»; para tus productos, añádelos con su foto en Productos.`;
+}
+
 @Injectable()
 export class SourceChatService {
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService) {}
@@ -198,7 +207,7 @@ export class SourceChatService {
       }, budget, decision.imageUses, workflow.report);
       await workflow.finish('completed');
       const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
-        threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `Guardé los cambios de tu tienda «${revision.label}». El editor comprobará su resultado en el navegador y mostrará aquí los errores y pasos pendientes. Revisa también el aspecto del sitio a la derecha.${revision.createdProducts?.length ? ` Creé ${revision.createdProducts.length} productos en tu catálogo; también aparecen en la tienda publicada.` : ''}${revision.updatedProducts?.length ? ` Actualicé ${revision.updatedProducts.length} productos de tu catálogo.` : ''}${revision.deletedProducts?.length ? ` Eliminé ${revision.deletedProducts.length} productos de tu catálogo.` : ''}${revision.createdProducts?.length || revision.updatedProducts?.length || revision.deletedProducts?.length ? ' Puedes seguir administrándolos en Productos.' : ''}${revision.optionChanges?.length ? ` Opciones guardadas: ${revision.optionChanges.map(change=>`${change.productName}: ${change.count} combinaciones`).join('; ')}.` : ''}`,
+        threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `Guardé los cambios de tu tienda «${revision.label}». El editor comprobará su resultado en el navegador y mostrará aquí los errores y pasos pendientes. Revisa también el aspecto del sitio a la derecha.${referenceOnlyNotice(decision.imageUses, input.assetUrls || [])}${revision.createdProducts?.length ? ` Creé ${revision.createdProducts.length} productos en tu catálogo; también aparecen en la tienda publicada.` : ''}${revision.updatedProducts?.length ? ` Actualicé ${revision.updatedProducts.length} productos de tu catálogo.` : ''}${revision.deletedProducts?.length ? ` Eliminé ${revision.deletedProducts.length} productos de tu catálogo.` : ''}${revision.createdProducts?.length || revision.updatedProducts?.length || revision.deletedProducts?.length ? ' Puedes seguir administrándolos en Productos.' : ''}${revision.optionChanges?.length ? ` Opciones guardadas: ${revision.optionChanges.map(change=>`${change.productName}: ${change.count} combinaciones`).join('; ')}.` : ''}`,
         metadata: { progress: workflow.value, sourceSetup: { ...setupDraft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: revision.revision, label: revision.label, createdProductIds: revision.createdProducts?.map(p => p.id) || [], ...(revision.generation ? { generation: revision.generation } : {}) },
       } });
       return { userMessage, assistantMessage, revision };
