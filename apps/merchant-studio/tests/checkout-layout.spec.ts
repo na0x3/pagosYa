@@ -38,11 +38,12 @@ for (const width of [1440, 1024, 390]) test(`checkout stays inside its authored 
   const layout = await review.evaluate(el => {
     const bounds = el.getBoundingClientRect(), host = el.closest('[data-pagosya-checkout]')!.getBoundingClientRect();
     const fields = el.querySelector('.checkout-review__fields')!.getBoundingClientRect(), summary = el.querySelector('.checkout-review__summary')!.getBoundingClientRect();
-    return { left: bounds.left, right: bounds.right, hostLeft: host.left, hostRight: host.right, fieldsBottom: fields.bottom, fieldsRight: fields.right, summaryTop: summary.top, summaryLeft: summary.left, contentWidth: el.closest('.checkout-page__inner')!.getBoundingClientRect().width, overflow: document.documentElement.scrollWidth > innerWidth };
+    return { left: bounds.left, right: bounds.right, hostLeft: host.left, hostRight: host.right, fieldsTop: fields.top, fieldsLeft: fields.left, summaryBottom: summary.bottom, summaryRight: summary.right, contentWidth: el.closest('.checkout-page__inner')!.getBoundingClientRect().width, overflow: document.documentElement.scrollWidth > innerWidth };
   });
   expect(layout.left).toBeGreaterThanOrEqual(layout.hostLeft); expect(layout.right).toBeLessThanOrEqual(layout.hostRight);
-  if (layout.contentWidth <= 700) expect(layout.summaryTop).toBeGreaterThanOrEqual(layout.fieldsBottom);
-  else expect(layout.summaryLeft).toBeGreaterThanOrEqual(layout.fieldsRight);
+  // The order summary leads: beside the delivery fields on wide checkouts, above them when narrow.
+  if (layout.contentWidth <= 700) expect(layout.fieldsTop).toBeGreaterThanOrEqual(layout.summaryBottom);
+  else expect(layout.fieldsLeft).toBeGreaterThanOrEqual(layout.summaryRight);
   expect(layout.overflow).toBe(false);
   const recovery = frame.locator('[data-retention-recovery]'); await expect(recovery).toBeVisible();
   const checkbox = await recovery.getByRole('checkbox').boundingBox(); expect(checkbox!.width).toBeLessThanOrEqual(24); expect(checkbox!.height).toBeLessThanOrEqual(24);

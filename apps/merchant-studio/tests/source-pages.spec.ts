@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
 const photo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
-const data = { storeName: 'Taller Alba', checkoutMode: 'payment', items: [{ id: 'p1', name: 'Bolso de algodón', description: 'Algodón natural. Hecho en La Paz.', amount: 15000, currency: 'BOB', stock: 3, imageUrls: [photo, photo.replace('iVBOR', 'iVBOR')] }], locations: [{ id: 'central', name: 'Taller central', address: 'La Paz', pickupEnabled: true, deliveryEnabled: true }], categories: [] };
+const data = { storeName: 'Taller Alba', checkoutMode: 'payment', items: [{ id: 'p1', name: 'Bolso de algodón', description: 'Algodón natural. Hecho en La Paz.', tags: ['Material: Algodón natural'], amount: 15000, currency: 'BOB', stock: 3, imageUrls: [photo, photo.replace('iVBOR', 'iVBOR')] }], locations: [{ id: 'central', name: 'Taller central', address: 'La Paz', pickupEnabled: true, deliveryEnabled: true }], categories: [] };
 const files = [
   ...['commerce.js', 'product.html', 'checkout.html', 'commerce-pages.css'].map(path => ({ path, content: kit(path) })),
   { path: 'index.html', content: '<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="styles.css"><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><h1>Taller Alba</h1><main id="catalogo" data-pagosya-catalog></main><div data-pagosya-cart></div><p data-pagosya-status role="status"></p></body></html>' },
@@ -70,10 +70,12 @@ for (const width of [1280, 390]) test(`full product tabs and automatic checkout 
   const frame = page.frameLocator('iframe');
   await frame.getByRole('link', { name: 'Ver detalle de Bolso de algodón' }).click();
   await expect(frame.getByRole('heading', { name: 'Bolso de algodón' })).toBeVisible();
+  // The description reads once under the title; the Detalles tab carries facts such as the material.
+  await expect(frame.locator('.product-detail__intro')).toHaveText('Algodón natural. Hecho en La Paz.');
   await expect(frame.getByRole('tabpanel')).toContainText('Algodón natural');
   await expect(frame.getByRole('button', { name: 'Añadir al pedido', exact: true })).toHaveCSS('background-color', 'rgb(7, 80, 164)');
   await expect(frame.getByRole('button', { name: 'Añadir al pedido', exact: true })).toHaveCSS('border-radius', '0px');
-  await frame.getByRole('tab', { name: 'Descripción', exact: true }).focus(); await page.keyboard.press('ArrowRight');
+  await frame.getByRole('tab', { name: 'Detalles', exact: true }).focus(); await page.keyboard.press('ArrowRight');
   await expect(frame.getByRole('tab', { name: 'Envíos y retiro' })).toHaveAttribute('aria-selected', 'true');
   await expect(frame.getByRole('tabpanel')).toContainText('Retiro en tienda · Entrega a domicilio');
   await frame.getByRole('button', { name: 'Añadir al pedido', exact: true }).click();
