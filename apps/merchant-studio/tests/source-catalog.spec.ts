@@ -10,7 +10,7 @@ const snapshot = {
   schemaVersion: 1, brief: { businessType: 'Tienda', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Simple' },
   files: [
     { path: 'index.html', content: '<html><head><style>.menu-item{display:grid;grid-template-columns:100px 1fr 50px 44px;gap:12px;padding:12px}.menu-item__image{width:100px;height:100px;object-fit:contain}.menu-add{height:44px}</style><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><main data-pagosya-catalog></main><span data-cart-count></span><div data-pagosya-cart></div><p data-pagosya-status></p></body></html>' },
-    { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ apiBaseUrl: 'http://localhost:3001/v1', slug: 'test', data: { storeName: 'Prueba', items: [
+    { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ apiBaseUrl: 'http://localhost:3001/v1', slug: 'test', productPageStyle: 'dense', data: { storeName: 'Prueba', items: [
       { id: 'p1', name: 'Crema de maní', description: 'Frasco de 350 g', amount: 5000, currency: 'BOB', stock: 1, imageUrls: [photo1, photo2] },
       { id: 'p2', name: 'Una foto', amount: 3000, currency: 'BOB', stock: 2, imageUrls: [photo1] },
       { id: 'p3', name: 'Sin foto', amount: 2000, currency: 'BOB', stock: 0, imageUrls: [] },

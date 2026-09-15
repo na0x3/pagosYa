@@ -12,16 +12,15 @@ for (const width of [1024, 390]) for (const stock of [false, true]) test(`produc
   await page.goto('https://gallery.test/product.html?id=p1');
   const image = page.locator('.product-detail__photo');
   await expect(image).toBeVisible();
-  await expect(image).toHaveCSS('object-fit', 'contain');
+  await expect(image).toHaveCSS('object-fit', 'cover');
   const media = (await image.boundingBox())!;
   const layout = (await page.locator('.product-detail__layout').boundingBox())!;
   const copy = (await page.locator('.product-detail__copy').boundingBox())!;
-  expect(media.width / layout.width).toBeGreaterThan(width > 640 ? 0.45 : 0.98);
-  // The square photo gets a square frame at full column width, not a viewport-height cap (viewport is 550px).
-  expect(media.height).toBeGreaterThan(width > 640 ? 440 : 330);
-  expect(media.height / media.width).toBeCloseTo(1, 1);
-  if (width > 640) expect(copy.x).toBeGreaterThan(media.x + media.width);
-  else expect(copy.y).toBeGreaterThan(media.y + media.height);
+  expect(media.width / layout.width).toBeGreaterThan(width > 899 ? 0.5 : 0.98);
+  // The photo keeps a full frame even in a short viewport (550px): column height on desktop, 4:5 capped at 72dvh on phones.
+  expect(media.height).toBeGreaterThan(width > 899 ? 420 : 380);
+  if (width > 899) expect(copy.x).toBeGreaterThanOrEqual(media.x + media.width - 1);
+  else expect(copy.y).toBeGreaterThanOrEqual(media.y + media.height - 1);
   await page.getByRole('button', { name: 'Ver foto 2', exact: true }).click();
   await expect(image).toHaveAttribute('src', second);
   await expect(page.getByRole('button', { name: 'Ver foto 2', exact: true })).toHaveAttribute('aria-pressed', 'true');

@@ -262,11 +262,12 @@ import { readFileSync } from 'node:fs';
 
 const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
 const photo = 'data:image/webp;base64,' + readFileSync(new URL('./fixtures/retention-product.webp', import.meta.url)).toString('base64');
+const second = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 // Demo catalog only. Nothing is written to a merchant store.
-const lamp = { id: 'lamp', name: 'Lámpara de escritorio USB-C', description: 'Brazo ajustable y acabado mate. No incluye adaptador de pared.', amount: 22000, currency: 'BOB', stock: 20, imageUrls: [photo, photo],
+const lamp = { id: 'lamp', name: 'Lámpara de escritorio USB-C', description: 'Brazo ajustable y acabado mate. No incluye adaptador de pared.', amount: 22000, currency: 'BOB', stock: 20, imageUrls: [photo, second],
   specifications: [{ label: 'Conector', value: 'USB-C' }, { label: 'Brazo', value: 'Ajustable' }, { label: 'Acabado', value: 'Mate' }, { label: 'Garantía', value: 'Un año con la tienda, sin costo adicional' }],
   variants: [{ id: 'black', name: 'Negro', amount: 22000, stock: 10, options: [{ name: 'Color', value: 'Negro' }] }, { id: 'ivory', name: 'Marfil', amount: 22700, stock: 10, options: [{ name: 'Color', value: 'Marfil' }] }] };
-const cushion = { id: 'cushion', name: 'Funda de cojín', description: 'Funda de lino, cierre oculto. No incluye relleno.', amount: 11000, currency: 'BOB', stock: 20, imageUrls: [photo, photo],
+const cushion = { id: 'cushion', name: 'Funda de cojín', description: 'Funda de lino, cierre oculto. No incluye relleno.', amount: 11000, currency: 'BOB', stock: 20, imageUrls: [photo, second],
   variants: [{ id: 'small', name: '40 × 40 cm', amount: 11000, stock: 10, options: [{ name: 'Tamaño', value: '40 × 40 cm' }] }, { id: 'large', name: '50 × 50 cm', amount: 11700, stock: 10, options: [{ name: 'Tamaño', value: '50 × 50 cm' }] }] };
 const shirt = { id: 'shirt', name: 'Camisa de algodón de manga larga con bolsillo', amount: 14000, currency: 'BOB', stock: 5, imageUrls: [photo] };
 
@@ -568,6 +569,7 @@ test('mobile shows a full-width photo with dots, then the purchase panel', async
   const copy = (await page.locator('.product-detail__copy').boundingBox())!;
   expect(copy.y).toBeGreaterThanOrEqual(photo.y + photo.height - 1);
   await page.getByRole('button', { name: 'Marfil', exact: true }).click();
+  expect((await page.locator('.product-detail__buy').boundingBox())!.height).toBeLessThanOrEqual(56);
   await page.getByRole('button', { name: 'Añadir al pedido', exact: true }).click();
   await expect(page.locator('[data-cart-count]')).toHaveText('1');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -698,12 +700,14 @@ through
     [data-pagosya-product][data-style] .product-detail__quantity output{min-width:24px;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
     [data-pagosya-product][data-style] .product-detail__subtotal{grid-column:1 / -1;grid-row:2;font-size:13px;color:var(--pd-muted)}
     [data-pagosya-product][data-style] .product-detail__subtotal:empty{display:none}
-    [data-pagosya-product][data-style] .product-detail__buy{display:flex;align-items:center;justify-content:center;gap:0;width:100%;min-height:48px;margin:0;padding:12px 20px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;transition:filter .15s}
+    [data-pagosya-product][data-style] .product-detail__buy{display:flex;align-items:center;justify-content:center;gap:0;width:100%;min-height:48px;margin:0;padding:12px 20px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:filter .15s}
     [data-pagosya-product][data-style] .product-detail__buy:hover:not(:disabled){filter:brightness(.92)}
     [data-pagosya-product][data-style] .product-detail__buy-total{white-space:nowrap;font-variant-numeric:tabular-nums}
     [data-pagosya-product][data-style=editorial] .product-detail__buy-total{display:none}
     [data-pagosya-product][data-style=dense] .product-detail__buy{min-height:50px;font-size:15px;letter-spacing:0;text-transform:none}
     [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:"—";margin:0 8px}
+    /* Narrow phones keep the action on one line; the price above already shows the total. */
+    @media(max-width:480px){[data-pagosya-product][data-style=dense] .product-detail__buy-total{display:none}}
     [data-pagosya-product][data-style] .product-detail__status{min-height:20px;margin:0;font-size:13px;line-height:1.5;color:var(--pd-muted)}
     [data-pagosya-product][data-style] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px 18px;margin:14px 0 0;padding:12px 14px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);list-style:none}
     [data-pagosya-product][data-style=dense] .product-detail__assurances{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));margin-top:16px;padding:0;border:0}

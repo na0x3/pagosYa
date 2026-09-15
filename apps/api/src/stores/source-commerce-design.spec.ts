@@ -53,13 +53,13 @@ describe('Shared storefront design', () => {
 
 it('styles inline options with merchant tokens and preserves text quick-add targets', () => {
   const runtime = kit('commerce.js');
-  const options = runtime.match(/\[data-pagosya-product\] \[data-product-option\]\{([^}]+)\}/)![1];
-  expect(options).toContain('min-width:44px;min-height:44px');
-  expect(options).toContain('var(--brand-radius,0px)');
-  expect(options).toContain('var(--brand-background,var(--paper,Canvas))');
-  expect(options).toContain('var(--brand-border,var(--line,currentColor))');
+  const options = runtime.match(/\[data-pagosya-product\]\[data-style\] \[data-product-option\]\{([^}]+)\}/)![1];
+  expect(options).toContain('min-width:44px');
+  expect(options).toContain('border:1px solid var(--pd-line)');
   expect(options).toContain('color:inherit');
-  expect(runtime).toContain('[data-product-option]:focus-visible{outline:3px solid var(--store-accent,var(--brand-accent,var(--accent,currentColor)))');
+  expect(runtime).toContain('--pd-line:var(--store-border,var(--brand-border,');
+  expect(runtime).toContain('--pd-radius:min(var(--store-radius,var(--brand-radius,0px)),6px)');
+  expect(runtime).toContain(':focus-visible{outline:2px solid var(--pd-accent)');
   const textAction = runtime.match(/\.menu-item:not\(\[data-custom-product\]\) button.menu-add\[data-product\]\{([^}]+)\}/)![1];
   expect(textAction).toContain('min-height:44px');
   expect(textAction).toContain('padding:10px 14px');
