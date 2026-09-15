@@ -357,6 +357,9 @@
   }
   releaseProductPageStyles();
   window.addEventListener('load', releaseProductPageStyles);
+  // A wrapper that holds nothing but the product page must not paint panels beside the kit layout.
+  const productWrapper = fullProductPage?.parentElement;
+  if (productWrapper && productWrapper !== document.body && productWrapper.children.length === 1) productWrapper.style.setProperty('background', 'none', 'important');
   let selectedProduct = null, selectedImage = 0, detailTrigger = null, oldOverflow = "";
   let selectedOptions = [], selectedQuantity = 1;
   const swatchColors = { negro: '#292b29', black: '#292b29', blanco: '#fffdf7', white: '#fffdf7', rojo: '#b5443f', red: '#b5443f', azul: '#446a98', blue: '#446a98', verde: '#71866a', green: '#71866a', rosa: '#d89ca6', pink: '#d89ca6', beige: '#d8c5a9', crema: '#eee4c9', cream: '#eee4c9', salvia: '#8b987b', 'verde salvia': '#8b987b', sage: '#8b987b', coral: '#d98b70', marfil: '#f1e8d5', ivory: '#f1e8d5', marron: '#805d48', brown: '#805d48', gris: '#92928e', gray: '#92928e', grey: '#92928e', amarillo: '#e0b847', yellow: '#e0b847', naranja: '#d28349', orange: '#d28349', morado: '#80678f', purple: '#80678f', oliva: '#757853', olive: '#757853' };
