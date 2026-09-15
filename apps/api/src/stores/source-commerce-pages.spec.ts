@@ -77,19 +77,20 @@ describe('Inline storefront product options', () => {
     const { query, click, choose } = await shop({ fullPage });
     if (!fullPage) click('.menu-add');
     expect(query('[data-pagosya-product]').querySelectorAll('fieldset legend').length).toBe(2);
-    expect(query('[data-variant-add]').disabled).toBe(true);
-    expect(query('.product-detail__swatch').style.getPropertyValue('--swatch')).toBe('#b5443f');
-    choose(0, 'Rojo');
+    // The first available combination is chosen on open, so price and purchase are ready.
     expect(query('[data-product-selection="0"]').textContent).toBe('Rojo');
-    expect(choose(1, 'M').disabled).toBe(true);
-    choose(1, 'S');
+    expect(query('[data-product-selection="1"]').textContent).toBe('S');
     expect(query('[data-variant-add]').disabled).toBe(false);
+    expect(query('.product-detail__swatch').style.getPropertyValue('--swatch')).toBe('#b5443f');
+    expect(choose(1, 'M').disabled).toBe(true);
     expect(query('.product-detail__price').textContent).toMatch(/25[,.]00/);
     expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
     expect(choose(0, 'Azul').getAttribute('aria-pressed')).toBe('true');
-    expect(query('[data-variant-add]').disabled).toBe(true);
+    // Azul has no S, so the size moves to the available M and the status says so.
+    expect(query('[data-product-selection="1"]').textContent).toBe('M');
+    expect(query('.product-detail__status').textContent).toContain('Actualizamos Talla: M por disponibilidad.');
+    expect(query('[data-variant-add]').disabled).toBe(false);
     expect(choose(1, 'S').disabled).toBe(true);
-    choose(1, 'M');
     expect(query('.product-detail__price').textContent).toMatch(/40[,.]00/);
     expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
     expect(query('[data-product-image="1"]').getAttribute('aria-pressed')).toBe('true');
@@ -97,12 +98,15 @@ describe('Inline storefront product options', () => {
     expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
   });
 
-  it('previews an unambiguous color photo before size selection without enabling purchase', async () => {
-    const { query, choose } = await shop({ fullPage: true });
+  it('keeps a still-available later choice when an earlier one changes', async () => {
+    const p = product();
+    p.variants.push(variant('blue-s', 'Azul', 'S', 3500, 3) as any);
+    const { query, choose } = await shop({ fullPage: true, items: [p] });
+    expect(query('[data-product-selection="1"]').textContent).toBe('S');
     choose(0, 'Azul');
-    expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
-    expect(query('[data-variant-add]').disabled).toBe(true);
-    expect(query('[data-product-selection="1"]').textContent).toBe('');
+    expect(query('[data-product-selection="1"]').textContent).toBe('S');
+    expect(query('.product-detail__status').textContent).not.toContain('Actualizamos');
+    expect(query('.product-detail__price').textContent).toMatch(/35[,.]00/);
   });
 
   it.each([undefined, 'https://shop.test/different.jpg'])('does not imply a specific photo when compatible sizes disagree (%s)', async otherImage => {
@@ -110,7 +114,8 @@ describe('Inline storefront product options', () => {
     p.variants.push({ ...variant('blue-s', 'Azul', 'S'), imageUrl: otherImage } as any);
     const { query, choose } = await shop({ fullPage: true, items: [p] });
     choose(0, 'Azul');
-    expect(query('.product-detail__photo').src).toBe('https://shop.test/base.jpg');
+    // Azul keeps the preselected S, so its own photo (or the product photo) shows.
+    expect(query('.product-detail__photo').src).toBe(otherImage || 'https://shop.test/base.jpg');
     choose(1, 'M');
     expect(query('.product-detail__photo').src).toBe('https://shop.test/blue.jpg');
   });
@@ -224,8 +229,8 @@ describe('Inline storefront product options', () => {
     } });
     expect(query('[data-pagosya-product]').open).toBe(true);
     expect(query('.product-detail__options').textContent).not.toContain('Azul');
-    expect(query('[data-variant-add]').disabled).toBe(true);
-    choose(0, 'Rojo'); choose(1, 'S');
+    // The removed Azul / M selection falls back to the only live combination.
+    expect(query('[data-product-selection="0"]').textContent).toBe('Rojo');
     expect(query('.product-detail__price').textContent).toMatch(/70[,.]00/);
     expect(query('[data-variant-add]').disabled).toBe(false);
   });
@@ -288,7 +293,7 @@ describe('Inline storefront product options', () => {
 
   it('adds the selected quantity, clamps it to variant stock and leaves cart increments at one', async () => {
     const { query, click, choose, serialize } = await shop({ fullPage: true });
-    expect(query('[data-product-quantity="1"]').disabled).toBe(true);
+    expect(query('[data-product-quantity="1"]').disabled).toBe(false);
     choose(0, 'Rojo'); choose(1, 'S');
     click('[data-product-quantity="1"]');
     expect(query('[data-product-quantity-value]').textContent).toBe('2');
@@ -336,10 +341,11 @@ describe('Inline storefront product options', () => {
     expect(preview.query('.product-detail__related')).toBeNull();
   });
 
-  it('keeps quantity with the action, shows the starting price before choices and exact choice prices only', async () => {
+  it('keeps quantity with the action, shows the preselected total and exact choice prices only', async () => {
     const { query, choose, w } = await shop({ fullPage: true });
     expect(query('.product-detail__purchase .product-detail__buy')).not.toBeNull();
-    expect(query('[data-product-total]').textContent).toMatch(/^desde .*25[,.]00/);
+    expect(query('[data-product-total]').textContent).toMatch(/25[,.]00/);
+    expect(query('[data-product-total]').textContent).not.toContain('desde');
     // Choice labels are exact prices, never "desde" ranges (sold-out combinations do not count).
     const labels = () => [...w.document.querySelectorAll('[data-product-option]')].map((b: any) => b.dataset.optionPrice || '');
     expect(labels().filter(Boolean).length).toBeGreaterThan(0);
