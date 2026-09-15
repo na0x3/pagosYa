@@ -7,6 +7,8 @@ const groups = [{ name: 'Color', values: ['Azul', 'Blanco'] }, { name: 'Talla', 
 afterEach(() => { document.body.innerHTML = ''; });
 function input(selector: string, value: string) { const el = document.querySelector<HTMLInputElement>(selector)!; el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); }
 function click(selector: string) { document.querySelector<HTMLButtonElement>(selector)!.click(); }
+// Combinations loaded from a saved product carry no new-row flags.
+function saved(rows: ReturnType<typeof editor.combinations>) { return rows.map(({ stockDirty, autoStock, ...row }, i) => ({ ...row, id: `v${i}` })); }
 
 it('tracks Blue/S independently from White/S and never treats missing combinations as purchasable', () => {
   const rows = editor.combinations(groups, [], '120').map((row, i) => ({ ...row, id: `v${i}`, stock: String(i === 0 ? 0 : 4) }));
@@ -23,7 +25,9 @@ it('preserves IDs, prices, photos and stock when adding values or reordering gro
   const previous = editor.combinations(groups, [], '120').map((r, i) => ({ ...r, id: `v${i}`, stock: String(i + 1), imageUrl: '/v1/uploads/photo.webp' }));
   const rows = editor.combinations([groups[1], { name: 'Color', values: ['Blanco', 'Azul', 'Negro'] }], previous, '150');
   expect(rows.find(r => r.name === 'S / Azul')).toMatchObject({ id: 'v0', stock: '1', amount: '120', imageUrl: '/v1/uploads/photo.webp' });
-  expect(rows.find(r => r.name === 'S / Negro')).toMatchObject({ stock: '0', amount: '150' });
+  // New combinations start without a stock limit unless the owner sets units for new combinations.
+  expect(rows.find(r => r.name === 'S / Negro')).toMatchObject({ stock: '', amount: '150' });
+  expect(editor.combinations(groups, [], '150', '3').every(r => r.stock === '3')).toBe(true);
   expect(previous[0].options?.[0].name).toBe('Color');
 });
 
@@ -38,7 +42,7 @@ it('supports custom option names and rejects duplicates and oversized products b
 
 it('filters bulk edits to matching combinations and distinguishes zero from unlimited stock', () => {
   document.body.innerHTML = '<div id="editor"></div>';
-  const instance = editor.mount(document.querySelector('#editor')!, { variants: editor.combinations(groups, [], '120') });
+  const instance = editor.mount(document.querySelector('#editor')!, { variants: editor.combinations(groups, [], '120', '0') });
   input('[data-search]', 'Azul S'); input('[data-bulk-stock]', '5'); click('[data-bulk]');
   expect(instance.values().map(v => v.stock)).toEqual([5, 0, 0, 0]);
   input('[data-row="0"] [data-field="stock"]', '');
@@ -47,21 +51,20 @@ it('filters bulk edits to matching combinations and distinguishes zero from unli
   expect(() => instance.values()).toThrow('stock');
 });
 
-it('requires applying pending group edits and reviewing removal of existing combinations', () => {
+it('rebuilds combinations on save but asks before retiring saved ones', () => {
   document.body.innerHTML = '<div id="editor"></div>';
-  const instance = editor.mount(document.querySelector('#editor')!, { variants: editor.combinations(groups, [], '120').map((row, i) => ({ ...row, id: `v${i}` })) });
+  const instance = editor.mount(document.querySelector('#editor')!, { variants: saved(editor.combinations(groups, [], '120')) });
   input('[data-group-values="0"]', 'Azul');
-  expect(() => instance.values()).toThrow('Generar');
-  click('[data-generate]');
+  expect(() => instance.values()).toThrow('Confirma');
   expect(document.querySelector('[data-error]')!.textContent).toContain('retirarán 2');
-  expect(() => instance.values()).toThrow('Generar');
+  expect(() => instance.values()).toThrow('Confirma');
   click('[data-generate]');
   expect(instance.values().map(v => v.id)).toEqual(['v0', 'v1']);
 });
 
 it('does not overwrite inventory that may have changed while a merchant edits a price', () => {
   document.body.innerHTML = '<div id="editor"></div>';
-  const rows = editor.combinations(groups, [], '120').map((r, i) => ({ ...r, id: `v${i}`, stock: '5' }));
+  const rows = saved(editor.combinations(groups, [], '120')).map(r => ({ ...r, stock: '5' }));
   const instance = editor.mount(document.querySelector('#editor')!, { variants: rows });
   input('[data-row="0"] [data-field="amount"]', '130');
   expect(instance.values().every(v => !('stock' in v))).toBe(true);
