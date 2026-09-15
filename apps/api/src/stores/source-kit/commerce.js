@@ -146,6 +146,15 @@
     .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
+    /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
+    @layer pagosya-commerce {
+      .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+      [data-pagosya-catalog][data-pagosya-grid]{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:start}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy p{margin-top:2px;opacity:.8}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-add{align-self:flex-start}
+    }
     /* Product page: platform-owned layout in two styles (editorial, dense). Stores supply tokens only. */
     [data-pagosya-product]{--pd-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#302c2a)));--pd-paper:var(--store-background,var(--brand-background,var(--paper,#fffdfb)));--pd-surface:var(--store-surface,var(--brand-surface,var(--pd-paper)));--pd-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--pd-ink))));--pd-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--pd-paper)));--pd-muted:color-mix(in srgb,var(--pd-ink) 64%,var(--pd-paper));--pd-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--pd-ink) 16%,var(--pd-paper))));--pd-tint:color-mix(in srgb,var(--pd-accent) 7%,var(--pd-paper));--pd-radius:min(var(--store-radius,var(--brand-radius,0px)),6px);--pd-heading:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));--pd-body:var(--store-body-font,var(--brand-body-font,var(--font-body,inherit)));box-sizing:border-box;color:var(--pd-ink);background:var(--pd-paper);font-family:var(--pd-body)}
     [data-pagosya-product] *{box-sizing:border-box}
@@ -922,6 +931,33 @@
     }
     return root.outerHTML;
   }
+  // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
+  function structureCatalog(el) {
+    const cards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
+    const card = cards[0], photo = card?.querySelector('.menu-item__image');
+    if (photo && !el.hasAttribute('data-pagosya-grid') && getComputedStyle(el).display === 'block' && photo.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.6) el.setAttribute('data-pagosya-grid', '');
+    readableCards(el, cards);
+  }
+  // Card text must not disappear into the card: switch to the store's text or background color, whichever reads.
+  function readableCards(el, cards) {
+    if (!cards.length) return;
+    const probe = document.createElement('span'); probe.hidden = true; el.append(probe);
+    const rgba = value => { probe.style.color = ''; probe.style.color = value; const n = (getComputedStyle(probe).color.match(/[\d.]+/g) || []).map(Number); return n.length >= 3 ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null; };
+    const luminance = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+    const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+    const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', '#111111', '#ffffff'].map(rgba).filter(Boolean);
+    for (const card of cards) {
+      let node = card, background = null;
+      while (node && node.nodeType === 1) { const color = rgba(getComputedStyle(node).backgroundColor); if (color && color[3] > .5) { background = color; break; } node = node.parentElement; }
+      background = background || [255, 255, 255, 1];
+      const text = rgba(getComputedStyle(card.querySelector('h3') || card).color);
+      if (!text || contrast(text, background) >= 3) continue;
+      // Prefer the store's own colors when they read; fall back to the strongest contrast.
+      const chosen = candidates.find(c => contrast(c, background) >= 4.5) || candidates.reduce((best, c) => contrast(c, background) > contrast(best, background) ? c : best);
+      card.style.color = `rgb(${chosen.slice(0, 3).join(',')})`;
+    }
+    probe.remove();
+  }
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
     document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
@@ -938,6 +974,7 @@
         if (custom) return custom;
         return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${limit(p) === 0 ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
       }).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      structureCatalog(el);
     });
     if (fullProductPage && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
