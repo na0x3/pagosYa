@@ -769,6 +769,7 @@ model Store {
   updatedAt                    DateTime                         @updatedAt
   paymentLinks                 PaymentLink[]
   categories                   Category[]
+  collections                  Collection[]
   links                        StoreLink[]
   mediaAssets                  MediaAsset[]
   visualProposals              StoreVisualProposal[]
@@ -1293,11 +1294,42 @@ model Category {
   @@index([storeId, sortOrder])
 }
 
+// An owner-made grouping of products, like a playlist: a product may sit in
+// several. Categories remain the single-choice filter field.
+model Collection {
+  id        String              @id @default(cuid())
+  storeId   String
+  store     Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name      String
+  // Generated from the name at creation and kept stable across renames so
+  // shared /c/<slug> links keep resolving.
+  slug      String
+  sortOrder Int                 @default(0)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  products  CollectionProduct[]
+
+  @@unique([storeId, slug])
+  @@index([storeId, sortOrder])
+}
+
+model CollectionProduct {
+  collectionId  String
+  collection    Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  paymentLinkId String
+  paymentLink   PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  sortOrder     Int         @default(0)
+
+  @@id([collectionId, paymentLinkId])
+  @@index([collectionId, sortOrder])
+}
+
 // A product within a Store's catalog.
 model PaymentLink {
   subscriptionOptions ProductSubscriptionOption[]
   fulfillmentType String @default("PHYSICAL")
   digitalAssets DigitalAsset[]
+  collectionProducts CollectionProduct[]
   shippingWeightGrams Int?
   id                 String            @id @default(cuid())
   storeId            String

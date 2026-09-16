@@ -22,6 +22,7 @@ import { HealthModule } from "./health/health.module";
 import { PaymentLinksModule } from "./payment-links/payment-links.module";
 import { StoresModule } from "./stores/stores.module";
 import { CategoriesModule } from "./categories/categories.module";
+import { CollectionsModule } from "./collections/collections.module";
 import { FinancesModule } from "./finances/finances.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { DebtCollectionsModule } from "./debt-collections/debt-collections.module";
@@ -70,6 +71,7 @@ import { OperationsModule } from "./operations/operations.module";
     StoresModule,
     PaymentLinksModule,
     CategoriesModule,
+    CollectionsModule,
     FinancesModule,
     UploadsModule,
     DebtCollectionsModule,
