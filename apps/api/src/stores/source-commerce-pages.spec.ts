@@ -454,3 +454,37 @@ describe('Inline storefront product options', () => {
     expect(query('[data-variant-add]').disabled).toBe(false);
   });
 });
+
+describe('Catalog page canonical: neutral static fallback, runtime sets the real value', () => {
+  // Pins the static/runtime agreement a review found broken: source-seo.ts must bake a neutral
+  // `home` canonical for productos.html/coleccion.html (never a source_page= URL a crawler
+  // without JS could see and disagree with), and commerce.js must then overwrite it here, at
+  // runtime, with the real pretty URL — exactly like it already does for product.html.
+  const home = 'https://pay.test/s/marca';
+  const shell = (mount: string) => `<html><head><link rel="canonical" href="${home}"><meta property="og:url" content="${home}"><meta property="og:title" content="Home"></head><body><main ${mount}></main><section data-pagosya-cart></section><p data-pagosya-status></p></body></html>`;
+
+  it('overwrites the neutral static canonical with /productos on productos.html', async () => {
+    const virtualConsole = new VirtualConsole();
+    const dom = new JSDOM(shell('data-pagosya-catalog data-catalog-full'), { url: 'https://shop.test/productos.html', runScripts: 'outside-only', virtualConsole });
+    const w = dom.window;
+    w.matchMedia = () => ({ matches: true });
+    w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Marca', items: [] } };
+    w.eval(commerce);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(w.document.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(`${home}/productos`);
+    expect(w.document.querySelector('meta[property="og:url"]').getAttribute('content')).toBe(`${home}/productos`);
+    w.close();
+  });
+
+  it('overwrites the neutral static canonical with /c/<slug> on coleccion.html', async () => {
+    const virtualConsole = new VirtualConsole();
+    const dom = new JSDOM(shell('data-pagosya-catalog data-catalog-full data-collection-page'), { url: 'https://shop.test/coleccion.html?c=verano', runScripts: 'outside-only', virtualConsole });
+    const w = dom.window;
+    w.matchMedia = () => ({ matches: true });
+    w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Marca', items: [], collections: [{ id: 'c1', name: 'Verano', slug: 'verano', productIds: [] }] } };
+    w.eval(commerce);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(w.document.querySelector('link[rel="canonical"]').getAttribute('href')).toBe(`${home}/c/verano`);
+    w.close();
+  });
+});

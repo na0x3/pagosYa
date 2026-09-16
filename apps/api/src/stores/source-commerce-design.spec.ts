@@ -32,6 +32,17 @@ describe('Shared storefront design', () => {
     const updated = await withSourceCommerceDesign(result.map(file => file.path === 'index.html' ? { ...file, content: file.content.replace('>Marca</a>', '>Nueva marca</a>') } : file));
     expect(updated.find(file => file.path === 'product.html')!.content).toContain('>Nueva marca</a>');
   });
+  it('also brands productos.html and coleccion.html (data-catalog-full), not just product.html/checkout.html', async () => {
+    const original = [...files(), { path: 'productos.html', content: kit('productos.html') }, { path: 'coleccion.html', content: kit('coleccion.html') }];
+    const result = await withSourceCommerceDesign(original);
+    for (const path of ['productos.html', 'coleccion.html']) {
+      const page = result.find(file => file.path === path)!.content;
+      expect(page).toContain('class="site-header"');
+      expect(page).toContain('class="site-footer"');
+      expect(page).toContain('class="commerce-document brand-theme"');
+      expect(page).toContain('href="brand.css"');
+    }
+  });
   it('rebases shared links, assets and styles for a nested product page', async () => {
     const nested = files().map(file => file.path === 'product.html' ? { path: 'pages/item.html', content: file.content.replace('href="styles.css"', 'href="../styles.css"') } : file);
     const page = (await withSourceCommerceDesign(nested)).find(file => file.path === 'pages/item.html')!.content;

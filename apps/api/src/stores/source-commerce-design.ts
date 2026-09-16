@@ -23,7 +23,9 @@ export async function withSourceCommerceDesign(files: SourceProjectFileDto[]): P
   return files.map(file => {
     if (file.path === 'commerce-pages.css') return file.content.trimStart().startsWith('@layer pagosya-commerce') ? file : { ...file, content: `@layer pagosya-commerce {\n${file.content}\n}\n` };
     if (file.path === 'index.html' || !file.path.endsWith('.html') || file.encoding === 'base64') return file;
-    if (!/data-pagosya-(?:product|checkout)-page/.test(file.content)) return file;
+    // Also match productos.html/coleccion.html (data-catalog-full): they share product.html's
+    // stock shell and must adopt the store's brand styles and a customized header/footer too.
+    if (!/data-pagosya-(?:product|checkout)-page|data-catalog-full/.test(file.content)) return file;
     const relative = (url: string) => {
       if (/^(?:[a-z][a-z\d+.-]*:|\/)/i.test(url)) return url;
       const [, path, suffix] = url.match(/^([^?#]*)(.*)$/s)!;

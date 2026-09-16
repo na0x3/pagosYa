@@ -11,8 +11,10 @@ export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSna
   if (!['https:', 'http:'].includes(base.protocol)) return snapshot;
   const home = base.href; const name = config.data?.storeName || config.slug;
   // coleccion.html is parameterized like product.html (one file, many collections via ?c=): it
-  // gets no single sitemap entry of its own. productos.html has one fixed meaning, so it is an
-  // ordinary indexable page like any other, unlike private checkout.html.
+  // gets no single sitemap entry of its own. productos.html has one fixed meaning, so it stays
+  // listed here for the sitemap/llms.txt — its own baked <link rel=canonical> is still the
+  // neutral `home` fallback below, matched by product.html and coleccion.html, since the real
+  // canonical for all three is only known and set at runtime (see canonical below).
   const pages = snapshot.files.filter(f => f.path.endsWith('.html') && !['product.html', 'checkout.html', 'coleccion.html'].includes(f.path) && !sourceSeoCopy(f.content).noindex);
   const pageUrl = (path: string) => path === 'index.html' ? home : `${home}?source_page=${encodeURIComponent(path)}`;
   const products: Array<{ id: string; name: string }> = Array.isArray(config.data?.items) ? config.data.items : [];
@@ -21,9 +23,14 @@ export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSna
   const files = snapshot.files.filter(f => !metadata.includes(f.path)).map(file => {
     if (!file.path.endsWith('.html')) return file;
     const copy = sourceSeoCopy(file.content);
-    // Product and collection metadata is personalized by the live runtime; checkout never enters search.
+    // Product, collection and full-catalog canonicals are all personalized by the live runtime
+    // (commerce.js knows the real product/collection/page and overwrites this at render time);
+    // checkout never enters search. One rule for every kit page whose canonical is set at
+    // runtime: a neutral static fallback here, so a crawler without JS never sees a URL that
+    // disagrees with the one JS sets a moment later.
     const privatePage = file.path === 'checkout.html';
-    const canonical = file.path === 'product.html' || file.path === 'coleccion.html' || privatePage ? home : pageUrl(file.path);
+    const runtimeCanonicalPage = ['product.html', 'coleccion.html', 'productos.html'].includes(file.path);
+    const canonical = runtimeCanonicalPage || privatePage ? home : pageUrl(file.path);
     const head = seoHead({ title: copy.title || name, description: copy.description || config.data?.tagline || name, canonical, graph: [], noindex: privatePage || copy.noindex });
     let content = file.content.replace(/<script\b[^>]*data-pagosya-seo[^>]*>[^]*?<\/script>/gi, '').replace(/<title\b[^>]*>[^]*?<\/title>/gi, '').replace(/<meta\b[^>]*(?:name=["'](?:description|robots|twitter:[^"']+)["']|property=["']og:[^"']+["'])[^>]*>/gi, '').replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '');
     content = content.replace(/<\/head>/i, () => head + '</head>');
