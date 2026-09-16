@@ -10,27 +10,29 @@ export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSna
   let base: URL; try { base = new URL(config.publicSiteUrl || `/s/${encodeURIComponent(config.slug)}`, config.checkoutOrigin); } catch { return snapshot; }
   if (!['https:', 'http:'].includes(base.protocol)) return snapshot;
   const home = base.href; const name = config.data?.storeName || config.slug;
-  // coleccion.html is parameterized like product.html (one file, many collections via ?c=): it
-  // gets no single sitemap entry of its own. productos.html has one fixed meaning, so it stays
-  // listed here for the sitemap/llms.txt — its own baked <link rel=canonical> is still the
-  // neutral `home` fallback below, matched by product.html and coleccion.html, since the real
-  // canonical for all three is only known and set at runtime (see canonical below).
+  // coleccion.html is parameterized like product.html (one file, many collections via ?c=): its
+  // real URL depends on which collection a visit is for, so it gets no single sitemap entry and
+  // its own baked <link rel=canonical> stays a neutral `home` fallback (see canonical below);
+  // the real value is only known and set at runtime. productos.html, unlike those two, has one
+  // stable URL — it is an ordinary page whose pretty pageUrl below IS its real, final canonical,
+  // so its sitemap/llms.txt entry and its baked canonical agree with each other (and with the
+  // pretty URL the runtime independently sets in commerce.js).
   const pages = snapshot.files.filter(f => f.path.endsWith('.html') && !['product.html', 'checkout.html', 'coleccion.html'].includes(f.path) && !sourceSeoCopy(f.content).noindex);
-  const pageUrl = (path: string) => path === 'index.html' ? home : `${home}?source_page=${encodeURIComponent(path)}`;
+  const pageUrl = (path: string) => path === 'index.html' ? home : path === 'productos.html' ? `${home.replace(/\/$/, '')}/productos` : `${home}?source_page=${encodeURIComponent(path)}`;
   const products: Array<{ id: string; name: string }> = Array.isArray(config.data?.items) ? config.data.items : [];
   const urls = [...pages.map(f => pageUrl(f.path)), ...products.map(p => `${home.replace(/\/$/, '')}/p/${encodeURIComponent(p.id)}`)];
   const metadata = ['robots.txt', 'sitemap.xml', 'llms.txt'];
   const files = snapshot.files.filter(f => !metadata.includes(f.path)).map(file => {
     if (!file.path.endsWith('.html')) return file;
     const copy = sourceSeoCopy(file.content);
-    // Product, collection and full-catalog canonicals are all personalized by the live runtime
-    // (commerce.js knows the real product/collection/page and overwrites this at render time);
-    // checkout never enters search. One rule for every kit page whose canonical is set at
-    // runtime: a neutral static fallback here, so a crawler without JS never sees a URL that
-    // disagrees with the one JS sets a moment later.
+    // product.html/coleccion.html are parameterized (one file, many products/collections): the
+    // real value commerce.js sets at runtime is the only correct canonical, so their static
+    // fallback here is neutral `home`, never a guess. checkout never enters search. productos.html
+    // has one fixed meaning, so pageUrl(file.path) below already IS its real canonical — no
+    // fallback needed, and it agrees with both the sitemap entry above and the runtime value.
     const privatePage = file.path === 'checkout.html';
-    const runtimeCanonicalPage = ['product.html', 'coleccion.html', 'productos.html'].includes(file.path);
-    const canonical = runtimeCanonicalPage || privatePage ? home : pageUrl(file.path);
+    const runtimeFallbackPage = ['product.html', 'coleccion.html'].includes(file.path);
+    const canonical = runtimeFallbackPage || privatePage ? home : pageUrl(file.path);
     const head = seoHead({ title: copy.title || name, description: copy.description || config.data?.tagline || name, canonical, graph: [], noindex: privatePage || copy.noindex });
     let content = file.content.replace(/<script\b[^>]*data-pagosya-seo[^>]*>[^]*?<\/script>/gi, '').replace(/<title\b[^>]*>[^]*?<\/title>/gi, '').replace(/<meta\b[^>]*(?:name=["'](?:description|robots|twitter:[^"']+)["']|property=["']og:[^"']+["'])[^>]*>/gi, '').replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '');
     content = content.replace(/<\/head>/i, () => head + '</head>');
