@@ -62,8 +62,9 @@ export class CollectionsService {
     await this.ownedStoreOrThrow(merchantId, storeId);
     const collections = await this.prisma.collection.findMany({ where: { storeId }, select: { id: true } });
     const currentIds = new Set(collections.map((collection) => collection.id));
+    const uniqueIds = new Set(collectionIds);
     const hasExactCollectionSet =
-      collectionIds.length === currentIds.size && collectionIds.every((id) => currentIds.has(id));
+      uniqueIds.size === currentIds.size && collectionIds.every((id) => currentIds.has(id));
     if (!hasExactCollectionSet) {
       throw new BadRequestException("Envía todas las colecciones de la tienda una sola vez para guardar el orden");
     }

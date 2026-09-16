@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsString } from "class-validator";
+import { ArrayUnique, IsArray, IsString } from "class-validator";
 
 export class ReorderCollectionsDto {
   @ApiProperty({
@@ -8,6 +8,7 @@ export class ReorderCollectionsDto {
     example: ["col_summer", "col_bestsellers"],
   })
   @IsArray()
+  @ArrayUnique()
   @IsString({ each: true })
   collectionIds!: string[];
 }

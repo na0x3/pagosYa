@@ -151,6 +151,20 @@ describe("CollectionsService.reorder", () => {
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it("rejects a duplicated id standing in for an omitted one", async () => {
+    const { service, prisma } = makeService();
+    // Store has {summer, winter}; payload repeats "summer" instead of naming
+    // "winter" — same length and every id is technically valid, so a naive
+    // length+membership check would let this through and leave "winter" with
+    // a stale sortOrder.
+    prisma.collection.findMany.mockResolvedValueOnce([{ id: "summer" }, { id: "winter" }]);
+
+    await expect(service.reorder("merchant_1", "store_1", ["summer", "summer"])).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
 });
 
 describe("CollectionsService.remove", () => {
