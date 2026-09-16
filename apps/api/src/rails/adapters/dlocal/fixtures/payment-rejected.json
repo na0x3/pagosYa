@@ -1,0 +1,12 @@
+{
+  "id": "D-4-fixture-rejected",
+  "amount": 100.58,
+  "currency": "USD",
+  "country": "BR",
+  "payment_method_id": "CARD",
+  "payment_method_flow": "REDIRECT",
+  "status": "REJECTED",
+  "status_detail": "The payment was rejected.",
+  "status_code": "300",
+  "order_id": "pi_fixture"
+}

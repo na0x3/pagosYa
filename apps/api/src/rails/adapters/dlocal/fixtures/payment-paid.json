@@ -1,0 +1,12 @@
+{
+  "id": "D-4-fixture-paid",
+  "amount": 100.58,
+  "currency": "USD",
+  "country": "BR",
+  "payment_method_id": "CARD",
+  "payment_method_flow": "REDIRECT",
+  "status": "PAID",
+  "status_detail": "The payment was paid.",
+  "status_code": "200",
+  "order_id": "pi_fixture"
+}
