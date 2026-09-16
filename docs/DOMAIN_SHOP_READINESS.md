@@ -4,9 +4,14 @@ Audit of the in-product domain purchase feature described in `docs/domain-shop.m
 code actually does, verified against the source, and what remains before a merchant can buy a domain.
 
 Summary: the API, the database schema, the registrar client, the Cloudflare client, the fulfilment worker and the
-merchant-dashboard UI are all real and wired. Nothing has ever run against a funded registrar account. Merchant
-Studio has no entry point at all. Every provider credential is absent locally, so the feature reports itself
-unavailable in every environment in this repository.
+merchant-dashboard UI are all real and wired. Nothing has ever run against a funded registrar account. Every
+provider credential is absent locally, so the feature reports itself unavailable in every environment in this
+repository.
+
+**Updated 2026-09-16.** Four items from §5(a) are now built: the Merchant Studio entry point (§5a.1), the
+paid-but-stalled escalation (§5a.2), the abandoned-checkout reaper (§5a.3) and the fail-closed CNAME target
+(§5a.4). Everything in §5(b) is unchanged and still owner-only. Sections below are marked where they no longer
+describe current code.
 
 ## 1. End-to-end reality, hop by hop
 
@@ -50,7 +55,7 @@ It is reachable in the standalone dashboard, but it is buried. The path is: dash
 on entering that view (`index.html:7193-7195`) → **Publica con tu propio dominio** → the **Mostrar** toggle, which
 defaults to collapsed (`index.html:7304`, last argument `false`). Nothing in the dashboard navigation names domains.
 
-**Merchant Studio has no entry point whatsoever.** This is the most important finding.
+**~~Merchant Studio has no entry point whatsoever.~~ Built on 2026-09-16** — see the note at the end of this section.
 
 - No file under `apps/merchant-studio/src/` references `domain-shop`, `/domain-shop/search`, `/quotes` or
   `/checkout`. `apps/merchant-studio/src/api.ts` has no domain method.
@@ -64,6 +69,14 @@ This is worse than the bug already found in `source-business-workspace.ts`, wher
 did not contain the tool. Here there is no button, in embedded mode or standalone. A merchant who works in Studio —
 the surface the product is moving toward — cannot buy a domain, and cannot see the purchase they made in the
 dashboard. See §6 for a specification.
+
+**Resolved.** `apps/merchant-studio/src/domain-shop.ts` implements the §6 specification, with five API methods on
+`MerchantStudioApi` and both entry points wired: the `#source-domain` toolbar button in the "Configuración" section
+of `source-studio.ts`, and the `id: 'domain'` catalog entry in `source-business-workspace.ts` (category `Diseño`,
+grouped with the other storefront-address tool). Three tests in `source-business-workspace.test.ts` cover the
+embedded route, the configured badge and a domain-shop outage; the badge test was confirmed to fail when the
+catalog entry's `connected` expression is broken. The panel renders the unavailable state until credentials exist,
+so this is live-safe with the feature off.
 
 ## 3. Activation gap: environment variables
 
@@ -81,7 +94,7 @@ match the documentation.
 | `DOMAIN_MARKUP_PERCENT` | `configuration.ts:219` | Defaults to 0, which passes the `>= 0` check. **The platform sells at cost, silently.** Absence is not an error. |
 | `DOMAIN_CLOUDFLARE_API_TOKEN` | `configuration.ts:220` | Required only in live mode (`domain-commerce.config.ts:20`). Absent in live mode → 503 on every call. |
 | `DOMAIN_CLOUDFLARE_ZONE_ID` | `configuration.ts:221` | Same as above; also interpolated into every Cloudflare URL (`cloudflare-hosting.provider.ts:16`). |
-| `CUSTOM_DOMAIN_CNAME_TARGET` | `configuration.ts:222` and `:228` | **Defaults to `stores.pagosya.bo`.** It is therefore never empty, so the `!c.target` guard at `domain-commerce.config.ts:20` can never fire. A deployment that forgets this variable will register real domains and point their apex `ANAME` and `www` `CNAME` at the default host, with no error. |
+| `CUSTOM_DOMAIN_CNAME_TARGET` | `configuration.ts` (both `domainCommerce.target` and `customDomains.target`) | **Fixed 2026-09-16.** `domainCommerce.target` no longer defaults, so the `!c.target` guard at `domain-commerce.config.ts:20` fires and live purchases are refused until it is set. `customDomains.target` keeps its `stores.pagosya.bo` default deliberately — that path serves the already-live manual connect flow. Covered by `configuration.spec.ts`. |
 
 One requirement is missing from the documented list: **`BANECO_QR_ENABLED`**. `domain-commerce.config.ts:19-20`
 requires the live Baneco rail to be enabled for live purchases and requires it to be *disabled* for sandbox
@@ -119,7 +132,7 @@ Verified as documented:
 
 Risks found:
 
-**A. A paid order can stall forever with no support case. (Highest severity.)** If `DOMAIN_COMMERCE_ENABLED` is
+**A. ~~A paid order can stall forever with no support case.~~ Fixed 2026-09-16.** If `DOMAIN_COMMERCE_ENABLED` is
 turned off, or any credential goes missing, after a merchant has paid: `reconcile` returns immediately at
 `domain-commerce.service.ts:213`, or `advance` throws at `:151` and is swallowed by the catch at `:224`. The
 escalation at `:226` explicitly skips orders whose status is `AWAITING_PAYMENT` — which is exactly the status a
@@ -127,7 +140,21 @@ paid-but-not-yet-registered order still carries, because the status only advance
 after the config check. Result: the merchant has paid, no domain is registered, no `SupportCase` is opened, and the
 loop retries silently forever. The only visible signal is a `logger.warn` line.
 
-**B. An abandoned checkout locks a hostname indefinitely.** `domain-commerce.service.ts:98` creates both
+*Fix:* `escalateStalledPayments` in `domain-commerce.service.ts` runs at the top of `reconcile`, **before** the
+`enabled` gate, so it fires even when the feature is switched off and the fulfilment loop never runs. It escalates
+any `AWAITING_PAYMENT` order whose `PaymentIntent` has been `SUCCEEDED` for more than an hour. The clock is on the
+payment, not the order, because the fulfilment loop rewrites the order's `updatedAt` on every pass — an order-based
+timer would never run out while the loop is running and failing. A healthy paid order leaves `AWAITING_PAYMENT`
+within one 30-second pass, so the margin is wide. Covered by the e2e test "escalates a paid order that cannot be
+fulfilled, even with the feature switched off", which asserts both that a freshly paid order is left alone and that
+an hour-old one opens a `SupportCase`.
+
+*Accepted consequence:* `REVIEW_REQUIRED` is not in `RUNNABLE`, so an escalated order stops retrying and needs an
+operator even if the missing credential returns. That is deliberate for money that has already moved, but it means
+a config slip lasting over an hour parks every paid order into support. §5a.5's operator tooling is what makes
+those recoverable, and is still unbuilt.
+
+**B. ~~An abandoned checkout locks a hostname indefinitely.~~ Fixed 2026-09-16.** `domain-commerce.service.ts:98` creates both
 `CustomDomain` rows before any money arrives. `hostname` is globally unique (`schema.prisma:817`), so the name is
 blocked for every other store, and the two rows consume the store's free slots (checkout requires at most one
 existing domain, `:97`; the manual path caps at three, `custom-domains.service.ts:168-171`). The rows are released
@@ -135,6 +162,15 @@ only by the merchant's own cancel (`:113-121`) or by the `PaymentIntent` reachin
 Nothing cancels an abandoned domain `PaymentIntent`: the only abandoned-intent sweeper is
 `apps/api/src/commerce-platform/credit-expiry.service.ts:9-24`, which joins `StoreCreditReservation` and never sees
 domain orders.
+
+*Fix:* `releaseAbandonedCheckouts` in `domain-commerce.service.ts`, an hourly `@Interval` shaped like
+`credit-expiry.service.ts`. After 24 hours it cancels the `PaymentIntent` and deletes both `CustomDomain` rows in
+one transaction. It is **ungated** and releases the rows itself rather than leaving that to `advance`, because the
+configuration `advance` needs may be the very reason an order is stuck. `cancelById` re-checks age and status under
+a row lock, so a payment that succeeds between the query and the cancel is left alone; the reaper only releases
+rows once the intent actually reports `CANCELED`. Covered by the e2e test "releases an abandoned checkout so the
+hostname is free for another store", which also asserts that an in-flight checkout survives and that another store
+can claim the name afterwards.
 
 **C. Platform-side exposure is bounded but not zero.** Registration cannot start without a matching payment
 (`domain-commerce.service.ts:160`), so the ordinary "platform pays, merchant doesn't" case cannot occur. The
@@ -165,20 +201,20 @@ listing (`:59`) and only deleted when the whole store is deleted (`stores.servic
 
 ### (a) Buildable without the owner
 
-1. Merchant Studio entry point for the domain shop (specified in §6). This is the blocking product gap.
-2. Fix risk A: escalate a paid order that cannot be fulfilled. `advance` should distinguish "payment not received"
-   from "payment received, cannot proceed", and the `attempts >= 30` branch at `domain-commerce.service.ts:226`
-   must not exclude an `AWAITING_PAYMENT` order whose `PaymentIntent` has succeeded.
-3. Fix risk B: expire abandoned domain checkouts. Cancel the `PaymentIntent` and drop both `CustomDomain`
-   reservations after a bounded window, following the shape of `credit-expiry.service.ts`.
-4. Make `CUSTOM_DOMAIN_CNAME_TARGET` a required value in live mode rather than a silent default
-   (`configuration.ts:222`), so a misconfigured deployment fails closed instead of pointing real domains at
-   `stores.pagosya.bo`.
-5. Operator surface for `DomainOrder`: list, inspect, mark reconciled, retry. Today this is `psql`.
-6. Expiry warning job and merchant notification, plus a documented support-driven renewal procedure.
-7. Reap stale `QUOTED` rows.
-8. Raise the domain shop out of a collapsed section inside a fullscreen-preview view in the dashboard
-   (`index.html:7193-7195`, `:7304`), or link to it from wherever storefront readiness is presented.
+1. ~~Merchant Studio entry point for the domain shop (specified in §6).~~ **Done 2026-09-16** — see §2.
+2. ~~Fix risk A: escalate a paid order that cannot be fulfilled.~~ **Done 2026-09-16** — see §4A. Implemented as a
+   time-since-payment sweep ahead of the `enabled` gate rather than by relaxing the `attempts >= 30` branch: that
+   branch never runs at all when the feature is switched off, which is one of the two ways an order stalls.
+3. ~~Fix risk B: expire abandoned domain checkouts.~~ **Done 2026-09-16** — see §4B.
+4. ~~Make `CUSTOM_DOMAIN_CNAME_TARGET` a required value in live mode.~~ **Done 2026-09-16** — see §3.
+5. **Still open.** Operator surface for `DomainOrder`: list, inspect, mark reconciled, retry. Today this is `psql`.
+   More urgent now that item 2 parks unfulfillable paid orders in `REVIEW_REQUIRED`.
+6. **Still open.** Expiry warning job and merchant notification, plus a documented support-driven renewal procedure.
+7. **Still open.** Reap stale `QUOTED` rows. The new reaper releases abandoned *checkouts*; a `QUOTED` row that was
+   never checked out still only disappears when its store is deleted.
+8. **Still open, and now lower priority.** Raise the domain shop out of a collapsed section inside a
+   fullscreen-preview view in the dashboard (`index.html:7193-7195`, `:7304`). Studio now has a first-class entry
+   point, so the dashboard's burial is no longer the only path a merchant has.
 
 ### (b) Needs the owner's accounts, credentials or a business decision
 
@@ -300,9 +336,10 @@ Owner-only steps are marked **[owner]**. Nothing below can be skipped for a live
 5. **[owner]** Decide the pricing policy: BOB per USD, and a markup that covers registrar cost, ICANN fees,
    settlement cost and a year of currency movement.
 6. **[owner]** Decide the renewal, transfer, expiry and refund policies, and publish the merchant-facing terms.
-7. Build the Merchant Studio entry point per §6, including both the toolbar button and the tool-catalog entry.
-8. Build the paid-but-stalled escalation (§5a.2) and the abandoned-checkout reaper (§5a.3).
-9. Make `CUSTOM_DOMAIN_CNAME_TARGET` required in live mode (§5a.4).
+7. ~~Build the Merchant Studio entry point per §6.~~ **Done 2026-09-16.**
+8. ~~Build the paid-but-stalled escalation (§5a.2) and the abandoned-checkout reaper (§5a.3).~~ **Done 2026-09-16.**
+9. ~~Make `CUSTOM_DOMAIN_CNAME_TARGET` required in live mode (§5a.4).~~ **Done 2026-09-16.** Note the consequence:
+   the API now refuses live domain purchases until this variable is set, so step 13 is no longer optional.
 10. Build the operator view for `DomainOrder` (§5a.5) and the expiry warning job (§5a.6).
 11. Set `NAMECOM_USERNAME`, `NAMECOM_API_TOKEN`, `DOMAIN_PLATFORM_MERCHANT_ID`, `DOMAIN_BOB_PER_USD`,
     `DOMAIN_MARKUP_PERCENT` on the API server. Leave `DOMAIN_REGISTRAR_SANDBOX=true`, `DOMAIN_COMMERCE_ENABLED=true`
