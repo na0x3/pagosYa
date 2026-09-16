@@ -73,11 +73,17 @@ export class InternationalPaymentsService {
   }
 
   async decide(merchantId: string, decision: "approve" | "reject", reason: string, actor: SupportActor) {
-    const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
-    if (merchant.internationalPaymentsStatus !== "REQUESTED") throw new ConflictException("Solo se deciden solicitudes pendientes.");
+    // 404 on an unknown merchant only; the pending->decided transition itself
+    // is checked and applied atomically below so two ops users racing on the
+    // same REQUESTED merchant can't both "win" (one write, one audit entry).
+    await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
     const status = decision === "approve" ? ("ENABLED" as const) : ("REJECTED" as const);
     await this.prisma.$transaction(async (tx) => {
-      await tx.merchant.update({ where: { id: merchantId }, data: { internationalPaymentsStatus: status, internationalPaymentsNote: reason } });
+      const { count } = await tx.merchant.updateMany({
+        where: { id: merchantId, internationalPaymentsStatus: "REQUESTED" },
+        data: { internationalPaymentsStatus: status, internationalPaymentsNote: reason },
+      });
+      if (count === 0) throw new ConflictException("Solo se deciden solicitudes pendientes.");
       await this.auditLog.record(tx, {
         actorType: "OPS_USER",
         actorId: actor.id,
