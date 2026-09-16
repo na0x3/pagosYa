@@ -271,6 +271,67 @@ describe("StoreAgentService", () => {
     expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
   });
 
+  it.each([
+    "ya cambié de opinión",
+    "perfecto como está",
+    "va a quedar feo",
+    "bueno, ¿y el envío?",
+    "ya lo tengo así",
+    "ya veré",
+  ])("keeps the pending confirmation and re-asks once for a short reply that merely CONTAINS an affirmative token without meaning yes, without ever writing or reaching generate() (the round-8 semantic-inversion finding): %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(result.needsClarification).toBe(true);
+    expect(result.question).toMatchObject({ id: "catalog_arrangement", prompt: "No entendí. ¿Aplico el cambio? Sí / No" });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+    expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement" });
+    expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
+  });
+
+  it.each([
+    "sí", "dale", "ok", "hazlo", "sí por favor", "hazlo por favor", "sí, hazlo ahora",
+    "sip", "claro", "dale pues", "si porfa", "sí quiero", "ok :)", "sí 👍",
+  ])("still applies the layout exactly once for each genuine short affirmative, unaffected by the round-8 unrecognized-marker fix: %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "sections" } });
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "sections" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it.each(["claro que no", "dale que no"])("still declines with zero writes even though it contains the new \"que no\" unrecognized-marker, because refusal is tested first: %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
   it("offers a fresh confirmation for a new arrangement request made mid-confirmation, in one message — catalogArrangementIntent is checked before the two-turn guard, since a match can only ever lead to another ASK, never to generate()", async () => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });

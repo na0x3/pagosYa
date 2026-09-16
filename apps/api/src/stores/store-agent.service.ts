@@ -105,16 +105,48 @@ function containsPhraseTokens(tokens: string[], phrase: string): boolean {
 
 type ConfirmationReplyOutcome = "accepted" | "declined" | "unrecognized";
 
+// The relaxed containment match above is itself a semantic-inversion risk
+// (the same shape as "no quiero que esté en secciones" once setting
+// sections): a ≤5-token reply that merely CONTAINS an affirmative token can
+// still not be answering "yes" at all — "ya cambié de opinión" contains
+// "ya", "perfecto como está" contains "perfecto", "va a quedar feo"
+// contains "va", "ya lo tengo así" and "ya veré" contain "ya". These two
+// checks force such a reply back to "unrecognized" (where the existing
+// two-turn guard handles it safely, for free) instead of reaching for a
+// blanket contrastive-word rule — a rule on e.g. "pero" would wrongly
+// reject the genuine yes "sí pero hazlo ya".
+//
+// A question is never an answer: "bueno, ¿y el envío?" contains "bueno" but
+// is asking about something else entirely.
+function replyAsksAQuestion(rawReply: string): boolean {
+  return /[?¿]/.test(rawReply);
+}
+// Explicit, fixed no-change / mind-change phrases — the same "specific
+// marker, not a general heuristic" shape as the refusal/affirmative lists
+// above. "va a" is included alongside the others: it is the auxiliary "ir a
+// + infinitivo" construction ("va a quedar feo", "va a costar más"), a
+// fixed two-word collocation distinct from the standalone affirmative
+// interjection "va" ("va", "va pues", "dale va") that stays on the
+// affirmative list untouched. "que no" is checked here, but refusal is
+// still tested FIRST above it in classifyConfirmationReply, so "claro que
+// no" / "dale que no" keep declining — this marker only ever gates the
+// affirmative check.
+const CATALOG_ARRANGEMENT_UNRECOGNIZED_MARKERS = [
+  "cambie de opinion", "como esta", "asi esta", "ya lo tengo", "ya vere", "que no", "va a",
+].map(normalizeConfirmationReply);
+
 // Only a SHORT reply (≤5 tokens) gets the relaxed containment match. Past
 // five tokens, the odds that a real sentence just happens to contain a bare
 // "si"/"no" token without meaning it as an answer rise fast — e.g. "no sé,
 // cuéntame más sobre mis pedidos" — so a longer reply is left unrecognized
 // and handled by the hard guard below instead.
 function classifyConfirmationReply(rawReply: string): ConfirmationReplyOutcome {
+  if (replyAsksAQuestion(rawReply)) return "unrecognized";
   const reply = normalizeConfirmationReply(rawReply);
   const tokens = reply.length ? reply.split(" ") : [];
   if (tokens.length === 0 || tokens.length > 5) return "unrecognized";
   if (CATALOG_ARRANGEMENT_REFUSAL_PHRASES.some((phrase) => containsPhraseTokens(tokens, phrase))) return "declined";
+  if (CATALOG_ARRANGEMENT_UNRECOGNIZED_MARKERS.some((phrase) => containsPhraseTokens(tokens, phrase))) return "unrecognized";
   if (CATALOG_ARRANGEMENT_AFFIRMATIVE_PHRASES.some((phrase) => containsPhraseTokens(tokens, phrase))) return "accepted";
   return "unrecognized";
 }
