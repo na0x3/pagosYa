@@ -149,11 +149,17 @@
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
-      [data-pagosya-catalog][data-pagosya-grid]{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:start}
-      [data-pagosya-grid]>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
-      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
-      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy p{margin-top:2px;opacity:.8}
-      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-add{align-self:flex-start}
+      [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:start}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy p,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy p{margin-top:2px;opacity:.8}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-add,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-add{align-self:flex-start}
+      /* Arrangement chrome: group headings, the "see all" link, and the collection tab row. */
+      [data-pagosya-catalog] .catalog-group__title{margin:24px 0 12px;font-family:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));font-size:1.05rem}
+      [data-pagosya-catalog] .catalog-group:first-child .catalog-group__title{margin-top:0}
+      [data-pagosya-catalog] .catalog-more{display:inline-block;padding:12px 0;text-decoration:underline}
+      [data-pagosya-catalog] .catalog-tabs{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 16px}
+      [data-pagosya-catalog] .catalog-tabs a[aria-current="page"]{text-decoration:none}
     }
     /* Product page: platform-owned layout in two styles (editorial, dense). Stores supply tokens only. */
     [data-pagosya-product]{--pd-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#302c2a)));--pd-paper:var(--store-background,var(--brand-background,var(--paper,#fffdfb)));--pd-surface:var(--store-surface,var(--brand-surface,var(--pd-paper)));--pd-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--pd-ink))));--pd-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--pd-paper)));--pd-muted:color-mix(in srgb,var(--pd-ink) 64%,var(--pd-paper));--pd-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--pd-ink) 16%,var(--pd-paper))));--pd-tint:color-mix(in srgb,var(--pd-accent) 7%,var(--pd-paper));--pd-radius:min(var(--store-radius,var(--brand-radius,0px)),6px);--pd-heading:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));--pd-body:var(--store-body-font,var(--brand-body-font,var(--font-body,inherit)));box-sizing:border-box;color:var(--pd-ink);background:var(--pd-paper);font-family:var(--pd-body)}
@@ -1070,6 +1076,14 @@
     }
     return root.outerHTML;
   }
+  // The default catalog card. Custom templates (customProductCard) take priority when the store authored one.
+  function productCard(p) {
+    const image = galleryImages(p)[0];
+    const complex = p.variants?.length || p.extras?.length;
+    const custom = customProductCard(p, image, complex);
+    if (custom) return custom;
+    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
+  }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
     const cards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
@@ -1097,6 +1111,24 @@
     }
     probe.remove();
   }
+  const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';
+  const collections = () => Array.isArray(store.collections) ? store.collections : [];
+  const HOME_PREVIEW = 4;
+  // Collected products keep the owner's order inside each group; whatever is
+  // left lands in one final group so nothing becomes unreachable.
+  function collectionGroups(selected) {
+    const byId = new Map(selected.map((p) => [p.id, p]));
+    const groups = collections().map((c) => ({
+      name: c.name, slug: c.slug,
+      items: (c.productIds || []).map((id) => byId.get(id)).filter(Boolean),
+    })).filter((group) => group.items.length);
+    const grouped = new Set(groups.flatMap((group) => group.items.map((p) => p.id)));
+    const rest = selected.filter((p) => !grouped.has(p.id));
+    return rest.length ? [...groups, { name: 'Más productos', slug: '', items: rest }] : groups;
+  }
+  const productsHref = () => pageHref('productos.html');
+  const collectionHref = (slug) => pageHref('coleccion.html', '?c=' + encodeURIComponent(slug));
+  const catalogMore = () => `<a class="catalog-more" data-catalog-more href="${escape(productsHref())}">Ver todos los productos</a>`;
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
     document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
@@ -1106,13 +1138,21 @@
     });
     document.querySelectorAll("[data-pagosya-catalog]").forEach((el) => {
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
-      el.innerHTML = selected.length ? selected.map((p) => {
-        const image = galleryImages(p)[0];
-        const complex = p.variants?.length || p.extras?.length;
-        const custom = customProductCard(p, image, complex);
-        if (custom) return custom;
-        return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
-      }).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
+      el.dataset.catalogLayout = layout;
+      if (layout === 'sections') {
+        const groups = collectionGroups(selected);
+        el.innerHTML = groups.length
+          ? groups.map((group) => `<section class="catalog-group"><h3 class="catalog-group__title">${escape(group.name)}</h3><div class="catalog-group__items">${group.items.map(productCard).join("")}</div></section>`).join("")
+          : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      } else if (layout === 'page' || layout === 'tabs') {
+        const tabs = layout === 'tabs' && collections().length
+          ? `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}">${escape(c.name)}</a>`).join("")}</nav>`
+          : '';
+        el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore();
+      } else {
+        el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      }
       structureCatalog(el);
     });
     if (fullProductPage && !preview) {
