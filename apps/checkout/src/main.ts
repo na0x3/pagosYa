@@ -22,6 +22,7 @@ import {
   createAppointmentPayment,
   fetchDebtCollection,
   fetchAppointmentAvailability,
+  fetchInternationalMethods,
   fetchSession,
   fetchTrackedOrder,
   fetchStore,
@@ -34,6 +35,7 @@ import {
   CheckoutSession,
   CustomerContact,
   Store,
+  type InternationalMethods,
   type StoreAnimation,
   type StoreMotionExperience,
   StoreItem,
@@ -42,6 +44,7 @@ import {
   DebtCollectionInfo,
   TrackedOrder,
 } from "./api";
+import { INTERNATIONAL_COUNTRIES, formatDualAmount, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
 import { readSourcePaymentPreview, closeSourcePaymentPreview, bindPreviewBranding } from './source-payment-preview';
 import { storePreviewExternalDestination } from "./preview-navigation";
@@ -233,6 +236,10 @@ const ICON_CHEVRON_DOWN =
 
 const app = document.getElementById("app")!;
 let selectedType: DomesticMethodType = PaymentMethodType.CARD;
+let internationalMode = false;
+let internationalCountry = "";
+let internationalMethods: InternationalMethods | null = null;
+let internationalMethodId = "";
 let linkHeader: LinkHeader | null = null;
 let activeOrderTrackingToken: string | null = null;
 let orderTrackingPoll: number | null = null;
@@ -849,6 +856,12 @@ async function renderOrderTracking(token: string): Promise<void> {
 const sourcePaymentPreview = new URLSearchParams(window.location.search).get('source_payment_preview') === '1';
 
 async function main() {
+  const intlReturn = parseReturnParams(window.location.search);
+  if (intlReturn) {
+    await renderInternationalReturn(intlReturn.paymentIntentId);
+    observeResize(app);
+    return;
+  }
   const params = new URLSearchParams(window.location.search);
   const fragmentParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   configureParentOrigin(fragmentParams.get("parent_origin"));
@@ -9419,7 +9432,31 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             ${recipient?.document ? `<div><span>Carnet / CI</span><strong>${escapeHtml(recipient.document)}</strong></div>` : ""}
             <p>${recipient?.name ? "El comercio ya completó tus datos." : "El comercio ya preparó este cobro."} Solo elige cómo pagar.</p>
           </div>`}
-      <div class="tabs">
+      ${session.international?.available && !domainPurchase && !sourcePaymentPreview ? `
+        <div class="intl-entry">
+          <label class="intl-toggle"><input type="checkbox" id="intlToggle" ${internationalMode ? "checked" : ""}> ¿Pagas desde fuera de Bolivia?</label>
+          ${internationalMode ? `
+            <div class="field">
+              <label for="intlCountry">País desde el que pagas</label>
+              <select id="intlCountry">
+                <option value="">Elige tu país</option>
+                ${INTERNATIONAL_COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === internationalCountry ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
+              </select>
+            </div>
+            ${internationalMethods ? `
+              <p class="intl-quote">${escapeHtml(formatDualAmount(internationalMethods.quote.originalAmount, internationalMethods.quote.originalCurrency, internationalMethods.quote.amount))}</p>
+              <div class="intl-methods" role="radiogroup" aria-label="Método de pago internacional">
+                ${internationalMethods.methods.map((m) => `
+                  <label class="intl-method">
+                    <input type="radio" name="intlMethod" value="${escapeHtml(m.id)}" ${m.id === internationalMethodId ? "checked" : ""}>
+                    ${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="" width="32" height="20" loading="lazy">` : ""}
+                    <span>${escapeHtml(m.name)}</span>
+                  </label>`).join("")}
+              </div>
+              <p class="hint">Serás redirigido para completar el pago de forma segura. Allí verás el monto final en tu moneda.</p>` : ""}
+          ` : ""}
+        </div>` : ""}
+      ${internationalMode ? "" : `<div class="tabs">
         ${DOMESTIC_METHOD_TYPES
           .filter(type => !domainPurchase || type === PaymentMethodType.QR)
           .map(
@@ -9427,9 +9464,11 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
               `<button type="button" class="tab ${type === selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,
           )
           .join("")}
-      </div>
+      </div>`}
       ${
-        import.meta.env.DEV && !sourcePaymentPreview
+        internationalMode
+          ? ""
+          : import.meta.env.DEV && !sourcePaymentPreview
           ? `<div class="field">
               <label for="token">Token de prueba (modo test)</label>
               <select id="token">
@@ -9439,7 +9478,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             </div>`
           : ""
       }
-      <button class="primary" type="submit" id="pay">${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${formatAmount(session.amount, session.currency)}</button>
+      <button class="primary" type="submit" id="pay">${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${internationalMode && internationalMethods ? `USD ${(internationalMethods.quote.amount / 100).toFixed(2)}` : formatAmount(session.amount, session.currency)}</button>
       <button class="secondary" type="button" id="cancel">Cancelar pago</button>
     </form></div>
     <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
@@ -9496,6 +9535,31 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     });
   });
 
+  app.querySelector<HTMLInputElement>("#intlToggle")?.addEventListener("change", (event) => {
+    internationalMode = (event.target as HTMLInputElement).checked;
+    renderForm(session, clientSecret);
+  });
+  app.querySelector<HTMLSelectElement>("#intlCountry")?.addEventListener("change", async (event) => {
+    internationalCountry = (event.target as HTMLSelectElement).value;
+    internationalMethods = null;
+    internationalMethodId = "";
+    if (internationalCountry) {
+      try {
+        internationalMethods = await fetchInternationalMethods(clientSecret, internationalCountry);
+        internationalMethodId = internationalMethods.methods[0]?.id ?? "";
+      } catch (err) {
+        renderFailed(session.id, (err as Error).message);
+        return;
+      }
+    }
+    renderForm(session, clientSecret);
+  });
+  app.querySelectorAll<HTMLInputElement>('input[name="intlMethod"]').forEach((input) =>
+    input.addEventListener("change", () => {
+      internationalMethodId = input.value;
+    }),
+  );
+
   app.querySelector<HTMLFormElement>("#payment-form")!.addEventListener("submit", async (e) => {
     e.preventDefault();
     contactFieldErrors.customerName = undefined;
@@ -9512,6 +9576,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     if (storeCheckout && !phone) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto.";
     else if (storeCheckout && !PHONE_PATTERN.test(phone)) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto válido.";
     if (storeCheckout && customerContact.deliveryRequested && !(customerContact.deliveryAddress || "").trim()) contactFieldErrors.deliveryAddress = "Escribe la dirección o una referencia para la entrega.";
+    if (internationalMode && !email) contactFieldErrors.customerEmail = "Ingresa tu correo para pagar desde el exterior.";
 
     if (contactFieldErrors.customerName || contactFieldErrors.customerEmail || contactFieldErrors.customerPhone || contactFieldErrors.deliveryAddress) {
       renderForm(session, clientSecret);
@@ -9587,11 +9652,17 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
   postToParent("PAYMENT_PROCESSING", { paymentIntentId: session.id });
 
   try {
+    const selectedIntl = internationalMode ? internationalMethods?.methods.find((m) => m.id === internationalMethodId) : undefined;
+    if (internationalMode && (!internationalCountry || !selectedIntl)) {
+      renderFailed(session.id, "Elige tu país y un método de pago.");
+      return;
+    }
     const { paymentIntent, railResult } = await confirmPaymentIntent(
       session.id,
       clientSecret,
-      { type: selectedType, token },
+      selectedIntl ? (tokenForMethod(selectedIntl) as unknown as { type: PaymentMethodType; token: string; metadata: Record<string, unknown> }) : { type: selectedType, token },
       customer,
+      selectedIntl ? { rail: "dlocal", country: internationalCountry } : undefined,
     );
 
     if (paymentIntent.status === "SUCCEEDED") {
@@ -9961,6 +10032,16 @@ function renderFailed(paymentIntentId: string, message: string) {
 
 function renderRequiresAction(paymentIntentId: string, clientSecret: string, railId: string, actionRequired: unknown) {
   const action = actionRequired as { type: string; data: Record<string, string> } | undefined;
+  if (action?.type === "redirect" && action.data.redirectUrl) {
+    rememberReturn(window.sessionStorage, paymentIntentId, clientSecret);
+    app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Te estamos llevando a la página de pago segura…</span></div></div>`;
+    try {
+      window.top!.location.href = action.data.redirectUrl;
+    } catch {
+      window.location.href = action.data.redirectUrl;
+    }
+    return;
+  }
   // Real bank QR (e.g. Baneco) returns a ready-to-scan PNG; the mock rail only has a raw
   // EMV-ish payload string to render as text — support both without the adapter caring.
   const qrImageHtml =
@@ -9992,6 +10073,31 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
       const updated = await fetchSession(clientSecret, checkoutPublishableKey);
       renderSuccess(updated);
     });
+  }
+}
+
+async function renderInternationalReturn(paymentIntentId: string) {
+  const clientSecret = recallReturn(window.sessionStorage, paymentIntentId);
+  const pendingNotice = (text: string) => {
+    app.innerHTML = `<div class="payment-outcome-panel"><div class="status action">${ICON_CLOCK}<span>${text}</span></div></div>`;
+  };
+  if (!clientSecret) {
+    pendingNotice("Recibimos tu regreso. Cuando se confirme el pago, te llegará el comprobante por correo.");
+    return;
+  }
+  const deadline = Date.now() + 2 * 60_000;
+  for (;;) {
+    const session = await fetchSession(clientSecret, checkoutPublishableKey);
+    if (session.status === "SUCCEEDED") return renderSuccess(session);
+    if (session.status === "FAILED" || session.status === "CANCELED") {
+      return renderFailed(session.id, "El pago no se completó. Puedes intentar con otro método.");
+    }
+    if (Date.now() > deadline) {
+      pendingNotice("Tu pago está pendiente. Si pagaste con comprobante o transferencia puede tardar; te avisaremos por correo.");
+      return;
+    }
+    pendingNotice("Confirmando tu pago…");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
 
