@@ -1306,6 +1306,36 @@ describe("StoresService.update — board texture", () => {
   });
 });
 
+describe("StoresService.update — catalog layout", () => {
+  it("persists an explicitly chosen catalog layout", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue({ ...store, catalogLayout: "sections" });
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await service.update("m_1", "store_1", { catalogLayout: "sections" } as any);
+
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "store_1" },
+      data: { catalogLayout: "sections", websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
+    });
+  });
+});
+
+describe("StoresService.create — catalog layout", () => {
+  it("persists an explicitly chosen catalog layout on a new store", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await service.create("m_1", { name: "Tienda nueva", catalogLayout: "tabs" } as any);
+
+    expect(prisma.store.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ catalogLayout: "tabs" }),
+    }));
+  });
+});
+
 describe("StoresService.update — locations", () => {
   it("rejects branches that cannot fulfill an order", async () => {
     const prisma = makeFakePrisma();
