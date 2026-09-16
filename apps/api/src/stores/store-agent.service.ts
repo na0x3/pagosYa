@@ -292,19 +292,30 @@ export class StoreAgentService {
             ...(accepted ? { catalogLayout: pendingLayout } : {}),
           };
         }
-        // Unrecognized: neither a matched affirmative nor a matched
-        // refusal. This is the HARD GUARD, independent of how complete the
-        // phrase lists above are — an unrecognized reply while a
-        // catalog_arrangement confirmation is pending must NEVER reach
-        // visualStudio.generate() on this same turn, because that is
-        // exactly the bug this whole confirmation flow exists to prevent
-        // (a plain "sí por favor" launching a paid redesign). On the FIRST
-        // unrecognized reply, keep the pending confirmation and re-ask once
-        // rather than falling through. Only on the SECOND consecutive
-        // unrecognized reply do we give up and fall through as before —
-        // bounding the one-way exit at two turns instead of removing it, so
-        // this can never ping-pong past that.
-        if (!pendingRequest?.confirmationRetried) {
+        // Unrecognized as an accept/decline of the CURRENT confirmation.
+        // Before falling back to the two-turn hard guard, check whether the
+        // reply is itself a NEW arrangement request. catalogArrangementIntent
+        // can only ever lead to ANOTHER confirmation — never to
+        // visualStudio.generate() — so admitting it here doesn't compromise
+        // the guard's actual goal (no unrecognized reply reaches generate());
+        // it just spares an owner who changed their mind from having to
+        // repeat themselves. A match clears the pending state — including
+        // `instruction`, which right now still holds the STALE
+        // "<original request>\n\nAclaración del comercio: <this reply>"
+        // string built above while answeringClarification was still true,
+        // and which must never reach the recognizer with the old keyword —
+        // and falls through to the ordinary arrangement-recognizer check
+        // below, the same one every fresh instruction goes through, which
+        // asks a brand-new question and replaces the stale pending
+        // confirmation with one for the NEW layout. An owner who keeps
+        // changing their mind this way gets a fresh question each time and
+        // never a write until they explicitly accept one — that terminates
+        // and cannot ping-pong, it only ever chains forward to a new ask.
+        const freshArrangement = catalogArrangementIntent(submittedInstruction);
+        if (freshArrangement) {
+          answeringClarification = false;
+          instruction = submittedInstruction;
+        } else if (!pendingRequest?.confirmationRetried) {
           const reaskClarification: StoreAgentClarification = {
             id: CATALOG_ARRANGEMENT_CLARIFICATION_ID,
             prompt: "No entendí. ¿Aplico el cambio? Sí / No",
@@ -332,21 +343,22 @@ export class StoreAgentService {
             question: reaskClarification,
             proposals: [],
           };
+        } else {
+          // Second consecutive unrecognized, non-arrangement reply: drop the
+          // pending confirmation and process this as a brand-new instruction
+          // — reset BOTH `instruction` (so the stale combined "<old
+          // request>\n\nAclaración: <new text>" string can never reach the
+          // recognizer with the wrong layout) and `answeringClarification`
+          // (so nothing downstream treats this as continuing the old
+          // catalog_arrangement thread, e.g. routing it into a
+          // credit-spending edit path). This is a ONE-WAY exit: once
+          // cleared, this branch's own condition (`answeringClarification &&
+          // ...`) can never be true again for the rest of this call, so the
+          // fresh instruction below gets at most one new confirmation of its
+          // own — it cannot ping-pong back into this same branch.
+          answeringClarification = false;
+          instruction = submittedInstruction;
         }
-        // Second consecutive unrecognized reply: drop the pending
-        // confirmation and process this as a brand-new instruction — reset
-        // BOTH `instruction` (so a stale combined "<old request>\n\nAclaración:
-        // <new text>" string can never reach the recognizer with the wrong
-        // layout) and `answeringClarification` (so nothing downstream
-        // treats this as continuing the old catalog_arrangement thread,
-        // e.g. routing it into a credit-spending edit path). This is a
-        // ONE-WAY exit: once cleared, this branch's own condition
-        // (`answeringClarification && ...`) can never be true again for the
-        // rest of this call, so the fresh instruction below gets at most
-        // one new confirmation of its own — it cannot ping-pong back into
-        // this same branch.
-        answeringClarification = false;
-        instruction = submittedInstruction;
       }
       // A matched arrangement request is cheap and must short-circuit ahead
       // of the redesign and editor-command branches, which can spend

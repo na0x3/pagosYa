@@ -271,32 +271,59 @@ describe("StoreAgentService", () => {
     expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
   });
 
-  it("offers a fresh confirmation for a new arrangement request made mid-confirmation, once the two-turn hard guard has cleared the original pending one", async () => {
+  it("offers a fresh confirmation for a new arrangement request made mid-confirmation, in one message — catalogArrangementIntent is checked before the two-turn guard, since a match can only ever lead to another ASK, never to generate()", async () => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
     prisma.storeAgentThread.findUnique.mockResolvedValue({
       id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
     });
 
-    // First turn: this doesn't answer the pending "secciones" confirmation (it is not a
-    // recognized affirmative or refusal), so the hard guard re-asks once instead of treating it
-    // as a fresh request — it never reaches generate() and never writes.
-    const first = await service.send("merchant_1", "store_1", { revision: 0, instruction: "mejor ponlo en pestañas por colección" });
-    expect(first.needsClarification).toBe(true);
-    expect(first.question).toMatchObject({ id: "catalog_arrangement", prompt: "No entendí. ¿Aplico el cambio? Sí / No" });
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "mejor ponlo en pestañas por colección" });
+
+    expect(result.needsClarification).toBe(true);
+    expect(result.question).toMatchObject({ id: "catalog_arrangement", prompt: expect.stringContaining("pestaña") });
     expect(prisma.store.update).not.toHaveBeenCalled();
     expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it("an owner who keeps changing their mind mid-confirmation gets a fresh question each time, never a write, and terminates without ping-pong — accepting the LAST question writes the LAST (not the original) layout", async () => {
+    const { service, prisma, visualStudio } = setup();
+    const first = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    expect(first.question).toMatchObject({ id: "catalog_arrangement", prompt: expect.stringContaining("secciones") });
     prisma.storeAgentThread.findUnique.mockResolvedValue({
       id: "thread_1", storeId: "store_1", messages: [first.assistantMessage, first.userMessage],
     });
 
-    // Second consecutive unrecognized reply: the guard gives up on the pending confirmation and
-    // falls through, where the new request is recognized on its own and offered a fresh one.
+    // Changes their mind once: "sections" confirmation is replaced by a fresh "tabs" one, with
+    // zero writes and zero calls to the paid generator in between.
     const second = await service.send("merchant_1", "store_1", { revision: 0, instruction: "mejor ponlo en pestañas por colección" });
-
     expect(second.needsClarification).toBe(true);
     expect(second.question).toMatchObject({ id: "catalog_arrangement", prompt: expect.stringContaining("pestaña") });
     expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [second.assistantMessage, second.userMessage],
+    });
+
+    // Changes their mind again: "tabs" is replaced by "page" — still zero writes, and this is
+    // the SECOND consecutive replacement, proving it doesn't loop back to the first ("sections").
+    const third = await service.send("merchant_1", "store_1", { revision: 0, instruction: "quiero una página aparte para los productos" });
+    expect(third.needsClarification).toBe(true);
+    expect(third.question).toMatchObject({ id: "catalog_arrangement", prompt: expect.stringContaining("página aparte") });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [third.assistantMessage, third.userMessage],
+    });
+
+    // Finally accepts: writes the LAST layout the owner asked about ("page"), never the
+    // original ("sections") or the intermediate one ("tabs") — this is the stale-instruction-
+    // string bug an earlier round introduced and this round must not reintroduce.
+    const accepted = await service.send("merchant_1", "store_1", { revision: 0, instruction: "sí" });
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "page" } });
+    expect(accepted.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "page" });
     expect(visualStudio.generate).not.toHaveBeenCalled();
     expect(visualStudio.revise).not.toHaveBeenCalled();
   });
