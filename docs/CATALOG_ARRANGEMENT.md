@@ -1,6 +1,10 @@
 # How products are arranged in a store
 
-Status: approved by the owner 2026-09-15 (including §7), not implemented. Plan: `docs/CATALOG_ARRANGEMENT_PLAN.md`. Follows `docs/PRODUCT_PAGE_KIT.md` (Part 1) and `docs/PRODUCT_HIGHLIGHTS.md` (Part 2).
+Status: implemented (2026-09-16), on `feature/independent-storefront-projects`, not yet merged to `main`. Plan: `docs/CATALOG_ARRANGEMENT_PLAN.md`; build ledger: `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/progress.md`; final verification: `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/task-8-report.md`. Follows `docs/PRODUCT_PAGE_KIT.md` (Part 1) and `docs/PRODUCT_HIGHLIGHTS.md` (Part 2).
+
+The two migrations (`20260916120000_store_collections`, `20260916130000_store_catalog_layout`) were applied for the first time against a real local database with pre-existing data during Task 8 verification and applied cleanly; see the verification report for the exact commands and output.
+
+**Known open issue (not fixed by this doc update — reported to the owner):** §3's YAPI chat path now asks for confirmation before applying a matched arrangement request (see §8), but the confirmation only recognizes the exact button value strings ("Sí, hazlo" / "No, déjalo así"), not a plainly typed "sí"/"no"/"dale"/etc. A merchant who types an affirmative reply instead of clicking the button is told "No cambié nada" — a false decline. A broadened accept/decline whitelist was designed (see progress.md Ruling R28) but the fix round that was supposed to land it was never committed; the code at HEAD still has the narrow exact-match check in `apps/api/src/stores/store-agent.service.ts`.
 
 ## 1. What the owner chooses
 
@@ -60,3 +64,10 @@ The kit owns the arrangement, as it owns the product page:
 Decided by the owner, 2026-09-15: when the arrangement is "página aparte" or "pestañas", the home mount shows the **first four products followed by a "Ver todos los productos" link**, not the link alone.
 
 "First four" means the first four of the same list the home page would otherwise have shown, in catalog order and after the same category filter — so a store with fewer than four products shows what it has, and a store with none shows only the link. The cards are the store's own product cards, identical to the ones the full grid renders. The link points at `/s/<tienda>/productos` under "página aparte", and at the first collection's page under "pestañas", where the tab row is shown above the four cards.
+
+## 8. Changes made during the build (vs. this spec)
+
+- **YAPI chat no longer applies an arrangement change silently.** The spec's §3 wording ("applied as a saved change the owner can undo") was the original design; during Task 7 two independent reviews found the free-form Spanish recognizer had recurring false-positive classes (questions, negations, past tense, a layout word attached to something other than the catalog) that kept resurfacing after five fix rounds. The owner decided (2026-09-16) that a matched request now makes YAPI **ask for confirmation** ("¿Quieres que ordene tus productos por secciones?") with confirm/decline buttons, and the layout is written only on explicit confirmation. This is a real behavior change from the approved spec text, made with the owner's sign-off; see §1 above for the still-open gap in that confirmation flow.
+- **Collection membership in the Studio picker.** Task 1's `listForStore` originally returned bare collection rows with no membership; Task 6 additively extended it with a flat `productIds` array so the panel can show which products are already in a collection — no spec change, an interface gap the spec didn't anticipate.
+- **Archived/paused products in a collection are never silently dropped.** The Studio product picker only lists `ACTIVE` products; saving a collection that already contained a paused/archived/draft product would otherwise have wiped it from membership on save. Fixed by rendering inactive members greyed with a status label and always resubmitting every rendered id.
+- Everything else in this document matches what shipped: `catalogLayout` values and default, the collections data model and its 12/200 limits, the four rendering behaviors, the new kit pages and hosted routes, the `/c/<id>` category fallback, and §7's four-products-plus-link behavior.
