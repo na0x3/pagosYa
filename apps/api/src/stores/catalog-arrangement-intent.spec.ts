@@ -13,4 +13,22 @@ describe('catalogArrangementIntent', () => {
       expect(catalogArrangementIntent(text)).toBeNull();
     }
   });
+
+  it('never rearranges a live store from a question, negation or hypothetical', () => {
+    for (const text of [
+      '¿me conviene una página aparte para los productos?',
+      '¿qué te parece si pongo todo en secciones?',
+      '¿debería usar una pestaña por colección?',
+      'no quiero que esté en secciones',
+      'antes lo tenía en secciones',
+      'si lo pongo en secciones, ¿se ve mejor?',
+      'pon una foto en la página de productos',
+    ]) {
+      expect(catalogArrangementIntent(text)).toBeNull();
+    }
+  });
+
+  it('lets a genuine full-site redesign reach the compositor even when it also mentions an arrangement word', () => {
+    expect(catalogArrangementIntent('rediseña mi tienda completa y ponla en secciones')).toBeNull();
+  });
 });
