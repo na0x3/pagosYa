@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { LedgerAccount, LedgerDirection, Prisma, SettlementMode } from "@prisma/client";
 import { customAlphabet } from "nanoid";
-import { computeFee } from "./ledger.constants";
+import { DOMESTIC_PRICING, FeePricing, computeFee } from "./ledger.constants";
 
 const groupId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 20);
 
@@ -60,6 +60,7 @@ export class LedgerService {
     transactionId: string;
     amount: number;
     settlementMode: SettlementMode;
+    pricing?: FeePricing;
   }): JournalLine[] {
     const { merchantId, transactionId, amount, settlementMode } = params;
 
@@ -70,10 +71,15 @@ export class LedgerService {
       ];
     }
 
-    const fee = computeFee(amount);
+    const { feeBps, railCostBps } = params.pricing ?? DOMESTIC_PRICING;
+    const fee = computeFee(amount, feeBps);
+    const railCost = computeFee(amount, railCostBps);
     const net = amount - fee;
     return [
-      { account: LedgerAccount.RAIL_CLEARING, direction: LedgerDirection.DEBIT, amount, merchantId, transactionId },
+      { account: LedgerAccount.RAIL_CLEARING, direction: LedgerDirection.DEBIT, amount: amount - railCost, merchantId, transactionId },
+      ...(railCost > 0
+        ? [{ account: LedgerAccount.RAIL_COST, direction: LedgerDirection.DEBIT, amount: railCost, merchantId, transactionId }]
+        : []),
       { account: LedgerAccount.MERCHANT_PAYABLE, direction: LedgerDirection.CREDIT, amount: net, merchantId, transactionId },
       { account: LedgerAccount.PAGOSYA_FEE_REVENUE, direction: LedgerDirection.CREDIT, amount: fee, merchantId, transactionId },
     ];
@@ -85,6 +91,7 @@ export class LedgerService {
     transactionId: string;
     amount: number;
     settlementMode: SettlementMode;
+    pricing?: FeePricing;
   }): JournalLine[] {
     const { merchantId, transactionId, amount, settlementMode } = params;
 
@@ -95,7 +102,7 @@ export class LedgerService {
       ];
     }
 
-    const fee = computeFee(amount);
+    const fee = computeFee(amount, (params.pricing ?? DOMESTIC_PRICING).feeBps);
     const net = amount - fee;
     return [
       { account: LedgerAccount.MERCHANT_PAYABLE, direction: LedgerDirection.DEBIT, amount: net, merchantId, transactionId },

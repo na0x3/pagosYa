@@ -48,4 +48,31 @@ describe("LedgerService", () => {
     const fakeTx = { ledgerEntry: { createMany: jest.fn() } } as any;
     await expect(ledger.postJournalEntry(fakeTx, "grp_1", badLines, "BOB")).rejects.toThrow(/imbalance/);
   });
+
+  it("books the international fee and dLocal's estimated cost as separate accounts, balanced", () => {
+    const lines = ledger.buildCaptureJournal({
+      ...base, amount: 10000, settlementMode: SettlementMode.AGGREGATOR, pricing: { feeBps: 590, railCostBps: 420 },
+    });
+    expect(netsToZero(lines)).toBe(true);
+    const find = (account: LedgerAccount) => lines.find((l) => l.account === account);
+    expect(find(LedgerAccount.RAIL_CLEARING)).toMatchObject({ direction: LedgerDirection.DEBIT, amount: 9580 });
+    expect(find(LedgerAccount.RAIL_COST)).toMatchObject({ direction: LedgerDirection.DEBIT, amount: 420 });
+    expect(find(LedgerAccount.MERCHANT_PAYABLE)).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 9410 });
+    expect(find(LedgerAccount.PAGOSYA_FEE_REVENUE)).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 590 });
+  });
+
+  it("omits the RAIL_COST line when the rail has no cost (domestic journals unchanged)", () => {
+    const lines = ledger.buildCaptureJournal({ ...base, settlementMode: SettlementMode.AGGREGATOR });
+    expect(lines.some((l) => l.account === LedgerAccount.RAIL_COST)).toBe(false);
+  });
+
+  it("reverses the international fee on refund and credits clearing for the full amount", () => {
+    const lines = ledger.buildRefundJournal({
+      ...base, amount: 10000, settlementMode: SettlementMode.AGGREGATOR, pricing: { feeBps: 590, railCostBps: 420 },
+    });
+    expect(netsToZero(lines)).toBe(true);
+    expect(lines.find((l) => l.account === LedgerAccount.MERCHANT_PAYABLE)).toMatchObject({ direction: LedgerDirection.DEBIT, amount: 9410 });
+    expect(lines.find((l) => l.account === LedgerAccount.PAGOSYA_FEE_REVENUE)).toMatchObject({ direction: LedgerDirection.DEBIT, amount: 590 });
+    expect(lines.find((l) => l.account === LedgerAccount.RAIL_CLEARING)).toMatchObject({ direction: LedgerDirection.CREDIT, amount: 10000 });
+  });
 });
