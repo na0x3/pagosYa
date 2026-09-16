@@ -23,6 +23,7 @@ import {
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
+import { CATALOG_LAYOUTS, type CatalogLayout } from "../catalog-layout";
 import {
   SITE_ART_DIRECTIONS,
   SITE_SECTION_BLOCK_KINDS,
@@ -1394,6 +1395,14 @@ export class CreateStoreDto {
   @IsOptional()
   @IsIn(["cinematic", "editorial", "collage", "catalog-first"])
   layoutStyle?: string;
+
+  @ApiPropertyOptional({
+    description: "How the home page arranges products.",
+    enum: CATALOG_LAYOUTS,
+  })
+  @IsOptional()
+  @IsIn([...CATALOG_LAYOUTS])
+  catalogLayout?: CatalogLayout;
 
   @ApiPropertyOptional({
     description: "Editorial presentation shown after the product catalog.",

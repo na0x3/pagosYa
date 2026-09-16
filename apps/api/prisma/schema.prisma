@@ -716,6 +716,9 @@ model Store {
   // Structural storefront composition selected by the merchant or visual AI:
   // cinematic | editorial | collage | catalog-first.
   layoutStyle                  String                           @default("cinematic")
+  // How the home page arranges products: all | sections | page | tabs.
+  // See docs/CATALOG_ARRANGEMENT.md.
+  catalogLayout                String                           @default("all")
   // Post-catalog visual experience selected by the merchant or visual AI:
   // coverflow | diagonal-marquee | story-scroller.
   experienceStyle              String                           @default("coverflow")

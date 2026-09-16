@@ -18,6 +18,7 @@ import {
   type StoreAnimationDto,
   type StoreLocationDto,
 } from "./dto/create-store.dto";
+import { readCatalogLayout } from "./catalog-layout";
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
@@ -1442,7 +1443,7 @@ export class StoresService implements OnModuleDestroy {
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
     const trackView = !options.ownerMerchantId && options.trackView !== false;
-    const [items, categories, links, productStats, appointmentOfferings] = await Promise.all([
+    const [items, categories, links, productStats, appointmentOfferings, collections] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
@@ -1454,6 +1455,11 @@ export class StoresService implements OnModuleDestroy {
         where: { storeId: store.id, isActive: true },
         select: { id: true, name: true, durationMinutes: true, bufferMinutes: true, price: true, currency: true, color: true },
         orderBy: { name: "asc" },
+      }),
+      this.prisma.collection.findMany({
+        where: { storeId: store.id },
+        orderBy: { sortOrder: 'asc' },
+        include: { products: { orderBy: { sortOrder: 'asc' }, select: { paymentLinkId: true } } },
       }),
     ]);
     if (trackView) this.queueStoreView(store.id);
@@ -1557,6 +1563,16 @@ export class StoresService implements OnModuleDestroy {
       showLowStockToCustomers: store.showLowStockToCustomers,
       appointmentOfferings,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
+      catalogLayout: readCatalogLayout(store.catalogLayout),
+      collections: collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+        slug: collection.slug,
+        // Only products the shopper can actually see travel with the collection.
+        productIds: collection.products
+          .map((row) => row.paymentLinkId)
+          .filter((id) => publicProductIds.has(id)),
+      })),
       categories: categories.map((c) => ({
         id: c.id,
         name: c.name,

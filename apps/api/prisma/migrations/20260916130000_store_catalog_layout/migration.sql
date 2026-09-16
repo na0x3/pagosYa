@@ -1,0 +1,1 @@
+ALTER TABLE "Store" ADD COLUMN "catalogLayout" TEXT NOT NULL DEFAULT 'all';

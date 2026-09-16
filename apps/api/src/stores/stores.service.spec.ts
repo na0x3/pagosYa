@@ -20,6 +20,7 @@ function makeFakePrisma() {
     appointmentServiceOffering: { findMany: jest.fn().mockResolvedValue([]) },
     event: { findMany: jest.fn().mockResolvedValue([]) },
     mediaAsset: { findMany: jest.fn().mockResolvedValue([]) },
+    collection: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   // Batch transactions resolve their prepared operations; interactive ones
@@ -958,6 +959,41 @@ describe("StoresService.getStorePublic — sold counts", () => {
     const result = await service.getStorePublic("abc123");
 
     expect(result.items[0].soldCount).toBe(0);
+  });
+
+  it("defaults catalogLayout to the single grid for a store that never set it", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.catalogLayout).toBe("all");
+  });
+
+  it("keeps only the active product in a collection that also references an archived one", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, catalogLayout: "sections" });
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { id: "link_1", name: "Corte", imageUrls: [], tags: [], stock: null, color: null, amount: 5000, currency: "BOB", categoryId: null, description: null },
+    ]);
+    prisma.collection.findMany.mockResolvedValue([
+      {
+        id: "col_1",
+        name: "Verano",
+        slug: "verano",
+        products: [{ paymentLinkId: "link_1" }, { paymentLinkId: "link_archived" }],
+      },
+    ]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.catalogLayout).toBe("sections");
+    expect(result.collections).toEqual([
+      { id: "col_1", name: "Verano", slug: "verano", productIds: ["link_1"] },
+    ]);
   });
 });
 
