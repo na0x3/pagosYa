@@ -50,16 +50,28 @@ const CATALOG_ARRANGEMENT_QUESTIONS: Record<CatalogLayout, string> = {
 };
 
 const CATALOG_ARRANGEMENT_CLARIFICATION_ID = "catalog_arrangement";
-// The confirm/decline option values double as the exact strings the accept
-// path checks for. They are plain acknowledgement phrases with no
-// arrangement words in them, so even if they were somehow re-run through
-// catalogArrangementIntent they could never match — but they never are:
-// the handler below recognizes the pending "catalog_arrangement"
-// clarification id and applies (or discards) the stored layout directly,
-// without ever calling catalogArrangementIntent again. That is what makes
-// this loop-proof rather than merely unlikely to loop.
+// The confirm/decline option values are two of the strings the accept path
+// checks for, but a real Spanish-speaking chat user overwhelmingly types a
+// short affirmative or refusal instead of the exact button text — "sí",
+// "dale", "no gracias". Both are small, bounded, hand-picked whitelists
+// checked with a PURE STRING comparison, never through
+// catalogArrangementIntent: the handler below recognizes the pending
+// "catalog_arrangement" clarification id and applies (or discards) the
+// stored layout directly. That is what makes this loop-proof rather than
+// merely unlikely to loop.
 const CATALOG_ARRANGEMENT_CONFIRM_VALUE = "Sí, hazlo";
 const CATALOG_ARRANGEMENT_DECLINE_VALUE = "No, déjalo así";
+
+function normalizeConfirmationReply(value: string) {
+  return normalizeAgentInstruction(value).replace(/[¡!¿?.,;:]/g, "").replace(/\s+/g, " ").trim();
+}
+
+const CATALOG_ARRANGEMENT_AFFIRMATIVES = [
+  CATALOG_ARRANGEMENT_CONFIRM_VALUE, "si", "sí", "sí hazlo", "dale", "ok", "okay", "correcto", "confirmo", "adelante", "hazlo",
+].map(normalizeConfirmationReply);
+const CATALOG_ARRANGEMENT_REFUSALS = [
+  CATALOG_ARRANGEMENT_DECLINE_VALUE, "no", "no gracias", "mejor no", "déjalo", "cancela",
+].map(normalizeConfirmationReply);
 
 function storeAgentInstructionRepairsPreviousRevision(instruction: string): boolean {
   const text = normalizeAgentInstruction(instruction);
@@ -142,10 +154,10 @@ export class StoreAgentService {
       : null;
     const startsNewTask = requestsStoreRedesign(submittedInstruction)
       || /^(olvida|olvidalo|cancela|cancelar|otra cosa|nuevo pedido|nueva tarea|en vez de eso)\b/.test(normalizeAgentInstruction(submittedInstruction));
-    const answeringClarification = latestMessage?.role === "ASSISTANT" && Boolean(latestMetadata?.clarification)
+    let answeringClarification = latestMessage?.role === "ASSISTANT" && Boolean(latestMetadata?.clarification)
       && !startsNewTask
       && (!dto.proposalId || (pendingRequest?.proposalId ?? latestMessage.proposalId) === dto.proposalId);
-    const instruction = answeringClarification && typeof pendingRequest?.instruction === "string"
+    let instruction = answeringClarification && typeof pendingRequest?.instruction === "string"
       ? `${pendingRequest.instruction}\n\nAclaración del comercio: ${submittedInstruction}`
       : submittedInstruction;
     const proposalId = dto.proposalId ?? (answeringClarification && typeof pendingRequest?.proposalId === "string" ? pendingRequest.proposalId : undefined);
@@ -181,12 +193,10 @@ export class StoreAgentService {
     try {
       // Answering a pending catalog-arrangement confirmation is handled
       // BEFORE anything else — in particular before catalogArrangementIntent
-      // ever runs again on this turn. That ordering is what makes the
-      // confirm/decline reply loop-proof: the pending clarification's own id
-      // is the signal, not the text the owner sent, so no matter what they
-      // typed (the confirm phrase, the decline phrase, or something else
-      // entirely) this branch is what handles it, applies at most once, and
-      // returns without re-entering the recognizer.
+      // ever runs again on this turn for an accept or a decline. The pending
+      // clarification's own id is the signal, not the text the owner sent,
+      // so a recognized affirmative or refusal is handled here, applies at
+      // most once, and returns without ever reaching the recognizer.
       if (answeringClarification && latestMetadata?.clarification
         && typeof latestMetadata.clarification === "object" && !Array.isArray(latestMetadata.clarification)
         && (latestMetadata.clarification as Prisma.JsonObject).id === CATALOG_ARRANGEMENT_CLARIFICATION_ID) {
@@ -194,29 +204,49 @@ export class StoreAgentService {
           && (CATALOG_LAYOUTS as readonly string[]).includes(pendingRequest.catalogLayout)
           ? pendingRequest.catalogLayout as CatalogLayout
           : null;
-        const accepted = pendingLayout !== null && normalizeAgentInstruction(submittedInstruction) === normalizeAgentInstruction(CATALOG_ARRANGEMENT_CONFIRM_VALUE);
-        if (accepted) {
-          await this.prisma.store.update({ where: { id: storeId }, data: { catalogLayout: pendingLayout } });
+        const reply = normalizeConfirmationReply(submittedInstruction);
+        const accepted = pendingLayout !== null && CATALOG_ARRANGEMENT_AFFIRMATIVES.includes(reply);
+        const declined = CATALOG_ARRANGEMENT_REFUSALS.includes(reply);
+        if (accepted || declined) {
+          if (accepted) {
+            await this.prisma.store.update({ where: { id: storeId }, data: { catalogLayout: pendingLayout! } });
+          }
+          const assistantMessage = await this.prisma.storeAgentMessage.create({
+            data: {
+              threadId: thread.id,
+              role: "ASSISTANT",
+              content: accepted
+                ? `Cambié cómo se ven tus productos: ahora quedan ${CATALOG_ARRANGEMENT_LABELS[pendingLayout!]}. Puedes deshacerlo cuando quieras desde "Cómo se ven tus productos".`
+                : `No cambié nada; tus productos siguen como estaban. Puedes ajustarlo cuando quieras desde "Cómo se ven tus productos".`,
+              metadata: accepted
+                ? { intent: "catalog_arrangement", catalogLayout: pendingLayout, changedAreas: ["arreglo del catálogo"] }
+                : { intent: "catalog_arrangement_declined", changedAreas: [] },
+            },
+          });
+          return {
+            userMessage,
+            assistantMessage,
+            proposals: [],
+            intent: accepted ? "catalog_arrangement" : "catalog_arrangement_declined",
+            ...(accepted ? { catalogLayout: pendingLayout } : {}),
+          };
         }
-        const assistantMessage = await this.prisma.storeAgentMessage.create({
-          data: {
-            threadId: thread.id,
-            role: "ASSISTANT",
-            content: accepted
-              ? `Cambié cómo se ven tus productos: ahora quedan ${CATALOG_ARRANGEMENT_LABELS[pendingLayout!]}. Puedes deshacerlo cuando quieras desde "Cómo se ven tus productos".`
-              : `No cambié nada; tus productos siguen como estaban. Puedes ajustarlo cuando quieras desde "Cómo se ven tus productos".`,
-            metadata: accepted
-              ? { intent: "catalog_arrangement", catalogLayout: pendingLayout, changedAreas: ["arreglo del catálogo"] }
-              : { intent: "catalog_arrangement_declined", changedAreas: [] },
-          },
-        });
-        return {
-          userMessage,
-          assistantMessage,
-          proposals: [],
-          intent: accepted ? "catalog_arrangement" : "catalog_arrangement_declined",
-          ...(accepted ? { catalogLayout: pendingLayout } : {}),
-        };
+        // Neither a recognized affirmative nor a recognized refusal: the
+        // owner ignored the question (a new question of their own, a
+        // change of mind, anything else) rather than answering it. Drop the
+        // pending confirmation and process this as a brand-new instruction
+        // — reset BOTH `instruction` (so a stale combined
+        // "<old request>\n\nAclaración: <new text>" string can never reach
+        // the recognizer with the wrong layout) and `answeringClarification`
+        // (so nothing downstream treats this as continuing the old
+        // catalog_arrangement thread, e.g. routing it into a credit-spending
+        // edit path). This is a ONE-WAY exit: once cleared, this branch's
+        // own condition (`answeringClarification && ...`) can never be true
+        // again for the rest of this call, so the fresh instruction below
+        // gets at most one new confirmation of its own — it cannot ping-pong
+        // back into this same branch.
+        answeringClarification = false;
+        instruction = submittedInstruction;
       }
       // A matched arrangement request is cheap and must short-circuit ahead
       // of the redesign and editor-command branches, which can spend
