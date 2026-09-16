@@ -27,7 +27,7 @@ All new rail code lives in `apps/api/src/rails/adapters/dlocal/`.
 1. **`DlocalClientService`**: an HTTP client that signs each request (`X-Date`, `X-Login`, `X-Trans-Key`, `Authorization: V2-HMAC-SHA256, Signature: <hmac>`). It wraps create payment, get payment, create refund, and list payment methods by country. Config: `DLOCAL_LOGIN`, `DLOCAL_TRANS_KEY`, `DLOCAL_SECRET_KEY`, `DLOCAL_BASE_URL` (sandbox or live), `DLOCAL_SMART_FIELDS_KEY`. If credentials are missing and the API is not live, it reads recorded fixtures.
 2. **`DlocalAdapter`** implements `PaymentRailAdapter` with `railId: "dlocal"` and `supportedMethodTypes: [CARD, BANK_TRANSFER, LOCAL_METHOD]`. The dLocal method id (`PX`, `OX`…) travels in `paymentMethod.metadata.dlocalPaymentMethodId`.
    - `authorize`: v1 always uses `REDIRECT`, including for `CARD`. `DIRECT` (a CARD payment with a Smart Fields token) is Task 13, gated on `DLOCAL_SMART_FIELDS_KEY`.
-   - Status mapping: `PAID → succeeded`, `AUTHORIZED → succeeded` (auto-capture), `PENDING` with a redirect URL `→ requires_action{type:"redirect"}`, `PENDING` without one `→ pending`, `REJECTED`/`CANCELLED`/`EXPIRED → failed`. dLocal's `status_detail` becomes `failureReason`.
+   - Status mapping: `PAID → succeeded`, `AUTHORIZED → succeeded` (auto-capture), `PENDING` with a redirect URL `→ requires_action{type:"redirect"}`, `PENDING` without one `→ pending`, `REJECTED`/`CANCELLED → failed` (an expired voucher resolves to `CANCELLED`, not a separate status). `VERIFIED` is a card-verification-only status; it is not expected on a payment and is treated as `succeeded` only for a zero-amount verification. dLocal's `status_detail` becomes `failureReason`.
    - `capture`: dLocal auto-captures, so this returns the current status and makes no new charge.
    - `refund` and `getStatus` map directly to dLocal's endpoints.
 3. **`dlocal-webhook.controller.ts`** (in `payment-intents/`, next to `baneco-qr-webhook.controller.ts`) checks the signature and then applies the status change through the existing state machine, idempotently.
@@ -95,7 +95,7 @@ All new rail code lives in `apps/api/src/rails/adapters/dlocal/`.
 | Duplicate or out-of-order webhook | No-op through the state machine's allowed transitions |
 | Merchant not `ENABLED` | 403 on `dlocal` rail |
 | Missing FX rate | International option hidden; API 409 `intl_fx_rate_unavailable` |
-| Voucher never paid | dLocal `EXPIRED` → `failed`; the linked store order follows the same path as any other failed payment |
+| Voucher never paid | dLocal `CANCELLED` (expired voucher) → `failed`; the linked store order follows the same path as any other failed payment |
 
 ## Testing
 
