@@ -23,13 +23,19 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
     try { slug = route ? decodeURIComponent(route[1]) : undefined; } catch { response.writeHead(400); return response.end('Invalid URL'); }
     const configuredHost = new URL(checkoutOrigin).hostname;
     const customHost = url.hostname !== configuredHost && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-    if (!route && !rootAsset && !(customHost && /^\/(?:p\/[^/]+\/?)?$/.test(url.pathname))) return next();
+    // Custom domains carry no /s/<slug> prefix, so /productos and /c/<x> are matched again here,
+    // bare — same page/collection params as the /s/ forms above, just resolved off this host.
+    const customHostRoute = customHost ? /^\/(?:p\/([^/]+)|(productos)|c\/([^/]+))?\/?$/.exec(url.pathname) : null;
+    if (!route && !rootAsset && !customHostRoute) return next();
     const send = (status, type, body, headers = {}) => { response.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', ...headers }); response.end(request.method === 'HEAD' ? undefined : body); };
     try {
       if (customHost) {
         const domain = await (await get(`/stores/public/domain?hostname=${encodeURIComponent(url.hostname)}`)).json();
         if (slug && slug !== domain.slug) return send(404, 'text/plain; charset=utf-8', 'Not found');
-        slug = domain.slug; productId ||= /^\/p\/([^/]+)/.exec(url.pathname)?.[1];
+        slug = domain.slug;
+        productId ||= customHostRoute?.[1];
+        productosRoute ||= customHostRoute?.[2] === 'productos';
+        collectionSlug ??= customHostRoute?.[3];
       }
       if (asset === 'robots.txt') {
         const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
