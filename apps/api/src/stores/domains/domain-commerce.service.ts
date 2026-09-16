@@ -226,11 +226,16 @@ export class DomainCommerceService {
    * Timed from the payment rather than the order: the fulfilment loop rewrites
    * the order's `updatedAt` on every pass, so an order-based clock would never
    * run out while the loop is running and failing.
+   *
+   * An operator retry (`retriedAt`) restarts that clock. Without it the payment
+   * is already hours old when the order returns to AWAITING_PAYMENT, so the very
+   * next pass would escalate it again and the retry would never get a turn.
    */
   private async escalateStalledPayments() {
     const before = new Date(Date.now() - STALLED_PAYMENT_MS);
     const stalled = await this.prisma.domainOrder.findMany({
-      where: { status: 'AWAITING_PAYMENT', paymentIntent: { status: 'SUCCEEDED', updatedAt: { lt: before } } },
+      where: { status: 'AWAITING_PAYMENT', paymentIntent: { status: 'SUCCEEDED', updatedAt: { lt: before } },
+        OR: [{ retriedAt: null }, { retriedAt: { lt: before } }] },
       orderBy: { createdAt: 'asc' }, take: 20,
     });
     for (const order of stalled) {

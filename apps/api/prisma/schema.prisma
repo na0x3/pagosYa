@@ -853,6 +853,10 @@ model DomainOrder {
   leaseUntil            DateTime?
   nextAttemptAt         DateTime @default(now())
   attempts              Int      @default(0)
+  // Set when an operator retries a REVIEW_REQUIRED order. The escalation sweep
+  // measures from this instead of the payment, so a retry gets its own window
+  // rather than being escalated again on the next pass.
+  retriedAt             DateTime?
   message               String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

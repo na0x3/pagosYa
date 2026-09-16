@@ -14,7 +14,7 @@ export interface SupportActor {
   role: OpsRole;
 }
 
-function actorLabel(actor: SupportActor): string {
+export function actorLabel(actor: SupportActor): string {
   return `${actor.name} <${actor.email}>`;
 }
 

@@ -12,10 +12,15 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { PaymentIntentsService } from '../src/payment-intents/payment-intents.service';
 import { CustomDomainsService } from '../src/stores/custom-domains.service';
 import { RefundsService } from '../src/refunds/refunds.service';
+import { DomainOrdersService } from '../src/ops/domain-orders.service';
+import { OpsUserService } from '../src/ops/ops-user.service';
+import { OpsRole } from '@prisma/client';
 
 describe('Domain shop (HTTP + PostgreSQL, mocked external providers)', () => {
   let app: INestApplication, db: PrismaService, service: DomainCommerceService, config: ConfigService;
   let merchant: string, platform: string, store: string, otherStore: string, token: string, quoteId: string;
+  let ops: DomainOrdersService;
+  const operator = { id: 'ops_e2e', name: 'Ana', email: 'ana@pagosya.bo', role: OpsRole.SUPPORT_AGENT };
   const contact = { firstName: 'Ana', lastName: 'Perez', email: 'ana@example.test', phone: '+59170000000', address1: 'Calle 123', city: 'La Paz', state: 'La Paz', zip: '0000', country: 'BO' };
   const availability = jest.fn(async (names: string[]) => names.map(domainName => ({ domainName, purchasable: true, premium: false, purchaseType: 'registration', purchasePrice: 12, renewalPrice: 15 })));
   const register = jest.fn(async (hostname: string) => ({ domain: { domainName: hostname, expireDate: '2027-10-01T00:00:00Z' }, order: 123, totalPaid: 12 }));
@@ -29,6 +34,7 @@ describe('Domain shop (HTTP + PostgreSQL, mocked external providers)', () => {
     app = module.createNestApplication(); app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })); await app.init();
     for (const interval of app.get(SchedulerRegistry).getIntervals()) app.get(SchedulerRegistry).deleteInterval(interval);
     db = app.get(PrismaService); service = app.get(DomainCommerceService); config = app.get(ConfigService);
+    ops = app.get(DomainOrdersService);
     const account = await request(app.getHttpServer()).post('/v1/merchants').send({ name: 'Domain buyer', email: 'domain-buyer@example.test' }).expect(201);
     merchant = account.body.merchant.id; token = account.body.testKeys.secretKey;
     platform = (await db.merchant.create({ data: { name: 'Platform', email: 'domains-platform@example.test', status: 'ACTIVE' } })).id;
@@ -177,5 +183,88 @@ describe('Domain shop (HTTP + PostgreSQL, mocked external providers)', () => {
     await service.reconcile();
     expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).not.toBe('CANCELED');
     expect(await db.customDomain.count({ where: { domainOrderId: quote.id } })).toBe(2);
+  });
+  /** Escalates a fresh paid order the way a missing credential would, and hands back its id. */
+  async function escalatedOrder(slug: string, hostname: string) {
+    const fresh = await db.store.create({ data: { merchantId: merchant, name: slug, slug } });
+    const quote = await service.quote(merchant, fresh.id, hostname);
+    await service.checkout(merchant, fresh.id, { quoteId: quote.id, registrant: contact, accepted: true });
+    const order = await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } });
+    await db.paymentIntent.update({ where: { id: order.paymentIntentId! }, data: { status: 'SUCCEEDED', railId: 'baneco_qr', livemode: true } });
+    await db.$executeRaw`UPDATE "PaymentIntent" SET "updatedAt" = NOW() - INTERVAL '2 hours' WHERE id = ${order.paymentIntentId!}`;
+    const settings = config.get('app.domainCommerce');
+    config.set('app.domainCommerce', { ...(settings as object), enabled: false });
+    try { await service.reconcile(); } finally { config.set('app.domainCommerce', settings); }
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).toBe('REVIEW_REQUIRED');
+    return quote.id;
+  }
+
+  it('shows an operator the escalated order with the payment, hostnames and case it needs', async () => {
+    const id = await escalatedOrder('domain-ops-queue', 'ops-queue-shop.com');
+
+    const queue = await ops.list();
+    expect(queue.map(row => row.id)).toContain(id);
+    // A quote nobody checked out is not an operator's problem.
+    expect(queue.some(row => row.status === 'QUOTED')).toBe(false);
+
+    const dossier = await ops.dossier(id);
+    expect(dossier.paymentIntent?.status).toBe('SUCCEEDED');
+    expect(dossier.domains).toHaveLength(2);
+    expect(dossier.supportCase?.summary).toContain(id);
+  });
+
+  it('keeps a retried order out of the escalation sweep until its own hour is up', async () => {
+    const id = await escalatedOrder('domain-ops-retry', 'ops-retry-shop.com');
+
+    await ops.retry(id, 'Credencial del registrador restaurada', operator);
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id } })).status).toBe('AWAITING_PAYMENT');
+
+    // Still unfulfillable: the sweep runs ahead of the enabled gate and the
+    // payment succeeded hours ago, so without retriedAt it would re-escalate
+    // immediately and the operator's retry would never get a pass.
+    const settings = config.get('app.domainCommerce');
+    config.set('app.domainCommerce', { ...(settings as object), enabled: false });
+    try {
+      await service.reconcile();
+      expect((await db.domainOrder.findUniqueOrThrow({ where: { id } })).status).toBe('AWAITING_PAYMENT');
+
+      await db.$executeRaw`UPDATE "DomainOrder" SET "retriedAt" = NOW() - INTERVAL '2 hours' WHERE id = ${id}`;
+      await service.reconcile();
+    } finally { config.set('app.domainCommerce', settings); }
+
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id } })).status).toBe('REVIEW_REQUIRED');
+  });
+
+  it('frees the hostname for another store once an operator settles the order', async () => {
+    const id = await escalatedOrder('domain-ops-settle', 'ops-settle-shop.com');
+
+    await ops.markReconciled(id, 'Reembolso emitido el 16/09', operator);
+
+    const settled = await db.domainOrder.findUniqueOrThrow({ where: { id } });
+    expect(settled.status).toBe('CANCELED');
+    expect(settled.message).not.toContain('Reembolso');
+    expect(await db.customDomain.count({ where: { domainOrderId: id } })).toBe(0);
+    expect(await db.auditLogEntry.count({ where: { targetId: id, action: 'domain_order.reconciled' } })).toBe(1);
+
+    const claimant = await db.store.create({ data: { merchantId: merchant, name: 'Claimant', slug: 'domain-ops-claimant' } });
+    const requote = await service.quote(merchant, claimant.id, 'ops-settle-shop.com');
+    await expect(service.checkout(merchant, claimant.id, { quoteId: requote.id, registrant: contact, accepted: true })).resolves.toBeDefined();
+  });
+  it('opens the operator endpoints only to a staff token and refuses an unexplained action', async () => {
+    const id = await escalatedOrder('domain-ops-http', 'ops-http-shop.com');
+    const { fullToken } = await app.get(OpsUserService).create('Ops e2e', 'ops-domains@pagosya.bo');
+    const staff = () => ({ Authorization: `Bearer ${fullToken}` });
+
+    await request(app.getHttpServer()).get('/internal/domain_orders').expect(401);
+    // A merchant's own API key is not a staff credential.
+    await request(app.getHttpServer()).get('/internal/domain_orders').set(auth()).expect(401);
+
+    const queue = await request(app.getHttpServer()).get('/internal/domain_orders').set(staff()).expect(200);
+    expect(queue.body.map((row: { id: string }) => row.id)).toContain(id);
+
+    await request(app.getHttpServer()).post(`/internal/domain_orders/${id}/retry`).set(staff()).send({ reason: 'corto' }).expect(400);
+    await request(app.getHttpServer()).post(`/internal/domain_orders/${id}/retry`).set(staff())
+      .send({ reason: 'Credencial del registrador restaurada' }).expect(201);
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id } })).status).toBe('AWAITING_PAYMENT');
   });
 });

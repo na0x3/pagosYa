@@ -1,0 +1,1 @@
+ALTER TABLE "DomainOrder" ADD COLUMN "retriedAt" TIMESTAMP(3);
