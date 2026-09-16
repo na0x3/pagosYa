@@ -151,7 +151,15 @@ interface LinkHeader {
   contactEmail: string | null;
 }
 
-const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]> = {
+type DomesticMethodType = Exclude<PaymentMethodType, PaymentMethodType.LOCAL_METHOD>;
+const DOMESTIC_METHOD_TYPES: DomesticMethodType[] = [
+  PaymentMethodType.CARD,
+  PaymentMethodType.TIGO_MONEY,
+  PaymentMethodType.BANK_TRANSFER,
+  PaymentMethodType.QR,
+];
+
+const TEST_TOKENS: Record<DomesticMethodType, { label: string; value: string }[]> = {
   [PaymentMethodType.CARD]: [
     { label: "Visa (aprobada)", value: "tok_visa_success" },
     { label: "Visa (rechazada)", value: "tok_visa_decline" },
@@ -174,14 +182,14 @@ const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]>
   ],
 };
 
-const TAB_LABELS: Record<PaymentMethodType, string> = {
+const TAB_LABELS: Record<DomesticMethodType, string> = {
   [PaymentMethodType.CARD]: "Tarjeta",
   [PaymentMethodType.TIGO_MONEY]: "Tigo Money",
   [PaymentMethodType.BANK_TRANSFER]: "Transferencia",
   [PaymentMethodType.QR]: "QR",
 };
 
-const TAB_ICONS: Record<PaymentMethodType, string> = {
+const TAB_ICONS: Record<DomesticMethodType, string> = {
   [PaymentMethodType.CARD]:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>',
   [PaymentMethodType.TIGO_MONEY]:
@@ -224,7 +232,7 @@ const ICON_CHEVRON_DOWN =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
 
 const app = document.getElementById("app")!;
-let selectedType: PaymentMethodType = PaymentMethodType.CARD;
+let selectedType: DomesticMethodType = PaymentMethodType.CARD;
 let linkHeader: LinkHeader | null = null;
 let activeOrderTrackingToken: string | null = null;
 let orderTrackingPoll: number | null = null;
@@ -9412,7 +9420,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             <p>${recipient?.name ? "El comercio ya completó tus datos." : "El comercio ya preparó este cobro."} Solo elige cómo pagar.</p>
           </div>`}
       <div class="tabs">
-        ${Object.values(PaymentMethodType)
+        ${DOMESTIC_METHOD_TYPES
           .filter(type => !domainPurchase || type === PaymentMethodType.QR)
           .map(
             (type) =>
@@ -9483,7 +9491,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
 
   app.querySelectorAll<HTMLElement>(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
-      selectedType = tab.dataset.type as PaymentMethodType;
+      selectedType = tab.dataset.type as DomesticMethodType;
       renderForm(session, clientSecret);
     });
   });

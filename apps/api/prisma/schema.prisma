@@ -33,6 +33,7 @@ enum PaymentMethodType {
   TIGO_MONEY
   BANK_TRANSFER
   QR
+  LOCAL_METHOD
 }
 
 enum PaymentIntentStatus {
@@ -63,6 +64,14 @@ enum LedgerAccount {
   MERCHANT_PAYABLE
   PAGOSYA_FEE_REVENUE
   RESERVE
+  RAIL_COST
+}
+
+enum InternationalPaymentsStatus {
+  OFF
+  REQUESTED
+  ENABLED
+  REJECTED
 }
 
 enum LedgerDirection {
@@ -234,6 +243,8 @@ model Merchant {
   storeLeads       StoreLead[]
   supportCases     SupportCase[]
   visualTemplates  StoreVisualTemplate[]
+  internationalPaymentsStatus InternationalPaymentsStatus @default(OFF)
+  internationalPaymentsNote   String?
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -486,6 +497,7 @@ model MerchantKycSubmission {
   legalRepName        String
   legalRepDocumentId  String
   payoutBankAccount   String
+  payoutUsdBankAccount String?
   status              KycStatus @default(PENDING_REVIEW)
   reviewNote          String?
   reviewedAt          DateTime?
@@ -552,6 +564,7 @@ model PaymentIntent {
 
   @@index([merchantId, createdAt])
   @@index([consumerUserId, createdAt])
+  @@index([railId, status, updatedAt])
 }
 
 enum PaymentLinkStatus {

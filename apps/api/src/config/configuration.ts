@@ -11,6 +11,48 @@ export interface BanecoQrConfig {
   webhookSecret: string;
 }
 
+export interface DlocalConfig {
+  enabled: boolean;
+  baseUrl: string;
+  login: string;
+  transKey: string;
+  secretKey: string;
+  smartFieldsKey: string;
+  notificationUrl: string;
+  returnUrl: string;
+  bobPerUsd: number;
+  intlFeeBps: number;
+  costBps: number;
+  timeoutMs: number;
+}
+
+function positiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function nonNegativeNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return value !== undefined && Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+export function parseDlocalConfig(env: NodeJS.ProcessEnv): DlocalConfig {
+  return {
+    enabled: env.DLOCAL_ENABLED === "true",
+    baseUrl: env.DLOCAL_BASE_URL ?? "https://sandbox.dlocal.com",
+    login: env.DLOCAL_LOGIN ?? "",
+    transKey: env.DLOCAL_TRANS_KEY ?? "",
+    secretKey: env.DLOCAL_SECRET_KEY ?? "",
+    smartFieldsKey: env.DLOCAL_SMART_FIELDS_KEY ?? "",
+    notificationUrl: env.DLOCAL_NOTIFICATION_URL ?? "http://localhost:3000/v1/webhooks/dlocal/payments",
+    returnUrl: env.DLOCAL_RETURN_URL ?? "http://localhost:5173/",
+    bobPerUsd: positiveNumber(env.INTL_BOB_PER_USD, 0),
+    intlFeeBps: positiveNumber(env.INTL_FEE_BPS, 590),
+    costBps: nonNegativeNumber(env.DLOCAL_COST_BPS, 0),
+    timeoutMs: positiveNumber(env.DLOCAL_TIMEOUT_MS, 15000),
+  };
+}
+
 export interface EmailConfig {
   resendApiKey: string;
   fromAddress: string;
@@ -48,6 +90,7 @@ export interface AppConfig {
     target: string;
   };
   banecoQr: BanecoQrConfig;
+  dlocal: DlocalConfig;
   uploadsDir: string;
   objectStorage: {
     privateBucket?: string;
@@ -153,6 +196,13 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
     }
     requireSecret("BANECO_WEBHOOK_SECRET", app.banecoQr.webhookSecret);
   }
+  if (app.dlocal.enabled) {
+    if (!app.dlocal.login || !app.dlocal.transKey || !app.dlocal.secretKey) {
+      failures.push("DLOCAL_LOGIN, DLOCAL_TRANS_KEY and DLOCAL_SECRET_KEY are required when DLOCAL_ENABLED=true");
+    }
+    requireHttps("DLOCAL_NOTIFICATION_URL", app.dlocal.notificationUrl);
+    requireHttps("DLOCAL_RETURN_URL", app.dlocal.returnUrl);
+  }
   if (failures.length) throw new Error(`Refusing insecure production startup:\n- ${failures.join("\n- ")}`);
 }
 
@@ -245,6 +295,7 @@ export default (): { app: AppConfig } => {
       creditAccount: process.env.BANECO_CREDIT_ACCOUNT ?? "",
       webhookSecret: process.env.BANECO_WEBHOOK_SECRET ?? "",
     },
+    dlocal: parseDlocalConfig(process.env),
     // The local fallback resolves to the same directory regardless of process
     // cwd. Set object storage in production for multi-instance durability.
     uploadsDir: process.env.UPLOADS_DIR ?? path.join(apiRootFromCwd(), "uploads"),
