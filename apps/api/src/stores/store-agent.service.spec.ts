@@ -133,6 +133,52 @@ describe("StoreAgentService", () => {
     expect(visualStudio.revise).not.toHaveBeenCalled();
   });
 
+  it.each(["ok :)", "sí 👍", "(sí)", "-si-"])("applies the layout exactly once for an affirmative dressed with punctuation, symbols or emoji: %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "sections" } });
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "sections" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it.each(["no :)", "(no)"])("declines with zero writes for a refusal dressed with punctuation or symbols: %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it.each([":)", "👍"])("treats a reply that strips down to nothing as unrecognized, not as an accept or a decline: %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+    visualStudio.generate.mockResolvedValueOnce({ proposals: [], mode: "local", engine: "test" });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement" });
+  });
+
   it("answers an unrelated question asked during a pending confirmation instead of treating it as a decline", async () => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });

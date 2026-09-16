@@ -62,8 +62,15 @@ const CATALOG_ARRANGEMENT_CLARIFICATION_ID = "catalog_arrangement";
 const CATALOG_ARRANGEMENT_CONFIRM_VALUE = "Sí, hazlo";
 const CATALOG_ARRANGEMENT_DECLINE_VALUE = "No, déjalo así";
 
+// Strips punctuation AND symbols generally (Unicode property escapes), not a
+// hand-listed character class — real replies carry parentheses, dashes and
+// emoji ("ok :)", "(sí)", "-si-", "sí 👍") that a fixed punctuation list will
+// always be one character behind. \p{P} covers punctuation (.,;:!?()-"'…),
+// \p{S} covers symbols including most emoji. A reply that strips down to
+// nothing ("👍" alone, ":)" alone) intentionally matches neither whitelist
+// below and falls through as unrecognized, same as today.
 function normalizeConfirmationReply(value: string) {
-  return normalizeAgentInstruction(value).replace(/[¡!¿?.,;:]/g, "").replace(/\s+/g, " ").trim();
+  return normalizeAgentInstruction(value).replace(/[\p{P}\p{S}]/gu, "").replace(/\s+/g, " ").trim();
 }
 
 const CATALOG_ARRANGEMENT_AFFIRMATIVES = [
