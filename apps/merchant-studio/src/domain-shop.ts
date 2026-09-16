@@ -24,6 +24,23 @@ const REGISTRANT_FIELDS: Array<[string, string, string, string?]> = [
 const money = (amount: number, currency: string) =>
   new Intl.NumberFormat('es-BO', { style: 'currency', currency }).format(amount / 100);
 
+const EXPIRY_WARNING_DAYS = 30;
+
+/**
+ * Renewal is manual — nothing charges the merchant again — so the last month
+ * before expiry has to read as something to act on, not as a date. Derived from
+ * expiresAt at render time rather than stored on the order: the fulfilment loop
+ * rewrites an active order's message on every pass and would erase a warning.
+ */
+export function expiryNotice(expiresAt: string | null | undefined): string {
+  if (!expiresAt) return '';
+  const date = new Date(expiresAt), when = new Intl.DateTimeFormat('es-BO').format(date);
+  const days = Math.ceil((date.getTime() - Date.now()) / (24 * 60 * 60_000));
+  if (days <= 0) return `Este dominio venció el ${when}. Escríbenos para recuperarlo cuanto antes.`;
+  if (days <= EXPIRY_WARNING_DAYS) return `Vence en ${days} día${days === 1 ? '' : 's'}, el ${when}. La renovación no es automática: escríbenos para renovarlo.`;
+  return `Vence el ${when} · Renovación automática desactivada.`;
+}
+
 export async function openDomainShop(api: MerchantStudioApi, storeId: string, onConnected?: () => void) {
   const dialog = document.createElement('dialog'); dialog.className = 'brand-dialog';
   dialog.setAttribute('aria-label', 'Tu propio dominio');
@@ -89,7 +106,7 @@ export async function openDomainShop(api: MerchantStudioApi, storeId: string, on
     if (!orders.length) return '';
     return `<section class="brand-import"><h3>Tus dominios</h3>${orders.map(order => `<article><strong>${escape(order.hostname)}</strong>
       <p>${escape(STATUS_LABELS[order.status] || order.status)}${order.message ? ` · ${escape(order.message)}` : ''}</p>
-      ${order.expiresAt ? `<p>Vence el ${escape(new Intl.DateTimeFormat('es-BO').format(new Date(order.expiresAt)))} · Renovación automática desactivada.</p>` : ''}
+      ${order.expiresAt ? `<p>${escape(expiryNotice(order.expiresAt))}</p>` : ''}
       ${order.expiresAt && !order.sandbox && !order.contactVerified ? '<p>Revisa el correo del titular y completa la verificación para mantener el dominio activo.</p>' : ''}
       ${order.checkoutUrl ? `<a class="button button--publish" href="${escape(order.checkoutUrl)}" target="_blank" rel="noopener noreferrer">Pagar ${escape(money(order.amount, order.currency))}</a><button class="button" type="button" data-cancel="${escape(order.id)}">Cancelar compra pendiente</button>` : ''}
       ${order.url ? `<a class="button" href="${escape(order.url)}" target="_blank" rel="noopener noreferrer">Abrir tienda ↗</a>` : ''}</article>`).join('')}</section>`;
