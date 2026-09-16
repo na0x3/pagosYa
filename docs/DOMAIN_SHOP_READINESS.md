@@ -8,10 +8,12 @@ merchant-dashboard UI are all real and wired. Nothing has ever run against a fun
 provider credential is absent locally, so the feature reports itself unavailable in every environment in this
 repository.
 
-**Updated 2026-09-16.** Five items from §5(a) are now built: the Merchant Studio entry point (§5a.1), the
-paid-but-stalled escalation (§5a.2), the abandoned-checkout reaper (§5a.3), the fail-closed CNAME target
-(§5a.4) and the operator surface for `DomainOrder` (§5a.5). Everything in §5(b) is unchanged and still
-owner-only. Sections below are marked where they no longer describe current code.
+**Updated 2026-09-16.** Every item in §5(a) that does not need the owner is now built: the Merchant Studio entry
+point (§5a.1), the paid-but-stalled escalation (§5a.2), the abandoned-checkout reaper (§5a.3), the fail-closed
+CNAME target (§5a.4), the operator surface for `DomainOrder` (§5a.5), the expiry warning job (§5a.6) and the
+stale-quote reaper (§5a.7). Only §5a.8, raising the dashboard's buried entry point, remains, and Studio has
+since given merchants another way in. Everything in §5(b) is unchanged and still owner-only. Sections below are
+marked where they no longer describe current code.
 
 ## 1. End-to-end reality, hop by hop
 
@@ -195,8 +197,15 @@ email, and no dashboard warning beyond the expiry date printed in the order card
 (`domain-commerce.service.ts:192`, `:207`) and shown as a nudge (`domain-shop.mjs:43`). ICANN suspends a domain
 whose registrant email is never verified; nothing escalates, retries, or blocks on this.
 
-**G. Abandoned `QUOTED` rows accumulate.** Every "Elegir" click writes a row (`:79`). They are excluded from the
-listing (`:59`) and only deleted when the whole store is deleted (`stores.service.ts:1331`).
+**G. ~~Abandoned `QUOTED` rows accumulate.~~ Fixed 2026-09-16.** Every "Elegir" click writes a row (`:79`). They
+are excluded from the listing (`:59`) and used to be deleted only with the whole store
+(`stores.service.ts:1331`), so browsing alone grew the table forever.
+
+*Fix:* `deleteStaleQuotes` runs inside the same hourly reaper and deletes `QUOTED` rows a day after
+`quoteExpiresAt`. A quote holds nothing — no payment, no reserved hostname — so nothing is released with it. The
+day of grace is deliberate: checkout answers a recently expired quote with a price explanation (`:104`), which a
+missing row could not do. Covered by the e2e test "reaps a quote nobody used, while a just-expired one still
+explains itself".
 
 **H. ~~An escalated order was recoverable only through `psql`.~~ Fixed 2026-09-16.** `needsReview` opens a
 `SupportCase`, but nothing let the person reading that case see the order, restart it, or close it. Operators had
@@ -230,6 +239,24 @@ until its own hour is up", which is the regression `retriedAt` exists to prevent
 *Still manual:* the reconcile action does not issue the refund. Whoever settles the order has to have done that
 first, through the ordinary refund path.
 
+**I. ~~An expiring domain warned nobody.~~ Fixed 2026-09-16.** `autoRenew` is `false` everywhere and nothing
+charges a merchant a second time, so a registered domain simply stops resolving on its expiry date and takes the
+storefront with it. Nothing watched `expiresAt`.
+
+*Fix:* `warnExpiringDomains`, a twelve-hour `@Interval` in `domain-commerce.service.ts`. At 30 days and again at 7
+days before `expiresAt` it opens a `SupportCase` naming the domain and the date — the same channel escalations use
+— and records the threshold in `expiryWarnedDays`, so the sweep is idempotent and the closer warning still speaks
+after the first. Ungated for the same reason as the reaper: an already-registered domain must be renewed whether
+or not the shop is switched on. An already-expired domain falls inside the 7-day threshold and gets a case too.
+
+The merchant-facing half is computed, not stored. `expiryNotice` in `apps/merchant-studio/src/domain-shop.ts`
+derives the line from `expiresAt` at render time: a plain date far out, "vence en N días … escríbenos para
+renovarlo" inside the last month, and a recovery line once it has passed. It cannot live in the order's `message`,
+because `advance` rewrites an `ACTIVE` order's message to `null` on every 30-second pass and would erase it.
+
+*Still manual:* renewal itself. The job makes sure a person is told in time; nobody is charged automatically, and
+the renewal procedure the case points at is §5b.6, still the owner's to decide.
+
 ## 5. What is genuinely missing
 
 ### (a) Buildable without the owner
@@ -241,9 +268,9 @@ first, through the ordinary refund path.
 3. ~~Fix risk B: expire abandoned domain checkouts.~~ **Done 2026-09-16** — see §4B.
 4. ~~Make `CUSTOM_DOMAIN_CNAME_TARGET` a required value in live mode.~~ **Done 2026-09-16** — see §3.
 5. ~~Operator surface for `DomainOrder`: list, inspect, mark reconciled, retry.~~ **Done 2026-09-16** — see §4H.
-6. **Still open.** Expiry warning job and merchant notification, plus a documented support-driven renewal procedure.
-7. **Still open.** Reap stale `QUOTED` rows. The new reaper releases abandoned *checkouts*; a `QUOTED` row that was
-   never checked out still only disappears when its store is deleted.
+6. ~~Expiry warning job and merchant notification.~~ **Done 2026-09-16** — see §4I. The renewal *procedure* the
+   warning points at is still §5b.6, an owner decision.
+7. ~~Reap stale `QUOTED` rows.~~ **Done 2026-09-16** — see §4G.
 8. **Still open, and now lower priority.** Raise the domain shop out of a collapsed section inside a
    fullscreen-preview view in the dashboard (`index.html:7193-7195`, `:7304`). Studio now has a first-class entry
    point, so the dashboard's burial is no longer the only path a merchant has.
@@ -372,8 +399,7 @@ Owner-only steps are marked **[owner]**. Nothing below can be skipped for a live
 8. ~~Build the paid-but-stalled escalation (§5a.2) and the abandoned-checkout reaper (§5a.3).~~ **Done 2026-09-16.**
 9. ~~Make `CUSTOM_DOMAIN_CNAME_TARGET` required in live mode (§5a.4).~~ **Done 2026-09-16.** Note the consequence:
    the API now refuses live domain purchases until this variable is set, so step 13 is no longer optional.
-10. ~~Build the operator view for `DomainOrder` (§5a.5).~~ **Done 2026-09-16.** The expiry warning job (§5a.6) is
-    still open; it only matters once a real domain has been registered.
+10. ~~Build the operator view for `DomainOrder` (§5a.5) and the expiry warning job (§5a.6).~~ **Done 2026-09-16.**
 11. Set `NAMECOM_USERNAME`, `NAMECOM_API_TOKEN`, `DOMAIN_PLATFORM_MERCHANT_ID`, `DOMAIN_BOB_PER_USD`,
     `DOMAIN_MARKUP_PERCENT` on the API server. Leave `DOMAIN_REGISTRAR_SANDBOX=true`, `DOMAIN_COMMERCE_ENABLED=true`
     and `BANECO_QR_ENABLED=false` for the sandbox pass.
