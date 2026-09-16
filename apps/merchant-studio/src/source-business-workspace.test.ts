@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn() }));
+const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn(), domainShop: vi.fn(), openDomain: vi.fn() }));
 vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'http://localhost:3001/v1', MerchantStudioApi: class {
         businessWorkspace = mocks.workspace;
         retention = mocks.retention;
         sourceState = mocks.source;
+        domainShop = mocks.domainShop;
         integrationConnections = mocks.connections;
         createIntegrationConnection = mocks.createConnection;
         integrationMappings = mocks.mappings;
@@ -18,6 +19,7 @@ vi.mock('./source-checks', () => ({ checkSourceWebsite: mocks.checks, sourceChec
 vi.mock('./commerce-platform', () => ({ openCommercePlatform: vi.fn() }));
 vi.mock('./commerce-content', () => ({ openCommerceContent: vi.fn() }));
 vi.mock('./shipping-settings', () => ({ openShippingSettings: vi.fn() }));
+vi.mock('./domain-shop', () => ({ openDomainShop: mocks.openDomain }));
 vi.mock('./brand-profile', () => ({ openBrandProfile: vi.fn() }));
 vi.mock('./catalog-arrangement', () => ({ openCatalogArrangement: mocks.openArrangement }));
 import { mountBusinessWorkspace } from './source-business-workspace';
@@ -40,6 +42,7 @@ beforeEach(() => {
     mocks.retention.mockResolvedValue({ settings: { comebackEnabled: false }, emailConfigured: false });
     mocks.source.mockResolvedValue(source());
     mocks.connections.mockResolvedValue([]);
+    mocks.domainShop.mockResolvedValue({ available: false, sandbox: true, tlds: ['com'], orders: [] });
     mocks.workspace.mockResolvedValue({ storeName: 'Tienda A', revision: 2, emailConfigured: true, staff: { enabled: false, recipients: [] }, templates: [{ id: 'SHIPPED', name: 'Pedido enviado', group: 'transactional', trigger: 'Al enviar', supported: true, enabled: false, subject: 'En camino', body: 'Hola {{customer}}' }], logs: { items: [], nextBefore: null } });
 });
 describe('marketing workspaces', () => {
@@ -104,6 +107,27 @@ describe('marketing workspaces', () => {
         expect(mocks.openArrangement).not.toHaveBeenCalled();
         click('[data-open-integration=arrangement]');
         expect(mocks.openArrangement).toHaveBeenCalledWith(expect.anything(), 'store-a');
+    });
+    it('opens the domain shop from the embedded integrations catalog, not just lists it', async () => {
+        await mount('library=integrations');
+        const card = app.querySelector('[data-open-integration=domain]')!.closest('article')!;
+        expect(card.textContent).toContain('Tu propio dominio');
+        expect(mocks.openDomain).not.toHaveBeenCalled();
+        click('[data-open-integration=domain]');
+        expect(mocks.openDomain).toHaveBeenCalledWith(expect.anything(), 'store-a');
+    });
+    it('marks the domain tool configured only once a purchase is connected', async () => {
+        await mount('library=integrations');
+        expect(app.querySelector('[data-open-integration=domain]')!.closest('article')!.querySelector('.business-badge')!.textContent).toBe('Incluida');
+        mocks.domainShop.mockResolvedValue({ available: true, sandbox: false, tlds: ['com'], orders: [{ status: 'ACTIVE' }] });
+        await mount('library=integrations');
+        expect(app.querySelector('[data-open-integration=domain]')!.closest('article')!.querySelector('.business-badge')!.textContent).toBe('Configurada');
+    });
+    it('keeps the integrations grid usable when the domain shop cannot be reached', async () => {
+        mocks.domainShop.mockRejectedValue(Error('503'));
+        await mount('library=integrations');
+        expect(app.querySelector('[data-open-integration=domain]')).not.toBeNull();
+        expect(app.querySelector('[data-open-integration=comeback]')).not.toBeNull();
     });
     it('sends Comeback navigation to its specific marketing tab', async () => {
         const send = vi.spyOn(window.parent, 'postMessage');

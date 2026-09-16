@@ -6,6 +6,7 @@ import { API_BASE_URL } from './api';
 import { openRetention } from './retention';
 import { openCommercePlatform } from './commerce-platform';
 import { openShippingSettings } from './shipping-settings';
+import { openDomainShop } from './domain-shop';
 import { openCatalogArrangement } from './catalog-arrangement';
 import { openBrandProfile } from './brand-profile';
 import { openCommerceContent } from './commerce-content';
@@ -145,7 +146,7 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
             return;
         }
         if (kind === 'integrations') {
-            const [retention, source] = await Promise.all([api.retention(storeId), api.sourceState(storeId)]);
+            const [retention, source, domains] = await Promise.all([api.retention(storeId), api.sourceState(storeId), api.domainShop(storeId).catch(() => null)]);
             let connections = await api.integrationConnections(storeId), search = '', category = '', installed = false, issued: any = null, connectionDraft = { name: '', kind: 'CUSTOM_DATABASE' };
             type Integration = { id: string; name: string; category: string; description: string; connected?: boolean; icon?: string; logo?: string; url?: string; guide?: string; setup?: string; view?: string; open?: () => unknown; action?: () => Promise<void> };
             let selectedIntegration: Integration | undefined;
@@ -197,6 +198,7 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                 { id: 'digital', name: 'Archivos digitales', category: 'Ventas', icon: 'box', description: 'Entrega descargas a quienes completan su compra.', open: () => openCommercePlatform(api, storeId, 'digital') },
                 { id: 'arrangement', name: 'Cómo se ven tus productos', category: 'Diseño', icon: 'box', description: 'Elige cómo se muestra tu catálogo y agrupa tus productos en colecciones.', open: () => openCatalogArrangement(api, storeId) },
                 { id: 'brand', name: 'Identidad de marca', category: 'Diseño', icon: 'palette', description: 'Tu logo, colores y datos de marca en un solo lugar.', open: () => openBrandProfile(api, storeId) },
+                { id: 'domain', name: 'Tu propio dominio', category: 'Diseño', icon: 'link', description: 'Compra un dominio y lo conectamos a tu tienda, o conecta el que ya tienes.', connected: Boolean(domains?.orders.some(order => order.status === 'ACTIVE')), open: () => openDomainShop(api, storeId) },
                 { id: 'redirects', name: 'Redirecciones y artículos', category: 'Diseño', icon: 'link', description: 'Conserva las direcciones de tus artículos y su contenido.', open: () => openCommercePlatform(api, storeId, 'redirects') },
             ];
             function drawIntegrations() {

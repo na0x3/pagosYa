@@ -32,6 +32,15 @@ export interface MerchantStore {
   catalogLayout?: CatalogLayout;
 }
 
+// Domain purchase. Amounts are integer centavos in `currency`, matching the API.
+export interface DomainSearchResult { hostname: string; available: boolean; amount: number; renewalAmount: number; currency: string }
+export interface DomainOrderView {
+  id: string; hostname: string; status: string; amount: number; renewalAmount: number; currency: string;
+  sandbox: boolean; expiresAt: string | null; contactVerified: boolean; message: string | null;
+  url: string | null; checkoutUrl: string | null;
+}
+export interface DomainShopState { available: boolean; sandbox: boolean; tlds: string[]; orders: DomainOrderView[] }
+
 // How the storefront arranges the product catalog — mirrors CATALOG_LAYOUTS on the API.
 export type CatalogLayout = 'all' | 'sections' | 'page' | 'tabs';
 
@@ -183,6 +192,13 @@ export class MerchantStudioApi {
   createShippingRate(storeId: string, input: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/delivery/zones`, { method: 'POST', body: JSON.stringify(input) }); }
   toggleShippingRate(storeId: string, rateId: string, active: boolean): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/rates/${encodeURIComponent(rateId)}`, { method: 'PATCH', body: JSON.stringify({ active }) }); }
   saveShippingWeight(storeId: string, productId: string, weightGrams: number | null): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ weightGrams }) }); }
+  // Buying a domain and connecting it to this store. Every route reports itself
+  // unavailable until the operator supplies registrar and hosting credentials.
+  domainShop(storeId: string): Promise<DomainShopState> { return this.request(`/stores/${encodeURIComponent(storeId)}/domain-shop`); }
+  searchDomains(storeId: string, query: string): Promise<DomainSearchResult[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/domain-shop/search`, { method: 'POST', body: JSON.stringify({ query }) }); }
+  quoteDomain(storeId: string, hostname: string): Promise<DomainOrderView> { return this.request(`/stores/${encodeURIComponent(storeId)}/domain-shop/quotes`, { method: 'POST', body: JSON.stringify({ hostname }) }); }
+  checkoutDomain(storeId: string, input: { quoteId: string; registrant: Record<string, string>; accepted: boolean }): Promise<DomainOrderView> { return this.request(`/stores/${encodeURIComponent(storeId)}/domain-shop/checkout`, { method: 'POST', body: JSON.stringify(input) }); }
+  cancelDomainOrder(storeId: string, orderId: string): Promise<{ success: boolean }> { return this.request(`/stores/${encodeURIComponent(storeId)}/domain-shop/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST' }); }
   // All of the store's products, active or archived — unlike sourceCatalog's
   // storefront-facing item list, this must include archived ones so a
   // collection never silently loses an archived member when saved.
