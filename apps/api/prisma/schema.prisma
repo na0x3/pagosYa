@@ -857,6 +857,10 @@ model DomainOrder {
   // measures from this instead of the payment, so a retry gets its own window
   // rather than being escalated again on the next pass.
   retriedAt             DateTime?
+  // The last expiry-warning threshold, in days, a renewal case was opened at.
+  // Keeps the twice-daily sweep idempotent while still letting the closer
+  // threshold speak after the first one has.
+  expiryWarnedDays      Int?
   message               String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

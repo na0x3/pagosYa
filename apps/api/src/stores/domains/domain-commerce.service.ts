@@ -19,6 +19,12 @@ const STALLED_PAYMENT_MS = 60 * 60_000;
 // Long enough that a merchant can pay a QR at their own pace, short enough that
 // one abandoned checkout does not hold a name away from everyone forever.
 const ABANDONED_CHECKOUT_MS = 24 * 60 * 60_000;
+// Measured from the quote's own expiry, not its creation: it only has to outlive
+// a merchant who wandered off mid-purchase and came back.
+const STALE_QUOTE_MS = 24 * 60 * 60_000;
+// Warn a month out, then again in the final week. Widest first: the sweep walks
+// them in order so a domain that crosses both at once settles on the closer one.
+const EXPIRY_WARNING_DAYS = [30, 7];
 export function purchasableHostname(input: string): string {
   const hostname = input.trim().toLowerCase();
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(com|net|org|store|shop)$/.test(hostname) || hostname.startsWith('xn--')) {
@@ -41,6 +47,7 @@ export class DomainCommerceService {
   private readonly logger = new Logger(DomainCommerceService.name);
   private running = false;
   private reaping = false;
+  private warning = false;
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService,
     private readonly payments: PaymentIntentsService, private readonly registrar: NamecomProvider,
     private readonly hosting: CloudflareHostingProvider) {}
@@ -256,11 +263,62 @@ export class DomainCommerceService {
    * to `advance`: the missing configuration `advance` needs may be the very
    * reason an order is stuck.
    */
+  /**
+   * A quote is one "Elegir" click and holds nothing — no payment, no hostname —
+   * but it is only ever deleted with its store, so browsing accumulates rows
+   * forever. Deleted a day after expiry rather than at expiry: checkout answers
+   * a recently expired quote with a price explanation, which a missing row
+   * cannot do.
+   */
+  private async deleteStaleQuotes() {
+    await this.prisma.domainOrder.deleteMany({
+      where: { status: 'QUOTED', quoteExpiresAt: { lt: new Date(Date.now() - STALE_QUOTE_MS) } },
+    });
+  }
+
+  /**
+   * Renewal is manual: `autoRenew` is false everywhere and nothing charges a
+   * merchant again, so an expiring domain silently stops resolving and takes
+   * the storefront with it. This opens a renewal case at each threshold — the
+   * same channel escalations use — and records the threshold so the sweep is
+   * idempotent while the closer warning can still speak after the first.
+   *
+   * Ungated, like the reaper: a domain that is already registered has to be
+   * renewed whether or not the shop is still switched on.
+   */
+  @Interval('domain-expiry-warnings', 12 * 60 * 60_000)
+  async warnExpiringDomains() {
+    if (this.warning) return;
+    this.warning = true;
+    try {
+      for (const days of EXPIRY_WARNING_DAYS) {
+        const rows = await this.prisma.domainOrder.findMany({
+          where: { status: 'ACTIVE', expiresAt: { not: null, lt: new Date(Date.now() + days * 24 * 60 * 60_000) },
+            OR: [{ expiryWarnedDays: null }, { expiryWarnedDays: { gt: days } }] },
+          orderBy: { expiresAt: 'asc' }, take: 50,
+        });
+        for (const order of rows) {
+          try {
+            await this.prisma.$transaction(async tx => {
+              const store = await tx.store.findUniqueOrThrow({ where: { id: order.storeId } });
+              await tx.supportCase.create({ data: { merchantId: store.merchantId, category: 'OTHER',
+                summary: `Renovación de dominio ${order.hostname} (${order.id}): vence el ${order.expiresAt!.toISOString().slice(0, 10)}. La renovación no es automática.` } });
+              await tx.domainOrder.update({ where: { id: order.id }, data: { expiryWarnedDays: days } });
+            });
+          } catch (error) {
+            this.logger.error(`Domain order ${order.id} expires on ${order.expiresAt?.toISOString()} but no renewal case could be opened: ${error instanceof Error ? error.message : 'unknown failure'}`);
+          }
+        }
+      }
+    } finally { this.warning = false; }
+  }
+
   @Interval('domain-checkout-expiry', 60 * 60_000)
   async releaseAbandonedCheckouts() {
     if (this.reaping) return;
     this.reaping = true;
     try {
+      await this.deleteStaleQuotes();
       const before = new Date(Date.now() - ABANDONED_CHECKOUT_MS);
       const abandoned = await this.prisma.domainOrder.findMany({
         where: { status: 'AWAITING_PAYMENT', paymentIntent: { status: { in: UNPAID }, createdAt: { lt: before } } },

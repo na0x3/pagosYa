@@ -267,4 +267,47 @@ describe('Domain shop (HTTP + PostgreSQL, mocked external providers)', () => {
       .send({ reason: 'Credencial del registrador restaurada' }).expect(201);
     expect((await db.domainOrder.findUniqueOrThrow({ where: { id } })).status).toBe('AWAITING_PAYMENT');
   });
+  it('reaps a quote nobody used, while a just-expired one still explains itself', async () => {
+    const fresh = await db.store.create({ data: { merchantId: merchant, name: 'Quotes', slug: 'domain-quotes' } });
+    const stale = await service.quote(merchant, fresh.id, 'stale-quote-shop.com');
+    const recent = await service.quote(merchant, fresh.id, 'recent-quote-shop.com');
+    await db.$executeRaw`UPDATE "DomainOrder" SET "quoteExpiresAt" = NOW() - INTERVAL '25 hours' WHERE id = ${stale.id}`;
+    await db.$executeRaw`UPDATE "DomainOrder" SET "quoteExpiresAt" = NOW() - INTERVAL '1 hour' WHERE id = ${recent.id}`;
+
+    await service.releaseAbandonedCheckouts();
+
+    expect(await db.domainOrder.findUnique({ where: { id: stale.id } })).toBeNull();
+    // Kept on purpose: checkout answers a recently expired quote with a price
+    // explanation, which a deleted row could not do.
+    expect(await db.domainOrder.findUnique({ where: { id: recent.id } })).not.toBeNull();
+    await expect(service.checkout(merchant, fresh.id, { quoteId: recent.id, registrant: contact, accepted: true }))
+      .rejects.toThrow('cotización venció');
+  });
+  it('opens one renewal case per warning threshold as a domain nears expiry', async () => {
+    // Its own merchant: other suites leave ACTIVE orders on the shared one, and
+    // an expired domain there legitimately opens a case of its own.
+    const owner = await db.merchant.create({ data: { name: 'Renewals', email: 'domains-renewal@example.test' } });
+    const fresh = await db.store.create({ data: { merchantId: owner.id, name: 'Renewing', slug: 'domain-renewal' } });
+    const day = 24 * 60 * 60_000;
+    const order = await db.domainOrder.create({ data: { storeId: fresh.id, hostname: 'renewing-shop.com', sandbox: false,
+      status: 'ACTIVE', providerPriceUsd: 12, amount: 10080, renewalAmount: 12600, quoteExpiresAt: new Date(),
+      expiresAt: new Date(Date.now() + 90 * day) } });
+    const cases = await db.supportCase.count({ where: { merchantId: owner.id } });
+
+    // Months out: nothing to say yet.
+    await service.warnExpiringDomains();
+    expect(await db.supportCase.count({ where: { merchantId: owner.id } })).toBe(cases);
+
+    await db.domainOrder.update({ where: { id: order.id }, data: { expiresAt: new Date(Date.now() + 20 * day) } });
+    await service.warnExpiringDomains();
+    await service.warnExpiringDomains();
+    expect(await db.supportCase.count({ where: { merchantId: owner.id } })).toBe(cases + 1);
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id: order.id } })).expiryWarnedDays).toBe(30);
+
+    // The last week deserves its own reminder, not silence behind the first one.
+    await db.domainOrder.update({ where: { id: order.id }, data: { expiresAt: new Date(Date.now() + 5 * day) } });
+    await service.warnExpiringDomains();
+    expect(await db.supportCase.count({ where: { merchantId: owner.id } })).toBe(cases + 2);
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id: order.id } })).expiryWarnedDays).toBe(7);
+  });
 });
