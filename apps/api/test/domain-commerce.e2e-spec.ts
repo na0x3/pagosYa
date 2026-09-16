@@ -116,4 +116,66 @@ describe('Domain shop (HTTP + PostgreSQL, mocked external providers)', () => {
     expect(register).toHaveBeenCalledTimes(count);
     expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).toBe('REVIEW_REQUIRED');
   });
+  it('escalates a paid order that cannot be fulfilled, even with the feature switched off', async () => {
+    const fresh = await db.store.create({ data: { merchantId: merchant, name: 'Stalled', slug: 'domain-stalled' } });
+    const quote = await service.quote(merchant, fresh.id, 'stalled-shop.com');
+    await service.checkout(merchant, fresh.id, { quoteId: quote.id, registrant: contact, accepted: true });
+    const order = await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } });
+    await db.paymentIntent.update({ where: { id: order.paymentIntentId! }, data: { status: 'SUCCEEDED', railId: 'baneco_qr', livemode: true } });
+    const cases = await db.supportCase.count({ where: { merchantId: merchant } });
+    const settings = config.get('app.domainCommerce');
+    // Switched off after the merchant paid. reconcile's own loop never runs, so
+    // nothing here can move the order forward or open a case on attempts.
+    config.set('app.domainCommerce', { ...(settings as object), enabled: false });
+    try {
+      // Freshly paid: fulfilment deserves its chance before support is involved.
+      await service.reconcile();
+      expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).toBe('AWAITING_PAYMENT');
+      expect(await db.supportCase.count({ where: { merchantId: merchant } })).toBe(cases);
+
+      await db.$executeRaw`UPDATE "PaymentIntent" SET "updatedAt" = NOW() - INTERVAL '2 hours' WHERE id = ${order.paymentIntentId!}`;
+      await service.reconcile();
+    } finally { config.set('app.domainCommerce', settings); }
+
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).toBe('REVIEW_REQUIRED');
+    expect(await db.supportCase.count({ where: { merchantId: merchant } })).toBe(cases + 1);
+  });
+
+  it('releases an abandoned checkout so the hostname is free for another store', async () => {
+    const fresh = await db.store.create({ data: { merchantId: merchant, name: 'Abandoned', slug: 'domain-abandoned' } });
+    const quote = await service.quote(merchant, fresh.id, 'abandoned-shop.com');
+    await service.checkout(merchant, fresh.id, { quoteId: quote.id, registrant: contact, accepted: true });
+    const order = await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } });
+
+    // An in-flight checkout must survive: a merchant may take hours to pay a QR.
+    await service.releaseAbandonedCheckouts();
+    expect(await db.customDomain.count({ where: { domainOrderId: quote.id } })).toBe(2);
+
+    await db.$executeRaw`UPDATE "PaymentIntent" SET "createdAt" = NOW() - INTERVAL '25 hours' WHERE id = ${order.paymentIntentId!}`;
+    await service.releaseAbandonedCheckouts();
+
+    expect(await db.customDomain.count({ where: { domainOrderId: quote.id } })).toBe(0);
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).toBe('CANCELED');
+    expect((await db.paymentIntent.findUniqueOrThrow({ where: { id: order.paymentIntentId! } })).status).toBe('CANCELED');
+
+    // The whole point: `hostname` is unique platform-wide, so the name was
+    // blocked for every other store until this ran.
+    const other = await db.store.create({ data: { merchantId: merchant, name: 'Next', slug: 'domain-next' } });
+    const reclaimed = await service.quote(merchant, other.id, 'abandoned-shop.com');
+    await expect(service.checkout(merchant, other.id, { quoteId: reclaimed.id, registrant: contact, accepted: true })).resolves.toBeTruthy();
+  });
+
+  it('leaves a paid order alone once it is already registering', async () => {
+    const fresh = await db.store.create({ data: { merchantId: merchant, name: 'Registering', slug: 'domain-registering' } });
+    const quote = await service.quote(merchant, fresh.id, 'registering-shop.com');
+    await service.checkout(merchant, fresh.id, { quoteId: quote.id, registrant: contact, accepted: true });
+    const order = await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } });
+    await db.paymentIntent.update({ where: { id: order.paymentIntentId! }, data: { status: 'SUCCEEDED', railId: 'baneco_qr', livemode: true } });
+    await db.$executeRaw`UPDATE "PaymentIntent" SET "updatedAt" = NOW() - INTERVAL '2 hours' WHERE id = ${order.paymentIntentId!}`;
+    await db.domainOrder.update({ where: { id: quote.id }, data: { status: 'REGISTERING', registrationStartedAt: new Date() } });
+    await service.releaseAbandonedCheckouts();
+    await service.reconcile();
+    expect((await db.domainOrder.findUniqueOrThrow({ where: { id: quote.id } })).status).not.toBe('CANCELED');
+    expect(await db.customDomain.count({ where: { domainOrderId: quote.id } })).toBe(2);
+  });
 });

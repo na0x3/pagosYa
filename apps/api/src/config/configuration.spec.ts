@@ -78,3 +78,33 @@ describe("production security configuration", () => {
     expect(result.app.databaseUrl).toContain("connection_limit=10");
   });
 });
+
+describe("domain commerce configuration", () => {
+  const DOMAIN_ENV_KEYS = ["CUSTOM_DOMAIN_CNAME_TARGET"] as const;
+  const original = Object.fromEntries(DOMAIN_ENV_KEYS.map((key) => [key, process.env[key]]));
+
+  afterEach(() => {
+    for (const key of DOMAIN_ENV_KEYS) {
+      const value = original[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  // A deployment that forgets this variable must not register real domains and
+  // point them at the default host. The manual connect flow keeps its default,
+  // because that path is already live and a change there would break it.
+  it("leaves the purchased-domain CNAME target empty while the manual flow keeps its default", () => {
+    delete process.env.CUSTOM_DOMAIN_CNAME_TARGET;
+    const { app } = configuration() as any;
+    expect(app.domainCommerce.target).toBe("");
+    expect(app.customDomains.target).toBe("stores.pagosya.bo");
+  });
+
+  it("uses the configured target for both once it is set", () => {
+    process.env.CUSTOM_DOMAIN_CNAME_TARGET = "edge.example.test";
+    const { app } = configuration() as any;
+    expect(app.domainCommerce.target).toBe("edge.example.test");
+    expect(app.customDomains.target).toBe("edge.example.test");
+  });
+});

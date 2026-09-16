@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { DomainOrder, Prisma } from '@prisma/client';
+import { DomainOrder, PaymentIntentStatus, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentIntentsService } from '../../payment-intents/payment-intents.service';
@@ -12,6 +12,13 @@ import { CloudflareHostingProvider, HostedDomain } from './cloudflare-hosting.pr
 
 const TLDS = ['com', 'net', 'org', 'store', 'shop'];
 const RUNNABLE = ['AWAITING_PAYMENT', 'REGISTERING', 'CONNECTING', 'ACTIVE'];
+const UNPAID: PaymentIntentStatus[] = ['REQUIRES_PAYMENT_METHOD', 'REQUIRES_CONFIRMATION'];
+// A healthy paid order leaves AWAITING_PAYMENT on the next 30-second pass, so an
+// hour is a wide margin before we conclude that fulfilment cannot proceed.
+const STALLED_PAYMENT_MS = 60 * 60_000;
+// Long enough that a merchant can pay a QR at their own pace, short enough that
+// one abandoned checkout does not hold a name away from everyone forever.
+const ABANDONED_CHECKOUT_MS = 24 * 60 * 60_000;
 export function purchasableHostname(input: string): string {
   const hostname = input.trim().toLowerCase();
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(com|net|org|store|shop)$/.test(hostname) || hostname.startsWith('xn--')) {
@@ -33,6 +40,7 @@ export function paidDomainOrder(order: DomainOrder, payment: { status: string; a
 export class DomainCommerceService {
   private readonly logger = new Logger(DomainCommerceService.name);
   private running = false;
+  private reaping = false;
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService,
     private readonly payments: PaymentIntentsService, private readonly registrar: NamecomProvider,
     private readonly hosting: CloudflareHostingProvider) {}
@@ -208,11 +216,78 @@ export class DomainCommerceService {
         message: active ? null : 'Estamos verificando el dominio y activando HTTPS. Revisa también el correo del titular.' } }),
     ]);
   }
+  /**
+   * A merchant whose payment succeeded but whose domain cannot be registered —
+   * a credential went missing, the feature was switched off — would otherwise
+   * wait forever behind a `logger.warn`. `advance` throws on the config check
+   * before it can move the order past AWAITING_PAYMENT, and `reconcile`'s
+   * attempt-based escalation deliberately skips that status.
+   *
+   * Timed from the payment rather than the order: the fulfilment loop rewrites
+   * the order's `updatedAt` on every pass, so an order-based clock would never
+   * run out while the loop is running and failing.
+   */
+  private async escalateStalledPayments() {
+    const before = new Date(Date.now() - STALLED_PAYMENT_MS);
+    const stalled = await this.prisma.domainOrder.findMany({
+      where: { status: 'AWAITING_PAYMENT', paymentIntent: { status: 'SUCCEEDED', updatedAt: { lt: before } } },
+      orderBy: { createdAt: 'asc' }, take: 20,
+    });
+    for (const order of stalled) {
+      try {
+        await this.needsReview(order, 'Recibimos tu pago pero todavía no pudimos registrar el dominio. Soporte está revisando tu compra; no vuelvas a pagar.');
+      } catch (error) {
+        this.logger.error(`Domain order ${order.id} is paid and stalled but could not be escalated: ${error instanceof Error ? error.message : 'unknown failure'}`);
+      }
+    }
+  }
+
+  /**
+   * An unpaid checkout reserves both hostnames before any money arrives, and
+   * `hostname` is unique across the whole platform — so an abandoned one blocks
+   * the name for every other store and consumes two of this store's slots.
+   *
+   * Ungated on purpose, and it releases the rows itself rather than leaving that
+   * to `advance`: the missing configuration `advance` needs may be the very
+   * reason an order is stuck.
+   */
+  @Interval('domain-checkout-expiry', 60 * 60_000)
+  async releaseAbandonedCheckouts() {
+    if (this.reaping) return;
+    this.reaping = true;
+    try {
+      const before = new Date(Date.now() - ABANDONED_CHECKOUT_MS);
+      const abandoned = await this.prisma.domainOrder.findMany({
+        where: { status: 'AWAITING_PAYMENT', paymentIntent: { status: { in: UNPAID }, createdAt: { lt: before } } },
+        orderBy: { createdAt: 'asc' }, take: 50,
+      });
+      for (const order of abandoned) {
+        try {
+          // cancelById re-checks the age and status under a row lock, so a
+          // payment that succeeds between the query and here is left alone.
+          const payment = await this.payments.cancelById(order.paymentIntentId!, before);
+          if (payment.status !== 'CANCELED') continue;
+          await this.prisma.$transaction([
+            this.prisma.customDomain.deleteMany({ where: { domainOrderId: order.id } }),
+            this.prisma.domainOrder.updateMany({ where: { id: order.id, status: 'AWAITING_PAYMENT' },
+              data: { status: 'CANCELED', message: 'Cancelamos esta compra porque no recibimos el pago. Puedes buscar el nombre otra vez.' } }),
+          ]);
+        } catch (error) {
+          this.logger.warn(`Abandoned domain checkout ${order.id} could not be released: ${error instanceof Error ? error.message : 'transient failure'}`);
+        }
+      }
+    } finally { this.reaping = false; }
+  }
+
   @Interval('domain-purchase-fulfillment', 30_000)
   async reconcile() {
-    if (this.running || !domainCommerceConfig(this.config)?.enabled) return;
+    if (this.running) return;
     this.running = true;
     try {
+      // Before the enabled gate: money that has already moved must reach support
+      // whether or not the feature is still switched on.
+      await this.escalateStalledPayments();
+      if (!domainCommerceConfig(this.config)?.enabled) return;
       const rows = await this.prisma.domainOrder.findMany({ where: { status: { in: RUNNABLE }, nextAttemptAt: { lte: new Date() },
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }] }, orderBy: { nextAttemptAt: 'asc' }, take: 5 });
       for (const row of rows) {
@@ -223,6 +298,9 @@ export class DomainCommerceService {
         try { await this.advance(row); }
         catch (error) {
           this.logger.warn(`Domain order ${row.id} will retry (${error instanceof DomainProviderError ? error.provider + ':' + error.status : 'transient failure'})`);
+          // AWAITING_PAYMENT is excluded because most orders in it are simply
+          // unpaid; the paid ones are escalated by escalateStalledPayments and
+          // the abandoned ones released by releaseAbandonedCheckouts.
           if (row.attempts >= 30 && row.status !== 'ACTIVE' && row.status !== 'AWAITING_PAYMENT') {
             await this.needsReview(row, 'La conexión está tardando más de lo esperado. Soporte revisará el registro; no vuelvas a pagar.');
           }

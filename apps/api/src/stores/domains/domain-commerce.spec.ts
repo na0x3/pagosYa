@@ -1,6 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { DomainOrder } from '@prisma/client';
-import { domainPrice } from './domain-commerce.config';
+import { assertDomainCommerceReady, domainPrice } from './domain-commerce.config';
 import { paidDomainOrder, purchasableHostname } from './domain-commerce.service';
 import { NamecomProvider } from './namecom.provider';
 import { CloudflareHostingProvider } from './cloudflare-hosting.provider';
@@ -24,6 +24,13 @@ describe('Domain commerce boundaries', () => {
     for (const patch of [{ amount: 1 }, { currency: 'USD' }, { merchantId: 'buyer' }, { livemode: false }, { railId: 'mock_qr' }, { status: 'PROCESSING' }]) {
       expect(paidDomainOrder(order, { ...payment, ...patch }, 'platform')).toBe(false);
     }
+  });
+  it('refuses live purchases until the storefront CNAME target is configured', () => {
+    const live = { enabled: true, sandbox: false, username: 'u', token: 't', platformMerchantId: 'm', bobPerUsd: 7, markupPercent: 20, cloudflareToken: 'cf', cloudflareZoneId: 'zone' };
+    const withTarget = (target: string) => ({ get: (key: string) => key === 'app.banecoQr.enabled' ? true : { ...live, target } }) as any;
+    // Absent, this silently pointed real domains at the platform's default host.
+    expect(() => assertDomainCommerceReady(withTarget(''))).toThrow(ServiceUnavailableException);
+    expect(() => assertDomainCommerceReady(withTarget('edge.example.test'))).not.toThrow();
   });
   it('pins the sandbox URL, registration price, one-year term, contacts and idempotency key', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ order: 1 }) } as Response);

@@ -219,7 +219,13 @@ export default (): { app: AppConfig } => {
       markupPercent: Number(process.env.DOMAIN_MARKUP_PERCENT ?? 0),
       cloudflareToken: process.env.DOMAIN_CLOUDFLARE_API_TOKEN ?? '',
       cloudflareZoneId: process.env.DOMAIN_CLOUDFLARE_ZONE_ID ?? '',
-      target: process.env.CUSTOM_DOMAIN_CNAME_TARGET ?? 'stores.pagosya.bo',
+      // No default on purpose. A purchased domain's apex and www records are
+      // written to this host, so a deployment that forgets it must fail closed
+      // in assertDomainCommerceReady rather than point real names at whatever
+      // the platform's default happens to be. customDomains.target below keeps
+      // its default: that path is already live and merchants aim their own DNS
+      // at it by hand.
+      target: process.env.CUSTOM_DOMAIN_CNAME_TARGET ?? '',
     },
     customDomains: {
       // All verified merchant hostnames route to the same storefront app. The
