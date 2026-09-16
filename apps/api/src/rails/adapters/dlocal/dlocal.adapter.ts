@@ -40,8 +40,9 @@ export class DlocalAdapter implements PaymentRailAdapter {
   async authorize(req: RailAuthorizeRequest): Promise<RailResult> {
     const methodId = req.paymentMethod.metadata?.dlocalPaymentMethodId;
     const invalid =
-      req.currency !== "USD" ? `dLocal charges USD only, got ${req.currency}`
-      : !req.country || !/^[A-Z]{2}$/.test(req.country) ? "Falta el país del comprador"
+      req.currency !== "USD" ? `dLocal solo cobra en USD, recibió ${req.currency}`
+      : !req.country ? "Falta el país del comprador"
+      : !/^[A-Z]{2}$/.test(req.country) ? "El país del comprador no es válido"
       : typeof methodId !== "string" || !methodId ? "Falta el método de pago internacional"
       : null;
     if (invalid) return { status: "failed", railReference: req.idempotencyKey, raw: {}, failureReason: invalid };
@@ -88,6 +89,10 @@ export class DlocalAdapter implements PaymentRailAdapter {
       const status = refund.status === "SUCCESS" ? "succeeded" : refund.status === "REJECTED" ? "failed" : "pending";
       return { status, railReference: refund.id, raw: { ...refund } };
     } catch (error) {
+      if (error instanceof DlocalApiError && error.retryable) {
+        this.logger.warn(`dLocal refund outcome unknown for ${req.railReference}; waiting for webhook`);
+        return { status: "pending", railReference: `refund:${req.railReference}`, raw: { error: error.message } };
+      }
       return { status: "failed", railReference: req.idempotencyKey, raw: { error: (error as Error).message }, failureReason: (error as Error).message };
     }
   }

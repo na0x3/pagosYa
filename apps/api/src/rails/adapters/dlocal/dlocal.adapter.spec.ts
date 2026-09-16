@@ -78,3 +78,17 @@ describe("DlocalAdapter.authorize", () => {
     await expect(makeAdapter({ createPayment }).authorize(request)).resolves.toMatchObject({ status: "failed", failureReason: "Invalid document" });
   });
 });
+
+describe("DlocalAdapter.refund", () => {
+  it("returns pending keyed by refund when dLocal's outcome is unknown", async () => {
+    const refund = jest.fn().mockRejectedValue(new DlocalApiError("timed out", 0, true));
+    const result = await makeAdapter({ refund }).refund({ railReference: "D-1", amount: 100, idempotencyKey: "refund_1" });
+    expect(result).toMatchObject({ status: "pending", railReference: "refund:D-1" });
+  });
+
+  it("fails on a final dLocal error", async () => {
+    const refund = jest.fn().mockRejectedValue(new DlocalApiError("Refund not allowed", 400, false));
+    const result = await makeAdapter({ refund }).refund({ railReference: "D-1", amount: 100, idempotencyKey: "refund_1" });
+    expect(result).toMatchObject({ status: "failed", failureReason: "Refund not allowed" });
+  });
+});
