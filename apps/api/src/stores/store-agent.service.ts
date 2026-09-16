@@ -5,6 +5,8 @@ import { SendStoreAgentMessageDto } from "./dto/send-store-agent-message.dto";
 import { assertWebsiteRevision, websiteEditorStore } from "./website-draft";
 import { instructionUsesSelection } from "./store-agent-selection";
 import { requestsStoreRedesign } from "./store-agent-intent";
+import { catalogArrangementIntent } from "./catalog-arrangement-intent";
+import { CatalogLayout } from "./catalog-layout";
 import {
   storeAgentInstructionIsScoped,
   storeAgentInstructionLooksLikeEditorCommand,
@@ -27,6 +29,14 @@ type StoreAgentClarification = {
 function normalizeAgentInstruction(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/\s+/g, " ").trim();
 }
+
+// How each layout reads back in the reply, naming the arrangement Yapi just set.
+const CATALOG_ARRANGEMENT_LABELS: Record<CatalogLayout, string> = {
+  all: "todo junto en la portada",
+  sections: "organizados en secciones por colección",
+  page: "en una página aparte de productos",
+  tabs: "con una pestaña por colección",
+};
 
 function storeAgentInstructionRepairsPreviousRevision(instruction: string): boolean {
   const text = normalizeAgentInstruction(instruction);
@@ -146,6 +156,21 @@ export class StoreAgentService {
     });
     const context = (existing?.messages ?? []).slice().reverse().map((message) => `${message.role === "USER" ? "Comercio" : "Yapi"}: ${message.content}`);
     try {
+      // A saved layout change is cheap and must short-circuit ahead of the
+      // redesign and editor-command branches, which can spend credits.
+      const arrangement = catalogArrangementIntent(instruction);
+      if (arrangement) {
+        await this.prisma.store.update({ where: { id: storeId }, data: { catalogLayout: arrangement.layout } });
+        const assistantMessage = await this.prisma.storeAgentMessage.create({
+          data: {
+            threadId: thread.id,
+            role: "ASSISTANT",
+            content: `Cambié cómo se ven tus productos: ahora quedan ${CATALOG_ARRANGEMENT_LABELS[arrangement.layout]}. Puedes deshacerlo cuando quieras desde "Cómo se ven tus productos".`,
+            metadata: { intent: "catalog_arrangement", catalogLayout: arrangement.layout, changedAreas: ["arreglo del catálogo"] },
+          },
+        });
+        return { userMessage, assistantMessage, proposals: [], intent: "catalog_arrangement", catalogLayout: arrangement.layout };
+      }
       const asksForAdvice = /(?:que|como|what|how).{0,45}(?:mejorarias|recomiendas|aconsejas|puedo mejorar|podria mejorar|improve|recommend)|(?:dame|give me).{0,20}(?:ideas|consejos|sugerencias|suggestions)/i.test(normalizeAgentInstruction(instruction));
       if (asksForAdvice) {
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, role: "ASSISTANT",

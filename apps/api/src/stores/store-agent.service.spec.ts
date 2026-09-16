@@ -4,7 +4,10 @@ import { StoreAgentService, storeAgentClarificationForInstruction } from "./stor
 describe("StoreAgentService", () => {
   function setup() {
     const prisma = {
-      store: { findFirst: jest.fn().mockResolvedValue({ id: "store_1", siteDocument: { version: 1, sections: [] } }) },
+      store: {
+        findFirst: jest.fn().mockResolvedValue({ id: "store_1", siteDocument: { version: 1, sections: [] } }),
+        update: jest.fn().mockResolvedValue({ id: "store_1" }),
+      },
       storeVisualProposal: { findFirst: jest.fn().mockResolvedValue({ id: "proposal_1" }) },
       storeAgentThread: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -27,6 +30,19 @@ describe("StoreAgentService", () => {
     };
     return { service: new StoreAgentService(prisma as never, visualStudio as never), prisma, visualStudio };
   }
+
+  it("applies a catalog arrangement request as a saved change, spending no credits and creating no design job", async () => {
+    const { service, prisma, visualStudio } = setup();
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "sections" } });
+    expect(result.assistantMessage.content).toContain("secciones por colección");
+    expect(result.assistantMessage.content).toContain("Cómo se ven tus productos");
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "sections" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
 
   it("answers an improvement question without generating or changing a design", async () => {
     const { service, visualStudio } = setup();
