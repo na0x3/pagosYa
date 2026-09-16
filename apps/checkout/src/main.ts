@@ -44,7 +44,7 @@ import {
   DebtCollectionInfo,
   TrackedOrder,
 } from "./api";
-import { INTERNATIONAL_COUNTRIES, formatDualAmount, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
+import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
 import { readSourcePaymentPreview, closeSourcePaymentPreview, bindPreviewBranding } from './source-payment-preview';
 import { storePreviewExternalDestination } from "./preview-navigation";
@@ -240,6 +240,7 @@ let internationalMode = false;
 let internationalCountry = "";
 let internationalMethods: InternationalMethods | null = null;
 let internationalMethodId = "";
+let internationalError: string | null = null;
 let linkHeader: LinkHeader | null = null;
 let activeOrderTrackingToken: string | null = null;
 let orderTrackingPoll: number | null = null;
@@ -9431,6 +9432,11 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             ${recipient?.name ? `<div><span>Destinatario</span><strong>${escapeHtml(recipient.name)}</strong></div>` : ""}
             ${recipient?.document ? `<div><span>Carnet / CI</span><strong>${escapeHtml(recipient.document)}</strong></div>` : ""}
             <p>${recipient?.name ? "El comercio ya completó tus datos." : "El comercio ya preparó este cobro."} Solo elige cómo pagar.</p>
+            ${internationalMode && !recipient?.email ? `<div class="field">
+              <label for="customerEmail">Correo electrónico</label>
+              <input id="customerEmail" type="email" autocomplete="email" placeholder="tu@gmail.com" value="${escapeHtml(customerContact.email)}" aria-describedby="customerEmailError"${invalid("customerEmail")} />
+              ${fieldError("customerEmail")}
+            </div>` : ""}
           </div>`}
       ${session.international?.available && !domainPurchase && !sourcePaymentPreview ? `
         <div class="intl-entry">
@@ -9443,7 +9449,9 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
                 ${INTERNATIONAL_COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === internationalCountry ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
               </select>
             </div>
-            ${internationalMethods ? `
+            ${internationalError ? `<p class="intl-error" role="alert">${escapeHtml(internationalError)}</p>` : ""}
+            ${internationalMethods && internationalMethods.methods.length === 0 ? `<p class="intl-error" role="alert">No hay métodos de pago disponibles para este país.</p>` : ""}
+            ${internationalMethods && internationalMethods.methods.length > 0 ? `
               <p class="intl-quote">${escapeHtml(formatDualAmount(internationalMethods.quote.originalAmount, internationalMethods.quote.originalCurrency, internationalMethods.quote.amount))}</p>
               <div class="intl-methods" role="radiogroup" aria-label="Método de pago internacional">
                 ${internationalMethods.methods.map((m) => `
@@ -9478,7 +9486,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             </div>`
           : ""
       }
-      <button class="primary" type="submit" id="pay">${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${internationalMode && internationalMethods ? `USD ${(internationalMethods.quote.amount / 100).toFixed(2)}` : formatAmount(session.amount, session.currency)}</button>
+      <button class="primary" type="submit" id="pay"${internationalMode && internationalMethods && internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${internationalMode && internationalMethods ? formatUsd(internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
       <button class="secondary" type="button" id="cancel">Cancelar pago</button>
     </form></div>
     <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
@@ -9537,19 +9545,24 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
 
   app.querySelector<HTMLInputElement>("#intlToggle")?.addEventListener("change", (event) => {
     internationalMode = (event.target as HTMLInputElement).checked;
+    internationalError = null;
     renderForm(session, clientSecret);
   });
   app.querySelector<HTMLSelectElement>("#intlCountry")?.addEventListener("change", async (event) => {
     internationalCountry = (event.target as HTMLSelectElement).value;
     internationalMethods = null;
     internationalMethodId = "";
+    internationalError = null;
     if (internationalCountry) {
       try {
         internationalMethods = await fetchInternationalMethods(clientSecret, internationalCountry);
         internationalMethodId = internationalMethods.methods[0]?.id ?? "";
       } catch (err) {
-        renderFailed(session.id, (err as Error).message);
-        return;
+        // A recoverable quote/availability failure shouldn't end the checkout —
+        // show it inline next to the country picker so the shopper can retry.
+        internationalError = (err as Error).message === "intl_fx_rate_unavailable"
+          ? "Los pagos internacionales no están disponibles en este momento."
+          : (err as Error).message;
       }
     }
     renderForm(session, clientSecret);
@@ -9576,7 +9589,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     if (storeCheckout && !phone) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto.";
     else if (storeCheckout && !PHONE_PATTERN.test(phone)) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto válido.";
     if (storeCheckout && customerContact.deliveryRequested && !(customerContact.deliveryAddress || "").trim()) contactFieldErrors.deliveryAddress = "Escribe la dirección o una referencia para la entrega.";
-    if (internationalMode && !email) contactFieldErrors.customerEmail = "Ingresa tu correo para pagar desde el exterior.";
+    if (internationalMode && !storeCheckout && !email) contactFieldErrors.customerEmail = "Ingresa tu correo para pagar desde el exterior.";
 
     if (contactFieldErrors.customerName || contactFieldErrors.customerEmail || contactFieldErrors.customerPhone || contactFieldErrors.deliveryAddress) {
       renderForm(session, clientSecret);
@@ -9588,7 +9601,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     await submitPayment(session, clientSecret, token, {
       name: storeCheckout ? name : recipient?.name ?? "",
       document: storeCheckout ? customerContact.document : recipient?.document ?? undefined,
-      email: storeCheckout ? email : recipient?.email ?? "",
+      email: storeCheckout ? email : (recipient?.email || email),
       phone: storeCheckout ? phone : recipient?.phone ?? "",
       ...(storeCheckout && customerContact.deliveryRequested ? {
         deliveryRequested: true,
@@ -9644,6 +9657,17 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     renderSuccess({ ...session, customerName: customer.name }, true);
     return;
   }
+
+  const selectedIntl = internationalMode ? internationalMethods?.methods.find((m) => m.id === internationalMethodId) : undefined;
+  if (internationalMode && (!internationalCountry || !selectedIntl)) {
+    // Recoverable — the shopper just hasn't finished picking a country/method
+    // yet (or the list came back empty). Show it inline instead of ending
+    // the checkout, and do it before PAYMENT_PROCESSING fires.
+    internationalError = "Elige tu país y un método de pago.";
+    renderForm(session, clientSecret);
+    return;
+  }
+
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
   if (payButton) {
     payButton.disabled = true;
@@ -9652,15 +9676,10 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
   postToParent("PAYMENT_PROCESSING", { paymentIntentId: session.id });
 
   try {
-    const selectedIntl = internationalMode ? internationalMethods?.methods.find((m) => m.id === internationalMethodId) : undefined;
-    if (internationalMode && (!internationalCountry || !selectedIntl)) {
-      renderFailed(session.id, "Elige tu país y un método de pago.");
-      return;
-    }
     const { paymentIntent, railResult } = await confirmPaymentIntent(
       session.id,
       clientSecret,
-      selectedIntl ? (tokenForMethod(selectedIntl) as unknown as { type: PaymentMethodType; token: string; metadata: Record<string, unknown> }) : { type: selectedType, token },
+      selectedIntl ? tokenForMethod(selectedIntl) : { type: selectedType, token },
       customer,
       selectedIntl ? { rail: "dlocal", country: internationalCountry } : undefined,
     );
@@ -10033,12 +10052,27 @@ function renderFailed(paymentIntentId: string, message: string) {
 function renderRequiresAction(paymentIntentId: string, clientSecret: string, railId: string, actionRequired: unknown) {
   const action = actionRequired as { type: string; data: Record<string, string> } | undefined;
   if (action?.type === "redirect" && action.data.redirectUrl) {
+    const redirectUrl = action.data.redirectUrl;
+    // Embedded (widget iframe): sessionStorage is partitioned by top-level
+    // site, so navigating window.top to dLocal and back would never find the
+    // remembered client secret, and the merchant page would never get
+    // PAYMENT_SUCCEEDED. Open dLocal in a popup instead and poll from inside
+    // the iframe, which keeps sessionStorage/postToParent working normally.
+    if (window.top !== window.self) {
+      const popup = window.open(redirectUrl, "_blank");
+      if (popup) {
+        app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Completa el pago en la ventana de dLocal. Esta página se actualizará sola.</span></div></div>`;
+        void pollInternationalOutcome(clientSecret, paymentIntentId, 10 * 60_000);
+        return;
+      }
+      // Popup blocked: fall back to the top-navigation path below.
+    }
     rememberReturn(window.sessionStorage, paymentIntentId, clientSecret);
     app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Te estamos llevando a la página de pago segura…</span></div></div>`;
     try {
-      window.top!.location.href = action.data.redirectUrl;
+      window.top!.location.href = redirectUrl;
     } catch {
-      window.location.href = action.data.redirectUrl;
+      window.location.href = redirectUrl;
     }
     return;
   }
@@ -10076,29 +10110,46 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
   }
 }
 
-async function renderInternationalReturn(paymentIntentId: string) {
-  const clientSecret = recallReturn(window.sessionStorage, paymentIntentId);
-  const pendingNotice = (text: string) => {
-    app.innerHTML = `<div class="payment-outcome-panel"><div class="status action">${ICON_CLOCK}<span>${text}</span></div></div>`;
-  };
-  if (!clientSecret) {
-    pendingNotice("Recibimos tu regreso. Cuando se confirme el pago, te llegará el comprobante por correo.");
-    return;
-  }
-  const deadline = Date.now() + 2 * 60_000;
+function paymentPendingNotice(text: string) {
+  app.innerHTML = `<div class="payment-outcome-panel"><div class="status action">${ICON_CLOCK}<span>${text}</span></div></div>`;
+}
+
+// Shared by the top-level dLocal return page and the embedded (widget
+// iframe) popup flow: polls the session until it reaches a terminal status,
+// rendering the same success/failure screens either way so the existing
+// postToParent calls inside renderSuccess/renderFailed fire in both cases.
+// A single failed poll (network blip, transient 5xx) must not end the
+// checkout, so fetchSession errors are swallowed and the loop just retries.
+async function pollInternationalOutcome(clientSecret: string, paymentIntentId: string, deadlineMs: number): Promise<void> {
+  const deadline = Date.now() + deadlineMs;
   for (;;) {
-    const session = await fetchSession(clientSecret, checkoutPublishableKey);
-    if (session.status === "SUCCEEDED") return renderSuccess(session);
-    if (session.status === "FAILED" || session.status === "CANCELED") {
-      return renderFailed(session.id, "El pago no se completó. Puedes intentar con otro método.");
+    try {
+      const session = await fetchSession(clientSecret, checkoutPublishableKey);
+      if (session.status === "SUCCEEDED") return renderSuccess(session);
+      if (session.status === "FAILED" || session.status === "CANCELED") {
+        return renderFailed(session.id, "El pago no se completó. Puedes intentar con otro método.");
+      }
+    } catch {
+      // Recoverable — keep polling until the deadline instead of stranding
+      // the shopper on a "Confirmando tu pago…" screen forever.
     }
     if (Date.now() > deadline) {
-      pendingNotice("Tu pago está pendiente. Si pagaste con comprobante o transferencia puede tardar; te avisaremos por correo.");
+      paymentPendingNotice("Tu pago está pendiente. Si pagaste con comprobante o transferencia puede tardar; te avisaremos por correo.");
       return;
     }
-    pendingNotice("Confirmando tu pago…");
+    paymentPendingNotice("Confirmando tu pago…");
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
+}
+
+async function renderInternationalReturn(paymentIntentId: string) {
+  document.body.classList.add("payment-page");
+  const clientSecret = recallReturn(window.sessionStorage, paymentIntentId);
+  if (!clientSecret) {
+    paymentPendingNotice("Recibimos tu regreso. Cuando se confirme el pago, te llegará el comprobante por correo.");
+    return;
+  }
+  await pollInternationalOutcome(clientSecret, paymentIntentId, 2 * 60_000);
 }
 
 if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";

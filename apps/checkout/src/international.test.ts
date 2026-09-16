@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INTERNATIONAL_COUNTRIES, formatDualAmount, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
+import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 
 function memoryStorage() {
   const data = new Map<string, string>();
@@ -19,6 +19,10 @@ describe("international checkout helpers", () => {
 
   it("formats both amounts", () => {
     expect(formatDualAmount(70000, "BOB", 10058)).toBe("Bs 700,00 ≈ USD 100,58");
+  });
+
+  it("formats a plain USD amount", () => {
+    expect(formatUsd(10058)).toBe("USD 100,58");
   });
 
   it("keeps the client secret in storage, not the URL, and forgets it after reading", () => {

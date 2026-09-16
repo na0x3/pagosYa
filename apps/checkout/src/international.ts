@@ -1,3 +1,5 @@
+import { PaymentMethodType } from "@pagosya/shared-types";
+
 const COUNTRIES: { code: string; name: string }[] = [
   { code: "AR", name: "Argentina" },
   { code: "BR", name: "Brasil" },
@@ -21,7 +23,11 @@ const money = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
 
 export function formatDualAmount(originalAmount: number, originalCurrency: string, usdAmount: number): string {
   const original = originalCurrency === "BOB" ? `Bs ${money(originalAmount)}` : `${originalCurrency} ${money(originalAmount)}`;
-  return `${original} ≈ USD ${money(usdAmount)}`;
+  return `${original} ≈ ${formatUsd(usdAmount)}`;
+}
+
+export function formatUsd(usdAmountCents: number): string {
+  return `USD ${money(usdAmountCents)}`;
 }
 
 const storageKey = (paymentIntentId: string) => `pagosya:intl-return:${paymentIntentId}`;
@@ -51,5 +57,6 @@ export function parseReturnParams(search: string): { paymentIntentId: string } |
 }
 
 export function tokenForMethod(method: { id: string; kind: "CARD" | "LOCAL_METHOD" }) {
-  return { type: method.kind, token: `dlocal:${method.id}`, metadata: { dlocalPaymentMethodId: method.id } };
+  const type = method.kind === "CARD" ? PaymentMethodType.CARD : PaymentMethodType.LOCAL_METHOD;
+  return { type, token: `dlocal:${method.id}`, metadata: { dlocalPaymentMethodId: method.id } };
 }

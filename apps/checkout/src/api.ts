@@ -537,6 +537,9 @@ export async function fetchInternationalMethods(clientSecret: string, country: s
     headers: { "content-type": "application/json", authorization: `Bearer ${clientSecret}` },
     body: JSON.stringify({ country }),
   });
+  // The FX-quote provider can be briefly down; surface that as a distinct
+  // code so the caller can show a friendlier message than the raw body.
+  if (response.status === 409) throw new Error("intl_fx_rate_unavailable");
   return parseOrThrow(response);
 }
 
