@@ -22,6 +22,7 @@ export interface CheckoutSession {
     phone: string | null;
   } | null;
   trackingToken: string | null;
+  international?: { available: boolean };
 }
 
 async function parseOrThrow<T>(response: Response): Promise<T> {

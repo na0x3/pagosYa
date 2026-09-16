@@ -13,9 +13,10 @@ import { WebhooksModule } from "../webhooks/webhooks.module";
 import { InvoicingModule } from "../invoicing/invoicing.module";
 import { AuthModule } from "../auth/auth.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
+import { InternationalModule } from "../international/international.module";
 
 @Module({
-  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule],
+  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule],
   controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController, BanecoQrWebhookController, DlocalWebhookController],
   providers: [PaymentIntentsService, DlocalReconciliationWorker],
   exports: [PaymentIntentsService],
