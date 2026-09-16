@@ -241,6 +241,16 @@ let internationalCountry = "";
 let internationalMethods: InternationalMethods | null = null;
 let internationalMethodId = "";
 let internationalError: string | null = null;
+// Opened synchronously (still inside the submit click's user-activation
+// window) before dLocal even returns a redirect URL, so Safari's popup
+// blocker doesn't see it as script-initiated after an await. Pointed at the
+// real URL once confirmPaymentIntent resolves; closed on every outcome that
+// doesn't end up needing it.
+let pendingIntlPopup: Window | null = null;
+function closePendingIntlPopup() {
+  pendingIntlPopup?.close();
+  pendingIntlPopup = null;
+}
 let linkHeader: LinkHeader | null = null;
 let activeOrderTrackingToken: string | null = null;
 let orderTrackingPoll: number | null = null;
@@ -9668,6 +9678,17 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     return;
   }
 
+  // Open the dLocal window here — still synchronous from the "submit" event
+  // (the form's submit handler never awaits before calling submitPayment,
+  // and everything above this line is synchronous too), so it still counts
+  // as opened from the shopper's click/tap for Safari's popup blocker. The
+  // real redirect URL isn't known until confirmPaymentIntent resolves below,
+  // so this opens a blank tab now and renderRequiresAction points it at the
+  // real URL once the rail returns one.
+  if (internationalMode && window.top !== window.self) {
+    pendingIntlPopup = window.open("about:blank", "_blank");
+  }
+
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
   if (payButton) {
     payButton.disabled = true;
@@ -9685,13 +9706,16 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     );
 
     if (paymentIntent.status === "SUCCEEDED") {
+      closePendingIntlPopup();
       renderSuccess(paymentIntent);
     } else if (paymentIntent.status === "REQUIRES_ACTION") {
       renderRequiresAction(paymentIntent.id, clientSecret, paymentIntent.railId ?? "", railResult.actionRequired);
     } else {
+      closePendingIntlPopup();
       renderFailed(paymentIntent.id, railResult.failureReason ?? "Pago rechazado");
     }
   } catch (err) {
+    closePendingIntlPopup();
     renderFailed(session.id, (err as Error).message);
   }
 }
@@ -10056,16 +10080,22 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
     // Embedded (widget iframe): sessionStorage is partitioned by top-level
     // site, so navigating window.top to dLocal and back would never find the
     // remembered client secret, and the merchant page would never get
-    // PAYMENT_SUCCEEDED. Open dLocal in a popup instead and poll from inside
-    // the iframe, which keeps sessionStorage/postToParent working normally.
+    // PAYMENT_SUCCEEDED. Reuse the popup submitPayment already opened
+    // synchronously (while the click still counted) and point it at the
+    // real URL, then poll from inside the iframe, which keeps
+    // sessionStorage/postToParent working normally.
     if (window.top !== window.self) {
-      const popup = window.open(redirectUrl, "_blank");
-      if (popup) {
+      if (pendingIntlPopup && !pendingIntlPopup.closed) {
+        const popup = pendingIntlPopup;
+        pendingIntlPopup = null;
+        popup.location.href = redirectUrl;
         app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Completa el pago en la ventana de dLocal. Esta página se actualizará sola.</span></div></div>`;
-        void pollInternationalOutcome(clientSecret, paymentIntentId, 10 * 60_000);
+        void pollInternationalOutcome(clientSecret, paymentIntentId, 10 * 60_000, popup);
         return;
       }
-      // Popup blocked: fall back to the top-navigation path below.
+      // No popup (blocked, closed early, or never opened): fall back to the
+      // top-navigation path below.
+      pendingIntlPopup = null;
     }
     rememberReturn(window.sessionStorage, paymentIntentId, clientSecret);
     app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Te estamos llevando a la página de pago segura…</span></div></div>`;
@@ -10076,6 +10106,10 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
     }
     return;
   }
+  // The rail returned a non-redirect action (QR/USSD/etc). If submitPayment
+  // preemptively opened a popup for this submission expecting a redirect, it
+  // isn't needed — close the stray blank tab instead of leaving it open.
+  closePendingIntlPopup();
   // Real bank QR (e.g. Baneco) returns a ready-to-scan PNG; the mock rail only has a raw
   // EMV-ish payload string to render as text — support both without the adapter caring.
   const qrImageHtml =
@@ -10120,13 +10154,20 @@ function paymentPendingNotice(text: string) {
 // postToParent calls inside renderSuccess/renderFailed fire in both cases.
 // A single failed poll (network blip, transient 5xx) must not end the
 // checkout, so fetchSession errors are swallowed and the loop just retries.
-async function pollInternationalOutcome(clientSecret: string, paymentIntentId: string, deadlineMs: number): Promise<void> {
+// `popup`, when passed (the embedded case), is the dLocal window this poll
+// is standing in for — it's closed whenever polling reaches a final state so
+// the shopper isn't left with a stray dLocal/return tab open.
+async function pollInternationalOutcome(clientSecret: string, paymentIntentId: string, deadlineMs: number, popup?: Window | null): Promise<void> {
   const deadline = Date.now() + deadlineMs;
   for (;;) {
     try {
       const session = await fetchSession(clientSecret, checkoutPublishableKey);
-      if (session.status === "SUCCEEDED") return renderSuccess(session);
+      if (session.status === "SUCCEEDED") {
+        popup?.close();
+        return renderSuccess(session);
+      }
       if (session.status === "FAILED" || session.status === "CANCELED") {
+        popup?.close();
         return renderFailed(session.id, "El pago no se completó. Puedes intentar con otro método.");
       }
     } catch {
@@ -10134,6 +10175,7 @@ async function pollInternationalOutcome(clientSecret: string, paymentIntentId: s
       // the shopper on a "Confirmando tu pago…" screen forever.
     }
     if (Date.now() > deadline) {
+      popup?.close();
       paymentPendingNotice("Tu pago está pendiente. Si pagaste con comprobante o transferencia puede tardar; te avisaremos por correo.");
       return;
     }
