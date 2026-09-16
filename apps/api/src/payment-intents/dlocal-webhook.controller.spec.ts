@@ -43,7 +43,7 @@ describe("DlocalWebhookController", () => {
     expect(paymentIntents.applyCallbackResult).not.toHaveBeenCalled();
   });
 
-  it("rejects an authenticated but malformed body instead of crashing", async () => {
+  it("defensively rejects a malformed raw body if one ever reaches the handler", async () => {
     const { controller, req } = setup();
     await expect(controller.payment(req("not json"), "l", "d", "sig")).rejects.toBeInstanceOf(BadRequestException);
   });

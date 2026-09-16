@@ -35,6 +35,9 @@ export class DlocalWebhookController {
       throw new UnauthorizedException("Invalid dLocal signature");
     }
 
+    // body-parser's json() middleware (see main.ts) already parses this same raw body with
+    // safeJsonReviver and rejects malformed JSON with its own 400 before this handler runs.
+    // This guard only protects direct callers (e.g. tests) that bypass that middleware.
     let payment: DlocalPayment;
     try {
       payment = JSON.parse(raw) as DlocalPayment;
