@@ -431,3 +431,56 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     await expect(setup({}).service.confirm("pi_1", { ...dto, customerEmail: undefined } as any)).rejects.toThrow("correo");
   });
 });
+
+describe("PaymentIntentsService receipts", () => {
+  it("labels a converted intent's cart lines in BOB and appends the original BOB total next to the charged USD total", async () => {
+    const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
+    const email = { send: jest.fn() };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig());
+
+    await (service as any).sendReceiptEmail(
+      {
+        id: "pi_1",
+        amount: 10058,
+        currency: "USD",
+        customerEmail: "ana@example.com",
+        customerName: "Ana",
+        metadata: {
+          fx: { originalAmount: 70000, originalCurrency: "BOB", rate: 6.96, convertedAt: "2026-09-17T12:00:00.000Z" },
+          cart: [{ paymentLinkId: "link_1", name: "Zapatos", quantity: 1, unitAmount: 70000 }],
+        },
+      },
+      "Tienda Ejemplo",
+    );
+
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: "ana@example.com",
+      body: expect.stringContaining("700.00 BOB"),
+    }));
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
+      body: expect.stringContaining("100.58 USD (700.00 BOB)"),
+    }));
+  });
+
+  it("leaves a domestic receipt byte-identical (no original-total suffix, line currency unchanged)", async () => {
+    const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
+    const email = { send: jest.fn() };
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig());
+
+    await (service as any).sendReceiptEmail(
+      {
+        id: "pi_2",
+        amount: 5000,
+        currency: "BOB",
+        customerEmail: "ana@example.com",
+        customerName: "Ana",
+        metadata: { cart: [{ paymentLinkId: "link_1", name: "Zapatos", quantity: 1, unitAmount: 5000 }] },
+      },
+      "Tienda Ejemplo",
+    );
+
+    const body = email.send.mock.calls[0][0].body as string;
+    expect(body).toContain("50.00 BOB");
+    expect(body).not.toMatch(/\(\d/);
+  });
+});

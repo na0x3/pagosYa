@@ -1,4 +1,4 @@
-import { FxRateUnavailableError, invoiceAmountFor, pricingForRail, resolveChargeAmount } from "./fx";
+import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "./fx";
 
 const now = new Date("2026-09-17T12:00:00.000Z");
 
@@ -39,5 +39,13 @@ describe("pricingForRail / invoiceAmountFor", () => {
   it("invoices converted intents in the original BOB amount", () => {
     expect(invoiceAmountFor({ amount: 10058, currency: "USD", metadata: { fx: { originalAmount: 70000, originalCurrency: "BOB" } } })).toEqual({ amount: 70000, currency: "BOB" });
     expect(invoiceAmountFor({ amount: 500, currency: "BOB", metadata: {} })).toEqual({ amount: 500, currency: "BOB" });
+  });
+});
+
+describe("lineCurrencyFor", () => {
+  it("labels cart lines in BOB for a converted intent, and in the intent's own currency otherwise", () => {
+    expect(lineCurrencyFor({ currency: "USD", metadata: { fx: { originalAmount: 70000, originalCurrency: "BOB" } } })).toBe("BOB");
+    expect(lineCurrencyFor({ currency: "BOB", metadata: {} })).toBe("BOB");
+    expect(lineCurrencyFor({ currency: "USD", metadata: null })).toBe("USD");
   });
 });

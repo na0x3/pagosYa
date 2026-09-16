@@ -50,3 +50,12 @@ export function invoiceAmountFor(intent: { amount: number; currency: string; met
   const fx = fxOf(intent.metadata);
   return fx ? { amount: fx.originalAmount, currency: "BOB" } : { amount: intent.amount, currency: intent.currency };
 }
+
+/**
+ * Cart line items are always priced in the merchant's original BOB catalog
+ * amounts, even when the intent itself was converted to USD for the charge.
+ * A receipt must label those lines in BOB, never in the charged currency.
+ */
+export function lineCurrencyFor(intent: { currency: string; metadata: unknown }): string {
+  return fxOf(intent.metadata) ? "BOB" : intent.currency;
+}
