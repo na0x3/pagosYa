@@ -31,15 +31,72 @@ describe("StoreAgentService", () => {
     return { service: new StoreAgentService(prisma as never, visualStudio as never), prisma, visualStudio };
   }
 
-  it("applies a catalog arrangement request as a saved change, spending no credits and creating no design job", async () => {
+  it("asks for confirmation instead of writing directly when a catalog arrangement request matches", async () => {
     const { service, prisma, visualStudio } = setup();
 
     const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
 
+    expect(result.needsClarification).toBe(true);
+    expect(result.question).toMatchObject({
+      id: "catalog_arrangement",
+      prompt: expect.stringContaining("secciones"),
+      options: expect.arrayContaining([
+        expect.objectContaining({ id: "confirm" }),
+        expect.objectContaining({ id: "decline" }),
+      ]),
+    });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it("applies the layout exactly once when the confirmation is accepted, and does not ask again", async () => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    const confirmValue = question.question!.options.find((option) => option.id === "confirm")!.value;
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: confirmValue });
+
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
     expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "sections" } });
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.question).toBeUndefined();
     expect(result.assistantMessage.content).toContain("secciones por colección");
     expect(result.assistantMessage.content).toContain("Cómo se ven tus productos");
     expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "sections" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing when the confirmation is declined", async () => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    const declineValue = question.question!.options.find((option) => option.id === "decline")!.value;
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: declineValue });
+
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.question).toBeUndefined();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it("never writes directly for a borderline catalog-adjacent phrasing — it only ever asks", async () => {
+    const { service, prisma, visualStudio } = setup();
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "pon los productos con fotos nuevas en secciones" });
+
+    expect(result.needsClarification).toBe(true);
+    expect(result.question?.id).toBe("catalog_arrangement");
+    expect(prisma.store.update).not.toHaveBeenCalled();
     expect(visualStudio.generate).not.toHaveBeenCalled();
     expect(visualStudio.revise).not.toHaveBeenCalled();
   });

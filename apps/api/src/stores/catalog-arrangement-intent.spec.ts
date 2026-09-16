@@ -65,6 +65,18 @@ describe('catalogArrangementIntent', () => {
     }
   });
 
+  it('recognizes the catalog as the object even when a modifier happens to contain a blocklist noun', () => {
+    expect(catalogArrangementIntent('pon los productos con fotos nuevas en secciones')).toEqual({ layout: 'sections' });
+    expect(catalogArrangementIntent('organiza los productos con precios altos en secciones')).toEqual({ layout: 'sections' });
+    expect(catalogArrangementIntent('pon los productos con buen video en pestañas por colección')).toEqual({ layout: 'tabs' });
+    expect(catalogArrangementIntent('pon los productos con banner promocional en secciones')).toEqual({ layout: 'sections' });
+    expect(catalogArrangementIntent('organiza los productos de la lista nueva en secciones')).toEqual({ layout: 'sections' });
+  });
+
+  it('does not fire on a past-tense reference to something already built', () => {
+    expect(catalogArrangementIntent('necesito ayuda con el catálogo en secciones que armamos ayer')).toBeNull();
+  });
+
   it('does not fire on a desire-verb sentence about something other than the catalog', () => {
     for (const text of [
       'necesito el reporte de ventas por secciones del mes pasado',

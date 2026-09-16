@@ -45,19 +45,41 @@ function isQuestionOrHypothetical(text: string): boolean {
     // Praising or describing the CURRENT layout is not a request to change it.
     || /\b(me gusta )?(como|asi) esta\b/.test(text)
     // Asking what a term means is not a request to apply it.
-    || /\b(entender|significa|que es)\b/.test(text);
+    || /\b(entender|significa|que es)\b/.test(text)
+    // Referencing something already built in the past ("...que armamos
+    // ayer") is describing history, the same risk family as "antes lo
+    // tenía en secciones" — not a request to apply it now.
+    || /\bque (armamos|hicimos|pusimos|configuramos|organizamos|creamos|arme|hice|puse|configure|organice|cree)\b/.test(text);
 }
 
 // Third layer, and the one invariant every layout pattern must pass: the
 // thing being arranged has to be the CATALOG — not a photo, a banner, a
 // sales report, a to-do list, or an existing page being named rather than
-// requested. Every misfire found across three review rounds shares this one
+// requested. Every misfire found across review rounds shares this one
 // shape: a layout phrase attached to something that isn't the store's
-// products. So instead of hand-patching each phrasing, this is a single
-// shared check every candidate match runs through: if one of these nouns
-// sits between the request verb and the matched layout phrase, the layout
-// phrase is scenery, not the request, and the match is discarded.
+// products.
+//
+// But the catalog itself is very often described with a modifier that
+// happens to contain one of those same nouns — "productos CON FOTOS
+// nuevas en secciones" is a request about the products, decorated with
+// "fotos"; "pon UNA FOTO en la pagina aparte de productos" is a request
+// about a photo, decorated with "productos" as the destination's name.
+// What distinguishes them isn't whether the noun appears, but whether the
+// catalog was already established as the object before it: if
+// "productos"/"catalogo" appears before the non-catalog noun, the noun is
+// just modifying an already-catalog request and the match stands; if the
+// non-catalog noun comes first (or the catalog is never mentioned at all
+// in between), that noun — not the catalog — is what's being placed, and
+// the match is discarded.
 const NON_CATALOG_OBJECT = /\b(fotos?|videos?|banners?|imag(?:en|enes)|textos?|logos?|boton(?:es)?|reportes?|listas?|ideas?|precios?|tareas?|ventas?)\b/;
+const CATALOG_WORD = /\b(productos|catalogo)\b/;
+
+function objectIsCatalog(between: string): boolean {
+  const distractor = NON_CATALOG_OBJECT.exec(between);
+  if (!distractor) return true;
+  const catalogIndex = between.search(CATALOG_WORD);
+  return catalogIndex !== -1 && catalogIndex < distractor.index;
+}
 
 // The text strictly between two (non-overlapping) regex matches, regardless
 // of which one comes first in the string.
@@ -74,7 +96,10 @@ function textBetween(text: string, a: RegExpExecArray, b: RegExpExecArray): stri
  * historia" is rejected because "crea" is not an arrangement verb; "pon una
  * foto en la pagina aparte de productos" is rejected because "foto" — not
  * the catalog — sits between the verb and the layout phrase, so the phrase
- * is naming an existing page, not requesting one. */
+ * is naming an existing page, not requesting one. A match here is a
+ * CANDIDATE, not a foregone conclusion: callers must confirm with the owner
+ * before applying it, since this whitelist is a finite noun blocklist and
+ * will still have holes by construction. */
 export function catalogArrangementIntent(instruction: string): { layout: CatalogLayout } | null {
   // A genuine full-site brief still needs to reach the compositor, even when
   // it also mentions an arrangement word (e.g. "rediseña mi tienda... y
@@ -106,7 +131,7 @@ export function catalogArrangementIntent(instruction: string): { layout: Catalog
   for (const [pattern, layout] of candidates) {
     const phraseMatch = pattern.exec(text);
     if (!phraseMatch) continue;
-    if (NON_CATALOG_OBJECT.test(textBetween(text, verbMatch, phraseMatch))) continue;
+    if (!objectIsCatalog(textBetween(text, verbMatch, phraseMatch))) continue;
     return { layout };
   }
   return null;

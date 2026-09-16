@@ -6,7 +6,7 @@ import { assertWebsiteRevision, websiteEditorStore } from "./website-draft";
 import { instructionUsesSelection } from "./store-agent-selection";
 import { requestsStoreRedesign } from "./store-agent-intent";
 import { catalogArrangementIntent } from "./catalog-arrangement-intent";
-import { CatalogLayout } from "./catalog-layout";
+import { CATALOG_LAYOUTS, CatalogLayout } from "./catalog-layout";
 import {
   storeAgentInstructionIsScoped,
   storeAgentInstructionLooksLikeEditorCommand,
@@ -37,6 +37,29 @@ const CATALOG_ARRANGEMENT_LABELS: Record<CatalogLayout, string> = {
   page: "en una página aparte de productos",
   tabs: "con una pestaña por colección",
 };
+
+// The question Yapi asks before applying a matched arrangement request. A
+// match from catalogArrangementIntent is a CANDIDATE, not a command: the
+// recognizer is a finite whitelist/blocklist and will always have holes, so
+// the layout is only ever written once the owner explicitly confirms.
+const CATALOG_ARRANGEMENT_QUESTIONS: Record<CatalogLayout, string> = {
+  all: "¿Quieres que muestre todos tus productos juntos en la portada?",
+  sections: "¿Quieres que ordene tus productos por secciones?",
+  page: "¿Quieres mover tus productos a una página aparte?",
+  tabs: "¿Quieres mostrar tus productos con una pestaña por colección?",
+};
+
+const CATALOG_ARRANGEMENT_CLARIFICATION_ID = "catalog_arrangement";
+// The confirm/decline option values double as the exact strings the accept
+// path checks for. They are plain acknowledgement phrases with no
+// arrangement words in them, so even if they were somehow re-run through
+// catalogArrangementIntent they could never match — but they never are:
+// the handler below recognizes the pending "catalog_arrangement"
+// clarification id and applies (or discards) the stored layout directly,
+// without ever calling catalogArrangementIntent again. That is what makes
+// this loop-proof rather than merely unlikely to loop.
+const CATALOG_ARRANGEMENT_CONFIRM_VALUE = "Sí, hazlo";
+const CATALOG_ARRANGEMENT_DECLINE_VALUE = "No, déjalo así";
 
 function storeAgentInstructionRepairsPreviousRevision(instruction: string): boolean {
   const text = normalizeAgentInstruction(instruction);
@@ -156,20 +179,79 @@ export class StoreAgentService {
     });
     const context = (existing?.messages ?? []).slice().reverse().map((message) => `${message.role === "USER" ? "Comercio" : "Yapi"}: ${message.content}`);
     try {
-      // A saved layout change is cheap and must short-circuit ahead of the
-      // redesign and editor-command branches, which can spend credits.
-      const arrangement = catalogArrangementIntent(instruction);
-      if (arrangement) {
-        await this.prisma.store.update({ where: { id: storeId }, data: { catalogLayout: arrangement.layout } });
+      // Answering a pending catalog-arrangement confirmation is handled
+      // BEFORE anything else — in particular before catalogArrangementIntent
+      // ever runs again on this turn. That ordering is what makes the
+      // confirm/decline reply loop-proof: the pending clarification's own id
+      // is the signal, not the text the owner sent, so no matter what they
+      // typed (the confirm phrase, the decline phrase, or something else
+      // entirely) this branch is what handles it, applies at most once, and
+      // returns without re-entering the recognizer.
+      if (answeringClarification && latestMetadata?.clarification
+        && typeof latestMetadata.clarification === "object" && !Array.isArray(latestMetadata.clarification)
+        && (latestMetadata.clarification as Prisma.JsonObject).id === CATALOG_ARRANGEMENT_CLARIFICATION_ID) {
+        const pendingLayout = typeof pendingRequest?.catalogLayout === "string"
+          && (CATALOG_LAYOUTS as readonly string[]).includes(pendingRequest.catalogLayout)
+          ? pendingRequest.catalogLayout as CatalogLayout
+          : null;
+        const accepted = pendingLayout !== null && normalizeAgentInstruction(submittedInstruction) === normalizeAgentInstruction(CATALOG_ARRANGEMENT_CONFIRM_VALUE);
+        if (accepted) {
+          await this.prisma.store.update({ where: { id: storeId }, data: { catalogLayout: pendingLayout } });
+        }
         const assistantMessage = await this.prisma.storeAgentMessage.create({
           data: {
             threadId: thread.id,
             role: "ASSISTANT",
-            content: `Cambié cómo se ven tus productos: ahora quedan ${CATALOG_ARRANGEMENT_LABELS[arrangement.layout]}. Puedes deshacerlo cuando quieras desde "Cómo se ven tus productos".`,
-            metadata: { intent: "catalog_arrangement", catalogLayout: arrangement.layout, changedAreas: ["arreglo del catálogo"] },
+            content: accepted
+              ? `Cambié cómo se ven tus productos: ahora quedan ${CATALOG_ARRANGEMENT_LABELS[pendingLayout!]}. Puedes deshacerlo cuando quieras desde "Cómo se ven tus productos".`
+              : `No cambié nada; tus productos siguen como estaban. Puedes ajustarlo cuando quieras desde "Cómo se ven tus productos".`,
+            metadata: accepted
+              ? { intent: "catalog_arrangement", catalogLayout: pendingLayout, changedAreas: ["arreglo del catálogo"] }
+              : { intent: "catalog_arrangement_declined", changedAreas: [] },
           },
         });
-        return { userMessage, assistantMessage, proposals: [], intent: "catalog_arrangement", catalogLayout: arrangement.layout };
+        return {
+          userMessage,
+          assistantMessage,
+          proposals: [],
+          intent: accepted ? "catalog_arrangement" : "catalog_arrangement_declined",
+          ...(accepted ? { catalogLayout: pendingLayout } : {}),
+        };
+      }
+      // A matched arrangement request is cheap and must short-circuit ahead
+      // of the redesign and editor-command branches, which can spend
+      // credits — but it only ever ASKS. The recognizer is a finite
+      // whitelist/blocklist and will always have false positives by
+      // construction, so nothing is written until the owner confirms.
+      const arrangement = catalogArrangementIntent(instruction);
+      if (arrangement) {
+        const clarification: StoreAgentClarification = {
+          id: CATALOG_ARRANGEMENT_CLARIFICATION_ID,
+          prompt: CATALOG_ARRANGEMENT_QUESTIONS[arrangement.layout],
+          options: [
+            { id: "confirm", label: CATALOG_ARRANGEMENT_CONFIRM_VALUE, value: CATALOG_ARRANGEMENT_CONFIRM_VALUE },
+            { id: "decline", label: CATALOG_ARRANGEMENT_DECLINE_VALUE, value: CATALOG_ARRANGEMENT_DECLINE_VALUE },
+          ],
+        };
+        const assistantMessage = await this.prisma.storeAgentMessage.create({
+          data: {
+            threadId: thread.id,
+            role: "ASSISTANT",
+            content: clarification.prompt,
+            proposalId,
+            metadata: {
+              clarification,
+              pendingRequest: { instruction, proposalId: proposalId ?? null, assetUrls, revision: dto.revision, catalogLayout: arrangement.layout, ...(selection ? { selection } : {}) },
+            } as unknown as Prisma.InputJsonObject,
+          },
+        });
+        return {
+          userMessage,
+          assistantMessage,
+          needsClarification: true,
+          question: clarification,
+          proposals: [],
+        };
       }
       const asksForAdvice = /(?:que|como|what|how).{0,45}(?:mejorarias|recomiendas|aconsejas|puedo mejorar|podria mejorar|improve|recommend)|(?:dame|give me).{0,20}(?:ideas|consejos|sugerencias|suggestions)/i.test(normalizeAgentInstruction(instruction));
       if (asksForAdvice) {
