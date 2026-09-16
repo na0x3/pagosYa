@@ -6,6 +6,7 @@ import { API_BASE_URL } from './api';
 import { openRetention } from './retention';
 import { openCommercePlatform } from './commerce-platform';
 import { openShippingSettings } from './shipping-settings';
+import { openCatalogArrangement } from './catalog-arrangement';
 import { openBrandProfile } from './brand-profile';
 import { openCommerceContent } from './commerce-content';
 import { checkSourceWebsite, sourceChecksBlockPublishing } from './source-checks';
@@ -194,6 +195,7 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                 { id: 'shipping', name: 'Envíos y retiro', category: 'Envíos', icon: 'box', description: 'Zonas, métodos de envío y retiro en tienda.', open: () => openShippingSettings(api, storeId) },
                 { id: 'gift', name: 'Tarjetas de regalo y saldos', category: 'Ventas', icon: 'gift', description: 'Emite y administra códigos de saldo de tu tienda.', open: () => openCommercePlatform(api, storeId, 'credits') },
                 { id: 'digital', name: 'Archivos digitales', category: 'Ventas', icon: 'box', description: 'Entrega descargas a quienes completan su compra.', open: () => openCommercePlatform(api, storeId, 'digital') },
+                { id: 'arrangement', name: 'Cómo se ven tus productos', category: 'Diseño', icon: 'box', description: 'Elige cómo se muestra tu catálogo y agrupa tus productos en colecciones.', open: () => openCatalogArrangement(api, storeId) },
                 { id: 'brand', name: 'Identidad de marca', category: 'Diseño', icon: 'palette', description: 'Tu logo, colores y datos de marca en un solo lugar.', open: () => openBrandProfile(api, storeId) },
                 { id: 'redirects', name: 'Redirecciones y artículos', category: 'Diseño', icon: 'link', description: 'Conserva las direcciones de tus artículos y su contenido.', open: () => openCommercePlatform(api, storeId, 'redirects') },
             ];

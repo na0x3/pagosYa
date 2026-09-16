@@ -157,7 +157,7 @@ test('saving a collection never drops a product with no checkbox in the picker',
   await openPanel(page);
 
   const summer = page.locator('[data-collection="col_summer"]');
-  await expect(summer.getByText('Producto no disponible')).toBeVisible();
+  await expect(summer.locator('.arrangement-product-inactive')).toContainText('Producto no disponible');
 
   await summer.getByLabel('Taza').check();
   await summer.getByRole('button', { name: 'Guardar productos' }).click();
@@ -167,6 +167,52 @@ test('saving a collection never drops a product with no checkbox in the picker',
   expect(saved).toContain('ghost');
   expect(saved).toContain('p1');
   expect(saved).toContain('p2');
+});
+
+test('reordering two products in a collection submits the new order', async ({ page }) => {
+  const state = makeState();
+  state.collections = [{ id: 'col_summer', name: 'Verano', slug: 'verano', sortOrder: 0, productIds: ['p1', 'p2', 'p3'] }];
+  await mockStoreApi(page, state);
+  await openPanel(page);
+
+  const summer = page.locator('[data-collection="col_summer"]');
+  await summer.getByRole('button', { name: 'Bajar Café' }).click();
+  await summer.getByRole('button', { name: 'Guardar productos' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Productos actualizados' })).toBeVisible();
+  expect(state.collections.find(c => c.id === 'col_summer')!.productIds).toEqual(['p2', 'p1', 'p3']);
+});
+
+test('saving without reordering keeps the collection\'s existing product order, not catalog order', async ({ page }) => {
+  const state = makeState();
+  // Deliberately out of catalog order (p1, p2, p3). A save built from
+  // checkbox DOM order (catalog order) instead of the collection's own order
+  // would silently resort these back to p1, p2, p3 — the destructive bug.
+  state.collections = [{ id: 'col_summer', name: 'Verano', slug: 'verano', sortOrder: 0, productIds: ['p3', 'p1', 'p2'] }];
+  await mockStoreApi(page, state);
+  await openPanel(page);
+
+  const summer = page.locator('[data-collection="col_summer"]');
+  await summer.getByRole('button', { name: 'Guardar productos' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Productos actualizados' })).toBeVisible();
+  expect(state.collections.find(c => c.id === 'col_summer')!.productIds).toEqual(['p3', 'p1', 'p2']);
+});
+
+test('archived products in a collection stay checked, greyed, and survive a save', async ({ page }) => {
+  const state = makeState();
+  state.products = [...state.products, { id: 'p4', name: 'Descontinuado', status: 'ARCHIVED' }];
+  state.collections = [{ id: 'col_summer', name: 'Verano', slug: 'verano', sortOrder: 0, productIds: ['p4', 'p1'] }];
+  await mockStoreApi(page, state);
+  await openPanel(page);
+
+  const summer = page.locator('[data-collection="col_summer"]');
+  await expect(summer.locator('.arrangement-product-inactive')).toContainText('Descontinuado (archivado)');
+  await expect(summer.getByLabel('Descontinuado (archivado)')).toBeChecked();
+
+  // Saving must not silently drop the archived product even though it isn't
+  // the one being touched.
+  await summer.getByRole('button', { name: 'Guardar productos' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Productos actualizados' })).toBeVisible();
+  expect(state.collections.find(c => c.id === 'col_summer')!.productIds).toEqual(['p4', 'p1']);
 });
 
 test('deleting a collection removes it from the next reorder call, which still sends every survivor', async ({ page }) => {

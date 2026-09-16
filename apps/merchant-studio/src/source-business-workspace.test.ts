@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn() }));
+const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn() }));
 vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'http://localhost:3001/v1', MerchantStudioApi: class {
         businessWorkspace = mocks.workspace;
         retention = mocks.retention;
@@ -19,6 +19,7 @@ vi.mock('./commerce-platform', () => ({ openCommercePlatform: vi.fn() }));
 vi.mock('./commerce-content', () => ({ openCommerceContent: vi.fn() }));
 vi.mock('./shipping-settings', () => ({ openShippingSettings: vi.fn() }));
 vi.mock('./brand-profile', () => ({ openBrandProfile: vi.fn() }));
+vi.mock('./catalog-arrangement', () => ({ openCatalogArrangement: mocks.openArrangement }));
 import { mountBusinessWorkspace } from './source-business-workspace';
 const source = () => ({ revision: 2, versions: [{ revision: 2, label: 'Alternativa' }, { revision: 1, label: 'Original' }], publication: { revision: 1, version: 3, active: true } });
 let app: HTMLDivElement;
@@ -95,6 +96,14 @@ describe('marketing workspaces', () => {
         await vi.waitFor(() => expect(mocks.saveMapping).toHaveBeenCalledWith('store-a', 'conn', { paymentLinkId: 'lamp', variantId: 'negro', externalSku: 'LAMP-NEGRO' }));
         await vi.waitFor(() => expect(mocks.deleteMapping).toHaveBeenCalledWith('store-a', 'conn', 'map1'));
         await vi.waitFor(() => expect(app.textContent).toContain('Guardamos 1 vínculo y quitamos 1.'));
+    });
+    it('opens the catalog arrangement panel from the embedded integrations catalog, not just lists it', async () => {
+        await mount('library=integrations');
+        const card = app.querySelector('[data-open-integration=arrangement]')!.closest('article')!;
+        expect(card.textContent).toContain('Cómo se ven tus productos');
+        expect(mocks.openArrangement).not.toHaveBeenCalled();
+        click('[data-open-integration=arrangement]');
+        expect(mocks.openArrangement).toHaveBeenCalledWith(expect.anything(), 'store-a');
     });
     it('sends Comeback navigation to its specific marketing tab', async () => {
         const send = vi.spyOn(window.parent, 'postMessage');

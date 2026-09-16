@@ -36,3 +36,6 @@
 .arrangement-collection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .arrangement-collection-actions button { min-height: 36px; padding: 6px 10px; }
 .arrangement-product-inactive { opacity: .6; }
+.arrangement-product-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; }
+.arrangement-product-actions { display: flex; gap: 6px; }
+.arrangement-product-actions button { min-height: 32px; padding: 4px 8px; font-size: 12px; }

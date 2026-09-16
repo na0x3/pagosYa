@@ -49,18 +49,52 @@ export async function openCatalogArrangement(api: MerchantStudioApi, storeId: st
     message = 'Orden actualizado.';
     onSaved?.();
   }
+  // Reordering the products inside a collection is a local, unsaved edit — it
+  // mutates this collection's own productIds array (the same array a save
+  // submits) in place, in memory, and just re-renders. Nothing is sent to the
+  // API until "Guardar productos" is submitted, same as a checkbox toggle.
+  function moveProduct(collectionId: string, productId: string, direction: -1 | 1) {
+    const collection = list.find(c => c.id === collectionId);
+    if (!collection) return;
+    const index = collection.productIds.indexOf(productId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= collection.productIds.length) return;
+    const ids = collection.productIds;
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    render();
+  }
   function collectionBlock(collection: Collection, index: number) {
-    const knownIds = new Set(products.map(product => product.id));
     // A product this collection already holds can be missing from `products`
     // (e.g. a reference to a product this store no longer has) — render it
     // anyway, checked, so saving an unrelated change never silently drops it
     // and the owner still has a way to remove it on purpose.
-    const unknownMembers = collection.productIds.filter(id => !knownIds.has(id));
-    const productRow = (id: string, label: string, archived: boolean) =>
-      `<label${archived ? ' class="arrangement-product-inactive"' : ''}><span><input type="checkbox" name="product" value="${escape(id)}" style="width:auto" ${collection.productIds.includes(id) ? 'checked' : ''}> ${escape(label)}${archived ? ' (archivado)' : ''}</span></label>`;
+    const labelFor = (id: string) => {
+      const product = products.find(p => p.id === id);
+      if (!product) return { label: 'Producto no disponible (archivado o eliminado)', archived: true };
+      return { label: product.name, archived: product.status === 'ARCHIVED' };
+    };
+    const memberIds = collection.productIds;
+    const memberSet = new Set(memberIds);
+    // Members render first, in the collection's own order (reorderable below)
+    // and pre-checked so unchecking one removes it. Products not yet in the
+    // collection render after, unchecked, so checking one adds it at the end.
+    const memberRow = (id: string, memberIndex: number) => {
+      const { label, archived } = labelFor(id);
+      return `<div class="arrangement-product-row${archived ? ' arrangement-product-inactive' : ''}">
+        <label><span><input type="checkbox" name="product" value="${escape(id)}" style="width:auto" checked> ${escape(label)}${archived ? ' (archivado)' : ''}</span></label>
+        <span class="arrangement-product-actions">
+          <button type="button" data-move-product-up="${escape(id)}" ${memberIndex === 0 ? 'disabled' : ''}>Subir ${escape(label)}</button>
+          <button type="button" data-move-product-down="${escape(id)}" ${memberIndex === memberIds.length - 1 ? 'disabled' : ''}>Bajar ${escape(label)}</button>
+        </span>
+      </div>`;
+    };
+    const addableRow = (product: { id: string; name: string; status: string }) => {
+      const archived = product.status === 'ARCHIVED';
+      return `<label${archived ? ' class="arrangement-product-inactive"' : ''}><span><input type="checkbox" name="product" value="${escape(product.id)}" style="width:auto"> ${escape(product.name)}${archived ? ' (archivado)' : ''}</span></label>`;
+    };
     const rows = [
-      ...products.map(product => productRow(product.id, product.name, product.status === 'ARCHIVED')),
-      ...unknownMembers.map(id => `<label class="arrangement-product-inactive"><span><input type="checkbox" name="product" value="${escape(id)}" style="width:auto" checked> Producto no disponible (archivado o eliminado)</span></label>`),
+      ...memberIds.map((id, memberIndex) => memberRow(id, memberIndex)),
+      ...products.filter(product => !memberSet.has(product.id)).map(addableRow),
     ];
     return `<article class="brand-import" data-collection="${escape(collection.id)}">
       <form data-rename="${escape(collection.id)}"><label>Nombre de la colección<input name="name" maxlength="60" required value="${escape(collection.name)}"></label><button class="button" type="submit">Renombrar</button></form>
@@ -111,20 +145,22 @@ export async function openCatalogArrangement(api: MerchantStudioApi, storeId: st
     });
     dialog.querySelectorAll<HTMLButtonElement>('[data-move-up]').forEach(button => button.onclick = () => void run(() => reorder(button.dataset.moveUp!, -1)));
     dialog.querySelectorAll<HTMLButtonElement>('[data-move-down]').forEach(button => button.onclick = () => void run(() => reorder(button.dataset.moveDown!, 1)));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-move-product-up]').forEach(button => button.onclick = () => moveProduct(button.closest('form')!.dataset.products!, button.dataset.moveProductUp!, -1));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-move-product-down]').forEach(button => button.onclick = () => moveProduct(button.closest('form')!.dataset.products!, button.dataset.moveProductDown!, 1));
     dialog.querySelectorAll<HTMLFormElement>('[data-products]').forEach(form => form.addEventListener('submit', e => {
       e.preventDefault();
       const id = form.dataset.products!;
       const collection = list.find(c => c.id === id);
-      const checked = new FormData(form).getAll('product').map(String);
-      // Every id currently in the collection gets a checkbox — a known product
-      // or the "no disponible" fallback row (see collectionBlock) — so this is
-      // already a no-op in practice. Kept as a safety net, computed from which
-      // ids actually had a control rendered (not from which are checked), so it
-      // can never fight a deliberate uncheck of the fallback row.
-      const knownIds = new Set(products.map(product => product.id));
-      const renderedIds = new Set([...knownIds, ...(collection?.productIds || []).filter(productId => !knownIds.has(productId))]);
-      const preserved = (collection?.productIds || []).filter(productId => !renderedIds.has(productId));
-      const paymentLinkIds = [...checked, ...preserved];
+      if (!collection) return;
+      const checked = new Set(new FormData(form).getAll('product').map(String));
+      // The saved order comes from the collection's own (possibly just
+      // reordered) productIds, filtered to what's still checked — never from
+      // checkbox DOM order, which is catalog order and would silently
+      // scramble any collection the owner had ordered differently. Newly
+      // checked products (not yet members) are appended at the end.
+      const kept = collection.productIds.filter(productId => checked.has(productId));
+      const added = products.filter(product => checked.has(product.id) && !collection.productIds.includes(product.id)).map(product => product.id);
+      const paymentLinkIds = [...kept, ...added];
       void run(async () => { await api.setCollectionProducts(storeId, id, paymentLinkIds); list = await api.collections(storeId); message = 'Productos actualizados.'; onSaved?.(); });
     }));
   }
