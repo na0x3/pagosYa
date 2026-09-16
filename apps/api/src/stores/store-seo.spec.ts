@@ -1,5 +1,6 @@
 import { seoHead, seoPrice, sourceSeoCopy } from './store-seo';
 import { withSourceSeo } from './source-seo';
+import { StoreSeoService } from './store-seo.service';
 it('extracts published copy without executing scripts or copying hidden/template content', () => {
   const result = sourceSeoCopy('<head><title>Tienda &amp; café</title><meta name="description" content="Café de origen"></head><h1>Una pausa</h1><script>stealSecrets()</script><p hidden>Private</p><template><p>Not rendered</p></template><p>Hecho aquí.</p>');
   expect(result).toMatchObject({ title: 'Tienda & café', description: 'Café de origen', blocks: [{ tag: 'h1', text: 'Una pausa' }, { tag: 'p', text: 'Hecho aquí.' }] });
@@ -45,4 +46,55 @@ it('gives productos.html a stable pretty canonical that agrees with its sitemap 
   expect(sitemap).not.toContain('coleccion.html');
   const llms = files.find(f => f.path === 'llms.txt')!.content;
   expect(llms).toContain('https://shops.example/s/cafe/productos');
+});
+describe('StoreSeoService — the two new platform-owned catalog pages (Task 8/CATALOG_ARRANGEMENT §4)', () => {
+  function makeService(opts: { files?: any[]; items?: any[]; collections?: any[] } = {}) {
+    const store = { id: 's1', slug: 'cafe', name: 'Café', tagline: 'Café de origen', bannerUrl: null, logoUrl: null, customDomains: [], publishedSourceRevision: 1, updatedAt: new Date('2026-01-01T00:00:00Z') };
+    const prisma: any = {
+      store: { findFirst: jest.fn().mockResolvedValue(store) },
+      storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ snapshot: { files: opts.files || [] }, createdAt: new Date('2026-01-02T00:00:00Z') }) },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const stores: any = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Café', tagline: 'Café de origen', items: opts.items || [], collections: opts.collections || [] }) };
+    const config: any = { get: jest.fn((key: string) => (key === 'app.checkoutOrigin' ? 'https://shops.example' : key === 'app.port' ? 3001 : undefined)) };
+    return new StoreSeoService(prisma, stores, config);
+  }
+  const files = [
+    { path: 'index.html', content: '<html><head><title>Café</title></head><body><h1>Café</h1></body></html>' },
+    { path: 'productos.html', content: '<html><head><title>Catálogo completo</title><meta name="description" content="Todo el catálogo de Café."></head><body><h1>Catálogo</h1></body></html>' },
+    { path: 'coleccion.html', content: '<html><head><title>Colección</title></head><body><h1>Colección</h1></body></html>' },
+    { path: 'product.html', content: '<html><head></head><body></body></html>' },
+    { path: 'checkout.html', content: '<h1>Checkout</h1>' },
+  ];
+  const items = [
+    { id: 'p1', name: 'Producto Uno', description: 'Uno bueno', currency: 'BOB', amount: 1000, imageUrls: [], stock: null },
+    { id: 'p2', name: 'Producto Dos', description: 'Dos bueno', currency: 'BOB', amount: 2000, imageUrls: [], stock: null },
+  ];
+  const collections = [{ id: 'c1', name: 'Colección de verano', slug: 'verano', productIds: ['p1'] }];
+  it("gives /productos (productos.html) the same pretty canonical source-seo bakes, not the raw ?source_page= fallback", async () => {
+    const doc = await makeService({ files, items, collections }).document('cafe', undefined, 'productos.html');
+    expect(doc.canonical).toBe('https://shops.example/s/cafe/productos');
+    expect(doc.canonical).not.toContain('source_page');
+  });
+  it("gives a known collection its own title, description and canonical, scoped to its own products only", async () => {
+    const doc = await makeService({ files, items, collections }).document('cafe', undefined, 'coleccion.html', 'verano');
+    expect(doc.canonical).toBe('https://shops.example/s/cafe/c/verano');
+    expect(doc.title).toBe('Colección de verano · Café');
+    expect(doc.head).toContain('Colección de verano');
+    expect(doc.body).toContain('Producto Uno');
+    expect(doc.body).not.toContain('Producto Dos');
+  });
+  it('never emits a canonical implying a collection that does not exist; an unknown slug renders the whole catalog like the storefront runtime does', async () => {
+    const doc = await makeService({ files, items, collections }).document('cafe', undefined, 'coleccion.html', 'no-existe');
+    expect(doc.canonical).toBe('https://shops.example/s/cafe/productos');
+    expect(doc.canonical).not.toContain('no-existe');
+    expect(doc.body).toContain('Producto Uno');
+    expect(doc.body).toContain('Producto Dos');
+  });
+  it('advertises the catalog page at its pretty URL in the sitemap, and never advertises the parameterized coleccion.html template', async () => {
+    const xml = await makeService({ files, items, collections }).sitemap('cafe');
+    expect(xml).toContain('<loc>https://shops.example/s/cafe/productos</loc>');
+    expect(xml).not.toContain('coleccion.html');
+    expect(xml).not.toContain('product.html');
+  });
 });

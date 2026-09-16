@@ -27,3 +27,32 @@ test('serves crawler files, noindexes personal links and returns real 404/503 st
     assert.equal((await fetch(base + '/s/missing')).status, 404); assert.equal((await fetch(base + '/s/failed')).status, 503);
   } finally { frontend.closeAllConnections(); backend.closeAllConnections(); await Promise.all([new Promise(r => frontend.close(r)), new Promise(r => backend.close(r))]); }
 });
+test('renders server-side SEO for the whole-catalog and collection storefront pages, not the bare SPA shell', async () => {
+  const seoRequests = [];
+  const backend = createServer((req, res) => {
+    seoRequests.push(req.url);
+    res.setHeader('Content-Type', 'application/json');
+    const url = new URL(req.url, 'http://backend.internal');
+    const page = url.searchParams.get('page');
+    const collection = url.searchParams.get('collection');
+    if (page === 'productos.html') return res.end(JSON.stringify({ head: '<title>Catálogo completo · Café</title><link rel="canonical" href="https://shop.example/s/cafe/productos">', body: '<h1>Catálogo completo</h1>' }));
+    if (page === 'coleccion.html' && collection === 'verano') return res.end(JSON.stringify({ head: '<title>Verano · Café</title><link rel="canonical" href="https://shop.example/s/cafe/c/verano">', body: '<h1>Verano</h1>' }));
+    if (page === 'coleccion.html') return res.end(JSON.stringify({ head: '<title>Catálogo completo · Café</title><link rel="canonical" href="https://shop.example/s/cafe/productos">', body: '<h1>Catálogo completo (colección desconocida)</h1>' }));
+    res.end(JSON.stringify({ head: '<title>Café</title>', body: '<h1>Café</h1>' }));
+  }); backend.listen(0, '127.0.0.1'); await once(backend, 'listening');
+  const middleware = createStorefrontSeo({ apiBase: `http://127.0.0.1:${backend.address().port}`, checkoutOrigin: 'https://shop.example', template: async () => '<head><title>Checkout</title></head><div id="app"></div>' });
+  const frontend = createServer((req, res) => middleware(req, res, () => res.writeHead(404).end())); frontend.listen(0, '127.0.0.1'); await once(frontend, 'listening');
+  const base = `http://127.0.0.1:${frontend.address().port}`;
+  try {
+    const catalog = await fetch(base + '/s/cafe/productos');
+    assert.match(await catalog.text(), /<h1>Catálogo completo<\/h1>/);
+    assert.match(seoRequests.at(-1), /[?&]page=productos\.html/);
+    const collection = await fetch(base + '/s/cafe/c/verano');
+    assert.match(await collection.text(), /<h1>Verano<\/h1>/);
+    assert.match(seoRequests.at(-1), /[?&]page=coleccion\.html/);
+    assert.match(seoRequests.at(-1), /[?&]collection=verano/);
+    const unknown = await fetch(base + '/s/cafe/c/no-existe');
+    assert.match(await unknown.text(), /<h1>Catálogo completo \(colección desconocida\)<\/h1>/);
+    assert.match(seoRequests.at(-1), /[?&]collection=no-existe/);
+  } finally { frontend.closeAllConnections(); backend.closeAllConnections(); await Promise.all([new Promise(r => frontend.close(r)), new Promise(r => backend.close(r))]); }
+});

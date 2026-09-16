@@ -17,9 +17,9 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
     if (!['GET', 'HEAD'].includes(request.method || 'GET')) return next();
     let url;
     try { url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`); } catch { return next(); }
-    const route = /^\/s\/([^/]+)(?:\/p\/([^/]+)|\/(sitemap\.xml|llms\.txt))?\/?$/.exec(url.pathname);
+    const route = /^\/s\/([^/]+)(?:\/p\/([^/]+)|\/(sitemap\.xml|llms\.txt)|\/(productos)|\/c\/([^/]+))?\/?$/.exec(url.pathname);
     const rootAsset = /^\/(robots\.txt|sitemap\.xml|llms\.txt)$/.exec(url.pathname)?.[1];
-    let slug, productId = route?.[2], asset = route?.[3] || rootAsset;
+    let slug, productId = route?.[2], asset = route?.[3] || rootAsset, productosRoute = route?.[4] === 'productos', collectionSlug = route?.[5];
     try { slug = route ? decodeURIComponent(route[1]) : undefined; } catch { response.writeHead(400); return response.end('Invalid URL'); }
     const configuredHost = new URL(checkoutOrigin).hostname;
     const customHost = url.hostname !== configuredHost && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
@@ -48,6 +48,8 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
       }
       const params = new URLSearchParams();
       if (productId) params.set('productId', decodeURIComponent(productId));
+      if (productosRoute) params.set('page', 'productos.html');
+      if (collectionSlug !== undefined) { params.set('page', 'coleccion.html'); params.set('collection', decodeURIComponent(collectionSlug)); }
       if (url.searchParams.has('source_page')) params.set('page', url.searchParams.get('source_page'));
       const document = await (await get(`/stores/public/${encodeURIComponent(slug)}/seo?${params}`)).json();
       const noindex = document.noindex === true || privateKeys.some(key => url.searchParams.has(key));

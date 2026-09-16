@@ -1,5 +1,5 @@
 import type { SourceProjectSnapshot } from './source-project';
-import { seoEscape as e, seoHead, sourceSeoCopy } from './store-seo';
+import { seoEscape as e, seoHead, sourcePageUrl, sourceSeoCopy } from './store-seo';
 /** Keep every new export self-describing. Canonicals point to the configured public store. */
 export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSnapshot {
   const configFile = snapshot.files.find(f => f.path === 'config.js');
@@ -18,7 +18,7 @@ export function withSourceSeo(snapshot: SourceProjectSnapshot): SourceProjectSna
   // so its sitemap/llms.txt entry and its baked canonical agree with each other (and with the
   // pretty URL the runtime independently sets in commerce.js).
   const pages = snapshot.files.filter(f => f.path.endsWith('.html') && !['product.html', 'checkout.html', 'coleccion.html'].includes(f.path) && !sourceSeoCopy(f.content).noindex);
-  const pageUrl = (path: string) => path === 'index.html' ? home : path === 'productos.html' ? `${home.replace(/\/$/, '')}/productos` : `${home}?source_page=${encodeURIComponent(path)}`;
+  const pageUrl = (path: string) => sourcePageUrl(home, path);
   const products: Array<{ id: string; name: string }> = Array.isArray(config.data?.items) ? config.data.items : [];
   const urls = [...pages.map(f => pageUrl(f.path)), ...products.map(p => `${home.replace(/\/$/, '')}/p/${encodeURIComponent(p.id)}`)];
   const metadata = ['robots.txt', 'sitemap.xml', 'llms.txt'];

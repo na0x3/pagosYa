@@ -9,7 +9,7 @@ export class StoreDiscoveryController {
 export class StoreSeoController {
   constructor(private readonly seo: StoreSeoService) {}
   @Get() @Header('Cache-Control', 'no-cache')
-  document(@Param('slug') slug: string, @Query('productId') productId?: string, @Query('page') page?: string) { return this.seo.document(slug, productId, page); }
+  document(@Param('slug') slug: string, @Query('productId') productId?: string, @Query('page') page?: string, @Query('collection') collection?: string) { return this.seo.document(slug, productId, page, collection); }
   @Get('sitemap.xml') @Header('Content-Type', 'application/xml; charset=utf-8') @Header('Cache-Control', 'no-cache')
   sitemap(@Param('slug') slug: string, @Query('part') part?: string) { return this.seo.sitemap(slug, part === undefined ? undefined : Number(part)); }
   @Get('llms.txt') @Header('Content-Type', 'text/plain; charset=utf-8') @Header('Cache-Control', 'no-cache')

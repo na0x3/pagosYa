@@ -20,6 +20,11 @@ export function publicImage(value: string | undefined | null, apiBase: string) {
   if (!value) return undefined;
   try { const url = new URL(value, apiBase); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : undefined; } catch { return undefined; }
 }
+// The one place every consumer (baked source pages and the live API) computes a source page's
+// public URL, so productos.html's stable pretty canonical can never drift between them again.
+export function sourcePageUrl(home: string, page: string) {
+  return page === 'index.html' ? home : page === 'productos.html' ? `${home.replace(/\/$/, '')}/productos` : `${home}?source_page=${encodeURIComponent(page)}`;
+}
 export function seoHead(input: { title: string; description: string; canonical: string; image?: string; graph: unknown[]; noindex?: boolean; kind?: string }) {
   const e = seoEscape;
   return `<title>${e(input.title)}</title><meta name="description" content="${e(input.description)}"><meta name="robots" content="${input.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large'}"><link rel="canonical" href="${e(input.canonical)}"><meta property="og:type" content="${input.kind || 'website'}"><meta property="og:title" content="${e(input.title)}"><meta property="og:description" content="${e(input.description)}"><meta property="og:url" content="${e(input.canonical)}"><meta name="twitter:card" content="${input.image ? 'summary_large_image' : 'summary'}">${input.image ? `<meta property="og:image" content="${e(input.image)}"><meta name="twitter:image" content="${e(input.image)}">` : ''}<script type="application/ld+json" data-pagosya-seo>${JSON.stringify({ '@context': 'https://schema.org', '@graph': input.graph }).replace(/</g, '\\u003c')}</script>`;
