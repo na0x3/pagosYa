@@ -395,6 +395,13 @@
   document.head.append(detailStyle);
   const fullProductPage = document.querySelector("[data-pagosya-product-page]");
   const fullCheckoutPage = document.querySelector("[data-pagosya-checkout-page]");
+  // Kit-owned pages: the whole catalog (productos.html) and one collection per page (coleccion.html).
+  const fullCatalogPage = Boolean(document.querySelector('[data-catalog-full]'));
+  const collectionPage = Boolean(document.querySelector('[data-collection-page]'));
+  const currentCollection = () => {
+    const slug = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('c');
+    return collections().find((c) => c.slug === slug) || null;
+  };
   const rootPath = /(?:^|\/)pages\//.test(window.PAGOSYA_PREVIEW_PAGE || location.pathname) ? "../" : "";
   const pageHref = (page, query = "") => rootPath + page + query;
   const detail = fullProductPage || document.createElement("dialog");
@@ -1132,6 +1139,8 @@
   const productsHref = () => pageHref('productos.html');
   const collectionHref = (slug) => pageHref('coleccion.html', '?c=' + encodeURIComponent(slug));
   const catalogMore = () => `<a class="catalog-more" data-catalog-more href="${escape(productsHref())}">Ver todos los productos</a>`;
+  // Shared by the home `tabs` layout (no current tab) and the collection page (marks its own tab).
+  const catalogTabs = (currentSlug) => `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}"${c.slug === currentSlug ? ' aria-current="page"' : ''}>${escape(c.name)}</a>`).join("")}</nav>`;
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
     document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
@@ -1143,15 +1152,20 @@
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
       const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
       el.dataset.catalogLayout = layout;
-      if (layout === 'sections') {
+      if (collectionPage) {
+        // An unknown or missing collection shows every product rather than an error.
+        const current = currentCollection();
+        const items = current ? selected.filter((p) => (current.productIds || []).includes(p.id)) : selected;
+        const tabs = collections().length ? catalogTabs(current?.slug) : '';
+        const heading = current ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
+        el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>');
+      } else if (layout === 'sections') {
         const groups = collectionGroups(selected);
         el.innerHTML = groups.length
           ? groups.map((group) => `<section class="catalog-group"><h3 class="catalog-group__title">${escape(group.name)}</h3><div class="catalog-group__items">${group.items.map(productCard).join("")}</div></section>`).join("")
           : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       } else if (layout === 'page' || layout === 'tabs') {
-        const tabs = layout === 'tabs' && collections().length
-          ? `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}">${escape(c.name)}</a>`).join("")}</nav>`
-          : '';
+        const tabs = layout === 'tabs' && collections().length ? catalogTabs() : '';
         el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore();
       } else {
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
@@ -1169,6 +1183,15 @@
           ['meta[property="og:description"]', 'content', p.description || p.name], ['meta[property="og:image"]', 'content', safeUrl(p.imageUrls?.[0])],
         ]) document.querySelector(selector)?.setAttribute(attribute, value);
       }
+    }
+    if (fullCatalogPage && !preview) {
+      const current = collectionPage ? currentCollection() : null;
+      const canonical = `${(config.publicSiteUrl || `${config.checkoutOrigin}/s/${encodeURIComponent(config.slug)}`).replace(/\/$/, '')}${current ? `/c/${encodeURIComponent(current.slug)}` : '/productos'}`;
+      document.title = `${current ? current.name : 'Productos'} · ${store.storeName || config.slug}`;
+      for (const [selector, attribute, value] of [
+        ['link[rel="canonical"]', 'href', canonical], ['meta[property="og:url"]', 'content', canonical],
+        ['meta[property="og:title"]', 'content', document.title],
+      ]) document.querySelector(selector)?.setAttribute(attribute, value);
     }
     if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
     else if (selectedProduct && detail.open) {

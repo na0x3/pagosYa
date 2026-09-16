@@ -14,13 +14,20 @@ export async function currentSourceRuntime(snapshot: SourceProjectSnapshot): Pro
   const commerce = await readFile(join(__dirname, 'source-kit', 'privacy.js'), 'utf8') + '\n' + await readFile(join(__dirname, 'source-kit', 'commerce.js'), 'utf8') + '\n' + await readFile(join(__dirname, 'source-kit', 'retention.js'), 'utf8');
   const prepared = applySourceLayoutBaseline(await withSourceFonts(await withSourceAssets(snapshot.files, snapshot.files)));
   if (!prepared.some(f => f.path === 'commerce.js') || !prepared.some(f => f.path === 'config.js')) return { ...snapshot, files: prepared.map(f => ({ ...f, encoding: f.encoding || 'utf8' })) };
-  const files = await withSourceMotion(await withSourceCommerceDesign(prepared.map(f => {
+  const substituted = prepared.map(f => {
     if (f.path === 'commerce.js') return { ...f, content: commerce };
     if (f.path !== 'config.js') return f;
     const match = f.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
     if (!match) return f;
     const config = JSON.parse(match[1]);
     return { ...f, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, ...sourceCommerceRoutes(snapshot.files, config) })};` };
-  })), sourceMotionMode(snapshot.files));
+  });
+  // Existing stores never regenerate: ship the products/collection pages onto every snapshot that
+  // already has commerce.js so the arrangement's catalog and tab links never 404 on a store
+  // published before this kit existed.
+  const catalogPages = await Promise.all(['productos.html', 'coleccion.html']
+    .filter(path => !substituted.some(f => f.path === path))
+    .map(async path => ({ path, encoding: 'utf8' as const, content: await readFile(join(__dirname, 'source-kit', path), 'utf8') })));
+  const files = await withSourceMotion(await withSourceCommerceDesign([...substituted, ...catalogPages]), sourceMotionMode(snapshot.files));
   return withSourceSeo({ ...snapshot, files: files.map(f => ({ ...f, encoding: f.encoding || 'utf8' })) });
 }

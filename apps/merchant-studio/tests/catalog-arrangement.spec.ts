@@ -5,15 +5,15 @@ const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-
 
 const product = (id: string, name: string) => ({ id, name, amount: 1000, currency: 'BOB', stock: 4 });
 
-async function storefront(page: Page, data: Record<string, unknown>) {
+async function storefront(page: Page, data: Record<string, unknown>, opts: { mount?: string; path?: string } = {}) {
   await page.setViewportSize({ width: 1000, height: 900 });
   // A themed shell close to a generated store, so screenshots reveal real spacing and heading weight.
   const css = 'body{margin:0;font-family:Arial,sans-serif;background:#fff5df;color:#0b2a80;padding:24px}.menu-item{border:1px solid #0b2a80;background:#fff;padding:12px}';
   await page.route('https://cards.test/**', route => route.fulfill({
     contentType: 'text/html',
-    body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div data-pagosya-catalog></div><div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'cards', data })}</script><script>${kit('commerce.js')}</script></body></html>`,
+    body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div data-pagosya-catalog${opts.mount ? ' ' + opts.mount : ''}></div><div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'cards', data })}</script><script>${kit('commerce.js')}</script></body></html>`,
   }));
-  await page.goto('https://cards.test/');
+  await page.goto(`https://cards.test/${opts.path || ''}`);
 }
 
 test('all renders one flat list with every product and no groups', async ({ page }) => {
@@ -126,4 +126,54 @@ test('sections applies the readable-card contrast fix to cards nested inside a g
   const [text, card] = await groupCard.evaluate(el => [getComputedStyle(el.querySelector('h3')!).color, getComputedStyle(el).backgroundColor]);
   expect(text).not.toBe(card);
   expect(text).toBe('rgb(11, 42, 128)');
+});
+
+test('productos.html renders every product and no preview link', async ({ page }) => {
+  const items = [product('p1', 'Uno'), product('p2', 'Dos'), product('p3', 'Tres'), product('p4', 'Cuatro'), product('p5', 'Cinco')];
+  // catalogLayout is 'page' here to prove data-catalog-full overrides the owner's chosen preview
+  // layout: a store whose owner picked 'page' still gets the full catalog on its products page.
+  await storefront(page, { storeName: 'Tienda', catalogLayout: 'page', items }, { mount: 'data-catalog-full', path: 'productos.html' });
+  await expect(page.locator('[data-pagosya-catalog] .menu-item')).toHaveCount(5);
+  await expect(page.locator('[data-catalog-more]')).toHaveCount(0);
+  await expect(page.locator('.catalog-tabs')).toHaveCount(0);
+});
+
+test('coleccion.html?c=verano renders only that collection\'s products under its name, with the tab marked current', async ({ page }) => {
+  const items = [product('p1', 'Uno'), product('p2', 'Dos'), product('p3', 'Tres')];
+  const collections = [
+    { id: 'c1', name: 'Verano', slug: 'verano', productIds: ['p1', 'p2'] },
+    { id: 'c2', name: 'Invierno', slug: 'invierno', productIds: ['p3'] },
+  ];
+  await storefront(page, { storeName: 'Tienda', items, collections }, { mount: 'data-catalog-full data-collection-page', path: 'coleccion.html?c=verano' });
+  await expect(page.locator('[data-pagosya-catalog] .menu-item')).toHaveCount(2);
+  await expect(page.locator('.catalog-group__title')).toHaveText('Verano');
+  const tabs = page.locator('.catalog-tabs a');
+  await expect(tabs).toHaveCount(2);
+  await expect(page.locator('.catalog-tabs a[aria-current="page"]')).toHaveText('Verano');
+  await expect(page.locator('.catalog-tabs a:not([aria-current])')).toHaveText('Invierno');
+});
+
+test('coleccion.html?c=desconocida renders the whole catalog', async ({ page }) => {
+  const items = [product('p1', 'Uno'), product('p2', 'Dos'), product('p3', 'Tres')];
+  const collections = [{ id: 'c1', name: 'Verano', slug: 'verano', productIds: ['p1', 'p2'] }];
+  await storefront(page, { storeName: 'Tienda', items, collections }, { mount: 'data-catalog-full data-collection-page', path: 'coleccion.html?c=desconocida' });
+  await expect(page.locator('[data-pagosya-catalog] .menu-item')).toHaveCount(3);
+  await expect(page.locator('.catalog-group__title')).toHaveCount(0);
+  // No link ever carries aria-current for a collection that does not exist.
+  await expect(page.locator('.catalog-tabs a[aria-current]')).toHaveCount(0);
+});
+
+test('productos.html and coleccion.html cards are byte-identical to the home page\'s', async ({ page }) => {
+  const items = [product('p1', 'Uno'), product('p2', 'Dos')];
+  const collections = [{ id: 'c1', name: 'Verano', slug: 'verano', productIds: ['p1'] }];
+  await storefront(page, { storeName: 'Tienda', catalogLayout: 'all', items });
+  const homeCard = await page.locator('[data-pagosya-catalog] .menu-item').first().evaluate(el => el.outerHTML);
+
+  await storefront(page, { storeName: 'Tienda', items, collections }, { mount: 'data-catalog-full', path: 'productos.html' });
+  const productosCard = await page.locator('[data-pagosya-catalog] .menu-item').first().evaluate(el => el.outerHTML);
+  expect(productosCard).toBe(homeCard);
+
+  await storefront(page, { storeName: 'Tienda', items, collections }, { mount: 'data-catalog-full data-collection-page', path: 'coleccion.html?c=verano' });
+  const coleccionCard = await page.locator('[data-pagosya-catalog] .menu-item').first().evaluate(el => el.outerHTML);
+  expect(coleccionCard).toBe(homeCard);
 });

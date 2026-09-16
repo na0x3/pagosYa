@@ -1,4 +1,38 @@
 import { sourceCommerceRoutes } from './source-commerce-pages';
+import { currentSourceRuntime } from './source-runtime';
+
+describe('Kit-owned products and collection pages ship to already-published stores', () => {
+  const snapshot = (files: Array<{ path: string; content: string }>) => ({
+    schemaVersion: 1 as const,
+    brief: { businessType: 'Tienda', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Libre' },
+    files: files.map(f => ({ ...f, encoding: 'utf8' as const })),
+  });
+  const config = { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"slug":"marca","checkoutOrigin":"https://pay.test","data":{"storeName":"Marca"}};' };
+
+  it('adds productos.html and coleccion.html to a snapshot that has commerce.js and config.js but not those pages', async () => {
+    const result = await currentSourceRuntime(snapshot([
+      { path: 'index.html', content: '<html><head></head><body><main data-pagosya-catalog></main></body></html>' },
+      config,
+      { path: 'commerce.js', content: '' },
+    ]));
+    expect(result.files.some(f => f.path === 'productos.html')).toBe(true);
+    expect(result.files.some(f => f.path === 'coleccion.html')).toBe(true);
+  });
+
+  it('leaves an existing productos.html untouched', async () => {
+    // No <head> tag, so the SEO pass (which only rewrites inside <head>) cannot alter it either;
+    // this proves the runtime never overwrites an authored/kit file already on the snapshot.
+    const authored = '<html><body>Custom productos page</body></html>';
+    const result = await currentSourceRuntime(snapshot([
+      { path: 'index.html', content: '<html><head></head><body><main data-pagosya-catalog></main></body></html>' },
+      config,
+      { path: 'commerce.js', content: '' },
+      { path: 'productos.html', content: authored },
+    ]));
+    expect(result.files.find(f => f.path === 'productos.html')?.content).toBe(authored);
+  });
+});
+
 describe('Authored commerce routes', () => {
   const pages = [
     {path:'index.html',content:'<div data-pagosya-cart></div>'},

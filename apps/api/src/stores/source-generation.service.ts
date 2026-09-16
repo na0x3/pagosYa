@@ -523,7 +523,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     }
     if (useNext && !tokenCss) generated.files.push({ path: 'brand.css', content: '/* No confirmed brand tokens. */' });
     const useCommercePages = useNext || !previous || generated.files.some(file => file.path === "product.html") && generated.files.some(file => file.path === "checkout.html");
-    const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(useCommercePages ? ["product.html", "checkout.html", "commerce-pages.css"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(join(__dirname, "source-kit", path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
+    const kitFiles = await Promise.all(["build.mjs", "server.mjs", "commerce.js", ...(useCommercePages ? ["product.html", "checkout.html", "productos.html", "coleccion.html", "commerce-pages.css"] : []).filter(path => !generated.files.some(file => file.path === path))].map(async (path) => ({ path, content: (await readFile(join(__dirname, "source-kit", path), "utf8")).replace(/<head>/i, tokenCss ? '<head>\n<link rel="stylesheet" href="brand.css">' : '<head>') })));
     const previousConfigFile = (previous?.snapshot as any)?.files?.find((f: SourceProjectFileDto) => f.path === 'config.js');
     const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
     const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
