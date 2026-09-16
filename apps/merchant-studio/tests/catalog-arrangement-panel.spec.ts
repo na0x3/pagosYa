@@ -6,9 +6,9 @@ function makeState() {
   return {
     store: { id: 's1', name: 'Tienda', catalogLayout: 'sections' as string },
     products: [
-      { id: 'p1', name: 'Café' },
-      { id: 'p2', name: 'Taza' },
-      { id: 'p3', name: 'Filtro' },
+      { id: 'p1', name: 'Café', status: 'ACTIVE' },
+      { id: 'p2', name: 'Taza', status: 'ACTIVE' },
+      { id: 'p3', name: 'Filtro', status: 'ACTIVE' },
     ],
     collections: [
       { id: 'col_summer', name: 'Verano', slug: 'verano', sortOrder: 0, productIds: [] },
@@ -36,7 +36,7 @@ async function mockStoreApi(page: Page, state: State) {
   await page.route('**/stores/s1/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
-    if (path.endsWith('/source-project/catalog')) return route.fulfill({ json: { items: state.products } });
+    if (path.endsWith('/payment_links')) return route.fulfill({ json: state.products });
     if (path.endsWith('/collections')) {
       if (method === 'GET') return route.fulfill({ json: state.collections });
       if (method === 'POST') {
@@ -145,4 +145,45 @@ test('a failed save shows the server message and keeps what the owner typed', as
 
   await expect(page.getByRole('status').filter({ hasText: 'Puedes tener hasta 12 colecciones' })).toBeVisible();
   await expect(page.getByLabel('Nombre de la nueva colección')).toHaveValue('Colección extra');
+});
+
+test('saving a collection never drops a product with no checkbox in the picker', async ({ page }) => {
+  const state = makeState();
+  // "ghost" is in the collection's membership but absent from the products
+  // payload entirely (e.g. archived or otherwise excluded) — it must still
+  // survive a save that only touches a different, known product.
+  state.collections = [{ id: 'col_summer', name: 'Verano', slug: 'verano', sortOrder: 0, productIds: ['ghost', 'p1'] }];
+  await mockStoreApi(page, state);
+  await openPanel(page);
+
+  const summer = page.locator('[data-collection="col_summer"]');
+  await expect(summer.getByText('Producto no disponible')).toBeVisible();
+
+  await summer.getByLabel('Taza').check();
+  await summer.getByRole('button', { name: 'Guardar productos' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Productos actualizados' })).toBeVisible();
+
+  const saved = state.collections.find(c => c.id === 'col_summer')!.productIds;
+  expect(saved).toContain('ghost');
+  expect(saved).toContain('p1');
+  expect(saved).toContain('p2');
+});
+
+test('deleting a collection removes it from the next reorder call, which still sends every survivor', async ({ page }) => {
+  const state = makeState();
+  state.collections = [
+    { id: 'col_summer', name: 'Verano', slug: 'verano', sortOrder: 0, productIds: [] },
+    { id: 'col_sale', name: 'Rebajas', slug: 'rebajas', sortOrder: 1, productIds: [] },
+    { id: 'col_winter', name: 'Invierno', slug: 'invierno', sortOrder: 2, productIds: [] },
+  ];
+  await mockStoreApi(page, state);
+  await openPanel(page);
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-collection="col_sale"]').getByRole('button', { name: 'Eliminar colección' }).click();
+  await expect(page.locator('[data-collection="col_sale"]')).toHaveCount(0);
+  expect(state.collections.map(c => c.id)).toEqual(['col_summer', 'col_winter']);
+
+  await page.locator('[data-collection="col_winter"]').getByRole('button', { name: 'Subir Invierno' }).click();
+  expect(state.orderCalls.at(-1)).toEqual(['col_winter', 'col_summer']);
 });

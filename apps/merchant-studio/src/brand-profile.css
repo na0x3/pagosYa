@@ -28,3 +28,11 @@
 .brand-actions button { justify-self: stretch; }
 .brand-dialog select { min-height: 44px; }
 @media (max-width: 600px) { .brand-dialog { padding: 16px; box-shadow: 5px 5px 0 #11110f; } .brand-dialog h2 { font-size: 26px; } .brand-actions { bottom: -16px; padding-bottom: 16px; } }
+
+/* Catalog arrangement panel — reuses the tokens/classes above; these just
+   cover the shapes (radio + explanation, action row) that panel introduces. */
+.arrangement-option { margin: 14px 0; }
+.arrangement-option p { margin: 4px 0 0; color: #555550; font-weight: 400; font-size: 13px; }
+.arrangement-collection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.arrangement-collection-actions button { min-height: 36px; padding: 6px 10px; }
+.arrangement-product-inactive { opacity: .6; }

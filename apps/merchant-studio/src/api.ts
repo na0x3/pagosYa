@@ -183,6 +183,10 @@ export class MerchantStudioApi {
   createShippingRate(storeId: string, input: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/delivery/zones`, { method: 'POST', body: JSON.stringify(input) }); }
   toggleShippingRate(storeId: string, rateId: string, active: boolean): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/rates/${encodeURIComponent(rateId)}`, { method: 'PATCH', body: JSON.stringify({ active }) }); }
   saveShippingWeight(storeId: string, productId: string, weightGrams: number | null): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ weightGrams }) }); }
+  // All of the store's products, active or archived — unlike sourceCatalog's
+  // storefront-facing item list, this must include archived ones so a
+  // collection never silently loses an archived member when saved.
+  products(storeId: string): Promise<Array<{ id: string; name: string; status: string }>> { return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`); }
   collections(storeId: string): Promise<Collection[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections`); }
   createCollection(storeId: string, name: string): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections`, { method: 'POST', body: JSON.stringify({ name }) }); }
   renameCollection(storeId: string, id: string, name: string): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ name }) }); }
