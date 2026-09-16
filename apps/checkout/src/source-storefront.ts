@@ -16,6 +16,12 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const site = await response.json();
   if (!site.published) return false;
   const productRoute = /\/p\/([^/]+)\/?$/.exec(location.pathname)?.[1];
+  const catalogRoute = /\/productos\/?$/.test(location.pathname);
+  const collectionRoute = /\/c\/([^/]+)\/?$/.exec(location.pathname)?.[1];
+  // `/c/<x>` is also the long-lived category route (main.ts), so a collection
+  // slug only wins here when the catalog actually has one by that name —
+  // otherwise this falls through untouched to today's category handling.
+  const collectionSlug = collectionRoute && (store as { collections?: { slug: string }[] }).collections?.some(c => c.slug === decodeURIComponent(collectionRoute)) ? decodeURIComponent(collectionRoute) : null;
   const routedProduct = productRoute ? store.items.find(item => item.id === decodeURIComponent(productRoute)) : undefined;
   if (routedProduct && (!sourceCanConfigureProduct(routedProduct) || routedProduct.variants?.length && !site.snapshot?.files?.some((file: { path: string; content: string }) => file.path === 'commerce.js' && file.content.includes(SOURCE_PRODUCT_OPTIONS_MARKER)))) return false;
   rememberSourceVisit(slug, site.visitToken);
@@ -39,6 +45,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const initialQuery = new URLSearchParams(location.search);
   const routeProduct = /\/p\/([^/]+)\/?$/.exec(location.pathname)?.[1];
   if (routeProduct) initialQuery.set('id', decodeURIComponent(routeProduct));
+  if (collectionSlug) initialQuery.set('c', collectionSlug);
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   try { navigation.cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch {}
@@ -58,11 +65,16 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       if (!merchantPreview) {
         const destination = new URL(location.href); const params = new URLSearchParams(next.query || '');
         const product = next.page === (settings.productPage || 'product.html') ? params.get('id') : null;
+        const collection = next.page === 'coleccion.html' ? params.get('c') : null;
+        const catalogPage = next.page === 'productos.html';
         const privatePage = next.page === (settings.checkoutPage || 'checkout.html');
         const home = location.pathname.startsWith('/s/') ? `/s/${encodeURIComponent(slug)}` : '/';
-        destination.pathname = product ? `${home.replace(/\/$/, '')}/p/${encodeURIComponent(product)}` : home;
-        destination.searchParams.delete('source_page'); destination.searchParams.delete('id');
-        if (!product && next.page !== 'index.html' && !privatePage) destination.searchParams.set('source_page', next.page);
+        destination.pathname = product ? `${home.replace(/\/$/, '')}/p/${encodeURIComponent(product)}`
+          : collection ? `${home.replace(/\/$/, '')}/c/${encodeURIComponent(collection)}`
+          : catalogPage ? `${home.replace(/\/$/, '')}/productos`
+          : home;
+        destination.searchParams.delete('source_page'); destination.searchParams.delete('id'); destination.searchParams.delete('c');
+        if (!product && !collection && !catalogPage && next.page !== 'index.html' && !privatePage) destination.searchParams.set('source_page', next.page);
         destination.hash = next.fragment || '';
         window.history.replaceState(window.history.state, '', destination);
         if (privatePage) markPrivateStorePage();
@@ -84,10 +96,15 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         const url = new URL(data.url);
         const phone = String(store.contactPhone || '').replace(/\D/g, '');
         const product = store.items.find(item => url.pathname === `/s/${encodeURIComponent(slug)}/p/${encodeURIComponent(item.id)}`);
+        // Same-origin links to the catalog or a collection page — matched by
+        // decoding the routed slug rather than interpolating it into a regex,
+        // so a slug with regex-special characters can't break the match.
+        const hostedPageMatch = /^\/s\/([^/]+)\/(?:productos|c\/[^/]+)\/?$/.exec(url.pathname);
+        const hostedPage = url.origin === location.origin && !!hostedPageMatch && decodeURIComponent(hostedPageMatch[1]) === slug;
         const apiOrigin = new URL(API_BASE_URL, location.origin);
         const articlePrefix = `${apiOrigin.pathname.replace(/\/$/, '')}/stores/public/${encodeURIComponent(slug)}/pages/`;
         const article = url.origin === apiOrigin.origin && url.pathname.startsWith(articlePrefix) && /^[a-z]{2}(?:-[A-Z]{2})?\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(url.pathname.slice(articlePrefix.length));
-        const allowed = article || (url.origin === location.origin && product) || (url.origin === 'https://wa.me' && url.pathname === '/' + phone && phone) || (store.checkoutMode === 'external' && url.href === store.leadCaptureUrl);
+        const allowed = article || (url.origin === location.origin && product) || hostedPage || (url.origin === 'https://wa.me' && url.pathname === '/' + phone && phone) || (store.checkoutMode === 'external' && url.href === store.leadCaptureUrl);
         if (allowed && ['https:', 'http:'].includes(url.protocol)) location.assign(url.href);
       } catch {}
       return;
@@ -134,7 +151,13 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   window.addEventListener('message', receive);
   window.addEventListener('pagehide', () => { window.removeEventListener('message', receive); window.removeEventListener('pagosya:privacy-change', consentChanged); }, { once: true });
   const requestedPage = new URLSearchParams(location.search).get('source_page');
-  show(routeProduct && prepared.files.some(f => f.path === (settings.productPage || 'product.html')) ? settings.productPage || 'product.html' : requestedPage && prepared.files.some(f => f.path === requestedPage && f.path.endsWith('.html')) ? requestedPage : 'index.html');
+  show(
+    routeProduct && prepared.files.some(f => f.path === (settings.productPage || 'product.html')) ? settings.productPage || 'product.html'
+    : collectionSlug && prepared.files.some(f => f.path === 'coleccion.html') ? 'coleccion.html'
+    : catalogRoute && prepared.files.some(f => f.path === 'productos.html') ? 'productos.html'
+    : requestedPage && prepared.files.some(f => f.path === requestedPage && f.path.endsWith('.html')) ? requestedPage
+    : 'index.html'
+  );
   privacy.mount(slug, { analyticsAvailable: site.analyticsAvailable === true, preview: merchantPreview });
   return true;
 }
