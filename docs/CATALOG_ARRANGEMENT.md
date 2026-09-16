@@ -1,6 +1,6 @@
 # How products are arranged in a store
 
-Status: draft for owner approval, 2026-09-15. Follows `docs/PRODUCT_PAGE_KIT.md` (Part 1) and `docs/PRODUCT_HIGHLIGHTS.md` (Part 2).
+Status: approved by the owner 2026-09-15 (including §7), not implemented. Plan: `docs/CATALOG_ARRANGEMENT_PLAN.md`. Follows `docs/PRODUCT_PAGE_KIT.md` (Part 1) and `docs/PRODUCT_HIGHLIGHTS.md` (Part 2).
 
 ## 1. What the owner chooses
 
@@ -37,7 +37,7 @@ The kit owns the arrangement, as it owns the product page:
 - **Todo en la portada:** unchanged behavior.
 - **Por secciones:** the kit renders one titled group per collection inside the existing `data-pagosya-catalog` mount, reusing the store's own card styling.
 - **Página de productos aparte:** the kit shows the first 4 products plus "Ver todos los productos" in the home mount, and the full catalog on the products page.
-- **Una pestaña por colección:** a tab row of real links; the current tab's products fill the mount.
+- **Una pestaña por colección:** a tab row of real links; the current tab's products fill the mount. On the home page the tab row sits above the first 4 products and the same "Ver todos los productos" link (§7).
 - **New pages:** `productos.html` and `coleccion.html` join `product.html` and `checkout.html` as kit-owned pages, taking the store's header, footer and styles the same way. Hosted routes: `/s/<tienda>/productos` and `/s/<tienda>/c/<colección>`, plus the same paths on custom domains. The storefront's existing `/c/<id>` route resolves a collection slug first, then falls back to a category id, so older links keep working.
 - Each collection page carries its own title, description and canonical link for search engines and sharing.
 
@@ -55,6 +55,8 @@ The kit owns the arrangement, as it owns the product page:
 - **Studio:** the panel creates a collection, moves products, reorders and switches arrangement, and YAPI's chat request produces the same saved change.
 - **Hosted (checkout):** `/s/<tienda>/productos` and `/s/<tienda>/c/<colección>` load, share correctly and keep the cart.
 
-## 7. Open question for the owner
+## 7. What the home page shows when the catalog moves
 
-When the arrangement is "página aparte" or "pestañas", the home page still needs something where the catalog used to be. The proposal above shows the first four products with a link. The alternative is to leave whatever YAPI designed there and add only the link.
+Decided by the owner, 2026-09-15: when the arrangement is "página aparte" or "pestañas", the home mount shows the **first four products followed by a "Ver todos los productos" link**, not the link alone.
+
+"First four" means the first four of the same list the home page would otherwise have shown, in catalog order and after the same category filter — so a store with fewer than four products shows what it has, and a store with none shows only the link. The cards are the store's own product cards, identical to the ones the full grid renders. The link points at `/s/<tienda>/productos` under "página aparte", and at the first collection's page under "pestañas", where the tab row is shown above the four cards.
