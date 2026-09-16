@@ -8,10 +8,10 @@ merchant-dashboard UI are all real and wired. Nothing has ever run against a fun
 provider credential is absent locally, so the feature reports itself unavailable in every environment in this
 repository.
 
-**Updated 2026-09-16.** Four items from §5(a) are now built: the Merchant Studio entry point (§5a.1), the
-paid-but-stalled escalation (§5a.2), the abandoned-checkout reaper (§5a.3) and the fail-closed CNAME target
-(§5a.4). Everything in §5(b) is unchanged and still owner-only. Sections below are marked where they no longer
-describe current code.
+**Updated 2026-09-16.** Five items from §5(a) are now built: the Merchant Studio entry point (§5a.1), the
+paid-but-stalled escalation (§5a.2), the abandoned-checkout reaper (§5a.3), the fail-closed CNAME target
+(§5a.4) and the operator surface for `DomainOrder` (§5a.5). Everything in §5(b) is unchanged and still
+owner-only. Sections below are marked where they no longer describe current code.
 
 ## 1. End-to-end reality, hop by hop
 
@@ -152,7 +152,8 @@ an hour-old one opens a `SupportCase`.
 *Accepted consequence:* `REVIEW_REQUIRED` is not in `RUNNABLE`, so an escalated order stops retrying and needs an
 operator even if the missing credential returns. That is deliberate for money that has already moved, but it means
 a config slip lasting over an hour parks every paid order into support. §5a.5's operator tooling is what makes
-those recoverable, and is still unbuilt.
+those recoverable; it is now built (§4H), and an operator retry gets its own one-hour window through `retriedAt`
+rather than being escalated again on the next pass.
 
 **B. ~~An abandoned checkout locks a hostname indefinitely.~~ Fixed 2026-09-16.** `domain-commerce.service.ts:98` creates both
 `CustomDomain` rows before any money arrives. `hostname` is globally unique (`schema.prisma:817`), so the name is
@@ -197,6 +198,38 @@ whose registrant email is never verified; nothing escalates, retries, or blocks 
 **G. Abandoned `QUOTED` rows accumulate.** Every "Elegir" click writes a row (`:79`). They are excluded from the
 listing (`:59`) and only deleted when the whole store is deleted (`stores.service.ts:1331`).
 
+**H. ~~An escalated order was recoverable only through `psql`.~~ Fixed 2026-09-16.** `needsReview` opens a
+`SupportCase`, but nothing let the person reading that case see the order, restart it, or close it. Operators had
+to edit `DomainOrder` rows by hand — on the money path, with no audit trail.
+
+*Fix:* `apps/api/src/ops/domain-orders.service.ts` and `domain-orders.controller.ts`, on `internal/domain_orders`
+behind `OpsAuthGuard`, and a "Dominios" tab in the ops console (`apps/ops/index.html`). Four operations:
+
+- `GET /internal/domain_orders` lists the in-flight queue with escalated orders first; `?query=` searches any
+  non-`QUOTED` order by hostname or id. A `QUOTED` row is never in the queue — nobody paid for it.
+- `GET /internal/domain_orders/:id` returns the order with its payment intent and refund transactions, both
+  `CustomDomain` rows, the linked `SupportCase` and the recent audit entries. This is the read that replaces the
+  psql joins. The case is found by the order id that `needsReview` writes into the summary; that string is the
+  only link between the two rows.
+- `POST /internal/domain_orders/:id/retry` returns the order to the fulfilment loop. The stage it resumes at is
+  derived the way `advance` derives its own — `providerOrderId` present → `CONNECTING`, otherwise
+  `AWAITING_PAYMENT` with `registrationStartedAt` cleared so the 24-hour conciliation guard re-arms. It also sets
+  `retriedAt`, which `escalateStalledPayments` measures from: without it the payment is already hours old when the
+  order returns to `AWAITING_PAYMENT`, so the next 30-second pass would escalate it again and the retry would
+  never get a turn.
+- `POST /internal/domain_orders/:id/reconcile` records that a person settled the order outside the system: status
+  `CANCELED`, both `CustomDomain` rows deleted so the hostname is free, the linked case resolved with the
+  operator's reason. **It moves no money** — refunds keep their own path, and the reason stays out of the
+  merchant-facing `message`, which gets a fixed line instead.
+
+Both actions require a reason of at least 8 characters, write an `AuditLogEntry` in the same transaction, and
+refuse any order that is not `REVIEW_REQUIRED`. Covered by seven unit tests in `domain-orders.service.spec.ts` and
+four e2e tests in `domain-commerce.e2e-spec.ts`, including "keeps a retried order out of the escalation sweep
+until its own hour is up", which is the regression `retriedAt` exists to prevent.
+
+*Still manual:* the reconcile action does not issue the refund. Whoever settles the order has to have done that
+first, through the ordinary refund path.
+
 ## 5. What is genuinely missing
 
 ### (a) Buildable without the owner
@@ -207,8 +240,7 @@ listing (`:59`) and only deleted when the whole store is deleted (`stores.servic
    branch never runs at all when the feature is switched off, which is one of the two ways an order stalls.
 3. ~~Fix risk B: expire abandoned domain checkouts.~~ **Done 2026-09-16** — see §4B.
 4. ~~Make `CUSTOM_DOMAIN_CNAME_TARGET` a required value in live mode.~~ **Done 2026-09-16** — see §3.
-5. **Still open.** Operator surface for `DomainOrder`: list, inspect, mark reconciled, retry. Today this is `psql`.
-   More urgent now that item 2 parks unfulfillable paid orders in `REVIEW_REQUIRED`.
+5. ~~Operator surface for `DomainOrder`: list, inspect, mark reconciled, retry.~~ **Done 2026-09-16** — see §4H.
 6. **Still open.** Expiry warning job and merchant notification, plus a documented support-driven renewal procedure.
 7. **Still open.** Reap stale `QUOTED` rows. The new reaper releases abandoned *checkouts*; a `QUOTED` row that was
    never checked out still only disappears when its store is deleted.
@@ -340,7 +372,8 @@ Owner-only steps are marked **[owner]**. Nothing below can be skipped for a live
 8. ~~Build the paid-but-stalled escalation (§5a.2) and the abandoned-checkout reaper (§5a.3).~~ **Done 2026-09-16.**
 9. ~~Make `CUSTOM_DOMAIN_CNAME_TARGET` required in live mode (§5a.4).~~ **Done 2026-09-16.** Note the consequence:
    the API now refuses live domain purchases until this variable is set, so step 13 is no longer optional.
-10. Build the operator view for `DomainOrder` (§5a.5) and the expiry warning job (§5a.6).
+10. ~~Build the operator view for `DomainOrder` (§5a.5).~~ **Done 2026-09-16.** The expiry warning job (§5a.6) is
+    still open; it only matters once a real domain has been registered.
 11. Set `NAMECOM_USERNAME`, `NAMECOM_API_TOKEN`, `DOMAIN_PLATFORM_MERCHANT_ID`, `DOMAIN_BOB_PER_USD`,
     `DOMAIN_MARKUP_PERCENT` on the API server. Leave `DOMAIN_REGISTRAR_SANDBOX=true`, `DOMAIN_COMMERCE_ENABLED=true`
     and `BANECO_QR_ENABLED=false` for the sandbox pass.
