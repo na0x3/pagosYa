@@ -40,3 +40,17 @@ it('matches complete confirmed variable names and accepts CSS whitespace', () =>
   expect(() => validateSourceStyleTokens([{ path: 'styles.css', content: ':root{--store-accent:var( --brand-accent , #ffffff)}' }], brand)).not.toThrow();
   expect(sourceStyleTokens([{ path: 'brand.css', content: brand }, { path: 'styles.css', content: ':root{--store-accent:var( --brand-accent , #ffffff)}' }]).accent?.resolved).toBe('#112233');
 });
+
+// docs/STOREFRONT_DESIGN_LEVEL_UP.md §3: the store declares its scales once in :root, so authored
+// CSS reads a rung or a step instead of inventing a fresh px value or an arbitrary grey.
+import { SOURCE_STYLE_TOKEN_CONTRACT } from './source-style-tokens';
+import { SOURCE_INK_LADDER, SOURCE_SPACING_SCALE, SOURCE_TYPE_ROLES } from './source-design';
+
+it('requires the type roles, the spacing scale and the ink ladder to be declared once in :root', () => {
+  expect(SOURCE_STYLE_TOKEN_CONTRACT).toContain('Declare this project’s scales once in that same :root'.replace('’', "'"));
+  expect(SOURCE_STYLE_TOKEN_CONTRACT).toContain(SOURCE_TYPE_ROLES.join(', '));
+  expect(SOURCE_STYLE_TOKEN_CONTRACT).toContain(SOURCE_SPACING_SCALE.join(' / '));
+  expect(SOURCE_STYLE_TOKEN_CONTRACT).toContain(SOURCE_INK_LADDER.map(rung => rung + '%').join(' / '));
+  expect(SOURCE_STYLE_TOKEN_CONTRACT).toContain('color-mix(in srgb, var(--store-foreground) N%, var(--store-background))');
+  expect(SOURCE_STYLE_TOKEN_CONTRACT).toContain(`the ${SOURCE_SPACING_SCALE.length} steps of the spacing scale`);
+});

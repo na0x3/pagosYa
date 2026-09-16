@@ -30,7 +30,7 @@ import { requestedSourceProductOperations, requestedSourceProducts, sourceProduc
 import { sourceCommerceRoutes } from './source-commerce-pages';
 import { withSourceCommerceDesign } from './source-commerce-design';
 import { sourceMotionMode, requestedSourceMotion, withSourceMotion } from './source-motion';
-import { buildSourceVisualSystem, sourceProductPageStyle, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
+import { buildSourceVisualSystem, savedSourceVisualSystem, sourceProductPageStyle, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
 import { validateSourcePreflight } from './source-preflight';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
@@ -258,6 +258,8 @@ export class SourceGenerationService {
     const previousDesign = savedSourceDesign((previous?.snapshot as any)?.files);
     // Rebuild guidance from the brief/concept, never from a retired preset manifest.
     let visualSystem: SourceVisualSystem = buildSourceVisualSystem(motion, sourceAssetInventory([...previousFiles, ...assets]), creative ? undefined : previousDesign);
+    // A local edit keeps the store's existing shoot; a fresh design or authorized redesign resolves a new one.
+    const previousScene = creative ? null : savedSourceVisualSystem(previousFiles)?.scene ?? null;
     const replaceablePaths = redesign ? context.files.map(f => f.path) : [];
     // Keep confirmed brand values inside the reusable prefix. Page source,
     // catalog data and the current request belong after the cache boundary.
@@ -537,7 +539,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const saveInput = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
       ...generated.files, ...kitFiles, ...assets,
       ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
-      { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files), null, 2) + '\n' },
+      { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, generated.files, previousScene), null, 2) + '\n' },
       { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
       ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
       { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),

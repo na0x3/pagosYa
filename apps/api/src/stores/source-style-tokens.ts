@@ -1,6 +1,7 @@
 import { BadGatewayException } from '@nestjs/common';
 import postcss from 'postcss';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { SOURCE_INK_LADDER, SOURCE_SPACING_SCALE, SOURCE_TYPE_ROLES } from './source-design';
 
 export const SOURCE_STYLE_TOKEN_NAMES = ['background', 'foreground', 'accent', 'accent-foreground', 'surface', 'border', 'radius', 'body-font', 'heading-font'] as const;
 type TokenName = typeof SOURCE_STYLE_TOKEN_NAMES[number];
@@ -45,7 +46,7 @@ export function sourceStyleTokens(files: SourceProjectFileDto[]): SourceStyleTok
   }));
 }
 
-export const SOURCE_STYLE_TOKEN_CONTRACT = `For a new design, define this project's semantic CSS variables in a top-level :root of styles.css or styles/globals.css: ${SOURCE_STYLE_TOKEN_NAMES.map(name => '--store-' + name).join(', ')}. Choose values for this specific merchant; these are shared names, not preset values. For each value with a confirmed brand token, reference it, e.g. --store-accent:var(--brand-accent,#your-authored-fallback). Never redeclare --brand-* in authored CSS: brand.css owns the confirmed identity. Use these same --store-* values across homepage, product, cart and checkout. Define the project's own spacing and type scale once and reuse it. Local edits keep the existing variables and unrelated styling; do not migrate legacy styles during an unrelated edit. A manifest records authored base values and cannot prove computed contrast or rendered quality.`;
+export const SOURCE_STYLE_TOKEN_CONTRACT = `For a new design, define this project's semantic CSS variables in a top-level :root of styles.css or styles/globals.css: ${SOURCE_STYLE_TOKEN_NAMES.map(name => '--store-' + name).join(', ')}. Choose values for this specific merchant; these are shared names, not preset values. For each value with a confirmed brand token, reference it, e.g. --store-accent:var(--brand-accent,#your-authored-fallback). Never redeclare --brand-* in authored CSS: brand.css owns the confirmed identity. Use these same --store-* values across homepage, product, cart and checkout. Declare this project's scales once in that same :root and reuse them everywhere instead of repeating raw values: one custom property per named type role (${SOURCE_TYPE_ROLES.join(', ')}), the ${SOURCE_SPACING_SCALE.length} steps of the spacing scale (${SOURCE_SPACING_SCALE.join(' / ')} before any single whole-set factor), and the ${SOURCE_INK_LADDER.length} rungs of the ink opacity ladder (${SOURCE_INK_LADDER.map(rung => rung + '%').join(' / ')}) written as color-mix(in srgb, var(--store-foreground) N%, var(--store-background)). Authored CSS reads those variables rather than inventing a fresh px value or an arbitrary grey. Local edits keep the existing variables and unrelated styling; do not migrate legacy styles during an unrelated edit. A manifest records authored base values and cannot prove computed contrast or rendered quality.`;
 
 /** Enforce confirmed ownership only during authorized design work. Legacy local
  * edits are not forced to migrate token names or adopt a different identity. */

@@ -376,7 +376,10 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, usage: { input_tokens: 1000, output_tokens: 2000 }, output: [] })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 1000 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label:'Reparado', files:files() }) }] }] })));
-    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 10 });
+    // 12, not 10: re-sending the stable prompt costs ~6.7 credits at this model's rate, so a
+    // 10-credit ceiling leaves the repair reserve within a few tokens of its 1024 floor and any
+    // prompt edit decides the outcome. The subject here is the repair's allowance, not the ceiling.
+    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 12 });
     const first = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     const repair = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
     expect(repair.max_output_tokens).toBeLessThan(first.max_output_tokens);

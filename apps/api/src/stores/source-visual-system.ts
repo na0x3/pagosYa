@@ -4,6 +4,7 @@ import { SOURCE_ICON_NAMES, type SourceAsset } from './source-asset-library';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { SOURCE_PRODUCT_PAGE_STYLES, type SourceDesign, type SourceProductPageStyle } from './source-design';
 import type { SourceMotionMode } from './source-motion';
+import { normalizeSourceSceneContract, resolveSourceSceneContract, type SourceSceneContract } from './source-scene-contract';
 
 export const SOURCE_VISUAL_SYSTEM_FILE = 'visual-system.json';
 export const SOURCE_VISUAL_SYSTEM_VERSION = 3 as const;
@@ -18,6 +19,9 @@ export type SourceVisualSystem = {
   motion: { mode: SourceMotionMode; reducedMotion: string };
   layout: { sectionOrder: string[]; catalogSection: string | null; mobileRule: string };
   productPage?: { style: SourceProductPageStyle };
+  /** One photographic shoot per store; see source-scene-contract.ts. Absent on v2 snapshots and on
+   * projects whose paper colour never resolved to a literal. */
+  scene?: SourceSceneContract;
   assets: Array<{ path: string; role: SourceAsset['role']; description: string; kind: SourceAsset['kind'] }>;
   invariants: string[];
 };
@@ -76,8 +80,14 @@ export function validateSourceVisualSystem(files: SourceProjectFileDto[]): void 
   if (unknownIcons.length) throw new BadGatewayException(`El sistema visual usa iconos no disponibles: ${unknownIcons.slice(0, 4).join(', ')}.`);
 }
 
-export function withSourceStyleTokens(system: SourceVisualSystem, files: SourceProjectFileDto[]): SourceVisualSystem {
-  return { ...system, version: SOURCE_VISUAL_SYSTEM_VERSION, tokens: sourceStyleTokens(files) };
+/** The scene contract is resolved beside the tokens, then carried unchanged. `previousScene` is the
+ * contract of the revision being edited: pass it on a local edit so the catalog keeps its shoot,
+ * and omit it on a fresh design or an authorized redesign so a new identity gets a new one. */
+export function withSourceStyleTokens(system: SourceVisualSystem, files: SourceProjectFileDto[], previousScene?: SourceSceneContract | null): SourceVisualSystem {
+  const tokens = sourceStyleTokens(files);
+  const scene = normalizeSourceSceneContract(previousScene) ?? normalizeSourceSceneContract(system.scene)
+    ?? resolveSourceSceneContract(tokens, system.productPage?.style);
+  return { ...system, version: SOURCE_VISUAL_SYSTEM_VERSION, tokens, ...(scene ? { scene } : {}) };
 }
 
 /** The concept's style wins; edits that keep the concept keep the style already written to config.js. */

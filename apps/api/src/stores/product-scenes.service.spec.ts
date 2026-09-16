@@ -57,3 +57,59 @@ it('refuses photos the merchant does not own and never calls the provider', asyn
   await expect(service.create('merchant_1', 'store_1', { ...input, imageUrl: 'https://evil.test/photo.jpg' })).rejects.toBeInstanceOf(BadRequestException);
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+// docs/STOREFRONT_DESIGN_LEVEL_UP.md §5: the store owns backdrop, light, camera and framing, so
+// every photograph in one catalog reads as one shoot instead of an independently generated packshot.
+import { buildSourceVisualSystem } from './source-visual-system';
+import type { SourceSceneContract } from './source-scene-contract';
+
+const contract: SourceSceneContract = { backdropHex: '#f2eee7', backdropMode: 'paper', lightDirection: 'left-45', cameraElevation: 'eye-level', fillFraction: 0.68, aspect: 'portrait', shadow: 'long-directional' };
+
+function withProject(scene: unknown) {
+  const { service, prisma, uploads, usage } = setup();
+  const system = { ...buildSourceVisualSystem('off'), ...(scene ? { scene } : {}) };
+  (prisma as any).storeSourceProject = { findUnique: jest.fn().mockResolvedValue({ revision: 7 }) };
+  (prisma as any).storeSourceVersion = { findUnique: jest.fn().mockResolvedValue({ snapshot: { files: [{ path: 'visual-system.json', content: JSON.stringify(system) }] } }) };
+  return { service, prisma, uploads, usage };
+}
+
+it('leaves backdrop colour, light and framing to the store contract rather than each setting', () => {
+  for (const direction of ['auto', 'studio', 'lifestyle', 'natural', 'editorial'] as const) {
+    const staging = productScenePrompt({ ...input, setting: direction, storeName: 'Punto' });
+    expect(staging).not.toMatch(/backdrop in a color|directional light|contact shadow|color field|daylight/i);
+  }
+});
+
+it('emits the store contract verbatim and omits it entirely when the store has none', () => {
+  const withContract = productScenePrompt({ ...input, storeName: 'Punto', contract });
+  expect(withContract).toContain('Seamless backdrop in exactly #f2eee7. Key light left-45. Camera eye-level. The product occupies 68% of the frame height, centred, with even margin. long-directional shadow. Every photograph for this store uses these same values so the catalogue reads as one shoot.');
+  // The product-preservation clauses keep precedence and are untouched by the contract.
+  expect(withContract.split('\n')[1]).toContain('Keep the product itself identical');
+  const without = productScenePrompt({ ...input, storeName: 'Punto' });
+  expect(without).not.toMatch(/Seamless backdrop in exactly|Key light|frame height/);
+  expect(withContract.replace(/^Seamless backdrop in exactly[^\n]*\n/m, '')).toBe(without);
+});
+
+it('photographs every product of one store against the same contract, overriding a per-call aspect', async () => {
+  const { service, prisma } = withProject(contract);
+  const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => ok());
+  await service.create('merchant_1', 'store_1', { ...input, aspect: 'square' });
+  await service.create('merchant_1', 'store_1', { ...input, productName: 'Otro', aspect: 'landscape' });
+  const prompts = fetchMock.mock.calls.map(call => ((call[1] as RequestInit).body as FormData).get('prompt') as string);
+  expect(prompts[0]).toContain('Seamless backdrop in exactly #f2eee7');
+  expect(prompts[1]).toContain('Seamless backdrop in exactly #f2eee7');
+  for (const call of fetchMock.mock.calls) expect(((call[1] as RequestInit).body as FormData).get('size')).toBe('1024x1536');
+  expect((prisma as any).storeSourceVersion.findUnique).toHaveBeenCalledTimes(2);
+});
+
+it('still creates a scene when the store has no design project or a drifted contract', async () => {
+  for (const scene of [null, { ...contract, lightDirection: 'back-lit' }]) {
+    const { service } = withProject(scene);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(ok());
+    await expect(service.create('merchant_1', 'store_1', { ...input, aspect: 'landscape' })).resolves.toMatchObject({ kind: 'AI_DERIVED' });
+    const form = (fetchMock.mock.calls[0][1] as RequestInit).body as FormData;
+    expect(form.get('prompt')).not.toContain('Seamless backdrop in exactly');
+    expect(form.get('size')).toBe('1536x1024');
+    jest.restoreAllMocks();
+  }
+});
