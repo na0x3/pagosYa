@@ -48,10 +48,33 @@ function isQuestionOrHypothetical(text: string): boolean {
     || /\b(entender|significa|que es)\b/.test(text);
 }
 
-/** Matches arrangement-shaped, imperative PHRASES only. "crea una seccion de
+// Third layer, and the one invariant every layout pattern must pass: the
+// thing being arranged has to be the CATALOG — not a photo, a banner, a
+// sales report, a to-do list, or an existing page being named rather than
+// requested. Every misfire found across three review rounds shares this one
+// shape: a layout phrase attached to something that isn't the store's
+// products. So instead of hand-patching each phrasing, this is a single
+// shared check every candidate match runs through: if one of these nouns
+// sits between the request verb and the matched layout phrase, the layout
+// phrase is scenery, not the request, and the match is discarded.
+const NON_CATALOG_OBJECT = /\b(fotos?|videos?|banners?|imag(?:en|enes)|textos?|logos?|boton(?:es)?|reportes?|listas?|ideas?|precios?|tareas?|ventas?)\b/;
+
+// The text strictly between two (non-overlapping) regex matches, regardless
+// of which one comes first in the string.
+function textBetween(text: string, a: RegExpExecArray, b: RegExpExecArray): string {
+  const aEnd = a.index + a[0].length;
+  if (aEnd <= b.index) return text.slice(aEnd, b.index);
+  const bEnd = b.index + b[0].length;
+  if (bEnd <= a.index) return text.slice(bEnd, a.index);
+  return ""; // overlapping matches: nothing meaningfully "between" them
+}
+
+/** Matches arrangement-shaped, imperative PHRASES only, and only when the
+ * catalog is what's actually being asked about. "crea una seccion de
  * historia" is rejected because "crea" is not an arrangement verb; "pon una
- * foto en la pagina de productos" is rejected because the thing being placed
- * is a photo, not the product catalog itself. */
+ * foto en la pagina aparte de productos" is rejected because "foto" — not
+ * the catalog — sits between the verb and the layout phrase, so the phrase
+ * is naming an existing page, not requesting one. */
 export function catalogArrangementIntent(instruction: string): { layout: CatalogLayout } | null {
   // A genuine full-site brief still needs to reach the compositor, even when
   // it also mentions an arrangement word (e.g. "rediseña mi tienda... y
@@ -60,29 +83,31 @@ export function catalogArrangementIntent(instruction: string): { layout: Catalog
 
   const text = normalize(instruction);
   if (isQuestionOrHypothetical(text)) return null;
-  if (!IMPERATIVE.test(text)) return null;
+
+  const verbMatch = IMPERATIVE.exec(text);
+  if (!verbMatch) return null;
 
   // The "page" arrangement is checked in both natural word orders: the
   // object before "pagina" ("pon los productos en una pagina aparte") and
-  // after it ("quiero una pagina aparte para los productos"). Either way,
-  // what disambiguates it from an edit request that merely names the
-  // products page as a destination ("pon una foto en la pagina de
-  // productos") is that "productos"/"catalogo" must appear together with an
-  // explicit "aparte"/"separada"/"de productos" marker, not just anywhere
-  // in the sentence.
-  const pageObjectBeforePagina = /\b(productos|catalogo)\b.{0,25}\bpagina\s+(aparte|de productos|separada)\b/;
-  const pageObjectAfterPagina = /\bpagina\s+(aparte|separada)\b.{0,25}\b(productos|catalogo)\b/;
-  if (pageObjectBeforePagina.test(text) || pageObjectAfterPagina.test(text)) return { layout: "page" };
-
-  const patterns: [RegExp, CatalogLayout][] = [
+  // after it ("quiero una pagina aparte para los productos"). Both still
+  // have to clear the shared catalog-object gate below, which is what
+  // rejects "pon una foto en la pagina aparte de productos" — the object
+  // sitting between the verb and "pagina aparte" is a photo, not the
+  // catalog, so the page is being named, not requested.
+  const candidates: [RegExp, CatalogLayout][] = [
+    [/\b(productos|catalogo)\b.{0,25}\bpagina\s+(aparte|de productos|separada)\b/, "page"],
+    [/\bpagina\s+(aparte|separada)\b.{0,25}\b(productos|catalogo)\b/, "page"],
     [/\b(en|por) seccion(es)?\b/, "sections"],
     [/\b(una )?pestanas?\b.{0,12}(por )?coleccion(es)?\b/, "tabs"],
     [/\ben pestanas\b/, "tabs"],
     [/\btodo en (la )?portada\b/, "all"],
   ];
 
-  for (const [pattern, layout] of patterns) {
-    if (pattern.test(text)) return { layout };
+  for (const [pattern, layout] of candidates) {
+    const phraseMatch = pattern.exec(text);
+    if (!phraseMatch) continue;
+    if (NON_CATALOG_OBJECT.test(textBetween(text, verbMatch, phraseMatch))) continue;
+    return { layout };
   }
   return null;
 }

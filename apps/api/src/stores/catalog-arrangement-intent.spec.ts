@@ -53,6 +53,31 @@ describe('catalogArrangementIntent', () => {
     expect(catalogArrangementIntent('quiero entender qué significa "pestañas por colección"')).toBeNull();
   });
 
+  it('does not treat "página aparte de productos" as a request when something else is being placed on it', () => {
+    for (const text of [
+      'pon una foto en la pagina aparte de productos',
+      'pon el video en la pagina aparte de productos del catalogo viejo',
+      'pon un banner en la pagina aparte del catalogo',
+      'pon una foto en la pagina separada de productos',
+      'pon una foto en la pagina aparte de productos que armamos ayer',
+    ]) {
+      expect(catalogArrangementIntent(text)).toBeNull();
+    }
+  });
+
+  it('does not fire on a desire-verb sentence about something other than the catalog', () => {
+    for (const text of [
+      'necesito el reporte de ventas por secciones del mes pasado',
+      'necesito organizar mis ideas por secciones antes de la reunión',
+      'necesito armar una lista de tareas por secciones para el equipo',
+      'quiero el reporte de ventas por secciones del mes pasado',
+      'quiero organizar mis ideas por secciones antes de la reunión',
+      'quiero armar una lista de tareas por secciones para el equipo',
+    ]) {
+      expect(catalogArrangementIntent(text)).toBeNull();
+    }
+  });
+
   // Accepted misses (product ruling): these fail closed and are left that
   // way on purpose. Pinned here so nobody "fixes" them into a match.
   it('accepts these known misses rather than risk a false positive', () => {
