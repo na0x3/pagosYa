@@ -1,4 +1,4 @@
-export type DlocalPaymentStatus = "PENDING" | "PAID" | "AUTHORIZED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+export type DlocalPaymentStatus = "PENDING" | "PAID" | "AUTHORIZED" | "REJECTED" | "CANCELLED" | "EXPIRED" | "VERIFIED";
 
 export interface DlocalPayment {
   id: string;

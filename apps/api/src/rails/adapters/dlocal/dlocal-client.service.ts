@@ -85,9 +85,21 @@ export class DlocalClientService {
         ...(method === "POST" ? { body: payload } : {}),
       });
       const text = await response.text();
-      const parsed = (text ? JSON.parse(text) : {}) as T & { message?: string };
+      let parsed: (T & { message?: string }) | undefined;
+      try {
+        parsed = (text ? JSON.parse(text) : {}) as T & { message?: string };
+      } catch {
+        parsed = undefined;
+      }
       if (!response.ok) {
-        throw new DlocalApiError(parsed.message ?? `dLocal ${method} ${requestPath} failed: HTTP ${response.status}`, response.status, response.status >= 500);
+        throw new DlocalApiError(
+          parsed?.message ?? `dLocal ${method} ${requestPath} failed: HTTP ${response.status}`,
+          response.status,
+          response.status >= 500,
+        );
+      }
+      if (parsed === undefined) {
+        throw new DlocalApiError("dLocal returned an unreadable response", response.status, true);
       }
       return parsed;
     } catch (error) {

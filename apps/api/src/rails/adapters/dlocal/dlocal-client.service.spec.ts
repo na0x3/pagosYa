@@ -1,4 +1,5 @@
 import { DlocalClientService } from "./dlocal-client.service";
+import { signDlocal } from "./dlocal-signature";
 import { DlocalApiError } from "./dlocal.types";
 
 function makeClient(overrides: Record<string, unknown> = {}) {
@@ -65,6 +66,13 @@ describe("DlocalClientService (http mode)", () => {
     await expect(makeClient({ enabled: true }).getPayment("D-1")).rejects.toMatchObject({ retryable: false, httpStatus: 400, message: "Invalid country" });
   });
 
+  it("keeps the real HTTP status when an error response isn't JSON", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValueOnce(new Response("<html>502 Bad Gateway</html>", { status: 502 }));
+    await expect(makeClient({ enabled: true }).getPayment("D-1")).rejects.toMatchObject({ retryable: true, httpStatus: 502 });
+    jest.spyOn(global, "fetch").mockResolvedValueOnce(new Response("<html>403 Forbidden</html>", { status: 403 }));
+    await expect(makeClient({ enabled: true }).getPayment("D-1")).rejects.toMatchObject({ retryable: false, httpStatus: 403 });
+  });
+
   it("treats a timeout as retryable", async () => {
     jest.spyOn(global, "fetch").mockImplementation((_url, init) => new Promise((_resolve, reject) => {
       (init as RequestInit).signal!.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
@@ -72,5 +80,17 @@ describe("DlocalClientService (http mode)", () => {
     const error = await makeClient({ enabled: true, timeoutMs: 10 }).getPayment("D-1").catch((e) => e);
     expect(error).toBeInstanceOf(DlocalApiError);
     expect(error.retryable).toBe(true);
+  });
+
+  it("rejects a webhook whose signature matches a different login than the config's", () => {
+    const xDate = "2026-09-17T12:00:00.000Z";
+    const body = "{}";
+    const client = makeClient({ enabled: true });
+
+    const signedAsOther = `V2-HMAC-SHA256, Signature: ${signDlocal("s", "other", xDate, body)}`;
+    expect(client.verifyWebhook("other", xDate, body, signedAsOther)).toBe(false);
+
+    const signedAsConfigLogin = `V2-HMAC-SHA256, Signature: ${signDlocal("s", "l", xDate, body)}`;
+    expect(client.verifyWebhook("l", xDate, body, signedAsConfigLogin)).toBe(true);
   });
 });
