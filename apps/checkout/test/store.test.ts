@@ -411,6 +411,27 @@ describe("storefront routes", () => {
     expect(document.querySelector(".product-detail-content h1")?.textContent).toContain("Corte de cabello");
   });
 
+  it("resolves a verified custom hostname for the bare /productos catalog route", async () => {
+    const resolveStoreDomain = vi.fn().mockResolvedValue({ hostname: "mitienda.bo", slug: "taller-norte" });
+    const fetchStore = vi.fn().mockResolvedValue({
+      ...baseStoreFields,
+      storeName: "Taller Norte",
+      items: [baseItem],
+    } satisfies Store);
+    vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
+      resolveStoreDomain,
+      fetchStore,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/productos");
+
+    expect(resolveStoreDomain).toHaveBeenCalledWith(window.location.hostname);
+    expect(fetchStore).toHaveBeenCalledWith("taller-norte", { preview: false });
+    expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
+  });
+
   it.each([
     { smallStock: 2, startingPrice: "40.00 BOB" },
     { smallStock: 0, startingPrice: "65.00 BOB" },

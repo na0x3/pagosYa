@@ -288,6 +288,7 @@ export interface Store {
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];
+  collections?: { id: string; slug: string; name: string; productIds: string[] }[];
 }
 
 export interface PublishedStore {

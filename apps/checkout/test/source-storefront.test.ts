@@ -95,3 +95,19 @@ it('writes a real /s/<slug>/c/<collection> URL — not ?source_page= — and res
   send(frame, { type: 'pagosya:source-navigate', page: 'index.html', query: '?' });
   expect(window.location.pathname).toBe('/s/tienda');
 });
+
+it('writes the bare /productos and /c/<collection> back to the URL bar on a custom domain', async () => {
+  window.history.replaceState({}, '', '/');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => site() }));
+  expect(await mountPublishedSource(document.querySelector('#app')!, 'tienda', store, vi.fn(), false)).toBe(true);
+  const frame = document.querySelector('iframe')!;
+
+  send(frame, { type: 'pagosya:source-navigate', page: 'productos.html', query: '?' });
+  expect(window.location.pathname).toBe('/productos');
+  expect(window.location.search).not.toContain('source_page');
+
+  send(frame, { type: 'pagosya:source-navigate', page: 'coleccion.html', query: '?c=verano' });
+  expect(window.location.pathname).toBe('/c/verano');
+  expect(window.location.search).not.toContain('source_page');
+  expect(window.location.search).not.toContain('c=verano');
+});

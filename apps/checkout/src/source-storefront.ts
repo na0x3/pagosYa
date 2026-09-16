@@ -21,7 +21,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   // `/c/<x>` is also the long-lived category route (main.ts), so a collection
   // slug only wins here when the catalog actually has one by that name —
   // otherwise this falls through untouched to today's category handling.
-  const collectionSlug = collectionRoute && (store as { collections?: { slug: string }[] }).collections?.some(c => c.slug === decodeURIComponent(collectionRoute)) ? decodeURIComponent(collectionRoute) : null;
+  const collectionSlug = collectionRoute && store.collections?.some(c => c.slug === decodeURIComponent(collectionRoute)) ? decodeURIComponent(collectionRoute) : null;
   const routedProduct = productRoute ? store.items.find(item => item.id === decodeURIComponent(productRoute)) : undefined;
   if (routedProduct && (!sourceCanConfigureProduct(routedProduct) || routedProduct.variants?.length && !site.snapshot?.files?.some((file: { path: string; content: string }) => file.path === 'commerce.js' && file.content.includes(SOURCE_PRODUCT_OPTIONS_MARKER)))) return false;
   rememberSourceVisit(slug, site.visitToken);

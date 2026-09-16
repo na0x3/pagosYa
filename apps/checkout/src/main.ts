@@ -557,11 +557,7 @@ function backgroundTheme(backgroundColor: string | null): { light: boolean; text
   return { light: textColor === "#000000", textColor };
 }
 
-// `collectionSlug` mirrors `categoryId` for a `/c/<x>` segment: this parser
-// has no catalog to resolve `<x>` against, so it hands back the same raw,
-// decoded segment under both names and leaves the collection-vs-category
-// decision to whichever caller can check it against `store.collections`.
-type StorefrontRoute = { slug: string | null; productId: string | null; categoryId: string | null; collectionSlug: string | null };
+type StorefrontRoute = { slug: string | null; productId: string | null; categoryId: string | null };
 
 function storefrontRouteFromPathname(pathname: string): StorefrontRoute {
   const match = pathname.match(/^\/s\/([^/]+)(?:\/productos|(?:\/c\/([^/]+))|(?:\/p\/([^/]+)))?\/?$/);
@@ -570,28 +566,26 @@ function storefrontRouteFromPathname(pathname: string): StorefrontRoute {
     const customCategory = activeCustomDomainSlug ? pathname.match(/^\/c\/([^/]+)\/?$/) : null;
     const customCatalog = activeCustomDomainSlug ? /^\/productos\/?$/.test(pathname) : false;
     if (!activeCustomDomainSlug || (pathname !== "/" && !customProduct && !customCategory && !customCatalog)) {
-      return { slug: null, productId: null, categoryId: null, collectionSlug: null };
+      return { slug: null, productId: null, categoryId: null };
     }
     try {
       return {
         slug: activeCustomDomainSlug,
         productId: customProduct?.[1] ? decodeURIComponent(customProduct[1]) : null,
         categoryId: customCategory?.[1] ? decodeURIComponent(customCategory[1]) : null,
-        collectionSlug: customCategory?.[1] ? decodeURIComponent(customCategory[1]) : null,
       };
     } catch {
-      return { slug: null, productId: null, categoryId: null, collectionSlug: null };
+      return { slug: null, productId: null, categoryId: null };
     }
   }
   try {
     return {
       slug: decodeURIComponent(match[1]),
       categoryId: match[2] ? decodeURIComponent(match[2]) : null,
-      collectionSlug: match[2] ? decodeURIComponent(match[2]) : null,
       productId: match[3] ? decodeURIComponent(match[3]) : null,
     };
   } catch {
-    return { slug: null, productId: null, categoryId: null, collectionSlug: null };
+    return { slug: null, productId: null, categoryId: null };
   }
 }
 
