@@ -1,7 +1,7 @@
 import { queueStoreEmail } from '../stores/email-workspace.config';
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { DebtRecordStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
@@ -18,6 +18,8 @@ import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
+import type { DlocalConfig } from "../config/configuration";
+import { FxRateUnavailableError, invoiceAmountFor, pricingForRail, resolveChargeAmount } from "../international/fx";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -116,7 +118,7 @@ export class PaymentIntentsService {
     private readonly webhooks: WebhookDispatcherService,
     private readonly invoicing: InvoicingService,
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
-    @Optional() private readonly config?: ConfigService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -290,11 +292,11 @@ export class PaymentIntentsService {
    * outbox all commit together).
    */
   async confirm(paymentIntentId: string, dto: ConfirmPaymentIntentDto) {
-    const { intentId, railId, amount, currency, merchantId } = await this.prisma.$transaction(async (tx) => {
+    const { intentId, railId, amount, currency, merchantId, country, payer } = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
-        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue }[]
+        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue; amount: number; currency: string }[]
       >`
-        SELECT id, status, "confirmationAttempts", "merchantId", "consumerUserId", metadata FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
+        SELECT id, status, "confirmationAttempts", "merchantId", "consumerUserId", metadata, amount, currency FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
@@ -308,7 +310,23 @@ export class PaymentIntentsService {
       await this.assertCartStillAvailable(tx, current.metadata);
       const locationStockReserved = await this.reserveLocationStockForCart(tx, current.metadata);
       const paymentMethod = await this.paymentMethods.findOrCreate(tx, current.merchantId, dto.paymentMethod);
-      const rail = this.railRegistry.getForMethodType(paymentMethod.type);
+      const international = dto.rail === "dlocal";
+      if (international) {
+        const merchant = await tx.merchant.findUniqueOrThrow({ where: { id: current.merchantId } });
+        if (merchant.internationalPaymentsStatus !== "ENABLED" || merchant.settlementMode !== "AGGREGATOR") {
+          throw new ForbiddenException("Este comercio no tiene habilitados los pagos internacionales.");
+        }
+        if (!dto.country) throw new BadRequestException("Elige el país desde el que pagas.");
+        if (!dto.customerEmail) throw new BadRequestException("Ingresa tu correo para pagar desde el exterior.");
+      }
+      const rail = international ? this.railRegistry.get("dlocal") : this.railRegistry.getForMethodType(paymentMethod.type);
+      let charge: ReturnType<typeof resolveChargeAmount>;
+      try {
+        charge = resolveChargeAmount(current, international, this.config.get<DlocalConfig>("app.dlocal")!.bobPerUsd, new Date());
+      } catch (error) {
+        if (error instanceof FxRateUnavailableError) throw new ConflictException("intl_fx_rate_unavailable");
+        throw error;
+      }
       if ((current.metadata as Prisma.JsonObject)?.platformPurchase === 'domain') {
         const order = await tx.domainOrder.findUnique({ where: { paymentIntentId } });
         if (!order || order.status !== 'AWAITING_PAYMENT' || rail.railId !== (order.sandbox ? 'mock_qr' : 'baneco_qr')) {
@@ -347,6 +365,8 @@ export class PaymentIntentsService {
           paymentMethodType: paymentMethod.type,
           paymentMethodId: paymentMethod.id,
           railId: rail.railId,
+          amount: charge.amount,
+          currency: charge.currency,
           confirmationAttempts: { increment: 1 },
           // The company owns debt identity and amount. Never let a modified
           // public confirm request replace the carnet/name from that record.
@@ -354,7 +374,13 @@ export class PaymentIntentsService {
           customerDocument: debt?.customerDocument || dto.customerDocument,
           customerEmail: effectiveEmail,
           customerPhone: debt?.customerPhone || dto.customerPhone,
-          metadata: { ...currentMetadata, delivery, ...(locationStockReserved ? { locationStockReserved: true } : {}) } as Prisma.InputJsonValue,
+          metadata: {
+            ...currentMetadata,
+            delivery,
+            ...(locationStockReserved ? { locationStockReserved: true } : {}),
+            fx: charge.fx,
+            ...(international ? { dlocalCostEstimated: true, intlCountry: dto.country } : {}),
+          } as Prisma.InputJsonValue,
           ...(consumerUserId && { consumerUserId }),
         },
       });
@@ -372,6 +398,10 @@ export class PaymentIntentsService {
         amount: updated.amount,
         currency: updated.currency,
         merchantId: updated.merchantId,
+        country: dto.country,
+        payer: international
+          ? { name: updated.customerName ?? "", email: updated.customerEmail ?? "", document: updated.customerDocument ?? undefined }
+          : undefined,
       };
     });
 
@@ -385,6 +415,8 @@ export class PaymentIntentsService {
         currency,
         paymentMethod: { type: dto.paymentMethod.type, token: dto.paymentMethod.token, metadata: dto.paymentMethod.metadata },
         idempotencyKey,
+        country,
+        payer,
       });
     } catch (error) {
       await this.applyRailResult(intentId, merchantId, railId, {
@@ -500,6 +532,7 @@ export class PaymentIntentsService {
           transactionId: transactionRow.id,
           amount: current.amount,
           settlementMode: merchant.settlementMode,
+          pricing: pricingForRail(railId, this.config.get<DlocalConfig>("app.dlocal")!),
         });
         await this.ledger.postJournalEntry(tx, this.ledger.generateGroupId(), lines, updated.currency);
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.succeeded", {
@@ -508,10 +541,11 @@ export class PaymentIntentsService {
           currency: updated.currency,
           status: updated.status,
         });
+        const invoiceAmount = invoiceAmountFor({ amount: updated.amount, currency: updated.currency, metadata: current.metadata });
         await this.invoicing.enqueueInvoice(tx, merchantId, {
           paymentIntentId: updated.id,
-          amount: Number((currentMetadata.storeCredit as Prisma.JsonObject)?.orderTotal) || updated.amount,
-          currency: updated.currency,
+          amount: Number((currentMetadata.storeCredit as Prisma.JsonObject)?.orderTotal) || invoiceAmount.amount,
+          currency: invoiceAmount.currency,
           customerName: current.customerName,
           customerDocument: current.customerDocument,
         });

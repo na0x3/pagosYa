@@ -1,5 +1,6 @@
 import { queueStoreEmail } from '../stores/email-workspace.config';
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { PaymentIntentStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
@@ -7,6 +8,8 @@ import { RailRegistry } from "../rails/rail-registry.service";
 import { LedgerService } from "../ledger/ledger.service";
 import { WebhookDispatcherService } from "../webhooks/webhook-dispatcher.service";
 import { CreateRefundDto } from "./dto/create-refund.dto";
+import type { DlocalConfig } from "../config/configuration";
+import { pricingForRail } from "../international/fx";
 
 @Injectable()
 export class RefundsService {
@@ -15,6 +18,7 @@ export class RefundsService {
     private readonly railRegistry: RailRegistry,
     private readonly ledger: LedgerService,
     private readonly webhooks: WebhookDispatcherService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(merchantId: string, dto: CreateRefundDto, idempotencyKey?: string) {
@@ -120,6 +124,7 @@ export class RefundsService {
           transactionId: refundTransaction.id,
           amount: refundTransaction.amount,
           settlementMode: merchant.settlementMode,
+          pricing: pricingForRail(reservation.originalTransaction.railId, this.config.get<DlocalConfig>("app.dlocal")!),
         });
         await this.ledger.postJournalEntry(tx, this.ledger.generateGroupId(), lines, reservation.intent.currency);
         await this.webhooks.enqueueEvent(tx, merchantId, "refund.succeeded", {

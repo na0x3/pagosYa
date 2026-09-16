@@ -33,7 +33,8 @@ function harness(refundedOrReserved = 0) {
     postJournalEntry: jest.fn(),
   };
   const webhooks = { enqueueEvent: jest.fn() };
-  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any), prisma, rail, ledger, webhooks };
+  const config = { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
+  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any), prisma, rail, ledger, webhooks };
 }
 
 describe("RefundsService financial invariants", () => {
