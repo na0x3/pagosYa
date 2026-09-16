@@ -41,6 +41,10 @@ test('sections renders one group per collection in order plus a leftover group',
   await expect(groups.nth(1).locator('.menu-item')).toHaveCount(1);
   await expect(groups.nth(2).locator('.menu-item')).toHaveCount(2);
   await expect(page.locator('[data-pagosya-catalog] .menu-item')).toHaveCount(5);
+  // .catalog-group__items gets its grid unconditionally from CSS — it does not depend on the
+  // mount's own [data-pagosya-grid] autodetection, which never fires for `sections` (no direct
+  // child cards for structureCatalog to measure).
+  await expect(groups.first().locator('.catalog-group__items')).toHaveCSS('display', 'grid');
   await page.screenshot({ path: '.test-artifacts/catalog-arrangement-sections.png', fullPage: true });
 });
 
@@ -103,4 +107,23 @@ test('a card under sections is byte-identical to the same card under all', async
   const sectionsCard = await page.locator('[data-pagosya-catalog] .menu-item').first().evaluate(el => el.outerHTML);
 
   expect(sectionsCard).toBe(allCard);
+});
+
+test('sections applies the readable-card contrast fix to cards nested inside a group', async ({ page }) => {
+  // Mirrors catalog-card-defaults.spec.ts's contrast setup (light text for a dark section, cream
+  // cards) but under `sections`, where cards sit two levels below the mount
+  // (.catalog-group > .catalog-group__items > .menu-item) instead of as its direct children.
+  const items = [product('p1', 'Uno'), product('p2', 'Dos')];
+  const collections = [{ id: 'c1', name: 'Todo', slug: 'todo', productIds: ['p1', 'p2'] }];
+  const data = { storeName: 'Tienda', catalogLayout: 'sections', items, collections };
+  await page.route('https://cards.test/**', route => route.fulfill({
+    contentType: 'text/html',
+    body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--store-background:#fff5df;--store-foreground:#0b2a80}body{margin:0;font-family:Arial,sans-serif}.collection{background:#0b2a80;color:#fff5df;padding:40px}.menu-item{border:3px solid #0b2a80;background:#fff5df;padding:16px}</style></head><body><section class="collection"><h2>Colección</h2><div data-pagosya-catalog></div></section><div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'cards', data })}</script><script>${kit('commerce.js')}</script></body></html>`,
+  }));
+  await page.goto('https://cards.test/');
+  const groupCard = page.locator('.catalog-group .menu-item').first();
+  await expect(groupCard).toBeVisible();
+  const [text, card] = await groupCard.evaluate(el => [getComputedStyle(el.querySelector('h3')!).color, getComputedStyle(el).backgroundColor]);
+  expect(text).not.toBe(card);
+  expect(text).toBe('rgb(11, 42, 128)');
 });

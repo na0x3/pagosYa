@@ -1086,10 +1086,13 @@
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
-    const cards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
-    const card = cards[0], photo = card?.querySelector('.menu-item__image');
+    // Grid autodetection only makes sense for the mount's own flat list: `sections` cards sit
+    // inside .catalog-group__items and already get their grid unconditionally from CSS.
+    const ownCards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
+    const card = ownCards[0], photo = card?.querySelector('.menu-item__image');
     if (photo && !el.hasAttribute('data-pagosya-grid') && getComputedStyle(el).display === 'block' && photo.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.6) el.setAttribute('data-pagosya-grid', '');
-    readableCards(el, cards);
+    // Contrast correction must reach every card, including ones nested inside `sections` groups.
+    readableCards(el, [...el.querySelectorAll('.menu-item:not([data-custom-product])')]);
   }
   // Card text must not disappear into the card: switch to the store's text or background color, whichever reads.
   function readableCards(el, cards) {
