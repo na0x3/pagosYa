@@ -1138,7 +1138,16 @@
   }
   const productsHref = () => pageHref('productos.html');
   const collectionHref = (slug) => pageHref('coleccion.html', '?c=' + encodeURIComponent(slug));
-  const catalogMore = () => `<a class="catalog-more" data-catalog-more href="${escape(productsHref())}">Ver todos los productos</a>`;
+  // Under `page` the link goes to the standalone products page, as it always has. Under `tabs`
+  // the catalog already reads as organized by collection, so "Ver todos los productos" instead
+  // goes to the first collection's own page — the products page it would otherwise point to
+  // isn't reachable from anywhere else in that layout. Falls back to the products page if the
+  // store has no collections yet (tabs itself doesn't render without at least one).
+  const catalogMore = (layout) => {
+    const firstCollection = collections()[0];
+    const href = layout === 'tabs' && firstCollection ? collectionHref(firstCollection.slug) : productsHref();
+    return `<a class="catalog-more" data-catalog-more href="${escape(href)}">Ver todos los productos</a>`;
+  };
   // Shared by the home `tabs` layout (no current tab) and the collection page (marks its own tab).
   const catalogTabs = (currentSlug) => `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}"${c.slug === currentSlug ? ' aria-current="page"' : ''}>${escape(c.name)}</a>`).join("")}</nav>`;
   function render() {
@@ -1158,16 +1167,20 @@
         const items = current ? selected.filter((p) => (current.productIds || []).includes(p.id)) : selected;
         const tabs = collections().length ? catalogTabs(current?.slug) : '';
         const heading = current ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
-        el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>');
-      } else if (layout === 'sections') {
+        // The shopper is on a specific collection's page here, not a category filter — "en esta
+        // categoría" would describe a page that doesn't exist in this layout.
+        el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
+      } else if (layout === 'sections' && collections().length) {
         const groups = collectionGroups(selected);
         el.innerHTML = groups.length
           ? groups.map((group) => `<section class="catalog-group"><h3 class="catalog-group__title">${escape(group.name)}</h3><div class="catalog-group__items">${group.items.map(productCard).join("")}</div></section>`).join("")
           : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       } else if (layout === 'page' || layout === 'tabs') {
         const tabs = layout === 'tabs' && collections().length ? catalogTabs() : '';
-        el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore();
+        el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore(layout);
       } else {
+        // Also covers `sections` with no collections yet: a single "Más productos" group holding
+        // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
@@ -1188,9 +1201,13 @@
       const current = collectionPage ? currentCollection() : null;
       const canonical = `${(config.publicSiteUrl || `${config.checkoutOrigin}/s/${encodeURIComponent(config.slug)}`).replace(/\/$/, '')}${current ? `/c/${encodeURIComponent(current.slug)}` : '/productos'}`;
       document.title = `${current ? current.name : 'Productos'} · ${store.storeName || config.slug}`;
+      const description = current
+        ? `Productos de ${current.name} en ${store.storeName || config.slug}.`
+        : `Todos los productos de ${store.storeName || config.slug}.`;
       for (const [selector, attribute, value] of [
         ['link[rel="canonical"]', 'href', canonical], ['meta[property="og:url"]', 'content', canonical],
-        ['meta[property="og:title"]', 'content', document.title],
+        ['meta[property="og:title"]', 'content', document.title], ['meta[name="description"]', 'content', description],
+        ['meta[property="og:description"]', 'content', description],
       ]) document.querySelector(selector)?.setAttribute(attribute, value);
     }
     if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));

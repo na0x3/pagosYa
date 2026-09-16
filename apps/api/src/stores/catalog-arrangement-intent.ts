@@ -5,7 +5,7 @@ import { requestsStoreRedesign } from "./store-agent-intent";
 // quoted spans: a phrase inside quotation marks is being referred to (e.g.
 // asking what it means), never requested.
 function normalize(value: string) {
-  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase("es")
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es")
     .replace(/["“«][^"”»]*["”»]/g, " ").replace(/\s+/g, " ").trim();
 }
 

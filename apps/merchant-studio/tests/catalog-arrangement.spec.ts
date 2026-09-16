@@ -91,7 +91,10 @@ test('tabs renders a keyboard-reachable tab row above the four-product preview',
   await expect(tabs.nth(0)).toHaveText('Verano');
   await expect(tabs.nth(1)).toHaveText('Invierno');
   await expect(page.locator('[data-pagosya-catalog] .menu-item')).toHaveCount(4);
-  await expect(page.locator('[data-catalog-more]')).toHaveAttribute('href', /productos\.html$/);
+  // Under `tabs` the catalog already reads as organized by collection, so "Ver todos los
+  // productos" points at the first collection's own page (spec §7) rather than the standalone
+  // products page — which `page` still uses (see the `page` layout tests above).
+  await expect(page.locator('[data-catalog-more]')).toHaveAttribute('href', /coleccion\.html\?c=verano$/);
   await page.keyboard.press('Tab');
   await expect.poll(() => page.evaluate(() => document.activeElement?.textContent)).toBe('Verano');
   await page.screenshot({ path: '.test-artifacts/catalog-arrangement-tabs.png', fullPage: true });

@@ -73,12 +73,51 @@ function normalizeConfirmationReply(value: string) {
   return normalizeAgentInstruction(value).replace(/[\p{P}\p{S}]/gu, "").replace(/\s+/g, " ").trim();
 }
 
-const CATALOG_ARRANGEMENT_AFFIRMATIVES = [
-  CATALOG_ARRANGEMENT_CONFIRM_VALUE, "si", "sí", "sí hazlo", "dale", "ok", "okay", "correcto", "confirmo", "adelante", "hazlo",
+// Phrase lists for a SHORT reply (≤5 tokens) to a pending confirmation.
+// This is deliberately CONTAINMENT, not exact-string equality: a real reply
+// is "sí por favor" or "sí, hazlo ahora", not the bare word "sí" — neither
+// equals a whitelist entry outright, but both contain one. Refusal is
+// tested FIRST: if a reply somehow contains both a refusal and an
+// affirmative phrase, refusal wins, because silently applying a layout
+// change on an ambiguous reply is the wrong failure mode here. This stays a
+// PURE STRING check inside the pending-confirmation branch — it never calls
+// catalogArrangementIntent, which is what makes it loop-proof rather than
+// merely unlikely to loop.
+const CATALOG_ARRANGEMENT_REFUSAL_PHRASES = [
+  "no", "nel", "nop", "cancela", "cancelar", "dejalo", "dejala", "mejor no", "todavia no", "aun no",
 ].map(normalizeConfirmationReply);
-const CATALOG_ARRANGEMENT_REFUSALS = [
-  CATALOG_ARRANGEMENT_DECLINE_VALUE, "no", "no gracias", "mejor no", "déjalo", "cancela",
+const CATALOG_ARRANGEMENT_AFFIRMATIVE_PHRASES = [
+  "si", "dale", "ok", "okay", "okey", "hazlo", "hagamos", "adelante", "claro", "correcto", "confirmo",
+  "confirmado", "perfecto", "bueno", "de acuerdo", "listo", "obvio", "sip", "va", "ya", "porfa",
 ].map(normalizeConfirmationReply);
+
+// True when `phrase` (itself one or more tokens) appears as a contiguous
+// run inside `tokens` — a real token match, not a substring match that
+// could fire inside an unrelated longer word.
+function containsPhraseTokens(tokens: string[], phrase: string): boolean {
+  const phraseTokens = phrase.split(" ");
+  if (phraseTokens.length > tokens.length) return false;
+  for (let start = 0; start <= tokens.length - phraseTokens.length; start += 1) {
+    if (phraseTokens.every((token, offset) => tokens[start + offset] === token)) return true;
+  }
+  return false;
+}
+
+type ConfirmationReplyOutcome = "accepted" | "declined" | "unrecognized";
+
+// Only a SHORT reply (≤5 tokens) gets the relaxed containment match. Past
+// five tokens, the odds that a real sentence just happens to contain a bare
+// "si"/"no" token without meaning it as an answer rise fast — e.g. "no sé,
+// cuéntame más sobre mis pedidos" — so a longer reply is left unrecognized
+// and handled by the hard guard below instead.
+function classifyConfirmationReply(rawReply: string): ConfirmationReplyOutcome {
+  const reply = normalizeConfirmationReply(rawReply);
+  const tokens = reply.length ? reply.split(" ") : [];
+  if (tokens.length === 0 || tokens.length > 5) return "unrecognized";
+  if (CATALOG_ARRANGEMENT_REFUSAL_PHRASES.some((phrase) => containsPhraseTokens(tokens, phrase))) return "declined";
+  if (CATALOG_ARRANGEMENT_AFFIRMATIVE_PHRASES.some((phrase) => containsPhraseTokens(tokens, phrase))) return "accepted";
+  return "unrecognized";
+}
 
 function storeAgentInstructionRepairsPreviousRevision(instruction: string): boolean {
   const text = normalizeAgentInstruction(instruction);
@@ -159,8 +198,23 @@ export class StoreAgentService {
     const pendingRequest = latestMetadata?.pendingRequest && typeof latestMetadata.pendingRequest === "object" && !Array.isArray(latestMetadata.pendingRequest)
       ? latestMetadata.pendingRequest as Prisma.JsonObject
       : null;
+    const latestClarification = latestMetadata?.clarification && typeof latestMetadata.clarification === "object" && !Array.isArray(latestMetadata.clarification)
+      ? latestMetadata.clarification as Prisma.JsonObject
+      : null;
+    const isPendingCatalogArrangementConfirmation = latestMessage?.role === "ASSISTANT"
+      && latestClarification?.id === CATALOG_ARRANGEMENT_CLARIFICATION_ID;
+    // "cancela"/"cancelar" said while a catalog-arrangement confirmation is
+    // pending is the owner declining THIS yes/no question (it's on the
+    // refusal phrase list above), not asking to abandon some unrelated
+    // in-flight task the way startsNewTask's other phrases mean elsewhere.
+    // Without this exemption the two words are unreachable dead code: this
+    // pattern matches `^cancela\b` before the confirmation branch ever runs
+    // and forces answeringClarification = false first on every turn.
+    const newTaskPhrase = isPendingCatalogArrangementConfirmation
+      ? /^(olvida|olvidalo|otra cosa|nuevo pedido|nueva tarea|en vez de eso)\b/
+      : /^(olvida|olvidalo|cancela|cancelar|otra cosa|nuevo pedido|nueva tarea|en vez de eso)\b/;
     const startsNewTask = requestsStoreRedesign(submittedInstruction)
-      || /^(olvida|olvidalo|cancela|cancelar|otra cosa|nuevo pedido|nueva tarea|en vez de eso)\b/.test(normalizeAgentInstruction(submittedInstruction));
+      || newTaskPhrase.test(normalizeAgentInstruction(submittedInstruction));
     let answeringClarification = latestMessage?.role === "ASSISTANT" && Boolean(latestMetadata?.clarification)
       && !startsNewTask
       && (!dto.proposalId || (pendingRequest?.proposalId ?? latestMessage.proposalId) === dto.proposalId);
@@ -200,20 +254,20 @@ export class StoreAgentService {
     try {
       // Answering a pending catalog-arrangement confirmation is handled
       // BEFORE anything else — in particular before catalogArrangementIntent
-      // ever runs again on this turn for an accept or a decline. The pending
-      // clarification's own id is the signal, not the text the owner sent,
-      // so a recognized affirmative or refusal is handled here, applies at
-      // most once, and returns without ever reaching the recognizer.
-      if (answeringClarification && latestMetadata?.clarification
-        && typeof latestMetadata.clarification === "object" && !Array.isArray(latestMetadata.clarification)
-        && (latestMetadata.clarification as Prisma.JsonObject).id === CATALOG_ARRANGEMENT_CLARIFICATION_ID) {
+      // ever runs again on this turn for an accept or a decline, and before
+      // visualStudio.generate() can be reached at all this turn. The
+      // pending clarification's own id is the signal, not the text the
+      // owner sent, so a recognized affirmative or refusal is handled here,
+      // applies at most once, and returns without ever reaching the
+      // recognizer.
+      if (answeringClarification && latestClarification?.id === CATALOG_ARRANGEMENT_CLARIFICATION_ID) {
         const pendingLayout = typeof pendingRequest?.catalogLayout === "string"
           && (CATALOG_LAYOUTS as readonly string[]).includes(pendingRequest.catalogLayout)
           ? pendingRequest.catalogLayout as CatalogLayout
           : null;
-        const reply = normalizeConfirmationReply(submittedInstruction);
-        const accepted = pendingLayout !== null && CATALOG_ARRANGEMENT_AFFIRMATIVES.includes(reply);
-        const declined = CATALOG_ARRANGEMENT_REFUSALS.includes(reply);
+        const outcome = classifyConfirmationReply(submittedInstruction);
+        const accepted = outcome === "accepted" && pendingLayout !== null;
+        const declined = outcome === "declined";
         if (accepted || declined) {
           if (accepted) {
             await this.prisma.store.update({ where: { id: storeId }, data: { catalogLayout: pendingLayout! } });
@@ -238,20 +292,59 @@ export class StoreAgentService {
             ...(accepted ? { catalogLayout: pendingLayout } : {}),
           };
         }
-        // Neither a recognized affirmative nor a recognized refusal: the
-        // owner ignored the question (a new question of their own, a
-        // change of mind, anything else) rather than answering it. Drop the
-        // pending confirmation and process this as a brand-new instruction
-        // — reset BOTH `instruction` (so a stale combined
-        // "<old request>\n\nAclaración: <new text>" string can never reach
-        // the recognizer with the wrong layout) and `answeringClarification`
-        // (so nothing downstream treats this as continuing the old
-        // catalog_arrangement thread, e.g. routing it into a credit-spending
-        // edit path). This is a ONE-WAY exit: once cleared, this branch's
-        // own condition (`answeringClarification && ...`) can never be true
-        // again for the rest of this call, so the fresh instruction below
-        // gets at most one new confirmation of its own — it cannot ping-pong
-        // back into this same branch.
+        // Unrecognized: neither a matched affirmative nor a matched
+        // refusal. This is the HARD GUARD, independent of how complete the
+        // phrase lists above are — an unrecognized reply while a
+        // catalog_arrangement confirmation is pending must NEVER reach
+        // visualStudio.generate() on this same turn, because that is
+        // exactly the bug this whole confirmation flow exists to prevent
+        // (a plain "sí por favor" launching a paid redesign). On the FIRST
+        // unrecognized reply, keep the pending confirmation and re-ask once
+        // rather than falling through. Only on the SECOND consecutive
+        // unrecognized reply do we give up and fall through as before —
+        // bounding the one-way exit at two turns instead of removing it, so
+        // this can never ping-pong past that.
+        if (!pendingRequest?.confirmationRetried) {
+          const reaskClarification: StoreAgentClarification = {
+            id: CATALOG_ARRANGEMENT_CLARIFICATION_ID,
+            prompt: "No entendí. ¿Aplico el cambio? Sí / No",
+            options: [
+              { id: "confirm", label: CATALOG_ARRANGEMENT_CONFIRM_VALUE, value: CATALOG_ARRANGEMENT_CONFIRM_VALUE },
+              { id: "decline", label: CATALOG_ARRANGEMENT_DECLINE_VALUE, value: CATALOG_ARRANGEMENT_DECLINE_VALUE },
+            ],
+          };
+          const assistantMessage = await this.prisma.storeAgentMessage.create({
+            data: {
+              threadId: thread.id,
+              role: "ASSISTANT",
+              content: reaskClarification.prompt,
+              proposalId,
+              metadata: {
+                clarification: reaskClarification,
+                pendingRequest: { ...(pendingRequest ?? {}), confirmationRetried: true } as unknown as Prisma.InputJsonObject,
+              } as unknown as Prisma.InputJsonObject,
+            },
+          });
+          return {
+            userMessage,
+            assistantMessage,
+            needsClarification: true,
+            question: reaskClarification,
+            proposals: [],
+          };
+        }
+        // Second consecutive unrecognized reply: drop the pending
+        // confirmation and process this as a brand-new instruction — reset
+        // BOTH `instruction` (so a stale combined "<old request>\n\nAclaración:
+        // <new text>" string can never reach the recognizer with the wrong
+        // layout) and `answeringClarification` (so nothing downstream
+        // treats this as continuing the old catalog_arrangement thread,
+        // e.g. routing it into a credit-spending edit path). This is a
+        // ONE-WAY exit: once cleared, this branch's own condition
+        // (`answeringClarification && ...`) can never be true again for the
+        // rest of this call, so the fresh instruction below gets at most
+        // one new confirmation of its own — it cannot ping-pong back into
+        // this same branch.
         answeringClarification = false;
         instruction = submittedInstruction;
       }

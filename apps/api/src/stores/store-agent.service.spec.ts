@@ -164,69 +164,169 @@ describe("StoreAgentService", () => {
     expect(visualStudio.revise).not.toHaveBeenCalled();
   });
 
-  it.each([":)", "👍"])("treats a reply that strips down to nothing as unrecognized, not as an accept or a decline: %s", async (reply) => {
+  it.each([
+    "sí por favor",
+    "hazlo por favor",
+    "sí, hazlo ahora",
+  ])("applies the layout exactly once for a short affirmative reply that contains more than the bare whitelist word, without ever reaching generate() — this is the CRITICAL bug: a plain \"sí\" launching a paid redesign: %s", async (reply) => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
     prisma.storeAgentThread.findUnique.mockResolvedValue({
       id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
     });
-    visualStudio.generate.mockResolvedValueOnce({ proposals: [], mode: "local", engine: "test" });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "sections" } });
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "sections" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "sip", "claro", "obvio", "va", "listo", "bueno", "de acuerdo", "perfecto", "dale pues", "si porfa", "sí quiero", "ya",
+  ])("applies the layout exactly once for each ordinary Spanish affirmative, without ever reaching generate(): %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(prisma.store.update).toHaveBeenCalledTimes(1);
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { catalogLayout: "sections" } });
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement", catalogLayout: "sections" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "no quiero", "mejor déjalo así",
+  ])("declines with zero writes for each ordinary Spanish refusal, without ever reaching generate(): %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
 
     const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
 
     expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(result.needsClarification).toBeUndefined();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it("recognizes \"cancela\" as a refusal of a pending confirmation instead of being swallowed as a new-task phrase (see task-7 review item 1c: startsNewTask matches ^cancela\\b and used to make this dead code)", async () => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "cancela" });
+
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(result.assistantMessage.metadata).toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    expect(visualStudio.revise).not.toHaveBeenCalled();
+  });
+
+  it.each([":)", "👍"])("keeps the pending confirmation and re-asks once for a reply that strips down to nothing, without ever reaching generate(): %s", async (reply) => {
+    const { service, prisma, visualStudio } = setup();
+    const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
+    });
+
+    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: reply });
+
+    expect(result.needsClarification).toBe(true);
+    expect(result.question).toMatchObject({ id: "catalog_arrangement", prompt: "No entendí. ¿Aplico el cambio? Sí / No" });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
     expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
     expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement" });
   });
 
-  it("answers an unrelated question asked during a pending confirmation instead of treating it as a decline", async () => {
+  it("keeps the pending confirmation and re-asks once for an unrelated question asked mid-confirmation, instead of declining it or ever reaching generate()", async () => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
     prisma.storeAgentThread.findUnique.mockResolvedValue({
       id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
     });
-    visualStudio.generate.mockResolvedValueOnce({ proposals: [], mode: "local", engine: "test" });
 
     const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "¿Cómo van mis ventas esta semana?" });
 
+    expect(result.needsClarification).toBe(true);
+    expect(result.question).toMatchObject({ id: "catalog_arrangement", prompt: "No entendí. ¿Aplico el cambio? Sí / No" });
     expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
     expect(result.assistantMessage.content).not.toContain("No cambié nada");
     expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
   });
 
-  it("offers a fresh confirmation for a new arrangement request made mid-confirmation, instead of discarding it as a decline", async () => {
+  it("offers a fresh confirmation for a new arrangement request made mid-confirmation, once the two-turn hard guard has cleared the original pending one", async () => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
     prisma.storeAgentThread.findUnique.mockResolvedValue({
       id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
     });
 
-    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "mejor ponlo en pestañas por colección" });
+    // First turn: this doesn't answer the pending "secciones" confirmation (it is not a
+    // recognized affirmative or refusal), so the hard guard re-asks once instead of treating it
+    // as a fresh request — it never reaches generate() and never writes.
+    const first = await service.send("merchant_1", "store_1", { revision: 0, instruction: "mejor ponlo en pestañas por colección" });
+    expect(first.needsClarification).toBe(true);
+    expect(first.question).toMatchObject({ id: "catalog_arrangement", prompt: "No entendí. ¿Aplico el cambio? Sí / No" });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [first.assistantMessage, first.userMessage],
+    });
 
-    expect(result.needsClarification).toBe(true);
-    expect(result.question).toMatchObject({ id: "catalog_arrangement", prompt: expect.stringContaining("pestaña") });
+    // Second consecutive unrecognized reply: the guard gives up on the pending confirmation and
+    // falls through, where the new request is recognized on its own and offered a fresh one.
+    const second = await service.send("merchant_1", "store_1", { revision: 0, instruction: "mejor ponlo en pestañas por colección" });
+
+    expect(second.needsClarification).toBe(true);
+    expect(second.question).toMatchObject({ id: "catalog_arrangement", prompt: expect.stringContaining("pestaña") });
     expect(prisma.store.update).not.toHaveBeenCalled();
     expect(visualStudio.generate).not.toHaveBeenCalled();
     expect(visualStudio.revise).not.toHaveBeenCalled();
   });
 
-  it("cannot ping-pong: the mid-confirmation fall-through clears the pending state so a non-answer can never re-enter this branch", async () => {
+  it("hard guard: an unrecognized reply never reaches generate() on the first turn, and a second consecutive unrecognized reply clears state and falls through exactly once — it cannot ping-pong", async () => {
     const { service, prisma, visualStudio } = setup();
     const question = await service.send("merchant_1", "store_1", { revision: 0, instruction: "ponlo en secciones" });
     prisma.storeAgentThread.findUnique.mockResolvedValue({
       id: "thread_1", storeId: "store_1", messages: [question.assistantMessage, question.userMessage],
     });
+
+    // First unrecognized reply: kept pending, re-asked once, generate() never reached.
+    const first = await service.send("merchant_1", "store_1", { revision: 0, instruction: "no se, cuentame mas sobre mis pedidos" });
+    expect(first.needsClarification).toBe(true);
+    expect(first.question).toMatchObject({ id: "catalog_arrangement", prompt: "No entendí. ¿Aplico el cambio? Sí / No" });
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).not.toHaveBeenCalled();
+    prisma.storeAgentThread.findUnique.mockResolvedValue({
+      id: "thread_1", storeId: "store_1", messages: [first.assistantMessage, first.userMessage],
+    });
     visualStudio.generate.mockResolvedValueOnce({ proposals: [], mode: "local", engine: "test" });
 
-    // A reply that is neither a recognized affirmative nor refusal, and does
-    // not itself match catalogArrangementIntent, must fall all the way
-    // through to the normal pipeline exactly once — not loop back into the
-    // catalog_arrangement confirmation branch.
-    const result = await service.send("merchant_1", "store_1", { revision: 0, instruction: "no se, cuentame mas sobre mis pedidos" });
-
-    expect(result.needsClarification).toBeUndefined();
-    expect(result.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
+    // Second consecutive unrecognized reply: clears the pending confirmation and falls through
+    // to the normal pipeline exactly once — it cannot loop back into this branch a third time.
+    const second = await service.send("merchant_1", "store_1", { revision: 0, instruction: "no se, cuentame mas sobre mis pedidos" });
+    expect(second.needsClarification).toBeUndefined();
+    expect(second.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement_declined" });
+    expect(second.assistantMessage.metadata).not.toMatchObject({ intent: "catalog_arrangement" });
     expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(visualStudio.generate).toHaveBeenCalledTimes(1);
   });
 
   it("answers an improvement question without generating or changing a design", async () => {
