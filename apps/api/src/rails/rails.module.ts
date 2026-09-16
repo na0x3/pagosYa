@@ -6,6 +6,8 @@ import { MockBankTransferRailAdapter } from "./adapters/mock-bank-transfer.adapt
 import { MockQrRailAdapter } from "./adapters/mock-qr.adapter";
 import { BanecoClientService } from "./adapters/baneco/baneco-client.service";
 import { BanecoQrAdapter } from "./adapters/baneco/baneco-qr.adapter";
+import { DlocalClientService } from "./adapters/dlocal/dlocal-client.service";
+import { DlocalAdapter } from "./adapters/dlocal/dlocal.adapter";
 import { RailRegistry } from "./rail-registry.service";
 import { RAIL_ADAPTERS } from "./tokens";
 import { PaymentRailAdapter } from "./interfaces/payment-rail-adapter.interface";
@@ -18,6 +20,8 @@ import { PaymentRailAdapter } from "./interfaces/payment-rail-adapter.interface"
     MockQrRailAdapter,
     BanecoClientService,
     BanecoQrAdapter,
+    DlocalClientService,
+    DlocalAdapter,
     {
       provide: RAIL_ADAPTERS,
       // BANECO_QR_ENABLED is the single switch between MockQrRailAdapter and
@@ -30,10 +34,11 @@ import { PaymentRailAdapter } from "./interfaces/payment-rail-adapter.interface"
         bank: MockBankTransferRailAdapter,
         mockQr: MockQrRailAdapter,
         banecoQr: BanecoQrAdapter,
+        dlocal: DlocalAdapter,
         config: ConfigService,
       ): PaymentRailAdapter[] => {
         const qr = config.get<boolean>("app.banecoQr.enabled") ? banecoQr : mockQr;
-        return [card, tigo, bank, qr];
+        return [card, tigo, bank, qr, dlocal];
       },
       inject: [
         MockCardRailAdapter,
@@ -41,11 +46,12 @@ import { PaymentRailAdapter } from "./interfaces/payment-rail-adapter.interface"
         MockBankTransferRailAdapter,
         MockQrRailAdapter,
         BanecoQrAdapter,
+        DlocalAdapter,
         ConfigService,
       ],
     },
     RailRegistry,
   ],
-  exports: [RailRegistry],
+  exports: [RailRegistry, DlocalAdapter, DlocalClientService],
 })
 export class RailsModule {}
