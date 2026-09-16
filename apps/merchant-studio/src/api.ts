@@ -29,6 +29,18 @@ export interface MerchantStore {
   siteDocument?: unknown;
   websiteRevision?: number;
   websiteDraft?: { data: JsonRecord; links?: unknown[]; inventoryChanges?: Array<{ name: string; beforeStock: number | null; stock: number | null }> } | null;
+  catalogLayout?: CatalogLayout;
+}
+
+// How the storefront arranges the product catalog — mirrors CATALOG_LAYOUTS on the API.
+export type CatalogLayout = 'all' | 'sections' | 'page' | 'tabs';
+
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  productIds: string[];
 }
 
 export interface AgentMessage {
@@ -171,6 +183,14 @@ export class MerchantStudioApi {
   createShippingRate(storeId: string, input: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/delivery/zones`, { method: 'POST', body: JSON.stringify(input) }); }
   toggleShippingRate(storeId: string, rateId: string, active: boolean): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/rates/${encodeURIComponent(rateId)}`, { method: 'PATCH', body: JSON.stringify({ active }) }); }
   saveShippingWeight(storeId: string, productId: string, weightGrams: number | null): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ weightGrams }) }); }
+  collections(storeId: string): Promise<Collection[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections`); }
+  createCollection(storeId: string, name: string): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections`, { method: 'POST', body: JSON.stringify({ name }) }); }
+  renameCollection(storeId: string, id: string, name: string): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ name }) }); }
+  deleteCollection(storeId: string, id: string): Promise<{ success: boolean }> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
+  setCollectionProducts(storeId: string, id: string, paymentLinkIds: string[]): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/${encodeURIComponent(id)}/products`, { method: 'PUT', body: JSON.stringify({ paymentLinkIds }) }); }
+  reorderCollections(storeId: string, ids: string[]): Promise<Collection[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/order`, { method: 'PUT', body: JSON.stringify({ collectionIds: ids }) }); }
+  // Reuses the store-update endpoint other Studio settings already write through — no dedicated route for catalogLayout.
+  saveCatalogLayout(storeId: string, layout: CatalogLayout): Promise<MerchantStore> { return this.request(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: JSON.stringify({ catalogLayout: layout }) }); }
   brandProfile(storeId: string): Promise<BrandState> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/brand`);
   }

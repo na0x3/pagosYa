@@ -8,6 +8,7 @@ import { openRetention } from './retention';
 import { openCommercePlatform } from './commerce-platform';
 import { openCommerceContent } from './commerce-content';
 import { openShippingSettings } from './shipping-settings';
+import { openCatalogArrangement } from './catalog-arrangement';
 import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
 import { checkSourceWebsite, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
@@ -411,7 +412,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<details class="source-store-menu source-disclosure"><summary>Mi tienda</summary><nav class="source-disclosure-panel" aria-label="Herramientas de mi tienda">
       <section><h2>Diseño y contenido</h2><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
       <section><h2>Marketing</h2><button id="source-retention" ${unavailable}>Correos, Comeback y promociones</button>${embedded ? `<button data-business-view="integrations" ${unavailable}>Integraciones</button><button data-business-view="experiments" ${unavailable}>Pruebas A/B</button>` : ''}</section>
-      <section><h2>Configuración</h2><button id="source-shipping" ${unavailable}>Envíos y retiro</button></section>
+      <section><h2>Configuración</h2><button id="source-shipping" ${unavailable}>Envíos y retiro</button><button id="source-arrangement" ${unavailable}>Cómo se ven tus productos</button></section>
       <section><h2>Productos</h2><button id="source-digital" ${unavailable}>Archivos digitales</button></section>
       <section><h2>Finanzas</h2><button id="source-credits" ${unavailable}>Tarjetas de regalo y saldos</button></section>
       <section><h2>Contenido web</h2><button id="source-redirects" ${unavailable}>Artículos y redirecciones</button></section>
@@ -539,6 +540,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-retention')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({ type: 'pagosya:workspace', view: 'marketing', tab: 'program' }); else void openRetention(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
     app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
+    app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openBrandProfile(api, storeId); } });
     const on = (id: string, fn: () => void) => app.querySelector(`#${id}`)?.addEventListener('click', fn);
 

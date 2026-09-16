@@ -56,6 +56,29 @@ describe("CollectionsService.create", () => {
   });
 });
 
+describe("CollectionsService.listForStore", () => {
+  it("flattens each collection's membership into a productIds array", async () => {
+    const { service, prisma } = makeService();
+    prisma.collection.findMany.mockResolvedValue([
+      { id: "col_1", storeId: "store_1", name: "Verano", slug: "verano", sortOrder: 0, products: [{ paymentLinkId: "p1" }, { paymentLinkId: "p2" }] },
+      { id: "col_2", storeId: "store_1", name: "Rebajas", slug: "rebajas", sortOrder: 1, products: [] },
+    ]);
+
+    const result = await service.listForStore("merchant_1", "store_1");
+
+    expect(prisma.collection.findMany).toHaveBeenCalledWith({
+      where: { storeId: "store_1" },
+      orderBy: { sortOrder: "asc" },
+      include: { products: { orderBy: { sortOrder: "asc" }, select: { paymentLinkId: true } } },
+    });
+    expect(result).toEqual([
+      { id: "col_1", storeId: "store_1", name: "Verano", slug: "verano", sortOrder: 0, productIds: ["p1", "p2"] },
+      { id: "col_2", storeId: "store_1", name: "Rebajas", slug: "rebajas", sortOrder: 1, productIds: [] },
+    ]);
+    expect(result[0]).not.toHaveProperty("products");
+  });
+});
+
 describe("CollectionsService.update", () => {
   it("changes the name but leaves the slug untouched", async () => {
     const { service, prisma } = makeService();

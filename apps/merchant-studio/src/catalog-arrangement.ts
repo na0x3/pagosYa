@@ -1,0 +1,106 @@
+import { preserveDialogForms } from './dialog-form-state';
+import { MerchantStudioApi, type CatalogLayout, type Collection } from './api';
+import { escapeHtml as escape } from './studio-ui';
+import './brand-profile.css';
+
+const MAX_COLLECTIONS = 12;
+const MAX_COLLECTION_PRODUCTS = 200;
+
+// The spec's four arrangements, in the order they're offered — value, name, and a
+// plain-Spanish line explaining what a shopper will see, so an owner can choose
+// without a manual.
+const LAYOUTS: Array<[CatalogLayout, string, string]> = [
+  ['all', 'Todo en la portada', 'Todos tus productos se muestran juntos en la portada, en una sola cuadrícula.'],
+  ['sections', 'Por secciones', 'La portada repite la cuadrícula una vez por colección, cada una con su título, en el orden que elijas.'],
+  ['page', 'Página de productos aparte', 'La portada muestra los primeros 4 productos y un enlace "Ver todos los productos"; el catálogo completo vive en una página aparte.'],
+  ['tabs', 'Una pestaña por colección', 'Una fila de pestañas, una por colección; cada pestaña abre su propia página con esos productos.'],
+];
+
+export async function openCatalogArrangement(api: MerchantStudioApi, storeId: string, onSaved?: () => void) {
+  const dialog = document.createElement('dialog'); dialog.className = 'brand-dialog'; dialog.setAttribute('aria-label', 'Cómo se ven tus productos');
+  let layout: CatalogLayout = 'all';
+  let list: Collection[] = [];
+  let products: Array<{ id: string; name: string }> = [];
+  let busy = false; let message = '';
+  document.body.append(dialog); dialog.innerHTML = '<p role="status">Cargando…</p>'; dialog.showModal();
+  dialog.addEventListener('close', () => dialog.remove()); dialog.addEventListener('cancel', e => { if (busy) e.preventDefault(); });
+  try {
+    const [stores, collections, catalog] = await Promise.all([api.listStores(), api.collections(storeId), api.sourceCatalog(storeId)]);
+    layout = stores.find(store => store.id === storeId)?.catalogLayout || 'all';
+    list = collections;
+    products = (catalog.items as Array<{ id: string; name: string }>) || [];
+    render();
+  } catch (e) {
+    dialog.innerHTML = `<p>${escape(e instanceof Error ? e.message : 'No se pudieron cargar tus productos.')}</p><button>Cerrar</button>`;
+    dialog.querySelector('button')!.onclick = () => dialog.close();
+  }
+  async function run(task: () => Promise<void>) { if (busy) return; const restore = preserveDialogForms(dialog); let failed = false; busy = true; message = ''; dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement>('input,textarea,select,button').forEach(control => control.disabled = true); try { await task(); } catch (e) { failed = true; message = e instanceof Error ? e.message : 'No se pudo guardar.'; } finally { busy = false; render(); if (failed) restore(); } }
+  async function reorder(id: string, direction: -1 | 1) {
+    const index = list.findIndex(c => c.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= list.length) return;
+    const ids = list.map(c => c.id);
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    await api.reorderCollections(storeId, ids);
+    list = await api.collections(storeId);
+    message = 'Orden actualizado.';
+    onSaved?.();
+  }
+  function collectionBlock(collection: Collection, index: number) {
+    return `<article class="brand-import" data-collection="${escape(collection.id)}">
+      <form data-rename="${escape(collection.id)}"><label>Nombre de la colección<input name="name" maxlength="60" required value="${escape(collection.name)}"></label><button class="button" type="submit">Renombrar</button></form>
+      <div class="arrangement-collection-actions">
+        <button type="button" data-move-up="${escape(collection.id)}" ${index === 0 ? 'disabled' : ''}>Subir ${escape(collection.name)}</button>
+        <button type="button" data-move-down="${escape(collection.id)}" ${index === list.length - 1 ? 'disabled' : ''}>Bajar ${escape(collection.name)}</button>
+        <button type="button" class="button" data-delete="${escape(collection.id)}">Eliminar colección</button>
+      </div>
+      <form data-products="${escape(collection.id)}">
+        <fieldset><legend>Productos en esta colección (${collection.productIds.length}/${MAX_COLLECTION_PRODUCTS})</legend>
+        ${products.length ? products.map(product => `<label><input type="checkbox" name="product" value="${escape(product.id)}" style="width:auto" ${collection.productIds.includes(product.id) ? 'checked' : ''}> ${escape(product.name)}</label>`).join('') : '<p>Todavía no tienes productos.</p>'}
+        </fieldset>
+        <button class="button" type="submit">Guardar productos</button>
+      </form>
+    </article>`;
+  }
+  function render() {
+    dialog.innerHTML = `<header><h2>Cómo se ven tus productos</h2><button class="button" id="arrangement-close">Cerrar</button></header>
+      <p>Elige cómo se muestran tus productos y agrúpalos en colecciones. Puedes tener hasta ${MAX_COLLECTIONS} colecciones, cada una con hasta ${MAX_COLLECTION_PRODUCTS} productos, y un producto puede estar en varias a la vez. Los productos que no agregues a ninguna colección aparecen al final, en "Más productos".</p>
+      <form id="arrangement-layout"><fieldset><legend>Elige cómo se ven tus productos</legend>
+        ${LAYOUTS.map(([value, title, description]) => `<div class="arrangement-option"><label><input type="radio" name="layout" value="${value}" aria-describedby="arrangement-desc-${value}" ${layout === value ? 'checked' : ''}> ${escape(title)}</label><p id="arrangement-desc-${value}">${escape(description)}</p></div>`).join('')}
+      </fieldset><button class="button button--publish" type="submit">Guardar arreglo</button></form>
+      <section class="brand-import"><h3>Colecciones (${list.length}/${MAX_COLLECTIONS})</h3>
+        <form id="arrangement-create-collection"><label>Nombre de la nueva colección<input name="name" maxlength="60" required placeholder="Verano"></label><button class="button" type="submit">Crear colección</button></form>
+        ${list.length ? list.map(collectionBlock).join('') : '<p>Todavía no tienes colecciones.</p>'}
+      </section>
+      <p role="status">${escape(message)}</p>`;
+    dialog.querySelector('#arrangement-close')!.addEventListener('click', () => dialog.close());
+    dialog.querySelector('#arrangement-layout')!.addEventListener('submit', e => {
+      e.preventDefault();
+      const value = String(new FormData(e.target as HTMLFormElement).get('layout') || 'all') as CatalogLayout;
+      void run(async () => { const saved = await api.saveCatalogLayout(storeId, value); layout = saved.catalogLayout || value; message = 'Guardamos cómo se ven tus productos.'; onSaved?.(); });
+    });
+    dialog.querySelector('#arrangement-create-collection')!.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = String(new FormData(e.target as HTMLFormElement).get('name') || '').trim();
+      void run(async () => { await api.createCollection(storeId, name); list = await api.collections(storeId); message = 'Colección creada.'; onSaved?.(); });
+    });
+    dialog.querySelectorAll<HTMLFormElement>('[data-rename]').forEach(form => form.addEventListener('submit', e => {
+      e.preventDefault();
+      const id = form.dataset.rename!;
+      const name = String(new FormData(form).get('name') || '').trim();
+      void run(async () => { await api.renameCollection(storeId, id, name); list = await api.collections(storeId); message = 'Colección renombrada.'; onSaved?.(); });
+    }));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-delete]').forEach(button => button.onclick = () => {
+      if (!confirm('¿Eliminar esta colección? Sus productos no se eliminan, solo dejan de estar agrupados aquí.')) return;
+      void run(async () => { await api.deleteCollection(storeId, button.dataset.delete!); list = await api.collections(storeId); message = 'Colección eliminada.'; onSaved?.(); });
+    });
+    dialog.querySelectorAll<HTMLButtonElement>('[data-move-up]').forEach(button => button.onclick = () => void run(() => reorder(button.dataset.moveUp!, -1)));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-move-down]').forEach(button => button.onclick = () => void run(() => reorder(button.dataset.moveDown!, 1)));
+    dialog.querySelectorAll<HTMLFormElement>('[data-products]').forEach(form => form.addEventListener('submit', e => {
+      e.preventDefault();
+      const id = form.dataset.products!;
+      const paymentLinkIds = new FormData(form).getAll('product').map(String);
+      void run(async () => { await api.setCollectionProducts(storeId, id, paymentLinkIds); list = await api.collections(storeId); message = 'Productos actualizados.'; onSaved?.(); });
+    }));
+  }
+}

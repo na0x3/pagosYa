@@ -38,9 +38,20 @@ export class CollectionsService {
     });
   }
 
+  /** The Studio panel needs each collection's current membership to show
+   * pre-checked product checkboxes, so the list carries a flat productIds
+   * array rather than making the owner open a second endpoint per collection. */
   async listForStore(merchantId: string, storeId: string) {
     await this.ownedStoreOrThrow(merchantId, storeId);
-    return this.prisma.collection.findMany({ where: { storeId }, orderBy: { sortOrder: "asc" } });
+    const collections = await this.prisma.collection.findMany({
+      where: { storeId },
+      orderBy: { sortOrder: "asc" },
+      include: { products: { orderBy: { sortOrder: "asc" }, select: { paymentLinkId: true } } },
+    });
+    return collections.map(({ products, ...collection }) => ({
+      ...collection,
+      productIds: products.map((product) => product.paymentLinkId),
+    }));
   }
 
   async update(merchantId: string, storeId: string, id: string, dto: UpdateCollectionDto) {
