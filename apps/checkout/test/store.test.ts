@@ -87,6 +87,7 @@ const baseStoreFields = {
   heroSlides: [],
   links: [],
   categories: [],
+  collections: [],
 };
 
 function contrastRatio(foreground: string, background: string): number {
@@ -384,6 +385,24 @@ describe("storefront routes", () => {
     await vi.waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 684));
     expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
     expect(document.querySelector(".store-announcement")?.textContent).toContain("ENVÍOS A TODO EL PAÍS");
+  });
+
+  it("resolves linkSlug and renders the catalog for the hosted /s/<slug>/productos route", async () => {
+    const fetchStore = vi.fn().mockResolvedValue({
+      ...baseStoreFields,
+      storeName: "Taller Norte",
+      items: [baseItem],
+    } satisfies Store);
+    vi.doMock("../src/api", () => ({
+      API_BASE_URL: "https://api.example/v1",
+      fetchStore,
+      assetUrl: (p: string | null) => p,
+    }));
+
+    await loadCheckout("/s/taller-norte/productos");
+
+    expect(fetchStore).toHaveBeenCalledWith("taller-norte", { preview: false });
+    expect(document.querySelector(".store-item-name")?.textContent).toContain("Corte de cabello");
   });
 
   it("resolves a verified custom hostname at the root and keeps product URLs on that domain", async () => {
