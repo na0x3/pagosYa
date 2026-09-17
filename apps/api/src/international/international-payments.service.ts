@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
-import type { DlocalConfig } from "../config/configuration";
+import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration";
 import { DlocalClientService } from "../rails/adapters/dlocal/dlocal-client.service";
 import type { DlocalPaymentMethod } from "../rails/adapters/dlocal/dlocal.types";
 import { AuditLogService } from "../ops/audit-log.service";
@@ -99,6 +99,7 @@ export class InternationalPaymentsService {
 
   async availableForIntent(intent: { merchantId: string }): Promise<boolean> {
     if (!(this.cfg.bobPerUsd > 0)) return false;
+    if (!dlocalChargesAllowed(this.cfg, this.config.get<string>("app.environment"))) return false;
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: intent.merchantId } });
     return merchant.internationalPaymentsStatus === "ENABLED" && merchant.settlementMode === "AGGREGATOR";
   }

@@ -377,7 +377,7 @@ describe("PaymentIntentsService sale records", () => {
 describe("PaymentIntentsService.confirm via dLocal", () => {
   const dlocalCfg = { bobPerUsd: 6.96, intlFeeBps: 590, costBps: 420 };
 
-  function setup(merchant: Record<string, unknown>, intent: Record<string, unknown> = {}) {
+  function setup(merchant: Record<string, unknown>, intent: Record<string, unknown> = {}, env: { environment?: string; enabled?: boolean } = {}) {
     const row = { id: "pi_1", status: "REQUIRES_PAYMENT_METHOD", confirmationAttempts: 0, merchantId: "m_1", consumerUserId: null, metadata: {}, amount: 70000, currency: "BOB", ...intent };
     const update = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...row, ...data, id: "pi_1", merchantId: "m_1" }));
     const tx = {
@@ -391,7 +391,7 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     const dlocal = { railId: "dlocal", authorize: jest.fn().mockResolvedValue({ status: "requires_action", railReference: "D-1", raw: {} }) };
     const railRegistry = { get: jest.fn().mockReturnValue(dlocal), getForMethodType: jest.fn() };
     const paymentMethods = { findOrCreate: jest.fn().mockResolvedValue({ id: "pm_1", type: "LOCAL_METHOD" }) };
-    const config = { get: jest.fn().mockReturnValue(dlocalCfg) };
+    const config = { get: jest.fn((key: string) => (key === "app.environment" ? env.environment ?? "development" : { ...dlocalCfg, enabled: env.enabled ?? false })) };
     // Reorder to the real constructor signature; config is always last.
     const service = new PaymentIntentsService(prisma as any, railRegistry as any, paymentMethods as any, {} as any, {} as any, {} as any, {} as any, config as any);
     jest.spyOn(service as any, "assertCartStillAvailable").mockResolvedValue(undefined);
@@ -424,6 +424,17 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
   it("rejects merchants that are not enabled, or not AGGREGATOR", async () => {
     await expect(setup({ internationalPaymentsStatus: "REQUESTED" }).service.confirm("pi_1", dto as any)).rejects.toThrow("pagos internacionales");
     await expect(setup({ settlementMode: "FACILITATOR" }).service.confirm("pi_1", dto as any)).rejects.toThrow("pagos internacionales");
+  });
+
+  it("refuses dLocal charges in production while dLocal runs on fixtures, before calling the rail", async () => {
+    const fixtureProd = setup({}, {}, { environment: "production", enabled: false });
+    await expect(fixtureProd.service.confirm("pi_1", dto as any)).rejects.toThrow("internacionales");
+    expect(fixtureProd.dlocal.authorize).not.toHaveBeenCalled();
+    expect(fixtureProd.update).not.toHaveBeenCalled();
+
+    const liveProd = setup({}, {}, { environment: "production", enabled: true });
+    await liveProd.service.confirm("pi_1", dto as any);
+    expect(liveProd.dlocal.authorize).toHaveBeenCalled();
   });
 
   it("requires a country and a shopper email", async () => {

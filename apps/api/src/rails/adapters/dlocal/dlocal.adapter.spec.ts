@@ -2,8 +2,8 @@ import { PaymentMethodType } from "@prisma/client";
 import { DlocalAdapter } from "./dlocal.adapter";
 import { DlocalApiError } from "./dlocal.types";
 
-function makeAdapter(client: Record<string, jest.Mock> = {}) {
-  const config = { get: jest.fn().mockReturnValue({ returnUrl: "https://checkout.test/" }) };
+function makeAdapter(client: Record<string, jest.Mock> = {}, cfg: Record<string, unknown> = {}) {
+  const config = { get: jest.fn().mockReturnValue({ returnUrl: "https://checkout.test/", smartFieldsKey: "", ...cfg }) };
   return new DlocalAdapter(client as any, config as any);
 }
 
@@ -51,12 +51,22 @@ describe("DlocalAdapter.authorize", () => {
 
   it("charges a Smart Fields token with the DIRECT flow", async () => {
     const createPayment = jest.fn().mockResolvedValue({ id: "D-9", amount: 100.58, currency: "USD", status: "PAID" });
-    const result = await makeAdapter({ createPayment }).authorize({
+    const result = await makeAdapter({ createPayment }, { smartFieldsKey: "sf_key" }).authorize({
       ...request,
       paymentMethod: { type: PaymentMethodType.CARD, token: "dlsf_CV-abc", metadata: { dlocalPaymentMethodId: "CARD" } },
     });
     expect(createPayment).toHaveBeenCalledWith(expect.objectContaining({ flow: "DIRECT", cardToken: "CV-abc" }));
     expect(result.status).toBe("succeeded");
+  });
+
+  it("refuses a Smart Fields token when no Smart Fields key is configured, without calling dLocal", async () => {
+    const createPayment = jest.fn();
+    const result = await makeAdapter({ createPayment }).authorize({
+      ...request,
+      paymentMethod: { type: PaymentMethodType.CARD, token: "dlsf_CV-abc", metadata: { dlocalPaymentMethodId: "CARD" } },
+    });
+    expect(result).toMatchObject({ status: "failed", failureReason: expect.stringMatching(/tarjeta/i) });
+    expect(createPayment).not.toHaveBeenCalled();
   });
 
   it("fails without calling dLocal for non-USD, missing country, or missing method id", async () => {

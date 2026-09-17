@@ -18,7 +18,7 @@ import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
-import type { DlocalConfig } from "../config/configuration";
+import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration";
 import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "../international/fx";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
@@ -312,6 +312,9 @@ export class PaymentIntentsService {
       const paymentMethod = await this.paymentMethods.findOrCreate(tx, current.merchantId, dto.paymentMethod);
       const international = dto.rail === "dlocal";
       if (international) {
+        if (!dlocalChargesAllowed(this.config.get<DlocalConfig>("app.dlocal")!, this.config.get<string>("app.environment"))) {
+          throw new ForbiddenException("Los pagos internacionales no están disponibles.");
+        }
         const merchant = await tx.merchant.findUniqueOrThrow({ where: { id: current.merchantId } });
         if (merchant.internationalPaymentsStatus !== "ENABLED" || merchant.settlementMode !== "AGGREGATOR") {
           throw new ForbiddenException("Este comercio no tiene habilitados los pagos internacionales.");

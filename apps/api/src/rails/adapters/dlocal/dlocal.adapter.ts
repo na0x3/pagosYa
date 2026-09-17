@@ -48,6 +48,11 @@ export class DlocalAdapter implements PaymentRailAdapter {
     if (invalid) return { status: "failed", railReference: req.idempotencyKey, raw: {}, failureReason: invalid };
 
     const cfg = this.config.get<DlocalConfig>("app.dlocal")!;
+    // A Smart Fields token can only come from dLocal's hosted card fields, which need
+    // the Smart Fields key. Without it the token is forged or a fixture leftover.
+    if (req.paymentMethod.token.startsWith(SMART_FIELDS_PREFIX) && !cfg.smartFieldsKey) {
+      return { status: "failed", railReference: req.idempotencyKey, raw: {}, failureReason: "El pago con tarjeta internacional no está disponible." };
+    }
     const callbackUrl = new URL(cfg.returnUrl);
     callbackUrl.searchParams.set("intl_return", "1");
     callbackUrl.searchParams.set("pi", req.paymentIntentId);

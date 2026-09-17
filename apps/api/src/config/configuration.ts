@@ -151,6 +151,14 @@ function databaseUrlWithPoolSettings(value: string): string {
   }
 }
 
+/**
+ * dLocal fixture mode (DLOCAL_ENABLED=false) fakes payments, so international
+ * charges may only be offered outside production unless the real client is on.
+ */
+export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, environment: string | undefined): boolean {
+  return dlocal.enabled || environment !== "production";
+}
+
 export function assertProductionSecurityConfig(app: AppConfig): void {
   if (app.environment !== "production") return;
   const failures: string[] = [];
@@ -202,6 +210,9 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
     }
     requireHttps("DLOCAL_NOTIFICATION_URL", app.dlocal.notificationUrl);
     requireHttps("DLOCAL_RETURN_URL", app.dlocal.returnUrl);
+  }
+  if (app.dlocal.bobPerUsd > 0 && !app.dlocal.enabled) {
+    failures.push("INTL_BOB_PER_USD must stay unset while DLOCAL_ENABLED is not true (fixture mode fakes international payments)");
   }
   if (failures.length) throw new Error(`Refusing insecure production startup:\n- ${failures.join("\n- ")}`);
 }

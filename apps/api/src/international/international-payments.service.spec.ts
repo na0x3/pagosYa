@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { InternationalPaymentsService } from "./international-payments.service";
 
-function setup(merchant: Record<string, unknown> = {}, rate = 6.96, updateManyCount = 1) {
+function setup(merchant: Record<string, unknown> = {}, rate = 6.96, updateManyCount = 1, env: { environment?: string; enabled?: boolean } = {}) {
   const tx = { merchant: { updateMany: jest.fn().mockResolvedValue({ count: updateManyCount }) } };
   const prisma = {
     merchant: {
@@ -17,7 +17,8 @@ function setup(merchant: Record<string, unknown> = {}, rate = 6.96, updateManyCo
     { id: "PX", type: "BANK_TRANSFER", name: "Pix" },
   ]) };
   const auditLog = { record: jest.fn() };
-  const config = { get: jest.fn().mockReturnValue({ bobPerUsd: rate, intlFeeBps: 590, costBps: 0 }) };
+  const dlocal = { bobPerUsd: rate, intlFeeBps: 590, costBps: 0, enabled: env.enabled ?? false };
+  const config = { get: jest.fn((key: string) => (key === "app.environment" ? env.environment ?? "development" : dlocal)) };
   const service = new InternationalPaymentsService(prisma as any, client as any, auditLog as any, config as any);
   return { service, prisma, tx, client, auditLog };
 }
@@ -60,6 +61,12 @@ describe("InternationalPaymentsService", () => {
     await expect(setup({ internationalPaymentsStatus: "ENABLED" }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(true);
     await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 0).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(false);
     await expect(setup({ internationalPaymentsStatus: "REQUESTED" }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(false);
+  });
+
+  it("is never available in production while dLocal runs on fixtures", async () => {
+    await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 6.96, 1, { environment: "production", enabled: false }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(false);
+    await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 6.96, 1, { environment: "production", enabled: true }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(true);
+    await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 6.96, 1, { environment: "development", enabled: false }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(true);
   });
 
   it("quotes USD and lists methods, caching per country", async () => {
