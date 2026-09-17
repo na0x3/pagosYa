@@ -1,11 +1,74 @@
 import { DlocalReconciliationWorker } from "./dlocal-reconciliation.worker";
 
 function setup(intents: unknown[]) {
-  const prisma = { paymentIntent: { findMany: jest.fn().mockResolvedValue(intents) } };
+  const prisma = {
+    paymentIntent: { findMany: jest.fn().mockResolvedValue(intents) },
+    supportCase: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: "case_1" }) },
+  };
   const adapter = { getStatus: jest.fn() };
   const paymentIntents = { applyCallbackResult: jest.fn().mockResolvedValue({}) };
   return { worker: new DlocalReconciliationWorker(prisma as any, adapter as any, paymentIntents as any), prisma, adapter, paymentIntents };
 }
+
+describe("DlocalReconciliationWorker unresolvable intents", () => {
+  const now = new Date("2026-09-17T12:00:00.000Z");
+  const stuck = [
+    { id: "pi_timeout", merchantId: "m_1", status: "REQUIRES_ACTION", transactions: [{ railReference: "order:pi_timeout" }] },
+    { id: "pi_norow", merchantId: "m_2", status: "PROCESSING", transactions: [] },
+    { id: "pi_resolvable", merchantId: "m_3", status: "REQUIRES_ACTION", transactions: [{ railReference: "D-7" }] },
+  ];
+
+  it("selects dlocal intents stuck for more than 6 hours without a dLocal payment id", async () => {
+    const { worker, prisma } = setup([]);
+    await worker.escalateUnresolvable(now);
+    expect(prisma.paymentIntent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        railId: "dlocal",
+        status: { in: ["PROCESSING", "REQUIRES_ACTION"] },
+        updatedAt: { lt: new Date("2026-09-17T06:00:00.000Z") },
+        OR: [
+          { transactions: { none: { type: "AUTHORIZATION" } } },
+          { transactions: { some: { type: "AUTHORIZATION", railReference: { startsWith: "order:" } } } },
+        ],
+      }),
+    }));
+  });
+
+  it("logs an error and opens one support case per unresolvable intent, only once", async () => {
+    const { worker, prisma } = setup(stuck);
+    const errorLog = jest.spyOn((worker as any).logger, "error").mockImplementation(() => undefined);
+
+    await worker.escalateUnresolvable(now);
+    expect(errorLog).toHaveBeenCalledTimes(2);
+    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("pi_timeout"));
+    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("pi_norow"));
+    expect(prisma.supportCase.create).toHaveBeenCalledTimes(2);
+    expect(prisma.supportCase.create).toHaveBeenCalledWith({ data: expect.objectContaining({ merchantId: "m_1", summary: expect.stringContaining("pi_timeout") }) });
+    expect(prisma.supportCase.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ summary: { contains: "pi_timeout" } }) }));
+
+    await worker.escalateUnresolvable(now);
+    expect(errorLog).toHaveBeenCalledTimes(2);
+    expect(prisma.supportCase.create).toHaveBeenCalledTimes(2);
+    expect(prisma.paymentIntent.findMany.mock.calls[1][0].where.id).toEqual({ notIn: ["pi_timeout", "pi_norow"] });
+  });
+
+  it("does not open a duplicate case after a restart when one is still open", async () => {
+    const { worker, prisma } = setup([stuck[0]]);
+    jest.spyOn((worker as any).logger, "error").mockImplementation(() => undefined);
+    prisma.supportCase.findFirst.mockResolvedValue({ id: "case_open" });
+    await worker.escalateUnresolvable(now);
+    expect(prisma.supportCase.create).not.toHaveBeenCalled();
+  });
+
+  it("retries a case it could not open on the next run", async () => {
+    const { worker, prisma } = setup([stuck[0]]);
+    jest.spyOn((worker as any).logger, "error").mockImplementation(() => undefined);
+    prisma.supportCase.create.mockRejectedValueOnce(new Error("db down"));
+    await worker.escalateUnresolvable(now);
+    await worker.escalateUnresolvable(now);
+    expect(prisma.supportCase.create).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("DlocalReconciliationWorker", () => {
   const now = new Date("2026-09-17T12:00:00.000Z");
