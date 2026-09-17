@@ -432,6 +432,24 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
   });
 });
 
+describe("PaymentIntentsService.latestAuthorization", () => {
+  it("returns the newest authorization attempt's reference and status, or null for an unknown intent", async () => {
+    const findUnique = jest.fn()
+      .mockResolvedValueOnce({ merchantId: "m_1", transactions: [{ railReference: "D-2", status: "PENDING" }] })
+      .mockResolvedValueOnce({ merchantId: "m_1", transactions: [] })
+      .mockResolvedValueOnce(null);
+    const service = new PaymentIntentsService({ paymentIntent: { findUnique } } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+
+    await expect(service.latestAuthorization("pi_1")).resolves.toEqual({ merchantId: "m_1", railReference: "D-2", status: "PENDING" });
+    await expect(service.latestAuthorization("pi_1")).resolves.toEqual({ merchantId: "m_1", railReference: null, status: null });
+    await expect(service.latestAuthorization("pi_x")).resolves.toBeNull();
+    expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "pi_1" },
+      select: expect.objectContaining({ transactions: expect.objectContaining({ where: { type: "AUTHORIZATION" }, orderBy: { createdAt: "desc" }, take: 1 }) }),
+    }));
+  });
+});
+
 describe("PaymentIntentsService receipts", () => {
   it("labels a converted intent's cart lines in BOB and appends the original BOB total next to the charged USD total", async () => {
     const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };

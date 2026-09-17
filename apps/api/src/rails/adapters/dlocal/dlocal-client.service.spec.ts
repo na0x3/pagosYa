@@ -88,9 +88,22 @@ describe("DlocalClientService (http mode)", () => {
     const client = makeClient({ enabled: true });
 
     const signedAsOther = `V2-HMAC-SHA256, Signature: ${signDlocal("s", "other", xDate, body)}`;
-    expect(client.verifyWebhook("other", xDate, body, signedAsOther)).toBe(false);
+    expect(client.verifyWebhook("other", xDate, body, signedAsOther, new Date("2026-09-17T12:01:00.000Z"))).toBe(false);
 
     const signedAsConfigLogin = `V2-HMAC-SHA256, Signature: ${signDlocal("s", "l", xDate, body)}`;
-    expect(client.verifyWebhook("l", xDate, body, signedAsConfigLogin)).toBe(true);
+    expect(client.verifyWebhook("l", xDate, body, signedAsConfigLogin, new Date("2026-09-17T12:01:00.000Z"))).toBe(true);
+  });
+
+  it("rejects a correctly signed webhook whose X-Date is outside the 5-minute replay window", () => {
+    const body = "{}";
+    const client = makeClient({ enabled: true });
+    const now = new Date("2026-09-17T12:00:00.000Z");
+    const signed = (xDate: string) => `V2-HMAC-SHA256, Signature: ${signDlocal("s", "l", xDate, body)}`;
+
+    expect(client.verifyWebhook("l", "2026-09-17T11:55:00.000Z", body, signed("2026-09-17T11:55:00.000Z"), now)).toBe(true);
+    expect(client.verifyWebhook("l", "2026-09-17T12:05:00.000Z", body, signed("2026-09-17T12:05:00.000Z"), now)).toBe(true);
+    expect(client.verifyWebhook("l", "2026-09-17T11:54:59.000Z", body, signed("2026-09-17T11:54:59.000Z"), now)).toBe(false);
+    expect(client.verifyWebhook("l", "2026-09-17T12:05:01.000Z", body, signed("2026-09-17T12:05:01.000Z"), now)).toBe(false);
+    expect(client.verifyWebhook("l", "yesterday", body, signed("yesterday"), now)).toBe(false);
   });
 });

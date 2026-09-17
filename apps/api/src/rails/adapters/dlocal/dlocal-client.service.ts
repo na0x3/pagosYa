@@ -7,6 +7,8 @@ import {
   CreateDlocalPayment, DlocalApiError, DlocalPayment, DlocalPaymentMethod, DlocalRefund, DlocalTransport,
 } from "./dlocal.types";
 
+const WEBHOOK_MAX_SKEW_MS = 5 * 60_000;
+
 /**
  * Thin client for dLocal's Payins API. Signing and major/minor unit
  * conversion live here so DlocalAdapter only speaks RailResult.
@@ -58,9 +60,15 @@ export class DlocalClientService {
     return this.transport.request<DlocalPaymentMethod[]>("GET", `/payments-methods?country=${encodeURIComponent(country)}`);
   }
 
-  /** In fixture mode there is no secret, so real inbound webhooks are always rejected. */
-  verifyWebhook(login: string | undefined, xDate: string | undefined, rawBody: string, authorization: string | undefined): boolean {
+  /**
+   * In fixture mode there is no secret, so real inbound webhooks are always rejected.
+   * X-Date is part of the signed string, so bounding it to ±5 minutes of our clock
+   * stops a captured notification from being replayed later.
+   */
+  verifyWebhook(login: string | undefined, xDate: string | undefined, rawBody: string, authorization: string | undefined, now: Date = new Date()): boolean {
     if (!this.cfg.enabled || !login || !xDate || login !== this.cfg.login) return false;
+    const signedAt = Date.parse(xDate);
+    if (Number.isNaN(signedAt) || Math.abs(now.getTime() - signedAt) > WEBHOOK_MAX_SKEW_MS) return false;
     return verifyDlocalSignature(this.cfg.secretKey, login, xDate, rawBody, authorization);
   }
 

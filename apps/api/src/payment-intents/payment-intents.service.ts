@@ -431,6 +431,29 @@ export class PaymentIntentsService {
     return this.applyRailResult(intentId, merchantId, railId, result, TransactionType.AUTHORIZATION);
   }
 
+  /**
+   * The intent's most recent authorization attempt, so a rail notification can
+   * be bound to the attempt it belongs to. Null when the intent doesn't exist;
+   * railReference/status are null when no attempt has been recorded yet.
+   */
+  async latestAuthorization(paymentIntentId: string): Promise<{ merchantId: string; railReference: string | null; status: TransactionStatus | null } | null> {
+    const intent = await this.prisma.paymentIntent.findUnique({
+      where: { id: paymentIntentId },
+      select: {
+        merchantId: true,
+        transactions: {
+          where: { type: TransactionType.AUTHORIZATION },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { railReference: true, status: true },
+        },
+      },
+    });
+    if (!intent) return null;
+    const latest = intent.transactions[0];
+    return { merchantId: intent.merchantId, railReference: latest?.railReference ?? null, status: latest?.status ?? null };
+  }
+
   /** Invoked by authenticated rail callbacks to resolve a `requires_action` intent. */
   async applyCallbackResult(
     paymentIntentId: string,
