@@ -775,7 +775,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <section class="dossier-section"><h4>Pagos recientes</h4>${compactRows(merchant.paymentIntents, (payment) => `
         <div class="compact-row"><strong><code>${esc(payment.id)}</code></strong><span>${money(payment.amount, payment.currency)}</span><span>${statusBadge(payment.status)}</span><span>${dateTime(payment.createdAt)}</span></div>`, "No hay pagos recientes.")}</section>
       <section class="dossier-section"><h4>Cumplimiento y entregas</h4>
-        ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
+        ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}<br>Cuenta ${esc(maskedValue(kyc.payoutBankAccount))} · USD ${esc(maskedValue(kyc.payoutUsdBankAccount))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
         ${compactRows(merchant.payouts, (payout) => `<div class="compact-row"><strong>Desembolso <code>${esc(payout.id)}</code></strong><span>${money(payout.amount, payout.currency)} · ${esc(maskedValue(payout.bankAccount))}</span><span>${statusBadge(payout.status)}</span><span>${esc(payout.failureReason || dateTime(payout.createdAt))}</span></div>`, "No hay desembolsos recientes.")}
         ${compactRows(merchant.invoices, (invoice) => `<div class="compact-row"><strong>Factura <code>${esc(invoice.id)}</code></strong><span>${money(invoice.amount, invoice.currency)}</span><span>${statusBadge(invoice.status)}</span><span>${esc(invoice.failureReason || dateTime(invoice.createdAt))}</span></div>`, "No hay facturas recientes.")}
       </section>
@@ -818,7 +818,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
         <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
-        <td>${esc(s.payoutBankAccount)}</td>
+        <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
         <td>${esc(new Date(s.createdAt).toLocaleString("es-BO"))}</td>
         <td>
           <div class="actions-cell">
