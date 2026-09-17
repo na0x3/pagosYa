@@ -38,6 +38,17 @@ export interface DlocalRefund {
   status: string;
 }
 
+/** Body dLocal POSTs to the refunds notification_url. Refund statuses are their own enum. */
+export interface DlocalRefundNotification {
+  id?: string;
+  payment_id?: string;
+  status?: "SUCCESS" | "PENDING" | "REJECTED" | string;
+  status_code?: string | number;
+  status_detail?: string;
+  amount?: number;
+  currency?: string;
+}
+
 export interface DlocalTransport {
   request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T>;
 }

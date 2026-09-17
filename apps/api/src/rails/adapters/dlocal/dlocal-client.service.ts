@@ -9,6 +9,15 @@ import {
 
 const WEBHOOK_MAX_SKEW_MS = 5 * 60_000;
 
+/** `<base>/payments` → `<base>/refunds`; a URL not ending in /payments gets /refunds appended. */
+export function refundNotificationUrl(paymentsUrl: string): string {
+  const url = new URL(paymentsUrl);
+  url.pathname = /\/payments\/?$/.test(url.pathname)
+    ? url.pathname.replace(/\/payments\/?$/, "/refunds")
+    : `${url.pathname.replace(/\/$/, "")}/refunds`;
+  return url.toString();
+}
+
 /**
  * Thin client for dLocal's Payins API. Signing and major/minor unit
  * conversion live here so DlocalAdapter only speaks RailResult.
@@ -47,12 +56,18 @@ export class DlocalClientService {
     return this.transport.request<DlocalPayment>("GET", `/payments/${encodeURIComponent(id)}`);
   }
 
-  refund(paymentId: string, amountCents: number, currency: string): Promise<DlocalRefund> {
+  /**
+   * order_refund_id carries our idempotency key so a retried request isn't a second
+   * refund (UNVERIFIED: see "Refund idempotency" in fixtures/README.md). Refund
+   * notifications go to their own endpoint, derived from DLOCAL_NOTIFICATION_URL.
+   */
+  refund(paymentId: string, amountCents: number, currency: string, idempotencyKey: string): Promise<DlocalRefund> {
     return this.transport.request<DlocalRefund>("POST", "/refunds", {
       payment_id: paymentId,
       amount: amountCents / 100,
       currency,
-      notification_url: this.cfg.notificationUrl,
+      order_refund_id: idempotencyKey,
+      notification_url: refundNotificationUrl(this.cfg.notificationUrl),
     });
   }
 

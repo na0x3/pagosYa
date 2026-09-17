@@ -16,12 +16,34 @@ function setup(verify = true, binding: { railReference: string | null; status: s
   };
   const refunds = { applyDlocalRefundNotification: jest.fn().mockResolvedValue(undefined) };
   const prisma = { supportCase: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: "case_1" }) } };
-  const controller = new DlocalWebhookController(client as any, adapter as any, paymentIntents as any, prisma as any);
+  const controller = new DlocalWebhookController(client as any, adapter as any, paymentIntents as any, prisma as any, refunds as any);
   const req = (raw: string) => ({ rawBody: Buffer.from(raw) }) as any;
   const errorLog = jest.spyOn((controller as any).logger, "error").mockImplementation(() => undefined);
   const warnLog = jest.spyOn((controller as any).logger, "warn").mockImplementation(() => undefined);
   return { controller, client, paymentIntents, refunds, prisma, req, errorLog, warnLog };
 }
+
+describe("DlocalWebhookController refunds", () => {
+  const refundBody = JSON.stringify({ id: "R-1", payment_id: "D-1", status: "SUCCESS", amount: 50, currency: "USD" });
+
+  it("verifies the signature and X-Date before touching refunds", async () => {
+    const { controller, refunds, client, req } = setup(false);
+    await expect(controller.refund(req(refundBody), "l", "d", "sig")).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(client.verifyWebhook).toHaveBeenCalledWith("l", "d", refundBody, "sig");
+    expect(refunds.applyDlocalRefundNotification).not.toHaveBeenCalled();
+  });
+
+  it("hands a verified notification to the refunds service and acknowledges it", async () => {
+    const { controller, refunds, req } = setup();
+    await expect(controller.refund(req(refundBody), "l", "d", "sig")).resolves.toEqual({ received: true });
+    expect(refunds.applyDlocalRefundNotification).toHaveBeenCalledWith({ id: "R-1", payment_id: "D-1", status: "SUCCESS", amount: 50, currency: "USD" });
+  });
+
+  it("rejects a malformed body", async () => {
+    const { controller, req } = setup();
+    await expect(controller.refund(req("nope"), "l", "d", "sig")).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
 
 describe("DlocalWebhookController payments", () => {
   it("rejects an invalid signature without touching the payment", async () => {

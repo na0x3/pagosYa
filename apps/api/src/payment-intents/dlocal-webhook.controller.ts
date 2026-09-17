@@ -6,7 +6,8 @@ import { openOpsCaseOnce } from "../ops/ops-escalation";
 import { PrismaService } from "../prisma/prisma.service";
 import { DlocalClientService } from "../rails/adapters/dlocal/dlocal-client.service";
 import { DlocalAdapter } from "../rails/adapters/dlocal/dlocal.adapter";
-import type { DlocalPayment } from "../rails/adapters/dlocal/dlocal.types";
+import type { DlocalPayment, DlocalRefundNotification } from "../rails/adapters/dlocal/dlocal.types";
+import { RefundsService } from "../refunds/refunds.service";
 import { IllegalStateTransitionError } from "./payment-intent.state-machine";
 import { PaymentIntentsService } from "./payment-intents.service";
 
@@ -31,7 +32,26 @@ export class DlocalWebhookController {
     private readonly adapter: DlocalAdapter,
     private readonly paymentIntents: PaymentIntentsService,
     private readonly prisma: PrismaService,
+    private readonly refunds: RefundsService,
   ) {}
+
+  /**
+   * dLocal's refund notifications (sent to the notification_url DlocalClientService.refund
+   * derives). Same signature and X-Date checks as payments; matching and settlement live
+   * in RefundsService so the ledger posting is shared with synchronous refunds.
+   */
+  @Post("refunds")
+  @HttpCode(200)
+  async refund(
+    @Req() req: { rawBody?: Buffer },
+    @Headers("x-login") login: string | undefined,
+    @Headers("x-date") xDate: string | undefined,
+    @Headers("authorization") authorization: string | undefined,
+  ) {
+    const notification = this.verifiedBody<DlocalRefundNotification>(req, login, xDate, authorization);
+    await this.refunds.applyDlocalRefundNotification(notification);
+    return { received: true };
+  }
 
   @Post("payments")
   @HttpCode(200)

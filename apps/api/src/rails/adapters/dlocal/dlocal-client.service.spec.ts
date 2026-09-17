@@ -1,4 +1,4 @@
-import { DlocalClientService } from "./dlocal-client.service";
+import { DlocalClientService, refundNotificationUrl } from "./dlocal-client.service";
 import { signDlocal } from "./dlocal-signature";
 import { DlocalApiError } from "./dlocal.types";
 
@@ -57,6 +57,25 @@ describe("DlocalClientService (http mode)", () => {
       amount: 100.58, currency: "USD", country: "BR", payment_method_id: "PX", payment_method_flow: "REDIRECT",
       order_id: "pi_1", notification_url: "https://api.test/v1/webhooks/dlocal/payments",
     });
+  });
+
+  it("sends refunds with an idempotency id and the refunds notification URL", async () => {
+    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "R-1", status: "PENDING" }), { status: 200 }),
+    );
+    await makeClient({ enabled: true }).refund("D-1", 5000, "USD", "refund_abc");
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://sandbox.dlocal.com/refunds");
+    expect(JSON.parse(init.body as string)).toEqual({
+      payment_id: "D-1", amount: 50, currency: "USD", order_refund_id: "refund_abc",
+      notification_url: "https://api.test/v1/webhooks/dlocal/refunds",
+    });
+  });
+
+  it("derives the refunds notification URL from the payments one", () => {
+    expect(refundNotificationUrl("https://api.pagosya.bo/v1/webhooks/dlocal/payments")).toBe("https://api.pagosya.bo/v1/webhooks/dlocal/refunds");
+    expect(refundNotificationUrl("https://api.pagosya.bo/v1/webhooks/dlocal/payments/")).toBe("https://api.pagosya.bo/v1/webhooks/dlocal/refunds");
+    expect(refundNotificationUrl("https://api.pagosya.bo/hooks/dlocal")).toBe("https://api.pagosya.bo/hooks/dlocal/refunds");
   });
 
   it("marks 5xx as retryable and 4xx as final", async () => {

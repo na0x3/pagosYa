@@ -85,7 +85,7 @@ export class DlocalAdapter implements PaymentRailAdapter {
 
   async refund(req: RailRefundRequest): Promise<RailResult> {
     try {
-      const refund = await this.client.refund(req.railReference, req.amount, "USD");
+      const refund = await this.client.refund(req.railReference, req.amount, "USD", req.idempotencyKey);
       const status = refund.status === "SUCCESS" ? "succeeded" : refund.status === "REJECTED" ? "failed" : "pending";
       return { status, railReference: refund.id, raw: { ...refund } };
     } catch (error) {

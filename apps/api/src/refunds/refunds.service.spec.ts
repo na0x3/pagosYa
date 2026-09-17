@@ -66,6 +66,31 @@ describe("RefundsService financial invariants", () => {
     expect(test.webhooks.enqueueEvent).toHaveBeenCalled();
   });
 
+  it("keeps a pending rail refund reserved as PENDING without posting the refund journal yet", async () => {
+    const test = harness();
+    test.rail.refund.mockResolvedValue({ status: "pending", railReference: "R-1", raw: { status: "PENDING" } });
+    const result = await test.service.create("merchant_1", { paymentIntentId: "pi_abc", amount: 300 }, "refund-order-789");
+
+    expect(test.prisma.transaction.update).toHaveBeenCalledWith({
+      where: { id: "txn_refund_1" },
+      data: expect.objectContaining({ status: TransactionStatus.PENDING, railReference: "R-1" }),
+    });
+    expect(result.status).toBe(TransactionStatus.PENDING);
+    expect(test.ledger.postJournalEntry).not.toHaveBeenCalled();
+    expect(test.webhooks.enqueueEvent).not.toHaveBeenCalled();
+  });
+
+  it("still records a failed rail refund as FAILED, releasing the reservation", async () => {
+    const test = harness();
+    test.rail.refund.mockResolvedValue({ status: "failed", railReference: "rail_refund_x", raw: {} });
+    await test.service.create("merchant_1", { paymentIntentId: "pi_abc", amount: 300 }, "refund-order-790");
+    expect(test.prisma.transaction.update).toHaveBeenCalledWith({
+      where: { id: "txn_refund_1" },
+      data: expect.objectContaining({ status: TransactionStatus.FAILED }),
+    });
+    expect(test.ledger.postJournalEntry).not.toHaveBeenCalled();
+  });
+
   it("counts pending reservations and succeeded refunds against the refundable balance", async () => {
     const test = harness(800);
     await expect(

@@ -91,4 +91,16 @@ describe("DlocalAdapter.refund", () => {
     const result = await makeAdapter({ refund }).refund({ railReference: "D-1", amount: 100, idempotencyKey: "refund_1" });
     expect(result).toMatchObject({ status: "failed", failureReason: "Refund not allowed" });
   });
+
+  it("passes the idempotency key through and maps dLocal's refund statuses", async () => {
+    const refund = jest.fn()
+      .mockResolvedValueOnce({ id: "R-1", status: "PENDING" })
+      .mockResolvedValueOnce({ id: "R-2", status: "SUCCESS" })
+      .mockResolvedValueOnce({ id: "R-3", status: "REJECTED" });
+    const adapter = makeAdapter({ refund });
+    await expect(adapter.refund({ railReference: "D-1", amount: 100, idempotencyKey: "refund_1" })).resolves.toMatchObject({ status: "pending", railReference: "R-1" });
+    await expect(adapter.refund({ railReference: "D-1", amount: 100, idempotencyKey: "refund_2" })).resolves.toMatchObject({ status: "succeeded", railReference: "R-2" });
+    await expect(adapter.refund({ railReference: "D-1", amount: 100, idempotencyKey: "refund_3" })).resolves.toMatchObject({ status: "failed", railReference: "R-3" });
+    expect(refund).toHaveBeenCalledWith("D-1", 100, "USD", "refund_1");
+  });
 });
