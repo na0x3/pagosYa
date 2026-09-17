@@ -114,3 +114,13 @@ test("merchant sees separate BOB and USD balances and can request international 
   await expect(card.getByText("Solicitud en revisión.")).toBeVisible();
   await expect(card.getByText("Agrega una cuenta en USD")).toBeVisible();
 });
+
+test("shows a fallback BOB balance card when the merchant has no ledger entries yet", async ({ page }) => {
+  await page.route("**/v1/merchants/balance", (route) => route.fulfill({ json: {
+    payableBalance: 0, currency: "BOB", balances: [],
+  } }));
+
+  await openOverview(page);
+
+  await expect(page.getByText("Saldo por desembolsar (BOB)")).toBeVisible();
+});

@@ -17383,7 +17383,7 @@
             <span class="muted">Saldo por desembolsar (${esc(entry.currency)})</span>
             <span class="card-icon">${BALANCE_CARD_ICON}</span>
           </div>
-          <div class="value">${money(entry.payableBalance, entry.currency)}</div>
+          <div class="value">${money(entry.payableBalance, esc(entry.currency))}</div>
           <p class="faint" style="margin:4px 0 0">Se transfiere a tu cuenta bancaria en el próximo desembolso</p>
         </div>`,
       )
@@ -19542,7 +19542,9 @@
       if (refreshVersion !== dashboardRefreshVersion || selectedStoreId !== currentStoreId) return;
 
       lastPayableBalance = balance.payableBalance;
-      lastBalances = balance.balances ?? [{ currency: balance.currency, payableBalance: balance.payableBalance }];
+      lastBalances = balance.balances?.length
+        ? balance.balances
+        : [{ currency: balance.currency || "BOB", payableBalance: balance.payableBalance || 0 }];
       renderBalanceCards(lastBalances);
       document.getElementById("internationalPaymentsCard").innerHTML = renderInternationalCard(international);
       const selectedStore = lastStores.find((store) => store.id === currentStoreId) || null;
