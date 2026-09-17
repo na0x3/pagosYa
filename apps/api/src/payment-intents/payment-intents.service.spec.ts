@@ -388,8 +388,12 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
       storeOrder: { updateMany: jest.fn() },
     };
     const prisma = { $transaction: jest.fn((cb) => cb(tx)) };
-    const dlocal = { railId: "dlocal", authorize: jest.fn().mockResolvedValue({ status: "requires_action", railReference: "D-1", raw: {} }) };
-    const railRegistry = { get: jest.fn().mockReturnValue(dlocal), getForMethodType: jest.fn() };
+    const dlocal = { railId: "dlocal", supportedMethodTypes: ["CARD", "LOCAL_METHOD"], authorize: jest.fn().mockResolvedValue({ status: "requires_action", railReference: "D-1", raw: {} }) };
+    const domestic = { railId: "mock_qr", supportedMethodTypes: ["QR"], authorize: jest.fn().mockResolvedValue({ status: "requires_action", railReference: "Q-1", raw: {} }) };
+    const railRegistry = {
+      get: jest.fn((id: string) => (id === "dlocal" ? dlocal : domestic)),
+      getForMethodType: jest.fn().mockReturnValue(domestic),
+    };
     const paymentMethods = { findOrCreate: jest.fn().mockResolvedValue({ id: "pm_1", type: "LOCAL_METHOD" }) };
     const config = { get: jest.fn((key: string) => (key === "app.environment" ? env.environment ?? "development" : { ...dlocalCfg, enabled: env.enabled ?? false })) };
     // Reorder to the real constructor signature; config is always last.
@@ -397,7 +401,7 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     jest.spyOn(service as any, "assertCartStillAvailable").mockResolvedValue(undefined);
     jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
     jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: {}, railResult: {} });
-    return { service, update, dlocal, railRegistry };
+    return { service, update, dlocal, domestic, railRegistry, paymentMethods };
   }
 
   const dto = {
@@ -435,6 +439,36 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     const liveProd = setup({}, {}, { environment: "production", enabled: true });
     await liveProd.service.confirm("pi_1", dto as any);
     expect(liveProd.dlocal.authorize).toHaveBeenCalled();
+  });
+
+  it("rejects a payment method type dLocal does not support, before calling the rail", async () => {
+    const test = setup({});
+    test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await expect(test.service.confirm("pi_1", { ...dto, paymentMethod: { type: "QR", token: "qr" } } as any)).rejects.toThrow("método de pago");
+    await expect(setup({}).service.confirm("pi_1", { ...dto, paymentMethod: { type: "QR", token: "qr" } } as any)).rejects.toBeInstanceOf(BadRequestException);
+    expect(test.dlocal.authorize).not.toHaveBeenCalled();
+    expect(test.update).not.toHaveBeenCalled();
+  });
+
+  it("writes the FX snapshot only for international charges and drops a stale one on a domestic retry", async () => {
+    const fx = { originalAmount: 70000, originalCurrency: "BOB", rate: 6.96, convertedAt: "2026-09-16T00:00:00.000Z" };
+
+    const domesticRetry = setup({}, { amount: 10058, currency: "USD", status: "FAILED", metadata: { fx, storeId: "store_1" } });
+    domesticRetry.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await domesticRetry.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any);
+    const retried = domesticRetry.update.mock.calls[0][0].data;
+    expect(retried).toMatchObject({ amount: 70000, currency: "BOB" });
+    expect(retried.metadata).not.toHaveProperty("fx");
+    expect(retried.metadata).toMatchObject({ storeId: "store_1" });
+
+    const domesticFirst = setup({});
+    domesticFirst.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await domesticFirst.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any);
+    expect(domesticFirst.update.mock.calls[0][0].data.metadata).not.toHaveProperty("fx");
+
+    const international = setup({});
+    await international.service.confirm("pi_1", dto as any);
+    expect(international.update.mock.calls[0][0].data.metadata.fx).toMatchObject({ originalAmount: 70000, rate: 6.96 });
   });
 
   it("requires a country and a shopper email", async () => {

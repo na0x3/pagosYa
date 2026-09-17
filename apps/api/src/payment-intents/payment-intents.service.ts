@@ -323,6 +323,9 @@ export class PaymentIntentsService {
         if (!dto.customerEmail) throw new BadRequestException("Ingresa tu correo para pagar desde el exterior.");
       }
       const rail = international ? this.railRegistry.get("dlocal") : this.railRegistry.getForMethodType(paymentMethod.type);
+      if (international && !rail.supportedMethodTypes.includes(dto.paymentMethod.type)) {
+        throw new BadRequestException("Este método de pago no está disponible para pagos desde el exterior.");
+      }
       let charge: ReturnType<typeof resolveChargeAmount>;
       try {
         charge = resolveChargeAmount(current, international, this.config.get<DlocalConfig>("app.dlocal")!.bobPerUsd, new Date());
@@ -349,6 +352,7 @@ export class PaymentIntentsService {
       const currentMetadata = current.metadata && typeof current.metadata === "object" && !Array.isArray(current.metadata)
         ? current.metadata as Prisma.JsonObject
         : {};
+      const { fx: _previousFx, ...metadataWithoutFx } = currentMetadata;
       const delivery = dto.deliveryRequested
         ? {
             requested: true,
@@ -378,10 +382,12 @@ export class PaymentIntentsService {
           customerEmail: effectiveEmail,
           customerPhone: debt?.customerPhone || dto.customerPhone,
           metadata: {
-            ...currentMetadata,
+            ...metadataWithoutFx,
             delivery,
             ...(locationStockReserved ? { locationStockReserved: true } : {}),
-            fx: charge.fx,
+            // Only an international charge carries a conversion; a domestic retry
+            // after one must not keep the stale snapshot (receipts/invoices read it).
+            ...(charge.fx ? { fx: charge.fx as unknown as Prisma.JsonObject } : {}),
             ...(international ? { dlocalCostEstimated: true, intlCountry: dto.country } : {}),
           } as Prisma.InputJsonValue,
           ...(consumerUserId && { consumerUserId }),
