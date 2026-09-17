@@ -29,11 +29,16 @@ describe("DlocalAdapter.toRailResult", () => {
     expect(result.railReference).toBe("D-1");
   });
 
-  it("carries the redirect URL and the decline reason", () => {
+  it("carries the redirect URL, a Spanish failure reason for shoppers, and dLocal's detail in raw", () => {
     expect(adapter.toRailResult({ id: "D-1", amount: 1, currency: "USD", status: "PENDING", redirect_url: "https://pay" } as any).actionRequired)
       .toEqual({ type: "redirect", data: { redirectUrl: "https://pay" } });
-    expect(adapter.toRailResult({ id: "D-1", amount: 1, currency: "USD", status: "REJECTED", status_detail: "Insufficient funds" } as any).failureReason)
-      .toBe("Insufficient funds");
+    const rejected = adapter.toRailResult({ id: "D-1", amount: 1, currency: "USD", status: "REJECTED", status_detail: "Insufficient funds" } as any);
+    expect(rejected.failureReason).toBe("El pago fue rechazado.");
+    expect(rejected.raw).toMatchObject({ status_detail: "Insufficient funds" });
+    expect(adapter.toRailResult({ id: "D-1", amount: 1, currency: "USD", status: "CANCELLED", status_detail: "The payment was expired." } as any).failureReason)
+      .toBe("El pago fue cancelado o expiró.");
+    expect(adapter.toRailResult({ id: "D-1", amount: 1, currency: "USD", status: "VERIFIED" } as any).failureReason)
+      .toBe("No se pudo completar el pago.");
   });
 });
 

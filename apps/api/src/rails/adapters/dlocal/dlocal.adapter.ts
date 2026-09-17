@@ -33,7 +33,17 @@ export class DlocalAdapter implements PaymentRailAdapter {
           ? { status: "requires_action", railReference: payment.id, raw, actionRequired: { type: "redirect", data: { redirectUrl: payment.redirect_url } } }
           : { status: "pending", railReference: payment.id, raw };
       default:
-        return { status: "failed", railReference: payment.id, raw, failureReason: payment.status_detail ?? `dlocal_${String(payment.status).toLowerCase()}` };
+        // failureReason is shown to shoppers, so it's Spanish; dLocal's own
+        // status_detail (English, provider wording) stays in raw for ops.
+        return {
+          status: "failed",
+          railReference: payment.id,
+          raw,
+          failureReason:
+            payment.status === "REJECTED" ? "El pago fue rechazado."
+            : payment.status === "CANCELLED" ? "El pago fue cancelado o expiró."
+            : "No se pudo completar el pago.",
+        };
     }
   }
 
