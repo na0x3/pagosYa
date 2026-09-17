@@ -16,6 +16,22 @@ function makeFakePrisma() {
 }
 
 describe("SupportService", () => {
+  it("shows both payout accounts in the dossier's KYC, masked", async () => {
+    const prisma = makeFakePrisma();
+    prisma.supportCase.findUnique.mockResolvedValue({ id: "case_1", merchantId: "merchant_1", status: SupportCaseStatus.REVIEWED, notes: [] });
+    prisma.merchant.findUnique.mockResolvedValue({
+      id: "merchant_1", users: [], payouts: [],
+      kycSubmissions: [{ id: "kyc_1", taxId: "1234567", legalRepDocumentId: "7654321", payoutBankAccount: "1000200030004000", payoutUsdBankAccount: "US-99887766" }],
+    });
+    const service = new SupportService(prisma, { record: jest.fn() } as any, {} as any);
+
+    const dossier = await service.getDossier("merchant_1", "case_1", actor);
+
+    const select = prisma.merchant.findUnique.mock.calls[0][0].select;
+    expect(select.kycSubmissions.select).toMatchObject({ payoutBankAccount: true, payoutUsdBankAccount: true });
+    expect(dossier.merchant.kycSubmissions[0]).toMatchObject({ payoutBankAccount: "••••••••4000", payoutUsdBankAccount: "•••••••7766" });
+  });
+
   it("lets an authenticated merchant submit a traceable case in SENT status", async () => {
     const prisma = makeFakePrisma();
     const auditLog = { record: jest.fn() };

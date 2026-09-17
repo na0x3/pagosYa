@@ -75,7 +75,15 @@ async function bootstrap() {
   // Slightly above Express's 100kb default for general headroom. Product photos and
   // merchant logos go through multipart uploads (see UploadsModule), not JSON bodies,
   // so this limit no longer needs to accommodate base64 image payloads.
-  app.use(json({ limit: "1mb", strict: true, reviver: safeJsonReviver }));
+  app.use(json({
+    limit: "1mb",
+    strict: true,
+    reviver: safeJsonReviver,
+    // Signed webhooks are verified over the exact bytes received, not a re-serialization.
+    verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
+      if (req.url?.startsWith("/v1/webhooks/dlocal/")) req.rawBody = Buffer.from(buf);
+    },
+  }));
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (jsonIsTooComplex(req.body)) {
       return res.status(400).json({ statusCode: 400, message: "JSON body is too deeply nested or complex" });

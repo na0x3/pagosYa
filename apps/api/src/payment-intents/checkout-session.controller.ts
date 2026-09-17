@@ -5,6 +5,7 @@ import { ClientSecretGuard } from "../auth/guards/client-secret.guard";
 import { PublishableApiKeyGuard } from "../auth/guards/publishable-api-key.guard";
 import { PaymentIntentsService } from "./payment-intents.service";
 import { CheckoutSessionDto, WidgetSessionDto } from "./dto/checkout-session.dto";
+import { InternationalPaymentsService } from "../international/international-payments.service";
 
 /**
  * Unauthenticated-but-secret-bearing: the checkout iframe has no API key,
@@ -14,7 +15,10 @@ import { CheckoutSessionDto, WidgetSessionDto } from "./dto/checkout-session.dto
 @ApiTags("checkout")
 @Controller("v1/checkout")
 export class CheckoutSessionController {
-  constructor(private readonly paymentIntents: PaymentIntentsService) {}
+  constructor(
+    private readonly paymentIntents: PaymentIntentsService,
+    private readonly international: InternationalPaymentsService,
+  ) {}
 
   @Post("session")
   @HttpCode(200)
@@ -46,6 +50,7 @@ export class CheckoutSessionController {
       metadata: intent.metadata,
       recipient: await this.paymentIntents.checkoutRecipient(intent),
       trackingToken: await this.paymentIntents.trackingTokenForPaymentIntent(intent.id),
+      international: { available: await this.international.availableForIntent(intent) },
     };
   }
 

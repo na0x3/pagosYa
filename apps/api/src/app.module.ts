@@ -10,6 +10,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { MerchantsModule } from "./merchants/merchants.module";
 import { PaymentIntentsModule } from "./payment-intents/payment-intents.module";
+import { InternationalModule } from "./international/international.module";
 import { RefundsModule } from "./refunds/refunds.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
 import { RailsModule } from "./rails/rails.module";
@@ -60,6 +61,7 @@ import { OperationsModule } from "./operations/operations.module";
     MerchantsModule,
     RailsModule,
     PaymentIntentsModule,
+    InternationalModule,
     RefundsModule,
     WebhooksModule,
     IdempotencyModule,

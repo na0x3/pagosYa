@@ -3860,16 +3860,7 @@
           <p class="merchant-workspace-note">El diseño se guarda como borrador. Tu catálogo y checkout siguen conectados a pagosYa. <a href="#dashboard-appearance" data-dashboard-view="appearance">Configuración de la tienda publicada</a></p>
         </section>
     <div class="cards" data-dashboard-page="overview">
-      <div class="card">
-        <div class="card-head">
-          <span class="muted">Saldo por pagar</span>
-          <span class="card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          </span>
-        </div>
-        <div class="value" id="balanceValue">—</div>
-        <p class="faint" style="margin:4px 0 0">Se transfiere a tu cuenta bancaria en el próximo desembolso</p>
-      </div>
+      <div id="balanceCards" style="display:contents"></div>
       <div class="card">
         <div class="card-head">
           <span class="muted">Estado de verificación (KYC)</span>
@@ -3889,6 +3880,7 @@
         <div class="value"><span class="badge" id="invoicingBadge">—</span></div>
       </div>
     </div>
+    <div id="internationalPaymentsCard" data-dashboard-page="overview"></div>
 
     <section class="gamification-summary" id="gamificationSummary" data-dashboard-page="overview" aria-labelledby="gamificationSummaryTitle">
       <div class="gamification-summary-character"><img id="gamificationSummaryImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
@@ -5172,6 +5164,7 @@
           <div><label>Nombre del representante legal</label><input name="legalRepName" required></div>
           <div><label>CI del representante legal</label><input name="legalRepDocumentId" required></div>
           <div><label>Cuenta bancaria para pagos</label><input name="payoutBankAccount" required></div>
+          <div><label>Cuenta en USD para desembolsos internacionales (opcional)</label><input name="payoutUsdBankAccount" maxlength="300"></div>
           <button class="primary" type="submit">Enviar KYC</button>
         </form>
       </div>
@@ -6652,6 +6645,7 @@
   let lastFinances = null;
   let lastTotalFinances = null;
   let lastPayableBalance = null;
+  let lastBalances = null;
   const GAMIFICATION_XP_PER_SALE = 50;
   const GAMIFICATION_XP_PER_VISIT = 2;
   // Progression tuning lives here. Change xpRequired values without touching map rendering or animation code.
@@ -17374,13 +17368,47 @@
     setButtonBusy(document.getElementById("paymentLinkSubmit"), busy, label);
   }
 
-  function money(cents) {
-    if (monetaryValuesHidden) return "•••••• BOB";
-    return (cents / 100).toFixed(2) + " BOB";
+  function money(cents, currency = "BOB") {
+    if (monetaryValuesHidden) return `•••••• ${currency}`;
+    return (cents / 100).toFixed(2) + " " + currency;
   }
 
   function moneyNumber(cents) {
     return monetaryValuesHidden ? "••••••" : (cents / 100).toFixed(2);
+  }
+
+  const BALANCE_CARD_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+
+  function renderBalanceCards(balances) {
+    document.getElementById("balanceCards").innerHTML = balances
+      .map(
+        (entry) => `<div class="card">
+          <div class="card-head">
+            <span class="muted">Saldo por desembolsar (${esc(entry.currency)})</span>
+            <span class="card-icon">${BALANCE_CARD_ICON}</span>
+          </div>
+          <div class="value">${money(entry.payableBalance, esc(entry.currency))}</div>
+          <p class="faint" style="margin:4px 0 0">Se transfiere a tu cuenta bancaria en el próximo desembolso</p>
+        </div>`,
+      )
+      .join("");
+  }
+
+  function renderInternationalCard(intl) {
+    if (!intl) return "";
+    const fee = `${(intl.feeBps / 100).toFixed(1).replace(".", ",")}%`;
+    const states = {
+      OFF: `<p>Recibe pagos de compradores fuera de Bolivia con tarjeta y métodos locales. Se cobra en USD con una comisión de ${fee}.</p>
+            <button type="button" class="primary" data-intl-request ${intl.settlementMode !== "AGGREGATOR" ? "disabled" : ""}>Solicitar activación</button>
+            ${intl.settlementMode !== "AGGREGATOR" ? '<p class="hint">Disponible solo cuando pagosYa liquida tus cobros.</p>' : ""}`,
+      REQUESTED: `<p><strong>Solicitud en revisión.</strong> Te avisaremos cuando esté activo. Comisión: ${fee}.</p>`,
+      ENABLED: `<p><strong>Activo.</strong> Comisión internacional: ${fee}.</p>`,
+      REJECTED: `<p><strong>No aprobado.</strong> ${esc(intl.note || "")}</p><button type="button" data-intl-request>Volver a solicitar</button>`,
+    };
+    const usdHint = intl.status !== "OFF" && !intl.usdPayoutAccountOnFile
+      ? '<p class="hint">Agrega una cuenta en USD en tus datos de verificación para recibir desembolsos en dólares.</p>'
+      : "";
+    return `<section class="panel" role="region" aria-label="Pagos internacionales"><h3>Pagos internacionales</h3>${states[intl.status] ?? ""}${usdHint}</section>`;
   }
 
   function setPasswordVisible(visible) {
@@ -17425,7 +17453,7 @@
         // The privacy choice still applies for this visit when storage is unavailable.
       }
     }
-    if (lastPayableBalance !== null) document.getElementById("balanceValue").textContent = money(lastPayableBalance);
+    if (lastBalances) renderBalanceCards(lastBalances);
     if (lastTotalFinances) renderTotalFinances(lastTotalFinances);
     if (lastFinances) renderFinances(lastFinances);
     if (lastPayments.length) renderPaymentRows();
@@ -19493,6 +19521,7 @@
         api("/merchants/invoicing_profile"),
         api("/merchants/payouts"),
         api("/merchants/finances"),
+        api("/merchants/international_payments").catch(() => null),
       ]);
       const stores = await api("/stores");
       if (refreshVersion !== dashboardRefreshVersion) {
@@ -19506,7 +19535,7 @@
 
       const selectedStoreId = currentStoreId;
       const storeQuery = selectedStoreId ? `?storeId=${encodeURIComponent(selectedStoreId)}` : "";
-      const [[balance, kyc, invoicing, payouts, totalFinances], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
+      const [[balance, kyc, invoicing, payouts, totalFinances, international], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
         overviewPromise,
         api(`/merchants/orders${storeQuery}`),
         selectedStoreId ? api(`/merchants/finances${storeQuery}`) : api("/merchants/finances"),
@@ -19519,7 +19548,11 @@
       if (refreshVersion !== dashboardRefreshVersion || selectedStoreId !== currentStoreId) return;
 
       lastPayableBalance = balance.payableBalance;
-      document.getElementById("balanceValue").textContent = money(lastPayableBalance);
+      lastBalances = balance.balances?.length
+        ? balance.balances
+        : [{ currency: balance.currency || "BOB", payableBalance: balance.payableBalance || 0 }];
+      renderBalanceCards(lastBalances);
+      document.getElementById("internationalPaymentsCard").innerHTML = renderInternationalCard(international);
       const selectedStore = lastStores.find((store) => store.id === currentStoreId) || null;
       const paymentStore = (selectedStore?.checkoutMode || "payment") === "payment";
 
@@ -19704,6 +19737,20 @@
     } finally {
       setButtonBusy(merchantDeleteConfirmEl, false, "Eliminar definitivamente mi acceso");
       merchantDeleteConfirmEl.disabled = merchantDeleteConfirmationEl.value !== "ELIMINAR";
+    }
+  });
+
+  document.getElementById("internationalPaymentsCard").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-intl-request]");
+    if (!button) return;
+    errorEl.textContent = "";
+    setButtonBusy(button, true, button.textContent);
+    try {
+      await api("/merchants/international_payments/request", { method: "POST" });
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+      setButtonBusy(button, false, button.textContent);
     }
   });
 

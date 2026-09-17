@@ -442,6 +442,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <a href="#revisiones">Revisiones KYC</a>
     <a href="#incidencias">Incidencias</a>
     <a href="#dominios">Dominios</a>
+    <a href="#pagos-internacionales">Pagos internacionales</a>
     <a href="#auditoria">Auditoría</a>
   </nav>
 
@@ -586,6 +587,30 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
   </section>
 
+  <section class="block" id="pagos-internacionales">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Pagos internacionales</h2>
+        <p class="muted" style="margin: 2px 0 0">Solicitudes de comercios para cobrar en USD con dLocal. Aprobar o rechazar queda auditado.</p>
+      </div>
+      <div id="notConnected5" class="empty-state">Conecta para consultar las solicitudes.</div>
+      <div id="intlEmpty" class="empty-state" style="display:none">No hay solicitudes pendientes.</div>
+      <div class="table-wrap"><table id="intlTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Comercio</th>
+            <th>Liquidación</th>
+            <th>Estado</th>
+            <th>Solicitado</th>
+            <th>Expediente</th>
+          </tr>
+        </thead>
+        <tbody id="intlRows"></tbody>
+      </table></div>
+      <div id="intlDossier" class="domain-dossier" style="display:none"></div>
+    </div>
+  </section>
+
   <section class="block" id="auditoria">
     <div class="panel">
       <div class="section-head">
@@ -629,6 +654,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   const domainRowsEl = document.getElementById("domainRows");
   const domainDossierEl = document.getElementById("domainDossier");
   const domainSearchFormEl = document.getElementById("domainSearchForm");
+  const intlEmptyEl = document.getElementById("intlEmpty");
+  const intlTableEl = document.getElementById("intlTable");
+  const intlRowsEl = document.getElementById("intlRows");
+  const intlDossierEl = document.getElementById("intlDossier");
   const supportNotConnectedEl = document.getElementById("supportNotConnected");
   const supportWorkspaceEl = document.getElementById("supportWorkspace");
   const supportSearchResultsEl = document.getElementById("supportSearchResults");
@@ -746,7 +775,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <section class="dossier-section"><h4>Pagos recientes</h4>${compactRows(merchant.paymentIntents, (payment) => `
         <div class="compact-row"><strong><code>${esc(payment.id)}</code></strong><span>${money(payment.amount, payment.currency)}</span><span>${statusBadge(payment.status)}</span><span>${dateTime(payment.createdAt)}</span></div>`, "No hay pagos recientes.")}</section>
       <section class="dossier-section"><h4>Cumplimiento y entregas</h4>
-        ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
+        ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}<br>Cuenta ${esc(maskedValue(kyc.payoutBankAccount))} · USD ${esc(maskedValue(kyc.payoutUsdBankAccount))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
         ${compactRows(merchant.payouts, (payout) => `<div class="compact-row"><strong>Desembolso <code>${esc(payout.id)}</code></strong><span>${money(payout.amount, payout.currency)} · ${esc(maskedValue(payout.bankAccount))}</span><span>${statusBadge(payout.status)}</span><span>${esc(payout.failureReason || dateTime(payout.createdAt))}</span></div>`, "No hay desembolsos recientes.")}
         ${compactRows(merchant.invoices, (invoice) => `<div class="compact-row"><strong>Factura <code>${esc(invoice.id)}</code></strong><span>${money(invoice.amount, invoice.currency)}</span><span>${statusBadge(invoice.status)}</span><span>${esc(invoice.failureReason || dateTime(invoice.createdAt))}</span></div>`, "No hay facturas recientes.")}
       </section>
@@ -789,7 +818,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
         <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
-        <td>${esc(s.payoutBankAccount)}</td>
+        <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
         <td>${esc(new Date(s.createdAt).toLocaleString("es-BO"))}</td>
         <td>
           <div class="actions-cell">
@@ -950,6 +979,85 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     }
   });
 
+  let lastIntlRequests = [];
+
+  const settlementBadge = (mode) => `<span class="badge badge-${mode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(mode)}</span>`;
+
+  async function refreshInternationalPayments() {
+    lastIntlRequests = await api("/internal/international_payments");
+    if (lastIntlRequests.length === 0) {
+      intlTableEl.style.display = "none";
+      intlDossierEl.style.display = "none";
+      intlEmptyEl.style.display = "block";
+      return;
+    }
+    intlEmptyEl.style.display = "none";
+    intlTableEl.style.display = "table";
+    intlRowsEl.innerHTML = lastIntlRequests
+      .map(
+        (request) => `
+      <tr>
+        <td><strong>${esc(request.name)}</strong><br><span class="muted">${esc(request.email)}</span></td>
+        <td>${settlementBadge(request.settlementMode)}</td>
+        <td>${statusBadge(request.internationalPaymentsStatus)}</td>
+        <td>${dateTime(request.updatedAt)}</td>
+        <td><button type="button" data-intl-merchant="${esc(request.id)}">Abrir</button></td>
+      </tr>`,
+      )
+      .join("");
+  }
+
+  function renderIntlDossier(request) {
+    intlDossierEl.style.display = "block";
+    intlDossierEl.innerHTML = `
+      <div class="section-head">
+        <h3 style="margin:0">${esc(request.name)} ${statusBadge(request.internationalPaymentsStatus)}</h3>
+        <p class="muted" style="margin:2px 0 0">${esc(request.email)} · ${settlementBadge(request.settlementMode)} · solicitado ${dateTime(request.updatedAt)}</p>
+      </div>
+      <form id="intlActionForm" data-merchant="${esc(request.id)}">
+        <label for="intlReason">Motivo (queda en la auditoría)</label>
+        <textarea id="intlReason" minlength="8" maxlength="500" required placeholder="Verificamos la actividad internacional y la cuenta en USD del comercio."></textarea>
+        <div class="panel-row" style="margin-top:8px">
+          <button class="approve" type="submit" value="approve" name="action">Aprobar</button>
+          <button class="reject" type="submit" value="reject" name="action">Rechazar</button>
+        </div>
+      </form>
+    `;
+  }
+
+  intlRowsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-intl-merchant]");
+    if (!button) return;
+    errorEl.textContent = "";
+    const request = lastIntlRequests.find((r) => r.id === button.dataset.intlMerchant);
+    if (request) {
+      renderIntlDossier(request);
+      intlDossierEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
+
+  intlDossierEl.addEventListener("submit", async (event) => {
+    const form = event.target.closest("#intlActionForm");
+    if (!form) return;
+    event.preventDefault();
+    const action = event.submitter?.value === "reject" ? "reject" : "approve";
+    const reason = form.querySelector("#intlReason").value.trim();
+    errorEl.textContent = "";
+    [...form.querySelectorAll("button")].forEach((button) => (button.disabled = true));
+    try {
+      await api(`/internal/international_payments/${encodeURIComponent(form.dataset.merchant)}/${action}`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      intlDossierEl.style.display = "none";
+      intlDossierEl.innerHTML = "";
+      await Promise.all([refreshInternationalPayments(), refreshAuditLog()]);
+    } catch (err) {
+      errorEl.textContent = "No pudimos aplicar la decisión: " + err.message;
+      [...form.querySelectorAll("button")].forEach((button) => (button.disabled = false));
+    }
+  });
+
   async function refreshAuditLog() {
     const entries = await api("/internal/audit_log");
     if (entries.length === 0) {
@@ -983,13 +1091,14 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     document.getElementById("notConnected2").style.display = "none";
     document.getElementById("notConnected3").style.display = "none";
     document.getElementById("notConnected4").style.display = "none";
+    document.getElementById("notConnected5").style.display = "none";
     supportNotConnectedEl.style.display = "none";
     supportWorkspaceEl.style.display = "grid";
 
     try {
       const me = await api("/internal/ops_users/me");
       whoamiEl.textContent = `Sesión de ${me.name} <${me.email}> · ${me.role}`;
-      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders()]);
+      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments()]);
     } catch (err) {
       errorEl.textContent = "No pudimos actualizar la consola: " + err.message;
       whoamiEl.textContent = "";
@@ -1003,6 +1112,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       domainEmptyEl.style.display = "none";
       domainDossierEl.style.display = "none";
       domainSearchFormEl.style.display = "none";
+      intlTableEl.style.display = "none";
+      intlEmptyEl.style.display = "none";
+      intlDossierEl.style.display = "none";
       supportWorkspaceEl.style.display = "none";
       supportNotConnectedEl.style.display = "grid";
     }

@@ -48,7 +48,7 @@ describe("KycService.submit", () => {
 
     expect(result.status).toBe(KycStatus.PENDING_REVIEW);
     expect(prisma.merchantKycSubmission.create).toHaveBeenCalledWith({
-      data: { merchantId: "m_1", ...submitDto },
+      data: { merchantId: "m_1", ...submitDto, payoutUsdBankAccount: null },
     });
   });
 

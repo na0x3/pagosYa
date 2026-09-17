@@ -24,6 +24,7 @@ export enum PaymentMethodType {
   TIGO_MONEY = "TIGO_MONEY",
   BANK_TRANSFER = "BANK_TRANSFER",
   QR = "QR",
+  LOCAL_METHOD = "LOCAL_METHOD",
 }
 
 export enum PaymentIntentStatus {
@@ -67,4 +68,4 @@ export enum WebhookEventStatus {
   FAILED = "FAILED",
 }
 
-export type RailId = "mock_card" | "mock_tigo_money" | "mock_bank_transfer" | "mock_qr" | "baneco_qr";
+export type RailId = "mock_card" | "mock_tigo_money" | "mock_bank_transfer" | "mock_qr" | "baneco_qr" | "dlocal";

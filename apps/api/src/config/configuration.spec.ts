@@ -18,7 +18,36 @@ const SECURITY_ENV_KEYS = [
   "ADDITIONAL_CORS_ORIGINS",
   "BANECO_QR_ENABLED",
   "TRUST_PROXY",
+  "INTL_BOB_PER_USD",
+  "DLOCAL_ENABLED",
+  "DLOCAL_LOGIN",
+  "DLOCAL_TRANS_KEY",
+  "DLOCAL_SECRET_KEY",
+  "DLOCAL_NOTIFICATION_URL",
+  "DLOCAL_RETURN_URL",
 ] as const;
+
+function setStrongProductionEnv() {
+  process.env.NODE_ENV = "production";
+  process.env.DATABASE_URL = "postgresql://database.example/pagosya";
+  process.env.REDIS_URL = "rediss://default:strong-password@redis.example:6379/0";
+  process.env.OBJECT_STORAGE_BUCKET = "pagosya-production";
+  process.env.OBJECT_STORAGE_ACCESS_KEY_ID = "production-access-key";
+  process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY = "production-secret-key";
+  process.env.INTERNAL_RAIL_CALLBACK_SECRET = "rail_" + "a".repeat(48);
+  process.env.INTERNAL_OPS_SECRET = "ops_" + "b".repeat(48);
+  process.env.CHECKOUT_ORIGIN = "https://checkout.pagosya.bo";
+  process.env.CONSUMER_DASHBOARD_ORIGIN = "https://mi.pagosya.bo";
+  process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
+  process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
+  process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+  process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
+  process.env.ADDITIONAL_CORS_ORIGINS = "https://ops.pagosya.bo,https://dashboard.pagosya.bo";
+  process.env.BANECO_QR_ENABLED = "false";
+  process.env.TRUST_PROXY = "1";
+  delete process.env.INTL_BOB_PER_USD;
+  delete process.env.DLOCAL_ENABLED;
+}
 
 describe("production security configuration", () => {
   const original = Object.fromEntries(SECURITY_ENV_KEYS.map((key) => [key, process.env[key]]));
@@ -76,6 +105,20 @@ describe("production security configuration", () => {
     expect(result.app.trustProxy).toBe(1);
     expect(result.app.exposeDocs).toBe(false);
     expect(result.app.databaseUrl).toContain("connection_limit=10");
+  });
+
+  it("refuses an FX rate in production while dLocal would run on fixtures", () => {
+    setStrongProductionEnv();
+    process.env.INTL_BOB_PER_USD = "6.96";
+    expect(configuration).toThrow("INTL_BOB_PER_USD");
+
+    process.env.DLOCAL_ENABLED = "true";
+    process.env.DLOCAL_LOGIN = "login";
+    process.env.DLOCAL_TRANS_KEY = "trans";
+    process.env.DLOCAL_SECRET_KEY = "secret";
+    process.env.DLOCAL_NOTIFICATION_URL = "https://api.pagosya.bo/v1/webhooks/dlocal/payments";
+    process.env.DLOCAL_RETURN_URL = "https://checkout.pagosya.bo/";
+    expect(() => configuration()).not.toThrow();
   });
 });
 

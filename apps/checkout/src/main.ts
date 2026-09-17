@@ -22,6 +22,7 @@ import {
   createAppointmentPayment,
   fetchDebtCollection,
   fetchAppointmentAvailability,
+  fetchInternationalMethods,
   fetchSession,
   fetchTrackedOrder,
   fetchStore,
@@ -34,6 +35,7 @@ import {
   CheckoutSession,
   CustomerContact,
   Store,
+  type InternationalMethods,
   type StoreAnimation,
   type StoreMotionExperience,
   StoreItem,
@@ -42,6 +44,7 @@ import {
   DebtCollectionInfo,
   TrackedOrder,
 } from "./api";
+import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, isNavigableRedirect, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
 import { readSourcePaymentPreview, closeSourcePaymentPreview, bindPreviewBranding } from './source-payment-preview';
 import { storePreviewExternalDestination } from "./preview-navigation";
@@ -151,7 +154,15 @@ interface LinkHeader {
   contactEmail: string | null;
 }
 
-const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]> = {
+type DomesticMethodType = Exclude<PaymentMethodType, PaymentMethodType.LOCAL_METHOD>;
+const DOMESTIC_METHOD_TYPES: DomesticMethodType[] = [
+  PaymentMethodType.CARD,
+  PaymentMethodType.TIGO_MONEY,
+  PaymentMethodType.BANK_TRANSFER,
+  PaymentMethodType.QR,
+];
+
+const TEST_TOKENS: Record<DomesticMethodType, { label: string; value: string }[]> = {
   [PaymentMethodType.CARD]: [
     { label: "Visa (aprobada)", value: "tok_visa_success" },
     { label: "Visa (rechazada)", value: "tok_visa_decline" },
@@ -174,14 +185,14 @@ const TEST_TOKENS: Record<PaymentMethodType, { label: string; value: string }[]>
   ],
 };
 
-const TAB_LABELS: Record<PaymentMethodType, string> = {
+const TAB_LABELS: Record<DomesticMethodType, string> = {
   [PaymentMethodType.CARD]: "Tarjeta",
   [PaymentMethodType.TIGO_MONEY]: "Tigo Money",
   [PaymentMethodType.BANK_TRANSFER]: "Transferencia",
   [PaymentMethodType.QR]: "QR",
 };
 
-const TAB_ICONS: Record<PaymentMethodType, string> = {
+const TAB_ICONS: Record<DomesticMethodType, string> = {
   [PaymentMethodType.CARD]:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>',
   [PaymentMethodType.TIGO_MONEY]:
@@ -224,7 +235,22 @@ const ICON_CHEVRON_DOWN =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
 
 const app = document.getElementById("app")!;
-let selectedType: PaymentMethodType = PaymentMethodType.CARD;
+let selectedType: DomesticMethodType = PaymentMethodType.CARD;
+let internationalMode = false;
+let internationalCountry = "";
+let internationalMethods: InternationalMethods | null = null;
+let internationalMethodId = "";
+let internationalError: string | null = null;
+// Opened synchronously (still inside the submit click's user-activation
+// window) before dLocal even returns a redirect URL, so Safari's popup
+// blocker doesn't see it as script-initiated after an await. Pointed at the
+// real URL once confirmPaymentIntent resolves; closed on every outcome that
+// doesn't end up needing it.
+let pendingIntlPopup: Window | null = null;
+function closePendingIntlPopup() {
+  pendingIntlPopup?.close();
+  pendingIntlPopup = null;
+}
 let linkHeader: LinkHeader | null = null;
 let activeOrderTrackingToken: string | null = null;
 let orderTrackingPoll: number | null = null;
@@ -841,6 +867,12 @@ async function renderOrderTracking(token: string): Promise<void> {
 const sourcePaymentPreview = new URLSearchParams(window.location.search).get('source_payment_preview') === '1';
 
 async function main() {
+  const intlReturn = parseReturnParams(window.location.search);
+  if (intlReturn) {
+    await renderInternationalReturn(intlReturn.paymentIntentId);
+    observeResize(app);
+    return;
+  }
   const params = new URLSearchParams(window.location.search);
   const fragmentParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   configureParentOrigin(fragmentParams.get("parent_origin"));
@@ -9444,18 +9476,51 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             ${recipient?.name ? `<div><span>Destinatario</span><strong>${escapeHtml(recipient.name)}</strong></div>` : ""}
             ${recipient?.document ? `<div><span>Carnet / CI</span><strong>${escapeHtml(recipient.document)}</strong></div>` : ""}
             <p>${recipient?.name ? "El comercio ya completó tus datos." : "El comercio ya preparó este cobro."} Solo elige cómo pagar.</p>
+            ${internationalMode && !recipient?.email ? `<div class="field">
+              <label for="customerEmail">Correo electrónico</label>
+              <input id="customerEmail" type="email" autocomplete="email" placeholder="tu@gmail.com" value="${escapeHtml(customerContact.email)}" aria-describedby="customerEmailError"${invalid("customerEmail")} />
+              ${fieldError("customerEmail")}
+            </div>` : ""}
           </div>`}
-      <div class="tabs">
-        ${Object.values(PaymentMethodType)
+      ${session.international?.available && !domainPurchase && !sourcePaymentPreview ? `
+        <div class="intl-entry">
+          <label class="intl-toggle"><input type="checkbox" id="intlToggle" ${internationalMode ? "checked" : ""}> ¿Pagas desde fuera de Bolivia?</label>
+          ${internationalMode ? `
+            <div class="field">
+              <label for="intlCountry">País desde el que pagas</label>
+              <select id="intlCountry">
+                <option value="">Elige tu país</option>
+                ${INTERNATIONAL_COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === internationalCountry ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
+              </select>
+            </div>
+            ${internationalError ? `<p class="intl-error" role="alert">${escapeHtml(internationalError)}</p>` : ""}
+            ${internationalMethods && internationalMethods.methods.length === 0 ? `<p class="intl-error" role="alert">No hay métodos de pago disponibles para este país.</p>` : ""}
+            ${internationalMethods && internationalMethods.methods.length > 0 ? `
+              <p class="intl-quote">${escapeHtml(formatDualAmount(internationalMethods.quote.originalAmount, internationalMethods.quote.originalCurrency, internationalMethods.quote.amount))}</p>
+              <div class="intl-methods" role="radiogroup" aria-label="Método de pago internacional">
+                ${internationalMethods.methods.map((m) => `
+                  <label class="intl-method">
+                    <input type="radio" name="intlMethod" value="${escapeHtml(m.id)}" ${m.id === internationalMethodId ? "checked" : ""}>
+                    ${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="" width="32" height="20" loading="lazy">` : ""}
+                    <span>${escapeHtml(m.name)}</span>
+                  </label>`).join("")}
+              </div>
+              <p class="hint">Serás redirigido para completar el pago de forma segura. Allí verás el monto final en tu moneda.</p>` : ""}
+          ` : ""}
+        </div>` : ""}
+      ${internationalMode ? "" : `<div class="tabs">
+        ${DOMESTIC_METHOD_TYPES
           .filter(type => !domainPurchase || type === PaymentMethodType.QR)
           .map(
             (type) =>
               `<button type="button" class="tab ${type === selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,
           )
           .join("")}
-      </div>
+      </div>`}
       ${
-        import.meta.env.DEV && !sourcePaymentPreview
+        internationalMode
+          ? ""
+          : import.meta.env.DEV && !sourcePaymentPreview
           ? `<div class="field">
               <label for="token">Token de prueba (modo test)</label>
               <select id="token">
@@ -9465,7 +9530,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             </div>`
           : ""
       }
-      <button class="primary" type="submit" id="pay">${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${formatAmount(session.amount, session.currency)}</button>
+      <button class="primary" type="submit" id="pay"${internationalMode && internationalMethods && internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${internationalMode && internationalMethods ? formatUsd(internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
       <button class="secondary" type="button" id="cancel">Cancelar pago</button>
     </form></div>
     <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
@@ -9517,10 +9582,40 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
 
   app.querySelectorAll<HTMLElement>(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
-      selectedType = tab.dataset.type as PaymentMethodType;
+      selectedType = tab.dataset.type as DomesticMethodType;
       renderForm(session, clientSecret);
     });
   });
+
+  app.querySelector<HTMLInputElement>("#intlToggle")?.addEventListener("change", (event) => {
+    internationalMode = (event.target as HTMLInputElement).checked;
+    internationalError = null;
+    renderForm(session, clientSecret);
+  });
+  app.querySelector<HTMLSelectElement>("#intlCountry")?.addEventListener("change", async (event) => {
+    internationalCountry = (event.target as HTMLSelectElement).value;
+    internationalMethods = null;
+    internationalMethodId = "";
+    internationalError = null;
+    if (internationalCountry) {
+      try {
+        internationalMethods = await fetchInternationalMethods(clientSecret, internationalCountry);
+        internationalMethodId = internationalMethods.methods[0]?.id ?? "";
+      } catch (err) {
+        // A recoverable quote/availability failure shouldn't end the checkout —
+        // show it inline next to the country picker so the shopper can retry.
+        internationalError = (err as Error).message === "intl_fx_rate_unavailable"
+          ? "Los pagos internacionales no están disponibles en este momento."
+          : (err as Error).message;
+      }
+    }
+    renderForm(session, clientSecret);
+  });
+  app.querySelectorAll<HTMLInputElement>('input[name="intlMethod"]').forEach((input) =>
+    input.addEventListener("change", () => {
+      internationalMethodId = input.value;
+    }),
+  );
 
   app.querySelector<HTMLFormElement>("#payment-form")!.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -9538,6 +9633,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     if (storeCheckout && !phone) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto.";
     else if (storeCheckout && !PHONE_PATTERN.test(phone)) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto válido.";
     if (storeCheckout && customerContact.deliveryRequested && !(customerContact.deliveryAddress || "").trim()) contactFieldErrors.deliveryAddress = "Escribe la dirección o una referencia para la entrega.";
+    if (internationalMode && !storeCheckout && !email) contactFieldErrors.customerEmail = "Ingresa tu correo para pagar desde el exterior.";
 
     if (contactFieldErrors.customerName || contactFieldErrors.customerEmail || contactFieldErrors.customerPhone || contactFieldErrors.deliveryAddress) {
       renderForm(session, clientSecret);
@@ -9549,7 +9645,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     await submitPayment(session, clientSecret, token, {
       name: storeCheckout ? name : recipient?.name ?? "",
       document: storeCheckout ? customerContact.document : recipient?.document ?? undefined,
-      email: storeCheckout ? email : recipient?.email ?? "",
+      email: storeCheckout ? email : (recipient?.email || email),
       phone: storeCheckout ? phone : recipient?.phone ?? "",
       ...(storeCheckout && customerContact.deliveryRequested ? {
         deliveryRequested: true,
@@ -9605,6 +9701,30 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     renderSuccess({ ...session, customerName: customer.name }, true);
     return;
   }
+
+  const selectedIntl = internationalMode ? internationalMethods?.methods.find((m) => m.id === internationalMethodId) : undefined;
+  if (internationalMode && (!internationalCountry || !selectedIntl)) {
+    // Recoverable — the shopper just hasn't finished picking a country/method
+    // yet (or the list came back empty). Show it inline instead of ending
+    // the checkout, and do it before PAYMENT_PROCESSING fires.
+    internationalError = "Elige tu país y un método de pago.";
+    renderForm(session, clientSecret);
+    return;
+  }
+
+  // Open the dLocal window here — still synchronous from the "submit" event
+  // (the form's submit handler never awaits before calling submitPayment,
+  // and everything above this line is synchronous too), so it still counts
+  // as opened from the shopper's click/tap for Safari's popup blocker. The
+  // real redirect URL isn't known until confirmPaymentIntent resolves below,
+  // so this opens a blank tab now and renderRequiresAction points it at the
+  // real URL once the rail returns one.
+  if (internationalMode && window.top !== window.self) {
+    pendingIntlPopup = window.open("about:blank", "_blank");
+    // Cut the popup's link back to the checkout before it navigates to a third party.
+    if (pendingIntlPopup) pendingIntlPopup.opener = null;
+  }
+
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
   if (payButton) {
     payButton.disabled = true;
@@ -9616,18 +9736,22 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     const { paymentIntent, railResult } = await confirmPaymentIntent(
       session.id,
       clientSecret,
-      { type: selectedType, token },
+      selectedIntl ? tokenForMethod(selectedIntl) : { type: selectedType, token },
       customer,
+      selectedIntl ? { rail: "dlocal", country: internationalCountry } : undefined,
     );
 
     if (paymentIntent.status === "SUCCEEDED") {
+      closePendingIntlPopup();
       renderSuccess(paymentIntent);
     } else if (paymentIntent.status === "REQUIRES_ACTION") {
       renderRequiresAction(paymentIntent.id, clientSecret, paymentIntent.railId ?? "", railResult.actionRequired);
     } else {
+      closePendingIntlPopup();
       renderFailed(paymentIntent.id, railResult.failureReason ?? "Pago rechazado");
     }
   } catch (err) {
+    closePendingIntlPopup();
     renderFailed(session.id, (err as Error).message);
   }
 }
@@ -9987,6 +10111,43 @@ function renderFailed(paymentIntentId: string, message: string) {
 
 function renderRequiresAction(paymentIntentId: string, clientSecret: string, railId: string, actionRequired: unknown) {
   const action = actionRequired as { type: string; data: Record<string, string> } | undefined;
+  // A redirect we can't safely follow (not https, or http outside dev) falls
+  // through to the generic waiting block below instead of being navigated to.
+  if (action?.type === "redirect" && action.data.redirectUrl && isNavigableRedirect(action.data.redirectUrl, import.meta.env.DEV)) {
+    const redirectUrl = action.data.redirectUrl;
+    // Embedded (widget iframe): sessionStorage is partitioned by top-level
+    // site, so navigating window.top to dLocal and back would never find the
+    // remembered client secret, and the merchant page would never get
+    // PAYMENT_SUCCEEDED. Reuse the popup submitPayment already opened
+    // synchronously (while the click still counted) and point it at the
+    // real URL, then poll from inside the iframe, which keeps
+    // sessionStorage/postToParent working normally.
+    if (window.top !== window.self) {
+      if (pendingIntlPopup && !pendingIntlPopup.closed) {
+        const popup = pendingIntlPopup;
+        pendingIntlPopup = null;
+        popup.location.href = redirectUrl;
+        app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Completa el pago en la ventana de dLocal. Esta página se actualizará sola.</span></div></div>`;
+        void pollInternationalOutcome(clientSecret, paymentIntentId, 10 * 60_000, popup);
+        return;
+      }
+      // No popup (blocked, closed early, or never opened): fall back to the
+      // top-navigation path below.
+      pendingIntlPopup = null;
+    }
+    rememberReturn(window.sessionStorage, paymentIntentId, clientSecret);
+    app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Te estamos llevando a la página de pago segura…</span></div></div>`;
+    try {
+      window.top!.location.href = redirectUrl;
+    } catch {
+      window.location.href = redirectUrl;
+    }
+    return;
+  }
+  // The rail returned a non-redirect action (QR/USSD/etc). If submitPayment
+  // preemptively opened a popup for this submission expecting a redirect, it
+  // isn't needed — close the stray blank tab instead of leaving it open.
+  closePendingIntlPopup();
   // Real bank QR (e.g. Baneco) returns a ready-to-scan PNG; the mock rail only has a raw
   // EMV-ish payload string to render as text — support both without the adapter caring.
   const qrImageHtml =
@@ -10000,9 +10161,7 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
         ? qrImageHtml
           ? "Escanee el código QR con su app bancaria"
           : `Escanee el código QR: ${action.data.qrPayload}`
-        : action?.type === "redirect"
-          ? `Confirme en: ${action.data.redirectUrl}`
-          : "Esperando confirmación...";
+        : "Esperando confirmación...";
 
   app.innerHTML = `
     <div class="payment-outcome-panel payment-action-panel">
@@ -10019,6 +10178,56 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
       renderSuccess(updated);
     });
   }
+}
+
+function paymentPendingNotice(text: string) {
+  app.innerHTML = `<div class="payment-outcome-panel"><div class="status action">${ICON_CLOCK}<span>${text}</span></div></div>`;
+}
+
+// Shared by the top-level dLocal return page and the embedded (widget
+// iframe) popup flow: polls the session until it reaches a terminal status,
+// rendering the same success/failure screens either way so the existing
+// postToParent calls inside renderSuccess/renderFailed fire in both cases.
+// A single failed poll (network blip, transient 5xx) must not end the
+// checkout, so fetchSession errors are swallowed and the loop just retries.
+// `popup`, when passed (the embedded case), is the dLocal window this poll
+// is standing in for — it's closed whenever polling reaches a final state so
+// the shopper isn't left with a stray dLocal/return tab open.
+async function pollInternationalOutcome(clientSecret: string, paymentIntentId: string, deadlineMs: number, popup?: Window | null): Promise<void> {
+  const deadline = Date.now() + deadlineMs;
+  for (;;) {
+    try {
+      const session = await fetchSession(clientSecret, checkoutPublishableKey);
+      if (session.status === "SUCCEEDED") {
+        popup?.close();
+        return renderSuccess(session);
+      }
+      if (session.status === "FAILED" || session.status === "CANCELED") {
+        popup?.close();
+        return renderFailed(session.id, "El pago no se completó. Puedes intentar con otro método.");
+      }
+    } catch {
+      // Recoverable — keep polling until the deadline instead of stranding
+      // the shopper on a "Confirmando tu pago…" screen forever.
+    }
+    if (Date.now() > deadline) {
+      popup?.close();
+      paymentPendingNotice("Tu pago está pendiente. Si pagaste con comprobante o transferencia puede tardar; te avisaremos por correo.");
+      return;
+    }
+    paymentPendingNotice("Confirmando tu pago…");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+}
+
+async function renderInternationalReturn(paymentIntentId: string) {
+  document.body.classList.add("payment-page");
+  const clientSecret = recallReturn(window.sessionStorage, paymentIntentId);
+  if (!clientSecret) {
+    paymentPendingNotice("Recibimos tu regreso. Cuando se confirme el pago, te llegará el comprobante por correo.");
+    return;
+  }
+  await pollInternationalOutcome(clientSecret, paymentIntentId, 2 * 60_000);
 }
 
 if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";

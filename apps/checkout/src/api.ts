@@ -22,6 +22,7 @@ export interface CheckoutSession {
     phone: string | null;
   } | null;
   trackingToken: string | null;
+  international?: { available: boolean };
 }
 
 async function parseOrThrow<T>(response: Response): Promise<T> {
@@ -496,8 +497,9 @@ export interface CustomerContact {
 export async function confirmPaymentIntent(
   paymentIntentId: string,
   clientSecret: string,
-  paymentMethod: { type: PaymentMethodType; token: string },
+  paymentMethod: { type: PaymentMethodType; token: string; metadata?: Record<string, unknown> },
   customer: CustomerContact,
+  international?: { rail: "dlocal"; country: string },
 ): Promise<{ paymentIntent: PaymentIntent; railResult: { status: string; actionRequired?: unknown; failureReason?: string } }> {
   const customerName = customer.name.trim();
   const customerDocument = customer.document?.trim();
@@ -517,8 +519,27 @@ export async function confirmPaymentIntent(
       customerLatitude: customer.customerLatitude,
       customerLongitude: customer.customerLongitude,
       customerLocationAccuracy: customer.customerLocationAccuracy,
+      ...(international ?? {}),
     }),
   });
+  return parseOrThrow(response);
+}
+
+export interface InternationalMethods {
+  country: string;
+  quote: { amount: number; currency: "USD"; originalAmount: number; originalCurrency: string; rate: number };
+  methods: { id: string; kind: "CARD" | "LOCAL_METHOD"; name: string; logo: string | null }[];
+}
+
+export async function fetchInternationalMethods(clientSecret: string, country: string): Promise<InternationalMethods> {
+  const response = await fetch(`${API_BASE_URL}/checkout/international_methods`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${clientSecret}` },
+    body: JSON.stringify({ country }),
+  });
+  // The FX-quote provider can be briefly down; surface that as a distinct
+  // code so the caller can show a friendlier message than the raw body.
+  if (response.status === 409) throw new Error("intl_fx_rate_unavailable");
   return parseOrThrow(response);
 }
 

@@ -37,7 +37,9 @@ export class KycService {
       throw new BadRequestException("A KYC submission is already pending review");
     }
 
-    return this.prisma.merchantKycSubmission.create({ data: { merchantId, ...dto } });
+    return this.prisma.merchantKycSubmission.create({
+      data: { merchantId, ...dto, payoutUsdBankAccount: dto.payoutUsdBankAccount?.trim() || null },
+    });
   }
 
   async latest(merchantId: string) {

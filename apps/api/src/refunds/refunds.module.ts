@@ -10,5 +10,6 @@ import { AuthModule } from "../auth/auth.module";
   imports: [RailsModule, LedgerModule, WebhooksModule, AuthModule],
   controllers: [RefundsController],
   providers: [RefundsService],
+  exports: [RefundsService],
 })
 export class RefundsModule {}

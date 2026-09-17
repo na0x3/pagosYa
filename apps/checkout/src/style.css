@@ -7930,3 +7930,12 @@ body.product-detail-page .product-detail-stepper { justify-self: stretch; justif
 @media (max-width: 720px) {
   body.product-detail-page .store-site-header { padding-bottom: 44px; }
 }
+
+.intl-entry { display: grid; gap: 12px; margin: 16px 0; }
+.intl-toggle { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; min-height: 44px; }
+.intl-error { color: var(--pg-error); font-size: 12.5px; font-weight: 600; margin: 0; }
+.intl-quote { margin: 0; font-variant-numeric: tabular-nums; }
+.intl-methods { display: grid; gap: 8px; }
+.intl-method { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--pg-border); border-radius: 10px; cursor: pointer; }
+.intl-method:has(input:checked) { border-color: var(--pg-accent); }
+.intl-method img { object-fit: contain; flex: none; }
