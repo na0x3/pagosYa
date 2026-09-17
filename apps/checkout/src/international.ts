@@ -50,6 +50,21 @@ export function recallReturn(storage: Pick<Storage, "getItem" | "removeItem">, p
   }
 }
 
+/**
+ * A rail's redirect URL is navigated to directly (popup or top window), so only
+ * absolute https URLs qualify; http is allowed in development, where the dLocal
+ * fixture redirects back to the local checkout. Anything else (javascript:,
+ * data:, relative) must never be followed.
+ */
+export function isNavigableRedirect(redirectUrl: string, allowHttp: boolean): boolean {
+  try {
+    const { protocol } = new URL(redirectUrl);
+    return protocol === "https:" || (allowHttp && protocol === "http:");
+  } catch {
+    return false;
+  }
+}
+
 export function parseReturnParams(search: string): { paymentIntentId: string } | null {
   const params = new URLSearchParams(search);
   const paymentIntentId = params.get("pi");

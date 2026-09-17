@@ -44,7 +44,7 @@ import {
   DebtCollectionInfo,
   TrackedOrder,
 } from "./api";
-import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
+import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, isNavigableRedirect, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
 import { readSourcePaymentPreview, closeSourcePaymentPreview, bindPreviewBranding } from './source-payment-preview';
 import { storePreviewExternalDestination } from "./preview-navigation";
@@ -9687,6 +9687,8 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
   // real URL once the rail returns one.
   if (internationalMode && window.top !== window.self) {
     pendingIntlPopup = window.open("about:blank", "_blank");
+    // Cut the popup's link back to the checkout before it navigates to a third party.
+    if (pendingIntlPopup) pendingIntlPopup.opener = null;
   }
 
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
@@ -10075,7 +10077,9 @@ function renderFailed(paymentIntentId: string, message: string) {
 
 function renderRequiresAction(paymentIntentId: string, clientSecret: string, railId: string, actionRequired: unknown) {
   const action = actionRequired as { type: string; data: Record<string, string> } | undefined;
-  if (action?.type === "redirect" && action.data.redirectUrl) {
+  // A redirect we can't safely follow (not https, or http outside dev) falls
+  // through to the generic waiting block below instead of being navigated to.
+  if (action?.type === "redirect" && action.data.redirectUrl && isNavigableRedirect(action.data.redirectUrl, import.meta.env.DEV)) {
     const redirectUrl = action.data.redirectUrl;
     // Embedded (widget iframe): sessionStorage is partitioned by top-level
     // site, so navigating window.top to dLocal and back would never find the
@@ -10123,9 +10127,7 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
         ? qrImageHtml
           ? "Escanee el código QR con su app bancaria"
           : `Escanee el código QR: ${action.data.qrPayload}`
-        : action?.type === "redirect"
-          ? `Confirme en: ${action.data.redirectUrl}`
-          : "Esperando confirmación...";
+        : "Esperando confirmación...";
 
   app.innerHTML = `
     <div class="payment-outcome-panel payment-action-panel">

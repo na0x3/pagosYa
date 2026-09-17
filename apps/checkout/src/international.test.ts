@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
+import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, isNavigableRedirect, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 
 function memoryStorage() {
   const data = new Map<string, string>();
@@ -9,6 +9,22 @@ function memoryStorage() {
     removeItem: (k: string) => void data.delete(k),
   };
 }
+
+describe("isNavigableRedirect", () => {
+  it("only lets the checkout navigate to https payment pages", () => {
+    expect(isNavigableRedirect("https://sandbox.dlocal.com/pay/abc", false)).toBe(true);
+    expect(isNavigableRedirect("http://sandbox.dlocal.com/pay/abc", false)).toBe(false);
+    expect(isNavigableRedirect("javascript:alert(1)", false)).toBe(false);
+    expect(isNavigableRedirect("data:text/html,<script>alert(1)</script>", false)).toBe(false);
+    expect(isNavigableRedirect("/relative/path", false)).toBe(false);
+    expect(isNavigableRedirect("", false)).toBe(false);
+  });
+
+  it("allows http only in development (the fixture redirect points at the local checkout)", () => {
+    expect(isNavigableRedirect("http://localhost:5173/?intl_return=1&pi=pi_1", true)).toBe(true);
+    expect(isNavigableRedirect("javascript:alert(1)", true)).toBe(false);
+  });
+});
 
 describe("international checkout helpers", () => {
   it("never offers Bolivia as a foreign country and lists countries alphabetically", () => {
