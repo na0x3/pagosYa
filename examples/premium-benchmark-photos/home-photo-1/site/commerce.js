@@ -139,189 +139,310 @@
     return typeof value === 'string' && /^(?:100|[0-9]{1,2})(?:\.\d+)?% (?:100|[0-9]{1,2})(?:\.\d+)?%$/.test(value) ? value : '50% 50%';
   };
   const detailStyle = document.createElement("style");
+  detailStyle.dataset.pagosyaKit = 'product';
   detailStyle.textContent = `
     .menu-item{position:relative}.menu-item:not([data-custom-product]) .menu-item__details{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:inherit;background:transparent;box-shadow:none;cursor:pointer;color:inherit}
     .menu-item .menu-item__details:focus-visible{outline:3px solid currentColor;outline-offset:-4px}.menu-item:not([data-custom-product]) .menu-add{position:relative;inset:auto;z-index:2}
     .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
-    [data-pagosya-product] .product-detail__layout[data-no-images]{grid-template-columns:minmax(0,1fr)!important}
-    [data-pagosya-product] .product-detail__gallery[hidden],[data-pagosya-product] .product-detail__navigation[hidden]{display:none!important}
-    [data-pagosya-product] .product-detail__sticky button{background:var(--product-accent);color:var(--product-on-accent)}
-    /* The thumbnail rail owns its gallery grid on wide screens; authored two-column galleries would otherwise enlarge thumbnails. */
-    @media(min-width:1100px){
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail]{display:grid;grid-template-columns:clamp(64px,6vw,88px) minmax(0,1fr);gap:16px;align-items:start}
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__stage{grid-column:2;grid-row:1}
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails{grid-column:1;grid-row:1;flex-direction:column;max-height:min(80vh,680px);overflow:auto;padding:2px}
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery[data-rail] .product-detail__thumbnails button{flex:0 0 auto;width:100%}
-    }
+    /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
-    [data-pagosya-product]{box-sizing:border-box;width:min(960px,calc(100% - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:0;border:1px solid var(--store-border,var(--brand-border,var(--line,currentColor)));border-radius:var(--store-radius,var(--brand-radius,0px));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));background:var(--store-background,var(--brand-background,var(--paper,Canvas)));font:inherit;box-shadow:0 16px 64px #0003;overflow:auto;overscroll-behavior:contain}
-    [data-pagosya-product]::backdrop{background:#0009}[data-pagosya-product] *{box-sizing:border-box}
-    [data-pagosya-product] button,[data-pagosya-product] a{font:inherit;cursor:pointer}[data-pagosya-product] button:disabled{opacity:.5;cursor:default}
-    [data-pagosya-product] button:focus-visible,[data-pagosya-product] a:focus-visible{outline:3px solid var(--store-accent,var(--brand-accent,var(--accent,currentColor)));outline-offset:3px}
-    [data-pagosya-product] .product-detail__close{position:sticky;top:12px;z-index:3;display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;margin:12px 12px -56px auto;padding:0;border:1px solid var(--store-border,var(--brand-border,var(--line,currentColor)));border-radius:50%;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:inherit;font-size:28px;line-height:1}
-    [data-pagosya-product] .product-detail__layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
-    [data-pagosya-product] .product-detail__gallery{min-width:0;padding:24px;background:var(--store-surface,var(--brand-surface,transparent))}
-    [data-pagosya-product] .product-detail__photo{display:block;width:100%;height:360px;max-height:48dvh;object-fit:contain;border:0;border-radius:8px;background:var(--store-surface,var(--brand-surface,transparent));touch-action:pan-y}
-    [data-pagosya-product] .product-detail__navigation{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0}
-    [data-pagosya-product] .product-detail__navigation button{width:44px;min-height:44px;padding:0;border:1px solid var(--store-border,var(--brand-border,var(--line,currentColor)));border-radius:50%;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:inherit;font-size:22px}
-    [data-pagosya-product] .product-detail__thumbnails{display:flex;gap:8px;overflow-x:auto;padding:4px}
-    [data-pagosya-product] .product-detail__thumbnails button{flex:0 0 64px;width:64px;height:64px;padding:3px;border:2px solid transparent;border-radius:8px;background:var(--store-background,var(--brand-background,var(--paper,Canvas)))}
-    [data-pagosya-product] .product-detail__thumbnails button[aria-pressed=true]{border-color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
-    [data-pagosya-product] .product-detail__thumbnails img{display:block;width:100%;height:100%;object-fit:contain}
-    [data-pagosya-product] .product-detail__copy{padding:64px 32px 32px;align-self:center;min-width:0}
-    [data-pagosya-product] h2{margin:0 0 16px;font:inherit;font-size:clamp(24px,4vw,34px);font-weight:700;line-height:1.15;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__description{margin:0 0 24px;font-size:16px;line-height:1.6;white-space:pre-line}
-    [data-pagosya-product] .product-detail__price{display:block;margin:0 0 20px;font-size:22px;font-weight:700}
-    [data-pagosya-product] .product-detail__buy{display:flex;align-items:center;justify-content:center;min-height:48px;width:100%;padding:12px 20px;border:0;border-radius:8px;color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,Canvas)));background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,CanvasText))));text-decoration:none;font-weight:700}
-    [data-pagosya-product] .product-detail__options{display:grid;gap:20px;margin:0 0 24px}
-    [data-pagosya-product] .product-detail__options fieldset{min-width:0;margin:0;padding:0;border:0}
-    [data-pagosya-product] .product-detail__options legend{margin:0 0 8px;padding:0;font-weight:600;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__values{display:flex;flex-wrap:wrap;gap:8px}
-    [data-pagosya-product] [data-product-option]{min-width:44px;min-height:44px;max-width:100%;padding:10px 14px;border:1px solid var(--store-border,var(--brand-border,var(--line,currentColor)));border-radius:var(--store-radius,var(--brand-radius,0px));background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:inherit;overflow-wrap:anywhere}
-    [data-pagosya-product] [data-product-option][aria-pressed=true]{border-color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)));outline:1px solid var(--store-accent,var(--brand-accent,var(--accent,currentColor)));outline-offset:-2px;font-weight:700}
-    [data-pagosya-product] [data-product-option]:disabled{text-decoration:line-through}
-    [data-pagosya-product] [data-product-option]:focus-visible{outline:3px solid var(--store-accent,var(--brand-accent,var(--accent,currentColor)));outline-offset:3px}
-    [data-pagosya-product] .product-detail__status{min-height:24px;margin:12px 0 0;font-size:14px;line-height:1.5}
-    [data-pagosya-product] .product-detail__empty{display:grid;min-height:220px;place-items:center;color:inherit}
-    @media(max-width:640px){[data-pagosya-product]{width:calc(100% - 16px);max-height:calc(100dvh - 16px)}[data-pagosya-product] .product-detail__layout{grid-template-columns:1fr}[data-pagosya-product] .product-detail__gallery{padding:20px}[data-pagosya-product] .product-detail__copy{padding:24px}[data-pagosya-product] .product-detail__photo{height:280px;max-height:36dvh}}
-    /* Full product pages have room for photography; dialog height limits must not shrink them. */
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,64px);align-items:start}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery{padding:0}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__photo{width:100%;height:auto;aspect-ratio:4/5;max-height:none;object-fit:contain;border-radius:var(--store-radius,var(--brand-radius,0px))}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__copy{padding:24px 0;align-self:start}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__thumbnails{gap:12px}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__thumbnails button{flex:0 0 clamp(64px,8vw,96px);width:clamp(64px,8vw,96px);height:auto;aspect-ratio:1;border-radius:var(--store-radius,var(--brand-radius,0px))}
-    @media(max-width:640px){[data-pagosya-product][data-pagosya-product-page] .product-detail__layout{grid-template-columns:minmax(0,1fr);gap:24px}[data-pagosya-product][data-pagosya-product-page] .product-detail__copy{padding:0}}
-    /* Shared semantic tokens carry the authored identity into every product state. */
-    [data-pagosya-product]{--product-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,CanvasText))));--product-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)));--product-paper:var(--store-background,var(--brand-background,var(--paper,#fffdfb)));--product-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#302c2a)));--product-tint:color-mix(in srgb,var(--product-accent) 9%,var(--product-paper));--product-line:color-mix(in srgb,var(--product-accent) 22%,var(--product-paper));color:var(--product-ink);background:var(--product-paper);border-color:var(--product-line);border-radius:var(--store-radius,var(--brand-radius,16px))}
-    [data-pagosya-product] .product-detail__breadcrumb{display:flex;align-items:center;gap:12px;margin:0 0 24px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__breadcrumb a{color:inherit;text-underline-offset:4px;flex-shrink:0;min-height:44px;display:inline-flex;align-items:center}
-    [data-pagosya-product] .product-detail__breadcrumb>span:last-child{opacity:.7}
-    [data-pagosya-product] .product-detail__gallery{background:var(--product-tint);border-radius:var(--store-radius,var(--brand-radius,14px))}
-    [data-pagosya-product] .product-detail__photo{background:var(--product-tint)}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__gallery{background:transparent}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__photo{border-radius:var(--store-radius,var(--brand-radius,14px))}
-    [data-pagosya-product] .product-detail__eyebrow{color:var(--product-accent);font-size:13px;font-weight:700;margin:0 0 12px;letter-spacing:.06em;overflow-wrap:anywhere}
-    [data-pagosya-product] :is(h1,h2){font-family:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));letter-spacing:-.035em}
-    [data-pagosya-product] .product-detail__pricing{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin:0 0 20px}
-    [data-pagosya-product] .product-detail__price{margin:0;font-size:26px;letter-spacing:-.025em}
-    [data-pagosya-product] .product-detail__original{font-size:16px;opacity:.65}
-    [data-pagosya-product] .product-detail__saving{padding:5px 9px;border-radius:var(--store-radius,var(--brand-radius,6px));background:var(--product-tint);color:var(--product-accent);font-size:12px;font-weight:700}
-    [data-pagosya-product] .product-detail__intro{font-size:15px;line-height:1.65;margin:0 0 28px;white-space:pre-line;overflow-wrap:anywhere;max-width:58ch}
-    [data-pagosya-product] .product-detail__options{padding:24px 0;border-top:1px solid var(--product-line);gap:22px;margin:0 0 20px}
-    [data-pagosya-product] .product-detail__options legend{font-size:14px;margin-bottom:12px}
-    [data-pagosya-product] [data-product-selection]{margin-left:8px;font-weight:400;font-size:12px;opacity:.7}
-    [data-pagosya-product] [data-product-option]{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-color:var(--product-line);border-radius:var(--store-radius,var(--brand-radius,8px));background:var(--product-paper);transition:background .18s,border-color .18s}
-    [data-pagosya-product] [data-product-option][aria-pressed=true]{background:var(--product-tint);color:var(--product-accent);border-color:var(--product-accent);outline-color:var(--product-accent)}
-    [data-pagosya-product] [data-product-option]:hover:not(:disabled){border-color:var(--product-accent);background:var(--product-tint)}
-    [data-pagosya-product] .product-detail__swatch{display:inline-block;width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1px #302c2a26}
-    [data-pagosya-product] .product-detail__purchase{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:12px;margin:0 0 14px}
-    [data-pagosya-product] .product-detail__quantity{display:flex;align-items:center;border:1px solid var(--product-line);border-radius:var(--store-radius,var(--brand-radius,8px));overflow:hidden}
-    [data-pagosya-product] .product-detail__quantity button{min-height:44px;min-width:44px;padding:0;border:0;background:var(--product-paper);color:inherit;font-size:20px}
-    [data-pagosya-product] .product-detail__quantity output{min-width:32px;text-align:center;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
-    [data-pagosya-product] .product-detail__subtotal{font-size:13px}
-    [data-pagosya-product] .product-detail__buy{min-height:54px;background:var(--product-accent);color:var(--product-on-accent);border-radius:var(--store-radius,var(--brand-radius,8px));transition:filter .18s}
-    [data-pagosya-product] .product-detail__buy:hover:not(:disabled){filter:brightness(.92)}
-    [data-pagosya-product] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px 20px;margin:20px 0 0;padding:18px 0 0;border-top:1px solid var(--product-line);list-style:none}
-    [data-pagosya-product] .product-detail__assurances li{display:flex;align-items:flex-start;gap:10px;min-width:0;font-size:12px;line-height:1.45}
-    [data-pagosya-product] .product-detail__assurances svg{flex:0 0 20px;margin-top:1px;color:var(--product-accent)}
-    [data-pagosya-product] .product-detail__assurances strong{display:block;font-size:13px;font-weight:600}
-    [data-pagosya-product] .product-detail__assurances span{display:block;opacity:.72;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__assurances button{display:flex;align-items:flex-start;gap:10px;min-height:44px;margin:-6px 0;padding:6px 0;border:0;background:transparent;color:inherit;font-size:inherit;text-align:left}
-    [data-pagosya-product] .product-detail__assurances button strong{text-decoration:underline;text-decoration-color:var(--product-line);text-underline-offset:4px}
-    [data-pagosya-product] .product-detail__navigation{font-size:12px;color:var(--product-ink)}
-    [data-pagosya-product] .product-detail__navigation button{border-color:var(--product-line);background:var(--product-paper)}
-    [data-pagosya-product] .product-detail__thumbnails button{background:var(--product-tint)}
-    [data-pagosya-product] .product-detail__thumbnails button[aria-pressed=true]{border-color:var(--product-accent)}
-    [data-pagosya-product] .product-tabs{border-color:var(--product-line);gap:24px}
-    [data-pagosya-product] .product-tabs button{font-size:14px}
-    [data-pagosya-product] .product-tabs button[aria-selected=true]{color:var(--product-accent);border-color:var(--product-accent)}
-    [data-pagosya-product] :is(button,a):focus-visible{outline:3px solid var(--product-accent);outline-offset:3px}
-    /* Purchase panel: small tracked labels, priced choices and the live total on the action. */
-    [data-pagosya-product] .product-detail__eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase}
-    [data-pagosya-product] .product-detail__options legend{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-    [data-pagosya-product] [data-product-selection]{letter-spacing:0;text-transform:none;font-size:13px}
-    [data-pagosya-product] .product-detail__values[data-priced]{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__copy[data-split]{width:100%;max-width:none}
+      .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+      [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:start}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy p,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy p{margin-top:2px;opacity:.8}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-add,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-add{align-self:flex-start}
+      /* Arrangement chrome: group headings, the "see all" link, and the collection tab row. */
+      [data-pagosya-catalog] .catalog-group__title{margin:24px 0 12px;font-family:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));font-size:1.05rem}
+      [data-pagosya-catalog] .catalog-group:first-child .catalog-group__title{margin-top:0}
+      [data-pagosya-catalog] .catalog-more{display:inline-block;padding:12px 0;text-decoration:underline}
+      [data-pagosya-catalog] .catalog-tabs{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 16px}
+      [data-pagosya-catalog] .catalog-tabs a[aria-current="page"]{text-decoration:none}
+    }
+    /* Product page: platform-owned layout in two styles (editorial, dense). Stores supply tokens only. */
+    [data-pagosya-product]{--pd-ink:var(--store-foreground,var(--brand-foreground,var(--ink,#302c2a)));--pd-paper:var(--store-background,var(--brand-background,var(--paper,#fffdfb)));--pd-surface:var(--store-surface,var(--brand-surface,var(--pd-paper)));--pd-accent:var(--store-accent,var(--brand-accent,var(--accent,var(--pd-ink))));--pd-on-accent:var(--store-accent-foreground,var(--brand-accent-foreground,var(--pd-paper)));--pd-muted:color-mix(in srgb,var(--pd-ink) 64%,var(--pd-paper));--pd-line:var(--store-border,var(--brand-border,color-mix(in srgb,var(--pd-ink) 16%,var(--pd-paper))));--pd-tint:color-mix(in srgb,var(--pd-accent) 7%,var(--pd-paper));--pd-radius:min(var(--store-radius,var(--brand-radius,0px)),6px);--pd-heading:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));--pd-body:var(--store-body-font,var(--brand-body-font,var(--font-body,inherit)));box-sizing:border-box;color:var(--pd-ink);background:var(--pd-paper);font-family:var(--pd-body)}
+    [data-pagosya-product] *{box-sizing:border-box}
+    [data-pagosya-product] [hidden]{display:none!important}
+    dialog[data-pagosya-product]{width:min(1040px,calc(100% - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:0;border:1px solid var(--pd-line);border-radius:var(--pd-radius);box-shadow:0 16px 64px #0003;overflow:auto;overscroll-behavior:contain}
+    dialog[data-pagosya-product]::backdrop{background:#0009}
+    [data-pagosya-product][data-pagosya-product-page]{display:block;width:100%;max-width:1440px;max-height:none;margin:0 auto;padding:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
+    [data-pagosya-product][data-style] :is(button,a){font:inherit;cursor:pointer}
+    [data-pagosya-product][data-style] button:disabled{opacity:.5;cursor:default}
+    [data-pagosya-product][data-style] :is(button,a,[tabindex]):focus-visible{outline:2px solid var(--pd-accent);outline-offset:3px}
+    [data-pagosya-product][data-style] .product-detail__close{position:sticky;top:12px;z-index:3;display:grid;place-items:center;width:44px;height:44px;margin:12px 12px -56px auto;padding:0;border:1px solid var(--pd-line);border-radius:50%;background:var(--pd-paper);color:inherit;font-size:26px;line-height:1}
+    [data-pagosya-product][data-style] .product-detail__layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);align-items:start}
+    [data-pagosya-product][data-style] .product-detail__layout[data-no-images]{grid-template-columns:minmax(0,1fr)}
+    /* Gallery: the photo fills its column; dense pages overlay thumbnails and a plain counter, editorial pages use dots. */
+    [data-pagosya-product][data-style] .product-detail__gallery{position:relative;min-width:0;margin:0;padding:0;border-radius:0;background:var(--pd-tint)}
+    [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:0}
+    [data-pagosya-product][data-style] .product-detail__stage{position:relative;min-width:0}
+    [data-pagosya-product][data-style] .product-detail__photo{display:block;width:100%;height:min(calc(100dvh - 64px),760px);min-height:420px;max-height:none;margin:0;object-fit:cover;border:0;border-radius:0;background:var(--pd-tint);touch-action:pan-y}
+    dialog[data-pagosya-product][data-style] .product-detail__photo{height:min(calc(100dvh - 34px),640px);min-height:360px}
+    [data-pagosya-product][data-style] .product-detail__navigation{position:absolute;right:16px;bottom:22px;display:flex;align-items:center;gap:8px;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;font-size:12px;font-variant-numeric:tabular-nums;color:var(--pd-ink);text-shadow:0 0 8px var(--pd-paper)}
+    [data-pagosya-product][data-style] .product-detail__navigation span{order:-1}
+    [data-pagosya-product][data-style] .product-detail__navigation button{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;border:1px solid color-mix(in srgb,var(--pd-ink) 35%,transparent);border-radius:50%;background:color-mix(in srgb,var(--pd-paper) 72%,transparent);color:inherit;font-size:15px;line-height:1}
+    [data-pagosya-product][data-style] .product-detail__thumbnails{position:absolute;left:16px;bottom:16px;display:flex;gap:6px;max-width:calc(100% - 170px);margin:0;padding:5px;overflow-x:auto;border-radius:calc(var(--pd-radius) + 3px);background:color-mix(in srgb,var(--pd-paper) 84%,transparent)}
+    [data-pagosya-product][data-style] .product-detail__thumbnails button{flex:0 0 56px;width:56px;height:56px;padding:0;border:0;border-radius:var(--pd-radius);overflow:hidden;background:var(--pd-tint);outline:1px solid color-mix(in srgb,var(--pd-ink) 12%,transparent);outline-offset:0}
+    [data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]{outline:2px solid var(--pd-ink);outline-offset:1px}
+    [data-pagosya-product][data-style] .product-detail__thumbnails img{display:block;width:100%;height:100%;object-fit:cover}
+    [data-pagosya-product][data-style=editorial] .product-detail__navigation{display:none}
+    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails{left:50%;bottom:14px;max-width:calc(100% - 32px);gap:0;padding:0;border-radius:0;background:none;transform:translateX(-50%)}
+    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button,[data-pagosya-product][data-style=editorial] .product-detail__thumbnails button[aria-pressed=true]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:none;outline:0}
+    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button::before{content:"";width:6px;height:6px;border-radius:3px;background:#ffffffa6;box-shadow:0 0 0 1px #00000026;transition:width .2s}
+    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails button[aria-pressed=true]::before{width:18px;background:#fff}
+    [data-pagosya-product][data-style=editorial] .product-detail__thumbnails img{display:none}
+    [data-pagosya-product][data-style] .product-detail__empty{display:grid;min-height:220px;place-items:center;color:inherit}
+    /* Purchase column */
+    [data-pagosya-product][data-style] .product-detail__copy{align-self:center;min-width:0;width:100%;max-width:620px;margin:0;padding:clamp(28px,4vw,56px)}
+    dialog[data-pagosya-product][data-style] .product-detail__copy{padding:44px 32px 28px}
+    [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__copy[data-split]{max-width:1200px;margin:0 auto}
     @media(min-width:900px){
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__copy[data-split]{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);grid-template-rows:auto 1fr;column-gap:clamp(40px,6vw,96px);align-items:start}
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__summary{grid-column:1;grid-row:1}
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__details{grid-column:1;grid-row:2}
-      [data-pagosya-product][data-pagosya-product-page] .product-detail__buybox{grid-column:2;grid-row:1 / span 2;position:sticky;top:24px;padding:clamp(20px,2.4vw,32px);border:1px solid var(--product-line);border-radius:var(--store-radius,var(--brand-radius,12px));background:var(--product-paper)}
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__copy[data-split]{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);grid-template-rows:auto 1fr;column-gap:clamp(40px,6vw,96px);align-items:start}
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__summary{grid-column:1;grid-row:1}
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__details{grid-column:1;grid-row:2}
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__buybox{grid-column:2;grid-row:1 / span 2;position:sticky;top:24px;padding:clamp(20px,2.4vw,32px);border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-surface)}
     }
-    [data-pagosya-product] .product-detail__values[data-priced] [data-product-option]{justify-content:flex-start;width:100%;padding:12px 16px;text-align:left}
-    /* Priced choices wrap the price under the label in narrow authored grids instead of crushing the label. */
-    [data-pagosya-product] [data-product-option][data-option-price]{flex-wrap:wrap;column-gap:14px;row-gap:2px;overflow-wrap:normal}
-    [data-pagosya-product] [data-product-option][data-option-price]::after{content:attr(data-option-price);margin-left:auto;font-size:.92em;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-    [data-pagosya-product] [data-product-option]:disabled[data-option-price]::after{text-decoration:line-through}
-    [data-pagosya-product] .product-detail__buy{gap:0}
-    [data-pagosya-product] .product-detail__purchase .product-detail__buy{flex:1 1 100%;grid-column:1 / -1;width:100%;margin:0}
-    [data-pagosya-product] .product-detail__purchase .product-detail__quantity{justify-self:start;width:max-content;max-width:100%}
-    [data-pagosya-product] .product-detail__buy-total{white-space:nowrap}
-    /* Verified reviews, specification rows and related products use only published catalog data. */
-    [data-pagosya-product] .product-detail__rating{display:flex;align-items:center;gap:8px;margin:-4px 0 14px;font-size:13px}
-    [data-pagosya-product] .product-detail__rating a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:inherit;text-underline-offset:4px}
-    [data-pagosya-product] .product-detail__stars{--rating:0;display:inline-block;letter-spacing:1px;line-height:1;background:linear-gradient(90deg,var(--product-accent) calc(var(--rating) * 20%),color-mix(in srgb,var(--product-ink) 22%,transparent) 0);-webkit-background-clip:text;background-clip:text;color:transparent}
-    [data-pagosya-product] .product-detail__facts:has(.product-detail__fact){margin:0;padding:0}
-    [data-pagosya-product] .product-detail__specs{margin:0 0 16px;padding:0}
-    [data-pagosya-product] .product-detail__specs div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--product-line)}
-    [data-pagosya-product] .product-detail__specs dt{opacity:.72}
-    [data-pagosya-product] .product-detail__specs dd{margin:0;text-align:right;font-weight:600;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__facts .product-detail__fact{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--product-line);list-style:none}
-    [data-pagosya-product] .product-detail__fact span:first-child{opacity:.72}
-    [data-pagosya-product] .product-detail__fact span:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}
-    [data-pagosya-product] :is(.product-detail__related,.product-detail__reviews):not([hidden]){display:grid;gap:20px;margin:clamp(40px,6vw,72px) 0 0;padding-top:clamp(24px,4vw,40px);border-top:1px solid var(--product-line)}
-    [data-pagosya-product] :is(.product-detail__related,.product-detail__reviews) h2{margin:0 0 20px;font-size:clamp(22px,2.4vw,28px);line-height:1.2}
-    [data-pagosya-product] .product-detail__related ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:20px 16px;margin:0;padding:0;list-style:none}
-    [data-pagosya-product] .product-detail__related a{display:grid;gap:6px;color:inherit;text-decoration:none}
-    [data-pagosya-product] .product-detail__related img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--store-radius,var(--brand-radius,10px));background:var(--product-tint)}
-    [data-pagosya-product] .product-detail__related a:hover .product-detail__related-name{text-decoration:underline;text-underline-offset:4px}
-    [data-pagosya-product] .product-detail__related-name{font-weight:600;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__related-price{font-size:14px;opacity:.8;font-variant-numeric:tabular-nums}
-    [data-pagosya-product] .product-detail__reviews-summary{display:flex;align-items:center;gap:10px;margin:-8px 0 0}
-    [data-pagosya-product] .product-detail__review-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px}
-    [data-pagosya-product] .product-detail__review-list article{padding:18px;border:1px solid var(--product-line);border-radius:var(--store-radius,var(--brand-radius,10px));background:var(--product-tint)}
-    [data-pagosya-product] .product-detail__review-list p{margin:0;line-height:1.55;overflow-wrap:anywhere}
-    [data-pagosya-product] .product-detail__review-score{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-    [data-pagosya-product] .product-detail__review-list .product-detail__review-meta{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px}
-    [data-pagosya-product] .product-detail__buy-total{font-variant-numeric:tabular-nums}
-    [data-pagosya-product] .product-detail__buy-total:not(:empty)::before{content:"·";margin:0 10px;opacity:.7}
-    [data-pagosya-product] .product-detail__subtotal:empty{display:none}
-    /* Gallery stage: photos keep their own proportion; the counter sits on the photo. */
-    [data-pagosya-product] .product-detail__stage{position:relative;min-width:0}
-    [data-pagosya-product][data-pagosya-product-page] .product-detail__photo{aspect-ratio:var(--product-photo-ratio,4/5)}
-    @media(min-width:641px){[data-pagosya-product][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:24px;align-self:start}}
-    @media(min-width:1100px){[data-pagosya-product][data-pagosya-product-page] .product-detail__layout:has(.product-detail__gallery[data-rail]){grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}}
-    [data-pagosya-product] .product-detail__stage .product-detail__navigation{position:absolute;right:12px;bottom:12px;gap:2px;margin:0;padding:0 2px;border-radius:999px;background:color-mix(in srgb,var(--product-paper) 88%,transparent);box-shadow:0 1px 8px #0000001a;font-variant-numeric:tabular-nums}
-    [data-pagosya-product] .product-detail__stage .product-detail__navigation button{width:44px;min-height:44px;border:0;border-radius:50%;background:transparent;font-size:16px}
-    /* Mobile purchase bar appears only after the shopper scrolls past the real action. */
-    [data-pagosya-product] .product-detail__sticky{display:none}
+    [data-pagosya-product][data-style] .product-detail__breadcrumb{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 18px;font-size:12px;line-height:1.4;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__breadcrumb a{display:inline-flex;align-items:center;min-height:32px;color:inherit;text-underline-offset:4px}
+    [data-pagosya-product][data-style] .product-detail__breadcrumb>span:last-child{max-width:28ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    [data-pagosya-product][data-style] .product-detail__eyebrow{margin:0 0 10px;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--pd-muted);overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] #pagosya-product-title{margin:0 0 12px;font-family:var(--pd-heading);font-size:clamp(32px,3.4vw,46px);font-weight:380;line-height:1.04;letter-spacing:-.02em;text-wrap:balance;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style=editorial] #pagosya-product-title[data-length=long]{font-size:clamp(28px,2.7vw,38px)}
+    [data-pagosya-product][data-style=dense] #pagosya-product-title{margin-bottom:10px;font-family:var(--pd-body);font-size:clamp(24px,2.3vw,30px);font-weight:650;line-height:1.12;letter-spacing:-.025em}
+    [data-pagosya-product][data-style=dense] #pagosya-product-title[data-length=long]{font-size:clamp(22px,2vw,26px)}
+    [data-pagosya-product][data-style] .product-detail__rating{display:flex;align-items:center;gap:8px;margin:-2px 0 12px;font-size:13px}
+    [data-pagosya-product][data-style] .product-detail__rating a{display:inline-flex;align-items:center;gap:8px;min-height:32px;color:inherit;text-underline-offset:4px}
+    [data-pagosya-product][data-style] .product-detail__stars{--rating:0;display:inline-block;letter-spacing:1px;line-height:1;background:linear-gradient(90deg,var(--pd-accent) calc(var(--rating) * 20%),color-mix(in srgb,var(--pd-ink) 22%,transparent) 0);-webkit-background-clip:text;background-clip:text;color:transparent}
+    [data-pagosya-product][data-style] .product-detail__pricing{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 12px;margin:0 0 14px}
+    [data-pagosya-product][data-style] .product-detail__price{margin:0;font-size:17px;font-weight:400;letter-spacing:0;font-variant-numeric:tabular-nums}
+    [data-pagosya-product][data-style] .product-detail__original{font-size:.9em;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__saving{padding:3px 7px;border-radius:var(--pd-radius);background:var(--pd-tint);color:var(--pd-accent);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+    [data-pagosya-product][data-style=dense] .product-detail__pricing{padding-bottom:14px;border-bottom:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style=dense] .product-detail__price{font-size:30px;font-weight:700;letter-spacing:-.03em}
+    [data-pagosya-product][data-style=dense] .product-detail__original{font-size:16px}
+    [data-pagosya-product][data-style] .product-detail__intro{max-width:52ch;margin:0 0 20px;font-size:14.5px;line-height:1.6;color:var(--pd-muted);white-space:pre-line;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style=dense] .product-detail__intro{margin:12px 0 14px}
+    [data-pagosya-product][data-style] .product-detail__chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px;padding:0;list-style:none}
+    [data-pagosya-product][data-style] .product-detail__chips li{padding:5px 8px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-surface);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+    [data-pagosya-product][data-style] :is(.product-detail__sr,.product-detail__review-score){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    /* Choices: pills by default, swatch circles for colors, radio rows for priced dense choices. */
+    [data-pagosya-product][data-style] .product-detail__options{display:grid;gap:18px;margin:0 0 20px;padding:18px 0 0;border-top:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style=dense] .product-detail__options{padding-top:4px;border-top:0}
+    [data-pagosya-product][data-style] .product-detail__options fieldset{min-width:0;margin:0;padding:0;border:0}
+    [data-pagosya-product][data-style] .product-detail__options legend{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;padding:0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style=dense] .product-detail__options legend{font-size:12.5px;letter-spacing:0;text-transform:none}
+    [data-pagosya-product][data-style] [data-product-selection]{font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__values{display:flex;flex-wrap:wrap;gap:8px}
+    [data-pagosya-product][data-style] [data-product-option]{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:40px;max-width:100%;padding:8px 16px;border:1px solid var(--pd-line);border-radius:999px;background:transparent;color:inherit;font-size:13.5px;line-height:1.2;overflow-wrap:anywhere;transition:border-color .15s,box-shadow .15s}
+    [data-pagosya-product][data-style=dense] [data-product-option]{border-radius:var(--pd-radius)}
+    [data-pagosya-product][data-style] [data-product-option]:hover:not(:disabled){border-color:color-mix(in srgb,var(--pd-ink) 55%,var(--pd-paper))}
+    [data-pagosya-product][data-style] [data-product-option][aria-pressed=true]{border-color:var(--pd-ink);box-shadow:inset 0 0 0 1px var(--pd-ink)}
+    [data-pagosya-product][data-style] [data-product-option]:disabled{opacity:.45;text-decoration:line-through}
+    [data-pagosya-product][data-style] [data-product-option][data-option-delta]::after{content:attr(data-option-delta);color:var(--pd-muted);font-size:.85em;white-space:nowrap}
+    [data-pagosya-product][data-style] .product-detail__values[data-kind=swatch]{gap:14px}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-product-option],[data-pagosya-product][data-style] [data-kind=swatch] [data-product-option][aria-pressed=true]{flex-direction:column;gap:6px;min-width:0;min-height:0;padding:0;border:0;border-radius:0;box-shadow:none;background:none;font-size:11px;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-product-option][aria-pressed=true]{color:var(--pd-ink)}
+    [data-pagosya-product][data-style] .product-detail__swatch{display:block;width:22px;height:22px;flex:0 0 auto;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pd-ink) 15%,transparent)}
+    [data-pagosya-product][data-style] [data-kind=swatch] .product-detail__swatch{width:34px;height:34px}
+    [data-pagosya-product][data-style=editorial] [data-kind=swatch] .product-detail__swatch{width:28px;height:28px}
+    [data-pagosya-product][data-style=editorial] [data-kind=swatch] .product-detail__option-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    [data-pagosya-product][data-style] [data-kind=swatch] [aria-pressed=true] .product-detail__swatch{box-shadow:0 0 0 2px var(--pd-paper),0 0 0 3.5px var(--pd-ink)}
+    [data-pagosya-product][data-style=dense] .product-detail__values[data-priced]:not([data-kind=swatch]){display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]{display:grid;grid-template-columns:16px minmax(0,1fr) auto;justify-content:stretch;gap:12px;width:100%;min-height:48px;padding:10px 14px;background:var(--pd-surface);font-size:14px;text-align:left}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]::before{content:"";width:16px;height:16px;border:1.5px solid color-mix(in srgb,var(--pd-ink) 45%,var(--pd-paper));border-radius:50%}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][aria-pressed=true]::before{border:5px solid var(--pd-ink)}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option][data-option-price]::after{content:attr(data-option-price);font-size:14px;font-weight:600;color:var(--pd-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+    [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]:disabled::after{text-decoration:line-through}
+    /* Quantity and action share one row; the live total rides on the dense action. */
+    [data-pagosya-product][data-style] .product-detail__purchase{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;gap:10px;margin:22px 0 12px}
+    [data-pagosya-product][data-style] .product-detail__quantity{display:flex;align-items:center;justify-content:space-between;min-width:118px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);overflow:hidden}
+    [data-pagosya-product][data-style] .product-detail__quantity button{width:40px;min-height:46px;padding:0;border:0;background:transparent;color:inherit;font-size:18px}
+    [data-pagosya-product][data-style] .product-detail__quantity output{min-width:24px;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
+    [data-pagosya-product][data-style] .product-detail__subtotal{grid-column:1 / -1;grid-row:2;font-size:13px;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__subtotal:empty{display:none}
+    [data-pagosya-product][data-style] .product-detail__buy{display:flex;align-items:center;justify-content:center;gap:0;width:100%;min-height:48px;margin:0;padding:12px 20px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:filter .15s}
+    [data-pagosya-product][data-style] .product-detail__buy:hover:not(:disabled){filter:brightness(.92)}
+    [data-pagosya-product][data-style] .product-detail__buy-total{white-space:nowrap;font-variant-numeric:tabular-nums}
+    [data-pagosya-product][data-style=editorial] .product-detail__buy-total{display:none}
+    [data-pagosya-product][data-style=dense] .product-detail__buy{min-height:50px;font-size:15px;letter-spacing:0;text-transform:none}
+    [data-pagosya-product][data-style=dense] .product-detail__buy-total:not(:empty)::before{content:"—";margin:0 8px}
+    /* Narrow phones keep the action on one line; the price above already shows the total. */
+    @media(max-width:480px){[data-pagosya-product][data-style=dense] .product-detail__buy-total{display:none}}
+    [data-pagosya-product][data-style] .product-detail__status{min-height:20px;margin:0;font-size:13px;line-height:1.5;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px 18px;margin:14px 0 0;padding:12px 14px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);list-style:none}
+    [data-pagosya-product][data-style=dense] .product-detail__assurances{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));margin-top:16px;padding:0;border:0}
+    [data-pagosya-product][data-style] .product-detail__assurances li{display:flex;align-items:center;gap:10px;min-width:0;font-size:12px;line-height:1.4}
+    [data-pagosya-product][data-style] .product-detail__assurances svg{flex:0 0 20px;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=dense] .product-detail__assurances svg{flex-basis:24px;width:24px;height:24px}
+    [data-pagosya-product][data-style] .product-detail__assurances strong{display:block;font-size:12.5px;font-weight:600}
+    [data-pagosya-product][data-style] .product-detail__assurances span{display:block;color:var(--pd-muted);overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] .product-detail__assurances button{display:flex;align-items:center;gap:10px;min-height:40px;margin:0;padding:0;border:0;background:transparent;color:inherit;font-size:inherit;text-align:left}
+    [data-pagosya-product][data-style] .product-detail__assurances button strong{text-decoration:underline;text-decoration-color:var(--pd-line);text-underline-offset:4px}
+    /* Details, related products and verified reviews use only published catalog data. */
+    [data-pagosya-product][data-style] .product-tabs{display:flex;gap:24px;margin:28px 0 16px;border-bottom:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style] .product-tabs button{min-height:44px;margin:0 0 -1px;padding:8px 0;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--pd-muted);font-size:13px}
+    [data-pagosya-product][data-style] .product-tabs button[aria-selected=true]{border-bottom-color:var(--pd-ink);color:var(--pd-ink)}
+    [data-pagosya-product][data-style] [role=tabpanel]{font-size:14px;line-height:1.6}
+    [data-pagosya-product][data-style] .product-delivery-list{margin:0 0 12px;padding-left:18px;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] .product-delivery-list li{margin-bottom:14px}
+    [data-pagosya-product][data-style] .product-detail__specs{margin:0 0 16px;padding:0}
+    [data-pagosya-product][data-style] .product-detail__specs div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style] .product-detail__specs dt{color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__specs dd{margin:0;text-align:right;font-weight:600;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] .product-detail__facts{margin:0;padding:0;list-style:none}
+    [data-pagosya-product][data-style] .product-detail__facts li{padding:10px 0;border-bottom:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style] .product-detail__fact{display:flex;justify-content:space-between;gap:16px}
+    [data-pagosya-product][data-style] .product-detail__fact span:first-child{color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__fact span:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] :is(.product-detail__related,.product-detail__reviews):not([hidden]){display:grid;gap:20px;margin:clamp(40px,6vw,72px) clamp(16px,4vw,56px) 0;padding-top:clamp(24px,4vw,40px);border-top:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style] :is(.product-detail__related,.product-detail__reviews) h2{margin:0;font-family:var(--pd-heading);font-size:clamp(22px,2.4vw,28px);font-weight:400;line-height:1.2}
+    [data-pagosya-product][data-style] .product-detail__related ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,160px),1fr));gap:20px 16px;margin:0;padding:0;list-style:none}
+    [data-pagosya-product][data-style] .product-detail__related a{display:grid;gap:6px;color:inherit;text-decoration:none}
+    [data-pagosya-product][data-style] .product-detail__related img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--pd-radius);background:var(--pd-tint)}
+    [data-pagosya-product][data-style] .product-detail__related a:hover .product-detail__related-name{text-decoration:underline;text-underline-offset:4px}
+    [data-pagosya-product][data-style] .product-detail__related-name{font-weight:600;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] .product-detail__related-price{font-size:14px;color:var(--pd-muted);font-variant-numeric:tabular-nums}
+    [data-pagosya-product][data-style] .product-detail__reviews-summary{display:flex;align-items:center;gap:10px;margin:0}
+    [data-pagosya-product][data-style] .product-detail__review-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px}
+    [data-pagosya-product][data-style] .product-detail__review-list article{padding:18px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);background:var(--pd-surface)}
+    [data-pagosya-product][data-style] .product-detail__review-list p{margin:0;line-height:1.55;overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] .product-detail__review-list .product-detail__review-meta{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px}
+    [data-pagosya-product][data-style] :is(.product-detail__sticky,.product-detail__sticky-space){display:none}
+    @media(max-width:899px){
+      [data-pagosya-product][data-style] .product-detail__layout{grid-template-columns:minmax(0,1fr)}
+      [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery{position:relative}
+      [data-pagosya-product][data-style] .product-detail__photo,dialog[data-pagosya-product][data-style] .product-detail__photo{height:auto;min-height:0;max-height:72dvh;aspect-ratio:4/5}
+      [data-pagosya-product][data-style] .product-detail__navigation{display:none}
+      [data-pagosya-product][data-style] .product-detail__thumbnails{left:50%;bottom:14px;max-width:calc(100% - 32px);gap:0;padding:0;border-radius:0;background:none;transform:translateX(-50%)}
+      [data-pagosya-product][data-style] .product-detail__thumbnails button,[data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:none;outline:0}
+      [data-pagosya-product][data-style] .product-detail__thumbnails button::before{content:"";width:6px;height:6px;border-radius:3px;background:#ffffffa6;box-shadow:0 0 0 1px #00000026;transition:width .2s}
+      [data-pagosya-product][data-style] .product-detail__thumbnails button[aria-pressed=true]::before{width:18px;background:#fff}
+      [data-pagosya-product][data-style] .product-detail__thumbnails img{display:none}
+      [data-pagosya-product][data-style] .product-detail__copy,dialog[data-pagosya-product][data-style] .product-detail__copy{max-width:none;padding:22px 16px 28px}
+    }
     @media(max-width:640px){
-      [data-pagosya-product] .product-detail__sticky:not([hidden]){position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--product-line);background:var(--product-paper);color:var(--product-ink);box-shadow:0 -6px 24px #0000001a}
-      [data-pagosya-product] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
-      [data-pagosya-product] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      [data-pagosya-product] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--store-radius,var(--brand-radius,8px));background:var(--product-accent);color:var(--product-on-accent);font-weight:700}
-      [data-pagosya-product] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
+      [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--pd-line);background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 -6px 24px #0000001a}
+      [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
+      [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
+      [data-pagosya-product][data-style] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
     }
-    [data-pagosya-product] .product-detail__sticky-space{display:none}
-    @media(prefers-reduced-motion:reduce){[data-pagosya-product] *{transition:none!important;scroll-behavior:auto!important}}
-  `;
-  detailStyle.textContent += `
-    }
-    :where([data-pagosya-product-page]){display:block;width:100%;max-width:1200px;max-height:none;margin:24px auto;padding:0 24px;border:0;border-radius:0;box-shadow:none;background:inherit;color:inherit;overflow:visible}
-    :where([data-pagosya-product-page]) h1{font-size:clamp(30px,4vw,64px);line-height:1.1;overflow-wrap:anywhere}
+    /* Approved highlights: one small looping motion each, paused off screen and stopped for reduced motion. */
+    [data-pagosya-product][data-style] .product-detail__highlights{display:grid;gap:12px 18px;margin:0 0 20px;padding:0;list-style:none}
+    [data-pagosya-product][data-style] .product-detail__highlights li{display:flex;align-items:center;gap:10px;min-width:0;font-size:12px;line-height:1.35}
+    [data-pagosya-product][data-style] .product-detail__highlights strong{display:block;font-size:12.5px;font-weight:600}
+    [data-pagosya-product][data-style] .product-detail__highlights span{display:block;color:var(--pd-muted);overflow-wrap:anywhere}
+    [data-pagosya-product][data-style] .pd-icon{flex:0 0 26px;width:26px;height:26px;overflow:visible;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=editorial] .product-detail__highlights{grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr));gap:16px 10px;margin:0 0 22px;padding:18px 0;border-top:1px solid var(--pd-line);border-bottom:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style=editorial] .product-detail__highlights li{flex-direction:column;gap:8px;text-align:center}
+    [data-pagosya-product][data-style=editorial] .product-detail__highlights strong{font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+    [data-pagosya-product][data-style=editorial] .pd-icon{flex-basis:28px;width:28px;height:28px}
+    [data-pagosya-product][data-style=dense] .product-detail__highlights{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));margin:16px 0 0}
+    @keyframes pd-roll{0%,100%{transform:translateX(-1.5px)}50%{transform:translateX(1.5px)}}
+    @keyframes pd-drip{0%,55%{transform:translateY(0);opacity:1}75%{transform:translateY(2px);opacity:.55}100%{transform:translateY(0);opacity:1}}
+    @keyframes pd-sweep{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+    @keyframes pd-spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    @keyframes pd-settle{0%,100%{transform:translateY(0)}50%{transform:translateY(1px)}}
+    @keyframes pd-stream{0%,100%{transform:translateY(-1px);opacity:.75}50%{transform:translateY(1px);opacity:1}}
+    @keyframes pd-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+    @keyframes pd-tick{0%,100%{transform:rotate(0)}50%{transform:rotate(10deg)}}
+    @keyframes pd-flicker{0%,58%,68%,100%{opacity:1}62%{opacity:.45}}
+    @keyframes pd-fill{0%,100%{opacity:.5;transform:scaleX(.6)}50%{opacity:1;transform:scaleX(1)}}
+    @keyframes pd-nudge{0%,100%{transform:translateX(-1px)}50%{transform:translateX(1px)}}
+    @keyframes pd-pulse{0%,100%{opacity:.7}50%{opacity:1}}
+    @keyframes pd-glow{0%,100%{opacity:.75}50%{opacity:1}}
+    @keyframes pd-sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
+    @keyframes pd-rays{0%,100%{transform:rotate(0);opacity:.8}50%{transform:rotate(12deg);opacity:1}}
+    @keyframes pd-drum{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    @keyframes pd-twinkle{0%,100%{opacity:.6;transform:scale(.92)}50%{opacity:1;transform:scale(1)}}
+    @keyframes pd-wave{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+    @keyframes pd-snip{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+    @keyframes pd-steam{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(-2px);opacity:1}}
+    @keyframes pd-tilt{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+    @keyframes pd-beat{0%,100%{transform:scale(1)}30%{transform:scale(1.08)}60%{transform:scale(.98)}}
+    @keyframes pd-draw{0%{stroke-dasharray:1;stroke-dashoffset:1}60%,100%{stroke-dasharray:1;stroke-dashoffset:0}}
+    [data-pagosya-product][data-style] .pd-icon>*{transform-box:fill-box;transform-origin:center}
+    [data-pagosya-product][data-style] :is(.pd-roll,.pd-sweep,.pd-spin,.pd-settle,.pd-bob,.pd-flicker,.pd-nudge,.pd-pulse,.pd-glow,.pd-sway,.pd-twinkle,.pd-wave,.pd-snip,.pd-tilt,.pd-beat)>*{animation:var(--pd-motion) var(--pd-duration,2.4s) ease-in-out infinite}
+    [data-pagosya-product][data-style] .pd-roll>*{--pd-motion:pd-roll}
+    [data-pagosya-product][data-style] .pd-sweep>*{--pd-motion:pd-sweep;--pd-duration:2.8s}
+    [data-pagosya-product][data-style] .pd-spin>*{--pd-motion:pd-spin;--pd-duration:6s;animation-timing-function:linear}
+    [data-pagosya-product][data-style] .pd-settle>*{--pd-motion:pd-settle;--pd-duration:3s}
+    [data-pagosya-product][data-style] .pd-bob>*{--pd-motion:pd-bob;--pd-duration:2.6s}
+    [data-pagosya-product][data-style] .pd-flicker>*{--pd-motion:pd-flicker;--pd-duration:2.6s}
+    [data-pagosya-product][data-style] .pd-nudge>*{--pd-motion:pd-nudge;--pd-duration:2.4s}
+    [data-pagosya-product][data-style] .pd-pulse>*{--pd-motion:pd-pulse;--pd-duration:2.2s}
+    [data-pagosya-product][data-style] .pd-glow>*{--pd-motion:pd-glow;--pd-duration:2.8s}
+    [data-pagosya-product][data-style] .pd-sway>*{--pd-motion:pd-sway;--pd-duration:2.8s}
+    [data-pagosya-product][data-style] .pd-twinkle>*{--pd-motion:pd-twinkle;--pd-duration:2.4s}
+    [data-pagosya-product][data-style] .pd-wave>*{--pd-motion:pd-wave;--pd-duration:2.4s}
+    [data-pagosya-product][data-style] .pd-snip>*{--pd-motion:pd-snip;--pd-duration:2.2s}
+    [data-pagosya-product][data-style] .pd-tilt>*{--pd-motion:pd-tilt;--pd-duration:3s}
+    [data-pagosya-product][data-style] .pd-beat>*{--pd-motion:pd-beat;--pd-duration:1.8s}
+    [data-pagosya-product][data-style] .pd-drip>*{animation:pd-drip 2.6s ease-in-out infinite}
+    [data-pagosya-product][data-style] .pd-stream>*{animation:pd-stream 2.2s ease-in-out infinite}
+    [data-pagosya-product][data-style] .pd-tick .pd-hand{animation:pd-tick 2.6s ease-in-out infinite}
+    [data-pagosya-product][data-style] .pd-fill .pd-level{animation:pd-fill 2.8s ease-in-out infinite}
+    [data-pagosya-product][data-style] .pd-rays .pd-rays,[data-pagosya-product][data-style] .pd-rays>*{animation:pd-rays 3s ease-in-out infinite}
+    [data-pagosya-product][data-style] .pd-drum .pd-drum{animation:pd-drum 6s linear infinite}
+    [data-pagosya-product][data-style] .pd-steam .pd-steam{animation:pd-steam 2.6s ease-in-out infinite}
+    [data-pagosya-product][data-style] :is(.pd-draw) :is(.pd-check){pathLength:1;animation:pd-draw 3.2s ease-in-out infinite}
+    [data-pagosya-product][data-style][data-highlights-paused] .pd-icon,[data-pagosya-product][data-style][data-highlights-paused] .pd-icon *{animation-play-state:paused}
+    @media(prefers-reduced-motion:reduce){[data-pagosya-product] .pd-icon *{animation:none!important}}
+    @media(prefers-reduced-motion:reduce){[data-pagosya-product] *,[data-pagosya-product] *::before{transition:none!important;scroll-behavior:auto!important}}
   `;
   document.head.append(detailStyle);
   const fullProductPage = document.querySelector("[data-pagosya-product-page]");
   const fullCheckoutPage = document.querySelector("[data-pagosya-checkout-page]");
+  // Kit-owned pages: the whole catalog (productos.html) and one collection per page (coleccion.html).
+  const fullCatalogPage = Boolean(document.querySelector('[data-catalog-full]'));
+  const collectionPage = Boolean(document.querySelector('[data-collection-page]'));
+  const currentCollection = () => {
+    const slug = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('c');
+    return collections().find((c) => c.slug === slug) || null;
+  };
   const rootPath = /(?:^|\/)pages\//.test(window.PAGOSYA_PREVIEW_PAGE || location.pathname) ? "../" : "";
   const pageHref = (page, query = "") => rootPath + page + query;
   const detail = fullProductPage || document.createElement("dialog");
   detail.setAttribute("data-pagosya-product", "");
   detail.setAttribute("aria-labelledby", "pagosya-product-title");
   if (!fullProductPage) document.body.append(detail);
+  // The product page is platform-rendered; authored rules aimed at its hooks would fight the kit layout.
+  // Exactly the product page hooks; catalog hooks such as [data-pagosya-product-template] stay authored.
+  const productHook = /\[data-pagosya-product(?:-page)?(?=[\]~|^$*=\s])|\.product-detail__/;
+  function splitSelectors(list) {
+    const parts = []; let depth = 0, start = 0;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      if (c === '(' || c === '[') depth++;
+      else if (c === ')' || c === ']') depth--;
+      else if (c === ',' && depth === 0) { parts.push(list.slice(start, i)); start = i + 1; }
+    }
+    parts.push(list.slice(start));
+    return parts.map(part => part.trim()).filter(Boolean);
+  }
+  function releaseRules(container) {
+    const rules = container.cssRules;
+    for (let i = rules.length - 1; i >= 0; i--) {
+      const rule = rules[i];
+      if (rule.cssRules?.length) releaseRules(rule);
+      if (typeof rule.selectorText !== 'string' || !productHook.test(rule.selectorText)) continue;
+      const kept = splitSelectors(rule.selectorText).filter(selector => !productHook.test(selector));
+      if (kept.length) rule.selectorText = kept.join(', '); else container.deleteRule(i);
+    }
+  }
+  function releaseProductPageStyles() {
+    for (const sheet of Array.from(document.styleSheets)) {
+      if (sheet.ownerNode?.dataset?.pagosyaKit !== undefined) continue;
+      try { releaseRules(sheet); } catch { /* Unreadable sheets keep their rules; kit selectors still outrank them. */ }
+    }
+  }
+  releaseProductPageStyles();
+  window.addEventListener('load', releaseProductPageStyles);
+  // A wrapper that holds nothing but the product page must not paint panels beside the kit layout.
+  const productWrapper = fullProductPage?.parentElement;
+  if (productWrapper && productWrapper !== document.body && productWrapper.children.length === 1) productWrapper.style.setProperty('background', 'none', 'important');
   let selectedProduct = null, selectedImage = 0, detailTrigger = null, oldOverflow = "";
   let selectedOptions = [], selectedQuantity = 1;
   const swatchColors = { negro: '#292b29', black: '#292b29', blanco: '#fffdf7', white: '#fffdf7', rojo: '#b5443f', red: '#b5443f', azul: '#446a98', blue: '#446a98', verde: '#71866a', green: '#71866a', rosa: '#d89ca6', pink: '#d89ca6', beige: '#d8c5a9', crema: '#eee4c9', cream: '#eee4c9', salvia: '#8b987b', 'verde salvia': '#8b987b', sage: '#8b987b', coral: '#d98b70', marfil: '#f1e8d5', ivory: '#f1e8d5', marron: '#805d48', brown: '#805d48', gris: '#92928e', gray: '#92928e', grey: '#92928e', amarillo: '#e0b847', yellow: '#e0b847', naranja: '#d28349', orange: '#d28349', morado: '#80678f', purple: '#80678f', oliva: '#757853', olive: '#757853' };
@@ -396,6 +517,19 @@
     const show = buyPassed && matchMedia('(max-width: 640px)').matches;
     bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show;
   }
+  let highlightObserver = null;
+  // Looping icons rest while nobody is looking at them.
+  function watchHighlights() {
+    highlightObserver?.disconnect();
+    const row = detail.querySelector('.product-detail__highlights');
+    delete detail.dataset.highlightsPaused;
+    if (!row || typeof IntersectionObserver !== 'function') return;
+    highlightObserver = new IntersectionObserver(entries => {
+      const entry = entries[entries.length - 1];
+      if (entry.isIntersecting) delete detail.dataset.highlightsPaused; else detail.dataset.highlightsPaused = '';
+    });
+    highlightObserver.observe(row);
+  }
   function watchStickyBar() {
     stickyObserver?.disconnect(); buyPassed = false;
     const buy = fullProductPage && detail.querySelector('.product-detail__buy');
@@ -414,7 +548,7 @@
       // Only label choices when this group actually changes what the shopper pays.
       const distinct = new Set(prices.filter(Boolean).map(range => range.low + ':' + range.high));
       // Ranges ("desde") on every choice read as noise; label a group once each choice has one exact price.
-      return distinct.size > 1 && prices.every(range => !range || range.low === range.high) ? prices.map(range => range ? money(range.low, p.currency) : '') : null;
+      return distinct.size > 1 && prices.every(range => !range || range.low === range.high) ? prices.map(range => range ? range.low : null) : null;
     });
   }
   const assuranceIcons = {
@@ -442,11 +576,25 @@
     }).join('')}</ul>` : '';
   }
   function optionsMarkup(groups) {
-    return `<div class="product-detail__options">${groups.map((group, index) => `<fieldset><legend>${escape(group.name)} <span data-product-selection="${index}"></span></legend><div class="product-detail__values">${group.values.map((value, valueIndex) => {
-      const color = swatchColor(group.name, value);
-      return `<button type="button" data-product-option="${index}" data-option-value="${valueIndex}" aria-pressed="false">${color ? `<span class="product-detail__swatch" style="--swatch:${color}" aria-hidden="true"></span>` : ''}${escape(value)}</button>`;
-    }).join('')}</div></fieldset>`).join('')}</div>`;
+    return `<div class="product-detail__options">${groups.map((group, index) => {
+      const colors = group.values.map(value => swatchColor(group.name, value));
+      return `<fieldset><legend>${escape(group.name)} <span data-product-selection="${index}"></span></legend><div class="product-detail__values"${colors.every(Boolean) ? ' data-kind="swatch"' : ''}>${group.values.map((value, valueIndex) => `<button type="button" data-product-option="${index}" data-option-value="${valueIndex}" aria-pressed="false">${colors[valueIndex] ? `<span class="product-detail__swatch" style="--swatch:${colors[valueIndex]}" aria-hidden="true"></span>` : ''}<span class="product-detail__option-label">${escape(value)}</span></button>`).join('')}</div></fieldset>`;
+    }).join('')}</div>`;
   }
+  /** Fill every group with an available value, keeping the shopper's choices where a variant still allows them. */
+  function completeSelection(p, preferred) {
+    const groups = optionGroups(p);
+    if (!groups) return [];
+    const result = [];
+    for (let index = 0; index < groups.length; index++) {
+      const available = value => p.variants.some(v => remaining(p, v) > 0 && variantValues(v).every((candidate, i) => i > index || (i === index ? candidate === value : candidate === result[i])));
+      const value = preferred[index] !== undefined && available(preferred[index]) ? preferred[index] : groups[index].values.find(available);
+      if (value === undefined) return preferred.slice(0, index);
+      result[index] = value;
+    }
+    return result;
+  }
+  let selectionNote = '';
   function selectedVariant() {
     const groups = optionGroups(selectedProduct);
     return groups && groups.every((g, i) => selectedOptions[i] !== undefined)
@@ -459,8 +607,12 @@
     detail.querySelectorAll('.product-detail__values').forEach((values, index) => { values.toggleAttribute('data-priced', !!prices[index] && groups[index].values.length <= 4); });
     detail.querySelectorAll('[data-product-option]').forEach(button => {
       const index = Number(button.dataset.productOption), value = groups[index].values[Number(button.dataset.optionValue)];
-      const optionPrice = prices[index]?.[Number(button.dataset.optionValue)];
-      if (optionPrice) button.dataset.optionPrice = optionPrice; else delete button.dataset.optionPrice;
+      const amounts = prices[index], amount = amounts?.[Number(button.dataset.optionValue)];
+      if (amount != null) {
+        const lowest = Math.min(...amounts.filter(value => value != null));
+        button.dataset.optionPrice = money(amount, p.currency);
+        if (amount > lowest) button.dataset.optionDelta = `+ ${money(amount - lowest, p.currency)}`; else delete button.dataset.optionDelta;
+      } else { delete button.dataset.optionPrice; delete button.dataset.optionDelta; }
       // Earlier groups constrain later ones. Changing an earlier choice clears
       // later choices, so sparse catalogs never trap shoppers in a combination.
       const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : i > index || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
@@ -479,7 +631,7 @@
     groups.forEach((group, index) => { detail.querySelector(`[data-product-selection="${index}"]`).textContent = selectedOptions[index] || ''; });
     updateQuantity();
     detail.querySelector('.product-detail__status').textContent = variant
-      ? available ? `${variant.name}${preview || config.demo ? ' · Vista previa, sin cobros.' : ''}` : 'Ya añadiste la cantidad disponible de esta combinación.'
+      ? available ? `${selectionNote || variant.name}${preview || config.demo ? ' · Vista previa, sin cobros.' : ''}` : 'Ya añadiste la cantidad disponible de esta combinación.'
       : p.variants.some(v => remaining(p, v) > 0) ? 'Selecciona una opción de cada grupo.' : 'Sin disponibilidad para añadir más unidades.';
   }
   function showImage(index) {
@@ -498,22 +650,22 @@
     const p = products().find(p => p.id === id);
     if (!p) { if (fullProductPage) detail.innerHTML = '<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="index.html#catalogo">Explorar productos</a>'; return; }
     track('product_view');
-    selectedProduct = p; selectedImage = 0; selectedOptions = []; selectedQuantity = 1; detailTrigger = trigger;
+    selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = '';
+    selectedOptions = completeSelection(p, []);
     const images = galleryImages(p), complex = p.variants?.length || p.extras?.length, groups = optionGroups(p);
-    detail.innerHTML = `${fullProductPage ? `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>` : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy"><p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title">${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
+    const style = productPageStyle();
+    detail.dataset.style = style;
+    adoptAuthoredAction();
+    const breadcrumb = `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('index.html', '#catalogo'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${images.length ? `<div class="product-detail__stage"><img class="product-detail__photo" src="${escape(images[0])}" alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}" alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>'}</section><section class="product-detail__copy">${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p><${fullProductPage ? "h1" : "h2"} id="pagosya-product-title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : ''}<div class="product-detail__pricing" data-product-pricing>${priceMarkup(p)}</div>${p.description ? `<p class="product-detail__intro">${escape(p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style === 'editorial' ? highlightsMarkup(p) : ''}${groups ? `${optionsMarkup(groups)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${fullProductPage ? `${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section><div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>Añadir</button></div>` : ''}`;
     showImage(0);
     if (fullProductPage && !images.length) {
       // Mobile reads identity, purchase, then details; desktop places the purchase panel beside both.
       const copy = detail.querySelector('.product-detail__copy'), [summary, buybox, details] = ['summary', 'buybox', 'details'].map(name => Object.assign(document.createElement('div'), { className: 'product-detail__' + name }));
-      for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
+      for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__highlights,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
     }
-    // Frame full-page photos in their own proportion (portrait to 3:2 landscape), not a fixed crop box.
-    const firstPhoto = fullProductPage && detail.querySelector('.product-detail__photo');
-    if (firstPhoto) {
-      const frame = () => { if (firstPhoto.naturalWidth && firstPhoto.naturalHeight) detail.querySelector('.product-detail__gallery').style.setProperty('--product-photo-ratio', String(Math.min(3 / 2, Math.max(4 / 5, firstPhoto.naturalWidth / firstPhoto.naturalHeight)))); };
-      if (firstPhoto.complete) frame(); else firstPhoto.addEventListener('load', frame, { once: true });
-    }
+    watchHighlights();
     watchStickyBar();
     decorateProductReviews();
     renderCart();
@@ -529,11 +681,85 @@
       touchStart = null;
     }, { passive: true });
   }
+  // Stores without accent tokens often color their action through .checkout-button; the product page keeps that brand color.
+  function adoptAuthoredAction() {
+    const root = getComputedStyle(document.documentElement);
+    if (detail.style.getPropertyValue('--pd-accent') || ['--store-accent', '--brand-accent', '--accent'].some(name => root.getPropertyValue(name).trim())) return;
+    const probe = Object.assign(document.createElement('button'), { className: 'checkout-button', type: 'button', hidden: true });
+    probe.style.cssText = 'display:block!important;position:absolute;visibility:hidden;pointer-events:none';
+    document.body.append(probe);
+    const action = getComputedStyle(probe), background = action.backgroundColor;
+    if (!/^rgba?\(0, 0, 0, 0\)$|transparent/.test(background)) { detail.style.setProperty('--pd-accent', background); detail.style.setProperty('--pd-on-accent', action.color); }
+    probe.remove();
+  }
+  // Icons for owner-approved highlights. Each keeps one gentle loop; the kit owns the drawings.
+  const highlightIcons = {
+    car: { motion: 'roll', paths: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>' },
+    fuel: { motion: 'drip', paths: '<path d="M3 22h12"/><path d="M4 9h10"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0V9.8a2 2 0 0 0-.6-1.4L18 5"/>' },
+    gauge: { motion: 'sweep', paths: '<path d="M3.3 19a10 10 0 1 1 17.4 0"/><path d="m12 14 4-4"/>' },
+    gear: { motion: 'spin', paths: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>' },
+    seat: { motion: 'settle', paths: '<path d="M5 18v-2a3 3 0 0 1 3-3h3"/><path d="M8 13V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v9"/><path d="M5 18h13"/><path d="M18 15v6"/>' },
+    road: { motion: 'stream', paths: '<path d="M4 22 8 2"/><path d="M20 22 16 2"/><path d="M12 6v3M12 12v3M12 18v3"/>' },
+    truck: { motion: 'roll', paths: '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.6a1 1 0 0 0-.2-.6l-3.5-4.4a1 1 0 0 0-.8-.4H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>' },
+    package: { motion: 'bob', paths: '<path d="m12 2 9 5v10l-9 5-9-5V7z"/><path d="m3 7 9 5 9-5"/><path d="M12 12v10"/>' },
+    clock: { motion: 'tick', paths: '<circle cx="12" cy="12" r="9"/><path class="pd-hand" d="M12 7v5l3 2"/>' },
+    calendar: { motion: 'bob', paths: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
+    bolt: { motion: 'flicker', paths: '<path d="M4 14a1 1 0 0 1-.8-1.6l9.9-10.2a.5.5 0 0 1 .9.5l-1.9 6A1 1 0 0 0 13 10h7a1 1 0 0 1 .8 1.6l-9.9 10.2a.5.5 0 0 1-.9-.5l1.9-6A1 1 0 0 0 11 14z"/>' },
+    battery: { motion: 'fill', paths: '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path class="pd-level" d="M5 10v4"/>' },
+    plug: { motion: 'nudge', paths: '<path d="M12 22v-5"/><path d="M9 7V2M15 7V2"/><path d="M7 7h10v4a5 5 0 0 1-10 0z"/>' },
+    wifi: { motion: 'pulse', paths: '<path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><path d="M12 20h.01"/>' },
+    chip: { motion: 'pulse', paths: '<rect x="7" y="7" width="10" height="10" rx="1"/><path d="M4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3"/>' },
+    screen: { motion: 'glow', paths: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>' },
+    leaf: { motion: 'sway', paths: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12"/>' },
+    ruler: { motion: 'nudge', paths: '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/>' },
+    drop: { motion: 'drip', paths: '<path d="M12 3c3 4 6 6.7 6 10a6 6 0 0 1-12 0c0-3.3 3-6 6-10z"/>' },
+    sun: { motion: 'rays', paths: '<circle cx="12" cy="12" r="4"/><path class="pd-rays" d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>' },
+    flame: { motion: 'flicker', paths: '<path d="M12 2c1 4 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 .5 2 2 2 3 1-1-2 0-4 0-6z"/>' },
+    snowflake: { motion: 'spin', paths: '<path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19"/>' },
+    shirt: { motion: 'sway', paths: '<path d="M15 3a3 3 0 0 1-6 0"/><path d="M9 3 4 6l2 4 2-1v12h8V9l2 1 2-4-5-3"/>' },
+    wash: { motion: 'drum', paths: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M7 6h.01M11 6h.01"/><circle class="pd-drum" cx="12" cy="14" r="5"/><path class="pd-drum" d="M9.5 14a2.5 2.5 0 0 1 5 0"/>' },
+    sparkle: { motion: 'twinkle', paths: '<path d="m12 3 2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path class="pd-spark" d="M19 15l.7 1.8L21.5 18l-1.8.7L19 20.5l-.7-1.8L16.5 18l1.8-.7z"/>' },
+    hand: { motion: 'wave', paths: '<path d="M11 11V5a1.5 1.5 0 0 1 3 0v6"/><path d="M14 10V4a1.5 1.5 0 0 1 3 0v8"/><path d="M17 11V7a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0v1"/><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12"/>' },
+    scissors: { motion: 'snip', paths: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path class="pd-blade" d="M8.1 7.9 20 20"/><path class="pd-blade" d="M8.1 16.1 20 4"/>' },
+    cup: { motion: 'steam', paths: '<path class="pd-steam" d="M8 3v3M12 2v4M16 3v3"/><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h2a2 2 0 0 1 0 4h-2"/>' },
+    wheat: { motion: 'sway', paths: '<path d="M12 22V9"/><path d="M12 9c0-2 1.5-4 4-4 0 2.5-1.5 4-4 4z"/><path d="M12 9c0-2-1.5-4-4-4 0 2.5 1.5 4 4 4z"/><path d="M12 15c0-2 1.5-4 4-4 0 2.5-1.5 4-4 4z"/><path d="M12 15c0-2-1.5-4-4-4 0 2.5 1.5 4 4 4z"/>' },
+    'chef-hat': { motion: 'bob', paths: '<path d="M6 21h12"/><path d="M7 18h10v-4a4 4 0 0 0 .8-7.8A4 4 0 0 0 12 3a4 4 0 0 0-5.8 3.2A4 4 0 0 0 7 14z"/>' },
+    bottle: { motion: 'tilt', paths: '<path d="M10 2h4v3l2 3v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-3z"/><path d="M8 13h8"/>' },
+    shield: { motion: 'draw', paths: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/><path class="pd-check" d="m9 12 2 2 4-4"/>' },
+    star: { motion: 'twinkle', paths: '<path d="m12 3 2.7 5.6 6.3.9-4.5 4.4 1 6.1-5.5-2.9-5.5 2.9 1-6.1L3 9.5l6.3-.9z"/>' },
+    heart: { motion: 'beat', paths: '<path d="M12 20s-7-4.4-7-9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7 3.5C19 15.6 12 20 12 20z"/>' },
+    recycle: { motion: 'spin', paths: '<path d="M7 19H5a2 2 0 0 1-1.7-3l1.6-2.7"/><path d="m9 22 2-3-3-2"/><path d="M17 5.5 15.5 3a2 2 0 0 0-3.4 0L10.5 5.7"/><path d="m8 4 3.5.3L11 7.8"/><path d="M19 19h-7"/><path d="m15 22 3-3-3-3"/>' },
+    check: { motion: 'draw', paths: '<circle cx="12" cy="12" r="9"/><path class="pd-check" d="m8.5 12.5 2.5 2.5 4.5-5"/>' },
+  };
+  function highlightsMarkup(p) {
+    const rows = (Array.isArray(p?.highlights) ? p.highlights : [])
+      .filter(row => row && highlightIcons[row.icon] && typeof row.label === 'string' && row.label.trim())
+      .slice(0, 4);
+    if (!rows.length) return '';
+    return `<ul class="product-detail__highlights" aria-label="Destacados del producto">${rows.map(row => {
+      const icon = highlightIcons[row.icon];
+      const detail = typeof row.detail === 'string' ? row.detail.trim() : '';
+      return `<li><svg class="pd-icon pd-${escape(icon.motion)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon.paths}</svg><div><strong>${escape(row.label.trim())}</strong>${detail ? `<span>${escape(detail)}</span>` : ''}</div></li>`;
+    }).join('')}</ul>`;
+  }
+  function specRows(p) {
+    return (Array.isArray(p?.specifications) ? p.specifications : []).filter(row => row && typeof row.label === 'string' && typeof row.value === 'string' && row.label.trim() && row.value.trim());
+  }
+  // A stored choice wins; older stores read their catalog, and spec-heavy catalogs get the dense page.
+  function productPageStyle() {
+    if (config.productPageStyle === 'editorial' || config.productPageStyle === 'dense') return config.productPageStyle;
+    const items = products();
+    return items.length && items.filter(p => specRows(p).length >= 3).length * 2 >= items.length ? 'dense' : 'editorial';
+  }
+  function specChipsMarkup(p) {
+    const chips = specRows(p).filter(row => row.value.trim().length <= 24).slice(0, 4);
+    return chips.length ? `<ul class="product-detail__chips" aria-label="Características">${chips.map(row => `<li><span class="product-detail__sr">${escape(row.label.trim())}: </span>${escape(row.value.trim())}</li>`).join('')}</ul>` : '';
+  }
   function productInformation(p) {
     const delivery = (store.locations || []).map(l => `<li><strong>${escape(l.name)}</strong>${l.address ? `<br>${escape(l.address)}` : ''}<br>${[l.pickupEnabled && 'Retiro en tienda', l.deliveryEnabled && 'Entrega a domicilio'].filter(Boolean).join(' · ') || 'Sin métodos de entrega disponibles'}</li>`).join('');
     const tags = Array.isArray(p.tags) ? [...new Set(p.tags.filter(tag => typeof tag === 'string' && tag.trim()))] : [];
     const panels = [];
-    const specs = (Array.isArray(p.specifications) ? p.specifications : []).filter(row => row && typeof row.label === 'string' && typeof row.value === 'string' && row.label.trim() && row.value.trim()).slice(0, 8);
+    const specs = specRows(p).slice(0, 8);
     if (tags.length || specs.length) panels.push({ id: 'description', label: 'Detalles', content: `${specs.length ? `<dl class="product-detail__specs">${specs.map(row => `<div><dt>${escape(row.label.trim())}</dt><dd>${escape(row.value.trim())}</dd></div>`).join('')}</dl>` : ''}${tags.length ? `<ul class="product-detail__facts">${tags.map(tag => { const fact = tag.match(/^([^:]{1,40}):\s*(\S.*)$/); return fact ? `<li class="product-detail__fact"><span>${escape(fact[1].trim())}</span><span>${escape(fact[2])}</span></li>` : `<li>${escape(tag)}</li>`; }).join('')}</ul>` : ''}` });
     if (delivery || store.shippingEnabled || store.shippingPickupEnabled) panels.push({ id: 'delivery', label: 'Envíos y retiro', content: `${delivery ? `<ul class="product-delivery-list">${delivery}</ul>` : ''}<p>Elige la opción disponible al revisar tu pedido. El total final se confirma en pagosYa.</p>` });
     if (!panels.length) return '';
@@ -789,6 +1015,8 @@
     const id = link?.closest('[data-custom-product]')?.dataset.productId;
     if (config.productPage && id && products().some(product => product.id === id)) link.href = pageHref(config.productPage, '?id=' + encodeURIComponent(id));
   }, true);
+  // Sold out means no units for the product or for any of its combinations; a shopper cannot choose options that cannot be bought.
+  const soldOut = p => limit(p) === 0 || (Array.isArray(p.variants) && p.variants.length > 0 && p.variants.every(v => limit(v) === 0));
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
     if (!template || !template.content) return null;
@@ -838,13 +1066,13 @@
     root.toggleAttribute('data-no-image', !image);
     root.querySelectorAll('[data-product-media]').forEach(media => { media.hidden = !image; });
     buy.classList.add('menu-add'); buy.type = 'button';
-    buy.dataset.add = p.id; buy.disabled = !ready || limit(p) === 0 || complex;
+    buy.dataset.add = p.id; buy.disabled = !ready || soldOut(p) || complex;
     buy.setAttribute('aria-label', `${complex ? 'Elegir opciones de' : 'Añadir'} ${p.name}`);
-    if (complex && optionGroups(p)) {
+    if (soldOut(p)) { buy.textContent = 'Agotado'; root.dataset.soldOut = 'true'; }
+    else if (complex && optionGroups(p)) {
       delete buy.dataset.add; buy.dataset.product = p.id; buy.disabled = false;
       buy.textContent = 'Elegir opciones';
     }
-    else if (limit(p) === 0) { buy.textContent = 'Agotado'; root.dataset.soldOut = 'true'; }
     else if (complex) {
       buy.textContent = 'Elegir opciones';
       if (!preview && !config.demo) {
@@ -855,6 +1083,73 @@
     }
     return root.outerHTML;
   }
+  // The default catalog card. Custom templates (customProductCard) take priority when the store authored one.
+  function productCard(p) {
+    const image = galleryImages(p)[0];
+    const complex = p.variants?.length || p.extras?.length;
+    const custom = customProductCard(p, image, complex);
+    if (custom) return custom;
+    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
+  }
+  // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
+  function structureCatalog(el) {
+    // Grid autodetection only makes sense for the mount's own flat list: `sections` cards sit
+    // inside .catalog-group__items and already get their grid unconditionally from CSS.
+    const ownCards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
+    const card = ownCards[0], photo = card?.querySelector('.menu-item__image');
+    if (photo && !el.hasAttribute('data-pagosya-grid') && getComputedStyle(el).display === 'block' && photo.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.6) el.setAttribute('data-pagosya-grid', '');
+    // Contrast correction must reach every card, including ones nested inside `sections` groups.
+    readableCards(el, [...el.querySelectorAll('.menu-item:not([data-custom-product])')]);
+  }
+  // Card text must not disappear into the card: switch to the store's text or background color, whichever reads.
+  function readableCards(el, cards) {
+    if (!cards.length) return;
+    const probe = document.createElement('span'); probe.hidden = true; el.append(probe);
+    const rgba = value => { probe.style.color = ''; probe.style.color = value; const n = (getComputedStyle(probe).color.match(/[\d.]+/g) || []).map(Number); return n.length >= 3 ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null; };
+    const luminance = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+    const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+    const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', '#111111', '#ffffff'].map(rgba).filter(Boolean);
+    for (const card of cards) {
+      let node = card, background = null;
+      while (node && node.nodeType === 1) { const color = rgba(getComputedStyle(node).backgroundColor); if (color && color[3] > .5) { background = color; break; } node = node.parentElement; }
+      background = background || [255, 255, 255, 1];
+      const text = rgba(getComputedStyle(card.querySelector('h3') || card).color);
+      if (!text || contrast(text, background) >= 3) continue;
+      // Prefer the store's own colors when they read; fall back to the strongest contrast.
+      const chosen = candidates.find(c => contrast(c, background) >= 4.5) || candidates.reduce((best, c) => contrast(c, background) > contrast(best, background) ? c : best);
+      card.style.color = `rgb(${chosen.slice(0, 3).join(',')})`;
+    }
+    probe.remove();
+  }
+  const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';
+  const collections = () => Array.isArray(store.collections) ? store.collections : [];
+  const HOME_PREVIEW = 4;
+  // Collected products keep the owner's order inside each group; whatever is
+  // left lands in one final group so nothing becomes unreachable.
+  function collectionGroups(selected) {
+    const byId = new Map(selected.map((p) => [p.id, p]));
+    const groups = collections().map((c) => ({
+      name: c.name, slug: c.slug,
+      items: (c.productIds || []).map((id) => byId.get(id)).filter(Boolean),
+    })).filter((group) => group.items.length);
+    const grouped = new Set(groups.flatMap((group) => group.items.map((p) => p.id)));
+    const rest = selected.filter((p) => !grouped.has(p.id));
+    return rest.length ? [...groups, { name: 'Más productos', slug: '', items: rest }] : groups;
+  }
+  const productsHref = () => pageHref('productos.html');
+  const collectionHref = (slug) => pageHref('coleccion.html', '?c=' + encodeURIComponent(slug));
+  // Under `page` the link goes to the standalone products page, as it always has. Under `tabs`
+  // the catalog already reads as organized by collection, so "Ver todos los productos" instead
+  // goes to the first collection's own page — the products page it would otherwise point to
+  // isn't reachable from anywhere else in that layout. Falls back to the products page if the
+  // store has no collections yet (tabs itself doesn't render without at least one).
+  const catalogMore = (layout) => {
+    const firstCollection = collections()[0];
+    const href = layout === 'tabs' && firstCollection ? collectionHref(firstCollection.slug) : productsHref();
+    return `<a class="catalog-more" data-catalog-more href="${escape(href)}">Ver todos los productos</a>`;
+  };
+  // Shared by the home `tabs` layout (no current tab) and the collection page (marks its own tab).
+  const catalogTabs = (currentSlug) => `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}"${c.slug === currentSlug ? ' aria-current="page"' : ''}>${escape(c.name)}</a>`).join("")}</nav>`;
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
     document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
@@ -864,13 +1159,31 @@
     });
     document.querySelectorAll("[data-pagosya-catalog]").forEach((el) => {
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
-      el.innerHTML = selected.length ? selected.map((p) => {
-        const image = galleryImages(p)[0];
-        const complex = p.variants?.length || p.extras?.length;
-        const custom = customProductCard(p, image, complex);
-        if (custom) return custom;
-        return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${limit(p) === 0 ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
-      }).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
+      el.dataset.catalogLayout = layout;
+      if (collectionPage) {
+        // An unknown or missing collection shows every product rather than an error.
+        const current = currentCollection();
+        const items = current ? selected.filter((p) => (current.productIds || []).includes(p.id)) : selected;
+        const tabs = collections().length ? catalogTabs(current?.slug) : '';
+        const heading = current ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
+        // The shopper is on a specific collection's page here, not a category filter — "en esta
+        // categoría" would describe a page that doesn't exist in this layout.
+        el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
+      } else if (layout === 'sections' && collections().length) {
+        const groups = collectionGroups(selected);
+        el.innerHTML = groups.length
+          ? groups.map((group) => `<section class="catalog-group"><h3 class="catalog-group__title">${escape(group.name)}</h3><div class="catalog-group__items">${group.items.map(productCard).join("")}</div></section>`).join("")
+          : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      } else if (layout === 'page' || layout === 'tabs') {
+        const tabs = layout === 'tabs' && collections().length ? catalogTabs() : '';
+        el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore(layout);
+      } else {
+        // Also covers `sections` with no collections yet: a single "Más productos" group holding
+        // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.
+        el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+      }
+      structureCatalog(el);
     });
     if (fullProductPage && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
@@ -883,6 +1196,19 @@
           ['meta[property="og:description"]', 'content', p.description || p.name], ['meta[property="og:image"]', 'content', safeUrl(p.imageUrls?.[0])],
         ]) document.querySelector(selector)?.setAttribute(attribute, value);
       }
+    }
+    if (fullCatalogPage && !preview) {
+      const current = collectionPage ? currentCollection() : null;
+      const canonical = `${(config.publicSiteUrl || `${config.checkoutOrigin}/s/${encodeURIComponent(config.slug)}`).replace(/\/$/, '')}${current ? `/c/${encodeURIComponent(current.slug)}` : '/productos'}`;
+      document.title = `${current ? current.name : 'Productos'} · ${store.storeName || config.slug}`;
+      const description = current
+        ? `Productos de ${current.name} en ${store.storeName || config.slug}.`
+        : `Todos los productos de ${store.storeName || config.slug}.`;
+      for (const [selector, attribute, value] of [
+        ['link[rel="canonical"]', 'href', canonical], ['meta[property="og:url"]', 'content', canonical],
+        ['meta[property="og:title"]', 'content', document.title], ['meta[name="description"]', 'content', description],
+        ['meta[property="og:description"]', 'content', description],
+      ]) document.querySelector(selector)?.setAttribute(attribute, value);
     }
     if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
     else if (selectedProduct && detail.open) {
@@ -1186,8 +1512,12 @@
     if (button.hasAttribute('data-product-option')) {
       const index = Number(button.dataset.productOption), groups = optionGroups(selectedProduct);
       if (!groups) return;
-      selectedOptions = selectedOptions.slice(0, index);
-      selectedOptions[index] = groups[index].values[Number(button.dataset.optionValue)];
+      const previous = [...selectedOptions];
+      const chosen = [...selectedOptions]; chosen[index] = groups[index].values[Number(button.dataset.optionValue)];
+      selectedOptions = completeSelection(selectedProduct, chosen);
+      // Never change a later choice silently: say which ones availability replaced.
+      const replaced = groups.map((group, i) => i > index && previous[i] !== undefined && previous[i] !== selectedOptions[i] ? `${group.name}: ${selectedOptions[i] ?? 'sin elegir'}` : '').filter(Boolean);
+      selectionNote = replaced.length ? `Actualizamos ${replaced.join(', ')} por disponibilidad.` : '';
       updateOptions();
       // An early choice may preview a photo only if every compatible variant agrees.
       const matches = selectedProduct.variants.filter(v => variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value));

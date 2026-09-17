@@ -1,29 +1,14 @@
 (function(){
-  "use strict";
-  function decorateCatalog(){
-    document.querySelectorAll(".ritual-product").forEach(function(card,index){
-      var name=card.querySelector('[data-product-field="name"]');
-      if(!name)return;
-      var label=card.querySelector(".gesture-label");
-      if(label)label.textContent=index%2===0?"Hidratar":"Limpiar";
-      if(name.textContent.trim().toLowerCase()==="crema de manos"){
-        var slot=card.querySelector(".product-tag-slot");
-        if(slot&&!slot.querySelector(".product-tag")){
-          var tag=document.createElement("span");tag.className="product-tag";tag.textContent="Sin perfume";slot.appendChild(tag);
-        }
-      }
-    });
-  }
-  document.addEventListener("pagosya:ready",decorateCatalog);
-  document.addEventListener("click",function(event){
-    var button=event.target.closest("[data-product-add]");
-    if(!button||button.disabled)return;
-    var original=button.textContent;
-    window.setTimeout(function(){
-      if(button.disabled)return;
-      button.classList.add("is-added");button.textContent="Añadido";button.setAttribute("aria-label","Producto añadido al pedido");
-      window.setTimeout(function(){button.classList.remove("is-added");button.textContent=original;button.removeAttribute("aria-label")},1100);
-    },80);
-  });
-  decorateCatalog();
+  var menuButton=document.querySelector('.menu-toggle');
+  var nav=document.querySelector('.site-nav');
+  if(menuButton&&nav){menuButton.addEventListener('click',function(){var open=nav.classList.toggle('is-open');menuButton.setAttribute('aria-expanded',String(open));});nav.addEventListener('click',function(){nav.classList.remove('is-open');menuButton.setAttribute('aria-expanded','false');});}
+  function cards(){return Array.prototype.slice.call(document.querySelectorAll('[data-pagosya-catalog] .daily-card'));}
+  function choose(name,shouldScroll){var list=cards();if(!list.length)return;list.forEach(function(card){var title=card.querySelector('[data-product-field="name"]');card.hidden=!title||title.textContent.trim()!==name;});document.querySelectorAll('[data-product-choice]').forEach(function(button){var active=button.getAttribute('data-product-choice')===name;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));});if(shouldScroll){var target=document.querySelector('#selector-diario');if(target)target.scrollIntoView({behavior:'smooth',block:'start'});}}
+  function setup(){var list=cards();if(list.length){var active=document.querySelector('[data-product-choice].is-active');choose(active?active.getAttribute('data-product-choice'):'Crema de manos',false);}}
+  document.addEventListener('pagosya:ready',setup);
+  document.querySelectorAll('[data-product-choice]').forEach(function(button){button.addEventListener('click',function(){choose(button.getAttribute('data-product-choice'),false);});});
+  document.querySelectorAll('[data-jump-product]').forEach(function(button){button.addEventListener('click',function(){choose(button.getAttribute('data-jump-product'),true);});});
+  var search=document.querySelector('.search-action');if(search)search.addEventListener('click',function(){var target=document.querySelector('.segments');if(target){target.scrollIntoView({behavior:'smooth',block:'center'});var first=target.querySelector('button');if(first)first.focus();}});
+  document.addEventListener('click',function(event){var add=event.target.closest('[data-product-add]');if(!add)return;var card=add.closest('.daily-card');var feedback=card&&card.querySelector('.add-feedback');if(feedback){feedback.textContent='Añadido al pedido';add.classList.add('is-added');window.setTimeout(function(){add.classList.remove('is-added');},240);}});
+  var scenes=document.querySelectorAll('[data-scene]');if(scenes.length){var query=window.PAGOSYA_PREVIEW_QUERY||window.location.search||'';var soap=query.indexOf('cmu4fjc8f0018lfd8tf0jv1np')>-1;scenes.forEach(function(scene){scene.hidden=scene.getAttribute('data-scene')!==(soap?'soap':'cream');});}
 })();

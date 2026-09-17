@@ -1,7 +1,7 @@
 {
   "version": 3,
   "typography": {
-    "display": "Instrument Serif para Bruma y titulares editoriales; Instrument Sans para navegación, precios, selectores y textos. Escritorio: marca 34 px, h1 68–82 px, h2 44 px, cuerpo 17 px. Móvil: marca 27 px, h1 43 px, h2 33 px, cuerpo 16 px. Ciruela para texto principal, lavanda para acentos y marfil cálido como base.",
+    "display": "Bricolage Grotesque como única familia, explotando contraste de escala y cursiva. Cinco roles exactos: display 49px/1.04 peso 450 (-0.03em, máx. 14ch; 39px móvil), subhead italic 18px/1.25 peso 400 a tinta 70% (16px móvil), body 16px/1.75 peso 400 máx. 50ch (15px móvil), label 11px/1.3 uppercase 0.16em peso 600, numeric 32px/1.05 peso 450 con tabular-nums (27px móvil). Solo pesos 400/600 en texto; variable 450 se resuelve dentro del registro ligero. Papel cálido, tinta ciruela oscura y rungs 100",
     "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
   },
   "iconography": {
@@ -39,12 +39,15 @@
   },
   "layout": {
     "sectionOrder": [
-      "intro-ritual",
-      "catalogo-dos-gestos",
-      "nota-formatos"
+      "selector-diario",
+      "indice-volumenes",
+      "galeria-envases"
     ],
-    "catalogSection": "catalogo-dos-gestos",
-    "mobileRule": "La portada pasa a texto sobre una franja clara y fotografía 4:5 debajo; el producto sigue completo y el botón aparece antes de la imagen. Cada ficha apila fotografía, nombre, selector, precio y botón de 48 px. “Mi pedido (0)” permanece en el encabezado fuera del menú. En producto, la compra deja de ser lateral y queda inmediatamente después de la primera imagen."
+    "catalogSection": "selector-diario",
+    "mobileRule": "La franja tipográfica se reduce a una cabecera de dos líneas y el selector de producto se vuelve un control segmentado debajo, sin ocultarse en menú. La fotografía activa ocupa el ancho y el grupo nombre/precio/volumen/acción queda inmediatamente después. «Mi pedido» con contador sigue en el masthead. La tabla de volúmenes se convierte en listas por producto; números grandes no desplazan controles y todas las acciones conservan 44px."
+  },
+  "productPage": {
+    "style": "editorial"
   },
   "assets": [
     {
@@ -54,7 +57,7 @@
       "kind": "image"
     },
     {
-      "path": "assets/image-49363bd178b6.jpg",
+      "path": "assets/image-5aa73323ed19.jpg",
       "role": "unknown",
       "description": "",
       "kind": "image"
@@ -66,7 +69,7 @@
       "kind": "image"
     },
     {
-      "path": "assets/image-f285b2310535.jpg",
+      "path": "assets/image-044ac61929a0.jpg",
       "role": "unknown",
       "description": "",
       "kind": "image"
@@ -81,58 +84,67 @@
   ],
   "tokens": {
     "background": {
-      "authored": "#f6f1e9",
-      "resolved": "#f6f1e9",
+      "authored": "#f7f3ee",
+      "resolved": "#f7f3ee",
       "source": "authored",
       "path": "styles.css"
     },
     "foreground": {
-      "authored": "#44283d",
-      "resolved": "#44283d",
+      "authored": "#321d2d",
+      "resolved": "#321d2d",
       "source": "authored",
       "path": "styles.css"
     },
     "accent": {
-      "authored": "#c8b4dc",
-      "resolved": "#c8b4dc",
+      "authored": "var(--brand-accent,#5a304d)",
+      "resolved": "#5a304d",
       "source": "authored",
       "path": "styles.css"
     },
     "accent-foreground": {
-      "authored": "#382037",
-      "resolved": "#382037",
+      "authored": "#fffaf5",
+      "resolved": "#fffaf5",
       "source": "authored",
       "path": "styles.css"
     },
     "surface": {
-      "authored": "#ede5dd",
-      "resolved": "#ede5dd",
+      "authored": "#eee8f2",
+      "resolved": "#eee8f2",
       "source": "authored",
       "path": "styles.css"
     },
     "border": {
-      "authored": "#cfc1c6",
-      "resolved": "#cfc1c6",
-      "source": "authored",
+      "authored": "color-mix(in srgb,var(--store-foreground) 14%,var(--store-background))",
+      "resolved": null,
+      "source": "unresolved",
       "path": "styles.css"
     },
     "radius": {
-      "authored": "2px",
-      "resolved": "2px",
+      "authored": "4px",
+      "resolved": "4px",
       "source": "authored",
       "path": "styles.css"
     },
     "body-font": {
-      "authored": "\"Instrument Sans\",sans-serif",
-      "resolved": "\"Instrument Sans\",sans-serif",
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
       "source": "authored",
       "path": "styles.css"
     },
     "heading-font": {
-      "authored": "\"Instrument Serif\",serif",
-      "resolved": "\"Instrument Serif\",serif",
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
       "source": "authored",
       "path": "styles.css"
     }
+  },
+  "scene": {
+    "backdropHex": "#f7f3ee",
+    "backdropMode": "paper",
+    "lightDirection": "right-45",
+    "cameraElevation": "three-quarter",
+    "fillFraction": 0.62,
+    "aspect": "portrait",
+    "shadow": "long-directional"
   }
 }

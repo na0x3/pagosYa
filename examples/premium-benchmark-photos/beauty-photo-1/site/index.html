@@ -3,86 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Bruma | Cuidado diario en formatos para casa y viaje</title>
-  <meta name="description" content="Elige el formato de tu crema de manos o jabón líquido Bruma y añádelo a tu pedido.">
+  <title>Bruma — Cuidado diario en formatos para casa y viaje</title>
+  <meta name="description" content="Elige crema de manos o jabón líquido Bruma en el volumen adecuado para tu rutina diaria.">
   <link rel="stylesheet" href="commerce-pages.css">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="home-page">
-  <a class="skip-link" href="#catalogo-dos-gestos">Ir a los productos</a>
-  <header class="site-header">
-    <a class="wordmark" href="index.html" aria-label="Bruma, inicio">Bruma</a>
-    <nav class="site-nav" aria-label="Navegación principal">
-      <a href="#catalogo-dos-gestos">Productos</a>
-      <button class="cart-trigger" type="button" data-cart-open>
-        <img src="assets/icons/shopping-bag.svg" alt="">
-        <span>Mi pedido</span> (<span data-cart-count>0</span>)
-      </button>
-    </nav>
-  </header>
-
-  <main>
-    <section id="intro-ritual" class="ritual-intro" aria-labelledby="ritual-title">
-      <div class="ritual-copy">
-        <p class="eyebrow">Casa o viaje</p>
-        <h1 id="ritual-title">Cuidado diario,<br>en tu medida</h1>
-        <p>Dos gestos cotidianos y distintos volúmenes para elegir el formato que acompaña tu rutina.</p>
-        <a class="primary-link" href="#catalogo-dos-gestos">Elegir producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+<body>
+<header class="masthead">
+  <a class="wordmark" href="index.html" aria-label="Bruma, inicio"><strong data-store-name>Bruma</strong><span>Cuidado cosmético diario en varios volúmenes</span></a>
+  <button class="icon-button menu-toggle" type="button" aria-label="Abrir navegación" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt=""></button>
+  <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+    <a href="#selector-diario" aria-current="page">Inicio</a><a href="#selector-diario">Elegir</a><a href="#indice-volumenes">Formatos</a><a href="#galeria-envases">Envases</a>
+  </nav>
+  <div class="header-actions">
+    <button class="icon-button search-action" type="button" aria-label="Buscar producto"><img src="assets/icons/search.svg" alt=""></button>
+    <button class="cart-button" type="button" data-cart-open aria-label="Abrir Mi pedido"><img src="assets/icons/shopping-bag.svg" alt=""><span class="cart-label">Mi pedido</span><span class="cart-count" data-cart-count>0</span></button>
+  </div>
+</header>
+<main>
+  <section id="selector-diario" class="daily-selector" aria-labelledby="daily-title">
+    <div class="opening-copy">
+      <p class="eyebrow">Escala diaria</p>
+      <h1 id="daily-title">Bruma</h1>
+      <p class="subhead">Un formato para cada ritmo, de viaje a casa.</p>
+    </div>
+    <div class="product-stage">
+      <div class="segments" role="group" aria-label="Elegir producto">
+        <button type="button" class="segment is-active" data-product-choice="Crema de manos" aria-pressed="true">Crema de manos</button>
+        <button type="button" class="segment" data-product-choice="Jabón líquido" aria-pressed="false">Jabón líquido</button>
       </div>
-      <figure class="ritual-photo">
-        <img src="assets/image-49363bd178b6.jpg" alt="Crema de manos Bruma en tubo lavanda sobre una superficie de madera">
-        <figcaption>Hidratar · Crema de manos</figcaption>
-      </figure>
-    </section>
-
-    <section id="catalogo-dos-gestos" class="catalog-section" aria-labelledby="catalog-title">
-      <header class="section-heading">
-        <p class="eyebrow">Dos gestos</p>
-        <h2 id="catalog-title">Elige tu formato</h2>
-        <p>Crema para las manos o jabón líquido para el uso cotidiano.</p>
-      </header>
       <div data-pagosya-catalog aria-live="polite"></div>
-    </section>
-
-    <section id="nota-formatos" class="format-note" aria-labelledby="format-title">
-      <p class="note-index">30 — 500 ml</p>
-      <div>
-        <p class="eyebrow">Casa o viaje</p>
-        <h2 id="format-title">El mismo gesto,<br>en otra medida.</h2>
-      </div>
-      <p>Elige el volumen dentro de cada producto antes de añadirlo a tu pedido.</p>
-    </section>
-  </main>
-
-  <template data-pagosya-product-template>
-    <article class="ritual-product">
-      <a class="product-media menu-item__details" data-product-link data-product-media>
-        <img data-product-field="image" alt="">
-        <span class="detail-cue">Ver producto <img src="assets/icons/arrow-right.svg" alt=""></span>
-      </a>
-      <div class="product-copy">
-        <p class="gesture-label">Cuidado diario</p>
-        <h3><a data-product-link data-product-field="name"></a></h3>
-        <p class="product-description" data-product-field="description"></p>
-        <div class="product-tag-slot"></div>
-        <div class="product-options" data-product-field="options"></div>
-        <div class="product-purchase">
-          <strong class="menu-item__price" data-product-field="price"></strong>
-          <button class="menu-add" type="button" data-product-add>Añadir</button>
+    </div>
+    <template data-pagosya-product-template>
+      <article class="daily-card">
+        <a class="daily-media" data-product-link data-product-media aria-label="Ver producto"><img data-product-field="image" alt=""></a>
+        <div class="daily-copy">
+          <h2 data-product-field="name"></h2>
+          <p class="daily-description" data-product-field="description"></p>
+          <p class="menu-item__price" data-product-field="price"></p>
+          <div class="daily-options"><span class="option-label">Volumen</span><div data-product-field="options"></div></div>
+          <div class="purchase-row"><button class="menu-add" type="button" data-product-add>Añadir al pedido</button><a class="detail-link" data-product-link>Ver producto <img src="assets/icons/arrow-right.svg" alt=""></a></div>
+          <span class="add-feedback" role="status" aria-live="polite"></span>
         </div>
-      </div>
-    </article>
-  </template>
-
-  <div class="contact-slot" data-pagosya-contact hidden></div>
-  <div class="commerce-cart-slot" data-pagosya-cart hidden></div>
-  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
-
-  <footer class="site-footer">
-    <a class="wordmark" href="index.html">Bruma</a>
-    <p>Cuidado cosmético diario en varios volúmenes.</p>
-    <a href="#catalogo-dos-gestos">Productos</a>
-  </footer>
-  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
-</body>
-</html>
+      </article>
+    </template>
+  </section>
+  <section id="indice-volumenes" class="volume-index" aria-labelledby="volume-title">
+    <div class="section-heading"><p class="eyebrow">Cuatro medidas</p><h2 id="volume-title">Elige tu escala</h2><p class="subhead">Formatos pequeños para llevar; formatos amplios para el uso cotidiano.</p></div>
+    <div class="volume-lists">
+      <article><h3>Crema de manos</h3><p>Sin perfume</p><ul><li><span>30</span><small>ml</small></li><li><span>60</span><small>ml</small></li></ul><button type="button" data-jump-product="Crema de manos">Elegir crema</button></article>
+      <article><h3>Jabón líquido</h3><p>Para uso cotidiano</p><ul><li><span>250</span><small>ml</small></li><li><span>500</span><small>ml</small></li></ul><button type="button" data-jump-product="Jabón líquido">Elegir jabón</button></article>
+    </div>
+  </section>
+  <section id="galeria-envases" class="vessel-gallery" aria-labelledby="gallery-title">
+    <div class="section-heading"><p class="eyebrow">Envases Bruma</p><h2 id="gallery-title">Del estante a la rutina</h2></div>
+    <div class="photo-pair"><figure><img src="assets/image-df8cb044d4b4.jpg" alt="Tubo de crema de manos Bruma sobre fondo claro"><figcaption>Crema de manos · envase</figcaption></figure><figure><img src="assets/image-5aa73323ed19.jpg" alt="Crema de manos Bruma en una escena de uso cotidiano"><figcaption>Crema de manos · escena</figcaption></figure></div>
+    <div class="photo-pair reverse"><figure><img src="assets/image-e6ed32c54de5.jpg" alt="Botella con bomba de jabón líquido Bruma"><figcaption>Jabón líquido · envase</figcaption></figure><figure><img src="assets/image-044ac61929a0.jpg" alt="Jabón líquido Bruma en una escena de uso cotidiano"><figcaption>Jabón líquido · escena</figcaption></figure></div>
+  </section>
+</main>
+<div data-pagosya-contact hidden></div>
+<div data-pagosya-cart hidden></div>
+<div class="site-status" data-pagosya-status role="status" aria-live="polite"></div>
+<footer class="site-footer"><a class="footer-mark" href="index.html">Bruma</a><nav aria-label="Enlaces del pie"><a href="#selector-diario">Elegir</a><a href="#indice-volumenes">Formatos</a><button type="button" data-cart-open>Mi pedido</button></nav><p>Cuidado cosmético diario en varios volúmenes.</p></footer>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body></html>

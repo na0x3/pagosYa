@@ -1,7 +1,7 @@
 {
   "version": 3,
   "typography": {
-    "display": "Fraunces variable para títulos y precios, con cursivas suaves como acento; Instrument Sans para navegación, variantes y controles. H1 de 64–84 px en escritorio, 42 px en móvil; títulos de producto 30–44/28–34 px; cuerpo 16–18 px. Interletraje de display entre -0.03em y -0.015em.",
+    "display": "Instrument Serif + Instrument Sans. Cinco roles exactos: display Instrument Serif 400, 50px/1.04, -0.02em, máximo 13ch; subhead Instrument Serif italic 400, 19px/1.2, tinta 70%; body Instrument Sans 400, 16px/1.75, máximo 58ch (15px móvil); label Instrument Sans 600, 11px uppercase/0.15em; numeric Instrument Sans 600 tabular, 19px editorial. Display móvil 40px, 2.67× body. Tinta única en 100/85/70/55/40%.",
     "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
   },
   "iconography": {
@@ -39,11 +39,15 @@
   },
   "layout": {
     "sectionOrder": [
-      "catalogo-editorial",
-      "textura-en-casa"
+      "portada-funda",
+      "catalogo-dos-gestos",
+      "escena-manta"
     ],
-    "catalogSection": "catalogo-editorial",
-    "mobileRule": "La doble página se convierte en una secuencia editorial: ficha comprable de funda primero y manta inmediatamente después, sin carruseles obligatorios. Header de dos líneas máximo con “Mi pedido 0” siempre visible. Selectores y botones ocupan todo el ancho útil y mantienen 44 px de altura; las fotografías conservan recortes verticales y el bloque ambiental pasa a desplazamiento natural."
+    "catalogSection": "catalogo-dos-gestos",
+    "mobileRule": "La portada deja de ser dividida: lockup, compra de la funda y fotografía aparecen en ese orden, comprimidos con pasos pequeños dentro del grupo. «Mi pedido» y contador permanecen fuera del menú. El catálogo se convierte en tarjetas verticales 4:3; opciones envuelven sin desbordar y cada acción conserva 44px. En checkout, el resumen sigue a los datos principales y no se fija sobre la pantalla."
+  },
+  "productPage": {
+    "style": "editorial"
   },
   "assets": [
     {
@@ -53,7 +57,7 @@
       "kind": "image"
     },
     {
-      "path": "assets/image-e58bfe385a7a.jpg",
+      "path": "assets/image-3887b5f05aa4.jpg",
       "role": "unknown",
       "description": "",
       "kind": "image"
@@ -65,7 +69,7 @@
       "kind": "image"
     },
     {
-      "path": "assets/image-f82f55029d51.jpg",
+      "path": "assets/image-6bc398292088.jpg",
       "role": "unknown",
       "description": "",
       "kind": "image"
@@ -80,58 +84,67 @@
   ],
   "tokens": {
     "background": {
-      "authored": "#f4eee4",
-      "resolved": "#f4eee4",
+      "authored": "#f5f0e7",
+      "resolved": "#f5f0e7",
       "source": "authored",
       "path": "styles.css"
     },
     "foreground": {
-      "authored": "#392431",
-      "resolved": "#392431",
+      "authored": "#302722",
+      "resolved": "#302722",
       "source": "authored",
       "path": "styles.css"
     },
     "accent": {
-      "authored": "#a94731",
-      "resolved": "#a94731",
+      "authored": "var(--brand-accent,#a95038)",
+      "resolved": "#a95038",
       "source": "authored",
       "path": "styles.css"
     },
     "accent-foreground": {
-      "authored": "#fffaf2",
-      "resolved": "#fffaf2",
+      "authored": "#fffaf3",
+      "resolved": "#fffaf3",
       "source": "authored",
       "path": "styles.css"
     },
     "surface": {
-      "authored": "#ead9d4",
-      "resolved": "#ead9d4",
+      "authored": "#ead5d1",
+      "resolved": "#ead5d1",
       "source": "authored",
       "path": "styles.css"
     },
     "border": {
-      "authored": "#b99c91",
-      "resolved": "#b99c91",
-      "source": "authored",
+      "authored": "color-mix(in srgb,var(--store-foreground) 14%,var(--store-background))",
+      "resolved": null,
+      "source": "unresolved",
       "path": "styles.css"
     },
     "radius": {
-      "authored": "2px",
-      "resolved": "2px",
+      "authored": "4px",
+      "resolved": "4px",
       "source": "authored",
       "path": "styles.css"
     },
     "body-font": {
-      "authored": "Instrument,system-ui,sans-serif",
-      "resolved": "Instrument,system-ui,sans-serif",
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
       "source": "authored",
       "path": "styles.css"
     },
     "heading-font": {
-      "authored": "Fraunces,serif",
-      "resolved": "Fraunces,serif",
+      "authored": "\"Instrument Serif\",serif",
+      "resolved": "\"Instrument Serif\",serif",
       "source": "authored",
       "path": "styles.css"
     }
+  },
+  "scene": {
+    "backdropHex": "#f5f0e7",
+    "backdropMode": "paper",
+    "lightDirection": "window-left",
+    "cameraElevation": "eye-level",
+    "fillFraction": 0.72,
+    "aspect": "portrait",
+    "shadow": "soft-contact"
   }
 }

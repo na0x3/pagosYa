@@ -1,24 +1,10 @@
 (function(){
-  function markAdded(button){
-    if(!button)return;
-    button.classList.add('is-added');
-    var label=button.querySelector('span');
-    if(label)label.textContent='Añadido';
-    window.setTimeout(function(){
-      button.classList.remove('is-added');
-      if(label)label.textContent='Añadir';
-    },1400);
-  }
-  document.addEventListener('click',function(event){
-    var add=event.target.closest('[data-product-add]');
-    if(add)window.setTimeout(function(){markAdded(add)},80);
-  });
-  document.addEventListener('pagosya:ready',function(){
-    document.querySelectorAll('.bench-product').forEach(function(card,index){
-      if(card.dataset.pointReady)return;
-      card.dataset.pointReady='true';
-      var mark=card.querySelector('.measure-mark');
-      if(mark)mark.textContent='VISTA / '+String(index+1).padStart(2,'0');
-    });
-  });
+  var menu=document.querySelector('.menu-toggle'),nav=document.querySelector('.nav');
+  if(menu&&nav){menu.addEventListener('click',function(){var open=nav.classList.toggle('is-open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Cerrar menú':'Abrir menú')});nav.addEventListener('click',function(){nav.classList.remove('is-open');menu.setAttribute('aria-expanded','false')})}
+  var tabs=[].slice.call(document.querySelectorAll('[data-view]'));
+  function prepareCatalog(){var cards=[].slice.call(document.querySelectorAll('.sequence-card'));cards.forEach(function(card){var title=card.querySelector('[data-product-field="name"]'),index=card.querySelector('.product-index');if(!title)return;var isLamp=title.textContent.toLowerCase().indexOf('lámpara')>-1;card.dataset.panel=isLamp?'luz':'altura';if(index)index.textContent=isLamp?'01 · Luz':'02 · Altura'});selectView((tabs.find(function(t){return t.getAttribute('aria-selected')==='true'})||{}).dataset?.view||'luz')}
+  function selectView(view){tabs.forEach(function(tab){var active=tab.dataset.view===view;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1});document.querySelectorAll('.sequence-card').forEach(function(card){card.hidden=card.dataset.panel!==view})}
+  tabs.forEach(function(tab,i){tab.addEventListener('click',function(){selectView(tab.dataset.view)});tab.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();var next=(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[next].focus();selectView(tabs[next].dataset.view)}})});
+  document.addEventListener('pagosya:ready',prepareCatalog);if(document.readyState!=='loading')prepareCatalog();else document.addEventListener('DOMContentLoaded',prepareCatalog);
+  document.addEventListener('click',function(e){var add=e.target.closest&&e.target.closest('[data-product-add]');if(!add)return;add.classList.add('added');var old=add.textContent;add.textContent='Añadido';setTimeout(function(){add.classList.remove('added');add.textContent=old},1000)});
 })();

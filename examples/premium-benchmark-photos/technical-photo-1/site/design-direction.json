@@ -1,67 +1,69 @@
 {
   "concepts": [
     {
-      "name": "Mesa de precisión",
-      "premise": "Catálogo primero, diseñado como una mesa técnica de dos estaciones. A diferencia de los otros conceptos, elimina la introducción independiente: fotografía, variantes, precio y compra aparecen juntos desde el inicio. La retícula grafito, los indicadores lima y las líneas de medida convierten las especificaciones reales en la identidad, sin añadir afirmaciones comerciales.",
-      "opening": "Masthead compacto con wordmark tipográfico “Punto.”, descriptor y “Mi pedido (0)”. Debajo comienza inmediatamente un catálogo de dos bandas horizontales: lámpara y soporte. En cada banda, la fotografía ocupa el campo principal y el bloque de compra reúne nombre, descripción, selector propio, precio y botón “Añadir”. El primer producto muestra nombre, precio y acción antes del pliegue en escritorio y móvil.",
-      "flow": "La portada permite comprar directamente o abrir la ficha. Cada ficha usa una galería de dos imágenes, descripción literal, etiquetas confirmadas, selector de Color o Tamaño, precio actualizado y control de cantidad. El carrito conserva la retícula técnica; checkout reduce el ruido visual, mantiene resumen fijo en escritorio y presenta recogida como modalidad disponible, sin inventar lugares ni políticas. Movimiento sutil: cambio de imagen y trazos de retícula al interactuar; sin animación con ‘3",
-      "typography": "Instrument Sans variable en toda la interfaz: wordmark 800; títulos 700 de 52/54 px en escritorio y 34/36 px en móvil; nombres de producto 650 de 30/34 y 24/28; cuerpo 400 de 16/24; precios 700 de 22/24; etiquetas técnicas 600 de 12 px en mayúsculas con tracking 0.08em. Números y opciones alineados con claridad, sin apariencia de terminal.",
-      "imagery": "assets/image-9dd0655fb51d.jpg abre la banda de la lámpara con encuadre completo y foco en pantalla, articulaciones y base; assets/image-8b9ccfb58a58.jpg funciona como segunda vista cálida en la ficha. assets/image-aaad3a22e445.jpg abre el soporte, preservando bordes y base completos; assets/image-7324486b3691.jpg aporta la vista ambiental secundaria. Fondos originales visibles, object-fit contain y recortes mínimos; nada de siluetas inventadas.",
-      "mobile": "Cabecera de una línea con “Punto.” y “Mi pedido (0)” siempre visible. Cada banda se convierte en una secuencia compacta: imagen 46vh máximo, nombre y precio en la misma zona, selector de ancho completo y botón de 48 px. La segunda imagen queda en la ficha, no compite con la compra inicial. A 320 px, opciones apiladas y cantidad/añadir en filas separadas.",
+      "name": "Plano de trabajo",
+      "premise": "Una tienda-catá­logo que funciona como una mesa de especificación: grafito, blanco y un único verde lima confirmado por la dirección visual. Abre directamente con los dos productos en una retícula técnica, a diferencia de las aperturas fotográficas y secuenciales de los otros conceptos. La identidad nace de líneas de medida, columnas visibles y datos alineados, no de cajas decorativas.",
+      "opening": "Masthead compacto con “Punto” y la segunda línea confirmada “Accesorios de escritorio con especificaciones claras”. Debajo, catálogo inmediato en dos columnas: fotografía 1:1, nombre, precio tabular, selector propio —Color o Tamaño— y “Añadir al pedido”. Producto, precio y acción quedan visibles sin desplazamiento en 1280×844 y 390×844; en móvil aparece primero la lámpara y una franja parcial del segundo producto para señalar continuidad.",
+      "flow": "Inicio: compra directa, seguida por una comparación breve basada únicamente en USB-C, brazo ajustable, aluminio y tamaños. Producto: página densa con galería, descripción, variante, cantidad y acción fija dentro de la columna de compra. Carrito y checkout reutilizan filas de especificación, precios tabulares y controles lima; “Mi pedido” con contador permanece visible en móvil. Recogida se presenta solo cuando el flujo de checkout la solicite, sin inventar ubicación o condiciones. Movimiento s ú",
+      "typography": "Dos familias: Instrument Sans y Fraunces. Cinco roles exactos: display—Instrument Sans 48px/1.04, 450, -0.03em, máximo 18ch; subhead—Fraunces italic 18px/1.2, 400, tinta 70%, máximo 46ch; body—Instrument Sans 16px/1.75 (15px móvil), 400, máximo 58ch; label—Instrument Sans 11px, 600, mayúsculas, 0.16em; numeric—Instrument Sans 32px/1.05, 450, tabular. La escala móvil del display baja a 39px, manteniendo una relación de 2.6× con el cuerpo.",
+      "imagery": "Contrato de tarjeta 1:1, media radius 4px y fondo blanco. `assets/image-9dd0655fb51d.jpg` muestra la lámpara completa, centrada y sin recortar base o pantalla; `assets/image-aaad3a22e445.jpg` muestra el soporte completo y conserva su silueta de aluminio. Las segundas tomas, `assets/image-230ec71ebf2b.jpg` y `assets/image-b6bb8e6448f4.jpg`, quedan para las galerías de producto, con recorte cuadrado centrado. No se alteran color, acabado ni fondos fotográficos.",
+      "mobile": "Cabecera de dos filas: marca arriba; navegación horizontal breve y “Mi pedido 0” con icono local `shopping-bag` siempre visibles. El catálogo pasa a una columna, pero selector y botón comparten una fila flexible con controles de 44px; a 320px se apilan sin recorte. La fotografía sigue ocupando el ancho principal y las líneas de medida se simplifican, no desaparecen.",
       "layout": {
         "sections": [
-          "catalogo-mesa",
-          "criterios-de-eleccion"
+          "catalogo-plano",
+          "comparador-esencial",
+          "metodo-de-eleccion"
         ],
-        "catalogSection": "catalogo-mesa",
+        "catalogSection": "catalogo-plano",
         "standaloneIntro": false,
-        "productsInOpening": true
+        "productsInOpening": true,
+        "productPage": "dense"
       }
     },
     {
       "name": "Objetos en foco",
-      "premise": "Apertura fotográfica editorial y espaciosa, frente a la densidad inmediata de “Mesa de precisión”. La lámpara funciona como retrato de portada y el catálogo posterior adopta composiciones alternadas; el soporte no se reduce a una tarjeta gemela. La información técnica permanece exacta, pero la secuencia favorece primero la observación del objeto.",
-      "opening": "Composición dividida: gran retrato de la lámpara sobre fondo claro con assets/image-9dd0655fb51d.jpg a la derecha; a la izquierda, “Punto”, el descriptor y un enlace ancla “Ver los dos objetos”. Una regla lima marca el límite de la imagen. No promete compra sobre el pliegue móvil: la portada se mantiene deliberadamente independiente.",
-      "flow": "Tras la apertura, la lámpara aparece en un bloque ancho con compra lateral; el soporte ocupa un bloque invertido y más compacto. Una franja final compara únicamente hechos disponibles: USB-C y brazo ajustable frente a aluminio y dos tamaños. Las fichas amplían la imagen inicial y colocan opciones en una columna blanca superpuesta; carrito y checkout usan paneles blancos sobre grafito con una línea lima continua que guía hasta el total.",
-      "typography": "Bricolage Grotesque variable como familia única: display 750 de 72/70 px, 42/42 en móvil; títulos de producto 650 de 36/40 y 28/31; cuerpo 400 de 17/26; navegación 600 de 14 px; precio 700 de 24/26. La jerarquía combina titulares compactos y pies de imagen pequeños, con letter-spacing nunca menor a -0.035em.",
-      "imagery": "assets/image-9dd0655fb51d.jpg es el retrato principal, mostrado casi completo con foco en la geometría del brazo. assets/image-8b9ccfb58a58.jpg ocupa una franja panorámica secundaria mediante recorte centrado en articulación y pantalla, sin alterar el producto. Para el soporte, assets/image-7324486b3691.jpg lidera el bloque ambiental y assets/image-aaad3a22e445.jpg queda como vista completa y neutra en ficha.",
-      "mobile": "La portada se reordena con palabra “Punto” arriba y fotografía completa debajo, conservando el trazo lima como eje vertical. Navegación desplegable separada, pero “Mi pedido (0)” permanece visible. En catálogo, foto, identidad y compra forman una sola secuencia; selectores de 48 px, precio y botón sin superposiciones. La comparación pasa de tabla a dos listas legibles.",
+      "premise": "Una portada editorial construida alrededor de las cuatro fotografías suministradas, con mucho papel blanco y grafito. El verde lima —confirmado por la dirección visual— aparece únicamente en anuncio, cejas, selección y compra. Frente al catálogo inmediato del primer concepto, aquí cada objeto recibe una escena fotográfica amplia antes de la elección; frente al tercero, evita una secuencia de pasos y favorece contemplación premium.",
+      "opening": "Composición asimétrica de dos planos: `assets/image-230ec71ebf2b.jpg` ocupa aproximadamente dos tercios y mantiene completa la lámpara; a su izquierda, “Punto” y el título “Dos piezas para ordenar el escritorio”, con una única entrada “Ver los productos”. No incluye controles de compra en el primer viewport: la fotografía establece apariencia y escala antes del catálogo.",
+      "flow": "Inicio: portada fotográfica, díptico narrativo “Iluminar / Elevar” y catálogo final de dos tarjetas horizontales con variantes y compra. Producto: página densa pero más editorial, con galería 60/40 y panel de compra compacto; la descripción y los hechos suministrados aparecen junto a la variante correspondiente. Carrito: lista limpia con miniaturas cuadradas. Checkout: resumen fotográfico lateral en escritorio y desplegable superior en móvil, conservando geometría y jerarquía.",
+      "typography": "Dos familias: Instrument Serif e Instrument Sans. Cinco roles exactos: display—Instrument Serif 50px/1.06, 400, -0.02em, máximo 16ch; subhead—Instrument Serif italic 19px/1.18, 400, tinta 70%, máximo 44ch; body—Instrument Sans 16px/1.75 (15px móvil), 400, máximo 56ch; label—Instrument Sans 11px, 600, mayúsculas, 0.14em; numeric—Instrument Sans 18px/1.2, 600, tabular. Display móvil de 40px para mantener 2.67× el cuerpo.",
+      "imagery": "La portada usa `assets/image-230ec71ebf2b.jpg` con encuadre contain y foco en pantalla, articulaciones y base. El bloque “Iluminar” usa `assets/image-9dd0655fb51d.jpg`; “Elevar” usa `assets/image-b6bb8e6448f4.jpg`, cuyo fondo cálido crea el único cambio atmosférico. El catálogo adopta ratio 4:3 compartido y object-fit:contain; `assets/image-aaad3a22e445.jpg` es la miniatura principal del soporte. Controles radius 4px y media radius 8px.",
+      "mobile": "La portada se recompone con título arriba y fotografía 4:5 debajo, sin superponer texto. El enlace al catálogo permanece en el primer viewport, aunque nombre, precio y compra aparecen tras desplazamiento. Masthead con menú, búsqueda y “Mi pedido 0” visible fuera del menú. Las tarjetas horizontales pasan a verticales manteniendo siempre nombre, precio, variante y acción como un grupo.",
       "layout": {
         "sections": [
           "portada-objeto",
-          "lampara-en-foco",
-          "soporte-en-foco",
-          "comparacion-confirmada"
+          "diptyco-funcional",
+          "catalogo-en-foco"
         ],
-        "catalogSection": "lampara-en-foco",
+        "catalogSection": "catalogo-en-foco",
         "standaloneIntro": true,
-        "productsInOpening": false
+        "productsInOpening": false,
+        "productPage": "dense"
       }
     },
     {
-      "name": "Plano de escritorio",
-      "premise": "Una interfaz de selección basada en plano, más interactiva y diagramática que las bandas de compra o el retrato editorial. La apertura presenta los dos objetos como coordenadas de un mismo puesto de trabajo y permite cambiar el foco. Después, un catálogo compacto reúne las decisiones. Es el concepto de mayor densidad informativa y jerarquía modular.",
-      "opening": "Escenario gráfico blanco con ejes finos y cuadrícula amplia: dos fotografías reales, assets/image-9dd0655fb51d.jpg y assets/image-aaad3a22e445.jpg, ocupan módulos asimétricos etiquetados “Luz / USB-C” y “Altura / Aluminio”. Botones accesibles “Elegir lámpara” y “Elegir soporte” desplazan al producto correspondiente; no se dibujan objetos ni se simula una fotografía de escritorio.",
-      "flow": "Un selector fijo local alterna el énfasis entre ambos productos sin desmontar contenido. El catálogo inferior presenta filas de especificación y módulos de compra muy compactos. Las fichas usan una vista tipo plano: galería a la izquierda y columna de configuración a la derecha, con opción, precio y cantidad siempre agrupados. Carrito y checkout se leen como una hoja de pedido: líneas divisorias, totales grandes y acentos lima solo en estados y acciones.",
-      "typography": "Oswald variable para wordmark y títulos de coordenada: 64/68 px en escritorio, 40/43 móvil; Instrument Sans para compra y lectura: producto 700 de 30/34, cuerpo 400 de 16/24, controles 600 de 15 px, etiquetas 650 de 11 px con tracking 0.1em, total 700 de 28/30. El contraste condensado/contemporáneo produce una voz de plano industrial sin sacrificar legibilidad.",
-      "imagery": "Las vistas neutras assets/image-9dd0655fb51d.jpg y assets/image-aaad3a22e445.jpg son los módulos principales, siempre con object-fit contain. assets/image-8b9ccfb58a58.jpg y assets/image-7324486b3691.jpg aparecen únicamente al cambiar de vista o en las galerías de producto. Los fondos cálidos quedan intactos y se separan de la cuadrícula mediante marcos grafito finos, no tarjetas coloreadas.",
-      "mobile": "El plano pasa a una tira vertical con dos módulos fotográficos y controles ancla; desaparecen ejes secundarios, pero se conserva una línea lima con marcas. “Mi pedido (0)” queda junto al nombre en la cabecera. El selector de producto se convierte en dos botones segmentados con etiquetas completas; compra apilada y controles de 48 px. La retícula nunca se usa como fondo detrás de texto pequeño.",
+      "name": "Secuencia 01—02",
+      "premise": "Una herramienta de elección guiada para un catálogo de solo dos piezas: primero se decide la función y después la variante. Usa grafito y blanco con verde lima confirmado como marcador de estado. Se diferencia del catálogo simultáneo del primer concepto mediante una navegación por vistas montadas, y del relato fotográfico del segundo mediante densidad, numeración funcional y una jerarquía sans condensada.",
+      "opening": "Una franja compacta plantea “¿Qué necesita tu mesa?” y ofrece dos pestañas reales: “Luz” y “Altura”. La vista inicial de Luz muestra inmediatamente `assets/image-9dd0655fb51d.jpg`, el nombre Lámpara de escritorio USB-C, precio desde Bs 220, selector de color y botón de añadir. Cambiar a Altura revela el soporte sin abandonar la página. El catálogo comienza dentro de los primeros 320px.",
+      "flow": "Inicio: selector funcional con ambos paneles montados, seguido por una tabla comparativa de hechos confirmados y un cierre fotográfico doble. Producto: página densa tipo ficha de instrumento, con imagen a la izquierda y nombre, descripción, opción, precio, cantidad y compra en una columna ordenada. Carrito: resumen numerado por producto, nunca por decoración. Checkout: pasos claramente rotulados y resumen persistente; la selección lima indica estado actual, no se usa como fondo amplio.",
+      "typography": "Una sola familia: Bricolage Grotesque. Cinco roles exactos: display—48px/1.02, 450, -0.03em, máximo 19ch; subhead—17px/1.2, 400 italic, tinta 70%, máximo 48ch; body—16px/1.75 (15px móvil), 400, máximo 60ch; label—11px, 600, mayúsculas, 0.18em; numeric—34px/1.02, 450, tabular. Display móvil de 39px, equivalente a 2.6× el cuerpo.",
+      "imagery": "La vista Luz utiliza `assets/image-9dd0655fb51d.jpg`; la alternativa de galería es `assets/image-230ec71ebf2b.jpg`. Altura utiliza `assets/image-aaad3a22e445.jpg` y reserva `assets/image-b6bb8e6448f4.jpg` para detalle ambiental. Todas las tarjetas obedecen ratio 1:1, contain, fondo fotográfico intacto y media radius 0; controles radius 0. El cierre muestra dos recortes verticales centrados, sin falsear escenas compartidas.",
+      "mobile": "Las pestañas Luz/Altura permanecen visibles bajo el masthead y tienen estados claros para teclado. Imagen, datos y compra se apilan dentro del primer viewport de 390×844; a 320px el selector y el botón ocupan filas completas de 44px. “Mi pedido 0” queda fijo en la cabecera junto al icono `shopping-bag`, separado del menú colapsable. La tabla comparativa se transforma en pares etiqueta/valor, sin desplazamiento horizontal.",
       "layout": {
         "sections": [
-          "plano-interactivo",
-          "selector-de-objeto",
-          "catalogo-coordenadas",
-          "detalle-de-materiales"
+          "catalogo-secuencia",
+          "comparacion-01-02",
+          "doble-vista"
         ],
-        "catalogSection": "catalogo-coordenadas",
-        "standaloneIntro": true,
-        "productsInOpening": false
+        "catalogSection": "catalogo-secuencia",
+        "standaloneIntro": false,
+        "productsInOpening": true,
+        "productPage": "dense"
       }
     }
   ],
-  "selected": 0,
+  "selected": 2,
   "selection": {
     "source": "planner",
-    "rationale": "“Mesa de precisión” responde mejor a la acción principal de elegir y añadir: el catálogo real tiene solo dos productos, ambos con variantes claras —Color para la lámpara y Tamaño para el soporte— y cuatro fotografías confirmadas. La apertura permite comparar y comprar sin demora, mientras la fotografía suministrada sigue liderando cada banda. La retícula grafito, blanco y lima coincide además con।"
+    "rationale": "“Secuencia 01—02” encaja mejor con un catálogo real de solo dos productos y con la compra basada en opciones claras: Color para la lámpara y Tamaño para el soporte. Mantiene visibles nombre, precio y acción desde el inicio, usa las cuatro fotografías suministradas y convierte los hechos disponibles —USB-C, brazo ajustable, aluminio y dos tamaños— en una elección legible sin inventar reseñas, enví­"
   }
 }

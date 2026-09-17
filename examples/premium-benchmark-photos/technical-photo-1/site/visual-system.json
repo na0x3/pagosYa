@@ -1,7 +1,7 @@
 {
   "version": 3,
   "typography": {
-    "display": "Instrument Sans variable en toda la interfaz: wordmark 800; títulos 700 de 52/54 px en escritorio y 34/36 px en móvil; nombres de producto 650 de 30/34 y 24/28; cuerpo 400 de 16/24; precios 700 de 22/24; etiquetas técnicas 600 de 12 px en mayúsculas con tracking 0.08em. Números y opciones alineados con claridad, sin apariencia de terminal.",
+    "display": "Una sola familia: Bricolage Grotesque. Cinco roles exactos: display—48px/1.02, 450, -0.03em, máximo 19ch; subhead—17px/1.2, 400 italic, tinta 70%, máximo 48ch; body—16px/1.75 (15px móvil), 400, máximo 60ch; label—11px, 600, mayúsculas, 0.18em; numeric—34px/1.02, 450, tabular. Display móvil de 39px, equivalente a 2.6× el cuerpo.",
     "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
   },
   "iconography": {
@@ -39,11 +39,15 @@
   },
   "layout": {
     "sectionOrder": [
-      "catalogo-mesa",
-      "criterios-de-eleccion"
+      "catalogo-secuencia",
+      "comparacion-01-02",
+      "doble-vista"
     ],
-    "catalogSection": "catalogo-mesa",
-    "mobileRule": "Cabecera de una línea con “Punto.” y “Mi pedido (0)” siempre visible. Cada banda se convierte en una secuencia compacta: imagen 46vh máximo, nombre y precio en la misma zona, selector de ancho completo y botón de 48 px. La segunda imagen queda en la ficha, no compite con la compra inicial. A 320 px, opciones apiladas y cantidad/añadir en filas separadas."
+    "catalogSection": "catalogo-secuencia",
+    "mobileRule": "Las pestañas Luz/Altura permanecen visibles bajo el masthead y tienen estados claros para teclado. Imagen, datos y compra se apilan dentro del primer viewport de 390×844; a 320px el selector y el botón ocupan filas completas de 44px. “Mi pedido 0” queda fijo en la cabecera junto al icono `shopping-bag`, separado del menú colapsable. La tabla comparativa se transforma en pares etiqueta/valor, sin desplazamiento horizontal."
+  },
+  "productPage": {
+    "style": "dense"
   },
   "assets": [
     {
@@ -53,7 +57,7 @@
       "kind": "image"
     },
     {
-      "path": "assets/image-8b9ccfb58a58.jpg",
+      "path": "assets/image-230ec71ebf2b.jpg",
       "role": "unknown",
       "description": "",
       "kind": "image"
@@ -65,7 +69,7 @@
       "kind": "image"
     },
     {
-      "path": "assets/image-7324486b3691.jpg",
+      "path": "assets/image-b6bb8e6448f4.jpg",
       "role": "unknown",
       "description": "",
       "kind": "image"
@@ -80,58 +84,67 @@
   ],
   "tokens": {
     "background": {
-      "authored": "#f4f5f0",
-      "resolved": "#f4f5f0",
+      "authored": "#fbfbf8",
+      "resolved": "#fbfbf8",
       "source": "authored",
       "path": "styles.css"
     },
     "foreground": {
-      "authored": "#171a18",
-      "resolved": "#171a18",
+      "authored": "#171917",
+      "resolved": "#171917",
       "source": "authored",
       "path": "styles.css"
     },
     "accent": {
-      "authored": "#c8f135",
-      "resolved": "#c8f135",
+      "authored": "var(--brand-accent,#b7f23a)",
+      "resolved": "#b7f23a",
       "source": "authored",
       "path": "styles.css"
     },
     "accent-foreground": {
-      "authored": "#11150d",
-      "resolved": "#11150d",
+      "authored": "#171917",
+      "resolved": "#171917",
       "source": "authored",
       "path": "styles.css"
     },
     "surface": {
-      "authored": "#fff",
-      "resolved": "#fff",
+      "authored": "#f0f0eb",
+      "resolved": "#f0f0eb",
       "source": "authored",
       "path": "styles.css"
     },
     "border": {
-      "authored": "#aeb3aa",
-      "resolved": "#aeb3aa",
-      "source": "authored",
+      "authored": "color-mix(in srgb,var(--store-foreground) 14%,var(--store-background))",
+      "resolved": null,
+      "source": "unresolved",
       "path": "styles.css"
     },
     "radius": {
-      "authored": "2px",
-      "resolved": "2px",
+      "authored": "0",
+      "resolved": "0",
       "source": "authored",
       "path": "styles.css"
     },
     "body-font": {
-      "authored": "Instrument,system-ui,sans-serif",
-      "resolved": "Instrument,system-ui,sans-serif",
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
       "source": "authored",
       "path": "styles.css"
     },
     "heading-font": {
-      "authored": "Instrument,system-ui,sans-serif",
-      "resolved": "Instrument,system-ui,sans-serif",
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
       "source": "authored",
       "path": "styles.css"
     }
+  },
+  "scene": {
+    "backdropHex": "#fbfbf8",
+    "backdropMode": "paper",
+    "lightDirection": "top-soft",
+    "cameraElevation": "overhead",
+    "fillFraction": 0.7,
+    "aspect": "square",
+    "shadow": "soft-contact"
   }
 }

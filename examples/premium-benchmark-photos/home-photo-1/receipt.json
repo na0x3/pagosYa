@@ -1,71 +1,71 @@
 {
   "id": "home-photo-1",
   "fixture": "home",
-  "merchantId": "cmu2uc7wv002612go29kjrt9x",
-  "storeId": "cmu2uc7wx002812gozr6qhxug",
-  "slug": "lbhubh6d",
+  "merchantId": "cmu4frcsm0026lfd8x2cx3ce1",
+  "storeId": "cmu4frcso0028lfd8fqvuixh5",
+  "slug": "ywsoaa8c",
   "status": "completed",
   "maxCredits": 200,
-  "createdAt": "2026-09-15T15:42:51.155Z",
+  "createdAt": "2026-09-16T18:30:15.435Z",
   "assets": [
-    "/v1/uploads/cdd693eb-6ba0-4569-b9eb-1a387680c64d.jpg",
-    "/v1/uploads/a17a1351-3efb-48ff-8619-265f8b903306.jpg",
-    "/v1/uploads/aab72057-c657-41cd-bd10-ecf77ab75666.jpg",
-    "/v1/uploads/5fcb0869-a2f2-44f1-8968-caca1947d8db.jpg"
+    "/v1/uploads/30100ea1-5381-402b-83cd-f9089ae2831c.jpg",
+    "/v1/uploads/1e1ab377-57aa-4ab8-b5f2-97ed640b813b.jpg",
+    "/v1/uploads/86558c96-6e5f-4be3-93e9-5adb2e885fe5.jpg",
+    "/v1/uploads/2984d350-6e8a-4d2e-b6f6-fb74f66d7011.jpg"
   ],
   "scenes": [
     {
       "product": "cojin",
-      "url": "/v1/uploads/a17a1351-3efb-48ff-8619-265f8b903306.jpg"
+      "url": "/v1/uploads/1e1ab377-57aa-4ab8-b5f2-97ed640b813b.jpg"
     },
     {
       "product": "manta",
-      "url": "/v1/uploads/5fcb0869-a2f2-44f1-8968-caca1947d8db.jpg"
+      "url": "/v1/uploads/2984d350-6e8a-4d2e-b6f6-fb74f66d7011.jpg"
     }
   ],
   "generation": {
-    "id": "cmu2ufgy6002q12goe9osr3y2",
+    "id": "cmu4fsxzk002qlfd8g1ctq191",
     "requestedModel": "gpt-5.6-sol",
     "model": "gpt-5.6-sol",
-    "credits": 31,
+    "credits": 34,
     "maxCredits": 200,
     "attempts": [
       {
         "model": "gpt-5.6-sol",
         "phase": "design",
-        "durationMs": 42202,
+        "durationMs": 41571,
         "status": "COMPLETED",
         "usage": {
-          "inputTokens": 9181,
+          "inputTokens": 10304,
           "cachedInputTokens": 0,
-          "outputTokens": 1989,
-          "providerMicroUsd": 85682,
-          "cacheWriteTokens": 9178
+          "outputTokens": 2502,
+          "providerMicroUsd": 101557,
+          "cacheWriteTokens": 10301
         },
         "reasoningEffort": "low",
-        "selectedIndex": 0,
+        "selectedIndex": 2,
         "selectionSource": "planner"
       },
       {
         "model": "gpt-5.6-sol",
         "phase": "source",
-        "durationMs": 69521,
+        "durationMs": 90113,
         "status": "COMPLETED",
         "usage": {
-          "inputTokens": 17224,
+          "inputTokens": 18656,
           "cachedInputTokens": 0,
-          "outputTokens": 6883,
-          "providerMicroUsd": 215273,
-          "cacheWriteTokens": 8717
+          "outputTokens": 7446,
+          "providerMicroUsd": 233188,
+          "cacheWriteTokens": 9644
         },
         "reasoningEffort": "medium",
-        "reasoningTokens": 808,
+        "reasoningTokens": 1460,
         "responseStatus": "completed"
       }
     ],
-    "durationMs": 111774,
+    "durationMs": 131732,
     "status": "COMPLETED"
   },
   "revision": 1,
-  "elapsedMs": 266553
+  "elapsedMs": 208417
 }
