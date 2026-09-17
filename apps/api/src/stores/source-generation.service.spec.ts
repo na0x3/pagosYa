@@ -2,13 +2,16 @@ import { nextStoreFiles } from './fixtures/next-store';
 import { creativeStoreFiles } from './fixtures/creative-store';
 import { SourceDesignPlanner } from './source-design-planner';
 import * as designModule from './source-design';
-import { SourceGenerationService, sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation.service';
+import { merchantFacingSourceFailure, SourceGenerationService, sourceMarqueeEditPaths, validateGeneratedSource } from './source-generation.service';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
 import { SOURCE_CONVERSATION_INSTRUCTIONS } from './source-conversation.service';
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
+import { samplePhotoColours } from './source-photo-sampler';
+// Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
+jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
 const design = () => ({ selected: 0, concepts: ['Menu', 'Poster', 'Counter'].map(name => ({ name, premise: name, opening: name + ' opening', flow: name + ' sequence', typography: 'System sans', imagery: 'No photos supplied', mobile: 'Reflow around the menu', layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true } })) });
 const files = () => [
   {path:'index.html',content:'<!doctype html><main><section id="menu"><h1>Menú</h1><div data-pagosya-catalog></div></section></main><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>'},
@@ -62,6 +65,20 @@ describe('Independent source generation',()=>{
     expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CANDIDATE', activeStoreId: null }) }));
   });
 
+  it('records what each bundled photograph is, so a card can prefer the scene of a product over its packshot', async () => {
+    const { service, prisma, stores, uploads, projects } = setup();
+    const pack = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg', scene = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000002.jpg';
+    prisma.mediaAsset.findMany.mockResolvedValue([{ url: pack, kind: 'ORIGINAL', parentAsset: null }, { url: scene, kind: 'AI_DERIVED', parentAsset: { url: pack } }]);
+    uploads.getBuffer.mockImplementation(async (name: string) => Buffer.from(`photo ${name}`));
+    jest.mocked(samplePhotoColours).mockResolvedValueOnce(new Map([[scene, { dominant: ['#a3442b', '#ede5db'], backdropHex: '#b99e85', uniformity: 0.33 }]]));
+    stores.getStorePublic.mockResolvedValue({ storeName: 'Pliegue', items: [{ id: 'cushion', name: 'Funda de cojín', amount: 12900, imageUrls: [pack] }], categories: [], locations: [] });
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Store', files: files() }) }] }] })));
+    await service.generate('m', 's', { ...input, assetUrls: [pack, scene] });
+    const manifest = JSON.parse(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'visual-assets.json').content);
+    expect(manifest.assets.map((a: any) => a.photo)).toEqual([{ shot: 'packshot', productKey: 'cushion' }, { shot: 'scene', productKey: 'cushion', dominant: ['#a3442b', '#ede5db'], backdropHex: '#b99e85' }]);
+    expect(jest.mocked(samplePhotoColours).mock.calls.at(-1)![0].map(photo => photo.url)).toEqual([pack, scene]);
+  });
+
   it('bundles variant-specific photos for portable choices without keeping API-only image URLs', async () => {
     const { service, prisma, stores, uploads, projects } = setup();
     const url = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png';
@@ -99,7 +116,7 @@ describe('Independent source generation',()=>{
     expect(saved.find((f:any)=>f.path==='components/home.tsx').content).toContain('Nuestra carta');
     expect(JSON.parse(saved.find((f:any)=>f.path==='design-direction.json').content).concepts[0].layout.sections).toEqual(['menu','preparacion']);
   });
-  it('reports typography and missing commerce hooks together to the one repair', async () => {
+  it('eases tight tracking itself and spends the one repair only on the missing commerce hook', async () => {
     const {service} = setup('next');
     const broken = nextStoreFiles();
     broken[0].content = broken[0].content.replace('data-cart-open','data-cart-missing');
@@ -109,11 +126,10 @@ describe('Independent source generation',()=>{
       .mockResolvedValueOnce(response({label:'Borrador',files:broken,products:[]}))
       .mockResolvedValueOnce(response({label:'Reparado',files:[],appends:[],edits:[
         {path:'components/Header.tsx',search:'data-cart-missing',replacement:'data-cart-open'},
-        {path:'styles/globals.css',search:'-.08em',replacement:'-.04em'},
       ]}));
     await service.generate('m','s',input);
     const prompt=JSON.stringify(fetchMock.mock.calls[1][1]!.body);
-    expect(prompt).toContain('espaciado');
+    expect(prompt).not.toContain('comprime demasiado');
     expect(prompt).toContain('home necesita data-cart-open');
   });
   it('offers matching artwork to planning and generation and saves Motion/Lottie with selected local assets', async () => {
@@ -188,16 +204,17 @@ describe('Independent source generation',()=>{
     incomplete[0].content = incomplete[0].content.replace('data-pagosya-status', 'data-message');
     expect(() => validateGeneratedSource(incomplete)).toThrow('Faltan archivos: site.js. Faltan contenedores en index.html: data-pagosya-status.');
   });
-  it('repairs compressed heading tracking before saving a revision', async () => {
+  it('eases compressed heading tracking before saving, without a paid repair round', async () => {
     const { service, projects } = setup();
     const broken = files(); broken[1].content = '.hero h1 { letter-spacing: -.082em; }';
     const fixed = files(); fixed[1].content = '.hero h1 { letter-spacing: -.04em; }';
     const response = (source: any) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'Readable title', files: source }) }] }] }));
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response(broken)).mockResolvedValueOnce(response(fixed));
     await service.generate('m', 's', input);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('espaciado tipográfico');
-    expect(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'styles.css').content).toContain('-.04em');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const saved = projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'styles.css').content;
+    expect(saved).toContain('letter-spacing: -0.04em');
+    expect(saved).not.toContain('-.082em');
   });
   it('repairs a preflight asset failure before saving the revision', async () => {
     const { service, projects } = setup();
@@ -318,7 +335,7 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ concepts: [] }))
       .mockResolvedValueOnce(response({ concepts: design().concepts }))
       .mockResolvedValueOnce(response({ label: 'Broken', files: [] }));
-    await expect(service.generate('m', 's', input)).rejects.toThrow('archivos');
+    await expect(service.generate('m', 's', input)).rejects.toThrow('no pasó las comprobaciones');
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(projects.save).not.toHaveBeenCalled();
   });
@@ -466,6 +483,8 @@ describe('Independent source generation',()=>{
     expect(catalog.items[0].amount).toBe(6500);
     expect(catalog).not.toHaveProperty('privateCredential');
     expect(stores.getStorePublic).toHaveBeenCalledWith('cafe', { trackView: false, ownerMerchantId: 'm' });
+    stores.getStorePublic.mockResolvedValueOnce({ storeName: 'Café', items: [], categories: [], cartRecommendationsEnabled: true, cartRecommendationProductIds: ['p1'], bundles: [{ id: 'b1', name: 'Dúo', kind: 'FIXED', items: [{ productId: 'p1', quantity: 2 }], minimumQuantity: 2, discountPercent: 10 }] });
+    expect(await service.catalog('m', 's')).toEqual(expect.objectContaining({ cartRecommendationsEnabled: true, cartRecommendationProductIds: ['p1'], bundles: [expect.objectContaining({ id: 'b1', kind: 'FIXED' })] }));
   });
   it('packages generated files with portable commerce without executing source or exporting secrets',async()=>{
     const fetchMock=jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({design: design(), label:'Café menu',files:files()})}]}]})));
@@ -580,6 +599,41 @@ describe('Independent source generation',()=>{
     const fetchMock=jest.spyOn(globalThis,'fetch');const {service,prisma,projects}=setup();
     projects.current.mockRejectedValueOnce(new Error('Store not found'));await expect(service.generate('other','s',input)).rejects.toThrow('Store not found');
     projects.current.mockResolvedValueOnce({revision:2});await expect(service.generate('m','s',input)).rejects.toThrow('cambió');expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('regenerates a rejected catalog in the repair instead of saving the site without its products', async () => {
+    const {service,projects} = setup('next');
+    const response = (value:any) => new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(value)}]}]}));
+    const fetchMock = jest.spyOn(globalThis,'fetch')
+      .mockResolvedValueOnce(response({label:'Tienda',files:nextStoreFiles(),products:[{name:'Matcha',description:'Galleta',amount:2200,currency:'BOB',priceText:'Bs 99',imageUrls:[]}]}))
+      .mockResolvedValueOnce(response({label:'Tienda',files:nextStoreFiles(),products:[{name:'Matcha',description:'Galleta',amount:2200,currency:'BOB',priceText:'Bs 22',imageUrls:[]}]}));
+    await service.generate('m','s',{...input,instruction:'Crea mi tienda y agrega el producto Matcha por Bs 22'});
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // A code-only patch schema would have dropped products; the repair asks for the full response again.
+    expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).text.format.schema.properties).toHaveProperty('products');
+    expect(projects.save.mock.calls[0][3].products).toMatchObject([{ name: 'Matcha', amount: 2200 }]);
+  });
+  it('lets a new product use a photo already bundled in the site, resolved to the merchant upload', async () => {
+    const { createHash } = await import('node:crypto');
+    const upload = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000009.jpg', bytes = Buffer.from('galleta de matcha');
+    const bundled = `assets/image-${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.jpg`;
+    const generated = {design: design(), label:'Catálogo',files:[...files(),
+      {path:'product.html',content:'<link rel="stylesheet" href="styles.css"><main data-pagosya-product-page></main><script src="config.js"></script><script src="commerce.js"></script><script src="site.js"></script>'},
+      {path:'checkout.html',content:'<link rel="stylesheet" href="styles.css"><main data-pagosya-checkout-page></main><script src="config.js"></script><script src="commerce.js"></script><script src="site.js"></script>'}],
+      products:[{name:'Matcha',description:'Galleta',amount:2200,currency:'BOB',priceText:'Bs 22',imageUrls:[bundled]}]};
+    jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(generated)}]}]})));
+    const {service,projects,prisma,uploads}=setup();
+    prisma.mediaAsset.findMany.mockImplementation(async ({ where }: any) => where.url ? (where.url.in.includes(upload) ? [{ url: upload }] : []) : [{ url: '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg' }, { url: upload }]);
+    uploads.getBuffer.mockImplementation(async (name: string) => upload.endsWith(name) ? bytes : Buffer.from('otra foto'));
+    await service.generate('m','s',{...input,instruction:'Crea el producto Matcha por Bs 22 con mi foto'});
+    expect(projects.save.mock.calls[0][3].products).toMatchObject([{ name: 'Matcha', imageUrls: [upload] }]);
+  });
+  it('still rejects a product photo the merchant does not own', async () => {
+    const generated = {design: design(), label:'Catálogo',files:files(), products:[{name:'Matcha',description:'Galleta',amount:2200,currency:'BOB',priceText:'Bs 22',imageUrls:['assets/image-ffffffffffff.jpg']}]};
+    jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(generated)}]}]})));
+    const {service,projects,prisma,uploads}=setup();
+    prisma.mediaAsset.findMany.mockResolvedValue([]); uploads.getBuffer.mockResolvedValue(null);
+    await expect(service.generate('m','s',{...input,instruction:'Crea el producto Matcha por Bs 22'})).rejects.toThrow();
+    expect(projects.save).not.toHaveBeenCalled();
   });
   it('authors all pages on first creation and commits explicitly requested products with the revision', async () => {
     const generated = {design: design(), label:'Café completo',files:[...files(),
@@ -710,5 +764,15 @@ describe('Independent source generation',()=>{
     expect(()=>validateGeneratedSource([...files(),{path:'commerce.js',content:'bad'}])).toThrow('reservado');
     expect(()=>validateGeneratedSource(files().map(f=>f.path==='site.js'?{...f,content:'function {'}:f))).toThrow('sintaxis');
     expect(()=>validateGeneratedSource(files().filter(f=>f.path!=='index.html'))).toThrow('Faltan archivos: index.html');
+  });
+});
+
+describe('merchant-facing source failures', () => {
+  it('replaces validator jargon but keeps messages already written for merchants', () => {
+    const jargon = merchantFacingSourceFailure(new Error('home necesita data-pagosya-catalog en JSX visible.')) as Error;
+    expect(jargon.message).toContain('no pasó las comprobaciones');
+    expect(jargon.message).not.toMatch(/data-pagosya|JSX/);
+    const plain = new Error('La respuesta de IA superó el espacio disponible para este cambio.');
+    expect(merchantFacingSourceFailure(plain)).toBe(plain);
   });
 });

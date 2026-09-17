@@ -33,7 +33,10 @@ for (const width of [1440, 1024, 390]) test(`checkout stays inside its authored 
   const frame = page.frameLocator('iframe'); const review = frame.locator('[data-checkout-review]');
   await expect(frame.getByRole('button', { name: 'Continuar al pago de prueba' })).toBeVisible();
   await expect(review).toHaveCSS('position', 'static');
-  await expect(frame.getByRole('heading', { name: 'Continúa al pago', exact: true })).toBeVisible();
+  // Nothing to choose: the button names the next step, so no heading repeats it.
+  await expect(frame.getByRole('heading', { name: 'Continúa al pago', exact: true })).toHaveCount(0);
+  // The store authored its own title above the mount, so the kit does not stack a second one.
+  await expect(frame.getByRole('heading', { level: 1 })).toHaveText(['Completar el pedido.']);
   await expect(frame.getByRole('heading', { name: '¿Cómo quieres recibir tu pedido?' })).toHaveCount(0);
   const layout = await review.evaluate(el => {
     const bounds = el.getBoundingClientRect(), host = el.closest('[data-pagosya-checkout]')!.getBoundingClientRect();

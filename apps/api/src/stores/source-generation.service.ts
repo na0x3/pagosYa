@@ -6,10 +6,13 @@ import type { SourceProgressReporter } from './source-progress';
 import { SOURCE_PRODUCT_OPTIONS } from './source-product-options';
 import { MAX_SOURCE_VIDEO_BYTES, sourceVideo } from './source-media';
 import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
+import { derivePhotoFacts } from './source-photo-facts';
+import { BUNDLED_PHOTO, bundledPhotoPath, productPhotoReferences, rewriteProductPhotos, uploadPath } from './source-product-photos';
+import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent } from './source-image-intent';
 import type { SourceImageUse } from './source-setup';
-import { adoptTrailingDesignSections, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, validateSourcePresentation, type SourceDesign } from './source-design';
+import { adoptTrailingDesignSections, SOURCE_CREATIVE_DIRECTION, SOURCE_DESIGN_CONTRACT, SOURCE_DESIGN_FILE, SOURCE_PRODUCT_PRESENTATION_DIRECTION, SOURCE_VISUAL_COHERENCE_CONTRACT, sourceDesignExploration, savedSourceDesign, validateSourceDesignImplementation, relaxSourceTracking, validateSourcePresentation, type SourceDesign } from './source-design';
 import { sourceProvider, sourceProviderBody, isDeepSeek } from './source-provider';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
@@ -103,11 +106,48 @@ export function validateGeneratedSource(files: SourceProjectFileDto[]): void {
   if (configAt < 0 || commerceAt < configAt || !html.includes('src="site.js"')) throw new BadGatewayException("La página no conectó los archivos de comercio.");
 }
 
+/** Validator output names internal hooks and file syntax. It stays in the attempt record for support and the
+ * repair prompt; the merchant sees what happened in their terms. Messages already written for merchants pass. */
+export function merchantFacingSourceFailure(error: unknown) {
+  if (!(error instanceof Error) || !/data-pagosya-|\bJSX\b|\.tsx\b|concepts\[|layout\.|sections\[|catalogSection|standaloneIntro/.test(error.message)) return error;
+  return new BadGatewayException('YAPI armó un borrador que no pasó las comprobaciones de la tienda (catálogo, ficha de producto o checkout), así que no lo guardé.');
+}
+
 @Injectable()
 export class SourceGenerationService {
   constructor(private readonly prisma: PrismaService, private readonly stores: StoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner()) {}
 
   protected exploreDesign() { return sourceDesignExploration(); }
+
+  /** Resolve the photos a generated catalog names to this merchant's own uploads: a file attached now, a photo
+   * already bundled in the site (matched by content hash), or an upload URL written absolutely. Anything that does
+   * not resolve to an upload this merchant owns is left as written, so validation still rejects it. */
+  private async ownedProductPhotos(merchantId: string, generated: any, legend: Array<{ original: string; path: string }>): Promise<Set<string>> {
+    const refs = productPhotoReferences(generated?.products, generated?.productOperations);
+    if (!refs.length) return new Set();
+    const resolved = new Map<string, string>();
+    const bare = (ref: string) => ref.replace(/^\.?\//, '');
+    for (const ref of refs) {
+      const attached = legend.find(entry => entry.path === bare(ref));
+      if (attached) resolved.set(ref, attached.original);
+      else if (/\/v1\/uploads\//.test(ref)) resolved.set(ref, uploadPath(ref));
+    }
+    const wanted = new Map(refs.filter(ref => !resolved.has(ref) && BUNDLED_PHOTO.test(ref)).map(ref => [bare(ref).toLowerCase(), ref]));
+    if (wanted.size) {
+      const library = await this.prisma.mediaAsset.findMany({ where: { merchantId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, orderBy: { createdAt: 'desc' }, take: 200, select: { url: true } });
+      for (const asset of library) {
+        if (!wanted.size) break;
+        const bytes = await this.uploads.getBuffer(asset.url.split('/').at(-1)!);
+        const ref = bytes ? wanted.get(bundledPhotoPath(bytes, asset.url)) : undefined;
+        if (ref) { resolved.set(ref, asset.url); wanted.delete(bare(ref).toLowerCase()); }
+      }
+    }
+    const candidates = [...new Set(resolved.values())];
+    const owned = new Set(candidates.length ? (await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: candidates } }, select: { url: true } })).map(asset => asset.url) : []);
+    for (const [ref, url] of resolved) if (!owned.has(url)) resolved.delete(ref);
+    rewriteProductPhotos(generated?.products, generated?.productOperations, resolved);
+    return owned;
+  }
 
   async catalog(merchantId: string, storeId: string) {
     const owner = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true } });
@@ -117,7 +157,8 @@ export class SourceGenerationService {
     return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, bundlesEnabled: data.bundlesEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
-      categories: data.categories, locations: data.locations, items: data.items };
+      categories: data.categories, locations: data.locations, items: data.items,
+      cartRecommendationsEnabled: data.cartRecommendationsEnabled, cartRecommendationProductIds: data.cartRecommendationProductIds, bundles: data.bundles };
   }
 
   async estimate(merchantId: string, storeId: string, dto: Pick<SendSourceMessageDto, 'revision' | 'instruction' | 'model' | 'maxCredits' | 'assetUrls'>) {
@@ -158,7 +199,8 @@ export class SourceGenerationService {
       contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
       contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
       categories: publicStore.categories, locations: publicStore.locations,
-      items: publicStore.items.map((item) => ({ ...item, imageUrls: item.imageUrls.map((url) => new URL(url, apiUrl).href), variants: item.variants?.map(variant => ({ ...variant, ...(variant.imageUrl ? { imageUrl: new URL(variant.imageUrl, apiUrl).href } : {}) })) })),
+      cartRecommendationsEnabled: publicStore.cartRecommendationsEnabled, cartRecommendationProductIds: publicStore.cartRecommendationProductIds, bundles: publicStore.bundles,
+      items: publicStore.items.map((item) => ({ ...item, imageUrls: item.imageUrls.map((url) => new URL(url, apiUrl).href), variants: item.variants?.map(variant => ({ ...variant, ...(variant.imageUrl ? { imageUrl: new URL(variant.imageUrl, apiUrl).href } : {}) })), extras: item.extras?.map(extra => ({ ...extra, ...(extra.imageUrl ? { imageUrl: new URL(extra.imageUrl, apiUrl).href } : {}) })) })),
     };
     const assets: SourceProjectFileDto[] = [];
     const assetLegend: Array<{ original: string; path: string }> = [];
@@ -171,7 +213,7 @@ export class SourceGenerationService {
     await progress?.('assets');
     const assetUrls = [...new Set(dto.assetUrls || [])];
     if (assetUrls.length > 24) throw new BadRequestException("Usa hasta 24 imágenes o videos.");
-    const ownedAssets = assetUrls.length ? await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: assetUrls } }, select: { url: true } }) : [];
+    const ownedAssets = assetUrls.length ? await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: assetUrls } }, select: { url: true, kind: true, parentAsset: { select: { url: true } } } }) : [];
     const ownedUrls = new Set(ownedAssets.map(asset => asset.url));
     for (const url of assetUrls) {
       if (!/^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp|mp4)$/i.test(url)) throw new BadRequestException("Selecciona imágenes o videos subidos a este comercio.");
@@ -203,6 +245,16 @@ export class SourceGenerationService {
         for (const variant of item.variants || []) if (variant.imageUrl === original) variant.imageUrl = path;
       }
     }
+    // What each photograph actually is — a packshot or a scene, of which product, in which colours.
+    // Measured, never asked for: a model cannot choose the better photograph of a product without
+    // data saying two photographs depict the same product. Every hop degrades to "unknown".
+    const bundledPhotos = assetLegend.filter(entry => !sourceVideo(entry.path)).map(entry => ({ url: entry.original, path: entry.path, bytes: assetBuffers.get(entry.original)! })).filter(photo => photo.bytes);
+    const photoFacts = bundledPhotos.length ? derivePhotoFacts({
+      assets: bundledPhotos,
+      lineage: new Map(ownedAssets.map(asset => [asset.url, { kind: asset.kind as string, parentUrl: asset.parentAsset?.url ?? null }])),
+      productImages: data.items.map(item => ({ id: item.id, images: [...item.imageUrls, ...(item.variants || []).map(variant => variant.imageUrl).filter((url): url is string => !!url)] })),
+      samples: await samplePhotoColours(bundledPhotos, execution?.signal),
+    }) : {};
     const fontPaths: Record<string, string> = {};
     for (const fact of brand?.data.confirmed || []) {
       if (!BRAND_FONT_FIELDS.has(fact.field)) continue;
@@ -349,6 +401,8 @@ export class SourceGenerationService {
     let model: SourceModel = plan.model;
     let repair = '';
     let repairSource: SourceProjectFileDto[] | null = null;
+    // A rejected catalog must be regenerated by the repair; a code-only patch would save the site without it.
+    let productsRejected = false;
     let committedDesign: SourceDesign | undefined;
     try {
       // Check again after acquiring the generation slot, before spending tokens.
@@ -428,14 +482,18 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
             try { generated = sourceResponseJson(body); } catch { throw new BadGatewayException('La generación no devolvió archivos válidos.'); }
             if (!generated || typeof generated.label !== 'string' || !generated.label.trim() || generated.label.length > 120) throw new BadGatewayException('La generación no devolvió archivos válidos.');
             // Valid catalog additions are changes even when the authored source stays the same.
+            productsRejected = false;
             if (!repairSource) {
-              products = requestedSourceProducts(generated.products, dto.instruction, ownedUrls);
-              productOperations = requestedSourceProductOperations(
-                generated.productOperations,
-                dto.instruction,
-                data.items,
-                new Set([...ownedUrls, ...data.items.flatMap(item => item.imageUrls || [])]),
-              );
+              try {
+                const libraryPhotos = await this.ownedProductPhotos(merchantId, generated, assetLegend);
+                products = requestedSourceProducts(generated.products, dto.instruction, new Set([...ownedUrls, ...libraryPhotos]));
+                productOperations = requestedSourceProductOperations(
+                  generated.productOperations,
+                  dto.instruction,
+                  data.items,
+                  new Set([...ownedUrls, ...libraryPhotos, ...data.items.flatMap(item => item.imageUrls || [])]),
+                );
+              } catch (error) { productsRejected = true; throw error; }
             }
             if (repairSource) {
               generated.files = applySourceEdits(repairSource, generated, { appendPaths: ['styles/globals.css'] });
@@ -454,6 +512,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               && file.content !== oldFiles.find(previousFile => previousFile.path === file.path)?.content);
             if (!editExisting || redesign || migrating || stylesheetChanged) generated.files = applySourceLayoutBaseline(generated.files);
             // Give the bounded repair all independent failures, not only the first one.
+            generated.files = relaxSourceTracking(generated.files, editExisting ? oldFiles : []);
             const validationErrors: string[] = [];
             for (const check of [
               () => validateSourcePresentation(generated.files, editExisting ? oldFiles : []),
@@ -472,7 +531,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
             }
             // Check the same asset set the save carries forward: new uploads plus previously bundled assets.
             const preflightAssets = [...assets, ...retainedAssets.filter(file => !assets.some(asset => asset.path === file.path) && !generated.files.some(generatedFile => generatedFile.path === file.path))];
-            const preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...preflightAssets], previousFiles, assetLegend, imageUses));
+            const preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));
             validateSourcePreflight(preflightFiles, {
               requiredImagePaths: requestsImageContent(dto.instruction) ? assetLegend.filter(asset => !sourceVideo(asset.path) && imageUses.some(use => use.url === asset.original && !['reference', 'unused', 'unknown'].includes(use.role))).map(asset => asset.path) : [],
               catalogImagePaths: [
@@ -487,11 +546,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
             break;
           } catch (error) {
             attempt.failureReason = (error instanceof Error ? error.message : 'Invalid source').slice(0, 300);
-            if (index + 1 >= sourceAttemptLimit || signal.aborted) throw error;
+            if (index + 1 >= sourceAttemptLimit || signal.aborted) throw merchantFacingSourceFailure(error);
             // A complete React candidate needs a patch, not another full generation with repeated image inputs.
             // Malformed/truncated output and failed original edit application still use the original response schema.
             if (error instanceof SourceScopeConflict) repairSource = null;
-            if (useNext && !(error instanceof SourceEditConflict) && !(error instanceof SourceScopeConflict) && Array.isArray(generated?.files) && generated.files.length > 0 && generated.files.length <= 24
+            if (useNext && !productsRejected && !(error instanceof SourceEditConflict) && !(error instanceof SourceScopeConflict) && Array.isArray(generated?.files) && generated.files.length > 0 && generated.files.length <= 24
               && generated.files.every(file => file && nextSourceFile(file.path) && typeof file.content === 'string' && file.content.length <= 180000 && file.encoding !== 'base64')
               && (!editExisting || generated.files.some(file => file.path === 'components/home.tsx'))) {
               repairSource = generated.files.map(file => ({ ...file }));
@@ -543,7 +602,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       { path: "config.js", content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },
       ...(!useNext ? [{ path: "package.json", content: JSON.stringify({ name: `storefront-${owner.slug}`, version: "1.0.0", private: true, type: "module", scripts: { build: "node build.mjs", start: "node server.mjs" } }, null, 2) },
       { path: "README.md", content: `# ${data.storeName}\n\nStandalone browser source. Run npm run build, then npm start (Node 20+). Deploy dist/ to a static host. No install needed.\n\nEdit index.html, styles.css and site.js freely. config.js contains public API configuration and the initial catalog snapshot. The live catalog refreshes before ordering. Configure the deployed origin in PagosYa CORS.\n\nThe bundled build script copies files and checks classic JavaScript syntax; it does not execute storefront scripts. Preview code only in an isolated browser. Source checks are not a security review.\n\nOrders, payments, stock and customer data depend on the PagosYa API and are not included. Selected uploaded assets are bundled; other product image URLs may still depend on the API. Export includes the per-file manifest.\n` }] : []),
-    ], previousFiles, assetLegend, imageUses))), motion) };
+    ], previousFiles, assetLegend, imageUses, photoFacts))), motion) };
     signal.throwIfAborted();
     if (execution?.candidate) {
       if (products.length || productOperations.length) throw new BadRequestException('Una reparación visual no puede modificar el catálogo.');

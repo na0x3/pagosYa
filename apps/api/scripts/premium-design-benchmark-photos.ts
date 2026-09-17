@@ -77,7 +77,7 @@ async function main() {
             const scene = await scenes.create(merchant.id, store.id, { imageUrl: stored.url, productName: product.name, description: product.description, setting: fixture.scene, aspect: 'square' });
             await writeFile(resolve(folder, `scene-${product.slug}.jpg`), (await uploads.getBuffer(scene.url.split('/').at(-1)!))!);
             const variants = normalizeProductVariants(product.values.map((value, i) => ({ name: value, amount: product.amount + i * 700, stock: i === product.values.length - 1 && product.values.length > 2 ? 0 : 12, options: [{ name: product.group, value }] })));
-            await prisma.paymentLink.create({ data: { storeId: store.id, name: product.name, description: product.description, amount: product.amount, currency: 'BOB', stock: totalVariantStock(variants), tags: product.tags || [], imageUrls: [stored.url, scene.url], variants: variants as any } });
+            await prisma.paymentLink.create({ data: { storeId: store.id, name: product.name, description: product.description, amount: product.amount, currency: 'BOB', stock: totalVariantStock(variants), tags: product.tags || [], imageUrls: [scene.url, stored.url] /* Studio makes an accepted scene the cover; measure what merchants get */, variants: variants as any } });
             record.assets.push(stored.url, scene.url); record.scenes.push({ product: product.slug, url: scene.url });
           }
           record.status = 'ready'; await writeFile(receiptPath, JSON.stringify(record, null, 2));

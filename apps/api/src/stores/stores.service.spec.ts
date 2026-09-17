@@ -40,6 +40,7 @@ function makeFakeUploads() {
 }
 
 const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE };
+const publicItem = { imageUrls: [], tags: [], stock: null, color: null, amount: 0, currency: "BOB", categoryId: null, description: null, variants: [], extras: [] };
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
 
 describe("StoresService.create", () => {
@@ -275,6 +276,27 @@ describe("StoresService.submitLead", () => {
 
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ to: "merchant@example.com" }));
     expect(paymentIntents.create).not.toHaveBeenCalled();
+  });
+
+  it("lists a picked-flavour box with its counts in the merchant's order email", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, name: "The Bake Lab", checkoutMode: "external", contactEmail: null });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "owner@gmail.com" });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "box_4", name: "Caja de 4", amount: 8000, currency: "BOB", variants: [],
+      extras: [
+        { id: "matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", pickCount: 4 },
+        { id: "pistacho", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", pickCount: 4 },
+      ],
+    }]);
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", { email: "maria@gmail.com", items: [{ paymentLinkId: "box_4", extraIds: ["matcha", "matcha"], quantity: 1 }] }))
+      .rejects.toThrow('Elige 4 en "Sabores" para "Caja de 4" (elegiste 2)');
+    await service.submitLead("abc123", { email: "maria@gmail.com", items: [{ paymentLinkId: "box_4", extraIds: ["pistacho", "matcha", "matcha", "matcha"], quantity: 1 }] });
+
+    expect(email.send.mock.calls[0][0].body).toContain("Caja de 4 (Matcha ×3 · Pistacho) × 1");
   });
 
   it("accepts an email-only checkout lead for an external store", async () => {
@@ -653,6 +675,70 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({ amount: 7400 }));
   });
 
+  it("sells a box whose flavours are picked with repeats and describes each count", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "box_4", name: "Caja de 4", amount: 8000, currency: "BOB", stock: null,
+      extras: [
+        { id: "matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4 },
+        { id: "pistacho", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4 },
+      ],
+    }]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["matcha", "pistacho", "matcha"], quantity: 1 }] }))
+      .rejects.toThrow('Elige 4 en "Sabores" para "Caja de 4" (elegiste 3)');
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["pistacho", "matcha", "pistacho", "matcha"], quantity: 2 }] });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 16000,
+      description: "Caja de 4 + Matcha ×2 + Pistacho ×2 x2",
+      metadata: expect.objectContaining({ cart: [expect.objectContaining({
+        extraIds: ["matcha", "matcha", "pistacho", "pistacho"],
+        extras: [expect.objectContaining({ id: "matcha" }), expect.objectContaining({ id: "matcha" }), expect.objectContaining({ id: "pistacho" }), expect.objectContaining({ id: "pistacho" })],
+        quantity: 2, unitAmount: 8000,
+      })] }),
+    }));
+  });
+
+  it("takes each picked flavour out of its own product's stock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    const catalog = [
+      { id: "box_4", name: "Caja de 4", amount: 8000, currency: "BOB", stock: null, status: "ACTIVE", extras: [
+        { id: "x_matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+        { id: "x_pistacho", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "pistacho" },
+      ] },
+      { id: "matcha", name: "Matcha", amount: 2200, currency: "BOB", stock: 3, status: "ACTIVE", extras: [] },
+      { id: "pistacho", name: "Pistacho", amount: 2200, currency: "BOB", stock: null, status: "ACTIVE", extras: [] },
+    ];
+    prisma.paymentLink.findMany.mockImplementation(({ where }: any) => Promise.resolve(catalog.filter(item => where.id.in.includes(item.id))));
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [
+      { paymentLinkId: "box_4", extraIds: ["x_matcha", "x_matcha", "x_pistacho", "x_pistacho"], quantity: 1 },
+      { paymentLinkId: "matcha", quantity: 2 },
+    ] })).rejects.toThrow('Solo quedan 3 unidades de "Matcha"');
+
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["x_matcha", "x_pistacho", "x_pistacho", "x_pistacho"], quantity: 3 }] });
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 24000,
+      metadata: expect.objectContaining({ cart: [expect.objectContaining({ extras: expect.arrayContaining([expect.objectContaining({ id: "x_matcha", productId: "matcha" })]) })] }),
+    }));
+
+    catalog.splice(1, 1);
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["x_matcha", "x_pistacho", "x_pistacho", "x_pistacho"], quantity: 1 }] }))
+      .rejects.toThrow('"Matcha" ya no está disponible');
+    // The flavours that remain still sell.
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["x_pistacho", "x_pistacho", "x_pistacho", "x_pistacho"], quantity: 1 }] }))
+      .resolves.toEqual(expect.objectContaining({ cartDescription: "Caja de 4 + Pistacho ×4 x1" }));
+  });
+
   it("rejects a cart whose combined products exceed one shared extra pool", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
@@ -705,6 +791,41 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
 });
 
 describe("StoresService.getStorePublic — sold counts", () => {
+
+  it("shows box choices with their product's live name and photo, and drops unavailable ones", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { ...publicItem, id: "box", name: "Caja", extras: [
+        { id: "x1", name: "Old name", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+        { id: "x2", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "pistacho" },
+        { id: "x3", name: "Archivada", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "archived" },
+      ] },
+      { ...publicItem, id: "matcha", name: "Matcha verde", imageUrls: ["/v1/uploads/matcha.jpg"], stock: 5 },
+      { ...publicItem, id: "pistacho", name: "Pistacho", imageUrls: [], stock: 0 },
+    ]);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.items.find((item: any) => item.id === "box")!.extras).toEqual([
+      { id: "x1", name: "Matcha verde", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4, productId: "matcha", imageUrl: "/v1/uploads/matcha.jpg", available: true },
+      { id: "x2", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4, productId: "pistacho", available: false },
+    ]);
+  });
+
+  it("publishes active bundles only when bundles are enabled", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, bundlesEnabled: true });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+    (prisma as any).storeBundle = { findMany: jest.fn().mockResolvedValue([{ id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "a", quantity: 1 }], minimumQuantity: 2, discountPercent: 10, active: true, storeId: "store_1", createdAt: new Date() }]) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    expect((await service.getStorePublic("abc123", { trackView: false })).bundles).toEqual([
+      { id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "a", quantity: 1 }], minimumQuantity: 2, discountPercent: 10 },
+    ]);
+    expect((prisma as any).storeBundle.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { storeId: "store_1", active: true } }));
+    prisma.store.findUnique.mockResolvedValue({ ...store, bundlesEnabled: false });
+    expect((await service.getStorePublic("abc123", { trackView: false })).bundles).toEqual([]);
+  });
 
   it("returns the merchant-authored public location block", async () => {
     const prisma = makeFakePrisma();

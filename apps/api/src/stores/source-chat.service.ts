@@ -133,7 +133,7 @@ export class SourceChatService {
       const budget = new SourceRequestBudget(input.maxCredits);
       const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
       const site = sourceSiteContext((previous?.snapshot as unknown as SourceProjectSnapshot)?.files || []);
-      const catalogInstruction = continuedCatalogRequest(setupDraft.pendingCatalogRequest, input.instruction);
+      const catalogInstruction = continuedCatalogRequest(setupDraft.pendingCatalogRequest, input.instruction, !current.revision);
       const referenceUrls = sourceWebsiteReferenceUrls(input.instruction, setupDraft.prompt);
       const websiteReferences = referenceUrls.length ? await Promise.all(referenceUrls.map(url => {
         const saved = setupDraft.websiteReferences?.find(ref => ref.url === url && ref.status === 'inspected');
@@ -184,7 +184,7 @@ export class SourceChatService {
         decision.action = 'reply';
         decision.generationInstruction = '';
       }
-      setupDraft = { pendingCatalogRequest: pendingCatalogRequest(catalogInstruction), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined };
+      setupDraft = { pendingCatalogRequest: pendingCatalogRequest(catalogInstruction, !current.revision, setupDraft.pendingCatalogRequest), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined };
       if (decision.action === 'reply') {
         await workflow.finish('completed');
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {

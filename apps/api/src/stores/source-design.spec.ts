@@ -1,4 +1,4 @@
-import { adoptTrailingDesignSections, savedSourceDesign,sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation } from './source-design';
+import { relaxSourceTracking, validateSourcePresentation, adoptTrailingDesignSections, savedSourceDesign,sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation } from './source-design';
 
 const proposal = () => ({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
   name, premise: 'Handmade ceramics from La Paz', opening: name + ' opening', flow: name + ' flow',
@@ -32,7 +32,22 @@ it('requires executable layout commitments for new concepts while retaining lega
   for (const concept of value.concepts) concept.layout = { sections: ['menu', 'visit'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true };
   expect(validateSourceDesign(value, 1, true).concepts[1].layout?.sections).toEqual(['menu', 'visit']);
   value.concepts[1].layout.sections = ['intro', 'menu'];
-  expect(() => validateSourceDesign(value, 1, true)).toThrow();
+  // An intro planned before the catalog corrects a contradicting flag instead of discarding the run.
+  expect(validateSourceDesign(value, 1, true).concepts[1].layout).toEqual(expect.objectContaining({ sections: ['intro', 'menu'], standaloneIntro: true }));
+  value.concepts[1].layout.catalogSection = 'missing';
+  expect(() => validateSourceDesign(value, 1, true)).toThrow('catalogSection');
+});
+
+it('trims prose slightly past the limit at a sentence, and still rejects runaway text', () => {
+  const value = proposal() as any;
+  value.concepts[2].premise = 'Una apertura cálida con la caja naranja como protagonista. '.repeat(9) + 'Cierre.';
+  const premise = validateSourceDesign(value, 1).concepts[2].premise;
+  expect(premise.length).toBeLessThanOrEqual(500);
+  expect(premise.endsWith('protagonista.')).toBe(true);
+  value.concepts[2].premise = 'x '.repeat(1200);
+  expect(() => validateSourceDesign(value, 1)).toThrow('premise');
+  value.concepts[2].premise = 'ok'; value.concepts[2].name = 'N'.repeat(81);
+  expect(() => validateSourceDesign(value, 1)).toThrow('name');
 });
 
 it('rejects a catalog-first plan implemented as an extra hero, reordered sections or inert catalog', () => {
@@ -114,6 +129,9 @@ it('pins one eight-step spacing scale with a real gap contrast and a five-slot a
   for (const slot of SOURCE_ACCENT_SLOTS) expect(SOURCE_RHYTHM_DIRECTION).toContain(slot);
   expect(SOURCE_RHYTHM_DIRECTION).toContain('color-mix(in srgb, var(--store-foreground) 14%, var(--store-background))');
   expect(SOURCE_RHYTHM_DIRECTION).toContain('text-wrap:balance');
+  // The accent, surface and scene-first rules only work because they name the measured manifest facts.
+  for (const fact of ['shot', 'productKey', 'dominant', 'backdropHex']) expect(SOURCE_RHYTHM_DIRECTION).toContain(fact);
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('leads with the scene');
 });
 
 it('derives the accent from the merchant’s own goods and never from a generic palette', () => {
@@ -131,4 +149,17 @@ it('carries the type, rhythm, card and masthead rules into the prompts that reac
   expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('four to six navigation entries');
   expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('cart count badge');
   expect(SOURCE_CARD_AND_MASTHEAD_DIRECTION).toContain('Never invent a tagline');
+});
+
+it('eases an over-tight heading to the tracking floor instead of failing the store', () => {
+  const files = [
+    { path: 'styles/globals.css', content: '.hero-title{font-size:96px;letter-spacing:-.06em}.body{letter-spacing:-.08em}' },
+    { path: 'components/home.tsx', content: '<h1 className="tracking-[-0.07em]">Hola</h1>' },
+  ];
+  expect(() => validateSourcePresentation(files)).toThrow('espaciado');
+  const relaxed = relaxSourceTracking(files);
+  expect(relaxed[0].content).toBe('.hero-title{font-size:96px;letter-spacing:-0.04em}.body{letter-spacing:-.08em}');
+  expect(relaxed[1].content).toContain('tracking-[-0.04em]');
+  expect(() => validateSourcePresentation(relaxed)).not.toThrow();
+  expect(relaxSourceTracking(files, files)).toEqual(files);
 });

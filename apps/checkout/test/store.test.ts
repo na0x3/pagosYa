@@ -141,6 +141,46 @@ describe("storefront routes", () => {
     await vi.waitFor(()=>expect(document.querySelector<HTMLImageElement>('.product-detail-main-image')?.getAttribute('src')).toBe('/white.jpg'));
     expect(document.querySelector('.product-detail-price')?.textContent).toContain('140.00');
   });
+  it('lets a shopper fill a box with repeated flavours and sends every pick to checkout', async () => {
+    const checkoutCart = vi.fn().mockResolvedValue({ clientSecret: 'pi_box_secret_x', storeName: 'The Bake Lab', cartDescription: 'Caja de 4', contactPhone: null, contactEmail: null });
+    const flavour = (id: string, name: string) => ({ id, name, amount: 0, required: false, available: true, groupName: 'Sabores', freeAllowance: 0, pickCount: 4, productId: `p_${id}`, imageUrl: `/v1/uploads/${id}.jpg` });
+    vi.doMock('../src/api', () => ({
+      API_BASE_URL: 'https://api.example/v1', assetUrl: (url: string | null) => url, checkoutCart,
+      fetchSession: vi.fn().mockResolvedValue({ id: 'pi_box', amount: 8000, currency: 'BOB', status: 'REQUIRES_PAYMENT_METHOD', description: null, merchantName: 'The Bake Lab' }),
+      fetchStore: vi.fn().mockResolvedValue({ ...baseStoreFields, storeName: 'The Bake Lab', items: [{ ...baseItem, id: 'box_4', name: 'Caja de 4', amount: 8000, extras: [flavour('matcha', 'Matcha'), flavour('pistacho', 'Pistacho')] }] }),
+    }));
+    await loadCheckout('/s/bakelab/p/box_4');
+    const plus = (id: string) => document.querySelector<HTMLButtonElement>(`.product-detail-pick[data-extra-id="${id}"][data-pick-step="1"]`)!;
+    const minus = (id: string) => document.querySelector<HTMLButtonElement>(`.product-detail-pick[data-extra-id="${id}"][data-pick-step="-1"]`)!;
+    expect(document.querySelector('.product-detail-pick-progress')!.textContent).toContain('0 de 4');
+    expect(document.querySelector<HTMLImageElement>('.product-detail-pick-row img')!.getAttribute('src')).toBe('/v1/uploads/matcha.jpg');
+    expect(document.querySelector<HTMLButtonElement>('.product-add')!.disabled).toBe(true);
+    expect(minus('matcha').disabled).toBe(true);
+    plus('matcha').click(); plus('matcha').click(); plus('matcha').click(); plus('pistacho').click();
+    expect(document.querySelector('.product-detail-pick-progress')!.textContent).toContain('4 de 4');
+    expect(plus('matcha').disabled).toBe(true);
+    expect(document.querySelector(`.product-detail-pick-count[data-extra-id="matcha"]`)!.textContent).toBe('3');
+    expect(document.querySelector('.product-detail-selection-summary')!.textContent).toContain('Matcha ×3');
+    minus('matcha').click();
+    expect(document.querySelector<HTMLButtonElement>('.product-add')!.disabled).toBe(true);
+    plus('pistacho').click();
+    document.querySelector<HTMLButtonElement>('.product-add')!.click();
+    expect(JSON.parse(localStorage.getItem('pagosya_cart_store_1') || '{}')).toEqual({ 'box_4~~matcha,matcha,pistacho,pistacho': 1 });
+    document.querySelector<HTMLButtonElement>('#cart-pay')!.click();
+    expect(document.querySelector('.cart-line-extras')!.textContent).toBe('Matcha ×2 · Pistacho ×2');
+    document.querySelector<HTMLButtonElement>('#cart-confirm')!.click();
+    await vi.waitFor(() => expect(checkoutCart).toHaveBeenCalled());
+    expect(checkoutCart.mock.calls[0][1]).toEqual([{ paymentLinkId: 'box_4', extraIds: ['matcha', 'matcha', 'pistacho', 'pistacho'], quantity: 1 }]);
+  });
+  it('restores a saved box only while its flavour picks still add up', async () => {
+    const flavour = (id: string, pickCount: number) => ({ id, name: id, amount: 0, required: false, available: true, groupName: 'Sabores', pickCount });
+    const { restoreCart } = await import('../src/cart-state');
+    localStorage.setItem('pagosya_cart_store_1', JSON.stringify({ 'box~~a,a,b,b': 1, 'box~~a,b': 2 }));
+    const store = { ...baseStoreFields, storeName: 'x', items: [{ ...baseItem, id: 'box', extras: [flavour('a', 4), flavour('b', 4)] }] } as unknown as Store;
+    const restored = restoreCart(store, () => null, () => null);
+    expect([...restored.cart.entries()]).toEqual([['box~~a,a,b,b', 1]]);
+    expect(restored.selectedExtraIdsByItem.get('box')).toEqual(['a', 'a', 'b', 'b']);
+  });
   it('groups product extras by their saved name and updates the selection and price', async () => {
     vi.doMock('../src/api', () => ({
       API_BASE_URL: 'https://api.example/v1', assetUrl: (url: string | null) => url,

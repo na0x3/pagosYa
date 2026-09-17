@@ -4847,6 +4847,39 @@ test("merchant can save a zero-priced product and grouped free extras", async ({
   ]);
 });
 
+test("merchant can make shoppers pick an exact number of flavours for a box", async ({ page }) => {
+  const requests = await openDashboard(page, [store("store_1", "Primera")], ({ path, request }) => {
+    if (path === "/stores/store_1/payment_links" && request.method() === "POST") {
+      return { id: "product_box", storeId: "store_1", status: "ACTIVE", currency: "BOB", variants: [], ...request.postDataJSON() };
+    }
+    return undefined;
+  });
+  await navigateDashboard(page, "products");
+  const form = page.locator("#paymentLinkForm");
+  if (!(await form.isVisible())) await page.locator("#paymentLinksSection .section-toggle").click();
+  await form.locator('[name="name"]').fill("Caja de 4");
+  await form.locator('[name="amount"]').fill("80");
+  await page.locator("#productAdvancedOptions > summary").click();
+  for (const [index, flavour] of ["Matcha", "Pistacho"].entries()) {
+    await page.locator("#paymentLinkExtraAdd").click();
+    const row = page.locator(`.product-extra-row[data-index="${index}"]`);
+    await row.locator(".extra-name").fill(flavour);
+    await row.locator(".extra-amount").fill("0");
+    await row.locator(".product-extra-advanced summary").click();
+    await expect(row.locator(".extra-pick-count")).toBeDisabled();
+    await row.locator(".extra-group-name").fill("Sabores");
+    await row.locator(".extra-pick-count").fill("4");
+  }
+  await form.evaluate((element) => element.requestSubmit());
+  await expect(page.locator("#info")).toContainText("creado");
+
+  const productWrite = requests.find((request) => request.path === "/stores/store_1/payment_links" && request.method === "POST")?.body;
+  expect(productWrite.extras).toEqual([
+    { name: "Matcha", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4 },
+    { name: "Pistacho", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4 },
+  ]);
+});
+
 test("empty catalog opens the importer without the retired setup wizard", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Primera")]);
   await navigateDashboard(page, "products");

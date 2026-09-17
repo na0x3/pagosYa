@@ -23,6 +23,8 @@ type ProductExtra = {
   required: boolean;
   groupName?: string;
   freeAllowance?: number;
+  pickCount?: number;
+  productId?: string;
   inventoryKey?: string;
   inventoryName?: string;
   stock?: number;
@@ -262,6 +264,8 @@ export class PaymentLinksService {
         typeof (entry as Record<string, unknown>).required === "boolean" &&
         (!("groupName" in entry) || typeof (entry as Record<string, unknown>).groupName === "string") &&
         (!("freeAllowance" in entry) || (Number.isInteger((entry as Record<string, unknown>).freeAllowance) && ((entry as Record<string, unknown>).freeAllowance as number) >= 0)) &&
+        (!("productId" in entry) || typeof (entry as Record<string, unknown>).productId === "string") &&
+        (!("pickCount" in entry) || (Number.isInteger((entry as Record<string, unknown>).pickCount) && ((entry as Record<string, unknown>).pickCount as number) >= 1)) &&
         (!("inventoryKey" in entry) || typeof (entry as Record<string, unknown>).inventoryKey === "string") &&
         (!("inventoryName" in entry) || typeof (entry as Record<string, unknown>).inventoryName === "string") &&
         (!("stock" in entry) || (Number.isInteger((entry as Record<string, unknown>).stock) && ((entry as Record<string, unknown>).stock as number) >= 0)),
@@ -321,14 +325,38 @@ export class PaymentLinksService {
     return normalizeProductVariants(variants, existing);
   }
 
-  private normalizeExtras(extras: CreatePaymentLinkDto["extras"], existing: ProductExtra[] | null = null): ProductExtra[] {
+  /** Box choices that stand for real products: each must be another active, simple product of this store. */
+  private async linkedBoxProducts(storeId: string, selfId: string | null, extras: CreatePaymentLinkDto["extras"]) {
+    const ids = (extras ?? []).flatMap((extra) => (extra.productId ? [extra.productId] : []));
+    if (!ids.length) return new Map<string, { name: string }>();
+    if (selfId && ids.includes(selfId)) throw new BadRequestException("Un producto no puede ir dentro de sí mismo");
+    const repeated = ids.find((id, index) => ids.indexOf(id) !== index);
+    if (repeated) throw new BadRequestException("Un producto está repetido dentro de la caja");
+    const products = await this.prisma.paymentLink.findMany({ where: { id: { in: ids }, storeId, status: PaymentLinkStatus.ACTIVE } });
+    const byId = new Map(products.map((product) => [product.id, product]));
+    for (const extra of extras ?? []) {
+      if (!extra.productId) continue;
+      const product = byId.get(extra.productId);
+      if (!product) throw new BadRequestException(`"${extra.name}" ya no está disponible en tu catálogo`);
+      if (this.readVariants(product.variants).length || this.readExtras(product.extras).length) {
+        throw new BadRequestException(`"${product.name}" tiene opciones propias y no puede ir dentro de una caja`);
+      }
+    }
+    return new Map(products.map((product) => [product.id, { name: product.name }]));
+  }
+
+  private normalizeExtras(extras: CreatePaymentLinkDto["extras"], existing: ProductExtra[] | null = null, linked = new Map<string, { name: string }>()): ProductExtra[] {
     if (!extras?.length) return [];
     const existingIds = new Set((existing ?? []).map((extra) => extra.id));
     const names = new Set<string>();
     const inventoryKeys = new Set<string>();
     const groupAllowances = new Map<string, number>();
+    const groupPickCounts = new Map<string, number | undefined>();
     return extras.map((extra) => {
-      const name = extra.name.trim();
+      if (extra.productId && !extra.pickCount) {
+        throw new BadRequestException(`"${extra.name}" necesita una cantidad a elegir para ir dentro de una caja`);
+      }
+      const name = (extra.productId ? linked.get(extra.productId)?.name ?? extra.name : extra.name).trim();
       const nameKey = name.toLocaleLowerCase("es");
       if (!name) throw new BadRequestException("Cada extra necesita un nombre");
       if (names.has(nameKey)) throw new BadRequestException(`El extra "${name}" está repetido`);
@@ -349,6 +377,15 @@ export class PaymentLinksService {
           throw new BadRequestException(`Todos los extras de "${groupName}" deben usar la misma cantidad gratis`);
         }
         groupAllowances.set(groupKey, freeAllowance);
+        if (groupPickCounts.has(groupKey) && groupPickCounts.get(groupKey) !== extra.pickCount) {
+          throw new BadRequestException(`Todos los extras de "${groupName}" deben usar la misma cantidad a elegir`);
+        }
+        groupPickCounts.set(groupKey, extra.pickCount);
+        if (extra.pickCount && extra.required) {
+          throw new BadRequestException(`"${name}" no puede ser requerido: en "${groupName}" se eligen ${extra.pickCount}`);
+        }
+      } else if (extra.pickCount) {
+        throw new BadRequestException(`La cantidad a elegir de "${name}" necesita un nombre de grupo`);
       }
       if (!inventoryName && extra.stock !== undefined) {
         throw new BadRequestException(`El stock compartido de "${name}" necesita un nombre de inventario`);
@@ -366,7 +403,8 @@ export class PaymentLinksService {
         name,
         amount: extra.amount,
         required: extra.required === true,
-        ...(groupName ? { groupName, freeAllowance } : {}),
+        ...(groupName ? { groupName, freeAllowance, ...(extra.pickCount ? { pickCount: extra.pickCount } : {}) } : {}),
+        ...(extra.productId ? { productId: extra.productId } : {}),
         ...(inventoryName ? {
           inventoryKey,
           inventoryName,
@@ -423,7 +461,7 @@ export class PaymentLinksService {
     }
     await this.validateFiscalMapping(merchantId, dto);
     const variants = this.normalizeVariants(dto.variants);
-    const extras = this.normalizeExtras(dto.extras);
+    const extras = this.normalizeExtras(dto.extras, null, await this.linkedBoxProducts(storeId, null, dto.extras));
     const discount = this.normalizeDiscountSchedule(dto);
     const created = await this.prisma.paymentLink.create({
       data: {
@@ -768,6 +806,9 @@ export class PaymentLinksService {
       for (const product of dto.products) {
         await this.validateFiscalMapping(merchantId, product);
         const variants = this.normalizeVariants(product.variants);
+        if (product.extras?.some((extra) => extra.productId)) {
+          throw new BadRequestException(`Configura la caja "${product.name}" desde el producto, no desde una importación`);
+        }
         const extras = this.normalizeExtras(product.extras);
         const category = product.categoryName?.trim()
           ? categoriesByName.get(categoryKey(product.categoryName))
@@ -864,7 +905,7 @@ export class PaymentLinksService {
       unidadMedida: dto.unidadMedida ?? link.unidadMedida,
     });
     const variants = dto.variants !== undefined ? this.normalizeVariants(dto.variants, this.readVariants(link.variants)) : undefined;
-    const extras = dto.extras !== undefined ? this.normalizeExtras(dto.extras, this.readExtras(link.extras)) : undefined;
+    const extras = dto.extras !== undefined ? this.normalizeExtras(dto.extras, this.readExtras(link.extras), await this.linkedBoxProducts(storeId, id, dto.extras)) : undefined;
     const imagePositions = dto.imageUrls !== undefined || dto.imagePositions !== undefined
       ? this.normalizeImagePositions(dto.imageUrls ?? link.imageUrls, dto.imagePositions ?? link.imagePositions)
       : undefined;

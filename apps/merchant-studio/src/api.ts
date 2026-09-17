@@ -30,7 +30,11 @@ export interface MerchantStore {
   websiteRevision?: number;
   websiteDraft?: { data: JsonRecord; links?: unknown[]; inventoryChanges?: Array<{ name: string; beforeStock: number | null; stock: number | null }> } | null;
   catalogLayout?: CatalogLayout;
+  cartRecommendationsEnabled?: boolean;
+  cartRecommendationProductIds?: string[];
 }
+
+export type RecommendableProduct = { id: string; name: string; status: string; recommendedProductIds?: string[] };
 
 // Domain purchase. Amounts are integer centavos in `currency`, matching the API.
 export interface DomainSearchResult { hostname: string; available: boolean; amount: number; renewalAmount: number; currency: string }
@@ -202,7 +206,9 @@ export class MerchantStudioApi {
   // All of the store's products, active or archived — unlike sourceCatalog's
   // storefront-facing item list, this must include archived ones so a
   // collection never silently loses an archived member when saved.
-  products(storeId: string): Promise<Array<{ id: string; name: string; status: string }>> { return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`); }
+  products(storeId: string): Promise<RecommendableProduct[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`); }
+  saveCartRecommendations(storeId: string, enabled: boolean, productIds: string[]): Promise<MerchantStore> { return this.request(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: JSON.stringify({ cartRecommendationsEnabled: enabled, cartRecommendationProductIds: productIds }) }); }
+  saveProductRecommendations(storeId: string, productId: string, productIds: string[]): Promise<{ id: string }> { return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ recommendedProductIds: productIds }) }); }
   collections(storeId: string): Promise<Collection[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections`); }
   createCollection(storeId: string, name: string): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections`, { method: 'POST', body: JSON.stringify({ name }) }); }
   renameCollection(storeId: string, id: string, name: string): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ name }) }); }
@@ -254,7 +260,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
   }
 
-  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}> }): Promise<{ id: string; name: string }> {
+  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> }): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 

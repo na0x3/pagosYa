@@ -28,20 +28,36 @@ it('does not accept truncated concepts or hide the cost of a failed planning res
 
 it('repairs an inconsistent completed plan once with an actionable layout diagnostic', async () => {
   const invalid = structuredClone(concepts);
-  invalid[1].layout.sections.unshift('intro');
+  invalid[1].layout.catalogSection = 'missing';
   const response = (value: unknown) => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }));
   const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response({ concepts: invalid })).mockResolvedValueOnce(response({ concepts }));
   const request = input();
   const result = await new SourceDesignPlanner().explore(request);
   expect(result.selected).toBe(2);
   expect(request.attempts.map(attempt => attempt.status)).toEqual(['FAILED', 'COMPLETED']);
-  expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[0].text).toContain('sections[0]=catalogSection');
+  expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[0].text).toContain('catalogSection incluido');
+});
+
+it('accepts an intro planned before the catalog without spending a repair on the flag', async () => {
+  const intro = structuredClone(concepts);
+  intro[1].layout.sections.unshift('intro');
+  const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts: intro }) }] }] })));
+  const request = input();
+  const result = await new SourceDesignPlanner().explore(request);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(request.attempts.map(attempt => attempt.status)).toEqual(['COMPLETED']);
+  expect(result.concepts[1].layout).toEqual(expect.objectContaining({ standaloneIntro: true }));
 });
 
 it('stops after the single planning repair also fails', async () => {
   const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: '{}' }] }] })));
-  await expect(new SourceDesignPlanner().explore(input())).rejects.toThrow('tres composiciones');
+  const request = input();
+  const failure = new SourceDesignPlanner().explore(request);
+  await expect(failure).rejects.toThrow('YAPI no logró armar una propuesta de diseño válida');
+  await expect(failure).rejects.not.toThrow(/concepts\[|catalogSection|standaloneIntro/);
   expect(fetchMock).toHaveBeenCalledTimes(2);
+  // The technical diagnostic is still recorded for support and for the repair prompt.
+  expect(request.attempts.at(-1)!.failureReason).toContain('tres composiciones');
 });
 
 function planningResponse(selection: unknown) {

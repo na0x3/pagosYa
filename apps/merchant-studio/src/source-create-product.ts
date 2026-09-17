@@ -8,7 +8,9 @@ import '../../merchant-dashboard/src/product-options.js';
 import '../../merchant-dashboard/src/product-options.css';
 import type { VariantInput } from '../../merchant-dashboard/src/product-options';
 
-export type ProductGuideRecord = { id: string; name: string; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[] };
+export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
+type BoxChoice = { id: string; name: string; imageUrls?: string[] };
+export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[] };
 export type ProductSpecification = { label: string; value: string };
 
 /** "Nombre: valor" lines to specification rows, or a message for the first invalid line. */
@@ -43,8 +45,8 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <section data-guide-step="2" hidden><label>Descripción del producto<textarea name="description" rows="3" maxlength="500" placeholder="Qué es, para quién es y por qué elegirlo"></textarea></label><label>Ficha técnica (opcional)<textarea name="specifications" rows="4" maxlength="1400" placeholder="Material: Algodón&#10;Medidas: 30 × 40 cm&#10;Origen: La Paz" aria-describedby="product-specifications-help"></textarea></label><p class="product-step-help" id="product-specifications-help">Una línea por dato, con el formato Nombre: valor (hasta 8). Se muestra como ficha en la página del producto. Ambos campos son opcionales.</p></section>
       <section data-guide-step="3" hidden><label>Precio (Bs)<input name="price" required type="number" min="0" max="21474836.47" step="0.01" inputmode="decimal" placeholder="0.00"></label></section>
       <section data-guide-step="4" hidden><h3 id="product-highlights-title">Destacados</h3><p id="product-highlights-help">YAPI propone hasta 4 datos cortos con un icono. Edítalos o quítalos; solo se publican los que guardes.</p><div data-highlight-rows aria-describedby="product-highlights-help"></div><button type="button" data-highlight-add>Añadir destacado</button><p data-highlight-status aria-live="polite"></p></section>
-      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La primera será la portada. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div></section>
-      <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p></section>
+      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div></section>
+      <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
       <section data-guide-step="7" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
       <section data-guide-step="8" hidden><div data-product-review class="product-review"></div></section>
       <p role="alert" data-product-error hidden></p><p role="status" data-product-status></p>
@@ -62,6 +64,47 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   const optionsToggle = form.elements.namedItem('hasOptions') as HTMLInputElement;
   const stockInput = form.elements.namedItem('stock') as HTMLInputElement;
   const optionsHost = dialog.querySelector<HTMLElement>('[data-product-options]')!;
+  const boxToggle = form.elements.namedItem('isBox') as HTMLInputElement;
+  const boxHost = dialog.querySelector<HTMLElement>('[data-product-box]')!;
+  const boxPickInput = form.elements.namedItem('boxPickCount') as HTMLInputElement;
+  const boxGroupInput = form.elements.namedItem('boxGroupName') as HTMLInputElement;
+  // Studio edits only boxes; extras set up in the products panel (inventory, cortesías) stay there, untouched.
+  const savedBox = (initial?.extras || []).filter(extra => extra.productId);
+  const boxLocked = (initial?.extras || []).some(extra => !extra.productId);
+  let boxChoices: BoxChoice[] | null = null;
+  const selectedBox = new Set(savedBox.map(extra => extra.productId!));
+  async function drawBoxChoices() {
+    const host = dialog.querySelector<HTMLElement>('[data-box-choices]')!;
+    try {
+      if (!boxChoices) {
+        const catalog = await api.sourceCatalog(storeId) as { items?: Array<BoxChoice & { variants?: unknown[]; extras?: unknown[] }> };
+        boxChoices = (catalog.items || []).filter(item => item.id !== initial?.id && !item.variants?.length && !item.extras?.length);
+      }
+      host.innerHTML = boxChoices.length ? boxChoices.map(item => {
+        const photo = item.imageUrls?.[0];
+        return `<label class="product-box-choice">${photo ? `<img src="${escape(uploadedPreview(photo))}" alt="">` : ''}<input type="checkbox" name="boxProduct" value="${escape(item.id)}" ${selectedBox.has(item.id) ? 'checked' : ''}><span>${escape(item.name)}</span></label>`;
+      }).join('') : '<p>Crea primero los productos que irán dentro de la caja.</p>';
+    } catch { host.innerHTML = '<p role="alert">No pudimos cargar tu catálogo. Vuelve a abrir este paso para intentar de nuevo.</p>'; boxChoices = null; }
+  }
+  /** The checklist is the source of truth once drawn; the set keeps a saved box while the catalog loads. */
+  function syncBoxSelection() {
+    const inputs = dialog.querySelectorAll<HTMLInputElement>('[name="boxProduct"]');
+    if (!inputs.length) return;
+    selectedBox.clear();
+    inputs.forEach(input => { if (input.checked) selectedBox.add(input.value); });
+  }
+  dialog.addEventListener('change', event => { if ((event.target as HTMLInputElement).name === 'boxProduct') syncBoxSelection(); });
+  boxToggle.checked = savedBox.length > 0; boxHost.hidden = !boxToggle.checked;
+  boxToggle.disabled = boxLocked; dialog.querySelector<HTMLElement>('[data-box-locked]')!.hidden = !boxLocked;
+  if (savedBox.length) { boxPickInput.value = String(savedBox[0].pickCount || ''); boxGroupInput.value = savedBox[0].groupName || boxGroupInput.value; void drawBoxChoices(); }
+  boxToggle.addEventListener('change', () => {
+    boxHost.hidden = !boxToggle.checked;
+    if (boxToggle.checked) {
+      if (optionsToggle.checked) { optionsToggle.checked = false; optionsToggle.dispatchEvent(new Event('change')); }
+      void drawBoxChoices();
+    }
+  });
+  const boxChosen = () => (boxChoices || []).filter(item => selectedBox.has(item.id));
   if (initial) {
     nameInput.value = initial.name;
     (form.elements.namedItem('description') as HTMLTextAreaElement).value = initial.description || '';
@@ -82,7 +125,8 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   const dispose = () => { photos.forEach(photo => URL.revokeObjectURL(photo.preview)); dialog.remove(); };
   const questions = ['¿Cómo se llama tu producto?', '¿Qué debería saber el cliente sobre este producto?', '¿Cuál es su precio de venta?', '¿Qué quieres destacar de este producto?', '¿Qué fotos quieres mostrar?', '¿El cliente puede elegir talla, color u otras opciones?', '¿Cuántas unidades tienes disponibles?', 'Todo listo. Revisa tus respuestas antes de guardar.'];
   function answers() {
-    return [nameInput.value.trim(), (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || 'Sin descripción', `Bs ${Number(priceInput.value).toFixed(2)}`, highlights.length ? `${highlights.length} destacados` : 'Sin destacados', `${photos.length} fotos`, optionsToggle.checked ? 'Con opciones y stock por combinación' : 'Sin opciones', optionsToggle.checked ? 'Stock por combinación' : stockInput.value === '' ? 'Sin límite' : `${stockInput.value} unidades`];
+    syncBoxSelection();
+    return [nameInput.value.trim(), (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim() || 'Sin descripción', `Bs ${Number(priceInput.value).toFixed(2)}`, highlights.length ? `${highlights.length} destacados` : 'Sin destacados', `${photos.length} fotos`, optionsToggle.checked ? 'Con opciones y stock por combinación' : boxToggle.checked ? `Caja: el cliente elige ${boxPickInput.value || '?'} entre ${selectedBox.size} productos` : 'Sin opciones', optionsToggle.checked ? 'Stock por combinación' : stockInput.value === '' ? 'Sin límite' : `${stockInput.value} unidades`];
   }
   const highlightRows = () => dialog.querySelector('[data-highlight-rows]')!;
   const highlightStatus = () => dialog.querySelector('[data-highlight-status]')!;
@@ -134,7 +178,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     dialog.querySelectorAll<HTMLButtonElement>('[data-answer-step]').forEach(button => button.onclick = () => { if (!busy) { step = Number(button.dataset.answerStep); updateStep(); } });
     if (step === 8) {
       const variants = optionsToggle.checked ? optionEditor.values() : [];
-      dialog.querySelector('[data-product-review]')!.innerHTML = `<strong>${escape(nameInput.value.trim())}</strong><p>${variants.length ? `${variants.length} combinaciones · desde Bs ${(Math.min(...variants.map(v => v.amount)) / 100).toFixed(2)}` : answers()[2]}</p>${variants.map(v => { const stock = v.stock === undefined ? initial?.variants?.find(row => row.id === v.id)?.stock : v.stock; return `<p>${escape(v.name)} · Bs ${(v.amount / 100).toFixed(2)} · ${stock == null ? 'Sin límite' : stock === 0 ? 'Agotado' : `${stock} unidades`}</p>`; }).join('')}<p>Al guardar, ${initial ? 'se actualizará este producto' : 'se añadirá al catálogo de esta tienda'}.</p>`;
+      dialog.querySelector('[data-product-review]')!.innerHTML = `<strong>${escape(nameInput.value.trim())}</strong><p>${variants.length ? `${variants.length} combinaciones · desde Bs ${(Math.min(...variants.map(v => v.amount)) / 100).toFixed(2)}` : answers()[2]}</p>${variants.map(v => { const stock = v.stock === undefined ? initial?.variants?.find(row => row.id === v.id)?.stock : v.stock; return `<p>${escape(v.name)} · Bs ${(v.amount / 100).toFixed(2)} · ${stock == null ? 'Sin límite' : stock === 0 ? 'Agotado' : `${stock} unidades`}</p>`; }).join('')}${boxToggle.checked ? `<p>${escape(answers()[5])}</p>` : ''}<p>Al guardar, ${initial ? 'se actualizará este producto' : 'se añadirá al catálogo de esta tienda'}.</p>`;
     }
     submit.innerHTML = step === 8 ? 'Guardar producto' : 'Siguiente <span aria-hidden="true">›</span>';
     back.setAttribute('aria-label', step === 1 ? 'Cancelar creación de producto' : 'Volver al paso anterior');
@@ -150,6 +194,13 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       const { problem } = parseSpecificationLines((form.elements.namedItem('specifications') as HTMLTextAreaElement).value);
       if (problem) { showError(problem); (form.elements.namedItem('specifications') as HTMLTextAreaElement).focus(); return false; }
     }
+    if (step === 6 && boxToggle.checked) {
+      syncBoxSelection();
+      if (!selectedBox.size) { showError('Elige al menos un producto para la caja.'); return false; }
+      if (!boxGroupInput.value.trim()) { showError('Escribe un título para la elección, por ejemplo Sabores.'); boxGroupInput.focus(); return false; }
+      const count = Number(boxPickInput.value);
+      if (!boxPickInput.value || !Number.isInteger(count) || count < 1 || count > 24) { showError('Indica cuántos productos elige el cliente, entre 1 y 24.'); boxPickInput.focus(); return false; }
+    }
     if (step === 5 && optionsToggle.checked) {
       try { optionEditor.values(); } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las opciones.'); return false; }
     }
@@ -160,8 +211,16 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   function drawPhotos() {
     optionEditor.refreshPhotos();
     const host = dialog.querySelector<HTMLElement>('[data-product-photos]')!;
-    host.innerHTML = photos.map((photo, index) => `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}${photo.scene ? ' · Escena YAPI' : ''}</figcaption>${photo.scene ? '' : `<button type="button" class="button" data-scene-photo="${index}" aria-label="Crear escena con la foto ${index + 1}">Crear escena</button>`}<button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
+    host.innerHTML = photos.map((photo, index) => `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}${photo.scene ? ' · Escena YAPI' : ''}</figcaption>${index === 0 ? '' : `<button type="button" class="button" data-cover-photo="${index}" aria-label="Usar la foto ${index + 1} como portada">Usar como portada</button>`}${photo.scene ? '' : `<button type="button" class="button" data-scene-photo="${index}" aria-label="Crear escena con la foto ${index + 1}">Crear escena</button>`}<button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
     host.querySelectorAll<HTMLButtonElement>('[data-scene-photo]').forEach(button => button.addEventListener('click', () => { if (!busy) openScene(Number(button.dataset.scenePhoto)); }));
+    // The cover is what a storefront card shows, so it is the owner's choice rather than upload order.
+    host.querySelectorAll<HTMLButtonElement>('[data-cover-photo]').forEach(button => button.addEventListener('click', () => {
+      if (busy) return;
+      photos.unshift(...photos.splice(Number(button.dataset.coverPhoto), 1));
+      drawPhotos(); status.textContent = 'Portada actualizada.';
+      // Re-rendering destroyed the clicked button; keep keyboard users on the photo that moved.
+      host.querySelector<HTMLButtonElement>('figure button')?.focus();
+    }));
     host.querySelectorAll<HTMLButtonElement>('[data-remove-photo]').forEach(button => button.addEventListener('click', () => {
       if (busy) return;
       const [removed] = photos.splice(Number(button.dataset.removePhoto), 1);
@@ -189,8 +248,10 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
         panel.innerHTML = `<h4>Revisa la escena</h4><div class="product-scene-compare"><figure><img src="${escape(source.preview)}" alt="Tu foto original"><figcaption>Tu foto</figcaption></figure><figure><img src="${escape(preview)}" alt="Escena creada por YAPI"><figcaption>Escena YAPI</figcaption></figure></div><p>Añádela solo si tu producto se ve igual: forma, colores, etiqueta y cantidad.</p><div class="product-scene-actions"><button type="button" class="product-next" data-scene-accept>Añadir a las fotos</button><button type="button" class="button" data-scene-close>Descartar</button></div>`;
         panel.querySelector<HTMLButtonElement>('[data-scene-accept]')!.onclick = () => {
           if (busy || photos.length >= 10) return;
-          photos.push({ preview, url: scene.url, scene: true }); drawPhotos();
-          panel.hidden = true; panel.innerHTML = ''; status.textContent = 'Escena añadida a las fotos.';
+          // The owner just confirmed the scene shows their product exactly, and a staged photograph sells
+          // from a catalog card where a cut-out does not. It leads; "Usar como portada" undoes it.
+          photos.unshift({ preview, url: scene.url, scene: true }); drawPhotos();
+          panel.hidden = true; panel.innerHTML = ''; status.textContent = 'Escena añadida como portada.';
         };
         panel.querySelector<HTMLButtonElement>('[data-scene-close]')!.onclick = () => { panel.hidden = true; panel.innerHTML = ''; };
         status.textContent = '';
@@ -226,6 +287,13 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       }
     } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las combinaciones.'); return; }
     const input = { name, description: String(data.get('description') || '').trim() || null, amount: variants ? Math.min(...variants.map(v => v.amount)) : Math.round(Number(data.get('price')) * 100), currency: initial?.currency || 'BOB', stock: variants ? initial && variants.some(v => v.stock === undefined) ? initial.stock ?? null : variants.some(v => v.stock == null) ? null : variants.reduce((n, v) => n + v.stock!, 0) : data.get('stock') === '' ? null : Number(data.get('stock')), imageUrls: [] as string[], ...(variants ? { variants } : {}) };
+    const pickCount = Number(boxPickInput.value), groupName = boxGroupInput.value.trim();
+    if (boxToggle.checked) Object.assign(input, { extras: [...selectedBox].map(productId => ({
+      ...(savedBox.find(extra => extra.productId === productId)?.id ? { id: savedBox.find(extra => extra.productId === productId)!.id } : {}),
+      name: boxChosen().find(item => item.id === productId)?.name || savedBox.find(extra => extra.productId === productId)?.name || 'Producto',
+      amount: 0, groupName, freeAllowance: 0, pickCount, productId,
+    })) });
+    else if (savedBox.length) Object.assign(input, { extras: [] });
     const specifications = parseSpecificationLines(String(data.get('specifications') || '')).rows;
     // Only send the sheet when there is one to save or an existing one to clear.
     if (specifications.length || initial?.specifications?.length) Object.assign(input, { specifications });

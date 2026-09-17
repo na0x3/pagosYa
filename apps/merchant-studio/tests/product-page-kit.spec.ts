@@ -12,10 +12,10 @@ const cushion = { id: 'cushion', name: 'Funda de cojín', description: 'Funda de
   variants: [{ id: 'small', name: '40 × 40 cm', amount: 11000, stock: 10, options: [{ name: 'Tamaño', value: '40 × 40 cm' }] }, { id: 'large', name: '50 × 50 cm', amount: 11700, stock: 10, options: [{ name: 'Tamaño', value: '50 × 50 cm' }] }] };
 const shirt = { id: 'shirt', name: 'Camisa de algodón de manga larga con bolsillo', amount: 14000, currency: 'BOB', stock: 5, imageUrls: [photo] };
 
-async function open(page: Page, id: string, config: Record<string, unknown>, options: { items?: unknown[]; css?: string; wrap?: 'only' | 'shared'; tokens?: boolean } = {}) {
+async function open(page: Page, id: string, config: Record<string, unknown>, options: { items?: unknown[]; css?: string; wrap?: 'only' | 'shared' | 'authored'; tokens?: boolean } = {}) {
   const data = { storeName: 'Prueba', shippingPickupEnabled: true, items: options.items || [lamp, cushion, shirt] };
   const mount = '<main data-pagosya-product-page></main>';
-  const body = options.wrap === 'only' ? `<div class="product-main">${mount}</div>` : options.wrap === 'shared' ? `<div class="product-main"><p>Nota de la tienda</p>${mount}</div>` : mount;
+  const body = options.wrap === 'only' ? `<div class="product-main">${mount}</div>` : options.wrap === 'shared' ? `<div class="product-main"><p>Nota de la tienda</p>${mount}</div>` : options.wrap === 'authored' ? `<div class="product-main"><a class="back-link" href="index.html#catalogo">Volver al catálogo</a>${mount}</div>` : mount;
   await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}${options.tokens === false ? '' : ':root{--store-background:#f5efe6;--store-foreground:#2b211d;--store-accent:#5a4032;--store-accent-foreground:#ffffff}'}body{margin:0;font-family:Arial,sans-serif}${options.css || ''}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header>${body}<div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', ...config, data })}</script><script>${kit('commerce.js')}</script></body></html>` }));
   await page.goto(`https://kit.test/product.html?id=${id}`);
   await expect(page.locator('#pagosya-product-title')).toBeVisible();
@@ -100,7 +100,26 @@ test('dense priced choices are radio rows with the price; editorial keeps pills 
   await expect(pill).toHaveCSS('border-radius', '999px');
   expect(await pill.evaluate(el => getComputedStyle(el, '::after').content)).toMatch(/\+ .*7,00/);
   await expect(page.locator('.product-detail__navigation')).toBeHidden();
-  await expect(page.locator('.product-detail__thumbnails img').first()).toBeHidden();
+  // Desktop editorial pages show real thumbnails, so a second photo (often the styled scene) is seen without guessing.
+  await expect(page.locator('.product-detail__thumbnails img').first()).toBeVisible();
+  await page.locator('[data-product-image="1"]').click();
+  await expect(page.locator('.product-detail__photo')).toHaveAttribute('src', second);
+  await expect(page.locator('[data-product-image="1"]')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('a store that authored its own way back gets no second breadcrumb', async ({ page }) => {
+  await open(page, 'cushion', { productPageStyle: 'editorial' }, { wrap: 'only' });
+  await expect(page.locator('.product-detail__breadcrumb')).toBeVisible();
+  await open(page, 'cushion', { productPageStyle: 'editorial' }, { wrap: 'authored' });
+  await expect(page.locator('.product-detail__breadcrumb')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Volver al catálogo' })).toBeVisible();
+});
+
+test('the purchase column starts level with the photo on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await open(page, 'cushion', { productPageStyle: 'editorial' });
+  const photo = (await page.locator('.product-detail__photo').boundingBox())!, copy = (await page.locator('.product-detail__copy').boundingBox())!;
+  expect(Math.abs(copy.y - photo.y)).toBeLessThanOrEqual(2);
 });
 
 test('mobile shows a full-width photo with dots, then the purchase panel', async ({ page }) => {

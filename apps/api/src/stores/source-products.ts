@@ -27,8 +27,31 @@ export type SourceProductOperation = {
   subscriptionOperations?: ProductSubscriptionOperation[];
 };
 
+/** A first catalog is often 8–10 items; 6 forced merchants to split their launch across messages. */
+const MAX_CREATED_PRODUCTS = 12;
+const plain = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/** YAPI's agreed summaries list prices under a currency heading ("Catálogo (Bs): Matcha 22; Pistacho 22"), so an
+ * exact "Bs 22" quote never appears although the merchant gave the price. Accept the price only when this product's
+ * name is followed closely by exactly this amount and the text states the currency: still nothing invented. */
+function priceStatedFor(text: string, item: { name?: unknown; amount?: unknown; currency?: unknown }) {
+  if (typeof item.name !== 'string' || !item.name.trim() || !Number.isSafeInteger(item.amount) || (item.amount as number) < 0) return false;
+  const source = plain(text), name = plain(item.name.trim());
+  const currency = item.currency === 'USD' ? /\b(?:usd|us\$|dolares)/ : /\b(?:bs\.?|bob|bolivianos)(?![a-z])/;
+  if (!currency.test(source)) return false;
+  const whole = Math.floor((item.amount as number) / 100), cents = (item.amount as number) % 100;
+  const number = cents ? `${whole}[.,]${String(cents).padStart(2, '0').replace(/0$/, '0?')}` : `${whole}(?:[.,]00?)?`;
+  const amount = new RegExp(`^[^\\d]{0,24}?(?<![\\d.,])${number}(?![\\d]|[.,]\\d)`);
+  for (let at = source.indexOf(name); at >= 0; at = source.indexOf(name, at + 1)) {
+    // Whole names only: "Caja de 1" must not borrow a price from "Caja de 12 220".
+    if (/[a-z0-9]/.test(source[at - 1] || '') || /[a-z0-9]/.test(source[at + name.length] || '')) continue;
+    if (amount.test(source.slice(at + name.length, at + name.length + 40))) return true;
+  }
+  return false;
+}
+
 export const sourceProductsSchema = {
-  type: 'array', maxItems: 6, items: {
+  type: 'array', maxItems: MAX_CREATED_PRODUCTS, items: {
     type: 'object', additionalProperties: false,
     required: ['name', 'description', 'amount', 'currency', 'priceText', 'imageUrls', 'variants', 'subscriptionOptions'],
     properties: {
@@ -98,13 +121,24 @@ function parsePriceQuote(quote: string, amount: number, currencyValue: string): 
 
 export function requestedSourceProducts(value: unknown, instruction: string, allowedImages: Set<string>): SourceProduct[] {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > 6) throw new BadRequestException('Puedes crear hasta 6 productos por mensaje.');
+  if (!Array.isArray(value) || value.length > MAX_CREATED_PRODUCTS) throw new BadRequestException(`Puedes crear hasta ${MAX_CREATED_PRODUCTS} productos por mensaje.`);
   const current = instruction.split('Pedido actual del comercio:').at(-1)!.trim();
   if (value.length && !/(?:crea|agrega|añad|anad|create|add|inclu|vend[oe]).{0,100}(?:producto|art[ií]culo|product|cat[aá]logo|camiseta|camisa|shirt|vestido|pantal[oó]n|zapato)|(?:producto|product).{0,60}(?:crea|agrega|añad|create|add)/is.test(current)) {
     throw new BadRequestException('Para crear productos, pídelo con su nombre y precio.');
   }
-  return value.map(item => {
-    if (!item || typeof item.priceText !== 'string' || !current.includes(item.priceText)) throw new BadRequestException('Indica el precio y la moneda de cada producto; YAPI no inventa precios.');
+  return value.map(raw => {
+    // Two model slips that change nothing about the price: sentence punctuation after the quote ("Bs 22."), and the
+    // amount written in bolivianos instead of centavos (22 for "Bs 22"). The quote is what gets checked against the
+    // merchant's words, so it decides the amount.
+    let item = raw;
+    const quoted = typeof raw?.priceText === 'string' ? raw.priceText.trim().replace(/[.;,:]+$/, '') : '';
+    const figure = /^(?:Bs\.?|BOB|USD|US\$)\s*(\d+(?:[.,]\d{1,2})?)$|^(\d+(?:[.,]\d{1,2})?)\s*(?:Bs\.?|BOB|USD|US\$)$/i.exec(quoted);
+    const minor = figure ? Math.round(Number((figure[1] || figure[2]).replace(',', '.')) * 100) : undefined;
+    if (raw && minor !== undefined) item = { ...raw, priceText: quoted, ...(Number.isSafeInteger(raw.amount) && raw.amount * 100 === minor ? { amount: minor } : {}) };
+    if (!item || typeof item.priceText !== 'string' || !(current.includes(item.priceText) || priceStatedFor(current, item))) {
+      const label = item && typeof item.name === 'string' && item.name.trim() ? `«${item.name.trim().slice(0, 60)}»` : 'un producto';
+      throw new BadRequestException(`No encontré el precio de ${label} en lo que acordamos; YAPI no inventa precios. Escríbelo con su moneda, por ejemplo «Bs 35».`);
+    }
     const quote = item.priceText.trim();
     const price = /^(?:Bs\.?|BOB|USD|US\$)\s*(\d+(?:[.,]\d{1,2})?)$|^(\d+(?:[.,]\d{1,2})?)\s*(?:Bs\.?|BOB|USD|US\$)$/i.exec(quote);
     const currency = /USD|US\$/i.test(quote) ? 'USD' : 'BOB';

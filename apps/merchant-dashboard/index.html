@@ -7866,7 +7866,8 @@
           <div class="product-extra-grouping">
             <div><label for="extraGroupName${index}">Grupo de cortesías (opcional)</label><input id="extraGroupName${index}" class="extra-group-name" type="text" maxlength="60" placeholder="Guarniciones" value="${esc(extra.groupName || "")}"></div>
             <div><label for="extraFreeAllowance${index}">Selecciones incluidas</label><input id="extraFreeAllowance${index}" class="extra-free-allowance" type="number" min="0" max="12" step="1" value="${esc(extra.freeAllowance ?? 0)}" ${extra.groupName ? "" : "disabled"}></div>
-            <p class="faint">Repite el mismo grupo y la misma cantidad incluida en sus opciones. Las selecciones siguientes cobran el costo indicado arriba.</p>
+            <div><label for="extraPickCount${index}">Cantidad a elegir (opcional)</label><input id="extraPickCount${index}" class="extra-pick-count" type="number" min="1" max="24" step="1" placeholder="6" value="${esc(extra.pickCount ?? "")}" ${extra.groupName ? "" : "disabled"}></div>
+            <p class="faint">Repite el mismo grupo y la misma cantidad incluida en sus opciones. Las selecciones siguientes cobran el costo indicado arriba. Con una cantidad a elegir, el cliente arma exactamente esa cantidad y puede repetir opciones, por ejemplo 6 galletas con 2 de Matcha.</p>
           </div>
           <div class="product-extra-inventory">
             <div><label for="extraInventoryName${index}">Inventario compartido (opcional)</label><input id="extraInventoryName${index}" class="extra-inventory-name" type="text" maxlength="60" list="sharedExtraInventoryOptions" placeholder="Queso cottage" value="${esc(extra.inventoryName || "")}"></div>
@@ -7884,7 +7885,9 @@
       row.querySelector(".extra-group-name").addEventListener("input", (event) => {
         pendingProductExtras[index].groupName = event.target.value;
         row.querySelector(".extra-free-allowance").disabled = !event.target.value.trim();
+        row.querySelector(".extra-pick-count").disabled = !event.target.value.trim();
       });
+      row.querySelector(".extra-pick-count").addEventListener("input", (event) => (pendingProductExtras[index].pickCount = event.target.value));
       row.querySelector(".extra-free-allowance").addEventListener("input", (event) => (pendingProductExtras[index].freeAllowance = event.target.value));
       row.querySelector(".extra-inventory-name").addEventListener("input", (event) => {
         const inventoryName = event.target.value;
@@ -7910,7 +7913,7 @@
       errorEl.textContent = `Error: máximo ${MAX_PRODUCT_EXTRAS} extras por producto`;
       return;
     }
-    pendingProductExtras.push({ name: "", amount: "", required: false, groupName: "", freeAllowance: "0", inventoryName: "", stock: "" });
+    pendingProductExtras.push({ name: "", amount: "", required: false, groupName: "", freeAllowance: "0", pickCount: "", inventoryName: "", stock: "" });
     renderProductExtras();
     paymentLinkExtraRowsEl.querySelector(".product-extra-row:last-child .extra-name")?.focus();
   });
@@ -9964,6 +9967,7 @@
         available: extra.stock === "" || extra.stock === undefined || Number(extra.stock) > 0,
         groupName: extra.groupName?.trim() || undefined,
         freeAllowance: Math.max(0, Number.parseInt(extra.freeAllowance, 10) || 0),
+        ...(Number.parseInt(extra.pickCount, 10) > 0 && extra.groupName?.trim() ? { pickCount: Number.parseInt(extra.pickCount, 10) } : {}),
       })),
       soldCount: saved.soldCount || 0,
     };
@@ -18584,6 +18588,8 @@
       required: Boolean(extra.required),
       groupName: extra.groupName || "",
       freeAllowance: String(extra.freeAllowance ?? 0),
+      pickCount: extra.pickCount ? String(extra.pickCount) : "",
+      productId: extra.productId || "",
       inventoryName: extra.inventoryName || "",
       stock: Number.isInteger(extra.stock) ? String(extra.stock) : "",
     }));
@@ -19764,6 +19770,19 @@
         errorEl.textContent = `Error: todas las opciones de "${groupName}" deben tener la misma cantidad incluida`;
         return;
       }
+      const pickCount = String(extra.pickCount ?? "").trim() && groupName ? Number(extra.pickCount) : undefined;
+      if (pickCount !== undefined && (!Number.isInteger(pickCount) || pickCount < 1 || pickCount > 24)) {
+        errorEl.textContent = `Error: usa una cantidad a elegir entre 1 y 24 para "${name}"`;
+        return;
+      }
+      if (groupName && matchingGroup && matchingGroup.pickCount !== pickCount) {
+        errorEl.textContent = `Error: todas las opciones de "${groupName}" deben tener la misma cantidad a elegir`;
+        return;
+      }
+      if (pickCount && extra.required) {
+        errorEl.textContent = `Error: "${name}" no puede ser obligatorio porque en "${groupName}" el cliente elige ${pickCount}`;
+        return;
+      }
       const inventoryName = extra.inventoryName?.trim();
       const sharedStock = Number(extra.stock);
       if (inventoryName && (!Number.isInteger(sharedStock) || sharedStock < 0 || sharedStock > 1_000_000)) {
@@ -19776,7 +19795,9 @@
         name,
         amount: Math.round(extraAmount * 100),
         required: Boolean(extra.required),
-        ...(groupName ? { groupName, freeAllowance } : {}),
+        ...(groupName ? { groupName, freeAllowance, ...(pickCount ? { pickCount } : {}) } : {}),
+        // A box choice linked to a catalog product keeps that link; this editor edits the box, not the product.
+        ...(extra.productId ? { productId: extra.productId } : {}),
         ...(inventoryName ? {
           inventoryName: inventoryName.replace(/\s+/g, " "),
           stock: sharedStock,

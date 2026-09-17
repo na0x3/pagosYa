@@ -4,7 +4,7 @@ import { applyCheckoutBranding } from "./checkout-branding";
 import { createStoreFunnel } from './store-funnel';
 let activeStoreFunnel: ReturnType<typeof createStoreFunnel> | null = null;
 let funnelCartCount = 0;
-import { cartItemKey, parseCartItemKey, restoreCart, persistCart } from "./cart-state";
+import { cartItemKey, parseCartItemKey, restoreCart, persistCart, pickedExtras, pickGroups, pickedExtrasLabel } from "./cart-state";
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
 import '../../api/src/stores/source-kit/retention.js';
@@ -773,7 +773,7 @@ function trackedOrderHtml(order: TrackedOrder, token: string): string {
     <section class="tracking-order-section">
       <div class="tracking-section-head"><h2>Tu pedido</h2><strong>${formatAmount(order.amount, order.currency)}</strong></div>
       ${order.fulfillment ? `<p class="tracking-fulfillment">${ICON_MAP_PIN}<span><strong>${order.fulfillment.method === "delivery" ? "Entrega desde" : "Retiro en"} ${escapeHtml(order.fulfillment.locationName)}</strong>${order.fulfillment.readyAt ? `<small>Disponible desde ${escapeHtml(new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", dateStyle: "full", timeStyle: "short" }).format(new Date(order.fulfillment.readyAt)))}</small>` : ""}</span></p>` : ""}
-      <div class="tracking-items">${items.map((item) => `<div class="tracking-item"><span class="tracking-item-quantity">${item.quantity || 1}×</span><span><strong>${escapeHtml(item.name)}</strong>${item.variantName ? `<small>${escapeHtml(item.variantName)}</small>` : ""}${item.extras?.length ? `<small>${item.extras.map((extra) => escapeHtml(extra.name)).join(" · ")}</small>` : ""}</span><strong>${formatAmount((item.unitAmount || 0) * (item.quantity || 1), order.currency)}</strong></div>`).join("") || '<p class="tracking-empty">El comercio no compartió el detalle de productos.</p>'}</div>
+      <div class="tracking-items">${items.map((item) => `<div class="tracking-item"><span class="tracking-item-quantity">${item.quantity || 1}×</span><span><strong>${escapeHtml(item.name)}</strong>${item.variantName ? `<small>${escapeHtml(item.variantName)}</small>` : ""}${item.extras?.length ? `<small>${escapeHtml(pickedExtrasLabel(item.extras))}</small>` : ""}</span><strong>${formatAmount((item.unitAmount || 0) * (item.quantity || 1), order.currency)}</strong></div>`).join("") || '<p class="tracking-empty">El comercio no compartió el detalle de productos.</p>'}</div>
       ${contact}
     </section>
     ${reviewSection}
@@ -1131,7 +1131,7 @@ const cart = new Map<string, number>();
 let appliedPromo: { storeId: string; code: string; discountType: "PERCENT" | "FIXED"; discountValue: number } | null = null;
 const selectedVariantByItem = new Map<string, string>();
 const selectedOptionsByItem = new Map<string, Record<string,string>>();
-const selectedExtraIdsByItem = new Map<string, Set<string>>();
+const selectedExtraIdsByItem = new Map<string, string[]>();
 const selectedProductImageByItem = new Map<string, number>();
 
 function itemVariants(item: StoreItem): StoreItem["variants"] {
@@ -1153,8 +1153,7 @@ function selectedVariantFor(item: StoreItem): StoreItem["variants"][number] | un
 }
 
 function selectedExtrasFor(item: StoreItem): StoreItem["extras"] {
-  const selected = selectedExtraIdsByItem.get(item.id) ?? new Set<string>();
-  return itemExtras(item).filter((extra) => selected.has(extra.id));
+  return pickedExtras(itemExtras(item), selectedExtraIdsByItem.get(item.id) ?? []);
 }
 
 function selectedExtrasAmount(extras: StoreItem["extras"]): number {
@@ -1191,8 +1190,9 @@ function extrasCourtesyCopy(item: StoreItem): string {
 
 function productConfigurationComplete(item: StoreItem): boolean {
   if (itemVariants(item).length > 0 && !selectedVariantFor(item)) return false;
-  const selectedIds = selectedExtraIdsByItem.get(item.id) ?? new Set<string>();
-  return itemExtras(item).every((extra) => !extra.required || (extra.available && selectedIds.has(extra.id)));
+  const selectedIds = selectedExtraIdsByItem.get(item.id) ?? [];
+  return itemExtras(item).every((extra) => !extra.required || (extra.available && selectedIds.includes(extra.id)))
+    && pickGroups(itemExtras(item), selectedIds).every((group) => group.picked === group.pickCount);
 }
 
 function activeProductDiscount(item: StoreItem, now = Date.now()): number | null {
@@ -1533,7 +1533,7 @@ function cartTotal(items: StoreItem[]): number {
     const item = items.find((candidate) => candidate.id === paymentLinkId);
     if (!item) continue;
     const variant = itemVariants(item).find((candidate) => candidate.id === variantId);
-    const extras = itemExtras(item).filter((extra) => extraIds.includes(extra.id));
+    const extras = pickedExtras(itemExtras(item), extraIds);
     total += selectedUnitAmount(item, variant, extras) * quantity;
   }
   return total;
@@ -1972,9 +1972,11 @@ function renderProductCard(
     : "";
 
   const courtesyCopy = extrasCourtesyCopy(item);
-  const extrasHtml = itemExtras(item).length
-    ? `<fieldset class="store-item-extras"><legend>Personaliza${courtesyCopy ? ` · ${escapeHtml(courtesyCopy)}` : ""}</legend>${itemExtras(item).map((extra) => { const displayAmount = extraDisplayAmount(item, extra, selectedExtras); return `<label><input type="checkbox" class="extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some((selected) => selected.id === extra.id) ? "checked" : ""} ${extra.available ? "" : "disabled"}><span>${escapeHtml(extra.name)}${extra.required ? ` <small>Requerido</small>` : ""}${extra.available ? "" : ` <small>Agotado</small>`}</span><strong>${displayAmount === 0 ? "Incluido" : `+${formatAmount(displayAmount, item.currency)}`}</strong></label>`; }).join("")}</fieldset>`
-    : "";
+  const toggleExtras = itemExtras(item).filter((extra) => !extra.pickCount);
+  const pickLinksHtml = pickGroups(itemExtras(item), []).map((group) => `<a class="store-item-pick-link product-page-link" href="${escapeHtml(detailUrl)}">Elige ${group.pickCount} en ${escapeHtml(group.name)}</a>`).join("");
+  const extrasHtml = pickLinksHtml + (toggleExtras.length
+    ? `<fieldset class="store-item-extras"><legend>Personaliza${courtesyCopy ? ` · ${escapeHtml(courtesyCopy)}` : ""}</legend>${toggleExtras.map((extra) => { const displayAmount = extraDisplayAmount(item, extra, selectedExtras); return `<label><input type="checkbox" class="extra-toggle" data-extra-id="${escapeHtml(extra.id)}" ${selectedExtras.some((selected) => selected.id === extra.id) ? "checked" : ""} ${extra.available ? "" : "disabled"}><span>${escapeHtml(extra.name)}${extra.required ? ` <small>Requerido</small>` : ""}${extra.available ? "" : ` <small>Agotado</small>`}</span><strong>${displayAmount === 0 ? "Incluido" : `+${formatAmount(displayAmount, item.currency)}`}</strong></label>`; }).join("")}</fieldset>`
+    : "");
 
   return `
     <div class="store-item ${soldOut ? "sold-out" : ""}${discountPercent === null ? "" : " has-sale"}${presentation.featured ? " is-site-featured" : ""}" data-id="${item.id}"${staggerStyle}>
@@ -2163,6 +2165,9 @@ function sanitizeStorePreviewProduct(value: unknown, store: Store): StoreItem | 
         available: extra.available !== false,
         ...(typeof extra.groupName === "string" && extra.groupName.trim() ? { groupName: extra.groupName.trim().slice(0, 60) } : {}),
         ...(typeof extra.freeAllowance === "number" && Number.isInteger(extra.freeAllowance) ? { freeAllowance: Math.min(12, Math.max(0, extra.freeAllowance)) } : {}),
+        ...(typeof extra.pickCount === "number" && Number.isInteger(extra.pickCount) && extra.pickCount >= 1 ? { pickCount: Math.min(24, extra.pickCount) } : {}),
+        ...(typeof extra.productId === "string" ? { productId: extra.productId.slice(0, 40) } : {}),
+        ...(typeof extra.imageUrl === "string" ? { imageUrl: extra.imageUrl.slice(0, 1000) } : {}),
       }));
   }
   return preview;
@@ -5666,7 +5671,7 @@ function cartLineEntries(store: Store) {
     const product = store.items.find((item) => item.id === selected.paymentLinkId);
     if (!product) return [];
     const variant = product.variants.find((candidate) => candidate.id === selected.variantId);
-    const extras = itemExtras(product).filter((extra) => selected.extraIds.includes(extra.id));
+    const extras = pickedExtras(itemExtras(product), selected.extraIds);
     return [{ key, product, variant, extras, quantity, unitAmount: selectedUnitAmount(product, variant, extras) }];
   });
 }
@@ -5769,7 +5774,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
             const visibleStock = stockStatus(remainingStock(product, variant), store.showLowStockToCustomers === true);
             return `<article class="cart-review-line" data-cart-key="${escapeHtml(key)}">
               ${image ? `<img src="${escapeHtml(image)}" alt="">` : `<span class="cart-review-placeholder" aria-hidden="true">${escapeHtml(initials(product.name))}</span>`}
-              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${extras.map((extra) => escapeHtml(extra.name)).join(" · ")}</span>` : ""}<small>${formatAmount(unitAmount, product.currency)} c/u</small>${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
+              <div class="cart-review-line-copy"><strong>${escapeHtml(product.name)}</strong>${variant ? `<span>${escapeHtml(variant.name)}</span>` : ""}${extras.length ? `<span class="cart-line-extras">${escapeHtml(pickedExtrasLabel(extras))}</span>` : ""}<small>${formatAmount(unitAmount, product.currency)} c/u</small>${visibleStock ? `<small class="cart-line-stock${visibleStock.exhausted ? " out" : ""}">${visibleStock.label}</small>` : ""}</div>
               <div class="cart-review-quantity" aria-label="Cantidad de ${escapeHtml(product.name)}">
                 <button type="button" data-cart-change="-1" aria-label="Quitar una unidad">−</button><span>${quantity}</span><button type="button" data-cart-change="1" aria-label="Agregar una unidad" ${atProductLimit || atOptionLimit ? "disabled" : ""}>+</button>
               </div>
@@ -5974,7 +5979,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
         return;
       }
       const messageLines = cartLineEntries(store).map(({ product, variant, extras, quantity, unitAmount }) =>
-        `• ${product.name}${variant ? ` (${variant.name})` : ""}${extras.length ? ` + ${extras.map((extra) => extra.name).join(", ")}` : ""} x${quantity} - ${formatAmount(unitAmount * quantity, product.currency)}`,
+        `• ${product.name}${variant ? ` (${variant.name})` : ""}${extras.length ? ` + ${pickedExtrasLabel(extras, ", ")}` : ""} x${quantity} - ${formatAmount(unitAmount * quantity, product.currency)}`,
       );
       const destination = store.storeName.trim() ? ` en ${store.storeName.trim()}` : "";
       const fulfillmentLines = fulfillment.selectedLocation && fulfillment.method
@@ -6225,7 +6230,24 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
     if (!extraGroups.has(key)) extraGroups.set(key, { name, extras: [] });
     extraGroups.get(key)!.extras.push(extra);
   });
+  const selectedExtraIds = selectedExtraIdsByItem.get(item.id) ?? [];
   const extrasHtml = [...extraGroups.values()].map(({ name, extras }) => {
+    const pickCount = extras[0].pickCount;
+    if (pickCount) {
+      const picked = extras.reduce((sum, extra) => sum + selectedExtraIds.filter(id => id === extra.id).length, 0);
+      return `<fieldset class="product-detail-extras product-detail-picks"><legend>${escapeHtml(name)} <span class="product-detail-selection product-detail-pick-progress" aria-live="polite">${picked} de ${pickCount}</span></legend>
+      <p>Elige ${pickCount}; puedes repetir.</p>
+      <div class="product-detail-pick-list">${extras.map(extra => {
+        const count = selectedExtraIds.filter(id => id === extra.id).length;
+        const photo = assetUrl(extra.imageUrl || null);
+        return `<div class="product-detail-pick-row${photo ? ' has-photo' : ''}">${photo ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy" decoding="async">` : ''}<span><strong>${escapeHtml(extra.name)}</strong>${extra.available ? '' : '<small>Agotado</small>'}${extra.amount ? `<small>+${formatAmount(extra.amount, item.currency)} c/u</small>` : ''}</span>
+          <div class="qty-stepper product-detail-pick-stepper" aria-label="Cantidad de ${escapeHtml(extra.name)}">
+            <button type="button" class="product-detail-pick" data-extra-id="${escapeHtml(extra.id)}" data-pick-step="-1" aria-label="Quitar ${escapeHtml(extra.name)}" ${count ? '' : 'disabled'}>−</button>
+            <span class="qty-value product-detail-pick-count" data-extra-id="${escapeHtml(extra.id)}">${count}</span>
+            <button type="button" class="product-detail-pick" data-extra-id="${escapeHtml(extra.id)}" data-pick-step="1" aria-label="Agregar ${escapeHtml(extra.name)}" ${extra.available && picked < pickCount ? '' : 'disabled'}>+</button>
+          </div></div>`;
+      }).join('')}</div></fieldset>`;
+    }
     const allowance = extras[0].freeAllowance || 0;
     return `<fieldset class="product-detail-extras"><legend>${escapeHtml(name)}</legend>
       <p>${allowance ? `${allowance} ${allowance === 1 ? 'incluido' : 'incluidos'}; los adicionales tienen el precio indicado.` : 'Elige los complementos para tu producto.'}</p>
@@ -6235,7 +6257,7 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       }).join('')}</div></fieldset>`;
   }).join('');
   const priceHtml = `${variants.length && !selectedVariant ? '<span class="product-detail-from">Desde </span>' : ''}${salePriceHtml(item, selectedUnitAmount(item, startingVariant, selectedExtras), originalSelectedUnitAmount(item, startingVariant, selectedExtras), 'product-detail-price')}`;
-  const selectionLabels = [...(selectedVariant?.options?.map(option => option.value) || (selectedVariant ? [selectedVariant.name] : [])), ...selectedExtras.map(extra => extra.name)];
+  const selectionLabels = [...(selectedVariant?.options?.map(option => option.value) || (selectedVariant ? [selectedVariant.name] : [])), ...(selectedExtras.length ? pickedExtrasLabel(selectedExtras, "\u0000").split("\u0000") : [])];
   const deliveryLocations = (store.locations || []).filter(location => location.pickupEnabled || location.deliveryEnabled);
 
   app.innerHTML = `
@@ -6350,11 +6372,24 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
       app.querySelector<HTMLButtonElement>(`[data-option-group="${button.dataset.optionGroup}"][data-option-value="${button.dataset.optionValue}"]`)?.focus();
     });
   });
+  app.querySelectorAll<HTMLButtonElement>(".product-detail-pick").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = [...(selectedExtraIdsByItem.get(item.id) ?? [])];
+      const extraId = button.dataset.extraId!;
+      const group = pickGroups(itemExtras(item), selected).find(candidate => candidate.extras.some(extra => extra.id === extraId));
+      if (!group) return;
+      if (button.dataset.pickStep === "1") { if (group.picked < group.pickCount) selected.push(extraId); }
+      else if (selected.includes(extraId)) selected.splice(selected.lastIndexOf(extraId), 1);
+      selectedExtraIdsByItem.set(item.id, selected);
+      renderProductPage(slug, store, item.id);
+      const again = app.querySelector<HTMLButtonElement>(`.product-detail-pick[data-extra-id="${extraId}"][data-pick-step="${button.dataset.pickStep}"]`);
+      (again && !again.disabled ? again : app.querySelector<HTMLButtonElement>(".product-add:not(:disabled)") ?? app.querySelector<HTMLElement>(".product-detail-pick-progress"))?.focus();
+    });
+  });
   app.querySelectorAll<HTMLInputElement>(".product-detail-extra-toggle").forEach((input) => {
     input.addEventListener("change", () => {
-      const selected = new Set(selectedExtraIdsByItem.get(item.id) ?? []);
-      if (input.checked) selected.add(input.dataset.extraId!);
-      else selected.delete(input.dataset.extraId!);
+      const selected = (selectedExtraIdsByItem.get(item.id) ?? []).filter(id => id !== input.dataset.extraId);
+      if (input.checked) selected.push(input.dataset.extraId!);
       selectedExtraIdsByItem.set(item.id, selected);
       renderProductPage(slug, store, item.id);
       app.querySelector<HTMLInputElement>(`.product-detail-extra-toggle[data-extra-id="${input.dataset.extraId}"]`)?.focus();
@@ -9260,9 +9295,8 @@ function renderStoreGrid(slug: string, store: Store, currency: string, visiblePr
       renderStoreGrid(slug, store, currency, visibleProductIds);
     });
     row.querySelectorAll<HTMLInputElement>(".extra-toggle").forEach((input) => input.addEventListener("change", () => {
-      const selected = new Set(selectedExtraIdsByItem.get(id) ?? []);
-      if (input.checked) selected.add(input.dataset.extraId!);
-      else selected.delete(input.dataset.extraId!);
+      const selected = (selectedExtraIdsByItem.get(id) ?? []).filter(extraId => extraId !== input.dataset.extraId);
+      if (input.checked) selected.push(input.dataset.extraId!);
       selectedExtraIdsByItem.set(id, selected);
       renderStoreGrid(slug, store, currency, visibleProductIds);
     }));

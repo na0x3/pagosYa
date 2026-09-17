@@ -40,3 +40,21 @@ it('rejects invented asset paths before saving', async () => {
   const next = await withSourceAssets(files, saved);
   expect(sourceAssetInventory(next)).toEqual([expect.objectContaining({ path: video.path, kind: 'video', role: 'background', description: 'Video de portada', references: ['index.html'] })]);
  });
+
+it('remembers photo facts across revisions and re-validates what it reads back', async () => {
+  const photo = { path: 'assets/cushion.jpg', content: 'aGVsbG8=', encoding: 'base64' as const };
+  const legend = [{ path: photo.path, original: '/v1/uploads/a.jpg' }];
+  const first = await withSourceAssets([photo], [], legend, [{ url: '/v1/uploads/a.jpg', role: 'product', description: 'Cojín' }],
+    { '/v1/uploads/a.jpg': { shot: 'scene', productKey: 'prod_1', dominant: ['#a3442b'], backdropHex: '#b99e85', aspect: 1 } });
+  expect(JSON.parse(first.find(f => f.path === SOURCE_ASSET_MANIFEST)!.content).assets[0].photo)
+    .toEqual({ shot: 'scene', productKey: 'prod_1', dominant: ['#a3442b'], backdropHex: '#b99e85', aspect: 1 });
+  const next = await withSourceAssets([photo], first);
+  expect(sourceAssetInventory(next)[0].photo).toEqual({ shot: 'scene', productKey: 'prod_1', dominant: ['#a3442b'], backdropHex: '#b99e85', aspect: 1 });
+  const tampered = next.map(f => f.path === SOURCE_ASSET_MANIFEST ? { ...f, content: JSON.stringify({ version: 1, assets: [{ path: photo.path, role: 'product', description: '', photo: { shot: 'billboard', backdropHex: 'beige', aspect: -1 } }] }) } : f);
+  expect(sourceAssetInventory(tampered)[0].photo).toBeUndefined();
+});
+it('omits the photo key entirely for assets nobody measured', async () => {
+  const files = await withSourceAssets([{ path: 'assets/logo.png', content: 'aGVsbG8=', encoding: 'base64' as const }]);
+  expect(JSON.parse(files.find(f => f.path === SOURCE_ASSET_MANIFEST)!.content).assets[0]).not.toHaveProperty('photo');
+  expect(sourceAssetInventory(files)[0]).not.toHaveProperty('photo');
+});

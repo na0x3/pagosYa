@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn(), domainShop: vi.fn(), openDomain: vi.fn() }));
+const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn(), openRecommendations: vi.fn(), domainShop: vi.fn(), openDomain: vi.fn() }));
 vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'http://localhost:3001/v1', MerchantStudioApi: class {
         businessWorkspace = mocks.workspace;
         retention = mocks.retention;
@@ -22,6 +22,7 @@ vi.mock('./shipping-settings', () => ({ openShippingSettings: vi.fn() }));
 vi.mock('./domain-shop', () => ({ openDomainShop: mocks.openDomain }));
 vi.mock('./brand-profile', () => ({ openBrandProfile: vi.fn() }));
 vi.mock('./catalog-arrangement', () => ({ openCatalogArrangement: mocks.openArrangement }));
+vi.mock('./recommendations', () => ({ openRecommendations: mocks.openRecommendations }));
 import { mountBusinessWorkspace } from './source-business-workspace';
 const source = () => ({ revision: 2, versions: [{ revision: 2, label: 'Alternativa' }, { revision: 1, label: 'Original' }], publication: { revision: 1, version: 3, active: true } });
 let app: HTMLDivElement;
@@ -107,6 +108,13 @@ describe('marketing workspaces', () => {
         expect(mocks.openArrangement).not.toHaveBeenCalled();
         click('[data-open-integration=arrangement]');
         expect(mocks.openArrangement).toHaveBeenCalledWith(expect.anything(), 'store-a');
+    });
+    it('opens the recommendations panel from the embedded integrations catalog', async () => {
+        await mount('library=integrations');
+        const card = app.querySelector('[data-open-integration=recommendations]')!.closest('article')!;
+        expect(card.textContent).toContain('Recomendaciones');
+        click('[data-open-integration=recommendations]');
+        expect(mocks.openRecommendations).toHaveBeenCalledWith(expect.anything(), 'store-a');
     });
     it('opens the domain shop from the embedded integrations catalog, not just lists it', async () => {
         await mount('library=integrations');

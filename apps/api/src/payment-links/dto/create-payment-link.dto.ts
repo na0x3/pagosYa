@@ -121,6 +121,19 @@ export class ProductExtraDto {
   @Max(12)
   freeAllowance?: number;
 
+  @ApiPropertyOptional({ description: "Another simple product of this store that this choice stands for. Its live name and photo are shown, and each pick consumes its stock." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  productId?: string;
+
+  @ApiPropertyOptional({ description: "Exact number of selections the customer makes from this group, repeats allowed (a box of 6 cookies with 2 Matcha).", example: 6 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  pickCount?: number;
+
   @ApiPropertyOptional({ description: "Customer must select this extra before adding the product.", default: false })
   @IsOptional()
   @IsBoolean()

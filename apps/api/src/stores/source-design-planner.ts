@@ -48,7 +48,8 @@ export class SourceDesignPlanner {
           result = validateSourceDesign({ ...(candidate as any), selected, selection: { source: input.selected === undefined ? 'planner' : 'forced', rationale } }, input.selected, true);
         } catch (error) {
           attempt.failureReason = (error instanceof Error ? error.message : 'Invalid concepts').slice(0, 300);
-          if (index || input.signal.aborted) throw error;
+          // The schema diagnostic stays in the attempt record and repair prompt; merchants get plain language.
+          if (index || input.signal.aborted) throw new BadGatewayException('YAPI no logró armar una propuesta de diseño válida en este intento.');
           // Spend the request's single repair allowance on invalid completed plans.
           // Do not retry quota errors, network failures or truncated responses.
           repair = '\nRepair the previous concepts to satisfy the SAME schema. Preserve their distinct compositions. Validation error: ' + attempt.failureReason
@@ -60,7 +61,7 @@ export class SourceDesignPlanner {
         attempt.selectionSource = result.selection?.source;
         return result;
       } catch (error) {
-        attempt.failureReason = (error instanceof Error ? error.message : 'Exploration failed').slice(0, 300);
+        attempt.failureReason ??= (error instanceof Error ? error.message : 'Exploration failed').slice(0, 300);
         throw error instanceof BadGatewayException ? error : new BadGatewayException('No se completó la exploración visual. Tu revisión anterior sigue guardada.');
       } finally {
         attempt.durationMs = Date.now() - started;

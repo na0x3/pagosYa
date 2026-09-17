@@ -69,6 +69,34 @@ describe("PaymentIntentsService cart option inventory", () => {
     expect(tx.$executeRaw).toHaveBeenCalledTimes(3);
   });
 
+  it("decrements the product behind every picked box flavour", async () => {
+    const service = makeService();
+    const tx = { paymentLink: { updateMany: jest.fn() }, $executeRaw: jest.fn().mockResolvedValue(1) };
+    const pick = (productId: string) => ({ id: `x_${productId}`, name: productId, amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId });
+
+    await (service as any).decrementStockForCart(tx, {
+      storeId: "store_1",
+      cart: [{ paymentLinkId: "box_4", name: "Caja de 4", quantity: 2, extras: [pick("matcha"), pick("matcha"), pick("matcha"), pick("pistacho")] }],
+    });
+
+    const decrements = tx.$executeRaw.mock.calls.map(([, quantity, id]: any[]) => [id, quantity]);
+    expect(decrements).toEqual([["box_4", 2], ["matcha", 6], ["pistacho", 2]]);
+  });
+
+  it("blocks payment when a picked flavour's product ran out after the cart was made", async () => {
+    const service = makeService();
+    const pick = { id: "x_matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "matcha" };
+    const tx = { paymentLink: { findMany: jest.fn().mockResolvedValue([
+      { id: "box_4", name: "Caja de 4", status: PaymentLinkStatus.ACTIVE, stock: null, variants: [], extras: [pick], locationStocks: {} },
+      { id: "matcha", name: "Matcha", status: PaymentLinkStatus.ACTIVE, stock: 3, variants: [], extras: [], locationStocks: {} },
+    ]) } };
+
+    await expect((service as any).assertCartStillAvailable(tx, {
+      cart: [{ paymentLinkId: "box_4", name: "Caja de 4", quantity: 1, extras: [pick, pick, pick, pick] }],
+    })).rejects.toThrow('Solo quedan 3 unidades de "Matcha"');
+    expect(tx.paymentLink.findMany).toHaveBeenCalledWith({ where: { id: { in: ["box_4", "matcha"] } } });
+  });
+
   it("atomically decrements each selected option", async () => {
     const service = makeService();
     const tx = {

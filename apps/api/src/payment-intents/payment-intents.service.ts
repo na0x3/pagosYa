@@ -18,6 +18,7 @@ import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
+import { selectedExtrasLabel } from "../payment-links/product-extras";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -45,6 +46,7 @@ type ProductExtra = {
   required: boolean;
   groupName?: string;
   freeAllowance?: number;
+  productId?: string;
   inventoryKey?: string;
   inventoryName?: string;
   stock?: number;
@@ -612,7 +614,7 @@ export class PaymentIntentsService {
         ? cart
             .map(
               (line) =>
-                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`,
+                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${selectedExtrasLabel(line.extras)}` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`,
             )
             .join("\n") + "\n"
         : "";
@@ -688,7 +690,9 @@ export class PaymentIntentsService {
     if (!cart) return;
     const fulfillment = (metadata as { fulfillment?: { locationId?: string; locationName?: string } } | null)?.fulfillment;
 
-    const links = await tx.paymentLink.findMany({ where: { id: { in: cart.map((line) => line.paymentLinkId) } } });
+    // Box picks stand for real products whose stock they consume, so load those products too.
+    const pickedProductIds = cart.flatMap((line) => (line.extras ?? []).flatMap((extra) => (extra.productId ? [extra.productId] : [])));
+    const links = await tx.paymentLink.findMany({ where: { id: { in: [...new Set([...cart.map((line) => line.paymentLinkId), ...pickedProductIds])] } } });
     const requestedByLinkId = new Map<string, number>();
     const requestedByVariant = new Map<string, { quantity: number; variant: ProductVariant; productName: string }>();
     const requestedByExtraPool = new Map<string, { quantity: number; stock: number; name: string }>();
@@ -727,6 +731,12 @@ export class PaymentIntentsService {
         }
       }
       requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
+      for (const extra of line.extras ?? []) {
+        if (!extra.productId) continue;
+        const product = links.find((candidate) => candidate.id === extra.productId);
+        if (!product || product.status !== PaymentLinkStatus.ACTIVE) throw new BadRequestException(`"${extra.name}" ya no está disponible`);
+        requestedByLinkId.set(extra.productId, (requestedByLinkId.get(extra.productId) ?? 0) + line.quantity);
+      }
     }
 
     for (const [paymentLinkId, quantity] of requestedByLinkId) {
@@ -784,6 +794,9 @@ export class PaymentIntentsService {
         });
       } else {
         requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
+      }
+      for (const extra of line.extras ?? []) {
+        if (extra.productId) requestedByLinkId.set(extra.productId, (requestedByLinkId.get(extra.productId) ?? 0) + line.quantity);
       }
       for (const extra of line.extras ?? []) {
         if (!extra.inventoryKey || extra.stock === undefined) continue;

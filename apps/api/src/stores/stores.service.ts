@@ -37,6 +37,8 @@ const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
 const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
 import type { ProductVariant } from '../payment-links/product-variants';
+import { pickedProductQuantities, resolveSelectedExtras, selectedExtrasLabel } from '../payment-links/product-extras';
+import type { CartItemDto } from '../payment-links/dto/cart-checkout.dto';
 type ProductExtra = {
   id: string;
   name: string;
@@ -44,6 +46,8 @@ type ProductExtra = {
   required: boolean;
   groupName?: string;
   freeAllowance?: number;
+  pickCount?: number;
+  productId?: string;
   inventoryKey?: string;
   inventoryName?: string;
   stock?: number;
@@ -238,6 +242,8 @@ function readProductExtras(value: Prisma.JsonValue): ProductExtra[] {
       typeof (entry as Record<string, unknown>).required === "boolean" &&
       (!("groupName" in entry) || typeof (entry as Record<string, unknown>).groupName === "string") &&
       (!("freeAllowance" in entry) || (Number.isInteger((entry as Record<string, unknown>).freeAllowance) && ((entry as Record<string, unknown>).freeAllowance as number) >= 0)) &&
+      (!("productId" in entry) || typeof (entry as Record<string, unknown>).productId === "string") &&
+      (!("pickCount" in entry) || (Number.isInteger((entry as Record<string, unknown>).pickCount) && ((entry as Record<string, unknown>).pickCount as number) >= 1)) &&
       (!("inventoryKey" in entry) || typeof (entry as Record<string, unknown>).inventoryKey === "string") &&
       (!("inventoryName" in entry) || typeof (entry as Record<string, unknown>).inventoryName === "string") &&
       (!("stock" in entry) || (Number.isInteger((entry as Record<string, unknown>).stock) && ((entry as Record<string, unknown>).stock as number) >= 0)),
@@ -1434,6 +1440,23 @@ export class StoresService implements OnModuleDestroy {
     };
   }
 
+  /** Box picks consume their linked product's stock: load the linked products that are not
+   * already cart lines, and count every pick (× line quantity) toward each product. */
+  private async pickedProductStock(storeId: string, links: Array<{ id: string; extras: Prisma.JsonValue }>, items: CartItemDto[]) {
+    const linksById = new Map(links.map((link) => [link.id, link]));
+    const picked = pickedProductQuantities(items, (item) => readProductExtras(linksById.get(item.paymentLinkId)?.extras ?? []));
+    const missing = [...picked.keys()].filter((id) => !linksById.has(id));
+    const linked = missing.length
+      ? await this.prisma.paymentLink.findMany({ where: { id: { in: missing }, storeId, status: PaymentLinkStatus.ACTIVE } })
+      : [];
+    for (const id of missing) {
+      if (linked.some((link) => link.id === id)) continue;
+      const name = links.flatMap((link) => readProductExtras(link.extras)).find((extra) => extra.productId === id)?.name;
+      throw new BadRequestException(`"${name ?? "Un producto de la caja"}" ya no está disponible`);
+    }
+    return { picked, linked };
+  }
+
   /** Public — no auth, called by the checkout page's landing view before any payment exists. */
   async getStorePublic(slug: string, options: { trackView?: boolean; ownerMerchantId?: string } = {}) {
     const store = options.ownerMerchantId
@@ -1467,6 +1490,11 @@ export class StoresService implements OnModuleDestroy {
     if (trackView) this.queueStoreView(store.id);
 
     const soldByProduct = new Map(productStats.map((stat) => [stat.paymentLinkId, stat.quantity]));
+    const itemsById = new Map(items.map((item) => [item.id, item]));
+    const bundles = store.bundlesEnabled
+      ? (await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true }, orderBy: { createdAt: "asc" } }))
+          .map(({ id, name, kind, items: bundleItems, minimumQuantity, discountPercent }) => ({ id, name, kind, items: bundleItems as Array<{ productId: string; quantity: number }>, minimumQuantity, discountPercent }))
+      : [];
     const sharedExtraStock = new Map<string, number>();
     for (const item of items) {
       for (const extra of readProductExtras(item.extras)) {
@@ -1562,6 +1590,7 @@ export class StoresService implements OnModuleDestroy {
       leadCaptureUrl: store.leadCaptureUrl,
       cartRecommendationsEnabled: store.cartRecommendationsEnabled,
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
+      bundles,
       showLowStockToCustomers: store.showLowStockToCustomers,
       appointmentOfferings,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
@@ -1607,14 +1636,21 @@ export class StoresService implements OnModuleDestroy {
           ...(store.showLowStockToCustomers ? {} : { stock: variant.stock === 0 ? 0 : null }),
           ...(variant.stock !== undefined ? { purchaseLimit: variant.stock } : {}),
         })),
-        extras: readProductExtras(item.extras).map((extra) => ({
-          id: extra.id,
-          name: extra.name,
-          amount: extra.amount,
-          required: extra.required,
-          ...(extra.groupName ? { groupName: extra.groupName, freeAllowance: extra.freeAllowance ?? 0 } : {}),
-          available: extra.stock === undefined || (extra.inventoryKey ? sharedExtraStock.get(extra.inventoryKey) !== 0 : extra.stock !== 0),
-        })),
+        // A box choice that stands for a product shows that product's live name and photo; one that was
+        // archived or deleted drops out of the box instead of selling something the store no longer offers.
+        extras: readProductExtras(item.extras).flatMap((extra) => {
+          const product = extra.productId ? itemsById.get(extra.productId) : undefined;
+          if (extra.productId && !product) return [];
+          return [{
+            id: extra.id,
+            name: product?.name ?? extra.name,
+            amount: extra.amount,
+            required: extra.required,
+            ...(extra.groupName ? { groupName: extra.groupName, freeAllowance: extra.freeAllowance ?? 0, ...(extra.pickCount ? { pickCount: extra.pickCount } : {}) } : {}),
+            ...(product ? { productId: product.id, ...(product.imageUrls[0] ? { imageUrl: product.imageUrls[0] } : {}) } : {}),
+            available: (extra.stock === undefined || (extra.inventoryKey ? sharedExtraStock.get(extra.inventoryKey) !== 0 : extra.stock !== 0)) && product?.stock !== 0,
+          }];
+        }),
         amount: item.amount,
         currency: item.currency,
         discountPercent: item.discountPercent,
@@ -1668,9 +1704,10 @@ export class StoresService implements OnModuleDestroy {
     // guarantee against overselling is the atomic decrement on payment
     // success (see PaymentIntentsService.applyRailResult), which never lets
     // stock go negative even if two carts race past this check.
-    for (const l of links) {
-      const requested = quantityByLinkId.get(l.id)!;
-      if (fulfillmentLocation && l.fulfillmentType !== 'DIGITAL') {
+    const { picked, linked } = await this.pickedProductStock(store.id, links, dto.items);
+    for (const l of [...links, ...linked]) {
+      const requested = (quantityByLinkId.get(l.id) ?? 0) + (picked.get(l.id) ?? 0);
+      if (quantityByLinkId.has(l.id) && fulfillmentLocation && l.fulfillmentType !== 'DIGITAL') {
         const branchStock = readLocationStocks(l.locationStocks)[fulfillmentLocation.id] ?? 0;
         if (branchStock !== null && branchStock < requested) {
           throw new BadRequestException(`La ubicación ${fulfillmentLocation.name} no tiene suficiente stock de "${l.name}"`);
@@ -1710,15 +1747,8 @@ export class StoresService implements OnModuleDestroy {
         throw new BadRequestException(`"${link.name}" no tiene opciones`);
       }
 
-      const selectedExtraIds = [...(item.extraIds ?? [])].sort();
-      const selectedExtras = extras.filter((extra) => selectedExtraIds.includes(extra.id));
-      if (selectedExtras.length !== selectedExtraIds.length) {
-        throw new BadRequestException(`Un extra de "${link.name}" ya no está disponible`);
-      }
-      const missingRequired = extras.filter((extra) => extra.required && !selectedExtraIds.includes(extra.id));
-      if (missingRequired.length) {
-        throw new BadRequestException(`Elige ${missingRequired.map((extra) => `"${extra.name}"`).join(", ")} para "${link.name}"`);
-      }
+      const selectedExtras = resolveSelectedExtras(link.name, extras, item.extraIds);
+      const selectedExtraIds = selectedExtras.map((extra) => extra.id);
       const exhaustedExtra = selectedExtras.find((extra) => extra.stock === 0);
       if (exhaustedExtra) throw new BadRequestException(`"${exhaustedExtra.name}" está agotado`);
 
@@ -1792,7 +1822,7 @@ export class StoresService implements OnModuleDestroy {
 
 
     let description = cartLines
-      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}`)
+      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${selectedExtrasLabel(line.extras)}` : ""} x${line.quantity}`)
       .join(", ");
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       description = description.slice(0, MAX_DESCRIPTION_LENGTH - 1) + "…";
@@ -1929,15 +1959,8 @@ export class StoresService implements OnModuleDestroy {
         throw new BadRequestException(`"${link.name}" no tiene opciones`);
       }
 
-      const selectedExtraIds = [...(item.extraIds ?? [])].sort();
-      const extras = availableExtras.filter((extra) => selectedExtraIds.includes(extra.id));
-      if (extras.length !== selectedExtraIds.length) {
-        throw new BadRequestException(`Un extra de "${link.name}" ya no está disponible`);
-      }
-      const missingRequired = availableExtras.filter((extra) => extra.required && !selectedExtraIds.includes(extra.id));
-      if (missingRequired.length) {
-        throw new BadRequestException(`Elige ${missingRequired.map((extra) => `"${extra.name}"`).join(", ")} para "${link.name}"`);
-      }
+      const extras = resolveSelectedExtras(link.name, availableExtras, item.extraIds);
+      const selectedExtraIds = extras.map((extra) => extra.id);
 
       requestedByProduct.set(link.id, (requestedByProduct.get(link.id) ?? 0) + item.quantity);
       if (variant && typeof variant.stock === "number") {
@@ -1961,7 +1984,7 @@ export class StoresService implements OnModuleDestroy {
       }
 
       const unitAmount = discountedProductAmount(link, variant?.amount ?? link.amount) + selectedExtrasAmount(extras);
-      const details = [variant?.name, ...extras.map((extra) => extra.name)].filter(Boolean).join(" · ");
+      const details = [variant?.name, selectedExtrasLabel(extras, " · ")].filter(Boolean).join(" · ");
       return {
         paymentLinkId: link.id,
         name: link.name,
@@ -1974,9 +1997,10 @@ export class StoresService implements OnModuleDestroy {
         currency: link.currency,
       };
     });
-    for (const link of links) {
-      const requested = requestedByProduct.get(link.id) ?? 0;
-      if (fulfillmentLocation) {
+    const { picked, linked } = await this.pickedProductStock(store.id, links, dto.items);
+    for (const link of [...links, ...linked]) {
+      const requested = (requestedByProduct.get(link.id) ?? 0) + (picked.get(link.id) ?? 0);
+      if (fulfillmentLocation && requestedByProduct.has(link.id)) {
         const branchStock = readLocationStocks(link.locationStocks)[fulfillmentLocation.id] ?? 0;
         if (branchStock !== null && requested > branchStock) {
           throw new BadRequestException(`La ubicación ${fulfillmentLocation.name} no tiene suficiente stock de "${link.name}"`);

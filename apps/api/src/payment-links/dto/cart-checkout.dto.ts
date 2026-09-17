@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
 
 export class CartItemDto {
   @ApiProperty()
@@ -12,11 +12,10 @@ export class CartItemDto {
   @IsString()
   variantId?: string;
 
-  @ApiProperty({ required: false, type: [String], description: "Selected additive extra ids." })
+  @ApiProperty({ required: false, type: [String], description: "Selected additive extra ids. An id repeats once per pick inside a choose-N group." })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(12)
-  @ArrayUnique()
+  @ArrayMaxSize(48)
   @IsString({ each: true })
   extraIds?: string[];
 

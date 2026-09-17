@@ -21,6 +21,13 @@ export function sourceFixture(): SaveSourceProjectDto {
 }
 
 describe("Independent source artifacts", () => {
+  it('gives the platform commerce runtime its own budget while authored files keep theirs', () => {
+    const runtime = { path: 'commerce.js', content: '/* runtime */'.padEnd(200_000, ' ') };
+    expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'site.js', content: runtime.content }] })).toThrow('Invalid source file content');
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'commerce.js', content: ''.padEnd(400_001, ' ') }] })).toThrow('Invalid source file content');
+  });
+
   it('exports MP4 bytes intact and enforces a separate video budget', () => {
     const bytes = Buffer.alloc(3_000_000); bytes.write('ftyp', 4); bytes.write('isom', 8);
     const video = { path: 'assets/clip.mp4', encoding: 'base64' as const, content: bytes.toString('base64') };

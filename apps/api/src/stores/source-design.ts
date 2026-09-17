@@ -32,11 +32,22 @@ export function sourceDesignExploration(selected?: number) {
   return { selected };
 }
 
+function fitProse(text: string, max: number) {
+  const cut = text.slice(0, max);
+  const sentence = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  if (sentence >= max * 0.5) return cut.slice(0, sentence + 1).trim();
+  const word = cut.lastIndexOf(' ');
+  return (word >= max * 0.5 ? cut.slice(0, word) : cut).trim();
+}
+
 export function validateSourceDesign(value: any, selected?: number, requireLayout = false): SourceDesign {
   const fail = (detail = '') => { throw new BadGatewayException('La propuesta necesita tres composiciones distintas y una dirección de diseño válida.' + (detail ? ' ' + detail : '')); };
   if (!value || !Number.isInteger(value.selected) || value.selected < 0 || value.selected > 2 || (selected !== undefined && value.selected !== selected)
     || !Array.isArray(value.concepts) || value.concepts.length !== 3) return fail();
   const concepts = value.concepts.map((concept: any, index: number) => {
+    // Prose a little past the limit is a formatting slip, not a bad design: keep it, cut at a sentence or word.
+    // Losing a paid run over a 540-character premise helps nobody. Runaway text still fails below.
+    if (concept && typeof concept === 'object') concept = { ...concept, ...Object.fromEntries(fields.filter(field => field !== 'name' && typeof concept[field] === 'string' && concept[field].trim().length > 500 && concept[field].length <= 2000).map(field => [field, fitProse(concept[field].trim(), 500)])) };
     const invalidField = fields.find(field => !concept || typeof concept[field] !== 'string' || !concept[field].trim() || concept[field].length > (field === 'name' ? 80 : 500));
     if (invalidField) return fail(`concepts[${index}].${invalidField}: texto obligatorio, máximo ${invalidField === 'name' ? 80 : 500} caracteres.`);
     const result = Object.fromEntries(fields.map(field => [field, concept[field].trim()])) as SourceDesignConcept;
@@ -46,9 +57,11 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
         || layout.sections.some((id: unknown) => typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(id))
         || new Set(layout.sections).size !== layout.sections.length || !layout.sections.includes(layout.catalogSection)
         || typeof layout.standaloneIntro !== 'boolean' || typeof layout.productsInOpening !== 'boolean') return fail(`concepts[${index}].layout: 1–12 IDs únicos válidos, catalogSection incluido y ambos indicadores booleanos.`);
-      if (!layout.standaloneIntro && layout.sections[0] !== layout.catalogSection) return fail(`concepts[${index}].layout: standaloneIntro=false exige sections[0]=catalogSection (${layout.catalogSection}); no puede precederlo otro bloque.`);
+      // The section order is the composition the model actually planned; a contradicting flag is the slip.
+      // An intro before the catalog is by definition a standalone intro, so the flag follows the order.
+      const standaloneIntro = layout.standaloneIntro || layout.sections[0] !== layout.catalogSection;
       if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa editorial o dense.`);
-      result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro: layout.standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
+      result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
     }
     return result;
   });
@@ -115,6 +128,20 @@ const headingSelector = /(?:^|[\s,>+~])h[1-3](?:$|[\s.#:[,])|(?:wordmark|display
 const tightTracking = /letter-spacing\s*:\s*(-?(?:0|\.)?\d+(?:\.\d+)?)\s*em\b/gi;
 const tightTrackingClass = /tracking-\[\s*['"]?(-?(?:0|\.)?\d+(?:\.\d+)?)em['"]?\s*\]/gi;
 
+/** A heading tracked a hair too tight is a one-number fix, not a reason to discard a whole paid store. Ease it to
+ * the floor that validateSourcePresentation enforces; only changed files are touched, so edits stay byte-stable. */
+export function relaxSourceTracking(files: SourceProjectFileDto[], baseline: SourceProjectFileDto[] = []): SourceProjectFileDto[] {
+  const floor = (value: string) => Number(value) < -0.04 ? '-0.04' : value;
+  return files.map(file => {
+    if (!/\.(css|html|tsx|jsx)$/.test(file.path) || file.encoding === 'base64' || baseline.find(candidate => candidate.path === file.path)?.content === file.content) return file;
+    let content = file.content;
+    if (file.path.endsWith('.css')) content = content.replace(/([^{}]+)\{([^{}]*)\}/g, (rule, selector: string, body: string) => headingSelector.test(selector)
+      ? `${selector}{${body.replace(tightTracking, (match, value: string) => match.replace(value, floor(value)))}}` : rule);
+    content = content.replace(tightTrackingClass, (match, value: string) => match.replace(value, floor(value)));
+    return content === file.content ? file : { ...file, content };
+  });
+}
+
 /** Rejects the class of heading bug that visual review already caught in production. */
 export function validateSourcePresentation(files: SourceProjectFileDto[], baseline: SourceProjectFileDto[] = []): void {
   const bad: string[] = [];
@@ -170,6 +197,7 @@ Compress inside a semantic group (title and subhead, price and qualifier, legend
 Cap display titles with a max-width in ch so they wrap to at most two lines at 1280px and three at 390px instead of relying on the viewport, and add text-wrap:balance.
 Accent budget: exactly one accent, in at most ${SOURCE_ACCENT_SLOTS.length} places per page, drawn only from ${SOURCE_ACCENT_SLOTS.join('; ')}. Never a large background field except an announcement bar; everything else is paper, an ink rung and the surface token.
 When --brand-accent is not confirmed, sample the accent from a colour physically present in this merchant's own product photography or its setting, never from a generic palette, and name that photo and element in the concept premise. A saturated blue on a cream apparel store is the failure this rule stops.
+visualAssets[].photo is measured, not suggested: shot (packshot or scene), productKey (photographs of one product share it), dominant (colours read off the pixels, most-covering first), backdropHex and aspect. Take that accent from a photo's dominant list. When the merchant supplied the photographs, set --store-surface to their shared backdropHex or a near neighbour so the goods sit on their own ground. When one productKey has both a scene and a packshot, every authored hero, feature or card for that product leads with the scene; the packshot belongs to detail views.
 Use one hairline per store, 1px solid color-mix(in srgb, var(--store-foreground) ${SOURCE_HAIRLINE_INK_PERCENT}%, var(--store-background)), ending at the content measure rather than the container edge unless it is a full-bleed divider, at most ${SOURCE_HAIRLINES_PER_SCREEN_MAX} per screenful.
 Declare two radii, controls and media, with media ${SOURCE_MEDIA_TO_CONTROL_RADIUS.min}-${SOURCE_MEDIA_TO_CONTROL_RADIUS.max}x controls. Zero for both is valid and often better.`;
 

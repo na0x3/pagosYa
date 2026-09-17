@@ -100,3 +100,103 @@ describe('owner-friendly options editor', () => {
     expect(e.api.values().map(v => v.id)).toEqual(['a']);
   });
 });
+
+describe('choosing the cover photo', () => {
+  const edit = (imageUrls: string[], extra: Record<string, unknown> = {}) => {
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p-old' }), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }), ...extra }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', saved, () => {}, { id: 'p-old', name: 'Funda de cojín', amount: 12900, stock: 4, imageUrls });
+    document.body.append(guide.element);
+    const photos = () => [...guide.element.querySelectorAll('[data-product-photos] figure')];
+    const save = async () => { for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce()); return api.updateProduct.mock.calls[0][2]; };
+    return { api, guide, photos, save };
+  };
+
+  it('lets the owner make any photo the cover, and saves that order', async () => {
+    const t = edit(['https://example.test/pack.jpg', 'https://example.test/scene.jpg']);
+    expect(t.photos()[0].querySelector('[data-cover-photo]')).toBeNull();
+    t.photos()[1].querySelector<HTMLButtonElement>('[data-cover-photo]')!.click();
+    expect(t.photos()[0].querySelector('figcaption')!.textContent).toBe('Portada');
+    expect(t.photos()[0].querySelector('img')!.getAttribute('src')).toBe('https://example.test/scene.jpg');
+    expect((await t.save()).imageUrls).toEqual(['https://example.test/scene.jpg', 'https://example.test/pack.jpg']);
+  });
+
+  it('makes an accepted YAPI scene the cover, because the storefront card shows the cover', async () => {
+    const createProductScene = vi.fn().mockResolvedValue({ url: '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000002.jpg', parentUrl: '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg', kind: 'AI_DERIVED' });
+    const t = edit(['/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg'], { createProductScene });
+    t.photos()[0].querySelector<HTMLButtonElement>('[data-scene-photo]')!.click();
+    t.guide.element.querySelector<HTMLButtonElement>('[data-scene-generate]')!.click();
+    await vi.waitFor(() => expect(t.guide.element.querySelector('[data-scene-accept]')).not.toBeNull());
+    t.guide.element.querySelector<HTMLButtonElement>('[data-scene-accept]')!.click();
+    expect(t.photos().map(photo => photo.querySelector('figcaption')!.textContent)).toEqual(['Portada · Escena YAPI', 'Foto 2']);
+    expect(t.guide.element.querySelector('[data-product-status]')!.textContent).toContain('portada');
+    expect((await t.save()).imageUrls).toEqual(['/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000002.jpg', '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-000000000001.jpg']);
+  });
+
+  it('keeps a variant pointing at its own photo when the cover changes', async () => {
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p-old' }), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', saved, () => {}, { id: 'p-old', name: 'Suéter', amount: 10000, stock: 3, imageUrls: ['https://example.test/blue.webp', 'https://example.test/white.webp'], variants: [{ id: 'white-s', name: 'Blanco / S', amount: 10000, stock: 3, imageUrl: 'https://example.test/white.webp', options: [{ name: 'Color', value: 'Blanco' }, { name: 'Talla', value: 'S' }] }] });
+    document.body.append(guide.element);
+    guide.element.querySelectorAll('[data-product-photos] figure')[1].querySelector<HTMLButtonElement>('[data-cover-photo]')!.click();
+    for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    const input = api.updateProduct.mock.calls[0][2];
+    expect(input.imageUrls).toEqual(['https://example.test/white.webp', 'https://example.test/blue.webp']);
+    expect(input.variants[0].imageUrl).toBe('https://example.test/white.webp');
+  });
+});
+
+describe('boxes filled with catalog products', () => {
+  const catalog = { items: [
+    { id: 'matcha', name: 'Matcha', amount: 2200, imageUrls: ['/v1/uploads/matcha.jpg'], variants: [], extras: [] },
+    { id: 'pistacho', name: 'Pistacho', amount: 2200, imageUrls: [], variants: [], extras: [] },
+    { id: 'sized', name: 'Taza por tamaño', amount: 5000, imageUrls: [], variants: [{ id: 's', name: 'S', amount: 5000 }], extras: [] },
+    { id: 'box-6', name: 'Caja de 6', amount: 11500, imageUrls: [], variants: [], extras: [] },
+  ] };
+  const toStep6 = (t: ReturnType<typeof setup>) => { t.fill('name', 'Caja de 6'); t.next(); t.next(); t.fill('price', '115'); while (t.step() !== 'Paso 6 de 8') t.next(); };
+  const toggleBox = async (t: ReturnType<typeof setup>) => {
+    t.field('isBox').checked = true; t.field('isBox').dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(t.guide.element.querySelectorAll('[name="boxProduct"]').length).toBeGreaterThan(0));
+  };
+
+  it('lets the owner choose which simple products go in the box and how many the shopper picks', async () => {
+    const t = setup(); Object.assign(t.api, { sourceCatalog: vi.fn().mockResolvedValue(catalog) });
+    toStep6(t); await toggleBox(t);
+    const choices = [...t.guide.element.querySelectorAll<HTMLInputElement>('[name="boxProduct"]')];
+    expect(choices.map(input => input.value)).toEqual(['matcha', 'pistacho', 'box-6']);
+    t.next(); expect(t.guide.element.querySelector('[data-product-error]')!.textContent).toBe('Elige al menos un producto para la caja.');
+    choices[0].checked = true; choices[1].checked = true;
+    t.fill('boxPickCount', '6'); t.fill('boxGroupName', 'Sabores');
+    t.next(); t.next(); expect(t.step()).toBe('Paso 8 de 8');
+    expect(t.guide.element.querySelector('[data-product-review]')!.textContent).toContain('Caja: el cliente elige 6 entre 2 productos');
+    t.next(); await vi.waitFor(() => expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.createProduct.mock.calls[0][1].extras).toEqual([
+      { name: 'Matcha', amount: 0, groupName: 'Sabores', freeAllowance: 0, pickCount: 6, productId: 'matcha' },
+      { name: 'Pistacho', amount: 0, groupName: 'Sabores', freeAllowance: 0, pickCount: 6, productId: 'pistacho' },
+    ]);
+  });
+
+  it('keeps a saved box, and turning it off empties the box', async () => {
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'box-6' }), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }), sourceCatalog: vi.fn().mockResolvedValue(catalog) }, saved = vi.fn();
+    const initial = { id: 'box-6', name: 'Caja de 6', amount: 11500, stock: null, imageUrls: [], extras: [
+      { id: 'x1', name: 'Matcha', amount: 0, required: false, groupName: 'Sabores', freeAllowance: 0, pickCount: 6, productId: 'matcha' },
+    ] };
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', saved, () => {}, initial as any); document.body.append(guide.element);
+    const form = guide.element.querySelector('form')!, next = () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const isBox = guide.element.querySelector<HTMLInputElement>('[name="isBox"]')!;
+    expect(isBox.checked).toBe(true);
+    await vi.waitFor(() => expect(guide.element.querySelector<HTMLInputElement>('[name="boxProduct"][value="matcha"]')!.checked).toBe(true));
+    expect(guide.element.querySelector<HTMLInputElement>('[name="boxProduct"][value="box-6"]')).toBeNull();
+    expect(guide.element.querySelector<HTMLInputElement>('[name="boxPickCount"]')!.value).toBe('6');
+    isBox.checked = false; isBox.dispatchEvent(new Event('change'));
+    while (guide.element.querySelector('[data-product-step]')!.textContent !== 'Paso 8 de 8') next();
+    next(); await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    expect(api.updateProduct.mock.calls[0][2].extras).toEqual([]);
+  });
+
+  it('does not offer a box for a product whose extras are managed elsewhere', () => {
+    const api = { updateProduct: vi.fn(), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }), sourceCatalog: vi.fn() };
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', () => {}, () => {}, { id: 'pizza', name: 'Pizza', amount: 8000, extras: [{ id: 'q', name: 'Queso', amount: 500, required: true }] } as any);
+    expect(guide.element.querySelector<HTMLInputElement>('[name="isBox"]')!.disabled).toBe(true);
+    expect(guide.element.querySelector('[data-box-locked]')!.textContent).toContain('extras');
+  });
+});

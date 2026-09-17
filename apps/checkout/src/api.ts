@@ -74,7 +74,7 @@ export interface StoreItem {
   purchaseLimit?: number | null;
   color: string | null;
   variants: Array<{ id: string; name: string; amount: number; options?: Array<{ name: string; value: string }>; imageUrl?: string; stock?: number | null; purchaseLimit?: number | null }>;
-  extras: Array<{ id: string; name: string; amount: number; required: boolean; available: boolean; groupName?: string; freeAllowance?: number }>;
+  extras: Array<{ id: string; name: string; amount: number; required: boolean; available: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string; imageUrl?: string }>;
   amount: number;
   currency: string;
   discountPercent: number | null;

@@ -183,6 +183,65 @@ describe("PaymentLinksService legacy option stock", () => {
     }));
   });
 
+  it("saves a choose-N flavour group and rejects an inconsistent or ungrouped pick count", async () => {
+    const { service, prisma } = makeService();
+    await service.create("merchant_1", "store_1", {
+      name: "Caja de 4", amount: 8000,
+      extras: [
+        { name: "Matcha", amount: 0, groupName: "Sabores", pickCount: 4 },
+        { name: "Pistacho", amount: 0, groupName: "Sabores", pickCount: 4 },
+      ],
+    });
+    expect(prisma.paymentLink.create.mock.calls[0][0].data.extras).toEqual([
+      expect.objectContaining({ name: "Matcha", groupName: "Sabores", pickCount: 4, required: false }),
+      expect.objectContaining({ name: "Pistacho", groupName: "Sabores", pickCount: 4 }),
+    ]);
+    await expect(service.create("merchant_1", "store_1", { name: "Caja", amount: 8000, extras: [
+      { name: "Matcha", amount: 0, groupName: "Sabores", pickCount: 4 },
+      { name: "Pistacho", amount: 0, groupName: "Sabores", pickCount: 6 },
+    ] })).rejects.toThrow("misma cantidad a elegir");
+    await expect(service.create("merchant_1", "store_1", { name: "Caja", amount: 8000, extras: [
+      { name: "Matcha", amount: 0, pickCount: 4 },
+    ] })).rejects.toThrow("necesita un nombre de grupo");
+    await expect(service.create("merchant_1", "store_1", { name: "Caja", amount: 8000, extras: [
+      { name: "Matcha", amount: 0, groupName: "Sabores", pickCount: 4, required: true },
+    ] })).rejects.toThrow("no puede ser requerido");
+  });
+
+  it("links box choices to simple active products of the same store, named after the product", async () => {
+    const { service, prisma } = makeService();
+    const catalog = [
+      { id: "matcha", name: "Matcha", storeId: "store_1", status: "ACTIVE", variants: [], extras: [] },
+      { id: "pistacho", name: "Pistacho", storeId: "store_1", status: "ACTIVE", variants: [], extras: [] },
+      { id: "sized", name: "Galleta por tamaño", storeId: "store_1", status: "ACTIVE", variants: [{ id: "s", name: "S", amount: 1 }], extras: [] },
+    ];
+    prisma.paymentLink.findMany.mockImplementation(({ where }: any) => Promise.resolve(where?.id?.in ? catalog.filter(item => where.id.in.includes(item.id) && item.storeId === where.storeId && item.status === where.status) : []));
+    const box = (extras: any[]) => service.create("merchant_1", "store_1", { name: "Caja de 4", amount: 8000, extras });
+
+    await box([
+      { name: "typed name is replaced", amount: 0, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+      { name: "Pistacho", amount: 0, groupName: "Sabores", pickCount: 4, productId: "pistacho" },
+    ]);
+    expect(prisma.paymentLink.create.mock.calls[0][0].data.extras).toEqual([
+      expect.objectContaining({ name: "Matcha", productId: "matcha", pickCount: 4 }),
+      expect.objectContaining({ name: "Pistacho", productId: "pistacho" }),
+    ]);
+    await expect(box([{ name: "x", amount: 0, groupName: "Sabores", pickCount: 4, productId: "gone" }])).rejects.toThrow("ya no está disponible");
+    await expect(box([{ name: "x", amount: 0, groupName: "Sabores", pickCount: 4, productId: "sized" }])).rejects.toThrow("no puede ir dentro de una caja");
+    await expect(box([{ name: "x", amount: 0, productId: "matcha" }])).rejects.toThrow("necesita una cantidad a elegir");
+    await expect(box([
+      { name: "a", amount: 0, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+      { name: "b", amount: 0, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+    ])).rejects.toThrow("está repetido");
+  });
+
+  it("does not let a box contain itself", async () => {
+    const { service, prisma } = makeService();
+    prisma.paymentLink.findFirst.mockResolvedValue({ id: "box", storeId: "store_1", variants: [], extras: [], imageUrls: [], imagePositions: [] });
+    await expect(service.update("merchant_1", "store_1", "box", { extras: [{ name: "x", amount: 0, groupName: "Sabores", pickCount: 4, productId: "box" }] }))
+      .rejects.toThrow("no puede ir dentro de sí mismo");
+  });
+
   it("rejects different allowances inside the same extra group", async () => {
     const { service } = makeService();
     await expect(service.create("merchant_1", "store_1", {
