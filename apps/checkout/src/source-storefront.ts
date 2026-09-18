@@ -120,6 +120,10 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       if (data.action === 'catalog') { reply(true, store); return; }
       if (data.action === 'location') {
         // The opaque sandboxed frame cannot use geolocation itself; this page (geolocation=(self)) asks on its behalf.
+        // Only answer a buyer's click: once the position permission exists, merchant script could otherwise read it
+        // silently and send it out through `lead`. A click in the frame activates this page too; browsers that cannot
+        // report activation fail closed and the buyer marks the pin on the map instead.
+        if (!navigator.userActivation?.isActive) { reply(false, { message: 'Toca «Usar mi ubicación» para compartirla.' }); return; }
         if (!navigator.geolocation) { reply(false, { message: 'Tu navegador no comparte la ubicación.' }); return; }
         const position = await new Promise<GeolocationPosition | null>(resolve => navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: true, timeout: 10000 }));
         reply(Boolean(position), position ? { lat: position.coords.latitude, lng: position.coords.longitude } : { message: 'No pudimos obtener tu ubicación.' }); return;
