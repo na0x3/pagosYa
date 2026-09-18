@@ -25,7 +25,7 @@ function harness(options: {
       update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve({ ...pendingRefund, ...data })),
     },
     paymentIntent: {
-      findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "pi_usd", merchantId: "merchant_1", livemode: false, currency: "USD", customerEmail: null, customerName: null }),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "pi_usd", merchantId: "merchant_1", livemode: false, amount: 5000, currency: "USD", customerEmail: null, customerName: null }),
     },
     $queryRaw: jest.fn().mockResolvedValue([{ status: options.lockedStatus ?? TransactionStatus.PENDING }]),
     merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ settlementMode: SettlementMode.AGGREGATOR }) },
@@ -35,10 +35,11 @@ function harness(options: {
   const ledger = { buildRefundJournal: jest.fn().mockReturnValue([]), generateGroupId: jest.fn().mockReturnValue("group_1"), postJournalEntry: jest.fn() };
   const webhooks = { enqueueEvent: jest.fn() };
   const config = { get: jest.fn().mockReturnValue({ bobPerUsd: 6.96, intlFeeBps: 590, costBps: 420 }) };
-  const service = new RefundsService(prisma, { get: jest.fn() } as any, ledger as any, webhooks as any, config as any);
+  const shipments = { cancelForOrder: jest.fn() };
+  const service = new RefundsService(prisma, { get: jest.fn() } as any, ledger as any, webhooks as any, config as any, shipments as any);
   jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
   jest.spyOn((service as any).logger, "warn").mockImplementation(() => undefined);
-  return { service, prisma, ledger, webhooks };
+  return { service, prisma, ledger, webhooks, shipments };
 }
 
 const notice = (fields: Record<string, unknown> = {}) => ({ id: "R-1", payment_id: "D-1", status: "SUCCESS", amount: 50, currency: "USD", ...fields });
@@ -58,6 +59,18 @@ describe("RefundsService.applyDlocalRefundNotification", () => {
     }));
     expect(test.ledger.postJournalEntry).toHaveBeenCalledWith(test.prisma, "group_1", [], "USD");
     expect(test.webhooks.enqueueEvent).toHaveBeenCalledWith(test.prisma, "merchant_1", "refund.succeeded", { paymentIntentId: "pi_usd", amount: 5000 });
+  });
+
+  it("a SUCCESS that completes a full refund cancels the order's shipment in the same transaction; a partial one does not", async () => {
+    for (const [settled, cancels] of [[5000, true], [2000, false]] as const) {
+      const test = harness();
+      test.prisma.storeOrder = { findUnique: jest.fn().mockResolvedValue({ id: "ord_1", storeId: "st_1", storeName: "Tienda" }) };
+      test.prisma.transaction.aggregate = jest.fn().mockResolvedValue({ _sum: { amount: settled } });
+      await expect(test.service.applyDlocalRefundNotification(notice())).resolves.toBe("applied");
+      expect(test.prisma.transaction.aggregate).toHaveBeenCalledWith({ where: { paymentIntentId: "pi_usd", type: TransactionType.REFUND, status: TransactionStatus.SUCCEEDED }, _sum: { amount: true } });
+      if (cancels) expect(test.shipments.cancelForOrder).toHaveBeenCalledWith(test.prisma, "ord_1");
+      else expect(test.shipments.cancelForOrder).not.toHaveBeenCalled();
+    }
   });
 
   it("marks a pending refund FAILED on REJECTED, releasing the reservation without a journal", async () => {

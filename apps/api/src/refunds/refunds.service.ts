@@ -12,6 +12,7 @@ import type { DlocalConfig } from "../config/configuration";
 import { pricingForRail } from "../international/fx";
 import { openOpsCaseOnce } from "../ops/ops-escalation";
 import type { DlocalRefundNotification } from "../rails/adapters/dlocal/dlocal.types";
+import { ShipmentsService } from "../shipping/shipments.service";
 
 @Injectable()
 export class RefundsService {
@@ -23,6 +24,7 @@ export class RefundsService {
     private readonly ledger: LedgerService,
     private readonly webhooks: WebhookDispatcherService,
     private readonly config: ConfigService,
+    private readonly shipments: ShipmentsService,
   ) {}
 
   async create(merchantId: string, dto: CreateRefundDto, idempotencyKey?: string) {
@@ -186,7 +188,7 @@ export class RefundsService {
 
     const intent = await this.prisma.paymentIntent.findUniqueOrThrow({
       where: { id: refundRow.paymentIntentId },
-      select: { id: true, merchantId: true, livemode: true, currency: true, customerEmail: true, customerName: true },
+      select: { id: true, merchantId: true, livemode: true, amount: true, currency: true, customerEmail: true, customerName: true },
     });
     const payment = await this.prisma.transaction.findFirst({
       where: { paymentIntentId: intent.id, type: TransactionType.AUTHORIZATION, railId: "dlocal", railReference: paymentId },
@@ -260,16 +262,22 @@ export class RefundsService {
     tx: Prisma.TransactionClient,
     params: {
       merchantId: string;
-      intent: { id: string; livemode: boolean; currency: string; customerEmail: string | null; customerName: string | null };
+      intent: { id: string; livemode: boolean; amount: number; currency: string; customerEmail: string | null; customerName: string | null };
       refundTransaction: { id: string; amount: number };
       railId: string;
     },
   ) {
     const { merchantId, intent, refundTransaction } = params;
     const merchant = await tx.merchant.findUniqueOrThrow({ where: { id: merchantId } });
-    if (intent.livemode && tx.storeOrder?.findUnique) {
-      const order = await tx.storeOrder.findUnique({where:{paymentIntentId:intent.id}});
-      if (order) await queueStoreEmail(tx,order.storeId,'REFUND',refundTransaction.id,intent.customerEmail,{store:order.storeName,order:order.id,customer:intent.customerName || 'cliente',amount:`${(refundTransaction.amount/100).toFixed(2)} ${intent.currency}`});
+    const order = tx.storeOrder?.findUnique ? await tx.storeOrder.findUnique({ where: { paymentIntentId: intent.id } }) : null;
+    if (intent.livemode && order) await queueStoreEmail(tx,order.storeId,'REFUND',refundTransaction.id,intent.customerEmail,{store:order.storeName,order:order.id,customer:intent.customerName || 'cliente',amount:`${(refundTransaction.amount/100).toFixed(2)} ${intent.currency}`});
+    if (order) {
+      // A full refund stops the order's shipment (spec flow 4); a partial refund leaves it alone.
+      const refunded = await tx.transaction.aggregate({
+        where: { paymentIntentId: intent.id, type: TransactionType.REFUND, status: TransactionStatus.SUCCEEDED },
+        _sum: { amount: true },
+      });
+      if ((refunded._sum.amount ?? 0) >= intent.amount) await this.shipments.cancelForOrder(tx, order.id);
     }
     const lines = this.ledger.buildRefundJournal({
       merchantId,

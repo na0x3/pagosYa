@@ -72,6 +72,22 @@ describe('Carrier shipping checkout', () => {
     expect((await prisma.shipment.findUniqueOrThrow({ where: { orderId: order.id } })).status).toBe('CANCELED');
   });
 
+  it('a partial refund keeps the shipment; the refund that completes it cancels the shipment before booking', async () => {
+    const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send(cart()).expect(201)).body;
+    await pay(paid);
+    const order = await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paid.id } });
+    const refund = (amount: number, key: string) => request(app.getHttpServer()).post('/v1/refunds').set(auth()).set('Idempotency-Key', key).send({ paymentIntentId: paid.id, amount }).expect(201);
+    await refund(2500, `ship-partial-${order.id}`);
+    expect((await prisma.shipment.findUniqueOrThrow({ where: { orderId: order.id } })).status).toBe('BOOKING');
+    await refund(paid.amount - 2500, `ship-rest-${order.id}`);
+    const shipment = await prisma.shipment.findUniqueOrThrow({ where: { orderId: order.id }, include: { events: true } });
+    expect(shipment).toMatchObject({ status: 'CANCELED', nextAttemptAt: null, labelFileId: null });
+    expect(shipment.events.map(e => e.description)).toEqual(['Envío cancelado con el pedido']);
+    await app.get(ShipmentBookingWorker).tick();
+    expect((await prisma.shipment.findUniqueOrThrow({ where: { orderId: order.id } })).status).toBe('CANCELED');
+    expect((await prisma.storeOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('PAID');
+  });
+
   it('leaves own-rider rates on the old path (no shipment row)', async () => {
     const own = await prisma.deliveryZone.create({ data: { merchantId, storeId, name: 'Moto propia', fee: 1000, currency: 'BOB' } });
     const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send({ ...cart(), shippingZoneId: own.id, shippingDestination: undefined }).expect(201)).body;

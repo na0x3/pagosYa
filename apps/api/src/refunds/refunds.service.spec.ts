@@ -34,8 +34,47 @@ function harness(refundedOrReserved = 0) {
   };
   const webhooks = { enqueueEvent: jest.fn() };
   const config = { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) };
-  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any), prisma, rail, ledger, webhooks };
+  const shipments = { cancelForOrder: jest.fn() };
+  return { service: new RefundsService(prisma, rails as any, ledger as any, webhooks as any, config as any, shipments as any), prisma, rail, ledger, webhooks, shipments };
 }
+
+describe("RefundsService stops the order's shipment on a full refund", () => {
+  // The payment is 1000; `settled` is the sum of SUCCEEDED refunds once this one has succeeded.
+  function withOrder(settled: number) {
+    const test = harness();
+    test.prisma.storeOrder = { findUnique: jest.fn().mockResolvedValue({ id: "ord_1", storeId: "st_1", storeName: "Tienda" }) };
+    test.prisma.transaction.aggregate = jest.fn(({ where }: any) => Promise.resolve({ _sum: { amount: where.status === TransactionStatus.SUCCEEDED ? settled : 0 } }));
+    return test;
+  }
+
+  it("cancels the shipment inside the refund transaction when the payment is fully refunded", async () => {
+    const test = withOrder(1_000);
+    test.rail.refund.mockResolvedValue({ status: "succeeded", railReference: "rail_refund_1", raw: {} });
+    await test.service.create("merchant_1", { paymentIntentId: "pi_abc" }, "refund-order-full");
+    expect(test.prisma.storeOrder.findUnique).toHaveBeenCalledWith({ where: { paymentIntentId: "pi_abc" } });
+    expect(test.shipments.cancelForOrder).toHaveBeenCalledWith(test.prisma, "ord_1");
+  });
+
+  it("leaves the shipment alone on a partial refund", async () => {
+    const test = withOrder(300);
+    await test.service.create("merchant_1", { paymentIntentId: "pi_abc", amount: 300 }, "refund-order-partial");
+    expect(test.shipments.cancelForOrder).not.toHaveBeenCalled();
+  });
+
+  it("does not cancel while the rail refund is still pending", async () => {
+    const test = withOrder(1_000);
+    test.rail.refund.mockResolvedValue({ status: "pending", railReference: "rail_refund_1", raw: {} });
+    await test.service.create("merchant_1", { paymentIntentId: "pi_abc" }, "refund-order-pending");
+    expect(test.shipments.cancelForOrder).not.toHaveBeenCalled();
+  });
+
+  it("does nothing for a payment that is not a store order", async () => {
+    const test = withOrder(1_000);
+    test.prisma.storeOrder.findUnique.mockResolvedValue(null);
+    await test.service.create("merchant_1", { paymentIntentId: "pi_abc" }, "refund-order-none");
+    expect(test.shipments.cancelForOrder).not.toHaveBeenCalled();
+  });
+});
 
 describe("RefundsService financial invariants", () => {
   it("requires a bounded idempotency key before contacting storage or a rail", async () => {

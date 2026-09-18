@@ -18,4 +18,14 @@ describe('ShipmentBookingWorker', () => {
     await expect(worker.tick()).resolves.toBe(0);
     release(); await first;
   });
+  it('keeps booking the rest of the tick when one shipment throws (even a non-Error)', async () => {
+    const book = jest.fn(async (id: string) => { if (id === 'a') throw Object.assign(Object.create(null), { circular: true }); if (id === 'b') throw null; });
+    const worker = new ShipmentBookingWorker({ shipment: { findMany: async () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }] } } as any, { book } as any);
+    await expect(worker.tick()).resolves.toBe(3);
+    expect(book.mock.calls.map(c => c[0])).toEqual(['a', 'b', 'c']);
+  });
+  it('run() never rejects, even on a nullish failure', async () => {
+    const worker = new ShipmentBookingWorker({ shipment: { findMany: async () => { throw undefined; } } } as any, { book: jest.fn() } as any);
+    await expect(worker.run()).resolves.toBeUndefined();
+  });
 });

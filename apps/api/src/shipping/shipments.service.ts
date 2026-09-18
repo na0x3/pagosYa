@@ -19,6 +19,14 @@ export const BOOKING_BACKOFF_MS = [60_000, 300_000, 1_800_000];
 const MAX_ATTEMPTS = BOOKING_BACKOFF_MS.length;
 const CANCELABLE: ShipmentStatus[] = ['BOOKING', 'BOOKED', 'FAILED'];
 const TRACKABLE: ShipmentStatus[] = ['BOOKED', 'PICKED_UP', 'IN_TRANSIT'];
+/** Orders a shipment may still be booked for. Anything else (canceled, refunded, ...) cancels the shipment instead. */
+const SHIPPABLE_ORDER: OrderFulfillmentStatus[] = ['PAID', 'PREPARING'];
+
+/** Text for a log line that never throws: String() of anything, falling back for null-prototype objects. */
+export const errorText = (error: unknown): string => {
+  if (error instanceof Error) return error.stack ?? error.message;
+  try { return String(error); } catch { return Object.prototype.toString.call(error); }
+};
 
 /** Never surface raw internal errors (SDK/Prisma dumps, emails) to merchants. Modelled on retention.service.ts's safeDeliveryError. */
 const safeShipmentError = (error: unknown) => {
@@ -78,6 +86,23 @@ export class ShipmentsService {
     if (payment?.livemode) await queueStoreEmail(tx, order.storeId, to, event.id, payment.customerEmail, { store: order.storeName, order: order.id, customer: payment.customerName || 'cliente', amount: `${(order.amount / 100).toFixed(2)} ${order.currency}`, ...(details ? { details } : {}) });
   }
 
+  /**
+   * The single "may this shipment be booked?" guard for book(), retry() and switchCarrier():
+   * the order must still be PAID or PREPARING and its payment must not be fully refunded.
+   */
+  private async orderStillShippable(order: { status: OrderFulfillmentStatus; paymentIntentId: string }): Promise<boolean> {
+    if (!SHIPPABLE_ORDER.includes(order.status)) return false;
+    const payment = await this.prisma.paymentIntent.findUnique({ where: { id: order.paymentIntentId }, select: { amount: true } });
+    const refunded = await this.prisma.transaction.aggregate({ where: { paymentIntentId: order.paymentIntentId, type: 'REFUND', status: 'SUCCEEDED' }, _sum: { amount: true } });
+    const refundedAmount = refunded._sum.amount ?? 0;
+    return !(payment && refundedAmount > 0 && refundedAmount >= payment.amount);
+  }
+
+  /** Cancels a not-yet-booked shipment whose order can no longer ship ('Envío cancelado con el pedido'). */
+  private async cancelUnshippable(orderId: string): Promise<void> {
+    await this.prisma.$transaction(tx => this.cancelForOrder(tx, orderId));
+  }
+
   private buyerTrackingLink(orderId: string) {
     const origin = (this.config.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '');
     return `${origin}/track/${createOrderTrackingToken(orderId, this.config.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
@@ -86,6 +111,7 @@ export class ShipmentsService {
   async book(shipmentId: string): Promise<void> {
     const shipment: any = await this.prisma.shipment.findUnique({ where: { id: shipmentId }, include: { carrier: true, order: true } });
     if (!shipment || shipment.status !== 'BOOKING') return;
+    if (!(await this.orderStillShippable(shipment.order))) { await this.cancelUnshippable(shipment.orderId); return; }
     const attempt = shipment.bookingAttempts + 1;
     try {
       const order = shipment.order;
@@ -109,7 +135,8 @@ export class ShipmentsService {
         await this.advanceOrder(tx, order, 'PREPARING', ['PAID']);
       });
     } catch (error) {
-      this.logger.warn(`Booking ${shipment.id} attempt ${attempt} failed: ${error instanceof Error ? error.stack ?? error.message : JSON.stringify(error)}`);
+      // Logging must never throw (a circular non-Error would break JSON.stringify and skip recording the attempt).
+      this.logger.warn(`Booking ${shipment.id} attempt ${attempt} failed: ${errorText(error)}`);
       const message = safeShipmentError(error);
       const failed = attempt >= MAX_ATTEMPTS;
       await this.prisma.shipment.updateMany({ where: { id: shipment.id, status: 'BOOKING' }, data: { bookingAttempts: attempt, lastError: message, status: failed ? 'FAILED' : 'BOOKING', nextAttemptAt: failed ? null : new Date(Date.now() + BOOKING_BACKOFF_MS[attempt - 1]) } });
@@ -143,9 +170,17 @@ export class ShipmentsService {
     return this.view(await this.owned(merchantId, shipmentId));
   }
 
+  /** A FAILED shipment of a canceled or refunded order is canceled, never re-armed. */
+  private async refuseUnshippable(shipment: { orderId: string; order: { status: OrderFulfillmentStatus; paymentIntentId: string } }): Promise<void> {
+    if (await this.orderStillShippable(shipment.order)) return;
+    await this.cancelUnshippable(shipment.orderId);
+    throw new BadRequestException('El pedido fue cancelado o reembolsado; cancelamos el envío.');
+  }
+
   async retry(merchantId: string, shipmentId: string): Promise<ShipmentView> {
     const shipment = await this.owned(merchantId, shipmentId);
     if (shipment.status !== 'FAILED') throw new BadRequestException('Solo se reintentan envíos fallidos.');
+    await this.refuseUnshippable(shipment);
     const changed = await this.prisma.shipment.updateMany({ where: { id: shipment.id, status: 'FAILED' }, data: { status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), lastError: null } });
     if (!changed.count) throw new BadRequestException('El envío cambió; vuelve a cargarlo.');
     return this.view(await this.owned(merchantId, shipmentId));
@@ -154,6 +189,7 @@ export class ShipmentsService {
   async switchCarrier(merchantId: string, shipmentId: string, carrierId: string): Promise<ShipmentView> {
     const shipment = await this.owned(merchantId, shipmentId);
     if (shipment.status !== 'FAILED') throw new BadRequestException('Solo se cambia el courier de envíos fallidos.');
+    await this.refuseUnshippable(shipment);
     const carrier = await this.prisma.shippingCarrier.findFirst({ where: { id: carrierId, isActive: true } });
     if (!carrier || carrier.mode !== 'MANUAL') throw new BadRequestException('Elige un courier manual activo.');
     const changed = await this.prisma.shipment.updateMany({ where: { id: shipment.id, status: 'FAILED' }, data: { carrierId: carrier.id, accountType: 'MERCHANT', status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), lastError: null } });

@@ -5,7 +5,7 @@ import { CarrierRegistry } from './carriers/carrier-registry';
 const carrier = { id: 'car_servientrega', code: 'servientrega', name: 'Servientrega Bolivia', mode: 'MANUAL', trackingUrlTemplate: 'https://t.example/{tracking}' };
 
 function fakePrisma() {
-  const db: any = { shipments: new Map<string, any>(), events: [] as any[], orders: new Map<string, any>(), statusEvents: [] as any[], emails: [] as any[] };
+  const db: any = { shipments: new Map<string, any>(), events: [] as any[], orders: new Map<string, any>(), statusEvents: [] as any[], emails: [] as any[], refunded: 0 };
   const carriers: Record<string, any> = { car_servientrega: carrier, car_ocs: { ...carrier, id: 'car_ocs', code: 'ocs', name: 'OCS Bolivia', trackingUrlTemplate: null }, car_dhl_express: { ...carrier, id: 'car_dhl_express', code: 'dhl_express', mode: 'API' } };
   const hydrate = (s: any) => s && { ...s, carrier: carriers[s.carrierId], events: db.events.filter((e: any) => e.shipmentId === s.id), order: db.orders.get(s.orderId) };
   const matches = (s: any, where: any) => (!where.id || s.id === where.id) && (!where.orderId || s.orderId === where.orderId) && (!where.merchantId || s.merchantId === where.merchantId)
@@ -21,7 +21,9 @@ function fakePrisma() {
     shippingCarrier: { findFirst: async ({ where }: any) => carriers[where.id] ?? null },
     storeOrder: { updateMany: async ({ where, data }: any) => { const o = db.orders.get(where.id); if (o && where.status.in.includes(o.status)) { Object.assign(o, data); return { count: 1 }; } return { count: 0 }; } },
     storeOrderStatusEvent: { create: async ({ data }: any) => { db.statusEvents.push(data); return { id: `evt_${db.statusEvents.length}`, ...data }; } },
-    paymentIntent: { findUnique: async () => ({ livemode: true, customerEmail: 'ana@example.com', customerName: 'Ana' }) },
+    paymentIntent: { findUnique: async () => ({ livemode: true, customerEmail: 'ana@example.com', customerName: 'Ana', amount: 16500 }) },
+    // Sum of SUCCEEDED refunds of the order's payment.
+    transaction: { aggregate: async ({ where }: any) => ({ _sum: { amount: where.type === 'REFUND' && where.status === 'SUCCEEDED' && db.refunded ? db.refunded : null } }) },
     store: { findUnique: async () => ({ name: 'Tienda Sol', contactPhone: '+59170000000', shippingPrepMinutes: 60, locations: [{ id: 'loc1', name: 'Centro', address: 'Calle 21', department: 'LA_PAZ', city: 'La Paz', lat: -16.5, lng: -68.1 }] }) },
     storeRetention: { findUnique: async () => null },
     storeEmailDelivery: { upsert: async ({ create }: any) => { db.emails.push(create); return create; } },
@@ -85,6 +87,56 @@ describe('ShipmentsService', () => {
     files.put.mockRejectedValueOnce('boom');
     await make(client).book('shp_1');
     expect(db.shipments.get('shp_1')).toMatchObject({ status: 'BOOKING', bookingAttempts: 1, lastError: 'No se pudo reservar el envío.' });
+  });
+
+  it('never lets a throw escape while logging: a circular non-Error still records the attempt', async () => {
+    const { db, client } = fakePrisma(); seed(db);
+    const circular: any = { reason: 'loop' }; circular.self = circular;
+    files.put.mockRejectedValueOnce(circular);
+    await expect(make(client).book('shp_1')).resolves.toBeUndefined();
+    expect(db.shipments.get('shp_1')).toMatchObject({ status: 'BOOKING', bookingAttempts: 1, lastError: 'No se pudo reservar el envío.' });
+  });
+
+  for (const status of ['CANCELED', 'REFUNDED', 'AWAITING_PAYMENT']) it(`book cancels instead of booking when the order is ${status}`, async () => {
+    const { db, client } = fakePrisma(); seed(db); db.orders.get('ord_1').status = status;
+    await make(client).book('shp_1');
+    expect(files.put).not.toHaveBeenCalled();
+    expect(db.shipments.get('shp_1')).toMatchObject({ status: 'CANCELED', nextAttemptAt: null, labelFileId: null });
+    expect(db.events.map((e: any) => [e.status, e.description])).toEqual([['CANCELED', 'Envío cancelado con el pedido']]);
+    expect(db.orders.get('ord_1').status).toBe(status);
+  });
+
+  it('book cancels instead of booking when the payment was fully refunded (order still PAID)', async () => {
+    const { db, client } = fakePrisma(); seed(db); db.refunded = 16500;
+    await make(client).book('shp_1');
+    expect(files.put).not.toHaveBeenCalled();
+    expect(db.shipments.get('shp_1').status).toBe('CANCELED');
+    expect(db.orders.get('ord_1').status).toBe('PAID');
+  });
+
+  it('book still books after a partial refund', async () => {
+    const { db, client } = fakePrisma(); seed(db); db.refunded = 5000;
+    await make(client).book('shp_1');
+    expect(db.shipments.get('shp_1').status).toBe('BOOKED');
+  });
+
+  it('book still books a PREPARING order', async () => {
+    const { db, client } = fakePrisma(); seed(db); db.orders.get('ord_1').status = 'PREPARING';
+    await make(client).book('shp_1');
+    expect(db.shipments.get('shp_1').status).toBe('BOOKED');
+  });
+
+  it('retry and switchCarrier cancel a FAILED shipment of a refunded order instead of re-arming it', async () => {
+    for (const action of ['retry', 'switchCarrier'] as const) {
+      const { db, client } = fakePrisma(); seed(db, { status: 'FAILED', bookingAttempts: 3 }); db.refunded = 16500;
+      const service = make(client);
+      await expect(action === 'retry' ? service.retry('m_1', 'shp_1') : service.switchCarrier('m_1', 'shp_1', 'car_ocs')).rejects.toThrow('cancelado o reembolsado');
+      expect(db.shipments.get('shp_1')).toMatchObject({ status: 'CANCELED', carrierId: 'car_servientrega' });
+      expect(db.events.map((e: any) => e.description)).toEqual(['Envío cancelado con el pedido']);
+    }
+    const { db, client } = fakePrisma(); seed(db, { status: 'FAILED' }); db.orders.get('ord_1').status = 'CANCELED';
+    await expect(make(client).retry('m_1', 'shp_1')).rejects.toThrow('cancelado o reembolsado');
+    expect(db.shipments.get('shp_1').status).toBe('CANCELED');
   });
 
   it('entering a tracking number ships the order and emails the buyer the tracking link', async () => {
