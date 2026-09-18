@@ -23,12 +23,19 @@ export class OpsCarriersController {
 
   @Patch('carriers/:id')
   async update(@CurrentOpsUser() actor: SupportActor, @Param('id') id: string, @Body() dto: UpdateCarrierDto) {
-    if (dto.trackingUrlTemplate) {
-      if (!dto.trackingUrlTemplate.startsWith('https://')) throw new BadRequestException('La plantilla debe usar https.');
-      if (!dto.trackingUrlTemplate.includes('{tracking}')) throw new BadRequestException('La plantilla debe incluir {tracking}.');
+    const data: Record<string, unknown> = { ...dto };
+    if (dto.trackingUrlTemplate !== undefined) {
+      const trimmed = dto.trackingUrlTemplate.trim();
+      if (trimmed === '') {
+        data.trackingUrlTemplate = null;
+      } else {
+        if (!trimmed.startsWith('https://')) throw new BadRequestException('La plantilla debe usar https.');
+        if (!trimmed.includes('{tracking}')) throw new BadRequestException('La plantilla debe incluir {tracking}.');
+        data.trackingUrlTemplate = trimmed;
+      }
     }
     return this.prisma.$transaction(async tx => {
-      const carrier = await tx.shippingCarrier.update({ where: { id }, data: dto });
+      const carrier = await tx.shippingCarrier.update({ where: { id }, data });
       await this.auditLog.record(tx, {
         actorType: 'OPS_USER',
         actorId: actor.id,
@@ -36,7 +43,7 @@ export class OpsCarriersController {
         action: 'shipping.carrier.update',
         targetType: 'ShippingCarrier',
         targetId: id,
-        metadata: { ...dto },
+        metadata: { ...data },
       });
       return carrier;
     });

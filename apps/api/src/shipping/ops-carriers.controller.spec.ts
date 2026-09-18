@@ -14,4 +14,16 @@ describe('OpsCarriersController', () => {
     await expect(controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: 'http://x.example/{tracking}' })).rejects.toThrow('https');
     await expect(controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: 'https://x.example/' })).rejects.toThrow('{tracking}');
   });
+  it('clears the tracking template when given an empty string', async () => {
+    await controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: '' });
+    expect(tx.shippingCarrier.update).toHaveBeenCalledWith({ where: { id: 'car_ocs' }, data: { trackingUrlTemplate: null } });
+  });
+  it('clears the tracking template when given only whitespace', async () => {
+    await controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: '   ' });
+    expect(tx.shippingCarrier.update).toHaveBeenCalledWith({ where: { id: 'car_ocs' }, data: { trackingUrlTemplate: null } });
+  });
+  it('still accepts a valid https template', async () => {
+    await controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: 'https://x.example/{tracking}' });
+    expect(tx.shippingCarrier.update).toHaveBeenCalledWith({ where: { id: 'car_ocs' }, data: { trackingUrlTemplate: 'https://x.example/{tracking}' } });
+  });
 });
