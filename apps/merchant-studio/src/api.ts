@@ -192,7 +192,7 @@ export class MerchantStudioApi {
   }
   writeCommerceContent(storeId: string, path: string, method: string, body: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce-content/${path}`, { method, body: JSON.stringify(body) }); }
   shippingSettings(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping`); }
-  saveShippingSettings(storeId: string, input: { enabled: boolean; pickupEnabled: boolean }): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping`, { method: 'POST', body: JSON.stringify(input) }); }
+  saveShippingSettings(storeId: string, input: { enabled: boolean; pickupEnabled: boolean; carriersEnabled?: boolean; prepMinutes?: number }): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping`, { method: 'POST', body: JSON.stringify(input) }); }
   createShippingRate(storeId: string, input: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/delivery/zones`, { method: 'POST', body: JSON.stringify(input) }); }
   toggleShippingRate(storeId: string, rateId: string, active: boolean): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/rates/${encodeURIComponent(rateId)}`, { method: 'PATCH', body: JSON.stringify({ active }) }); }
   saveShippingWeight(storeId: string, productId: string, weightGrams: number | null): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ weightGrams }) }); }

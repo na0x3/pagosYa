@@ -6738,6 +6738,7 @@
   let categoryOrderSaveVersion = 0;
   let dashboardRefreshVersion = 0;
   let domainShop = null;
+  let renderShipmentPanel = null;
   let currentStoreId = sessionStorage.getItem("pagosya_current_store_id") || null;
   let debtLinkStatusTab = "ACTIVE";
   const DEFAULT_OPEN_SECTIONS = new Set(["storesSection", "paymentLinksSection"]);
@@ -18357,7 +18358,7 @@
           <td>${money(p.amount)}</td>
           <td><span class="badge ${esc(p.status)}">${esc(ORDER_STATUS_LABELS[p.status] || p.status)}</span>${p.paymentMethodType ? `<div class="faint" style="margin-top:4px">${esc(p.paymentMethodType)}</div>` : ""}</td>
           <td>${esc(new Date(p.createdAt).toLocaleString())}</td>
-          <td><details class="order-detail"><summary>Ver datos</summary><div class="order-detail-card"><strong>${esc(orderItemsLabel(p))}</strong>${p.description ? `<span>${esc(p.description)}</span>` : ""}${p.fulfillmentStatus ? `<span>Entrega: <b>${esc(ORDER_STATUS_LABELS[p.fulfillmentStatus] || p.fulfillmentStatus)}</b></span>` : ""}${p.deliveryRequested ? `<span><b>Entrega solicitada</b>${p.deliveryAddress ? ` · ${esc(p.deliveryAddress)}` : ""}</span>` : ""}<div class="order-contact-links">${p.customerEmail ? `<a href="mailto:${encodeURIComponent(p.customerEmail)}">Enviar correo</a>` : ""}${p.customerPhone ? `<a href="tel:${esc(String(p.customerPhone).replace(/[^+\d]/g, ""))}">Llamar</a>` : ""}${Number.isFinite(p.customerLatitude) && Number.isFinite(p.customerLongitude) ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(`${p.customerLatitude},${p.customerLongitude}`)}" target="_blank" rel="noopener noreferrer">Abrir ubicación</a>` : ""}</div>${p.orderId && (FULFILLMENT_NEXT[p.fulfillmentStatus] || []).length ? `<label class="faint">Actualizar entrega<select class="fulfillment-select" data-order-id="${esc(p.orderId)}" style="margin-top:6px"><option value="">Selecciona…</option>${FULFILLMENT_NEXT[p.fulfillmentStatus].map((status) => `<option value="${status}">${esc(ORDER_STATUS_LABELS[status] || status)}</option>`).join("")}</select></label>` : ""}<code>ID: ${esc(p.id)}</code></div></details></td>
+          <td><details class="order-detail"><summary>Ver datos</summary><div class="order-detail-card"><strong>${esc(orderItemsLabel(p))}</strong>${p.description ? `<span>${esc(p.description)}</span>` : ""}${p.fulfillmentStatus ? `<span>Entrega: <b>${esc(ORDER_STATUS_LABELS[p.fulfillmentStatus] || p.fulfillmentStatus)}</b></span>` : ""}${p.deliveryRequested ? `<span><b>Entrega solicitada</b>${p.deliveryAddress ? ` · ${esc(p.deliveryAddress)}` : ""}</span>` : ""}<div class="order-contact-links">${p.customerEmail ? `<a href="mailto:${encodeURIComponent(p.customerEmail)}">Enviar correo</a>` : ""}${p.customerPhone ? `<a href="tel:${esc(String(p.customerPhone).replace(/[^+\d]/g, ""))}">Llamar</a>` : ""}${Number.isFinite(p.customerLatitude) && Number.isFinite(p.customerLongitude) ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(`${p.customerLatitude},${p.customerLongitude}`)}" target="_blank" rel="noopener noreferrer">Abrir ubicación</a>` : ""}</div>${p.orderId && (FULFILLMENT_NEXT[p.fulfillmentStatus] || []).length ? `<label class="faint">Actualizar entrega<select class="fulfillment-select" data-order-id="${esc(p.orderId)}" style="margin-top:6px"><option value="">Selecciona…</option>${FULFILLMENT_NEXT[p.fulfillmentStatus].map((status) => `<option value="${status}">${esc(ORDER_STATUS_LABELS[status] || status)}</option>`).join("")}</select></label>` : ""}${p.orderId ? `<div data-shipment-panel data-order-id="${esc(p.orderId)}"></div>` : ""}<code>ID: ${esc(p.id)}</code></div></details></td>
         </tr>`,
       )
       .join("") ||
@@ -18392,6 +18393,22 @@
         } catch (error) {
           errorEl.textContent = "Error actualizando la entrega: " + error.message;
           select.disabled = false;
+        }
+      });
+    });
+    document.querySelectorAll(".order-detail").forEach((d) => {
+      d.addEventListener("toggle", async () => {
+        const box = d.querySelector("[data-shipment-panel]");
+        if (d.open && box && !box.dataset.loaded) {
+          box.dataset.loaded = "1";
+          try {
+            if (!renderShipmentPanel) {
+              ({ renderShipmentPanel } = await import('/src/shipment-panel.mjs'));
+            }
+            await renderShipmentPanel(box, api, box.dataset.orderId);
+          } catch (e) {
+            box.textContent = e.message;
+          }
         }
       });
     });
@@ -18934,6 +18951,7 @@
       error.retryable = true;
       throw error;
     }
+    if (options.raw && res.ok) return res.blob();
     const body = await res.json().catch(() => null);
     if (res.status === 429) {
       throw new Error("El panel recibió demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo.");
