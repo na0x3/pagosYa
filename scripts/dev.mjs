@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +21,18 @@ function portIsOpen(port, host = "127.0.0.1") {
     socket.once("error", () => finish(false));
     socket.once("timeout", () => finish(false));
   });
+}
+
+// Reads one key from apps/api/.env so dev-only checkout helpers share the API's value.
+function apiEnv(key) {
+  try {
+    const line = readFileSync(path.join(rootDir, "apps/api/.env"), "utf8")
+      .split("\n")
+      .find((entry) => entry.startsWith(`${key}=`));
+    return line?.slice(key.length + 1).trim().replace(/^(["'])(.*)\1$/, "$2") || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function runOnce(args) {
@@ -97,6 +110,9 @@ await startOrReuse("API", 3001, ["--filter", "@pagosya/api", "run", "start:dev"]
 await startOrReuse("checkout", 5175, ["--filter", "@pagosya/checkout", "exec", "vite", "--host", "127.0.0.1", "--port", "5175"], {
   VITE_API_BASE_URL: "http://localhost:3001/v1",
   VITE_CONSUMER_APP_ORIGIN: "http://localhost:4324",
+  // Lets the dev-only "Simular confirmación" button post the rail callback.
+  VITE_DEV_INTERNAL_RAIL_CALLBACK_SECRET:
+    process.env.VITE_DEV_INTERNAL_RAIL_CALLBACK_SECRET ?? apiEnv("INTERNAL_RAIL_CALLBACK_SECRET") ?? "",
 });
 await startOrReuse("dashboard", 4323, ["--filter", "@pagosya/merchant-dashboard", "run", "dev"], {
   DASHBOARD_LIVE_RELOAD: "0",

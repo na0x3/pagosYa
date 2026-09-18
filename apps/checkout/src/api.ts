@@ -626,9 +626,10 @@ export async function simulateRailCallback(
   const internalSecret = import.meta.env.VITE_DEV_INTERNAL_RAIL_CALLBACK_SECRET;
   if (!internalSecret) throw new Error("VITE_DEV_INTERNAL_RAIL_CALLBACK_SECRET is not set");
 
-  await fetch(`${API_ROOT_URL}/internal/rails/${railId}/callback`, {
+  const response = await fetch(`${API_ROOT_URL}/internal/rails/${railId}/callback`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${internalSecret}` },
     body: JSON.stringify({ paymentIntentId, status, railReference: `dev_sim_${Date.now()}` }),
   });
+  if (!response.ok) throw new Error(`Rail callback failed (${response.status})`);
 }

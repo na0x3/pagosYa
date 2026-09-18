@@ -10200,10 +10200,15 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
   `;
 
   if (import.meta.env.DEV) {
-    app.querySelector<HTMLButtonElement>("#simulate")!.addEventListener("click", async () => {
-      await simulateRailCallback(railId, paymentIntentId, "succeeded");
-      const updated = await fetchSession(clientSecret, checkoutPublishableKey);
-      renderSuccess(updated);
+    const simulate = app.querySelector<HTMLButtonElement>("#simulate")!;
+    simulate.addEventListener("click", async () => {
+      try {
+        await simulateRailCallback(railId, paymentIntentId, "succeeded");
+        const updated = await fetchSession(clientSecret, checkoutPublishableKey);
+        renderSuccess(updated);
+      } catch (error) {
+        simulate.textContent = `[dev] ${error instanceof Error ? error.message : "No se pudo simular"}`;
+      }
     });
   }
 }
