@@ -75,7 +75,17 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
         frame.inert = true; frame.title = 'Comprobación automática del sitio'; frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
         frame.sandbox.add('allow-scripts'); frame.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;height:844px;border:0;pointer-events:none;`;
         let settled = false, pagePaymentOpened = false, checkoutNavigation = false;
-        const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); signal?.removeEventListener('abort', abort); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }); resolve(rows); };
+        // `inert` does not stop the checked page from taking focus (its cart dialog's showModal() focuses a
+        // button inside the frame), so hand focus straight back to whatever the merchant last focused;
+        // otherwise keystrokes typed in the composer meanwhile are lost.
+        let returnFocus = previousFocus;
+        const trackFocus = (event: FocusEvent) => { if (event.target !== frame && event.target instanceof HTMLElement) returnFocus = event.target; };
+        const reclaimFocus = () => queueMicrotask(() => {
+          if (document.activeElement !== frame) return;
+          if (returnFocus?.isConnected && returnFocus !== document.body) returnFocus.focus({ preventScroll: true }); else frame.blur();
+        });
+        document.addEventListener('focusin', trackFocus); document.addEventListener('focusout', reclaimFocus);
+        const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); signal?.removeEventListener('abort', abort); document.removeEventListener('focusin', trackFocus); document.removeEventListener('focusout', reclaimFocus); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true }); resolve(rows); };
         const abort = () => finish([]);
         const timeout = window.setTimeout(() => finish([{ label: 'Carga del sitio', status: 'failed', detail: 'La página no respondió en 8 segundos.' }]), 8000);
         const receive = (event: MessageEvent) => {
