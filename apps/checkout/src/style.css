@@ -777,6 +777,8 @@ body.payment-page #app {
 .payment-page .status.success { background: var(--debt-green); }
 .payment-page .status.failed { background: #fecaca; }
 .payment-page .status.action { background: var(--debt-violet); }
+/* Outrank the generic .status.<state> colors, which assume their own soft background. */
+.payment-page .status:is(.success, .failed, .action) { color: var(--debt-ink); }
 .payment-page .receipt { border: 2px solid var(--debt-ink); border-radius: 1px; background: var(--debt-paper); color: var(--debt-ink); }
 .payment-page .receipt :is(.muted-label, code, .receipt-contact) { color: #404040; }
 .payment-page .receipt-line, .payment-page .receipt-row { border-color: var(--debt-ink); }
@@ -2231,6 +2233,11 @@ button.secondary:hover {
 }
 .field-error:empty {
   display: none;
+}
+
+/* Inputs carry no bottom margin, so the negative offset above would pull the message into the input. */
+.field > .field-error {
+  margin: 6px 0 0;
 }
 
 .receipt {
