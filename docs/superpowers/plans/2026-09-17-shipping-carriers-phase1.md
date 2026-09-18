@@ -2018,7 +2018,219 @@ git commit -m "Add courier settings and an order shipment panel for merchants"
 
 ---
 
-### Task 15: End-to-end verification
+### Task 15: Parcel profile — dimensions, fragility, size class
+
+Picks which vehicle class an order needs and lets rates be restricted by it. Products gain dimensions and handling flags; each order snapshots a computed parcel; rates may list allowed size classes; the waybill prints handling marks.
+
+**Files:**
+- Create: `apps/api/src/shipping/parcel.ts`, `apps/api/src/shipping/parcel.spec.ts`, `apps/api/prisma/migrations/20260917130000_parcel_profile/migration.sql`
+- Modify: `apps/api/prisma/schema.prisma`, `apps/api/src/stores/shipping-rates.ts` (+ spec), `apps/api/src/stores/stores.service.ts` (cart checkout, ~L1808), `apps/api/src/stores/shipping.controller.ts` (`PATCH products/:productId`), the `CreateDeliveryZoneDto` file + `operations.service.ts:createDeliveryZone`, `apps/api/src/shipping/carriers/carrier.ts` (`BookInput`), `apps/api/src/shipping/waybill-pdf.ts` (+ spec), `apps/api/src/shipping/shipments.service.ts` (`book`), `apps/merchant-studio/src/api.ts`, `apps/merchant-studio/src/shipping-settings.ts` (+ test), `apps/api/test/shipping-carriers.e2e-spec.ts`
+
+**Interfaces:**
+- Produces:
+  ```ts
+  type SizeClass = 'MOTO' | 'AUTO' | 'CAMIONETA';
+  type ParcelLine = { quantity: number; weightGrams: number | null; lengthCm: number | null; widthCm: number | null; heightCm: number | null; fragile: boolean; noStack: boolean };
+  type Parcel = { weightGrams: number | null; lengthCm: number | null; widthCm: number | null; heightCm: number | null; fragile: boolean; noStack: boolean; sizeClass: SizeClass | null };
+  function computeParcel(lines: ParcelLine[]): Parcel;
+  const SIZE_LIMITS: Record<SizeClass, { maxWeightGrams: number; maxDimsCm: [number, number, number] }>;
+  ```
+  `quoteShipping` input gains `sizeClass?: SizeClass | null`; `ShippingRate` gains `sizeClasses?: string[]`; `BookInput` gains `parcel: Parcel | null`; `StoreOrder.parcel Json?`.
+- Rules (starting defaults; replaced per carrier once real quotes arrive):
+  - `MOTO`: ≤ 8 kg and sorted box dims fit 40×40×40 cm, and not (fragile and box volume > 20 000 cm³).
+  - `AUTO`: ≤ 50 kg and sorted box dims fit 100×60×50 cm.
+  - `CAMIONETA`: everything larger.
+  - Unknown weight or dimensions on any line → `sizeClass: null`. Rates that list `sizeClasses` don't match `null`, the same way unknown weight never matches a weight band. Rates without `sizeClasses` behave as today.
+  - Box estimate: length = max item length, width = max item width, height = max(max item height, ceil(total volume × 1.15 / (length × width))). With `noStack`, height is the tallest item only, and length grows to fit the items side by side: length = ceil(total footprint × 1.15 / width).
+
+- [ ] **Step 1: Schema + migration**
+
+`schema.prisma`:
+```prisma
+// in model PaymentLink
+  lengthCm           Int?
+  widthCm            Int?
+  heightCm           Int?
+  fragile            Boolean           @default(false)
+  noStack            Boolean           @default(false)
+// in model DeliveryZone
+  sizeClasses String[] @default([])
+// in model StoreOrder
+  parcel             Json?
+```
+Run: `cd apps/api && pnpm prisma migrate dev --name parcel_profile && pnpm prisma generate`. The folder must sort after `20260917120000_shipping_carriers`; rename it to `20260917130000_parcel_profile` if needed.
+
+- [ ] **Step 2: Write the failing `parcel.spec.ts`**
+
+```ts
+import { computeParcel } from './parcel';
+
+const line = (over: Partial<Parameters<typeof computeParcel>[0][number]> = {}) => ({ quantity: 1, weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: false, noStack: false, ...over });
+
+describe('computeParcel', () => {
+  it('sums weight across quantities and classifies a small box as MOTO', () => {
+    expect(computeParcel([line({ quantity: 3 })])).toMatchObject({ weightGrams: 1500, lengthCm: 20, widthCm: 15, sizeClass: 'MOTO' });
+  });
+  it('stacks items to estimate height', () => {
+    const p = computeParcel([line({ quantity: 4 })]); // 4 × 3000 cm³ × 1.15 / (20×15) = 46 → 46 cm
+    expect(p.heightCm).toBe(46);
+    expect(p.sizeClass).toBe('AUTO'); // 46 > 40
+  });
+  it('uses AUTO above 8 kg and CAMIONETA above 50 kg or oversized', () => {
+    expect(computeParcel([line({ weightGrams: 9000 })]).sizeClass).toBe('AUTO');
+    expect(computeParcel([line({ weightGrams: 51000 })]).sizeClass).toBe('CAMIONETA');
+    expect(computeParcel([line({ lengthCm: 120, widthCm: 70, heightCm: 20 })]).sizeClass).toBe('CAMIONETA');
+  });
+  it('moves large fragile boxes off motorbikes', () => {
+    expect(computeParcel([line({ lengthCm: 35, widthCm: 30, heightCm: 25, fragile: true })]).sizeClass).toBe('AUTO'); // 26 250 cm³
+    expect(computeParcel([line({ fragile: true })])).toMatchObject({ sizeClass: 'MOTO', fragile: true });
+  });
+  it('lays no-stack items side by side instead of stacking', () => {
+    const p = computeParcel([line({ quantity: 4, noStack: true })]);
+    expect(p).toMatchObject({ heightCm: 10, widthCm: 15, noStack: true });
+    expect(p.lengthCm).toBe(92); // ceil(4 × 300 cm² × 1.15 / 15)
+  });
+  it('returns null size class when any line lacks weight or dimensions', () => {
+    expect(computeParcel([line(), line({ weightGrams: null })])).toMatchObject({ weightGrams: null, sizeClass: null });
+    expect(computeParcel([line({ heightCm: null })]).sizeClass).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 3: Run to confirm failure**
+
+Run: `cd apps/api && pnpm test -- parcel`
+Expected: FAIL, module not found.
+
+- [ ] **Step 4: Implement `parcel.ts`**
+
+```ts
+export type SizeClass = 'MOTO' | 'AUTO' | 'CAMIONETA';
+export type ParcelLine = { quantity: number; weightGrams: number | null; lengthCm: number | null; widthCm: number | null; heightCm: number | null; fragile: boolean; noStack: boolean };
+export type Parcel = { weightGrams: number | null; lengthCm: number | null; widthCm: number | null; heightCm: number | null; fragile: boolean; noStack: boolean; sizeClass: SizeClass | null };
+
+export const SIZE_CLASSES: SizeClass[] = ['MOTO', 'AUTO', 'CAMIONETA'];
+export const SIZE_LIMITS: Record<Exclude<SizeClass, 'CAMIONETA'>, { maxWeightGrams: number; maxDimsCm: [number, number, number] }> = {
+  MOTO: { maxWeightGrams: 8_000, maxDimsCm: [40, 40, 40] },
+  AUTO: { maxWeightGrams: 50_000, maxDimsCm: [100, 60, 50] },
+};
+const PACKING = 1.15;
+const FRAGILE_MOTO_MAX_CM3 = 20_000;
+
+const fits = (dims: number[], limit: [number, number, number]) => {
+  const sorted = [...dims].sort((a, b) => b - a);
+  return sorted.every((value, index) => value <= limit[index]);
+};
+
+export function computeParcel(lines: ParcelLine[]): Parcel {
+  const fragile = lines.some(l => l.fragile);
+  const noStack = lines.some(l => l.noStack);
+  const weightKnown = lines.every(l => l.weightGrams !== null);
+  const weightGrams = weightKnown ? lines.reduce((sum, l) => sum + l.weightGrams! * l.quantity, 0) : null;
+  if (!lines.length || lines.some(l => l.lengthCm === null || l.widthCm === null || l.heightCm === null)) {
+    return { weightGrams, lengthCm: null, widthCm: null, heightCm: null, fragile, noStack, sizeClass: null };
+  }
+  const length = Math.max(...lines.map(l => l.lengthCm!));
+  const width = Math.max(...lines.map(l => l.widthCm!));
+  const tallest = Math.max(...lines.map(l => l.heightCm!));
+  let lengthCm = length, heightCm: number;
+  if (noStack) {
+    const footprint = lines.reduce((sum, l) => sum + l.lengthCm! * l.widthCm! * l.quantity, 0);
+    lengthCm = Math.max(length, Math.ceil((footprint * PACKING) / width));
+    heightCm = tallest;
+  } else {
+    const volume = lines.reduce((sum, l) => sum + l.lengthCm! * l.widthCm! * l.heightCm! * l.quantity, 0);
+    heightCm = Math.max(tallest, Math.ceil((volume * PACKING) / (length * width)));
+  }
+  const dims = [lengthCm, width, heightCm];
+  let sizeClass: SizeClass | null = null;
+  if (weightGrams !== null) {
+    const boxVolume = lengthCm * width * heightCm;
+    if (weightGrams <= SIZE_LIMITS.MOTO.maxWeightGrams && fits(dims, SIZE_LIMITS.MOTO.maxDimsCm) && !(fragile && boxVolume > FRAGILE_MOTO_MAX_CM3)) sizeClass = 'MOTO';
+    else if (weightGrams <= SIZE_LIMITS.AUTO.maxWeightGrams && fits(dims, SIZE_LIMITS.AUTO.maxDimsCm)) sizeClass = 'AUTO';
+    else sizeClass = 'CAMIONETA';
+  }
+  return { weightGrams, lengthCm, widthCm: width, heightCm, fragile, noStack, sizeClass };
+}
+```
+
+- [ ] **Step 5: Run the parcel tests**
+
+Run: `cd apps/api && pnpm test -- parcel`
+Expected: PASS (6 tests). If an expected number in the spec is off by one because of rounding, recompute it by hand from the rules above and fix the test, not the rule.
+
+- [ ] **Step 6: Rates filter by size class**: add to `shipping-rates.spec.ts`:
+
+```ts
+  it('restricts rates to their size classes and never matches an unknown size', () => {
+    const moto = { ...rate, id: 'moto', sizeClasses: ['MOTO'] };
+    const base = { currency: 'BOB', subtotal: 5000, weightGrams: 500 };
+    expect(quoteShipping([moto], { ...base, sizeClass: 'MOTO' }).options).toHaveLength(1);
+    expect(quoteShipping([moto], { ...base, sizeClass: 'AUTO' }).options).toHaveLength(0);
+    expect(quoteShipping([moto], { ...base, sizeClass: null }).options).toHaveLength(0);
+    expect(quoteShipping([rate], { ...base, sizeClass: null }).options).toHaveLength(1);
+  });
+```
+In `shipping-rates.ts`: add `sizeClasses?: string[]` to `ShippingRate`, `sizeClass?: string | null` to the input, and this filter clause:
+`&& (!rate.sizeClasses?.length || !!input.sizeClass && rate.sizeClasses.includes(input.sizeClass))`.
+Run: `pnpm test -- shipping-rates` → PASS.
+
+- [ ] **Step 7: Wire into checkout** (`stores.service.ts`)
+- Make sure the `links` query selects `lengthCm, widthCm, heightCm, fragile, noStack` next to `shippingWeightGrams`.
+- Next to the existing `weightGrams` computation (~L1808), add:
+  ```ts
+      const parcel = computeParcel(links.map(link => ({ quantity: quantityByLinkId.get(link.id)!, weightGrams: link.shippingWeightGrams, lengthCm: link.lengthCm, widthCm: link.widthCm, heightCm: link.heightCm, fragile: link.fragile, noStack: link.noStack })));
+  ```
+  Pass `sizeClass: parcel.sizeClass` to `quoteShipping`. Hoist `parcel` (declare `let parcel: Parcel | null = null;` next to `let shipping`) so the order create can read it.
+- In `tx.storeOrder.create` data add `...(parcel && shipping?.carrierId ? { parcel: parcel as Prisma.InputJsonValue } : {})`.
+- Add `sizeClass: parcel?.sizeClass ?? null` to the `quoteOnly` return object, so the storefront can show "Envío en moto / auto / camioneta".
+
+- [ ] **Step 8: Merchant inputs**
+- `stores/shipping.controller.ts`: extend `ShippingWeightDto` with optional `lengthCm`, `widthCm`, `heightCm` (each `@ValidateIf(v => v !== null) @IsInt() @Min(1) @Max(500)`), and optional `fragile`, `noStack` (`@IsOptional() @IsBoolean()`). The `weight` handler writes whichever are present. `get()`'s product select adds `lengthCm, widthCm, heightCm, fragile, noStack`.
+- `CreateDeliveryZoneDto`: `@IsOptional() @IsArray() @IsIn(['MOTO','AUTO','CAMIONETA'], { each: true }) sizeClasses?: string[];`. `createDeliveryZone` stores `sizeClasses: dto.sizeClasses ?? []`.
+- `merchant-studio/src/api.ts`: `saveShippingWeight(storeId, productId, input: { weightGrams: number | null; lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null; fragile?: boolean; noStack?: boolean })`. Keep backward compatibility: if a number is passed, wrap it as `{ weightGrams }`.
+- `shipping-settings.ts`: in each `[data-product-weight]` form, add three number inputs (`Largo cm`, `Ancho cm`, `Alto cm`) and two checkboxes (`Frágil`, `No apilar`), prefilled from state. Submit sends all of them. In the rate form (when `state.carriersEnabled`), add a fieldset `Tamaño del paquete (vacío = todos)` with checkboxes `name="sizeClasses"` for `MOTO` (Moto), `AUTO` (Auto), `CAMIONETA` (Camioneta); on submit add `const sizes = form.getAll('sizeClasses').map(String); if (sizes.length) rate.sizeClasses = sizes;`. Add a vitest case to `shipping-settings.test.ts` asserting `createShippingRate` receives `sizeClasses: ['MOTO']` and `saveShippingWeight` receives `{ lengthCm: 20, fragile: true, ... }`.
+
+- [ ] **Step 9: Carriers and waybill**
+- `carrier.ts`: add `parcel: Parcel | null` to `BookInput` (import the type from `../parcel`).
+- `shipments.service.ts` `book()`: `const parcel = (order.parcel ?? null) as Parcel | null;` set `weightGrams: parcel?.weightGrams ?? null, parcel` in `input`.
+- `waybill-pdf.ts`: under the weight line, print `Medidas: ${l}×${w}×${h} cm` when known and `Vehículo: Moto/Auto/Camioneta` when `sizeClass` is set. When `fragile` or `noStack`, draw a bold red banner at the top right: `FRÁGIL` / `NO APILAR` / `FRÁGIL · NO APILAR` (`doc.fillColor('#b91c1c').fontSize(16).text(mark, 300, 28, { width: 260, align: 'right' })`).
+- `waybill-pdf.spec.ts`: add a case with `parcel: { weightGrams: 1200, lengthCm: 30, widthCm: 20, heightCm: 15, fragile: true, noStack: true, sizeClass: 'MOTO' }` that asserts the PDF renders (header `%PDF-`, one page). Add `parcel: null` to the existing fixture.
+- `shipments.service.spec.ts`: add `parcel: null` to the seeded order; the tests should still pass.
+
+- [ ] **Step 10: E2E**: in `shipping-carriers.e2e-spec.ts`, add:
+
+```ts
+  it('classifies the parcel, hides motorbike rates for big boxes and snapshots the parcel', async () => {
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: true }).expect(200);
+    const moto = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Moto SCZ', fee: 1500, departments: ['SANTA_CRUZ'], carrierId: 'car_other', sizeClasses: ['MOTO'] }).expect(201)).body.id;
+    const small = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send({ ...cart(), shippingZoneId: undefined }).expect(201)).body;
+    expect(small.sizeClass).toBe('MOTO');
+    expect(small.shippingOptions.map((o: any) => o.id)).toContain(moto);
+    const big = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send({ ...cart(), shippingZoneId: undefined, items: [{ paymentLinkId: productId, quantity: 20 }] }).expect(201)).body;
+    expect(big.sizeClass).not.toBe('MOTO');
+    expect(big.shippingOptions.map((o: any) => o.id)).not.toContain(moto);
+    const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send({ ...cart(), shippingZoneId: moto }).expect(201)).body;
+    const order = await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paid.id } });
+    expect(order.parcel).toMatchObject({ sizeClass: 'MOTO', fragile: true, weightGrams: 500 });
+  });
+```
+
+- [ ] **Step 11: Run everything touched**
+
+Run: `cd apps/api && pnpm test -- parcel shipping-rates waybill-pdf shipments.service && pnpm test:e2e -- shipping-carriers brand-shipping && cd ../merchant-studio && pnpm vitest run src/shipping-settings.test.ts && pnpm build`
+Expected: all PASS.
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add apps/api/prisma apps/api/src/shipping apps/api/src/stores apps/api/src/operations apps/api/test/shipping-carriers.e2e-spec.ts apps/merchant-studio/src
+git commit -m "Pick the vehicle class from product size, weight and fragility"
+```
+
+---
+
+### Task 16: End-to-end verification
 
 - [ ] **Step 1: Full API suites**
 
