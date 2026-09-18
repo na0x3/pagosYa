@@ -87,6 +87,7 @@ describe('Carrier shipping checkout', () => {
     expect(settings.carriers.map((c: any) => c.code)).not.toContain('dhl_express');
     await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'X', fee: 1, departments: ['LIMA'] }).expect(400);
     await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Y', fee: 1, carrierId: 'car_dhl_express' }).expect(400);
+    await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Z', fee: 1, carrierId: '' }).expect(400);
 
     const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send(cart()).expect(201)).body;
     await pay(paid);
@@ -99,7 +100,9 @@ describe('Carrier shipping checkout', () => {
     expect(pdf.headers['content-type']).toContain('application/pdf');
     expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
     const other = (await request(app.getHttpServer()).post('/v1/merchants').send({ name: 'CarrierOther', email: 'carrier-other@test.example', settlementMode: 'AGGREGATOR' }).expect(201)).body.testKeys.secretKey;
-    await request(app.getHttpServer()).get(`/v1/shipments/${view.id}/label`).set({ Authorization: `Bearer ${other}` }).expect(404);
+    const otherLabel = await request(app.getHttpServer()).get(`/v1/shipments/${view.id}/label`).set({ Authorization: `Bearer ${other}` }).expect(404);
+    expect(otherLabel.headers['content-type']).toContain('application/json');
+    await request(app.getHttpServer()).post(`/v1/shipments/${view.id}/tracking`).set({ Authorization: `Bearer ${other}` }).send({ trackingNumber: 'SV-000123' }).expect(404);
     const tracked = (await request(app.getHttpServer()).post(`/v1/shipments/${view.id}/tracking`).set(auth()).send({ trackingNumber: 'SV-000123' }).expect(201)).body;
     expect(tracked).toMatchObject({ status: 'IN_TRANSIT', trackingNumber: 'SV-000123' });
     expect((await prisma.storeOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('SHIPPED');

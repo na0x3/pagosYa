@@ -1,15 +1,16 @@
-import { IsBoolean, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class TrackingNumberDto {
-  @IsString()
-  @MaxLength(60)
-  @Matches(/^[A-Za-z0-9 ._\/-]{3,60}$/)
+  @IsString({ message: 'Escribe un número de guía válido.' })
+  @MaxLength(60, { message: 'Escribe un número de guía válido.' })
+  @Matches(/^[A-Za-z0-9 ._\/-]{3,60}$/, { message: 'Escribe un número de guía válido.' })
   trackingNumber!: string;
 }
 
 export class SwitchCarrierDto {
-  @IsString()
-  @MaxLength(48)
+  @IsString({ message: 'Elige un courier.' })
+  @MinLength(1, { message: 'Elige un courier.' })
+  @MaxLength(48, { message: 'Elige un courier.' })
   carrierId!: string;
 }
 

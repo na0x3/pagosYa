@@ -1011,27 +1011,27 @@ export class StoreLocationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsIn(BOLIVIA_DEPARTMENTS)
+  @IsIn(BOLIVIA_DEPARTMENTS, { message: 'Elige un departamento válido.' })
   department?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
+  @IsString({ message: 'Escribe la ciudad.' })
+  @MaxLength(80, { message: 'Escribe la ciudad.' })
   city?: string;
 
   @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  @Min(-23.0)
-  @Max(-9.6)
+  @ValidateIf((o) => o.lng !== undefined)
+  @IsNumber({}, { message: 'Marca la sucursal dentro de Bolivia.' })
+  @Min(-23.0, { message: 'Marca la sucursal dentro de Bolivia.' })
+  @Max(-9.6, { message: 'Marca la sucursal dentro de Bolivia.' })
   lat?: number;
 
   @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  @Min(-69.7)
-  @Max(-57.4)
+  @ValidateIf((o) => o.lat !== undefined)
+  @IsNumber({}, { message: 'Marca la sucursal dentro de Bolivia.' })
+  @Min(-69.7, { message: 'Marca la sucursal dentro de Bolivia.' })
+  @Max(-57.4, { message: 'Marca la sucursal dentro de Bolivia.' })
   lng?: number;
 
   @ApiProperty()

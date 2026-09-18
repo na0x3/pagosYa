@@ -9,8 +9,8 @@ import { SwitchCarrierDto, TrackingNumberDto } from './dto';
 export class MerchantShipmentsController {
   constructor(private readonly shipments: ShipmentsService) {}
   @Get('orders/:orderId/shipment') view(@CurrentMerchant() m: { id: string }, @Param('orderId') orderId: string) { return this.shipments.viewForMerchant(m.id, orderId); }
-  @Get('shipments/:id/label') @Header('Content-Type', 'application/pdf') @Header('Cache-Control', 'private, no-store')
-  async label(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return new StreamableFile(await this.shipments.label(m.id, id), { disposition: `attachment; filename="guia-${id}.pdf"` }); }
+  @Get('shipments/:id/label') @Header('Cache-Control', 'private, no-store')
+  async label(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return new StreamableFile(await this.shipments.label(m.id, id), { type: 'application/pdf', disposition: `attachment; filename="guia-${id}.pdf"` }); }
   @Post('shipments/:id/tracking') tracking(@CurrentMerchant() m: { id: string }, @Param('id') id: string, @Body() dto: TrackingNumberDto) { return this.shipments.setTrackingNumber(m.id, id, dto.trackingNumber); }
   @Post('shipments/:id/delivered') delivered(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return this.shipments.markDelivered(m.id, id); }
   @Post('shipments/:id/retry') retry(@CurrentMerchant() m: { id: string }, @Param('id') id: string) { return this.shipments.retry(m.id, id); }

@@ -9,7 +9,11 @@ class ShippingSettingsDto {
   @IsBoolean() enabled!: boolean;
   @IsBoolean() pickupEnabled!: boolean;
   @IsOptional() @IsBoolean() carriersEnabled?: boolean;
-  @IsOptional() @IsInt() @Min(0) @Max(1440) prepMinutes?: number;
+  @IsOptional()
+  @IsInt({ message: 'El tiempo de preparación debe estar entre 0 y 1440 minutos.' })
+  @Min(0, { message: 'El tiempo de preparación debe estar entre 0 y 1440 minutos.' })
+  @Max(1440, { message: 'El tiempo de preparación debe estar entre 0 y 1440 minutos.' })
+  prepMinutes?: number;
 }
 class ShippingWeightDto { @ValidateIf((_object, value) => value !== null) @IsInt() @Min(0) @Max(100000000) weightGrams!: number | null; }
 @UseGuards(MerchantAuthGuard)

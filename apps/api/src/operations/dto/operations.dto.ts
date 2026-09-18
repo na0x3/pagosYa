@@ -16,6 +16,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from "class-validator";
 import { BOLIVIA_DEPARTMENTS } from "../../shipping/bolivia-address";
@@ -107,8 +108,8 @@ export class CreateAutomationDto {
 }
 
 export class CreateDeliveryZoneDto {
-  @IsOptional() @IsString() @MaxLength(48) carrierId?: string;
-  @IsOptional() @IsArray() @ArrayMaxSize(9) @IsIn([...BOLIVIA_DEPARTMENTS], { each: true }) departments?: string[];
+  @IsOptional() @IsString({ message: 'Elige un courier disponible.' }) @MinLength(1, { message: 'Elige un courier disponible.' }) @MaxLength(48, { message: 'Elige un courier disponible.' }) carrierId?: string;
+  @IsOptional() @IsArray({ message: 'Elige departamentos válidos.' }) @ArrayMaxSize(9, { message: 'Elige departamentos válidos.' }) @IsIn([...BOLIVIA_DEPARTMENTS], { each: true, message: 'Elige departamentos válidos.' }) departments?: string[];
   @IsOptional() @IsArray() @ArrayMaxSize(250) @Matches(/^[A-Z]{2}$/, { each: true }) countryCodes?: string[];
   @IsOptional() @IsArray() @ArrayMaxSize(100) @Matches(/^[A-Z0-9]{1,12}$/, { each: true }) postalPrefixes?: string[];
   @IsOptional() @IsIn(['BOB', 'USD']) currency?: string;

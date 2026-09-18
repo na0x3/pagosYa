@@ -275,6 +275,20 @@ describe("CreateStoreDto storefront layout", () => {
     await expect(validate(dto)).resolves.toHaveLength(0);
   });
 
+  it("requires a location's lat and lng together, never just one", async () => {
+    const latOnly = plainToInstance(CreateStoreDto, {
+      name: "Cocina Norte",
+      locations: [{ id: "centro", name: "Sucursal Centro", pickupEnabled: true, deliveryEnabled: true, lat: -16.5 }],
+    });
+    const both = plainToInstance(CreateStoreDto, {
+      name: "Cocina Norte",
+      locations: [{ id: "centro", name: "Sucursal Centro", pickupEnabled: true, deliveryEnabled: true, lat: -16.5, lng: -68.12 }],
+    });
+
+    expect(await validate(latOnly)).not.toHaveLength(0);
+    await expect(validate(both)).resolves.toHaveLength(0);
+  });
+
   it("accepts only booleans for the cart recommendation preference", async () => {
     const valid = plainToInstance(CreateStoreDto, { name: "Taller Norte", cartRecommendationsEnabled: false });
     const invalid = plainToInstance(CreateStoreDto, { name: "Taller Norte", cartRecommendationsEnabled: "no" });
