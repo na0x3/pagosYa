@@ -127,3 +127,21 @@ test('stores without carriers keep the single address field', async ({ page }) =
   expect(bodies.checkouts[0]).not.toHaveProperty('shippingDestination');
   expect(await page.evaluate(() => typeof (window as any).__pagosyaSetPin)).toBe('undefined');
 });
+
+test('at 390px the address fieldset and map container fit without horizontal scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, { shippingCarriersEnabled: true });
+  const fieldset = page.locator('[data-shipping-destination]');
+  const map = page.locator('[data-shipping-map]');
+  await expect(fieldset).toBeVisible();
+  await expect(map).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  const [fieldsetBox, mapBox, viewportWidth] = await Promise.all([
+    fieldset.evaluate((el) => el.getBoundingClientRect().right),
+    map.evaluate((el) => el.getBoundingClientRect().right),
+    page.evaluate(() => document.documentElement.clientWidth),
+  ]);
+  expect(fieldsetBox).toBeLessThanOrEqual(viewportWidth + 1);
+  expect(mapBox).toBeLessThanOrEqual(viewportWidth + 1);
+});
