@@ -70,12 +70,23 @@ describe('ShipmentsService', () => {
     }
   });
 
+  it('books safely when a non-Error is thrown, recording a Spanish fallback message', async () => {
+    const { db, client } = fakePrisma(); seed(db);
+    files.put.mockRejectedValueOnce('boom');
+    await make(client).book('shp_1');
+    expect(db.shipments.get('shp_1')).toMatchObject({ status: 'BOOKING', bookingAttempts: 1, lastError: 'No se pudo reservar el envío.' });
+  });
+
   it('entering a tracking number ships the order and emails the buyer the tracking link', async () => {
     const { db, client } = fakePrisma(); seed(db, { status: 'BOOKED' });
+    client.storeRetention.findUnique = async () => ({ settings: { emailWorkspace: { templates: { SHIPPED: { enabled: true, subject: 'Tu pedido {{order}} va en camino', body: 'Hola {{customer}}, tu pedido está en camino.' } } } } });
     const view = await make(client).setTrackingNumber('m_1', 'shp_1', ' SV-123 ');
     expect(view).toMatchObject({ trackingNumber: 'SV-123', trackingUrl: 'https://t.example/SV-123', status: 'IN_TRANSIT' });
     expect(db.orders.get('ord_1').status).toBe('SHIPPED');
     expect(db.statusEvents.map((e: any) => e.status)).toEqual(['SHIPPED']);
+    expect(db.emails).toHaveLength(1);
+    expect(db.emails[0].body).toContain('SV-123');
+    expect(db.emails[0].body).toContain('https://t.example/SV-123');
   });
 
   it("rejects tracking on another merchant's shipment", async () => {
@@ -109,6 +120,15 @@ describe('ShipmentsService', () => {
     db.shipments.get('shp_1').status = 'IN_TRANSIT';
     await make(client).cancelForOrder(client, 'ord_1');
     expect(db.shipments.get('shp_1').status).toBe('IN_TRANSIT');
+  });
+
+  it('cancelForOrder blocks a later retry: the shipment stays CANCELED', async () => {
+    const { db, client } = fakePrisma(); seed(db, { status: 'FAILED' });
+    const service = make(client);
+    await service.cancelForOrder(client, 'ord_1');
+    expect(db.shipments.get('shp_1').status).toBe('CANCELED');
+    await expect(service.retry('m_1', 'shp_1')).rejects.toThrow();
+    expect(db.shipments.get('shp_1').status).toBe('CANCELED');
   });
 
   it('builds tracking URLs safely', () => {

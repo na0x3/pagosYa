@@ -19,6 +19,12 @@ const MAX_ATTEMPTS = BOOKING_BACKOFF_MS.length;
 const CANCELABLE: ShipmentStatus[] = ['BOOKING', 'BOOKED', 'FAILED'];
 const TRACKABLE: ShipmentStatus[] = ['BOOKED', 'PICKED_UP', 'IN_TRANSIT'];
 
+/** Never surface raw internal errors (SDK/Prisma dumps, emails) to merchants. Modelled on retention.service.ts's safeDeliveryError. */
+const safeShipmentError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : 'No se pudo reservar el envío.';
+  return message.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[correo oculto]').slice(0, 300);
+};
+
 export type ShipmentView = {
   id: string; status: ShipmentStatus; carrier: { id: string; code: string; name: string; mode: string };
   trackingNumber: string | null; trackingUrl: string | null; hasLabel: boolean; lastError: string | null;
@@ -101,8 +107,8 @@ export class ShipmentsService {
         await this.advanceOrder(tx, order, 'PREPARING', ['PAID']);
       });
     } catch (error) {
-      const message = (error as Error).message.slice(0, 500);
-      this.logger.warn(`Booking ${shipment.id} attempt ${attempt} failed: ${message}`);
+      this.logger.warn(`Booking ${shipment.id} attempt ${attempt} failed: ${error instanceof Error ? error.stack ?? error.message : JSON.stringify(error)}`);
+      const message = safeShipmentError(error);
       const failed = attempt >= MAX_ATTEMPTS;
       await this.prisma.shipment.updateMany({ where: { id: shipment.id, status: 'BOOKING' }, data: { bookingAttempts: attempt, lastError: message, status: failed ? 'FAILED' : 'BOOKING', nextAttemptAt: failed ? null : new Date(Date.now() + BOOKING_BACKOFF_MS[attempt - 1]) } });
     }
@@ -114,7 +120,8 @@ export class ShipmentsService {
     if (!/^[A-Za-z0-9 ._\/-]{3,60}$/.test(value)) throw new BadRequestException('Escribe un número de seguimiento válido.');
     if (!TRACKABLE.includes(shipment.status)) throw new BadRequestException('Este envío ya no acepta número de seguimiento.');
     await this.prisma.$transaction(async tx => {
-      await tx.shipment.update({ where: { id: shipment.id }, data: { trackingNumber: value, status: 'IN_TRANSIT' } });
+      const changed = await tx.shipment.updateMany({ where: { id: shipment.id, status: { in: TRACKABLE } }, data: { trackingNumber: value, status: 'IN_TRANSIT' } });
+      if (!changed.count) throw new BadRequestException('El envío cambió; vuelve a cargarlo.');
       await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: 'IN_TRANSIT', description: `Entregado a ${shipment.carrier.name} · ${value}` } });
       const url = ShipmentsService.trackingUrl(shipment.carrier.trackingUrlTemplate, value);
       await this.advanceOrder(tx, shipment.order, 'SHIPPED', ['PAID', 'PREPARING'], `Courier: ${shipment.carrier.name}\nNº de seguimiento: ${value}${url ? `\nRastrea en el courier: ${url}` : ''}\nSigue tu pedido: ${this.buyerTrackingLink(shipment.order.id)}`);
@@ -126,7 +133,8 @@ export class ShipmentsService {
     const shipment = await this.owned(merchantId, shipmentId);
     if (!TRACKABLE.includes(shipment.status)) throw new BadRequestException('Este envío no se puede marcar como entregado.');
     await this.prisma.$transaction(async tx => {
-      await tx.shipment.update({ where: { id: shipment.id }, data: { status: 'DELIVERED', deliveredAt: new Date() } });
+      const changed = await tx.shipment.updateMany({ where: { id: shipment.id, status: { in: TRACKABLE } }, data: { status: 'DELIVERED', deliveredAt: new Date() } });
+      if (!changed.count) throw new BadRequestException('El envío cambió; vuelve a cargarlo.');
       await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: 'DELIVERED', description: 'Entregado al destinatario' } });
       await this.advanceOrder(tx, shipment.order, 'DELIVERED', ['PAID', 'PREPARING', 'SHIPPED']);
     });
@@ -136,7 +144,8 @@ export class ShipmentsService {
   async retry(merchantId: string, shipmentId: string): Promise<ShipmentView> {
     const shipment = await this.owned(merchantId, shipmentId);
     if (shipment.status !== 'FAILED') throw new BadRequestException('Solo se reintentan envíos fallidos.');
-    await this.prisma.shipment.update({ where: { id: shipment.id }, data: { status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), lastError: null } });
+    const changed = await this.prisma.shipment.updateMany({ where: { id: shipment.id, status: 'FAILED' }, data: { status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), lastError: null } });
+    if (!changed.count) throw new BadRequestException('El envío cambió; vuelve a cargarlo.');
     return this.view(await this.owned(merchantId, shipmentId));
   }
 
@@ -145,7 +154,8 @@ export class ShipmentsService {
     if (shipment.status !== 'FAILED') throw new BadRequestException('Solo se cambia el courier de envíos fallidos.');
     const carrier = await this.prisma.shippingCarrier.findFirst({ where: { id: carrierId, isActive: true } });
     if (!carrier || carrier.mode !== 'MANUAL') throw new BadRequestException('Elige un courier manual activo.');
-    await this.prisma.shipment.update({ where: { id: shipment.id }, data: { carrierId: carrier.id, accountType: 'MERCHANT', status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), lastError: null } });
+    const changed = await this.prisma.shipment.updateMany({ where: { id: shipment.id, status: 'FAILED' }, data: { carrierId: carrier.id, accountType: 'MERCHANT', status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), lastError: null } });
+    if (!changed.count) throw new BadRequestException('El envío cambió; vuelve a cargarlo.');
     return this.view(await this.owned(merchantId, shipmentId));
   }
 
