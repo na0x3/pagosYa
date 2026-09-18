@@ -1,0 +1,149 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Oswald para palabras de capítulo y titulares altos de 72/48 px; Instrument Sans para nombres completos, descripciones, variantes y compra. El contraste condensado/claro produce una identidad de despensa rotulada sin competir con SAVIA.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "ritual-catalog",
+      "table-pairing"
+    ],
+    "catalogSection": "ritual-catalog",
+    "mobileRule": "Los capítulos se apilan con alturas diferentes para conservar el ritmo del díptico; el primer producto mantiene nombre, precio y acción en el viewport inicial. “Mi pedido 0” queda fijado visualmente en el header, fuera del menú. Los selectores pasan a una retícula de dos columnas y a una sola a 320 px; las imágenes usan recortes centrados en botella o frasco."
+  },
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-06465dbb2877.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-5d185857f7d9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7afdd1c26f9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-ceff3979a97c.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f3eadc",
+      "resolved": "#f3eadc",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#173d2b",
+      "resolved": "#173d2b",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#d9663f",
+      "resolved": "#d9663f",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fbf5ea",
+      "resolved": "#fbf5ea",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#947f68",
+      "resolved": "#947f68",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "'Instrument Sans',sans-serif",
+      "resolved": "'Instrument Sans',sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "'Oswald',sans-serif",
+      "resolved": "'Oswald',sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

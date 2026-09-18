@@ -1,0 +1,18 @@
+{
+  "prompt_file": ".impeccable/mocks/agent-timeline-split.prompt.txt",
+  "approved": true,
+  "approved_at": "2026-08-31T20:30:00-04:00",
+  "approval": "User delegated the choice; selected from the brief and prior product audit.",
+  "carry_forward": [
+    "Agent action timeline is the primary navigation",
+    "Live storefront preview remains visible beside the work",
+    "One amber approval action sits between task and result",
+    "Existing admin capabilities remain available as grouped tools",
+    "Lifecycle labels come from the preview-first alternative: Vista privada, Borrador aplicado, Publicado"
+  ],
+  "do_not_literalize": [
+    "Synthetic merchant products, prices, photography, or shipping claims",
+    "Generated icon details that conflict with the existing pagosYa icon set",
+    "Decorative progress that is not backed by real product state"
+  ]
+}

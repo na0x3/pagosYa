@@ -1,0 +1,12 @@
+/* Candidate B: compact studio composition; same identity, catalog and behavior. */
+[data-pagosya-product] .product-detail__layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px}
+[data-pagosya-product] .product-detail__gallery{display:grid;grid-template-columns:60px minmax(0,1fr);gap:14px}
+[data-pagosya-product] .product-detail__photo{grid-column:2;grid-row:1;aspect-ratio:4/5;object-fit:cover}
+[data-pagosya-product] .product-detail__thumbnails{grid-column:1;grid-row:1;flex-direction:column;padding:0;overflow:visible}
+[data-pagosya-product] .product-detail__thumbnails button{width:60px;height:60px;flex-basis:60px}
+[data-pagosya-product] .product-detail__navigation{display:none}
+[data-pagosya-product] .product-detail__copy{padding:20px 0 0}
+[data-pagosya-product] :is(h1,h2){font-size:42px}
+[data-pagosya-product] .product-detail__options{display:flex;flex-wrap:wrap;gap:24px 40px}
+[data-pagosya-product] .product-detail__intro{max-width:44ch}
+@media(max-width:640px){[data-pagosya-product] .product-detail__layout{grid-template-columns:1fr;gap:24px}[data-pagosya-product] .product-detail__gallery{grid-template-columns:48px minmax(0,1fr);gap:10px}[data-pagosya-product] .product-detail__photo{aspect-ratio:1}[data-pagosya-product] .product-detail__thumbnails button{width:48px;height:48px;flex-basis:48px}[data-pagosya-product] :is(h1,h2){font-size:32px}[data-pagosya-product] .product-detail__copy{padding:0}}

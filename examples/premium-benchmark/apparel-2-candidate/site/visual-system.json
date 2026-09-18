@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Bricolage Grotesque en toda la tienda: logotipo 700, nombres de producto 600 y texto 400. Escala desktop 64/34/18/15 px; móvil 40/27/17/14 px. Cifras y precios grandes, etiquetas pequeñas en mayúsculas con espaciado amplio.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-editorial",
+      "nota-retiro"
+    ],
+    "catalogSection": "catalogo-editorial",
+    "mobileRule": "Masthead de dos líneas con «Mi pedido (0)» siempre visible. Cada producto se convierte en una ficha vertical sin columna de imagen; nombre, precio, opciones y botón permanecen juntos. Selectores de 44 px, acciones a ancho completo y reglas que preservan el ritmo editorial a 320 px."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f2eddf",
+      "resolved": "#f2eddf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#171816",
+      "resolved": "#171816",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#1646d8",
+      "resolved": "#1646d8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#f8f4e9",
+      "resolved": "#f8f4e9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#262722",
+      "resolved": "#262722",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0",
+      "resolved": "0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Bricolage Grotesque\",sans-serif",
+      "resolved": "\"Bricolage Grotesque\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "\"Bricolage Grotesque\",sans-serif",
+      "resolved": "\"Bricolage Grotesque\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

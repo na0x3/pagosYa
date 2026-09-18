@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bruma — Cuidado cosmético en varios volúmenes</title>
+  <meta name="description" content="Elige el volumen de tu crema de manos o jabón líquido y añádelo a tu pedido Bruma.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <h1 class="wordmark"><a href="index.html">Bruma</a></h1>
+      <button class="cart-control" type="button" data-cart-open aria-label="Abrir mi pedido">
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido · <span data-cart-count>0</span></span>
+      </button>
+    </div>
+    <div class="header-secondary">
+      <p>Cuidado cosmético diario en varios volúmenes</p>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <img src="assets/icons/menu.svg" alt=""><span>Menú</span>
+      </button>
+      <nav id="site-nav" class="site-nav" aria-label="Navegación principal">
+        <a href="#catalogo-carta" aria-current="page">Productos</a>
+        <a href="#recogida-breve">Recogida</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section id="catalogo-carta" class="catalog-letter" aria-labelledby="catalog-title">
+      <div class="catalog-intro">
+        <p class="eyebrow">Carta de volúmenes</p>
+        <h2 id="catalog-title">Elige producto y formato.</h2>
+        <p>Dos fórmulas cotidianas, disponibles en distintos volúmenes.</p>
+      </div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+    </section>
+
+    <section id="recogida-breve" class="pickup-note" aria-labelledby="pickup-title">
+      <p class="eyebrow">Modalidad disponible</p>
+      <h2 id="pickup-title">Recogida</h2>
+      <p>Selecciona tus productos y continúa al pedido para completar los datos de recogida.</p>
+      <button class="text-cart-action" type="button" data-cart-open>Revisar mi pedido <img src="assets/icons/arrow-right.svg" alt=""></button>
+    </section>
+  </main>
+
+  <footer class="site-footer"><a class="footer-mark" href="index.html">Bruma</a><p>Cuidado cosmético diario.</p></footer>
+
+  <template data-pagosya-product-template>
+    <article class="volume-row">
+      <div class="volume-copy">
+        <a class="product-name-link menu-item__details" data-product-link><h3 data-product-field="name"></h3></a>
+        <p data-product-field="description"></p>
+      </div>
+      <div class="volume-options" data-product-field="options"></div>
+      <div class="volume-purchase">
+        <strong class="menu-item__price" data-product-field="price"></strong>
+        <button class="menu-add" type="button" data-product-add>Añadir</button>
+      </div>
+    </article>
+  </template>
+
+  <div data-pagosya-cart hidden></div>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-contact hidden></div>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

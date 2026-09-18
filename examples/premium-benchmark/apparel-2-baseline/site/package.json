@@ -1,0 +1,10 @@
+{
+  "name": "storefront-g4p0hqw4",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.mjs"
+  }
+}

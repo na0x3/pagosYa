@@ -1,0 +1,67 @@
+{
+  "concepts": [
+    {
+      "name": "Mesa de precisión",
+      "premise": "Una tienda-catálogo que abre directamente con los dos productos como una hoja técnica premium. Es la opción más densa y transaccional: evita una portada independiente, presenta variantes y precios de inmediato y usa reglas, índices y alineación tabular en lugar de imágenes inexistentes.",
+      "opening": "Masthead compacto con Punto, descriptor y «Mi pedido · 0». Debajo, el catálogo empieza antes de 320 px: encabezado «Equipo para la mesa» a la izquierda y una retícula de dos productos. En cada ficha aparecen nombre, descripción, etiquetas, selector propio —Color o Tamaño—, precio actualizado y «Añadir al pedido».",
+      "flow": "Inicio: catálogo inmediato → breve nota comparativa de especificaciones → cierre de marca. Producto: nombre y precio dominantes, selector visible, descripción factual, etiquetas y compra en una columna coordinada; sin galería vacía. Carrito y checkout conservan filas técnicas, totales bien alineados y acentos lima solo en la acción principal. La recogida se comunica únicamente cuando el flujo real la solicite.",
+      "typography": "Instrument Sans variable en toda la interfaz. Nombre de marca 700; títulos 650 de 44–64 px; nombres de producto 600 de 22–28 px; metadatos y precios con cifras tabulares de 13–18 px. Mayúsculas pequeñas y espaciadas para rótulos; titulares con tracking de -0.03em.",
+      "imagery": "No se usan fotos, siluetas ni dibujos de producto. La identidad nace de tipografía, divisores de 1 px, columnas de especificación y grandes campos de blanco. Verde lima para selección y compra; grafito para texto; blanco cálido como fondo.",
+      "mobile": "Cabecera de dos niveles muy compacta: Punto arriba y «Mi pedido · 0» siempre visible junto al icono local de bolsa; navegación debajo, sin ocultar la compra. Los productos pasan a una sola columna y el primero muestra nombre, precio, variante y botón dentro del primer viewport. Selectores y botones ocupan todo el ancho con 44 px mínimos; la comparación se convierte en pares etiqueta/valor.",
+      "layout": {
+        "sections": [
+          "catalogo-tecnico",
+          "comparacion-esencial",
+          "cierre-punto"
+        ],
+        "catalogSection": "catalogo-tecnico",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "El punto de partida",
+      "premise": "Una apertura tipográfica espaciosa convierte el nombre Punto en un sistema editorial antes de comprar. A diferencia del catálogo inmediato, separa contexto y comercio: primero establece una identidad memorable con una composición asimétrica y después presenta los productos como dos capítulos verticales, no como tarjetas gemelas.",
+      "opening": "Portada breve pero autónoma sobre blanco: «Punto» ocupa el plano izquierdo y el descriptor forma una columna estrecha a la derecha, rematada por un enlace ancla «Ver accesorios». Un único punto lima funciona como signo tipográfico, no como ilustración. No promete productos visibles sin desplazamiento.",
+      "flow": "Inicio: manifiesto tipográfico conciso → catálogo en secuencia vertical alternada → banda factual sobre variantes → cierre. Cada producto se presenta como un bloque editorial con nombre grande, descripción, etiquetas, precio y selector junto al botón. Página de producto: encabezado monumental y panel de compra grafito adherente en escritorio, en flujo normal en móvil. Carrito y checkout reducen la escala y usan una lista blanca con una línea lima que avanza entre resumen y pago.",
+      "typography": "Bricolage Grotesque variable como única familia: palabra Punto en 750 y 88–150 px; títulos de producto 650 y 40–68 px; texto 400 y 16–18 px. La personalidad proviene del contraste extremo de escala, no de mezclar serifas. Tracking máximo de -0.04em en display y cifras tabulares en precios.",
+      "imagery": "Composición exclusivamente tipográfica. El punto lima, líneas negras y áreas de color plano son signos de navegación visual; nunca representan la lámpara ni el soporte. No hay marcos de galería ni espacios reservados para medios ausentes.",
+      "mobile": "La portada se reordena en una diagonal tipográfica contenida: marca de 66 px, descriptor legible y acceso al catálogo. «Mi pedido · 0» permanece en la cabecera, fuera del menú. Los capítulos pierden alternancia y se apilan; selector, precio y añadir forman un bloque continuo sin posiciones adhesivas. A 320 px la marca envuelve de forma natural si fuera necesario, sin recortes.",
+      "layout": {
+        "sections": [
+          "portada-punto",
+          "catalogo-capitulos",
+          "variantes-claras",
+          "firma-final"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice de equipo",
+      "premise": "Una interfaz inspirada en un índice de herramientas: el catálogo ocupa la apertura, pero no usa tarjetas ni grandes capítulos. Los dos productos son filas expandibles con una zona de decisión lateral. Frente a la retícula de «Mesa de precisión», esta propuesta es más compacta, oscura y operativa; frente a «El punto de partida», elimina la portada y prioriza exploración rápida.",
+      "opening": "Fondo grafito con cabecera blanca y lima. Tras una línea de contexto mínima, aparecen dos filas numeradas por códigos de catálogo discretos —sin numeración decorativa repetida dentro de cada producto—. La primera fila está abierta por defecto y enseña descripción, etiquetas, selector de color, precio y añadir; la segunda deja visibles nombre y precio y puede expandirse.",
+      "flow": "Inicio: índice interactivo de productos → matriz común «Producto / Opciones / Desde» → cierre claro. Las filas son botones accesibles solo para expandir información; «Añadir al pedido» permanece como acción separada. Producto: franja superior lima con nombre y precio, seguida de descripción y módulo de configuración. Carrito: lista condensada sobre grafito; checkout cambia a fondo blanco para formularios, manteniendo cabeceras negras, cifras tabulares y botón lima.",
+      "typography": "Oswald variable para marca, títulos y nombres —36–76 px, peso 500—; Instrument Sans para descripciones, controles y checkout —14–18 px—. La combinación crea una voz industrial legible sin fingir planos técnicos. Titulares con tracking de -0.02em; rótulos sans en mayúsculas con 0.08em.",
+      "imagery": "Sin imágenes ni diagramas. El medio visual es la propia estructura: bandas horizontales, cursores de expansión con chevron local y estados de selección lima. Las áreas negras nunca simulan una fotografía o miniatura de producto.",
+      "mobile": "La cabecera conserva marca, menú y «Mi pedido · 0» visible. El índice se transforma en acordeón de ancho completo; la primera fila abierta muestra nombre, precio y añadir dentro del primer viewport. Cada panel apila descripción, etiquetas, selector y acción, con chevrons semánticos y áreas táctiles de 44 px. La matriz comparativa se vuelve una lista de dos registros.",
+      "layout": {
+        "sections": [
+          "indice-catalogo",
+          "matriz-de-opciones",
+          "salida-grafito"
+        ],
+        "catalogSection": "indice-catalogo",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "«Mesa de precisión» encaja mejor con el pedido explícito de precisión técnica, verde lima, grafito y diagramación legible. El catálogo real tiene solo dos productos, ambos con variantes concretas —Color para la lámpara USB-C y Tamaño para el soporte de aluminio—, por lo que una retícula comparativa permite elegir y añadir sin navegación extra. Al no existir logo, fotos ni diagramas suministrados,ร"
+  }
+}

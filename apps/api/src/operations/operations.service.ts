@@ -65,6 +65,11 @@ type OperationalCalendarEvent = {
   action?: { kind: string; label: string };
 };
 
+type StockVariant = { id: string; name: string; stock?: number | null; [key: string]: unknown };
+function readStockVariants(value: Prisma.JsonValue): StockVariant[] {
+  return Array.isArray(value) ? (value as unknown[]).filter((entry) => !!entry && typeof entry === "object" && !Array.isArray(entry) && typeof (entry as Record<string, unknown>).id === "string") as StockVariant[] : [];
+}
+
 @Injectable()
 export class OperationsService {
   private readonly logger = new Logger(OperationsService.name);
@@ -603,7 +608,9 @@ export class OperationsService {
 
   async createDeliveryZone(merchantId: string, storeId: string, dto: CreateDeliveryZoneDto) {
     await this.ownedStore(merchantId, storeId);
-    return this.prisma.deliveryZone.create({ data: { merchantId, storeId, name: dto.name.trim(), fee: dto.fee, minimumOrder: dto.minimumOrder ?? 0, radiusKm: dto.radiusKm, estimatedMinutes: dto.estimatedMinutes } });
+    if (dto.maximumOrder !== undefined && dto.maximumOrder < (dto.minimumOrder ?? 0) || dto.maximumWeightGrams !== undefined && dto.maximumWeightGrams < (dto.minimumWeightGrams ?? 0)) throw new BadRequestException('Revisa los límites de importe y peso.');
+    if (dto.carrierId && !(await this.prisma.shippingCarrier.findFirst({ where: { id: dto.carrierId, isActive: true, mode: 'MANUAL' } }))) throw new BadRequestException('Elige un courier disponible.');
+    return this.prisma.deliveryZone.create({ data: { countryCodes: dto.countryCodes, postalPrefixes: dto.postalPrefixes, currency: dto.currency ?? 'BOB', freeAbove: dto.freeAbove, maximumOrder: dto.maximumOrder, minimumWeightGrams: dto.minimumWeightGrams, maximumWeightGrams: dto.maximumWeightGrams, merchantId, storeId, name: dto.name.trim(), fee: dto.fee, minimumOrder: dto.minimumOrder ?? 0, radiusKm: dto.radiusKm, estimatedMinutes: dto.estimatedMinutes, carrierId: dto.carrierId ?? null, departments: dto.departments ?? [], sizeClasses: [...new Set(dto.sizeClasses ?? [])] } });
   }
 
   async createCourier(merchantId: string, storeId: string, dto: CreateCourierDto) {
@@ -771,11 +778,42 @@ export class OperationsService {
 
   async listIntegrations(merchantId: string, storeId: string) {
     await this.ownedStore(merchantId, storeId);
-    return this.prisma.integrationConnection.findMany({
+    const connections = await this.prisma.integrationConnection.findMany({
       where: { merchantId, storeId, status: "ACTIVE" },
       select: { id: true, kind: true, name: true, status: true, lastSyncAt: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });
+    return Promise.all(connections.map(async (connection) => {
+      const [mappingCount, lastRun] = await Promise.all([
+        this.prisma.integrationProductMapping.count({ where: { connectionId: connection.id } }),
+        this.prisma.integrationSyncRun.findFirst({ where: { connectionId: connection.id }, orderBy: { startedAt: "desc" }, select: { direction: true, status: true, itemCount: true, errorMessage: true, details: true, startedAt: true } }),
+      ]);
+      return { ...connection, mappingCount, lastRun };
+    }));
+  }
+
+  /** Products and combinations with their linked SKUs, so the merchant can link every sellable item. */
+  async listProductMappings(merchantId: string, storeId: string, connectionId: string) {
+    await this.ownedStore(merchantId, storeId);
+    const connection = await this.prisma.integrationConnection.findFirst({ where: { id: connectionId, merchantId, storeId, status: "ACTIVE" }, select: { id: true } });
+    if (!connection) throw new NotFoundException("Integration not found");
+    const [products, mappings] = await Promise.all([
+      this.prisma.paymentLink.findMany({ where: { storeId, status: PaymentLinkStatus.ACTIVE }, select: { id: true, name: true, stock: true, variants: true }, orderBy: { name: "asc" }, take: 500 }),
+      this.prisma.integrationProductMapping.findMany({ where: { connectionId }, select: { id: true, paymentLinkId: true, variantId: true, externalSku: true } }),
+    ]);
+    return {
+      products: products.map((product) => ({ id: product.id, name: product.name, stock: product.stock, variants: readStockVariants(product.variants).map((variant) => ({ id: variant.id, name: variant.name, stock: variant.stock ?? null })) })),
+      mappings,
+    };
+  }
+
+  async deleteProductMapping(merchantId: string, storeId: string, connectionId: string, mappingId: string) {
+    await this.ownedStore(merchantId, storeId);
+    const connection = await this.prisma.integrationConnection.findFirst({ where: { id: connectionId, merchantId, storeId }, select: { id: true } });
+    if (!connection) throw new NotFoundException("Integration not found");
+    const deleted = await this.prisma.integrationProductMapping.deleteMany({ where: { id: mappingId, connectionId } });
+    if (!deleted.count) throw new NotFoundException("Mapping not found");
+    return { deleted: true };
   }
 
   async verifyIntegrationInbound(connectionId: string, secret: string) {
@@ -800,8 +838,22 @@ export class OperationsService {
     await this.ownedStore(merchantId, storeId);
     const connection = await this.prisma.integrationConnection.findFirst({ where: { id: connectionId, merchantId, storeId, status: "ACTIVE" } });
     if (!connection) throw new NotFoundException("Integration not found");
-    if (!(await this.prisma.paymentLink.findFirst({ where: { id: dto.paymentLinkId, storeId } }))) throw new BadRequestException("El producto no pertenece a esta tienda");
-    return this.prisma.integrationProductMapping.upsert({ where: { connectionId_externalSku: { connectionId, externalSku: dto.externalSku.trim() } }, create: { connectionId, paymentLinkId: dto.paymentLinkId, externalSku: dto.externalSku.trim(), externalName: this.clean(dto.externalName) }, update: { paymentLinkId: dto.paymentLinkId, externalName: this.clean(dto.externalName) } });
+    const product = await this.prisma.paymentLink.findFirst({ where: { id: dto.paymentLinkId, storeId } });
+    if (!product) throw new BadRequestException("El producto no pertenece a esta tienda");
+    const variants = readStockVariants(product.variants);
+    if (variants.length && !dto.variantId) throw new BadRequestException("Este producto tiene combinaciones: elige a qué combinación corresponde el SKU");
+    if (dto.variantId && !variants.some((variant) => variant.id === dto.variantId)) throw new BadRequestException("La combinación no pertenece a este producto");
+    const variantId = variants.length ? dto.variantId! : null;
+    const externalSku = dto.externalSku.trim();
+    // One SKU per product or combination: a new SKU for the same target replaces the old one.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.integrationProductMapping.deleteMany({ where: { connectionId, paymentLinkId: product.id, variantId, NOT: { externalSku } } });
+      return tx.integrationProductMapping.upsert({
+        where: { connectionId_externalSku: { connectionId, externalSku } },
+        create: { connectionId, paymentLinkId: product.id, variantId, externalSku, externalName: this.clean(dto.externalName) },
+        update: { paymentLinkId: product.id, variantId, externalName: this.clean(dto.externalName) },
+      });
+    });
   }
 
   async createSubscriptionPlanMapping(merchantId: string, storeId: string, connectionId: string, dto: CreateSubscriptionPlanMappingDto) {
@@ -820,30 +872,72 @@ export class OperationsService {
     });
   }
 
+  /**
+   * Merge rule: the connected system owns stock counts for mapped SKUs. An
+   * absolute count replaces pagosYa's number, minus units pagosYa sold (online
+   * or in its POS) after `asOf`; a delta adjusts the current number. Every change is an auditable
+   * movement, and every SKU that could not be applied is reported with a reason.
+   */
   async syncStockInbound(connectionId: string, secret: string, dto: InboundStockSyncDto) {
     const connection = await this.prisma.integrationConnection.findFirst({ where: { id: connectionId, status: "ACTIVE" } });
     if (!connection || !(await argon2.verify(connection.secretHash, secret))) throw new UnauthorizedException("Invalid integration secret");
-    const mappings = await this.prisma.integrationProductMapping.findMany({ where: { connectionId, externalSku: { in: dto.items.map((item) => item.externalSku.trim()) } } });
+    const skus = dto.items.map((item) => item.externalSku.trim());
+    const mappings = await this.prisma.integrationProductMapping.findMany({ where: { connectionId, externalSku: { in: skus } } });
     const mappingBySku = new Map(mappings.map((mapping) => [mapping.externalSku, mapping]));
     const run = await this.prisma.integrationSyncRun.create({ data: { connectionId, direction: "INBOUND_STOCK" } });
+    const updated: Array<{ externalSku: string; productId: string; variantId: string | null; stock: number; soldAfterCount?: number }> = [];
+    const skipped: Array<{ externalSku: string; reason: string }> = [];
     try {
-      let updated = 0;
       await this.prisma.$transaction(async (tx) => {
+        const seen = new Set<string>();
         for (const item of dto.items) {
-          const mapping = mappingBySku.get(item.externalSku.trim());
-          if (!mapping) continue;
+          const externalSku = item.externalSku.trim();
+          const skip = (reason: string) => { skipped.push({ externalSku, reason }); };
+          if (seen.has(externalSku)) { skip("SKU repetido en esta sincronización; se aplicó la primera fila"); continue; }
+          seen.add(externalSku);
+          if ((item.stock === undefined) === (item.delta === undefined)) { skip("Envía stock o delta (solo uno)"); continue; }
+          if (item.delta !== undefined && item.asOf) { skip("asOf solo se usa con stock absoluto"); continue; }
+          const mapping = mappingBySku.get(externalSku);
+          if (!mapping) { skip("SKU sin vincular a un producto en pagosYa"); continue; }
+          // Lock the product row so a checkout decrement cannot interleave with this merge.
+          await tx.$queryRaw`SELECT "id" FROM "PaymentLink" WHERE "id" = ${mapping.paymentLinkId} FOR UPDATE`;
           const product = await tx.paymentLink.findFirst({ where: { id: mapping.paymentLinkId, storeId: connection.storeId } });
-          if (!product) continue;
-          await tx.paymentLink.update({ where: { id: product.id }, data: { stock: item.stock } });
-          await tx.inventoryMovement.create({ data: { merchantId: connection.merchantId, storeId: connection.storeId, paymentLinkId: product.id, quantityDelta: item.stock - (product.stock ?? 0), stockAfter: item.stock, reason: `Sincronización ${connection.name}`, sourceType: "INTEGRATION", sourceId: run.id } });
-          updated += 1;
+          if (!product) { skip("El producto vinculado ya no existe"); continue; }
+          const variants = readStockVariants(product.variants);
+          if (variants.length && !mapping.variantId) { skip("El producto tiene combinaciones: vincula este SKU a una combinación"); continue; }
+          const variant = mapping.variantId ? variants.find((candidate) => candidate.id === mapping.variantId) : undefined;
+          if (mapping.variantId && !variant) { skip("La combinación vinculada ya no existe"); continue; }
+          if (variant && variants.some((candidate) => candidate.stock === undefined)) { skip("Las combinaciones comparten stock en pagosYa; asigna stock a cada combinación"); continue; }
+          const current = variant ? variant.stock ?? null : product.stock;
+          let next: number;
+          let soldAfterCount: number | undefined;
+          if (item.delta !== undefined) {
+            if (current === null) { skip("El stock es ilimitado en pagosYa; envía un stock absoluto"); continue; }
+            next = Math.max(0, current + item.delta);
+          } else {
+            next = item.stock!;
+            if (item.asOf) {
+              const sold = await tx.inventoryMovement.aggregate({ _sum: { quantityDelta: true }, where: { storeId: connection.storeId, paymentLinkId: product.id, variantId: mapping.variantId ?? null, sourceType: { in: ["ORDER", "POS"] }, createdAt: { gt: new Date(item.asOf) } } });
+              soldAfterCount = -(sold._sum.quantityDelta ?? 0);
+              next = Math.max(0, next - soldAfterCount);
+            }
+          }
+          if (variant) {
+            const nextVariants = variants.map((candidate) => (candidate.id === variant.id ? { ...candidate, stock: next } : candidate));
+            const total = nextVariants.some((candidate) => candidate.stock == null) ? null : nextVariants.reduce((sum, candidate) => sum + (candidate.stock ?? 0), 0);
+            await tx.paymentLink.update({ where: { id: product.id }, data: { variants: nextVariants as unknown as Prisma.InputJsonValue, stock: total } });
+          } else {
+            await tx.paymentLink.update({ where: { id: product.id }, data: { stock: next } });
+          }
+          await tx.inventoryMovement.create({ data: { merchantId: connection.merchantId, storeId: connection.storeId, paymentLinkId: product.id, variantId: mapping.variantId, quantityDelta: next - (current ?? 0), stockAfter: next, reason: `Sincronización ${connection.name}`, sourceType: "INTEGRATION", sourceId: run.id } });
+          updated.push({ externalSku, productId: product.id, variantId: mapping.variantId, stock: next, ...(soldAfterCount ? { soldAfterCount } : {}) });
         }
         await tx.integrationConnection.update({ where: { id: connection.id }, data: { lastSyncAt: new Date() } });
-        await tx.integrationSyncRun.update({ where: { id: run.id }, data: { status: "SUCCEEDED", itemCount: updated, completedAt: new Date() } });
+        await tx.integrationSyncRun.update({ where: { id: run.id }, data: { status: "SUCCEEDED", itemCount: updated.length, details: { updated, skipped } as unknown as Prisma.InputJsonValue, completedAt: new Date() } });
       });
-      return { received: dto.items.length, updated };
+      return { received: dto.items.length, updated: updated.length, skipped: skipped.length, results: updated, skippedItems: skipped };
     } catch (error) {
-      await this.prisma.integrationSyncRun.update({ where: { id: run.id }, data: { status: "FAILED", errorMessage: (error as Error).message, completedAt: new Date() } });
+      await this.prisma.integrationSyncRun.update({ where: { id: run.id }, data: { status: "FAILED", errorMessage: (error as Error).message.slice(0, 1_000), completedAt: new Date() } });
       throw error;
     }
   }

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bruma — cuidado cosmético diario en varios volúmenes</title>
+  <meta name="description" content="Elige el volumen de tu crema de manos o jabón líquido y añádelo a tu pedido en Bruma.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="header-brand">
+      <a class="wordmark" href="index.html" aria-current="page">Bruma</a>
+      <p>Cuidado cosmético diario en varios volúmenes</p>
+    </div>
+    <div class="header-actions">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+      <nav id="site-nav" class="site-nav" aria-label="Navegación principal">
+        <a href="index.html" aria-current="page">Inicio</a>
+        <a href="#catalogo-franjas">Productos</a>
+        <a href="#guia-volumen">Elegir volumen</a>
+      </nav>
+      <button class="order-button" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span class="cart-count" data-cart-count>0</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="catalogo-franjas" class="catalog-section" aria-labelledby="catalog-title">
+      <div class="catalog-heading">
+        <h1 id="catalog-title">Dos productos.<br>Tu medida.</h1>
+        <p>Elige un volumen para casa o viaje.</p>
+      </div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+    </section>
+
+    <section id="guia-volumen" class="volume-guide" aria-labelledby="volume-title">
+      <p class="section-kicker">El volumen cambia. La elección sigue clara.</p>
+      <h2 id="volume-title">Una medida para llevar.<br>Otra para dejar en casa.</h2>
+      <a class="text-link" href="#catalogo-franjas">Comparar productos <img src="assets/icons/arrow-right.svg" alt=""></a>
+    </section>
+
+    <section id="recogida-cierre" class="pickup-close" aria-labelledby="pickup-title">
+      <div>
+        <p class="section-kicker">Recogida</p>
+        <h2 id="pickup-title">Completa el pedido a tu ritmo.</h2>
+        <p>Podrás elegir la recogida al continuar con tu pedido.</p>
+      </div>
+      <button class="primary-action" type="button" data-cart-open>Revisar mi pedido <span data-cart-count>0</span></button>
+    </section>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+
+  <footer class="site-footer"><a class="wordmark" href="index.html">Bruma</a><p>Cuidado cotidiano, en la medida que eliges.</p></footer>
+
+  <template data-pagosya-product-template>
+    <article class="menu-item product-stripe">
+      <div class="product-stripe__copy">
+        <a class="menu-item__details product-name-link" data-product-link><h2 data-product-field="name"></h2></a>
+        <p data-product-field="description"></p>
+        <div class="product-options" data-product-field="options"></div>
+        <div class="product-purchase">
+          <strong class="menu-item__price" data-product-field="price"></strong>
+          <button class="menu-add" type="button" data-product-add>Añadir <img src="assets/icons/plus.svg" alt=""></button>
+        </div>
+      </div>
+      <div class="volume-mark" data-volume-mark aria-hidden="true"></div>
+    </article>
+  </template>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

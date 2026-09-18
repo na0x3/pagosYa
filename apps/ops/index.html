@@ -173,6 +173,14 @@
   .compact-row strong { overflow-wrap: anywhere; }
   .compact-row span { color: var(--pg-text-muted); }
   .support-action-zone { margin-top: 20px; padding: 16px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-bg); }
+  .domain-dossier { margin-top: 16px; padding: 16px; border: 1px solid var(--pg-border); border-radius: 10px; background: var(--pg-bg); }
+  .domain-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 20px; margin: 14px 0 0; }
+  .domain-facts dt { color: var(--pg-text-faint); font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em; }
+  .domain-facts dd { margin: 4px 0 0; font-size: .8125rem; overflow-wrap: anywhere; }
+  .domain-dossier h4 { margin: 18px 0 8px; font-size: .875rem; }
+  .domain-audit { margin: 0; padding-left: 18px; font-size: .8125rem; color: var(--pg-text-muted); }
+  #domainActionForm { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--pg-border); }
+  #domainActionForm input { width: 100%; min-width: 0; }
   .support-action-zone h4 { margin: 0 0 4px; font-size: .875rem; }
   .support-action-zone > p { margin: 0 0 14px; }
   .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -322,6 +330,7 @@
   #soporte .panel { background: color-mix(in srgb, var(--bento-violet) 22%, var(--pg-surface)); }
   #revisiones .panel { background: color-mix(in srgb, var(--bento-yellow) 20%, var(--pg-surface)); }
   #incidencias .panel { background: color-mix(in srgb, var(--bento-red) 18%, var(--pg-surface)); }
+  #dominios .panel { background: color-mix(in srgb, var(--bento-yellow) 14%, var(--pg-surface)); }
   #auditoria .panel { background: color-mix(in srgb, var(--bento-blue) 18%, var(--pg-surface)); }
   section.block { margin-bottom: 38px; scroll-margin-top: 18px; }
   h2 {
@@ -385,6 +394,7 @@
   .compact-list { border-top: 2px solid var(--pg-border); }
   .compact-row, .case-note { border-bottom: 1px solid var(--pg-border); }
   .support-action-zone { border: 2px solid var(--pg-border); border-radius: 1px; background: rgba(255,255,255,.7); }
+  .domain-dossier { border: 2px solid var(--pg-border); border-radius: 1px; background: rgba(255,255,255,.7); }
   .badge { border: 1.5px solid var(--pg-border); border-radius: 999px; color: var(--pg-text); }
   .badge-exhausted, .badge-high, .badge-urgent, .badge-failed, .badge-suspended, .badge-rejected { background: var(--pg-error-soft); }
   .badge-retrying, .badge-aggregator, .badge-normal { background: var(--pg-accent-soft); }
@@ -431,6 +441,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <a href="#soporte">Soporte de cuentas</a>
     <a href="#revisiones">Revisiones KYC</a>
     <a href="#incidencias">Incidencias</a>
+    <a href="#dominios">Dominios</a>
+    <a href="#pagos-internacionales">Pagos internacionales</a>
     <a href="#auditoria">Auditoría</a>
   </nav>
 
@@ -543,6 +555,62 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
   </section>
 
+  <section class="block" id="dominios">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Compras de dominios</h2>
+        <p class="muted" style="margin: 2px 0 0">Órdenes en curso, con las escaladas primero. Reintentar devuelve la orden al ciclo de registro; conciliar la cierra y libera el nombre para otra tienda. Ninguna de las dos mueve dinero.</p>
+      </div>
+      <div id="notConnected4" class="empty-state">Conecta para consultar las compras de dominios.</div>
+      <form id="domainSearchForm" class="panel-row" style="display:none">
+        <div>
+          <label for="domainQuery">Buscar por dominio o ID de orden</label>
+          <input id="domainQuery" type="search" autocomplete="off" placeholder="tienda.com">
+        </div>
+        <button class="primary" type="submit">Buscar</button>
+      </form>
+      <div id="domainEmpty" class="empty-state" style="display:none">No hay compras de dominios en curso.</div>
+      <div class="table-wrap"><table id="domainTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Dominio</th>
+            <th>Tienda</th>
+            <th>Estado</th>
+            <th>Intentos</th>
+            <th>Creada</th>
+            <th>Expediente</th>
+          </tr>
+        </thead>
+        <tbody id="domainRows"></tbody>
+      </table></div>
+      <div id="domainDossier" class="domain-dossier" style="display:none"></div>
+    </div>
+  </section>
+
+  <section class="block" id="pagos-internacionales">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Pagos internacionales</h2>
+        <p class="muted" style="margin: 2px 0 0">Solicitudes de comercios para cobrar en USD con dLocal. Aprobar o rechazar queda auditado.</p>
+      </div>
+      <div id="notConnected5" class="empty-state">Conecta para consultar las solicitudes.</div>
+      <div id="intlEmpty" class="empty-state" style="display:none">No hay solicitudes pendientes.</div>
+      <div class="table-wrap"><table id="intlTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Comercio</th>
+            <th>Liquidación</th>
+            <th>Estado</th>
+            <th>Solicitado</th>
+            <th>Expediente</th>
+          </tr>
+        </thead>
+        <tbody id="intlRows"></tbody>
+      </table></div>
+      <div id="intlDossier" class="domain-dossier" style="display:none"></div>
+    </div>
+  </section>
+
   <section class="block" id="auditoria">
     <div class="panel">
       <div class="section-head">
@@ -581,6 +649,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   const auditEmptyEl = document.getElementById("auditEmpty");
   const auditTableEl = document.getElementById("auditTable");
   const auditRowsEl = document.getElementById("auditRows");
+  const domainEmptyEl = document.getElementById("domainEmpty");
+  const domainTableEl = document.getElementById("domainTable");
+  const domainRowsEl = document.getElementById("domainRows");
+  const domainDossierEl = document.getElementById("domainDossier");
+  const domainSearchFormEl = document.getElementById("domainSearchForm");
+  const intlEmptyEl = document.getElementById("intlEmpty");
+  const intlTableEl = document.getElementById("intlTable");
+  const intlRowsEl = document.getElementById("intlRows");
+  const intlDossierEl = document.getElementById("intlDossier");
   const supportNotConnectedEl = document.getElementById("supportNotConnected");
   const supportWorkspaceEl = document.getElementById("supportWorkspace");
   const supportSearchResultsEl = document.getElementById("supportSearchResults");
@@ -698,7 +775,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <section class="dossier-section"><h4>Pagos recientes</h4>${compactRows(merchant.paymentIntents, (payment) => `
         <div class="compact-row"><strong><code>${esc(payment.id)}</code></strong><span>${money(payment.amount, payment.currency)}</span><span>${statusBadge(payment.status)}</span><span>${dateTime(payment.createdAt)}</span></div>`, "No hay pagos recientes.")}</section>
       <section class="dossier-section"><h4>Cumplimiento y entregas</h4>
-        ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
+        ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}<br>Cuenta ${esc(maskedValue(kyc.payoutBankAccount))} · USD ${esc(maskedValue(kyc.payoutUsdBankAccount))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
         ${compactRows(merchant.payouts, (payout) => `<div class="compact-row"><strong>Desembolso <code>${esc(payout.id)}</code></strong><span>${money(payout.amount, payout.currency)} · ${esc(maskedValue(payout.bankAccount))}</span><span>${statusBadge(payout.status)}</span><span>${esc(payout.failureReason || dateTime(payout.createdAt))}</span></div>`, "No hay desembolsos recientes.")}
         ${compactRows(merchant.invoices, (invoice) => `<div class="compact-row"><strong>Factura <code>${esc(invoice.id)}</code></strong><span>${money(invoice.amount, invoice.currency)}</span><span>${statusBadge(invoice.status)}</span><span>${esc(invoice.failureReason || dateTime(invoice.createdAt))}</span></div>`, "No hay facturas recientes.")}
       </section>
@@ -741,7 +818,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
         <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
-        <td>${esc(s.payoutBankAccount)}</td>
+        <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
         <td>${esc(new Date(s.createdAt).toLocaleString("es-BO"))}</td>
         <td>
           <div class="actions-cell">
@@ -784,6 +861,203 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       .join("");
   }
 
+  const domainStatusLabels = {
+    QUOTED: "Cotizada", AWAITING_PAYMENT: "Esperando pago", REGISTERING: "Registrando", CONNECTING: "Conectando",
+    ACTIVE: "Conectado", REVIEW_REQUIRED: "Escalada a soporte", CANCELED: "Cancelada", TEST_COMPLETE: "Prueba",
+  };
+
+  function domainStatus(value) {
+    const normalized = String(value || "").toLowerCase().replace(/_/g, "-");
+    return `<span class="badge badge-${esc(normalized)}">${esc(domainStatusLabels[value] || value || "—")}</span>`;
+  }
+
+  async function refreshDomainOrders(query = "") {
+    const orders = await api("/internal/domain_orders" + (query ? `?query=${encodeURIComponent(query)}` : ""));
+    domainSearchFormEl.style.display = "flex";
+    if (orders.length === 0) {
+      domainTableEl.style.display = "none";
+      domainDossierEl.style.display = "none";
+      domainEmptyEl.style.display = "block";
+      domainEmptyEl.textContent = query ? "Ninguna compra coincide con esa búsqueda." : "No hay compras de dominios en curso.";
+      return;
+    }
+    domainEmptyEl.style.display = "none";
+    domainTableEl.style.display = "table";
+    domainRowsEl.innerHTML = orders
+      .map(
+        (order) => `
+      <tr>
+        <td><code>${esc(order.hostname)}</code></td>
+        <td>${esc(order.store?.name || "—")}</td>
+        <td>${domainStatus(order.status)}</td>
+        <td>${esc(order.attempts)}</td>
+        <td>${esc(dateTime(order.createdAt))}</td>
+        <td><button type="button" data-domain-order="${esc(order.id)}">Abrir</button></td>
+      </tr>`,
+      )
+      .join("");
+  }
+
+  function renderDomainDossier(order) {
+    const payment = order.paymentIntent;
+    const refunds = (payment?.transactions || []).filter((t) => t.type === "REFUND");
+    const actionable = order.status === "REVIEW_REQUIRED";
+    domainDossierEl.style.display = "block";
+    domainDossierEl.innerHTML = `
+      <div class="section-head">
+        <h3 style="margin:0"><code>${esc(order.hostname)}</code> ${domainStatus(order.status)}</h3>
+        <p class="muted" style="margin:2px 0 0">${esc(order.store?.merchant?.name || "")} · ${esc(order.store?.name || "")} · orden <code>${esc(order.id)}</code></p>
+      </div>
+      <dl class="domain-facts">
+        <div><dt>Mensaje al comercio</dt><dd>${esc(order.message || "—")}</dd></div>
+        <div><dt>Pago</dt><dd>${payment ? `${esc(payment.status)} · ${money(payment.amount, payment.currency)} · ${esc(payment.railId || "—")} · ${esc(dateTime(payment.updatedAt))}` : "Sin pago"}</dd></div>
+        <div><dt>Reembolsos</dt><dd>${refunds.length ? refunds.map((r) => `${esc(r.status)} ${money(r.amount, payment.currency)}`).join(", ") : "Ninguno"}</dd></div>
+        <div><dt>Orden en el registrador</dt><dd>${esc(order.providerOrderId || "—")} · inicio ${esc(dateTime(order.registrationStartedAt))}</dd></div>
+        <div><dt>Nombres reservados</dt><dd>${order.domains.length ? order.domains.map((d) => `${esc(d.hostname)} (${esc(d.status)})`).join("<br>") : "Liberados"}</dd></div>
+        <div><dt>Intentos</dt><dd>${esc(order.attempts)} · último reintento de soporte ${esc(dateTime(order.retriedAt))}</dd></div>
+        <div><dt>Caso de soporte</dt><dd>${order.supportCase ? `${esc(order.supportCase.status)} · <code>${esc(order.supportCase.id)}</code>` : "Ninguno"}</dd></div>
+      </dl>
+      ${actionable ? `
+      <form id="domainActionForm" data-order="${esc(order.id)}">
+        <label for="domainReason">Motivo (queda en la auditoría)</label>
+        <input id="domainReason" minlength="8" maxlength="500" required placeholder="El token del registrador volvió a cargarse.">
+        <div class="panel-row" style="margin-top:8px">
+          <button class="primary" type="submit" value="retry" name="action">Reintentar el registro</button>
+          <button type="submit" value="reconcile" name="action">Conciliar y liberar el nombre</button>
+        </div>
+        <p class="muted" style="margin:6px 0 0">Conciliar no emite reembolsos: registra que una persona ya resolvió el pago fuera del sistema.</p>
+      </form>` : `<p class="muted">Solo se puede actuar sobre una orden escalada a soporte.</p>`}
+      ${order.audit.length ? `<h4>Historial</h4><ul class="domain-audit">${order.audit.map((entry) => `<li>${esc(dateTime(entry.createdAt))} · ${esc(entry.actorLabel)} · ${esc(entry.action)}${entry.metadata?.reason ? ` · ${esc(entry.metadata.reason)}` : ""}</li>`).join("")}</ul>` : ""}
+    `;
+  }
+
+  async function openDomainOrder(id) {
+    renderDomainDossier(await api(`/internal/domain_orders/${encodeURIComponent(id)}`));
+    domainDossierEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  domainRowsEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-domain-order]");
+    if (!button) return;
+    errorEl.textContent = "";
+    try {
+      await openDomainOrder(button.dataset.domainOrder);
+    } catch (err) {
+      errorEl.textContent = "No pudimos abrir la compra: " + err.message;
+    }
+  });
+
+  domainSearchFormEl.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.textContent = "";
+    domainDossierEl.style.display = "none";
+    try {
+      await refreshDomainOrders(document.getElementById("domainQuery").value.trim());
+    } catch (err) {
+      errorEl.textContent = "No pudimos buscar la compra: " + err.message;
+    }
+  });
+
+  domainDossierEl.addEventListener("submit", async (event) => {
+    const form = event.target.closest("#domainActionForm");
+    if (!form) return;
+    event.preventDefault();
+    const action = event.submitter?.value === "reconcile" ? "reconcile" : "retry";
+    const reason = form.querySelector("#domainReason").value.trim();
+    errorEl.textContent = "";
+    [...form.querySelectorAll("button")].forEach((button) => (button.disabled = true));
+    try {
+      await api(`/internal/domain_orders/${encodeURIComponent(form.dataset.order)}/${action}`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      await refreshDomainOrders(document.getElementById("domainQuery").value.trim());
+      await Promise.all([openDomainOrder(form.dataset.order), refreshAuditLog(), refreshSupportCases()]);
+    } catch (err) {
+      errorEl.textContent = "No pudimos aplicar la acción: " + err.message;
+      [...form.querySelectorAll("button")].forEach((button) => (button.disabled = false));
+    }
+  });
+
+  let lastIntlRequests = [];
+
+  const settlementBadge = (mode) => `<span class="badge badge-${mode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(mode)}</span>`;
+
+  async function refreshInternationalPayments() {
+    lastIntlRequests = await api("/internal/international_payments");
+    if (lastIntlRequests.length === 0) {
+      intlTableEl.style.display = "none";
+      intlDossierEl.style.display = "none";
+      intlEmptyEl.style.display = "block";
+      return;
+    }
+    intlEmptyEl.style.display = "none";
+    intlTableEl.style.display = "table";
+    intlRowsEl.innerHTML = lastIntlRequests
+      .map(
+        (request) => `
+      <tr>
+        <td><strong>${esc(request.name)}</strong><br><span class="muted">${esc(request.email)}</span></td>
+        <td>${settlementBadge(request.settlementMode)}</td>
+        <td>${statusBadge(request.internationalPaymentsStatus)}</td>
+        <td>${dateTime(request.updatedAt)}</td>
+        <td><button type="button" data-intl-merchant="${esc(request.id)}">Abrir</button></td>
+      </tr>`,
+      )
+      .join("");
+  }
+
+  function renderIntlDossier(request) {
+    intlDossierEl.style.display = "block";
+    intlDossierEl.innerHTML = `
+      <div class="section-head">
+        <h3 style="margin:0">${esc(request.name)} ${statusBadge(request.internationalPaymentsStatus)}</h3>
+        <p class="muted" style="margin:2px 0 0">${esc(request.email)} · ${settlementBadge(request.settlementMode)} · solicitado ${dateTime(request.updatedAt)}</p>
+      </div>
+      <form id="intlActionForm" data-merchant="${esc(request.id)}">
+        <label for="intlReason">Motivo (queda en la auditoría)</label>
+        <textarea id="intlReason" minlength="8" maxlength="500" required placeholder="Verificamos la actividad internacional y la cuenta en USD del comercio."></textarea>
+        <div class="panel-row" style="margin-top:8px">
+          <button class="approve" type="submit" value="approve" name="action">Aprobar</button>
+          <button class="reject" type="submit" value="reject" name="action">Rechazar</button>
+        </div>
+      </form>
+    `;
+  }
+
+  intlRowsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-intl-merchant]");
+    if (!button) return;
+    errorEl.textContent = "";
+    const request = lastIntlRequests.find((r) => r.id === button.dataset.intlMerchant);
+    if (request) {
+      renderIntlDossier(request);
+      intlDossierEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
+
+  intlDossierEl.addEventListener("submit", async (event) => {
+    const form = event.target.closest("#intlActionForm");
+    if (!form) return;
+    event.preventDefault();
+    const action = event.submitter?.value === "reject" ? "reject" : "approve";
+    const reason = form.querySelector("#intlReason").value.trim();
+    errorEl.textContent = "";
+    [...form.querySelectorAll("button")].forEach((button) => (button.disabled = true));
+    try {
+      await api(`/internal/international_payments/${encodeURIComponent(form.dataset.merchant)}/${action}`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      intlDossierEl.style.display = "none";
+      intlDossierEl.innerHTML = "";
+      await Promise.all([refreshInternationalPayments(), refreshAuditLog()]);
+    } catch (err) {
+      errorEl.textContent = "No pudimos aplicar la decisión: " + err.message;
+      [...form.querySelectorAll("button")].forEach((button) => (button.disabled = false));
+    }
+  });
+
   async function refreshAuditLog() {
     const entries = await api("/internal/audit_log");
     if (entries.length === 0) {
@@ -816,13 +1090,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     document.getElementById("notConnected1").style.display = "none";
     document.getElementById("notConnected2").style.display = "none";
     document.getElementById("notConnected3").style.display = "none";
+    document.getElementById("notConnected4").style.display = "none";
+    document.getElementById("notConnected5").style.display = "none";
     supportNotConnectedEl.style.display = "none";
     supportWorkspaceEl.style.display = "grid";
 
     try {
       const me = await api("/internal/ops_users/me");
       whoamiEl.textContent = `Sesión de ${me.name} <${me.email}> · ${me.role}`;
-      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases()]);
+      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments()]);
     } catch (err) {
       errorEl.textContent = "No pudimos actualizar la consola: " + err.message;
       whoamiEl.textContent = "";
@@ -832,6 +1108,13 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       failuresEmptyEl.style.display = "none";
       auditTableEl.style.display = "none";
       auditEmptyEl.style.display = "none";
+      domainTableEl.style.display = "none";
+      domainEmptyEl.style.display = "none";
+      domainDossierEl.style.display = "none";
+      domainSearchFormEl.style.display = "none";
+      intlTableEl.style.display = "none";
+      intlEmptyEl.style.display = "none";
+      intlDossierEl.style.display = "none";
       supportWorkspaceEl.style.display = "none";
       supportNotConnectedEl.style.display = "grid";
     }

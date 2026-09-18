@@ -11,11 +11,13 @@ import { DashboardModule } from "../dashboard/dashboard.module";
 import { SupportController } from "./support.controller";
 import { SupportService } from "./support.service";
 import { MerchantSupportController } from "./merchant-support.controller";
+import { DomainOrdersController } from "./domain-orders.controller";
+import { DomainOrdersService } from "./domain-orders.service";
 
 @Module({
   imports: [AuthModule, DashboardModule],
-  controllers: [OpsUsersController, AuditLogController, DeliveryFailuresController, SupportController, MerchantSupportController],
-  providers: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, OpsAuthGuard],
-  exports: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, OpsAuthGuard],
+  controllers: [OpsUsersController, AuditLogController, DeliveryFailuresController, SupportController, MerchantSupportController, DomainOrdersController],
+  providers: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, DomainOrdersService, OpsAuthGuard],
+  exports: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, DomainOrdersService, OpsAuthGuard],
 })
 export class OpsModule {}

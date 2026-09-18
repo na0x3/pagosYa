@@ -1,0 +1,193 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Bricolage: moderate 500-weight headings, readable body and compact labeled controls.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "immersive-cover",
+      "chapter-catalog",
+      "ritual-film",
+      "closing-manifesto"
+    ],
+    "catalogSection": "chapter-catalog",
+    "mobileRule": "Full-width gallery with horizontal thumbnails, then title, price and choices. Keep 20px margins, visible cart, and 44px controls."
+  },
+  "assets": [
+    {
+      "path": "assets/bottle-coral.jpg",
+      "role": "product",
+      "description": "Savia bottle-coral: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/bottle-marfil.jpg",
+      "role": "product",
+      "description": "Savia bottle-marfil: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/bottle-salvia.jpg",
+      "role": "product",
+      "description": "Savia bottle-salvia: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/granola-cacao.jpg",
+      "role": "product",
+      "description": "Savia granola-cacao: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/granola-ritual.jpg",
+      "role": "product",
+      "description": "Savia granola-ritual: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/granola-studio.jpg",
+      "role": "product",
+      "description": "Savia granola-studio: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-7f7a1768a2f5.jpg",
+      "role": "reference",
+      "description": "Amboras reference: rich colorful product panels, never embed this screenshot.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "product",
+      "description": "Botella Ritual: Salvia, Coral, Marfil.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "product",
+      "description": "Granola de la casa.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "product",
+      "description": "Jugo naranja + jengibre; also use as Savia hero photo.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/juice-ritual.jpg",
+      "role": "product",
+      "description": "Savia juice-ritual: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/juice-studio.jpg",
+      "role": "product",
+      "description": "Savia juice-studio: approved coordinated product photography.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/video-d2f1f17e3310.mp4",
+      "role": "business",
+      "description": "Orange juice preparation stock video, use in editorial section with visible playback controls.",
+      "kind": "video"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#fcfbf8",
+      "resolved": "#fcfbf8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#243c32",
+      "resolved": "#243c32",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#294d3b",
+      "resolved": "#294d3b",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffdf8",
+      "resolved": "#fffdf8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#f0eee7",
+      "resolved": "#f0eee7",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#d9ddd4",
+      "resolved": "#d9ddd4",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "6px",
+      "resolved": "6px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Bricolage,system-ui,sans-serif",
+      "resolved": "Bricolage,system-ui,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Bricolage,system-ui,sans-serif",
+      "resolved": "Bricolage,system-ui,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

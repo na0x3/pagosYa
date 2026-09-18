@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  
+  
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+<title>Punto — accesorios de escritorio con especificaciones claras</title><meta name="description" content="Elige lámparas y soportes de escritorio comparando sus especificaciones, variantes y precios."><meta name="robots" content="index, follow, max-image-preview:large"><link rel="canonical" href="http://localhost:5175/s/rcyja2wh"><meta property="og:type" content="website"><meta property="og:title" content="Punto — accesorios de escritorio con especificaciones claras"><meta property="og:description" content="Elige lámparas y soportes de escritorio comparando sus especificaciones, variantes y precios."><meta property="og:url" content="http://localhost:5175/s/rcyja2wh"><meta name="twitter:card" content="summary"><script type="application/ld+json" data-pagosya-seo>{"@context":"https://schema.org","@graph":[]}</script></head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Punto, inicio">Punto<span aria-hidden="true">.</span></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+      <a href="index.html" aria-current="page">Inicio</a>
+      <a href="#catalogo-matriz">Catálogo</a>
+      <a href="#criterio-material">Criterio</a>
+      <a href="#retiro-cierre">Retiro</a>
+    </nav>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span class="cart-count" data-cart-count>0</span></button>
+  </header>
+
+  <main>
+    <section id="catalogo-matriz" class="catalog-section" aria-labelledby="catalog-title">
+      <div class="catalog-heading">
+        <div>
+          <p class="eyebrow">Equipo de escritorio / 02 piezas</p>
+          <h1 id="catalog-title">Objetos precisos para trabajar.</h1>
+        </div>
+        <p class="catalog-intro">Compara la especificación, elige la variante y añade cada pieza directamente al pedido.</p>
+      </div>
+      <div class="matrix-labels" aria-hidden="true"><span>Pieza / especificación</span><span>Configuración</span><span>Precio / acción</span></div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+      <template data-pagosya-product-template>
+        <article class="spec-row">
+          <div class="spec-copy">
+            <p class="row-index" aria-hidden="true">Punto / selección</p>
+            <h2 data-product-field="name"></h2>
+            <p data-product-field="description"></p>
+            <a class="detail-link menu-item__details" data-product-link href="product.html">Ver ficha completa <img src="assets/icons/arrow-right.svg" alt=""></a>
+          </div>
+          <div class="spec-options">
+            <span class="column-caption">Elige una opción</span>
+            <div data-product-field="options"></div>
+          </div>
+          <div class="spec-purchase">
+            <span class="column-caption">Precio según selección</span>
+            <strong data-product-field="price"></strong>
+            <button type="button" data-product-add>Añadir <img src="assets/icons/plus.svg" alt=""></button>
+          </div>
+        </article>
+      </template>
+    </section>
+
+    <section id="criterio-material" class="material-section" aria-labelledby="material-title">
+      <p class="eyebrow">Criterio material</p>
+      <h2 id="material-title">Menos supuestos.<br>Más especificación.</h2>
+      <div class="material-notes">
+        <p><strong>01 / Alimentación</strong><span>La lámpara funciona mediante USB-C y no incluye adaptador de pared.</span></p>
+        <p><strong>02 / Construcción</strong><span>Brazo ajustable y acabado mate en la lámpara; aluminio en el soporte.</span></p>
+        <p><strong>03 / Elección</strong><span>Color para la lámpara. Tamaño para el soporte. El precio se actualiza con la selección.</span></p>
+      </div>
+    </section>
+
+    <section id="retiro-cierre" class="pickup-section" aria-labelledby="pickup-title">
+      <p class="eyebrow">Recepción del pedido</p>
+      <h2 id="pickup-title">Retiro coordinado.</h2>
+      <p>Confirma tus piezas y continúa al checkout para completar la información de retiro disponible.</p>
+      <button class="primary-action" type="button" data-cart-open>Revisar mi pedido <img src="assets/icons/arrow-right.svg" alt=""></button>
+    </section>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <aside data-pagosya-cart hidden aria-label="Mi pedido"></aside>
+  <div data-pagosya-contact hidden></div>
+  <footer class="site-footer"><a class="wordmark wordmark--small" href="index.html">Punto<span aria-hidden="true">.</span></a><p>Accesorios de escritorio con especificaciones claras.</p><p>© <span data-year></span> Punto</p></footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

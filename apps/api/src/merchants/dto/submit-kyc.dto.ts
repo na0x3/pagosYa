@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString, MinLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class SubmitKycDto {
   @ApiProperty({ example: "Tienda Ejemplo S.R.L." })
@@ -26,4 +26,10 @@ export class SubmitKycDto {
   @IsString()
   @MinLength(5)
   payoutBankAccount!: string;
+
+  @ApiPropertyOptional({ description: "USD account (bank, account number, SWIFT/ABA) for international payouts." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  payoutUsdBankAccount?: string;
 }

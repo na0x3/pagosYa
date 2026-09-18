@@ -1,3 +1,4 @@
+import { queueStoreEmail } from '../stores/email-workspace.config';
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ConsumerAffiliationStatus, DebtRecordStatus, OrderFulfillmentStatus, Prisma, StoreStatus } from "@prisma/client";
@@ -8,6 +9,7 @@ import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { normalizeCustomerDocument, DebtCollectionsService } from "../debt-collections/debt-collections.service";
 import { readOrderTrackingToken } from "./order-tracking-token";
+import { ShipmentsService } from "../shipping/shipments.service";
 
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 32);
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -27,6 +29,7 @@ export class ConsumerService {
     private readonly config: ConfigService,
     private readonly debts: DebtCollectionsService,
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+    private readonly shipments: ShipmentsService,
   ) {}
 
   private trackedOrderId(token: string): string {
@@ -46,7 +49,7 @@ export class ConsumerService {
       },
     });
     if (!order) throw new NotFoundException("No encontramos ese seguimiento de pedido");
-    const [store, delivery] = await Promise.all([
+    const [store, delivery, shipment] = await Promise.all([
       this.prisma.store.findUnique({
         where: { id: order.storeId },
         select: { slug: true, logoUrl: true, contactPhone: true, contactEmail: true },
@@ -54,6 +57,15 @@ export class ConsumerService {
       this.prisma.deliveryAssignment.findUnique({
         where: { orderId: order.id },
         select: { status: true, estimatedAt: true, deliveredAt: true },
+      }),
+      this.prisma.shipment.findUnique({
+        where: { orderId: order.id },
+        select: {
+          status: true,
+          trackingNumber: true,
+          carrier: { select: { name: true, trackingUrlTemplate: true } },
+          events: { orderBy: { occurredAt: "asc" }, select: { status: true, description: true, occurredAt: true } },
+        },
       }),
     ]);
     return {
@@ -74,6 +86,13 @@ export class ConsumerService {
       statusEvents: order.statusEvents.map((event) => ({ status: event.status, createdAt: event.createdAt })),
       store,
       delivery,
+      shipment: shipment ? {
+        carrierName: shipment.carrier.name,
+        status: shipment.status,
+        trackingNumber: shipment.trackingNumber,
+        trackingUrl: ShipmentsService.trackingUrl(shipment.carrier.trackingUrlTemplate, shipment.trackingNumber),
+        events: shipment.events,
+      } : null,
     };
   }
 
@@ -310,7 +329,12 @@ export class ConsumerService {
     return this.prisma.$transaction(async (tx) => {
       const changed = await tx.storeOrder.updateMany({ where: { id: order.id, status: order.status }, data: { status } });
       if (changed.count !== 1) throw new BadRequestException("El pedido cambió mientras lo actualizabas; vuelve a cargarlo");
-      await tx.storeOrderStatusEvent.create({ data: { orderId: order.id, status } });
+      const statusEvent = await tx.storeOrderStatusEvent.create({ data: { orderId: order.id, status } });
+      if (status === OrderFulfillmentStatus.CANCELED || status === OrderFulfillmentStatus.REFUNDED) await this.shipments.cancelForOrder(tx, order.id);
+      if (['SHIPPED','DELIVERED','CANCELED'].includes(status) && tx.paymentIntent?.findUnique) {
+        const payment = await tx.paymentIntent.findUnique({where:{id:order.paymentIntentId}});
+        if (payment?.livemode) await queueStoreEmail(tx,order.storeId,status,statusEvent.id,payment.customerEmail,{store:order.storeName,order:order.id,customer:payment.customerName || 'cliente',amount:`${(order.amount/100).toFixed(2)} ${order.currency}`});
+      }
       return tx.storeOrder.findUniqueOrThrow({ where: { id: order.id } });
     });
   }

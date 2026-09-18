@@ -1,0 +1,64 @@
+{
+  "concepts": [
+    {
+      "name": "La mesa de la mañana",
+      "premise": "Una apertura fotográfica y editorial convierte los dos productos SAVIA en una escena de desayuno cotidiana. A diferencia de los conceptos de catálogo inmediato, primero crea atmósfera con una composición panorámica; después alterna fichas amplias de jugo y granola, con poca densidad y abundante superficie mineral.",
+      "opening": "Masthead crema con “Nido · Pilot 2”, enlaces Inicio/Despensa y “Mi pedido 0”. Debajo, assets/image-f1220ebdbbf1.jpg ocupa cerca de dos tercios del ancho, recortada para conservar las tres botellas, naranjas y etiqueta SAVIA; una columna estrecha presenta “Despensa para todos los días”, la categoría y un enlace ancla “Ver la despensa”. Sin afirmaciones añadidas.",
+      "flow": "La escena conduce al catálogo de dos fichas horizontales. Cada ficha agrupa nombre, descripción, precio desde BOB, acceso a opciones y añadir. La página de producto mantiene una galería 2+1, selectores reales por Tamaño/Presentación o Sabor/Peso, precio reactivo, cantidad y compra. Carrito y checkout usan listas limpias, resumen fijo en escritorio y selección de retiro sin inventar condiciones.",
+      "typography": "Instrument Serif para titulares de 64/54 px en escritorio y 42/36 px en móvil; Instrument Sans para navegación, cuerpo, precios y controles. Etiquetas en mayúsculas pequeñas y espaciadas, sin imitar el logotipo impreso.",
+      "imagery": "Jugo: assets/image-f1220ebdbbf1.jpg como escena principal, assets/image-06465dbb2877.jpg como retrato de botella y assets/image-d7afdd1c26f9.jpg como detalle servido. Granola: assets/image-e2dc7f4f02d3.jpg como ficha de color coral, assets/image-5d185857f7d9.jpg como retrato del frasco y assets/image-ceff3979a97c.jpg como escena de desayuno. Recortes cálidos, sin recolorear ni cubrir etiquetas SAVIA.",
+      "mobile": "La escena se vuelve una fotografía 4:3 seguida del titular; la navegación secundaria cabe en una fila desplazable, mientras “Mi pedido 0” permanece visible. Las fichas pasan a imagen, nombre/precio, opciones y acción; la galería de producto usa una imagen principal y miniaturas accesibles. Resumen de compra no tapa selectores.",
+      "layout": {
+        "sections": [
+          "morning-table",
+          "pantry-catalog",
+          "pickup-note"
+        ],
+        "catalogSection": "pantry-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Despensa a la vista",
+      "premise": "Una tienda compacta, útil y casi tipográfica que abre directamente con los dos productos comprables. Se distingue de la escena editorial por eliminar el hero y de la composición por capítulos por mostrar jugo y granola simultáneamente en una retícula de mostrador.",
+      "opening": "Header de 72 px y, de inmediato, el bloque “Hoy en la despensa” con una línea contextual corta. Dos filas compactas comienzan antes de los primeros 320 px: miniatura, nombre, precio, selector inicial y botón “Añadir”. En 390 px, la primera fila muestra nombre, precio y añadir dentro del primer viewport.",
+      "flow": "El catálogo funciona como una hoja de pedido premium: jugo y granola tienen filas expansibles para revelar todas las opciones sin abandonar Inicio. El clic en el nombre abre una página de producto más detallada con galería, grupos de opciones segmentados, cantidad y compra. Carrito y checkout conservan la lógica de tabla, separadores finos y totales alineados; retiro aparece solo como método disponible.",
+      "typography": "Bricolage Grotesque en toda la interfaz: 52 px para el rótulo de sección, 22–28 px para productos y 15–17 px para controles. Jerarquía lograda con peso y anchura, no con una segunda familia; cifras tabulares para precios y cantidades.",
+      "imagery": "Miniaturas recortadas con foco estricto en el envase: assets/image-06465dbb2877.jpg para el jugo y assets/image-5d185857f7d9.jpg para la granola. Las demás imágenes forman las galerías de producto, respetando el orden de cada producto. Fondo marfil, tinta verde profunda y naranja cítrico reservado para selección, foco y confirmación de añadido.",
+      "mobile": "Header de dos líneas muy compacto: nombre arriba; Menú y “Mi pedido 0” abajo, siempre visibles. Las filas se reorganizan en miniatura de 88 px junto a nombre/precio y una segunda línea de selectores más añadir; todos los controles miden al menos 44 px y envuelven sin recorte. No depende de animación.",
+      "layout": {
+        "sections": [
+          "counter-catalog",
+          "ingredient-index"
+        ],
+        "catalogSection": "counter-catalog",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Dos rituales",
+      "premise": "La portada se construye como un díptico: “Servir” para el jugo y “Acompañar” para la granola. A diferencia del catálogo denso, cada mitad tiene escala de cartel y compra enfocada; a diferencia de la mesa editorial, los productos y sus opciones son la apertura, no una introducción separada.",
+      "opening": "Debajo de un masthead fino, dos paneles asimétricos comparten la pantalla. El jugo ocupa un panel arena más ancho con assets/image-06465dbb2877.jpg; la granola aparece sobre coral apagado con assets/image-e2dc7f4f02d3.jpg. Cada panel incluye nombre, precio desde, una opción resumida y “Elegir opciones”. En escritorio ambos son visibles; en móvil el jugo completo abre la secuencia y la granola asoma como siguiente capítulo.",
+      "flow": "Cada panel expande su configurador dentro del catálogo: opciones reales, cantidad y añadir, sin repetir descripciones. Después, una franja cruzada muestra las dos escenas de consumo como transición visual. En producto, una galería vertical comparte pantalla con un configurador adhesivo; en móvil el configurador sigue a la primera imagen. Carrito y checkout retoman el díptico mediante columnas crema/coral y un resumen compacto, no mediante tarjetas genéricas.",
+      "typography": "Oswald para palabras de capítulo y titulares altos de 72/48 px; Instrument Sans para nombres completos, descripciones, variantes y compra. El contraste condensado/claro produce una identidad de despensa rotulada sin competir con SAVIA.",
+      "imagery": "assets/image-06465dbb2877.jpg y assets/image-e2dc7f4f02d3.jpg son retratos de apertura con envases completos y etiquetas intactas. assets/image-d7afdd1c26f9.jpg y assets/image-ceff3979a97c.jpg forman la franja “Así llega a la mesa”; assets/image-f1220ebdbbf1.jpg y assets/image-5d185857f7d9.jpg completan las galerías. Bordes rectos con radios mínimos, evitando cajas decorativas.",
+      "mobile": "Los capítulos se apilan con alturas diferentes para conservar el ritmo del díptico; el primer producto mantiene nombre, precio y acción en el viewport inicial. “Mi pedido 0” queda fijado visualmente en el header, fuera del menú. Los selectores pasan a una retícula de dos columnas y a una sola a 320 px; las imágenes usan recortes centrados en botella o frasco.",
+      "layout": {
+        "sections": [
+          "ritual-catalog",
+          "table-pairing"
+        ],
+        "catalogSection": "ritual-catalog",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 2,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Dos rituales” aprovecha que el catálogo real tiene exactamente dos productos y que ambos cuentan con tres fotografías confirmadas, incluyendo retratos claros de sus envases SAVIA. Permite elegir variantes reales desde la apertura, conserva visible la compra en 390 px y traslada naturalmente la galería, opciones, cantidad y retiro al producto y checkout, tal como solicita el brief."
+  }
+}

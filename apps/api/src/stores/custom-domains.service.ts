@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Interval } from "@nestjs/schedule";
 import { CustomDomainStatus, MerchantStatus, StoreStatus } from "@prisma/client";
 import { promises as dns } from "node:dns";
 import { randomBytes } from "node:crypto";
@@ -95,11 +96,22 @@ export class CustomDomainsService {
     return [...hostV4, ...hostV6].some((address) => targetAddresses.has(address));
   }
 
+  private async hasVerificationRecord(domain: { hostname: string; verificationToken: string }): Promise<boolean> {
+    try {
+      const records = await dns.resolveTxt(`_pagosya.${domain.hostname}`);
+      const expected = `pagosya-site-verification=${domain.verificationToken}`;
+      return records.some((chunks) => chunks.join("").trim() === expected);
+    } catch {
+      return false;
+    }
+  }
+
   private response(domain: {
     id: string;
     hostname: string;
     status: CustomDomainStatus;
     verificationToken: string;
+    domainOrderId?: string | null;
     verifiedAt: Date | null;
     lastCheckedAt: Date | null;
     createdAt: Date;
@@ -108,6 +120,7 @@ export class CustomDomainsService {
     const target = this.targetHostname();
     return {
       id: domain.id,
+      managed: Boolean(domain.domainOrderId),
       hostname: domain.hostname,
       status: domain.status,
       verifiedAt: domain.verifiedAt,
@@ -149,26 +162,29 @@ export class CustomDomainsService {
       throw new BadRequestException("Ese dominio pertenece a la infraestructura de pagosYa.");
     }
 
-    const count = await this.prisma.customDomain.count({ where: { storeId } });
-    if (count >= MAX_DOMAINS_PER_STORE) {
-      throw new BadRequestException(`Cada tienda puede conectar hasta ${MAX_DOMAINS_PER_STORE} dominios.`);
-    }
-
-    try {
-      const domain = await this.prisma.customDomain.create({
-        data: {
-          storeId,
-          hostname,
-          verificationToken: randomBytes(24).toString("base64url"),
-        },
-      });
-      return this.response(domain);
-    } catch (error) {
-      if ((error as { code?: string }).code === "P2002") {
-        throw new ConflictException("Ese dominio ya está conectado a una tienda.");
+    return this.prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`store-domains:${storeId}`}))`;
+      const count = await tx.customDomain.count({ where: { storeId } });
+      if (count >= MAX_DOMAINS_PER_STORE) {
+        throw new BadRequestException(`Cada tienda puede conectar hasta ${MAX_DOMAINS_PER_STORE} dominios.`);
       }
-      throw error;
-    }
+
+      try {
+        const domain = await tx.customDomain.create({
+          data: {
+            storeId,
+            hostname,
+            verificationToken: randomBytes(24).toString("base64url"),
+          },
+        });
+        return this.response(domain);
+      } catch (error) {
+        if ((error as { code?: string }).code === "P2002") {
+          throw new ConflictException("Ese dominio ya está conectado a una tienda.");
+        }
+        throw error;
+      }
+    });
   }
 
   async verify(merchantId: string, storeId: string, domainId: string) {
@@ -176,20 +192,11 @@ export class CustomDomainsService {
     const domain = await this.prisma.customDomain.findFirst({ where: { id: domainId, storeId } });
     if (!domain) throw new NotFoundException("Domain not found");
 
+    if (domain.domainOrderId) throw new BadRequestException("La conexión de este dominio se verifica automáticamente.");
     const checkedAt = new Date();
-    const expected = `pagosya-site-verification=${domain.verificationToken}`;
-    let records: string[][] = [];
-    try {
-      records = await dns.resolveTxt(`_pagosya.${domain.hostname}`);
-    } catch {
+    if (!(await this.hasVerificationRecord(domain))) {
       await this.prisma.customDomain.update({ where: { id: domain.id }, data: { lastCheckedAt: checkedAt } });
       throw new BadRequestException("Todavía no encontramos el registro TXT. Revisa los valores y espera a que el DNS se propague.");
-    }
-
-    const verified = records.some((chunks) => chunks.join("").trim() === expected);
-    if (!verified) {
-      await this.prisma.customDomain.update({ where: { id: domain.id }, data: { lastCheckedAt: checkedAt } });
-      throw new BadRequestException("Encontramos el DNS, pero el valor TXT no coincide con el de esta tienda.");
     }
 
     const routingActive = await this.routesToTarget(domain.hostname);
@@ -204,8 +211,28 @@ export class CustomDomainsService {
     return this.response(updated);
   }
 
+  /** Re-check both ownership and routing so a removed DNS record cannot leave a stale active hostname. */
+  @Interval("custom-domain-reconciliation", 15 * 60 * 1000)
+  async reconcileActiveDomains() {
+    const domains = await this.prisma.customDomain.findMany({
+      where: { status: CustomDomainStatus.ACTIVE, domainOrderId: null },
+      select: { id: true, hostname: true, verificationToken: true },
+      take: 200,
+    });
+    for (const domain of domains) {
+      const [owned, routed] = await Promise.all([this.hasVerificationRecord(domain), this.routesToTarget(domain.hostname)]);
+      await this.prisma.customDomain.updateMany({
+        where: { id: domain.id, status: CustomDomainStatus.ACTIVE },
+        data: { status: owned && routed ? CustomDomainStatus.ACTIVE : CustomDomainStatus.VERIFIED, lastCheckedAt: new Date() },
+      });
+    }
+    return { checked: domains.length };
+  }
+
   async remove(merchantId: string, storeId: string, domainId: string) {
     await this.ownedStore(merchantId, storeId);
+    const managed = await this.prisma.customDomain.findFirst({ where: { id: domainId, storeId, domainOrderId: { not: null } } });
+    if (managed) throw new BadRequestException("Este dominio fue comprado en pagosYa. Contacta a soporte para transferirlo o cambiar su conexión.");
     const result = await this.prisma.customDomain.deleteMany({ where: { id: domainId, storeId } });
     if (!result.count) throw new NotFoundException("Domain not found");
     return { success: true };
@@ -216,6 +243,7 @@ export class CustomDomainsService {
     const domain = await this.prisma.customDomain.findUnique({
       where: { hostname },
       include: {
+        domainOrder: { select: { status: true, expiresAt: true, sandbox: true } },
         store: {
           select: {
             slug: true,
@@ -228,6 +256,7 @@ export class CustomDomainsService {
     if (
       !domain ||
       domain.status !== CustomDomainStatus.ACTIVE ||
+      (domain.domainOrder && (domain.domainOrder.sandbox || domain.domainOrder.status !== 'ACTIVE' || !domain.domainOrder.expiresAt || domain.domainOrder.expiresAt <= new Date())) ||
       domain.store.status !== StoreStatus.ACTIVE ||
       domain.store.merchant.status !== MerchantStatus.ACTIVE
     ) {

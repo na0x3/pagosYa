@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bruma — Cuidado cosmético diario en varios volúmenes</title>
+  <meta name="description" content="Elige crema de manos y jabón líquido Bruma en formatos para casa o viaje.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Bruma, inicio" data-store-name>Bruma</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+      <a href="#catalogo-esencial" aria-current="page">Productos</a>
+      <a href="#recogida">Recogida</a>
+    </nav>
+    <button class="cart-control" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span>(<span data-cart-count>0</span>)</span></button>
+  </header>
+
+  <main>
+    <section id="catalogo-esencial" class="catalog-section" aria-labelledby="catalog-title">
+      <div class="catalog-intro">
+        <p class="eyebrow">El tocador esencial</p>
+        <h1 id="catalog-title">Cuidado diario, en el volumen que necesitas.</h1>
+        <a class="intro-action" href="#catalog-list">Elegir producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+      <div id="catalog-list" data-pagosya-catalog aria-label="Productos Bruma"></div>
+    </section>
+
+    <section id="nota-formatos" class="format-note" aria-labelledby="format-title">
+      <p class="section-index">Formatos</p>
+      <div>
+        <h2 id="format-title">Para llevar o dejar en casa.</h2>
+        <p>Cada producto ofrece dos volúmenes. Selecciona el formato antes de añadirlo a tu pedido.</p>
+      </div>
+    </section>
+
+    <section id="recogida" class="pickup-note" aria-labelledby="pickup-title">
+      <p class="section-index">Recogida</p>
+      <div>
+        <h2 id="pickup-title">Finaliza tu elección con calma.</h2>
+        <p>La opción de recogida y los datos disponibles se muestran durante el checkout.</p>
+        <button class="text-cart" type="button" data-cart-open>Revisar mi pedido <img src="assets/icons/arrow-right.svg" alt=""></button>
+      </div>
+    </section>
+  </main>
+
+  <template data-pagosya-product-template>
+    <article class="essential-row">
+      <div class="essential-copy">
+        <p class="product-kicker">Bruma · cuidado diario</p>
+        <h2 data-product-field="name"></h2>
+        <p class="product-description" data-product-field="description"></p>
+        <a class="menu-item__details" data-product-link href="product.html">Ver producto</a>
+      </div>
+      <div class="essential-choice">
+        <span class="choice-label">Volumen</span>
+        <div data-product-field="options"></div>
+      </div>
+      <div class="essential-purchase">
+        <span class="menu-item__price" data-product-field="price"></span>
+        <button class="menu-add" type="button" data-product-add>Añadir</button>
+      </div>
+    </article>
+  </template>
+
+  <div data-pagosya-contact hidden></div>
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <aside data-pagosya-cart hidden aria-label="Mi pedido"></aside>
+
+  <footer class="site-footer">
+    <a class="wordmark footer-mark" href="index.html">Bruma</a>
+    <p>Cuidado cosmético diario en varios volúmenes.</p>
+    <a href="#catalogo-esencial">Volver a productos</a>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

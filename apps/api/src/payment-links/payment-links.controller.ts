@@ -8,7 +8,9 @@ import { CreatePaymentLinkDto } from "./dto/create-payment-link.dto";
 import { UpdatePaymentLinkDto } from "./dto/update-payment-link.dto";
 import { ImportInventoryDto } from "./dto/import-inventory.dto";
 import { NormalizeInventoryCsvDto } from "./dto/normalize-inventory-csv.dto";
+import { ImportProductImagesDto } from "./dto/import-product-images.dto";
 import { ScheduleProductDiscountsDto } from "./dto/schedule-product-discounts.dto";
+import { RemoveProductSubscriptionsDto, UpdateProductSubscriptionsDto } from "./dto/update-product-subscriptions.dto";
 
 /** Dashboard/backend-authenticated management of a single store's products (Payment
  * Links) — nested under the store they belong to, since a merchant can run several
@@ -70,6 +72,16 @@ export class PaymentLinksController {
     return this.paymentLinks.normalizeInventoryCsv(merchant.id, storeId, dto.csv, dto.imageFileNames ?? []);
   }
 
+  @Post("import/images")
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  importProductImages(
+    @CurrentMerchant() merchant: { id: string },
+    @Param("storeId") storeId: string,
+    @Body() dto: ImportProductImagesDto,
+  ) {
+    return this.paymentLinks.interpretAndImportProductImages(merchant.id, storeId, dto);
+  }
+
   @Post(":id/archive")
   archive(
     @CurrentMerchant() merchant: { id: string },
@@ -77,6 +89,21 @@ export class PaymentLinksController {
     @Param("id") id: string,
   ) {
     return this.paymentLinks.archive(merchant.id, storeId, id);
+  }
+
+  @Get(":id/subscriptions")
+  listSubscriptions(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Param("id") id: string) {
+    return this.paymentLinks.listSubscriptions(merchant.id, storeId, id);
+  }
+
+  @Patch(":id/subscriptions")
+  updateSubscriptions(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateProductSubscriptionsDto) {
+    return this.paymentLinks.updateSubscriptions(merchant.id, storeId, id, dto);
+  }
+
+  @Delete(":id/subscriptions")
+  removeSubscriptions(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: RemoveProductSubscriptionsDto) {
+    return this.paymentLinks.removeSubscriptions(merchant.id, storeId, id, dto);
   }
 
   @Post(":id/restore")

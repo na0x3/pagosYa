@@ -39,6 +39,34 @@ jobs:
       - name: Test
         run: pnpm test
 
+  browser-tests:
+    name: Customer shopping and merchant publishing (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @pagosya/merchant-studio exec playwright install --with-deps chromium
+      - name: Test cart, fulfillment, publishing, and onboarding
+        run: pnpm --filter @pagosya/merchant-studio exec playwright test tests/source-next.spec.ts tests/source-shopping-flow.spec.ts tests/source-checks.spec.ts tests/source-publication.spec.ts tests/store-readiness.spec.ts
+      - run: pnpm --filter @pagosya/merchant-dashboard run build:studio
+      - name: Test merchant navigation and account access
+        run: pnpm --filter @pagosya/merchant-dashboard exec playwright test tests/merchant-workspace.spec.mjs tests/auth-account.spec.mjs tests/consumer-auth-account.spec.mjs --workers=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: shopping-browser-results
+          path: |
+            apps/merchant-studio/test-results/
+            apps/merchant-studio/playwright-report/
+            apps/merchant-dashboard/test-results/
+          retention-days: 7
+
   migration-safety:
     name: Migration safety (apply against pre-existing data)
     runs-on: ubuntu-latest

@@ -1,0 +1,149 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Bricolage Grotesque como única familia. Cinco roles exactos: display 450 a 48px/1.05 (móvil 39px), máximo 20ch y 3x el cuerpo; subhead italic 400 a 18px/1.25, tinta 70%; body 400 a 16px/1.75 (móvil 15px), máximo 52ch; label 600 a 11px, mayúsculas y 0.14em; numeric 500 con cifras tabulares a 19px editorial. Se usan únicamente pesos 400/600 en la implementación, con contraste por escala y color.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-mesa",
+      "detalles-cotidianos"
+    ],
+    "catalogSection": "catalogo-mesa",
+    "mobileRule": "Una sola columna compacta conserva fotos cuadradas y grupos de compra completos. La cabecera muestra wordmark, menú y «Mi pedido 0» con icono de bolsa; la compra nunca entra al menú. Las opciones envuelven sin desbordar a 320px y cada botón mide al menos 44px. La franja editorial se vuelve una secuencia de dos imágenes con textos breves."
+  },
+  "productPage": {
+    "style": "editorial"
+  },
+  "assets": [
+    {
+      "path": "assets/image-739dfea4fbd5.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-c31788d5846f.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7f873aa0012.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-7ef7d25d1813.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f4f1eb",
+      "resolved": "#f4f1eb",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#18191c",
+      "resolved": "#18191c",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "var(--brand-accent,#1747d1)",
+      "resolved": "#1747d1",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffdfa",
+      "resolved": "#fffdfa",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fffdfa",
+      "resolved": "#fffdfa",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "color-mix(in srgb,var(--store-foreground) 14%,var(--store-background))",
+      "resolved": null,
+      "source": "unresolved",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "4px",
+      "resolved": "4px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  },
+  "scene": {
+    "backdropHex": "#f4f1eb",
+    "backdropMode": "paper",
+    "lightDirection": "left-45",
+    "cameraElevation": "overhead",
+    "fillFraction": 0.62,
+    "aspect": "portrait",
+    "shadow": "long-directional"
+  }
+}

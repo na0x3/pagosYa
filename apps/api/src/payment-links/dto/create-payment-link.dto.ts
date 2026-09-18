@@ -2,8 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -19,10 +21,44 @@ import {
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
+import { PRODUCT_HIGHLIGHT_ICONS } from "../product-highlights";
 
 const PRODUCT_IMAGE_POSITION_PATTERN = /^(?:0|[1-9]\d?|100)% (?:0|[1-9]\d?|100)%$/;
 
+export class ProductOptionValueDto {
+  @IsString() @IsSafeText() @Length(1, 40)
+  name!: string;
+
+  @IsString() @IsSafeText() @Length(1, 40)
+  value!: string;
+}
+
+export class ProductSpecificationDto {
+  @IsString() @IsSafeText() @Length(1, 40)
+  label!: string;
+
+  @IsString() @IsSafeText() @Length(1, 120)
+  value!: string;
+}
+
+export class ProductHighlightDto {
+  @ApiProperty({ description: "Icon name drawn by the storefront.", enum: PRODUCT_HIGHLIGHT_ICONS })
+  @IsIn(PRODUCT_HIGHLIGHT_ICONS as unknown as string[])
+  icon!: string;
+
+  @IsString() @IsSafeText() @Length(1, 24)
+  label!: string;
+
+  @IsOptional() @IsString() @IsSafeText() @Length(1, 40)
+  detail?: string;
+}
+
 export class ProductVariantDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @ValidateNested({ each: true }) @Type(() => ProductOptionValueDto)
+  options?: ProductOptionValueDto[];
+
+  @IsOptional() @IsString() @Matches(UPLOADED_FILE_URL_PATTERN) @MaxLength(MAX_UPLOADED_FILE_URL_LENGTH)
+  imageUrl?: string | null;
   @ApiPropertyOptional({ description: "Stable option id returned by the API. Include it when editing an existing option." })
   @IsOptional()
   @IsString()
@@ -32,7 +68,7 @@ export class ProductVariantDto {
   @ApiProperty({ example: "Grande" })
   @IsString()
   @IsSafeText()
-  @MaxLength(60)
+  @MaxLength(260)
   name!: string;
 
   @ApiProperty({ description: "Option price in minor units (centavos).", example: 6500 })
@@ -85,6 +121,19 @@ export class ProductExtraDto {
   @Max(12)
   freeAllowance?: number;
 
+  @ApiPropertyOptional({ description: "Another simple product of this store that this choice stands for. Its live name and photo are shown, and each pick consumes its stock." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  productId?: string;
+
+  @ApiPropertyOptional({ description: "Exact number of selections the customer makes from this group, repeats allowed (a box of 6 cookies with 2 Matcha).", example: 6 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  pickCount?: number;
+
   @ApiPropertyOptional({ description: "Customer must select this extra before adding the product.", default: false })
   @IsOptional()
   @IsBoolean()
@@ -109,6 +158,7 @@ export class ProductExtraDto {
 }
 
 export class CreatePaymentLinkDto {
+  @IsOptional() @IsInt() @Min(0) @Max(100000000) shippingWeightGrams?: number;
   @ApiProperty({ example: "Corte de cabello" })
   @IsString()
   @IsSafeText()
@@ -155,6 +205,34 @@ export class CreatePaymentLinkDto {
   @MaxLength(24, { each: true })
   tags?: string[];
 
+  @ApiPropertyOptional({ description: "Ordered specification rows shown on the product page, e.g. Material: Algodón.", type: [ProductSpecificationDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @ValidateNested({ each: true })
+  @Type(() => ProductSpecificationDto)
+  specifications?: ProductSpecificationDto[];
+
+  @ApiPropertyOptional({ description: "Up to four approved highlights with an icon shown on the product page.", type: [ProductHighlightDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => ProductHighlightDto)
+  highlights?: ProductHighlightDto[];
+
+  @ApiPropertyOptional({
+    description: "Ordered Payment Link ids shown as recommendations on this product's detail page.",
+    type: [String],
+    default: [],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ArrayUnique()
+  @IsString({ each: true })
+  recommendedProductIds?: string[];
+
   @ApiPropertyOptional({
     description: "Remaining units. Omit to leave unchanged, or send null for unlimited (not tracked).",
     example: 10,
@@ -174,7 +252,7 @@ export class CreatePaymentLinkDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(8)
+  @ArrayMaxSize(256)
   @ValidateNested({ each: true })
   @Type(() => ProductVariantDto)
   variants?: ProductVariantDto[];

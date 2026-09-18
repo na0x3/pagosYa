@@ -7,6 +7,9 @@ export interface RailAuthorizeRequest {
   currency: string;
   paymentMethod: { type: PaymentMethodType; token: string; metadata?: Record<string, unknown> };
   idempotencyKey: string;
+  /** ISO-3166 alpha-2 shopper country; required by cross-border rails. */
+  country?: string;
+  payer?: { name: string; email: string; document?: string };
 }
 
 export interface RailCaptureRequest {
@@ -38,6 +41,8 @@ export interface RailResult {
 export interface PaymentRailAdapter {
   readonly railId: RailId;
   readonly supportedMethodTypes: PaymentMethodType[];
+  /** Explicit-only rails are chosen by id (e.g. confirm with rail: "dlocal"), never by payment method type. */
+  readonly explicitOnly?: boolean;
   authorize(req: RailAuthorizeRequest): Promise<RailResult>;
   capture(req: RailCaptureRequest): Promise<RailResult>;
   refund(req: RailRefundRequest): Promise<RailResult>;

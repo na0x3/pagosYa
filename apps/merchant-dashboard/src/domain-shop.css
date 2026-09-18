@@ -1,0 +1,19 @@
+.domain-shop { margin-top: 20px; padding: 20px; border: 2px solid var(--bento-keyline, #222); background: var(--pg-bg, #fff); color: var(--pg-text, #18181b); }
+.domain-shop h4 { margin: 0 0 8px; font-size: 1rem; }
+.domain-shop p { font-size: .8rem; line-height: 1.55; }
+.domain-shop-heading, .domain-shop-results article, .domain-shop-order > div:first-child { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.domain-shop-search { display: flex; align-items: end; gap: 10px; margin-top: 16px; }
+.domain-shop label { display: grid; gap: 6px; font-size: .76rem; font-weight: 600; }
+.domain-shop-search label { flex: 1; }
+.domain-shop input:not([type=checkbox]) { width: 100%; min-width: 0; padding: 10px; border: 1px solid #71717a; border-radius: 6px; }
+.domain-shop-results article, .domain-shop-order { padding: 16px 0; border-top: 1px solid #a1a1aa; }
+.domain-shop-results strong, .domain-shop-results small { display: block; overflow-wrap: anywhere; }
+.domain-shop-results small { margin-top: 6px; font-size: .74rem; }
+.domain-shop-review { margin: 18px 0; padding: 18px; border: 2px solid currentColor; border-radius: 8px; }
+.domain-shop-contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.domain-shop .domain-shop-consent { display: flex; align-items: flex-start; gap: 10px; line-height: 1.6; }
+.domain-shop-consent input { flex: 0 0 auto; margin-top: 4px; }
+.domain-shop-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.domain-shop-link { display: inline-flex; align-items: center; min-height: 42px; padding: 8px 14px; text-decoration: none; border: 1px solid currentColor; border-radius: 6px; }
+.domain-shop [hidden] { display: none !important; }
+@media (max-width: 620px) { .domain-shop { padding: 14px; } .domain-shop-contact { grid-template-columns: 1fr; } .domain-shop-search, .domain-shop-heading, .domain-shop-results article, .domain-shop-order > div:first-child { flex-direction: column; align-items: stretch; } .domain-shop-review { padding: 12px; } }

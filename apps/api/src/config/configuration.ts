@@ -1,4 +1,5 @@
 import * as path from "path";
+import type { DomainCommerceConfig } from '../stores/domains/domain-commerce.config';
 
 export interface BanecoQrConfig {
   enabled: boolean;
@@ -8,6 +9,48 @@ export interface BanecoQrConfig {
   aesKey: string;
   creditAccount: string;
   webhookSecret: string;
+}
+
+export interface DlocalConfig {
+  enabled: boolean;
+  baseUrl: string;
+  login: string;
+  transKey: string;
+  secretKey: string;
+  smartFieldsKey: string;
+  notificationUrl: string;
+  returnUrl: string;
+  bobPerUsd: number;
+  intlFeeBps: number;
+  costBps: number;
+  timeoutMs: number;
+}
+
+function positiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function nonNegativeNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return value !== undefined && Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+export function parseDlocalConfig(env: NodeJS.ProcessEnv): DlocalConfig {
+  return {
+    enabled: env.DLOCAL_ENABLED === "true",
+    baseUrl: env.DLOCAL_BASE_URL ?? "https://sandbox.dlocal.com",
+    login: env.DLOCAL_LOGIN ?? "",
+    transKey: env.DLOCAL_TRANS_KEY ?? "",
+    secretKey: env.DLOCAL_SECRET_KEY ?? "",
+    smartFieldsKey: env.DLOCAL_SMART_FIELDS_KEY ?? "",
+    notificationUrl: env.DLOCAL_NOTIFICATION_URL ?? "http://localhost:3000/v1/webhooks/dlocal/payments",
+    returnUrl: env.DLOCAL_RETURN_URL ?? "http://localhost:5173/",
+    bobPerUsd: positiveNumber(env.INTL_BOB_PER_USD, 0),
+    intlFeeBps: positiveNumber(env.INTL_FEE_BPS, 590),
+    costBps: nonNegativeNumber(env.DLOCAL_COST_BPS, 0),
+    timeoutMs: positiveNumber(env.DLOCAL_TIMEOUT_MS, 15000),
+  };
 }
 
 export interface EmailConfig {
@@ -26,6 +69,9 @@ export interface SiatConfig {
 }
 
 export interface AppConfig {
+  domainCommerce: DomainCommerceConfig;
+  sourceFramework: 'next' | 'static';
+  sourceDesignJobsEnabled: boolean;
   environment: string;
   port: number;
   databaseUrl: string;
@@ -44,8 +90,10 @@ export interface AppConfig {
     target: string;
   };
   banecoQr: BanecoQrConfig;
+  dlocal: DlocalConfig;
   uploadsDir: string;
   objectStorage: {
+    privateBucket?: string;
     bucket: string;
     region: string;
     endpoint: string;
@@ -53,9 +101,11 @@ export interface AppConfig {
     secretAccessKey: string;
     forcePathStyle: boolean;
   };
+  deepSeek: { apiKey: string; enabled: boolean };
   openAi: {
     apiKey: string;
     designModel: string;
+    conversationModel: string;
     inventoryModel: string;
     imageModel: string;
     enabled: boolean;
@@ -99,6 +149,14 @@ function databaseUrlWithPoolSettings(value: string): string {
   } catch {
     return value;
   }
+}
+
+/**
+ * dLocal fixture mode (DLOCAL_ENABLED=false) fakes payments, so international
+ * charges may only be offered outside production unless the real client is on.
+ */
+export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, environment: string | undefined): boolean {
+  return dlocal.enabled || environment !== "production";
 }
 
 export function assertProductionSecurityConfig(app: AppConfig): void {
@@ -145,6 +203,16 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
       failures.push("all Baneco credentials are required when BANECO_QR_ENABLED=true");
     }
     requireSecret("BANECO_WEBHOOK_SECRET", app.banecoQr.webhookSecret);
+  }
+  if (app.dlocal.enabled) {
+    if (!app.dlocal.login || !app.dlocal.transKey || !app.dlocal.secretKey) {
+      failures.push("DLOCAL_LOGIN, DLOCAL_TRANS_KEY and DLOCAL_SECRET_KEY are required when DLOCAL_ENABLED=true");
+    }
+    requireHttps("DLOCAL_NOTIFICATION_URL", app.dlocal.notificationUrl);
+    requireHttps("DLOCAL_RETURN_URL", app.dlocal.returnUrl);
+  }
+  if (app.dlocal.bobPerUsd > 0 && !app.dlocal.enabled) {
+    failures.push("INTL_BOB_PER_USD must stay unset while DLOCAL_ENABLED is not true (fixture mode fakes international payments)");
   }
   if (failures.length) throw new Error(`Refusing insecure production startup:\n- ${failures.join("\n- ")}`);
 }
@@ -202,6 +270,24 @@ export default (): { app: AppConfig } => {
     ]),
     exposeDocs: process.env.EXPOSE_API_DOCS ? process.env.EXPOSE_API_DOCS === "true" : environment !== "production",
     trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+    domainCommerce: {
+      enabled: process.env.DOMAIN_COMMERCE_ENABLED === 'true',
+      sandbox: process.env.DOMAIN_REGISTRAR_SANDBOX !== 'false',
+      username: process.env.NAMECOM_USERNAME ?? '',
+      token: process.env.NAMECOM_API_TOKEN ?? '',
+      platformMerchantId: process.env.DOMAIN_PLATFORM_MERCHANT_ID ?? '',
+      bobPerUsd: Number(process.env.DOMAIN_BOB_PER_USD ?? 0),
+      markupPercent: Number(process.env.DOMAIN_MARKUP_PERCENT ?? 0),
+      cloudflareToken: process.env.DOMAIN_CLOUDFLARE_API_TOKEN ?? '',
+      cloudflareZoneId: process.env.DOMAIN_CLOUDFLARE_ZONE_ID ?? '',
+      // No default on purpose. A purchased domain's apex and www records are
+      // written to this host, so a deployment that forgets it must fail closed
+      // in assertDomainCommerceReady rather than point real names at whatever
+      // the platform's default happens to be. customDomains.target below keeps
+      // its default: that path is already live and merchants aim their own DNS
+      // at it by hand.
+      target: process.env.CUSTOM_DOMAIN_CNAME_TARGET ?? '',
+    },
     customDomains: {
       // All verified merchant hostnames route to the same storefront app. The
       // deployment edge must accept this target and provision TLS for the
@@ -220,10 +306,12 @@ export default (): { app: AppConfig } => {
       creditAccount: process.env.BANECO_CREDIT_ACCOUNT ?? "",
       webhookSecret: process.env.BANECO_WEBHOOK_SECRET ?? "",
     },
+    dlocal: parseDlocalConfig(process.env),
     // The local fallback resolves to the same directory regardless of process
     // cwd. Set object storage in production for multi-instance durability.
     uploadsDir: process.env.UPLOADS_DIR ?? path.join(apiRootFromCwd(), "uploads"),
     objectStorage: {
+      privateBucket: process.env.PRIVATE_DOWNLOAD_BUCKET ?? "",
       bucket: process.env.OBJECT_STORAGE_BUCKET ?? "",
       region: process.env.OBJECT_STORAGE_REGION ?? "us-east-1",
       endpoint: process.env.OBJECT_STORAGE_ENDPOINT ?? "",
@@ -231,8 +319,12 @@ export default (): { app: AppConfig } => {
       secretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? "",
       forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE !== "false",
     },
+    sourceFramework: process.env.SOURCE_FRAMEWORK === 'static' ? 'static' : 'next',
+    sourceDesignJobsEnabled: process.env.SOURCE_DESIGN_JOBS_ENABLED === 'true',
+    deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",
+      conversationModel: process.env.OPENAI_CONVERSATION_MODEL ?? "gpt-5.6-terra",
       designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-sol",
       inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-sol",
       imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2",

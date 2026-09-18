@@ -60,13 +60,29 @@ function scheduleReload() {
 
 function isDashboardSourceFile(filename) {
   const normalized = String(filename || "").split(path.sep).join("/");
-  return normalized === "index.html" || normalized.startsWith("assets/") || normalized.startsWith("fonts/");
+  return normalized === "index.html" || normalized.startsWith("assets/") || normalized.startsWith("fonts/") || normalized.startsWith("src/");
 }
 
 const server = createServer(async (req, res) => {
   applySecurityHeaders(res);
   try {
     const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    if (requestUrl.pathname.startsWith("/studio/")) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      const relative = decodeURIComponent(requestUrl.pathname.slice("/studio/".length)) || "index.html";
+      const root = path.join(dirname, "public", "studio");
+      const filename = path.resolve(root, relative);
+      if (!filename.startsWith(root + path.sep)) { res.writeHead(404); res.end("not found"); return; }
+      const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ttf": "font/ttf", ".svg": "image/svg+xml" };
+      try {
+        const content = await readFile(filename);
+        res.setHeader("content-security-policy", "frame-ancestors 'self'; base-uri 'self'");
+        res.setHeader("x-frame-options", "SAMEORIGIN");
+        res.writeHead(200, { "content-type": types[path.extname(filename)] || "application/octet-stream", "cache-control": "no-store" });
+        res.end(content);
+      } catch (error) { if (error.code !== "ENOENT") throw error; res.writeHead(404); res.end("Studio unavailable. Run pnpm run build:studio."); }
+      return;
+    }
     if (requestUrl.pathname === "/__live_reload" && liveReloadEnabled) {
       res.writeHead(200, {
         "content-type": "text/event-stream",
@@ -98,6 +114,19 @@ const server = createServer(async (req, res) => {
       const css = await readFile(path.join(dirname, "journey.css"), "utf8");
       res.writeHead(200, { "content-type": "text/css; charset=utf-8", "cache-control": liveReloadEnabled ? "no-cache" : "public, max-age=3600" });
       res.end(css);
+      return;
+    }
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/product-options.js", "/src/product-options.css", "/src/workspace-design.css", "/src/shipment-panel.mjs"].includes(requestUrl.pathname)) {
+      const filename = path.basename(requestUrl.pathname);
+      const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
+      res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(content); return;
+    }
+    if (["/src/store-editor/state.js", "/src/store-editor/commands.js", "/src/store-editor/persistence.js", "/src/store-editor/selection.js", "/src/store-editor/bootstrap.js"].includes(requestUrl.pathname)) {
+      const filename = requestUrl.pathname.slice("/src/store-editor/".length);
+      const source = await readFile(path.join(dirname, "src", "store-editor", filename), "utf8");
+      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+      res.end(source);
       return;
     }
     if (mascotAssets.has(requestUrl.pathname)) {

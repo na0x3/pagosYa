@@ -1,0 +1,84 @@
+{
+  "id": "cmu2tfuc6001dtxevj3uypgxn",
+  "requestId": "bb749650-f2bd-4e7b-89b8-245996595e7d",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 17.1406,
+  "observedCredits": 17.1406,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "508d8155-f79e-4040-b57f-ed5cff2eeb74",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:17:43.549Z",
+      "finishedAt": "2026-09-15T15:17:55.608Z",
+      "actualMicroUsd": 9155,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "f7103903-9a0d-4a19-8083-e69f8a51b511",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:17:56.326Z",
+      "finishedAt": "2026-09-15T15:18:19.238Z",
+      "actualMicroUsd": 123655,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "6ba16415-4c83-40da-a610-f8130f2e606a",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:18:22.663Z",
+      "finishedAt": "2026-09-15T15:18:39.268Z",
+      "actualMicroUsd": 38596,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:17:40.566Z",
+  "updatedAt": "2026-09-15T15:18:39.271Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A es preferible: elimina el enlace de volver redundante que B suma sobre las migas y deja el inicio de la ficha más directo, sin perder contenido útil. Aun así, la zona de compra necesita aclarar selección y total, y la composición de escritorio desaprovecha gran parte del ancho.",
+    "findings": [
+      {
+        "category": "consistency",
+        "location": "Selector de volumen y bloque de compra",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Diferenciar de forma clara la opción seleccionada y mantener visible su valor junto a la etiqueta de volumen; conservar los precios completos dentro de cada opción.",
+        "observation": "Los dos volúmenes tienen la misma apariencia, sin un estado elegido reconocible, mientras el mensaje bajo el botón indica que falta seleccionar una opción. No queda visible qué valor se aplicaría a la compra."
+      },
+      {
+        "category": "layout",
+        "location": "Cantidad y acción principal",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Ajustar el contenedor al ancho real del selector de cantidad y agruparlo de forma compacta con el botón. Cuando exista una opción válida, incluir el total correspondiente en la acción principal.",
+        "observation": "El control de cantidad queda dentro de una franja contorneada mucho más ancha que sus tres controles, generando un vacío que parece un campo incompleto. Además, el botón principal no muestra el total asociado a la selección."
+      },
+      {
+        "category": "layout",
+        "location": "Cuerpo principal de la ficha",
+        "severity": "major",
+        "viewport": "desktop",
+        "correction": "Reequilibrar la retícula para que el bloque de producto y compra aproveche mejor el ancho disponible, sin introducir fotografías ni ilustraciones de envases.",
+        "observation": "La información y la compra ocupan una columna relativamente estrecha a la izquierda, mientras casi la mitad derecha queda vacía. Sin fotografía por el brief, esa ausencia deja una composición desbalanceada y reduce la presencia de la ficha."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_05efda50f6ef71eb016aa961bf569087d289baf81a5899f931",
+    "regressions": [],
+    "providerMicroUsd": 38596
+  },
+  "resumeAvailable": false
+}

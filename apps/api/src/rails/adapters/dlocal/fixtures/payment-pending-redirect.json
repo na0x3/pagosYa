@@ -1,0 +1,13 @@
+{
+  "id": "D-4-fixture-pending",
+  "amount": 100.58,
+  "currency": "USD",
+  "country": "BR",
+  "payment_method_id": "PX",
+  "payment_method_flow": "REDIRECT",
+  "status": "PENDING",
+  "status_detail": "The payment is pending.",
+  "status_code": "100",
+  "redirect_url": "https://sandbox.dlocal.com/collect/pay/fixture",
+  "order_id": "pi_fixture"
+}

@@ -1,0 +1,58 @@
+[
+  {
+    "file": "bricolage.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bricolagegrotesque/BricolageGrotesque%5Bopsz%2Cwdth%2Cwght%5D.ttf",
+    "gitBlob": "9a4ca271ff84357bb8f8830ce71b85ea3571f731",
+    "sha256": "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682"
+  },
+  {
+    "file": "bricolage-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bricolagegrotesque/OFL.txt",
+    "gitBlob": "a397658a5c4ab27c349964553b7caca61a4346f6",
+    "sha256": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba"
+  },
+  {
+    "file": "fraunces.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/Fraunces%5BSOFT%2CWONK%2Copsz%2Cwght%5D.ttf",
+    "gitBlob": "8210f9488d3c732359a9292dd09aca3f2bae830e",
+    "sha256": "177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb"
+  },
+  {
+    "file": "fraunces-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/OFL.txt",
+    "gitBlob": "22fa7ce5733434d0c634f6e55116f410858e938c",
+    "sha256": "bdf4c22802eaf804f998195871c6b8938aac2ac14b2d78a8bd66a6f1eced833b"
+  },
+  {
+    "file": "instrument.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/InstrumentSans%5Bwdth%2Cwght%5D.ttf",
+    "gitBlob": "3589b81b22d3defc725dfdcdf16b5da7c9adc691",
+    "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1"
+  },
+  {
+    "file": "instrument-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/OFL.txt",
+    "gitBlob": "26bd2f954bfa282d235370728095db97d8a36f6f",
+    "sha256": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966"
+  },
+  {
+    "file": "oswald.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/Oswald%5Bwght%5D.ttf",
+    "sha256": "5b38c246e255a12f5712d640d56bcced0472466fc68983d2d0410ec0457c2817"
+  },
+  {
+    "file": "oswald-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/OFL.txt",
+    "sha256": "0fd731a904b729a4e02eaf5e8ebd06783edd9abe400e8882760160230675b652"
+  },
+  {
+    "file": "instrument-serif.ttf",
+    "source": "examples/independent-cafe/assets/instrument-serif.ttf",
+    "sha256": "a99e3db50076202713812ed541feeb23ffeebb61db1fa6b1cf48fe590d37ef18"
+  },
+  {
+    "file": "instrument-serif-OFL.txt",
+    "source": "examples/independent-cafe/assets/InstrumentSerif-OFL.txt",
+    "sha256": "b6b2292aa580937fb63796878d65a027a27f8c3db2d97601d0c34d9031f4ca17"
+  }
+]

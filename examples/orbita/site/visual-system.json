@@ -1,0 +1,146 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Oswald variable para titulares condensados y wordmark; Instrument Sans para lectura y controles; códigos técnicos en una pila monoespaciada local del sistema. H1 de 112–176px en escritorio, 58–76px en móvil; H2 de 64–104px/42–58px; cuerpo 16–18px; microtexto 11–12px en mayúsculas espaciadas. Letter-spacing de displays entre -0.035em y -0.01em, siempre con wrapping natural.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "cover-001",
+      "expedition-strip",
+      "field-catalog",
+      "north-manifesto",
+      "buying-faq"
+    ],
+    "catalogSection": "field-catalog",
+    "mobileRule": "Header de dos filas muy compacto: marca y navegación visible arriba; botón permanente “Mi pedido” o “Lista de carga” con conteo debajo o al costado, nunca dentro del menú. El hero se convierte en portada apilada: titular y acciones primero, fotografía panorámica después con el excursionista visible. Catálogo en una columna, sin perder la jerarquía destacada de Parka. Selectores de variantes ocupan todo el ancho, acciones y cantidad tienen mínimo 44px, drawer a pantalla completa y checkout apil"
+  },
+  "assets": [
+    {
+      "path": "assets/image-4d9eab2b58fa.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Botella Órbita 03 en color grafito; color de portada, sin filtros ni recoloración.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-a1be9b4c2923.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Mochila Rover 02 en color bermellón; color de portada, sin filtros ni recoloración.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-c40ec7b8528c.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Kit de Misión 04 con estuche y parches; foto de producto, no campaña.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7a9c0dba65d.jpg",
+      "role": "background",
+      "description": "Fotografía de campaña para el hero a gran escala; paisaje marciano con excursionista a la derecha, que debe permanecer visible y sin texto encima.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d89b02e383f1.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Parka Cráter 01 en color hueso; color de portada, sin filtros ni recoloración.",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f0eee6",
+      "resolved": "#f0eee6",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "foreground": {
+      "authored": "#191b19",
+      "resolved": "#191b19",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "accent": {
+      "authored": "#ef451f",
+      "resolved": "#ef451f",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "accent-foreground": {
+      "authored": "#191b19",
+      "resolved": "#191b19",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "surface": {
+      "authored": "#e5e1d7",
+      "resolved": "#e5e1d7",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "border": {
+      "authored": "#191b19",
+      "resolved": "#191b19",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "radius": {
+      "authored": "0px",
+      "resolved": "0px",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "body-font": {
+      "authored": "Instrument,Arial,sans-serif",
+      "resolved": "Instrument,Arial,sans-serif",
+      "source": "authored",
+      "path": "styles/globals.css"
+    },
+    "heading-font": {
+      "authored": "Oswald,Arial Narrow,sans-serif",
+      "resolved": "Oswald,Arial Narrow,sans-serif",
+      "source": "authored",
+      "path": "styles/globals.css"
+    }
+  }
+}

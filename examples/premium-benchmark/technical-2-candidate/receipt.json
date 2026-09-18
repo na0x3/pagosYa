@@ -1,0 +1,15 @@
+{
+  "id": "technical-2-candidate",
+  "arm": "candidate",
+  "fixture": "technical",
+  "repeat": 2,
+  "merchantId": "cmu0ez1a40052t6nwmupkr6b5",
+  "storeId": "cmu0ez1a60054t6nwxpvt0xje",
+  "slug": "wcdazmjn",
+  "status": "failed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:57:09.440Z",
+  "assets": [],
+  "elapsedMs": 965,
+  "error": "No se completó la exploración visual. Tu revisión anterior sigue guardada."
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "CARD",
+    "type": "CARD",
+    "name": "Tarjeta de crédito o débito",
+    "logo": "https://static.dlocal.com/images/providers/card.png",
+    "allowed_flows": ["DIRECT", "REDIRECT"]
+  },
+  {
+    "id": "PX",
+    "type": "BANK_TRANSFER",
+    "name": "Pix",
+    "logo": "https://static.dlocal.com/images/providers/pix.png",
+    "allowed_flows": ["REDIRECT"]
+  }
+]

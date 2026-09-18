@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trama — Prendas cotidianas con colores y tallas</title>
+  <meta name="description" content="Explora el catálogo de Trama: prendas cotidianas disponibles en distintos colores y tallas.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</head>
+<body class="home-page">
+<header class="site-header">
+  <div class="masthead">
+    <a class="wordmark" href="index.html" aria-current="page">TRAMA</a>
+    <p>Prendas cotidianas<br>con colores y tallas</p>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span data-cart-count>0</span></button>
+  </div>
+  <nav class="site-nav" aria-label="Navegación principal">
+    <a href="#catalogo-muestrario">Catálogo</a>
+    <a href="#nota-trama">Sobre Trama</a>
+  </nav>
+</header>
+
+<main>
+  <section id="catalogo-muestrario" aria-labelledby="catalog-title">
+    <div class="section-line">
+      <p class="eyebrow">Muestrario 01 / Catálogo</p>
+      <h1 id="catalog-title">Elegir una prenda</h1>
+    </div>
+    <div data-pagosya-catalog aria-live="polite"></div>
+  </section>
+
+  <section id="nota-trama" aria-labelledby="nota-title">
+    <p class="eyebrow">La selección</p>
+    <h2 id="nota-title">Ropa informal,<br>decidida por color y talla.</h2>
+    <p>Trama reúne prendas cotidianas en un catálogo breve. Cada ficha muestra las opciones disponibles y actualiza el precio según la elección.</p>
+    <a class="text-link" href="#catalogo-muestrario">Volver al muestrario <img src="assets/icons/arrow-right.svg" alt=""></a>
+  </section>
+</main>
+
+<template data-pagosya-product-template>
+  <article class="specimen">
+    <div class="specimen__index" aria-hidden="true">TRAMA</div>
+    <div class="specimen__head">
+      <p class="eyebrow specimen__type">Prenda cotidiana</p>
+      <h2 data-product-field="name"></h2>
+      <div class="specimen__price" data-product-field="price"></div>
+    </div>
+    <p class="specimen__description" data-product-field="description"></p>
+    <div class="specimen__choices" data-product-field="options"></div>
+    <div class="specimen__actions">
+      <a class="menu-item__details" data-product-link href="product.html">Ver ficha</a>
+      <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+    </div>
+  </article>
+</template>
+
+<div data-pagosya-status role="status" aria-live="polite"></div>
+<div data-pagosya-cart hidden></div>
+<div data-pagosya-contact hidden></div>
+<footer class="site-footer"><a class="wordmark wordmark--small" href="index.html">TRAMA</a><p>Prendas cotidianas con colores y tallas.</p><button type="button" class="footer-cart" data-cart-open>Mi pedido <span data-cart-count>0</span></button></footer>
+</body>
+</html>

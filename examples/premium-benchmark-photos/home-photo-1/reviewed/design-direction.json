@@ -1,0 +1,65 @@
+{
+  "concepts": [
+    {
+      "name": "Pliegues habitados",
+      "premise": "Una apertura editorial y comprable: el catálogo ocupa la primera pantalla como una doble página de revista, con la funda y la manta en composiciones de distinta escala. A diferencia del segundo concepto, no antepone una portada fotográfica; frente al tercero, evita la densidad de una lista técnica y deja que textura, aire y fotografía conduzcan la elección.",
+      "opening": "Masthead crema muy compacto con “Pliegue”, enlace a Productos y “Mi pedido 0”. Debajo, catálogo asimétrico: la funda aparece como pieza principal con nombre, “Desde Bs 110”, selector de tamaño y añadir; la manta comparte la pantalla en una columna secundaria con precio, color y compra. Los productos comienzan antes de 320 px y al menos una compra completa queda visible a 1280 y 390 px.",
+      "flow": "Compra inmediata → breve transición tipográfica “Texturas para cambiar el ritmo de una habitación” → díptico de fotografías ambientales que muestra ambos textiles en contexto. La página de producto alterna fotografía limpia y ambiental, con selector propio, estado Oliva no disponible y compra fija pero discreta. Carrito y checkout retoman el formato de hoja editorial, con resumen alineado y recogida como único método disponible.",
+      "typography": "Fraunces variable para títulos y precios, con cursivas suaves como acento; Instrument Sans para navegación, variantes y controles. H1 de 64–84 px en escritorio, 42 px en móvil; títulos de producto 30–44/28–34 px; cuerpo 16–18 px. Interletraje de display entre -0.03em y -0.015em.",
+      "imagery": "assets/image-e58bfe385a7a.jpg lidera la funda con recorte 4:5 y foco en el cojín terracota; assets/image-f82f55029d51.jpg lidera la manta con recorte 4:5 y foco en el tejido y los flecos. assets/image-bfa86d664066.jpg y assets/image-f5d075124660.jpg funcionan como vistas limpias secundarias en producto, sin alterar color ni silueta. Fondo crema, terracota tomado de la funda, rosa arcilla apagado y tinta ciruela.",
+      "mobile": "La doble página se convierte en una secuencia editorial: ficha comprable de funda primero y manta inmediatamente después, sin carruseles obligatorios. Header de dos líneas máximo con “Mi pedido 0” siempre visible. Selectores y botones ocupan todo el ancho útil y mantienen 44 px de altura; las fotografías conservan recortes verticales y el bloque ambiental pasa a desplazamiento natural.",
+      "layout": {
+        "sections": [
+          "catalogo-editorial",
+          "textura-en-casa"
+        ],
+        "catalogSection": "catalogo-editorial",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Una habitación, dos gestos",
+      "premise": "Una portada fotográfica espaciosa presenta los textiles como cambios pequeños dentro del hogar antes de abrir la compra. Se diferencia del catálogo inmediato del primer concepto por su escena inicial y del índice del tercero por una narración pausada, imágenes ambientales grandes y fichas apiladas, no una matriz de opciones.",
+      "opening": "Composición partida: assets/image-e58bfe385a7a.jpg ocupa aproximadamente dos tercios y muestra el cojín en el sofá; sobre el margen crema aparece “Pliegue” y la frase “Dos gestos para renovar la casa”, con ancla “Ver textiles”. Una tira inferior rosa apagado anticipa “Lino · Algodón”, pero la compra comienza en el bloque siguiente.",
+      "flow": "Portada ambiental → catálogo de dos capítulos verticales, uno por producto → cierre con acercamientos de textura. Cada capítulo enfrenta una imagen limpia con una ficha estrecha: descripción factual, variantes, precio y añadir. En producto, una galería 60/40 precede a una columna de compra; carrito y checkout usan una banda terracota lateral y superficies crema, manteniendo la recogida visible sin inventar políticas.",
+      "typography": "Instrument Serif como voz de portada y titulares amplios; Bricolage Grotesque para precios, controles y datos. Portada de 72–104 px en escritorio y 44–52 px en móvil; nombres 40–56/32–38 px; cuerpo 17 px. Contraste entre serif muy aireada y etiquetas sans compactas.",
+      "imagery": "assets/image-e58bfe385a7a.jpg es la portada, con foco central en la funda y espacio ambiental preservado. En catálogo, assets/image-bfa86d664066.jpg muestra la funda sobre fondo neutro y assets/image-f5d075124660.jpg la manta plegada, ambas 1:1. assets/image-f82f55029d51.jpg cierra como escena cálida de manta, recortada 3:2 con atención a flecos, brazo del sofá y luz.",
+      "mobile": "La portada sigue siendo reconocible: imagen 4:5 arriba, titular parcialmente sobre una franja crema inferior, nunca sobre detalles de bajo contraste. El catálogo pasa a imagen, nombre, variantes y compra como grupos indivisibles. “Mi pedido 0” permanece fuera del menú; la galería de producto usa imágenes apiladas para evitar miniaturas diminutas.",
+      "layout": {
+        "sections": [
+          "portada-habitada",
+          "catalogo-capitulos",
+          "detalle-de-texturas"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Muestrario doméstico",
+      "premise": "Una tienda compacta inspirada en un muestrario textil: ambos productos y todas sus decisiones principales aparecen como filas tipográficas con fotografías laterales. Frente a las grandes escenas de los otros conceptos, prioriza comparación, variantes y velocidad; usa una jerarquía sans condensada y reglas lineales en vez de tarjetas editoriales.",
+      "opening": "Encabezado crema con palabra “PLIEGUE” en gran escala condensada, subtítulo pequeño y “Mi pedido 0”. El catálogo comienza inmediatamente como dos franjas: miniatura limpia, material, nombre, variantes, precio y añadir. En escritorio ambas filas caben ampliamente en la primera pantalla; en móvil la primera ficha comprable queda completa y la segunda comienza a asomar.",
+      "flow": "Muestrario comprable → tabla visual “En la habitación” con las dos escenas ambientales enfrentadas → cierre tipográfico breve. La página de producto parece una ficha de tejido ampliada: imagen limpia grande, banda de material, selector y compra; las imágenes ambientales siguen debajo. Carrito y checkout se organizan como comprobantes sobrios con líneas, totales destacados y recogida claramente seleccionada.",
+      "typography": "Oswald variable para wordmark, títulos y precios; Instrument Sans para descripciones y formularios. Wordmark de 88–132 px en escritorio y 52–64 px en móvil; nombres 34–46/30–34 px; etiquetas 13 px en mayúsculas moderadamente espaciadas. Geometría rectangular, esquinas de 2–4 px y reglas de 1 px.",
+      "imagery": "assets/image-bfa86d664066.jpg y assets/image-f5d075124660.jpg son miniaturas de muestrario en recorte cuadrado, con el producto completo como foco. assets/image-e58bfe385a7a.jpg y assets/image-f82f55029d51.jpg aparecen después en una comparación 1:1 de uso doméstico. Paleta crema papel, terracota, rosa polvo y texto marrón oscuro; sin texturas añadidas que compitan con los tejidos reales.",
+      "mobile": "Cada fila se recompone en una cuadrícula de miniatura compacta y datos, seguida por variantes y botón a ancho completo. El wordmark se reduce sin nowrap y la acción “Mi pedido 0” conserva prioridad. La comparación ambiental se vuelve vertical; líneas y bandas mantienen la identidad sin depender de solapamientos.",
+      "layout": {
+        "sections": [
+          "catalogo-muestrario",
+          "escenas-comparadas",
+          "cierre-pliegue"
+        ],
+        "catalogSection": "catalogo-muestrario",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Pliegues habitados” responde mejor a la dirección confirmada de hogar editorial en terracota, rosa apagado y crema, y aprovecha las cuatro fotografías suministradas como pares limpio/ambiental. Con solo dos productos —funda de lino con tamaños y manta de algodón con colores— permite mostrar opciones y compra desde la apertura sin convertir el catálogo en una tabla demasiado técnica."
+  }
+}

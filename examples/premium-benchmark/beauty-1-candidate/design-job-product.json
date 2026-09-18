@@ -1,0 +1,76 @@
+{
+  "id": "cmu2tdqqq000xtxev0sr87xch",
+  "requestId": "4e55a87b-5569-4255-af61-9f82a1ee2aeb",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 22.7051,
+  "observedCredits": 22.7051,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "f20970db-d2f6-48d0-8ed5-67041905e163",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:16:04.580Z",
+      "finishedAt": "2026-09-15T15:16:16.021Z",
+      "actualMicroUsd": 23036,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "8603a050-553d-4432-9fd9-3a6dbd45ae43",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:16:16.361Z",
+      "finishedAt": "2026-09-15T15:17:22.118Z",
+      "actualMicroUsd": 166379,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "8e3b1daa-35da-4462-9e7e-9c9d3a71c243",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:17:25.632Z",
+      "finishedAt": "2026-09-15T15:17:40.060Z",
+      "actualMicroUsd": 37636,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:16:02.594Z",
+  "updatedAt": "2026-09-15T15:17:40.061Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A resuelve mejor la compra inicial: deja una opción seleccionada, muestra el total en la acción principal y evita duplicar la navegación de regreso junto a las migas. La lectura móvil mantiene una secuencia clara de producto, opción, cantidad, acción y reaseguro.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Área principal de producto, a la derecha del formulario",
+        "severity": "major",
+        "viewport": "desktop",
+        "correction": "Reequilibrar la composición sin introducir fotografías ni ilustraciones de envases: ampliar moderadamente el bloque de producto/compra o usar una retícula que centre y sostenga mejor la columna dentro del ancho disponible.",
+        "observation": "El contenido de compra queda concentrado en una columna relativamente estrecha a la izquierda y deja una extensión vacía muy dominante en la mitad derecha. La composición se percibe incompleta y reduce la presencia del producto en escritorio."
+      },
+      {
+        "category": "layout",
+        "location": "Transición entre detalles y pie de página",
+        "severity": "minor",
+        "viewport": "desktop",
+        "correction": "Reducir el espacio previo al pie o ajustar el bloque de detalles para que el final del contenido y el pie formen una transición más compacta.",
+        "observation": "Después del único detalle visible queda un tramo vertical amplio antes del pie, lo que debilita el cierre de la página y hace que el contenido final parezca desconectado."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_03412f9450846722016aa96186967c87d2884b10307e90e1af",
+    "regressions": [],
+    "providerMicroUsd": 37636
+  },
+  "resumeAvailable": false
+}

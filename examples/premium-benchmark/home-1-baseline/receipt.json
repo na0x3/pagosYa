@@ -1,0 +1,14 @@
+{
+  "id": "home-1-baseline",
+  "arm": "baseline",
+  "fixture": "home",
+  "repeat": 1,
+  "merchantId": "cmu0ez5fa005o4gwzbf9uglhs",
+  "storeId": "cmu0ez5fc005q4gwzhdrah177",
+  "slug": "xr5ezqha",
+  "status": "interrupted",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:57:14.810Z",
+  "assets": [],
+  "error": "Stopped after OpenAI reported insufficient balance. No automatic replay."
+}

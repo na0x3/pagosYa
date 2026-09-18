@@ -1,0 +1,44 @@
+[
+  {
+    "id": "pantry-1",
+    "fromRevision": 2,
+    "revision": 3,
+    "images": 0,
+    "designFilesChanged": false
+  },
+  {
+    "id": "pantry-2",
+    "fromRevision": 1,
+    "revision": 2,
+    "images": 0,
+    "designFilesChanged": false
+  },
+  {
+    "id": "hydration-1",
+    "fromRevision": 2,
+    "revision": 3,
+    "images": 0,
+    "designFilesChanged": false
+  },
+  {
+    "id": "hydration-2",
+    "fromRevision": 1,
+    "revision": 2,
+    "images": 6,
+    "designFilesChanged": false
+  },
+  {
+    "id": "cafe-1",
+    "fromRevision": 1,
+    "revision": 2,
+    "images": 0,
+    "designFilesChanged": false
+  },
+  {
+    "id": "cafe-2",
+    "fromRevision": 1,
+    "revision": 2,
+    "images": 0,
+    "designFilesChanged": false
+  }
+]

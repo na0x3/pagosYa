@@ -1,0 +1,76 @@
+{
+  "id": "cmu2ulb56000h9lvhizl6jn3g",
+  "requestId": "6a6afedc-ab41-42f3-a11f-8641fc8ed850",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 22.0175,
+  "observedCredits": 22.0175,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "ab2d42d2-3514-4171-8625-b4518a05d2e2",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:49:57.673Z",
+      "finishedAt": "2026-09-15T15:50:13.968Z",
+      "actualMicroUsd": 25922,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "fea379e8-59c1-4ce1-94a2-a043e977efed",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:50:14.843Z",
+      "finishedAt": "2026-09-15T15:50:59.200Z",
+      "actualMicroUsd": 154739,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "a7fdaec5-bd07-44cb-8125-7122f2be3123",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:51:03.749Z",
+      "finishedAt": "2026-09-15T15:51:22.591Z",
+      "actualMicroUsd": 39514,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:49:55.242Z",
+  "updatedAt": "2026-09-15T15:51:22.595Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "B es preferible: hace visible el formato seleccionado, reemplaza el precio de partida por el precio concreto y refleja ese total en la acción principal, sin perder la fotografía dominante ni la separación entre compra, reaseguro y detalles.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Columna de compra, entre las opciones de volumen y el botón principal",
+        "severity": "major",
+        "viewport": "desktop",
+        "correction": "Reducir el espacio vertical de este bloque —sin achicar ni recortar la fotografía— para que cantidad y botón con el total queden visibles tras las opciones dentro del primer viewport.",
+        "observation": "La acción principal queda fuera del primer viewport de 844 px; inicialmente solo se alcanza a ver el selector de cantidad. Esto separa en exceso la selección del formato de la posibilidad de añadirlo al pedido."
+      },
+      {
+        "category": "readability",
+        "location": "Encabezado de la opción, junto a «VOLUMEN»",
+        "severity": "minor",
+        "viewport": "both",
+        "correction": "Eliminar ese dato si no aporta a la decisión o mostrarlo únicamente con una etiqueta explícita y confirmada; mantener visible el formato seleccionado.",
+        "observation": "El resumen «30 ml · 0» incluye un «0» sin etiqueta ni contexto visible, por lo que parece un dato incompleto y distrae de la opción elegida."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_03a084a3dfd7378b016aa96968d50887d2bb101db47d72ab2e",
+    "regressions": [],
+    "providerMicroUsd": 39514
+  },
+  "resumeAvailable": false
+}

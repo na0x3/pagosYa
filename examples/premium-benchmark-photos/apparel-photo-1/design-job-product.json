@@ -1,0 +1,76 @@
+{
+  "id": "cmu2ujyi100019lvh6pubyc8h",
+  "requestId": "2af06ed3-b59f-4dd0-a65e-a935650746cf",
+  "revision": 1,
+  "page": "product.html",
+  "status": "APPLIED",
+  "stage": "APPLY",
+  "maxCredits": 150,
+  "reservedCredits": 19.6274,
+  "observedCredits": 19.6274,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "e585a012-c558-4e0d-8fa8-8e78e2915cff",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:48:55.209Z",
+      "finishedAt": "2026-09-15T15:49:02.130Z",
+      "actualMicroUsd": 19335,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "08f75d45-3c7e-4f55-bb86-395691f7bca3",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:49:02.818Z",
+      "finishedAt": "2026-09-15T15:49:30.808Z",
+      "actualMicroUsd": 138207,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "380aa75f-17d0-429e-a1f3-f610d943ac01",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:49:35.288Z",
+      "finishedAt": "2026-09-15T15:49:54.159Z",
+      "actualMicroUsd": 38732,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": 2,
+  "createdAt": "2026-09-15T15:48:52.201Z",
+  "updatedAt": "2026-09-15T15:49:54.739Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "B es preferible: corrige claramente la composición móvil al dar a la fotografía el ancho principal y mantener las miniaturas completas y separadas, sin sacrificar contenido útil visible. La estructura de compra, con precio, opciones, cantidad, acción y reaseguro, se conserva coherente entre tamaños.",
+    "findings": [
+      {
+        "category": "readability",
+        "location": "Franja bajo la cabecera, enlace «MENÚ»",
+        "severity": "minor",
+        "viewport": "mobile",
+        "correction": "Dar al enlace un tratamiento tipográfico y cromático claramente legible, consistente con la navegación de cabecera, sin añadir una banda adicional.",
+        "observation": "El texto de menú queda visualmente muy desvanecido sobre el fondo claro, por lo que es difícil de localizar al inicio de la página."
+      },
+      {
+        "category": "consistency",
+        "location": "Selector de color",
+        "severity": "minor",
+        "viewport": "both",
+        "correction": "Aplicar un único estado seleccionado reconocible al contenedor de la opción activa y mantener el nombre y el precio íntegros.",
+        "observation": "Las dos opciones se presentan con el mismo estado visual de contenedor; el punto azul identifica el color, pero no deja inequívocamente señalado cuál es la opción elegida cuando exista una selección."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_017965f31dd76322016aa96913094887d2b83bb5099014e82c",
+    "regressions": [],
+    "providerMicroUsd": 38732
+  },
+  "resumeAvailable": false
+}

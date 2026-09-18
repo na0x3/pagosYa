@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trama — Prendas cotidianas con colores y tallas</title>
+  <meta name="description" content="Explora las prendas cotidianas de Trama, elige color y talla y añade tu selección al pedido.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html" aria-label="Trama, inicio">TRAMA</a>
+      <button class="order-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido</span>
+        <span class="order-count" data-cart-count>0</span>
+      </button>
+    </div>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="#catalogo-muestrario" aria-current="page">Catálogo</a>
+      <a href="#nota-de-trama">La trama</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="catalogo-muestrario" aria-labelledby="catalog-title">
+      <div class="catalog-heading">
+        <p class="eyebrow">Muestrario 01 · uso diario</p>
+        <h1 id="catalog-title">Prendas para lo <em>cotidiano</em>.</h1>
+        <a class="catalog-jump" href="#muestrario-real">Elegir una prenda <span aria-hidden="true">↓</span></a>
+      </div>
+      <div id="muestrario-real" data-pagosya-catalog aria-live="polite"></div>
+      <template data-pagosya-product-template>
+        <article class="specimen">
+          <div class="specimen-register" aria-hidden="true"><span></span><span></span></div>
+          <div class="specimen-copy">
+            <p class="specimen-label">Pieza de Trama</p>
+            <h2 data-product-field="name"></h2>
+            <p class="specimen-description" data-product-field="description"></p>
+            <a class="menu-item__details" data-product-link href="product.html">Ver ficha completa <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="specimen-purchase">
+            <p class="menu-item__price" data-product-field="price"></p>
+            <div class="specimen-options" data-product-field="options"></div>
+            <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+            <span class="add-feedback" role="status" aria-live="polite"></span>
+          </div>
+        </article>
+      </template>
+    </section>
+
+    <section id="nota-de-trama" aria-labelledby="trama-title">
+      <p class="eyebrow">Una selección breve</p>
+      <h2 id="trama-title">Dos prendas.<br>Variaciones precisas.</h2>
+      <p>Elige cada pieza por sus opciones disponibles. Color, talla y precio se mantienen juntos para comparar sin perder el hilo.</p>
+      <a href="#catalogo-muestrario">Volver al muestrario <span aria-hidden="true">↑</span></a>
+    </section>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html">TRAMA</a>
+    <p>Prendas cotidianas con colores y tallas.</p>
+    <a href="#catalogo-muestrario">Catálogo</a>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

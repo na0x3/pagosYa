@@ -5,12 +5,13 @@ export default defineConfig({
   timeout: 30_000,
   use: {
     baseURL: "http://127.0.0.1:4323",
-    channel: "chrome",
+    channel: process.env.CI ? undefined : "chrome",
+    trace: "retain-on-failure",
     headless: true,
   },
   webServer: {
     command: "node server.mjs",
     url: "http://127.0.0.1:4323",
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
   },
 });

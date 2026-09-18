@@ -36,6 +36,10 @@ function makeFakeConfig() {
   return { get: jest.fn().mockReturnValue("http://localhost:3001") } as any;
 }
 
+function makeFakeSessions() {
+  return { createSession: jest.fn().mockResolvedValue({ token: "dash_fake", expiresAt: new Date(0), merchant: { id: "m_1" }, user: { email: "owner@tienda.bo" } }) } as any;
+}
+
 const HOUR_MS = 60 * 60 * 1000;
 
 describe("MerchantUserService.signup", () => {
@@ -45,7 +49,7 @@ describe("MerchantUserService.signup", () => {
     prisma.merchantUser.create.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     const result = await service.signup("m_1", "owner@tienda.bo", "a-strong-password");
 
     expect(prisma.merchantUser.create).toHaveBeenCalled();
@@ -65,7 +69,7 @@ describe("MerchantUserService.signup", () => {
     });
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     const result = await service.signup("attacker_merchant", "owner@tienda.bo", "whatever");
 
     expect(prisma.merchantUser.create).not.toHaveBeenCalled();
@@ -84,7 +88,7 @@ describe("MerchantUserService.signup", () => {
     });
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     await service.signup("attacker_merchant", "victim@tienda.bo", "whatever");
 
     expect(prisma.merchantUser.update).not.toHaveBeenCalled();
@@ -101,7 +105,7 @@ describe("MerchantUserService.signup", () => {
     prisma.merchantUser.update.mockResolvedValue({ id: "user_1", email: "victim@tienda.bo" });
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     await service.signup("real_owner_merchant", "victim@tienda.bo", "a-strong-password");
 
     expect(prisma.merchantUser.update).toHaveBeenCalledWith({
@@ -120,7 +124,7 @@ describe("MerchantUserService.signupPasswordless", () => {
     prisma.merchantUser.create.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     const result = await service.signupPasswordless("m_1", "owner@tienda.bo");
 
     expect(prisma.merchantUser.create).toHaveBeenCalledWith({
@@ -151,7 +155,7 @@ describe("MerchantUserService.signupPasswordless", () => {
     const email = makeFakeEmailProvider();
     email.send.mockRejectedValue(new Error("Resend rejected the message"));
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
 
     await expect(service.signupPasswordless("m_1", "owner@tienda.bo")).rejects.toThrow(
       "Resend rejected the message",
@@ -166,7 +170,7 @@ describe("MerchantUserService.signupPasswordless", () => {
 describe("MerchantUserService.verifyEmail", () => {
   it("marks the matching user verified and consumes the token", async () => {
     const prisma = makeFakePrisma();
-    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig(), makeFakeSessions());
 
     // Drive a real signup first so the token/hash pairing is genuine.
     prisma.merchantUser.findUnique.mockResolvedValue(null);
@@ -201,7 +205,7 @@ describe("MerchantUserService.verifyEmail", () => {
   it("returns unverified for an unknown/invalid token without mutating anything", async () => {
     const prisma = makeFakePrisma();
     prisma.emailVerificationToken.findMany.mockResolvedValue([]);
-    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig(), makeFakeSessions());
 
     await expect(service.verifyEmail("totally-made-up")).resolves.toEqual({ verified: false });
     expect(prisma.merchantUser.update).not.toHaveBeenCalled();
@@ -214,7 +218,7 @@ describe("MerchantUserService.requestPasswordReset", () => {
     prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     const result = await service.requestPasswordReset("owner@tienda.bo");
 
     expect(prisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { merchantUserId: "user_1" } });
@@ -230,7 +234,7 @@ describe("MerchantUserService.requestPasswordReset", () => {
     prisma.merchantUser.findUnique.mockResolvedValue(null);
     const email = makeFakeEmailProvider();
 
-    const service = new MerchantUserService(prisma as any, email, makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, email, makeFakeConfig(), makeFakeSessions());
     const result = await service.requestPasswordReset("nobody@tienda.bo");
 
     expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
@@ -240,9 +244,10 @@ describe("MerchantUserService.requestPasswordReset", () => {
 });
 
 describe("MerchantUserService.resetPassword", () => {
-  it("updates the password, verifies the email, and revokes existing sessions for a valid token", async () => {
+  it("updates the password, verifies the email, revokes existing sessions and logs the merchant straight in for a valid token", async () => {
     const prisma = makeFakePrisma();
-    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig());
+    const sessions = makeFakeSessions();
+    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig(), sessions as any);
 
     // Drive a real requestPasswordReset first so token/hash pairing is genuine.
     prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", email: "owner@tienda.bo" });
@@ -259,10 +264,11 @@ describe("MerchantUserService.resetPassword", () => {
     prisma.passwordResetToken.findMany.mockResolvedValue([
       { id: "reset_1", merchantUserId: "user_1", hashedToken: storedHashedToken },
     ]);
+    prisma.merchantUser.update.mockResolvedValue({ id: "user_1", merchantId: "m_1", email: "owner@tienda.bo" });
 
     const result = await service.resetPassword(issuedToken, "a-new-strong-password");
 
-    expect(result).toEqual({ reset: true });
+    expect(result).toEqual({ reset: true, session: await sessions.createSession.mock.results[0].value });
     expect(prisma.merchantUser.update).toHaveBeenCalledWith({
       where: { id: "user_1" },
       data: { hashedPassword: expect.any(String), emailVerifiedAt: expect.any(Date) },
@@ -272,12 +278,19 @@ describe("MerchantUserService.resetPassword", () => {
       where: { merchantUserId: "user_1", revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
+    // The new session must be issued after the revocation above, or it would revoke itself.
+    expect(sessions.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "user_1", merchantId: "m_1" }),
+    );
+    expect(prisma.merchantSession.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+      sessions.createSession.mock.invocationCallOrder[0],
+    );
   });
 
   it("returns unreset for an unknown/expired token without mutating anything", async () => {
     const prisma = makeFakePrisma();
     prisma.passwordResetToken.findMany.mockResolvedValue([]);
-    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig());
+    const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig(), makeFakeSessions());
 
     await expect(service.resetPassword("totally-made-up", "new-password")).resolves.toEqual({ reset: false });
     expect(prisma.merchantUser.update).not.toHaveBeenCalled();

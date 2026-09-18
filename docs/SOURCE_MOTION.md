@@ -1,0 +1,13 @@
+# Creative motion for generated websites
+
+New sites default to **Según el diseño** (`auto`). YAPI chooses motion for the merchant’s concept, including a deliberately still composition. This mode adds no platform reveals, floats, or product-image hover effects. Existing revisions retain their saved mode; legacy configurations without a mode retain `subtle`. **Sin movimiento**, **Sutil**, and **Expresivo** remain explicit choices. Changing the selector saves a revision without AI credits or a redesign.
+
+The shared creative instructions permit original SVG/CSS illustrations, stickers, collage, animated typography, Canvas, WAAPI, scroll-linked scenes and gestures. They impose no hero format, CTA count, preset palette or section-to-page recipe. Confirmed merchant preferences, functional purchasing, honest product imagery, readable content and usable mobile/keyboard controls still apply.
+
+React storefronts can import `motion/react`, `motion`, and `@pagosya/creative`. Motion provides springs, gestures, layout and scroll animation. The trusted creative module provides `Lottie` for inline vector animation data and `useCreativeMotion()` for gating authored loops/imperative effects. Lottie uses the light SVG player, loads locally, provides a pause/resume button for loops, respects reduced motion and off mode, pauses in background tabs, and destroys its player on unmount. Meaningful content should use `initial={false}`. Authored effects must clean up on unmount and provide an accessible still state. The platform’s MotionConfig respects reduced motion; it is not a substitute for gating custom loops with the hook.
+
+The isolated compiler bundles the real libraries without executing merchant modules on the server. The same trusted helper and pinned dependencies are included in Next.js exports. Legacy HTML sites can use native CSS, SVG, Canvas and WAAPI; adding a React-library import to legacy `site.js` is not supported. A requested full redesign can migrate an old site to React while preserving commerce and assets.
+
+Subtle and Expressive retain the earlier lightweight CSS/IntersectionObserver/WAAPI runtime. Its entrances run once, exclude commerce controls, and stop on keyboard interaction. Expressive’s two automatic decorative floats are finite. These runtime limits do not impose choreography on the new Auto mode.
+
+Verification covers actual Motion interactions, local Lottie playback and pause/resume, unmount/remount, off/reduced motion, asset loading, mobile layout, and shopping in Studio and hosted previews. The separate export check installs the generated package and runs a real Next build.

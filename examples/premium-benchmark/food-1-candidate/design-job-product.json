@@ -1,0 +1,76 @@
+{
+  "id": "cmu2tj8mk0020txevls42hp13",
+  "requestId": "caa5aa55-b4c6-4fee-b5e4-dc533f4b499e",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 17.7316,
+  "observedCredits": 17.7316,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "69f2b207-1b41-42b4-a238-ebfae591ffe0",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:20:22.298Z",
+      "finishedAt": "2026-09-15T15:20:35.123Z",
+      "actualMicroUsd": 8837,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "953530c3-c877-43d7-b80c-bc0c83ee9d27",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:20:35.457Z",
+      "finishedAt": "2026-09-15T15:20:48.642Z",
+      "actualMicroUsd": 131627,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "6a64954a-7d7e-4b34-a9d8-4324d5a0cd85",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:20:52.340Z",
+      "finishedAt": "2026-09-15T15:21:07.022Z",
+      "actualMicroUsd": 36852,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:20:19.052Z",
+  "updatedAt": "2026-09-15T15:21:07.023Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "Ambas propuestas conservan bien la fotografía de catálogo y la estructura general de compra, pero B elimina la navegación duplicada a costa de separar demasiado la cantidad del botón principal. No hay una mejora neta sin regresión visible.",
+    "findings": [
+      {
+        "category": "consistency",
+        "location": "Parte superior, antes de las migas de pan",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Conservar solo las migas de pan, que ya sitúan el producto dentro del catálogo y permiten volver al listado.",
+        "observation": "A muestra a la vez el enlace «Volver a la despensa» y la ruta de migas «Todos los productos / …», dos vías redundantes para regresar al catálogo."
+      },
+      {
+        "category": "layout",
+        "location": "Bloque de compra, debajo de las opciones",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Cuando haya una configuración válida, señalar visualmente los valores elegidos y reflejar el total correspondiente en el botón principal, manteniendo cantidad y acción como un bloque compacto.",
+        "observation": "La cantidad y el botón «Añadir al pedido» no muestran el total de la configuración en la propia acción. Además, las opciones aparecen sin un estado elegido visible, mientras el mensaje inferior indica que aún falta seleccionar grupos."
+      }
+    ],
+    "preference": "uncertain",
+    "responseId": "resp_0779dc206ddf83bc016aa96255232487d292955497b82bb38f",
+    "regressions": [],
+    "providerMicroUsd": 36852
+  },
+  "resumeAvailable": false
+}

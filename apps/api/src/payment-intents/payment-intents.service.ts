@@ -1,4 +1,7 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
+import { queueStoreEmail } from '../stores/email-workspace.config';
+import { sourceCheckoutBranding } from "@pagosya/shared-types";
+import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { DebtRecordStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
@@ -15,7 +18,9 @@ import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { PaymentIntentEvent, transition } from "./payment-intent.state-machine";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
-import { completeEventReservationPayment } from "../events/events-payment.bridge";
+import { selectedExtrasLabel } from "../payment-links/product-extras";
+import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration";
+import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "../international/fx";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -29,6 +34,7 @@ type ProductVariant = { id: string; name: string; amount: number; stock?: number
 type CartInventoryLine = {
   paymentLinkId: string;
   variantId?: string;
+  digitalAssetIds?: string[];
   quantity: number;
   name: string;
   variantName?: string;
@@ -42,6 +48,7 @@ type ProductExtra = {
   required: boolean;
   groupName?: string;
   freeAllowance?: number;
+  productId?: string;
   inventoryKey?: string;
   inventoryName?: string;
   stock?: number;
@@ -87,6 +94,24 @@ function readLocationStocks(value: Prisma.JsonValue): Record<string, number | nu
 export class PaymentIntentsService {
   private readonly logger = new Logger(PaymentIntentsService.name);
 
+  async checkoutBranding(intent: { merchantId: string; metadata: unknown }) {
+    // A store hint must still belong to the authenticated intent's merchant.
+    // Unscoped API payments can use a sole store; never choose arbitrarily across stores.
+    const metadata = intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+      ? intent.metadata as Record<string, unknown> : {};
+    const storeId = typeof metadata.storeId === "string" ? metadata.storeId : undefined;
+    const matches = await this.prisma.store.findMany({ where: { merchantId: intent.merchantId, ...(storeId !== undefined && { id: storeId }) }, take: 2, select: {
+      id: true, name: true, logoUrl: true, backgroundColor: true, accentColor: true, fontStyle: true, publishedSourceRevision: true,
+    } });
+    const store = matches.length === 1 ? matches[0] : null;
+    if (!store) return null;
+    const version = store.publishedSourceRevision == null ? null : await this.prisma.storeSourceVersion.findUnique({
+      where: { storeId_revision: { storeId: store.id, revision: store.publishedSourceRevision } }, select: { snapshot: true },
+    });
+    return sourceCheckoutBranding(store, version?.snapshot as Parameters<typeof sourceCheckoutBranding>[1]);
+  }
+
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly railRegistry: RailRegistry,
@@ -95,7 +120,7 @@ export class PaymentIntentsService {
     private readonly webhooks: WebhookDispatcherService,
     private readonly invoicing: InvoicingService,
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
-    @Optional() private readonly config?: ConfigService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -127,6 +152,27 @@ export class PaymentIntentsService {
         livemode,
       },
     });
+  }
+
+  /** A credit-only sale consumes a merchant liability; it never posts a cash capture. */
+  async completeCreditPaymentInTransaction(tx: Prisma.TransactionClient, id: string) {
+    const intent = await tx.paymentIntent.findUniqueOrThrow({ where: { id } });
+    const reservation = await tx.storeCreditReservation.findUnique({ where: { paymentIntentId: id } });
+    const order = await tx.storeOrder.findUnique({ where: { paymentIntentId: id } });
+    if (intent.status !== 'REQUIRES_PAYMENT_METHOD' || intent.amount !== 0 || !order || !reservation || reservation.status !== 'RESERVED' || reservation.amount !== order.amount) throw new BadRequestException('El saldo no cubre este pedido.');
+    await this.assertCartStillAvailable(tx, intent.metadata);
+    const locationStockReserved = await this.reserveLocationStockForCart(tx, intent.metadata);
+    const metadata = { ...(intent.metadata as Prisma.JsonObject), ...(locationStockReserved ? { locationStockReserved: true } : {}) };
+    await finishCredit(tx, id, true);
+    await this.decrementStockForCart(tx, metadata);
+    await this.recordCartSales(tx, intent.merchantId, id, metadata);
+    await this.recordProductStats(tx, intent.merchantId, metadata);
+    const updated = await tx.paymentIntent.update({ where: { id }, data: { status: 'SUCCEEDED', metadata } });
+    await tx.storeOrder.update({ where: { id: order.id }, data: { status: 'PAID', statusEvents: { create: { status: 'PAID' } } } });
+    await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING', nextAttemptAt: null }, data: { nextAttemptAt: new Date() } });
+    await this.webhooks.enqueueEvent(tx, intent.merchantId, 'payment_intent.succeeded', { id, amount: 0, creditAmount: reservation.amount, orderTotal: order.amount, currency: intent.currency, status: 'SUCCEEDED' });
+    await this.invoicing.enqueueInvoice(tx, intent.merchantId, { paymentIntentId: id, amount: order.amount, currency: intent.currency, customerName: null, customerDocument: null });
+    return updated;
   }
 
   async findByIdForMerchant(merchantId: string, id: string) {
@@ -205,14 +251,19 @@ export class PaymentIntentsService {
    * already scopes the caller to exactly this PaymentIntent, so there's no
    * separate ownership check to do here.
    */
-  async cancelById(id: string) {
+  async cancelById(id: string, abandonedBefore?: Date) {
     return this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<{ status: PaymentIntentStatus; metadata: Prisma.JsonValue }[]>`
         SELECT status, metadata FROM "PaymentIntent" WHERE id = ${id} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
+      if (abandonedBefore) {
+        const intent = await tx.paymentIntent.findUniqueOrThrow({ where: { id } });
+        if (intent.createdAt >= abandonedBefore || !['REQUIRES_PAYMENT_METHOD', 'REQUIRES_CONFIRMATION'].includes(current.status)) return intent;
+      }
       const nextStatus = transition(current.status, PaymentIntentEvent.CANCEL);
+      if ((current.metadata as Prisma.JsonObject)?.storeCredit) await finishCredit(tx, id, false);
       const hadReservation = (current.metadata as { locationStockReserved?: boolean } | null)?.locationStockReserved === true;
       if (hadReservation) await this.releaseLocationStockForCart(tx, current.metadata);
       const metadata = current.metadata && typeof current.metadata === "object" && !Array.isArray(current.metadata)
@@ -228,6 +279,7 @@ export class PaymentIntentsService {
           where: { id: order.id },
           data: { status: OrderFulfillmentStatus.CANCELED, statusEvents: { create: { status: OrderFulfillmentStatus.CANCELED } } },
         });
+        await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING' }, data: { status: 'CANCELED', nextAttemptAt: null } });
       }
       await tx.appointment.updateMany({
         where: { depositPaymentIntentId: id, status: "PENDING" },
@@ -244,21 +296,53 @@ export class PaymentIntentsService {
    * outbox all commit together).
    */
   async confirm(paymentIntentId: string, dto: ConfirmPaymentIntentDto) {
-    const { intentId, railId, amount, currency, merchantId } = await this.prisma.$transaction(async (tx) => {
+    const { intentId, railId, amount, currency, merchantId, country, payer } = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
-        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue }[]
+        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue; amount: number; currency: string }[]
       >`
-        SELECT id, status, "confirmationAttempts", "merchantId", "consumerUserId", metadata FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
+        SELECT id, status, "confirmationAttempts", "merchantId", "consumerUserId", metadata, amount, currency FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
 
+      if ((current.metadata as Prisma.JsonObject)?.platformPurchase === "domain" && dto.paymentMethod.type !== "QR") {
+        throw new BadRequestException("La compra de dominios se paga con QR bancario.");
+      }
       const confirmedStatus = transition(current.status, PaymentIntentEvent.CONFIRM);
 
+      if ((current.metadata as Prisma.JsonObject)?.storeCredit) await ensureCreditReservation(tx, paymentIntentId);
       await this.assertCartStillAvailable(tx, current.metadata);
       const locationStockReserved = await this.reserveLocationStockForCart(tx, current.metadata);
       const paymentMethod = await this.paymentMethods.findOrCreate(tx, current.merchantId, dto.paymentMethod);
-      const rail = this.railRegistry.getForMethodType(paymentMethod.type);
+      const international = dto.rail === "dlocal";
+      if (international) {
+        if (!dlocalChargesAllowed(this.config.get<DlocalConfig>("app.dlocal")!, this.config.get<string>("app.environment"))) {
+          throw new ForbiddenException("Los pagos internacionales no están disponibles.");
+        }
+        const merchant = await tx.merchant.findUniqueOrThrow({ where: { id: current.merchantId } });
+        if (merchant.internationalPaymentsStatus !== "ENABLED" || merchant.settlementMode !== "AGGREGATOR") {
+          throw new ForbiddenException("Este comercio no tiene habilitados los pagos internacionales.");
+        }
+        if (!dto.country) throw new BadRequestException("Elige el país desde el que pagas.");
+        if (!dto.customerEmail) throw new BadRequestException("Ingresa tu correo para pagar desde el exterior.");
+      }
+      const rail = international ? this.railRegistry.get("dlocal") : this.railRegistry.getForMethodType(paymentMethod.type);
+      if (international && !rail.supportedMethodTypes.includes(dto.paymentMethod.type)) {
+        throw new BadRequestException("Este método de pago no está disponible para pagos desde el exterior.");
+      }
+      let charge: ReturnType<typeof resolveChargeAmount>;
+      try {
+        charge = resolveChargeAmount(current, international, this.config.get<DlocalConfig>("app.dlocal")!.bobPerUsd, new Date());
+      } catch (error) {
+        if (error instanceof FxRateUnavailableError) throw new ConflictException("intl_fx_rate_unavailable");
+        throw error;
+      }
+      if ((current.metadata as Prisma.JsonObject)?.platformPurchase === 'domain') {
+        const order = await tx.domainOrder.findUnique({ where: { paymentIntentId } });
+        if (!order || order.status !== 'AWAITING_PAYMENT' || rail.railId !== (order.sandbox ? 'mock_qr' : 'baneco_qr')) {
+          throw new BadRequestException('El método de pago no está disponible para esta compra de dominio.');
+        }
+      }
       const processingStatus = transition(confirmedStatus, PaymentIntentEvent.AUTHORIZE_START);
       const debt = (current.metadata as {
         debt?: { customerName?: string; customerDocument?: string; customerEmail?: string; customerPhone?: string };
@@ -272,6 +356,7 @@ export class PaymentIntentsService {
       const currentMetadata = current.metadata && typeof current.metadata === "object" && !Array.isArray(current.metadata)
         ? current.metadata as Prisma.JsonObject
         : {};
+      const { fx: _previousFx, ...metadataWithoutFx } = currentMetadata;
       const delivery = dto.deliveryRequested
         ? {
             requested: true,
@@ -291,6 +376,8 @@ export class PaymentIntentsService {
           paymentMethodType: paymentMethod.type,
           paymentMethodId: paymentMethod.id,
           railId: rail.railId,
+          amount: charge.amount,
+          currency: charge.currency,
           confirmationAttempts: { increment: 1 },
           // The company owns debt identity and amount. Never let a modified
           // public confirm request replace the carnet/name from that record.
@@ -298,7 +385,15 @@ export class PaymentIntentsService {
           customerDocument: debt?.customerDocument || dto.customerDocument,
           customerEmail: effectiveEmail,
           customerPhone: debt?.customerPhone || dto.customerPhone,
-          metadata: { ...currentMetadata, delivery, ...(locationStockReserved ? { locationStockReserved: true } : {}) } as Prisma.InputJsonValue,
+          metadata: {
+            ...metadataWithoutFx,
+            delivery,
+            ...(locationStockReserved ? { locationStockReserved: true } : {}),
+            // Only an international charge carries a conversion; a domestic retry
+            // after one must not keep the stale snapshot (receipts/invoices read it).
+            ...(charge.fx ? { fx: charge.fx as unknown as Prisma.JsonObject } : {}),
+            ...(international ? { dlocalCostEstimated: true, intlCountry: dto.country } : {}),
+          } as Prisma.InputJsonValue,
           ...(consumerUserId && { consumerUserId }),
         },
       });
@@ -316,6 +411,10 @@ export class PaymentIntentsService {
         amount: updated.amount,
         currency: updated.currency,
         merchantId: updated.merchantId,
+        country: dto.country,
+        payer: international
+          ? { name: updated.customerName ?? "", email: updated.customerEmail ?? "", document: updated.customerDocument ?? undefined }
+          : undefined,
       };
     });
 
@@ -329,6 +428,8 @@ export class PaymentIntentsService {
         currency,
         paymentMethod: { type: dto.paymentMethod.type, token: dto.paymentMethod.token, metadata: dto.paymentMethod.metadata },
         idempotencyKey,
+        country,
+        payer,
       });
     } catch (error) {
       await this.applyRailResult(intentId, merchantId, railId, {
@@ -341,6 +442,29 @@ export class PaymentIntentsService {
     }
 
     return this.applyRailResult(intentId, merchantId, railId, result, TransactionType.AUTHORIZATION);
+  }
+
+  /**
+   * The intent's most recent authorization attempt, so a rail notification can
+   * be bound to the attempt it belongs to. Null when the intent doesn't exist;
+   * railReference/status are null when no attempt has been recorded yet.
+   */
+  async latestAuthorization(paymentIntentId: string): Promise<{ merchantId: string; railReference: string | null; status: TransactionStatus | null } | null> {
+    const intent = await this.prisma.paymentIntent.findUnique({
+      where: { id: paymentIntentId },
+      select: {
+        merchantId: true,
+        transactions: {
+          where: { type: TransactionType.AUTHORIZATION },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { railReference: true, status: true },
+        },
+      },
+    });
+    if (!intent) return null;
+    const latest = intent.transactions[0];
+    return { merchantId: intent.merchantId, railReference: latest?.railReference ?? null, status: latest?.status ?? null };
   }
 
   /** Invoked by authenticated rail callbacks to resolve a `requires_action` intent. */
@@ -409,6 +533,8 @@ export class PaymentIntentsService {
         ? current.metadata as Prisma.JsonObject
         : {};
 
+      if (currentMetadata.storeCredit && result.status !== 'requires_action' && ['succeeded', 'failed'].includes(result.status)) await finishCredit(tx, paymentIntentId, result.status === 'succeeded');
+
       const transactionRow = await tx.transaction.create({
         data: {
           paymentIntentId,
@@ -435,12 +561,14 @@ export class PaymentIntentsService {
         },
       });
 
+      let receiptQueued = false;
       if (result.status === "succeeded") {
         const lines = this.ledger.buildCaptureJournal({
           merchantId,
           transactionId: transactionRow.id,
           amount: current.amount,
           settlementMode: merchant.settlementMode,
+          pricing: pricingForRail(railId, this.config.get<DlocalConfig>("app.dlocal")!),
         });
         await this.ledger.postJournalEntry(tx, this.ledger.generateGroupId(), lines, updated.currency);
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.succeeded", {
@@ -449,17 +577,26 @@ export class PaymentIntentsService {
           currency: updated.currency,
           status: updated.status,
         });
-        await completeEventReservationPayment(tx, updated);
+        const invoiceAmount = invoiceAmountFor({ amount: updated.amount, currency: updated.currency, metadata: current.metadata });
         await this.invoicing.enqueueInvoice(tx, merchantId, {
           paymentIntentId: updated.id,
-          amount: updated.amount,
-          currency: updated.currency,
+          amount: Number((currentMetadata.storeCredit as Prisma.JsonObject)?.orderTotal) || invoiceAmount.amount,
+          currency: invoiceAmount.currency,
           customerName: current.customerName,
           customerDocument: current.customerDocument,
         });
         await this.decrementStockForCart(tx, current.metadata);
+        await this.recordCartSales(tx, merchantId, updated.id, current.metadata);
         await this.recordProductStats(tx, merchantId, current.metadata);
-        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, status: true } });
+        const order = await tx.storeOrder.findUnique({ where: { paymentIntentId }, select: { id: true, storeId: true, status: true } });
+        if (order?.storeId && updated.livemode) {
+          const cart = (updated.metadata as {cart?:CartInventoryLine[]} | null)?.cart;
+          const lineCurrency = lineCurrencyFor({ currency: updated.currency, metadata: updated.metadata });
+          const originalTotal = invoiceAmount.currency !== updated.currency ? ` (${formatAmount(invoiceAmount.amount, invoiceAmount.currency)})` : '';
+          const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
+          const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
+          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`});
+        }
         if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
           await tx.storeOrder.update({
             where: { id: order.id },
@@ -468,6 +605,7 @@ export class PaymentIntentsService {
               statusEvents: { create: { status: OrderFulfillmentStatus.PAID } },
             },
           });
+          await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING', nextAttemptAt: null }, data: { nextAttemptAt: new Date() } });
         }
         const debtMetadata = (current.metadata as { debt?: { debtRecordId?: string; debtRecordIds?: string[] } } | null)?.debt;
         const debtRecordIds = [...new Set([
@@ -490,6 +628,11 @@ export class PaymentIntentsService {
           data: { status: "CONFIRMED", holdExpiresAt: null },
         });
       } else if (result.status === "failed") {
+        if (updated.livemode && tx.subscriptionInvoice?.findFirst && tx.customerSubscription?.findUnique) {
+          const invoice = await tx.subscriptionInvoice.findFirst({where:{paymentIntentId}});
+          const subscription = invoice && await tx.customerSubscription.findUnique({where:{id:invoice.subscriptionId}});
+          if (invoice && subscription) await queueStoreEmail(tx,invoice.storeId,'SUBSCRIPTION_FAILED',updated.id,subscription.customerEmail,{store:merchant.name,order:invoice.id,customer:subscription.customerName,amount:formatAmount(invoice.amount,invoice.currency)});
+        }
         await this.webhooks.enqueueEvent(tx, merchantId, "payment_intent.failed", {
           id: updated.id,
           amount: updated.amount,
@@ -499,14 +642,14 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
     // webhook/invoice enqueues above, which just write an outbox row), so it
     // must never hold a DB row lock open while it runs.
     if (outcome.railResult.status === "succeeded") {
-      await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
+      if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
 
@@ -524,6 +667,7 @@ export class PaymentIntentsService {
    */
   private async sendReceiptEmail(
     intent: {
+      livemode?: boolean;
       id: string;
       amount: number;
       currency: string;
@@ -537,16 +681,19 @@ export class PaymentIntentsService {
     try {
       const cart = (intent.metadata as { cart?: CartInventoryLine[] } | null)?.cart;
       const appointment = (intent.metadata as { appointment?: { offeringName?: string; startsAt?: string } } | null)?.appointment;
+      const lineCurrency = lineCurrencyFor({ currency: intent.currency, metadata: intent.metadata });
+      const invoiceAmount = invoiceAmountFor({ amount: intent.amount, currency: intent.currency, metadata: intent.metadata });
+      const originalTotal = invoiceAmount.currency !== intent.currency ? ` (${formatAmount(invoiceAmount.amount, invoiceAmount.currency)})` : "";
       const itemLines = cart
         ? cart
             .map(
               (line) =>
-                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, intent.currency)}`,
+                `- ${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${selectedExtrasLabel(line.extras)}` : ""} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`,
             )
             .join("\n") + "\n"
         : "";
 
-      const order = await this.prisma.storeOrder.findUnique({ where: { paymentIntentId: intent.id }, select: { id: true } });
+      const order = await this.prisma.storeOrder.findUnique({ where: { paymentIntentId: intent.id }, select: { id: true, storeId: true } });
       const trackingLine = order
         ? `\nSigue tu pedido aquí:\n${(this.config?.get<string>("app.checkoutOrigin") ?? "http://localhost:5174").replace(/\/$/, "")}/track/${createOrderTrackingToken(order.id, this.config?.get<string>("app.orderTrackingSecret") ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}\n`
         : "";
@@ -554,7 +701,7 @@ export class PaymentIntentsService {
       await this.email.send({
         to: intent.customerEmail,
         subject: appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`,
-        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${trackingLine}\nGracias por tu compra.`,
+        body: `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}\nGracias por tu compra.`,
       });
     } catch (err) {
       this.logger.warn(`Failed to send receipt email for ${intent.id}: ${(err as Error).message}`);
@@ -563,6 +710,7 @@ export class PaymentIntentsService {
 
   private async sendDebtPaymentNotification(
     intent: {
+      livemode?: boolean;
       id: string;
       amount: number;
       currency: string;
@@ -616,7 +764,9 @@ export class PaymentIntentsService {
     if (!cart) return;
     const fulfillment = (metadata as { fulfillment?: { locationId?: string; locationName?: string } } | null)?.fulfillment;
 
-    const links = await tx.paymentLink.findMany({ where: { id: { in: cart.map((line) => line.paymentLinkId) } } });
+    // Box picks stand for real products whose stock they consume, so load those products too.
+    const pickedProductIds = cart.flatMap((line) => (line.extras ?? []).flatMap((extra) => (extra.productId ? [extra.productId] : [])));
+    const links = await tx.paymentLink.findMany({ where: { id: { in: [...new Set([...cart.map((line) => line.paymentLinkId), ...pickedProductIds])] } } });
     const requestedByLinkId = new Map<string, number>();
     const requestedByVariant = new Map<string, { quantity: number; variant: ProductVariant; productName: string }>();
     const requestedByExtraPool = new Map<string, { quantity: number; stock: number; name: string }>();
@@ -655,6 +805,12 @@ export class PaymentIntentsService {
         }
       }
       requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
+      for (const extra of line.extras ?? []) {
+        if (!extra.productId) continue;
+        const product = links.find((candidate) => candidate.id === extra.productId);
+        if (!product || product.status !== PaymentLinkStatus.ACTIVE) throw new BadRequestException(`"${extra.name}" ya no está disponible`);
+        requestedByLinkId.set(extra.productId, (requestedByLinkId.get(extra.productId) ?? 0) + line.quantity);
+      }
     }
 
     for (const [paymentLinkId, quantity] of requestedByLinkId) {
@@ -666,6 +822,7 @@ export class PaymentIntentsService {
     if (fulfillment?.locationId) {
       for (const [paymentLinkId, quantity] of requestedByLinkId) {
         const link = links.find((candidate) => candidate.id === paymentLinkId)!;
+        if (cart.some(line => line.paymentLinkId === paymentLinkId && line.digitalAssetIds?.length)) continue;
         const stock = readLocationStocks(link.locationStocks)[fulfillment.locationId] ?? 0;
         if (stock !== null && stock < quantity) {
           throw new BadRequestException(`${fulfillment.locationName || "La ubicación elegida"} ya no tiene suficiente stock de "${link.name}"`);
@@ -699,7 +856,7 @@ export class PaymentIntentsService {
     const requestedByExtraPool = new Map<string, { quantity: number; name: string }>();
     const requestedByLocationProduct = new Map<string, number>();
     for (const line of cart) {
-      requestedByLocationProduct.set(line.paymentLinkId, (requestedByLocationProduct.get(line.paymentLinkId) ?? 0) + line.quantity);
+      if (!line.digitalAssetIds?.length) requestedByLocationProduct.set(line.paymentLinkId, (requestedByLocationProduct.get(line.paymentLinkId) ?? 0) + line.quantity);
       if (line.variantId) {
         const key = `${line.paymentLinkId}:${line.variantId}`;
         const requested = requestedByVariant.get(key);
@@ -711,6 +868,9 @@ export class PaymentIntentsService {
         });
       } else {
         requestedByLinkId.set(line.paymentLinkId, (requestedByLinkId.get(line.paymentLinkId) ?? 0) + line.quantity);
+      }
+      for (const extra of line.extras ?? []) {
+        if (extra.productId) requestedByLinkId.set(extra.productId, (requestedByLinkId.get(extra.productId) ?? 0) + line.quantity);
       }
       for (const extra of line.extras ?? []) {
         if (!extra.inventoryKey || extra.stock === undefined) continue;
@@ -840,7 +1000,7 @@ export class PaymentIntentsService {
     const locationId = (metadata as { fulfillment?: { locationId?: string } } | null)?.fulfillment?.locationId;
     if (!cart || !locationId) return false;
     const requested = new Map<string, number>();
-    for (const line of cart) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
+    for (const line of cart.filter(line => !line.digitalAssetIds?.length)) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
     for (const [paymentLinkId, quantity] of requested) {
       const updated = await tx.$executeRaw`
         UPDATE "PaymentLink"
@@ -870,7 +1030,7 @@ export class PaymentIntentsService {
     const locationId = (metadata as { fulfillment?: { locationId?: string } } | null)?.fulfillment?.locationId;
     if (!cart || !locationId) return;
     const requested = new Map<string, number>();
-    for (const line of cart) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
+    for (const line of cart.filter(line => !line.digitalAssetIds?.length)) requested.set(line.paymentLinkId, (requested.get(line.paymentLinkId) ?? 0) + line.quantity);
     for (const [paymentLinkId, quantity] of requested) {
       await tx.$executeRaw`
         UPDATE "PaymentLink"
@@ -892,6 +1052,40 @@ export class PaymentIntentsService {
   /** Increment compact per-product totals in the same transaction that marks
    * the payment successful. This makes retries atomic and avoids rescanning
    * every historical PaymentIntent for storefront and finance reads. */
+  /**
+   * After stock was decremented, keep one auditable ORDER movement per sold
+   * product or combination and tell connected systems which SKUs sold. The
+   * movements also let an inbound stock count taken before these sales be
+   * reconciled instead of overwriting them.
+   */
+  private async recordCartSales(tx: Prisma.TransactionClient, merchantId: string, paymentIntentId: string, metadata: Prisma.JsonValue): Promise<void> {
+    const snapshot = metadata as { storeId?: string; cart?: CartInventoryLine[] } | null;
+    if (!snapshot?.storeId || !Array.isArray(snapshot.cart) || !snapshot.cart.length) return;
+    const sold = new Map<string, { paymentLinkId: string; variantId: string | null; name: string; variantName: string | null; quantity: number }>();
+    for (const line of snapshot.cart) {
+      const key = `${line.paymentLinkId}:${line.variantId ?? ""}`;
+      const current = sold.get(key);
+      sold.set(key, { paymentLinkId: line.paymentLinkId, variantId: line.variantId ?? null, name: line.name, variantName: line.variantName ?? null, quantity: (current?.quantity ?? 0) + line.quantity });
+    }
+    const ids = [...new Set([...sold.values()].map((line) => line.paymentLinkId))];
+    const [products, mappings] = await Promise.all([
+      tx.paymentLink.findMany({ where: { id: { in: ids }, storeId: snapshot.storeId }, select: { id: true, stock: true, variants: true } }),
+      tx.integrationProductMapping.findMany({ where: { paymentLinkId: { in: ids } }, select: { paymentLinkId: true, variantId: true, externalSku: true, connectionId: true } }),
+    ]);
+    const items = [];
+    for (const line of sold.values()) {
+      const product = products.find((candidate) => candidate.id === line.paymentLinkId);
+      if (!product) continue;
+      const stockAfter = line.variantId ? readProductVariants(product.variants).find((variant) => variant.id === line.variantId)?.stock ?? null : product.stock;
+      await tx.inventoryMovement.create({ data: { merchantId, storeId: snapshot.storeId, paymentLinkId: line.paymentLinkId, variantId: line.variantId, quantityDelta: -line.quantity, stockAfter, reason: "Venta en pagosYa", sourceType: "ORDER", sourceId: paymentIntentId } });
+      items.push({
+        productId: line.paymentLinkId, variantId: line.variantId, name: line.name, variantName: line.variantName, quantity: line.quantity, stockAfter,
+        skus: mappings.filter((mapping) => mapping.paymentLinkId === line.paymentLinkId && (mapping.variantId ?? null) === line.variantId).map((mapping) => ({ connectionId: mapping.connectionId, externalSku: mapping.externalSku })),
+      });
+    }
+    if (items.length) await this.webhooks.enqueueEvent(tx, merchantId, "inventory.sold", { paymentIntentId, storeId: snapshot.storeId, items });
+  }
+
   private async recordProductStats(tx: Prisma.TransactionClient, merchantId: string, metadata: Prisma.JsonValue): Promise<void> {
     const snapshot = metadata as { storeId?: string; cart?: CartInventoryLine[] } | null;
     if (!snapshot?.storeId || !Array.isArray(snapshot.cart)) return;

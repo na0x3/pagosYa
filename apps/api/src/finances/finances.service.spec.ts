@@ -137,6 +137,7 @@ describe("FinancesService.summary", () => {
       where: {
         merchantId: "m_1",
         status: "SUCCEEDED",
+        currency: "BOB",
         metadata: { path: ["storeId"], equals: "store_1" },
       },
       _sum: { amount: true },
@@ -153,6 +154,24 @@ describe("FinancesService.summary", () => {
       totalStoreViews: 12,
       scope: { type: "STORE", storeId: "store_1", storeName: "Tienda Centro" },
     });
+  });
+
+  it("only sums BOB payments into the BOB totals, leaving USD international charges out", async () => {
+    const prisma = makeFakePrisma();
+    prisma.paymentIntent.aggregate.mockResolvedValue({ _sum: { amount: 0 }, _count: { _all: 0 } });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+    prisma.store.aggregate.mockResolvedValue({ _sum: { viewCount: 0 } });
+    prisma.paymentIntent.groupBy.mockResolvedValue([]);
+
+    await new FinancesService(prisma as any).summary("m_1");
+
+    expect(prisma.paymentIntent.aggregate.mock.calls[0][0].where.currency).toBe("BOB");
+    expect(prisma.paymentIntent.groupBy.mock.calls[0][0].where.currency).toBe("BOB");
+    const [unattributedSql, weekdaySql] = prisma.$queryRaw.mock.calls.map((call: any[]) => call[0]);
+    expect(unattributedSql.sql).toMatch(/currency = \?/);
+    expect(unattributedSql.values).toContain("BOB");
+    expect(weekdaySql.sql).toMatch(/pi\.currency = \?/);
+    expect(weekdaySql.values).toContain("BOB");
   });
 
   it("values finite option inventory at each option price", async () => {

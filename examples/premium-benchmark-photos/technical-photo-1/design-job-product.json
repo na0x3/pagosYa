@@ -1,0 +1,76 @@
+{
+  "id": "cmu2uops800119lvh96k5jvrm",
+  "requestId": "b3f770e4-3881-42a7-884a-7e228c526f0f",
+  "revision": 1,
+  "page": "product.html",
+  "status": "APPLIED",
+  "stage": "APPLY",
+  "maxCredits": 150,
+  "reservedCredits": 21.2963,
+  "observedCredits": 21.2963,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "d625e870-4eb6-4bb9-8d8c-2ec86232d77a",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:52:36.768Z",
+      "finishedAt": "2026-09-15T15:52:44.791Z",
+      "actualMicroUsd": 19902,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "75d563e5-4650-4f51-8a64-2e00ba154b9e",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:52:45.044Z",
+      "finishedAt": "2026-09-15T15:53:35.615Z",
+      "actualMicroUsd": 156699,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "105c57b2-5fa0-4b17-89f3-006e3157364c",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:53:40.305Z",
+      "finishedAt": "2026-09-15T15:53:52.512Z",
+      "actualMicroUsd": 36362,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": 2,
+  "createdAt": "2026-09-15T15:52:34.184Z",
+  "updatedAt": "2026-09-15T15:53:53.143Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A mantiene una compra más clara: la acción principal conserva una sola línea y la galería móvil aprovecha mejor el espacio sin introducir una banda vacía grande. La fotografía, la jerarquía de nombre/precio y la agrupación de cantidad con acción son coherentes con el brief.",
+    "findings": [
+      {
+        "category": "readability",
+        "location": "Ruta de migas, sobre la galería",
+        "severity": "minor",
+        "viewport": "mobile",
+        "correction": "Ajustar el tratamiento responsive de la ruta para que el nombre se trunque, reduzca de forma controlada o pase completo a una nueva línea sin dejar caracteres huérfanos.",
+        "observation": "El nombre del producto se parte dejando la última letra sola en una tercera línea, lo que hace que la ruta se vea accidental y consume altura antes de la imagen."
+      },
+      {
+        "category": "consistency",
+        "location": "Selector de color y resumen de la acción principal",
+        "severity": "minor",
+        "viewport": "both",
+        "correction": "Marcar visualmente la opción elegida de manera consistente y reflejar el total correspondiente en la acción cuando exista una selección.",
+        "observation": "Las dos opciones de color tienen el mismo tratamiento visual, por lo que no se distingue de forma evidente cuál es la elegida; al mismo tiempo, la acción sigue mostrando un importe “desde”."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_083ef73a226f3437016aa96a0569d087d28bc53a84ee08ec42",
+    "regressions": [],
+    "providerMicroUsd": 36362
+  },
+  "resumeAvailable": false
+}

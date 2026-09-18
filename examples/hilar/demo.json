@@ -1,0 +1,43 @@
+{
+  "merchantId": "cmu1cushx0000lceerxnpmgc7",
+  "storeId": "cmu1cusi50002lcee0iw6rgv1",
+  "slug": "v0ybuup8",
+  "assets": {
+    "hero": "/v1/uploads/77e41b18-e58c-405e-895c-2a62f9b163aa.jpg",
+    "cable-oat": "/v1/uploads/8af249c6-813e-48c9-aef6-feb77d25b5d0.jpg",
+    "rib-burgundy": "/v1/uploads/eed5061f-c2ad-4006-9d9d-eae77484054c.jpg",
+    "cardigan-olive": "/v1/uploads/6a35fde6-5510-4c68-9597-5646f6f0b3f1.jpg",
+    "cable-burgundy": "/v1/uploads/9c81444a-8bbc-4ce5-bf5d-411fbc4a0167.jpg",
+    "cable-olive": "/v1/uploads/519c4642-d1f7-4086-9046-4a66cc7fbc60.jpg",
+    "rib-oat": "/v1/uploads/1defb8a8-ca08-4674-ba03-214d8a30651c.jpg",
+    "rib-olive": "/v1/uploads/59ed06ed-da15-4e90-a420-5d3b21a946fd.jpg",
+    "cardigan-oat": "/v1/uploads/641e480f-fea6-4a0e-ba6f-9df1b76fd75d.jpg",
+    "cardigan-burgundy": "/v1/uploads/abc0cefa-044d-45f1-978f-38cb7438a757.jpg"
+  },
+  "products": [
+    {
+      "id": "cmu1cuskc000olceeouftfn5q",
+      "name": "Suéter Ocho"
+    },
+    {
+      "id": "cmu1cuski000qlceecx3xnk7n",
+      "name": "Suéter Sur"
+    },
+    {
+      "id": "cmu1cuskl000slceep0f7n64f",
+      "name": "Cárdigan Nido"
+    },
+    {
+      "id": "cmu1cusko000ulceeftvthewc",
+      "name": "Caja de regalo"
+    }
+  ],
+  "authored": true,
+  "revision": 5,
+  "url": "http://localhost:5175/s/v0ybuup8",
+  "localPublication": {
+    "revision": 5,
+    "payments": "test",
+    "url": "http://localhost:5175/s/v0ybuup8"
+  }
+}

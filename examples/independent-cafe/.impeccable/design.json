@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-06T00:25:13.312757+00:00",
+  "title": "Design System: Café Aroma",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Ivory paper",
+        "canonical": "#f5efe5",
+        "tonalRamp": [
+          "oklch(15% 0.015 80)",
+          "oklch(26% 0.015 80)",
+          "oklch(38% 0.015 80)",
+          "oklch(49% 0.015 80)",
+          "oklch(61% 0.015 80)",
+          "oklch(72% 0.015 80)",
+          "oklch(84% 0.015 80)",
+          "oklch(95% 0.015 80)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Espresso ink",
+        "canonical": "#30251c",
+        "tonalRamp": [
+          "oklch(15% 0.025 65)",
+          "oklch(26% 0.025 65)",
+          "oklch(38% 0.025 65)",
+          "oklch(49% 0.025 65)",
+          "oklch(61% 0.025 65)",
+          "oklch(72% 0.025 65)",
+          "oklch(84% 0.025 65)",
+          "oklch(95% 0.025 65)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Warm supporting text",
+        "canonical": "#6c5a49",
+        "tonalRamp": [
+          "oklch(15% 0.035 65)",
+          "oklch(26% 0.035 65)",
+          "oklch(38% 0.035 65)",
+          "oklch(49% 0.035 65)",
+          "oklch(61% 0.035 65)",
+          "oklch(72% 0.035 65)",
+          "oklch(84% 0.035 65)",
+          "oklch(95% 0.035 65)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Terracotta",
+        "canonical": "#a33f22",
+        "tonalRamp": [
+          "oklch(15% 0.13 38)",
+          "oklch(26% 0.13 38)",
+          "oklch(38% 0.13 38)",
+          "oklch(49% 0.13 38)",
+          "oklch(61% 0.13 38)",
+          "oklch(72% 0.13 38)",
+          "oklch(84% 0.13 38)",
+          "oklch(95% 0.13 38)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Warm divider",
+        "canonical": "#cab9a5",
+        "tonalRamp": [
+          "oklch(15% 0.035 76)",
+          "oklch(26% 0.035 76)",
+          "oklch(38% 0.035 76)",
+          "oklch(49% 0.035 76)",
+          "oklch(61% 0.035 76)",
+          "oklch(72% 0.035 76)",
+          "oklch(84% 0.035 76)",
+          "oklch(95% 0.035 76)"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Warm section wash",
+        "canonical": "#eee4d6",
+        "tonalRamp": [
+          "oklch(15% 0.023 75)",
+          "oklch(26% 0.023 75)",
+          "oklch(38% 0.023 75)",
+          "oklch(49% 0.023 75)",
+          "oklch(61% 0.023 75)",
+          "oklch(72% 0.023 75)",
+          "oklch(84% 0.023 75)",
+          "oklch(95% 0.023 75)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Instrument Serif",
+        "purpose": "Expressive hero and section headlines."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "hover",
+        "value": "150ms ease",
+        "purpose": "Color feedback; disabled by reduced-motion preference."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "700px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1000px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Primary button",
+      "html": "<button class=\"ds-primary\">Ver la carta</button>",
+      "css": ".ds-primary{background:#30251c;color:#f5efe5;border:0;padding:16px 24px;min-height:52px;font:12px Arial,sans-serif;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:background .15s ease}.ds-primary:hover{background:#a33f22}.ds-primary:focus-visible{outline:3px solid #a33f22;outline-offset:5px}"
+    },
+    {
+      "name": "Add product",
+      "kind": "button",
+      "description": "Add product",
+      "html": "<button class=\"ds-add\" aria-label=\"Añadir café\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-add{border:1px solid #a33f22;color:#a33f22;background:none;border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.ds-add:hover{background:#a33f22;color:#f5efe5}.ds-add:focus-visible{outline:3px solid #a33f22;outline-offset:5px}"
+    },
+    {
+      "name": "Category selection",
+      "kind": "chip",
+      "description": "Category selection",
+      "html": "<button class=\"ds-category\" aria-pressed=\"true\">Cafés</button>",
+      "css": ".ds-category{min-height:44px;border:0;border-bottom:2px solid #a33f22;background:none;color:#a33f22;padding:12px 3px;font:11px Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}.ds-category:hover{color:#30251c}.ds-category:focus-visible{outline:3px solid #a33f22;outline-offset:5px}"
+    },
+    {
+      "name": "Order field",
+      "kind": "input",
+      "description": "Order field",
+      "html": "<label class=\"ds-field\">Sucursal<select><option>Selecciona una sucursal</option></select></label>",
+      "css": ".ds-field{font:11px Arial,sans-serif;color:#30251c}.ds-field select{display:block;width:100%;min-height:44px;padding:9px;border:1px solid #cab9a5;background:#f5efe5;color:#30251c;margin-top:8px}.ds-field select:focus-visible{outline:3px solid #a33f22;outline-offset:5px}"
+    },
+    {
+      "name": "Menu navigation",
+      "kind": "nav",
+      "description": "Menu navigation",
+      "html": "<nav class=\"ds-nav\"><a href=\"#carta\">La carta</a><a href=\"#mesa\">Nuestra mesa</a></nav>",
+      "css": ".ds-nav{display:flex;gap:44px;font:12px Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase}.ds-nav a{color:#30251c;text-decoration:none;padding:14px 0}.ds-nav a:hover{color:#a33f22}.ds-nav a:focus-visible{outline:3px solid #a33f22;outline-offset:5px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The café menu",
+    "overview": "This is the visual system of the independent Café Aroma demonstration. It does not prescribe the identity of other merchant websites or the pagosYa dashboard. Warm paper, editorial lettering and a real breakfast photograph introduce a straightforward menu and order flow.",
+    "keyCharacteristics": [
+      "Serif headlines paired with compact sans-serif controls.",
+      "Photography supplies depth; surfaces remain flat.",
+      "Menu rows, fine rules and open space carry the composition."
+    ],
+    "rules": [
+      {
+        "name": "The Accent Rule",
+        "body": "Reserve terracotta for actions, selection, status and short rules; do not flood the reading surface with it.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do keep merchant photography prominent and unobscured.",
+      "Do preserve the difference between expressive headlines and readable commerce controls.",
+      "Do use the actual catalog and clearly label demonstration content."
+    ],
+    "donts": [
+      "Don't impose this café identity on unrelated businesses.",
+      "Don't add elevated product cards or decorative gradients to this flat menu world.",
+      "Don't invent claims, testimonials or operational details."
+    ]
+  }
+}

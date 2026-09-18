@@ -1,290 +1,158 @@
-<!-- last-updated-commit: bf017746aacd6fb53f5b10c88830fddc8d5a7c42 -->
 # pagosYa — Session Handoff
 
 Read this first, every session, before touching code. It's a restart
-snapshot, not a diary — it should describe *current truth*, not what
-happened. For session-by-session narrative/history, see
-`docs/SESSION_LOG.md`. For architecture, the regulatory model, and
-how to run locally, see `README.md` — don't duplicate that here.
+snapshot, not a diary — it describes *current truth*. For session narrative,
+see `docs/SESSION_LOG.md`. For architecture and how to run locally, see
+`README.md`.
 
-**This file is only updated when the user explicitly asks** — the Stop
-hook that used to auto-force this on every turn was disabled by request
-(`.claude/settings.json` is `{"hooks": {}}`). Don't re-add that
-automation; see the memory note on this if unsure.
+**This file is only updated when the user explicitly asks.** The Stop hook
+that used to force this every turn was disabled by request. Don't re-add it.
 
-Updated: 2026-08-08
-Branch: main
-HEAD: (see last-updated-commit marker above — updated in a follow-up commit)
-Working tree: clean — everything through 2026-08-08 committed and pushed
-  to origin/main this session, ending a long uncommitted streak (see §6)
-Last verified: 2026-08-08 (110 API + 29 checkout tests, tsc clean, live
-  browser QA of this session's changes — see §7)
+Updated: 2026-09-16 (overnight session)
+Branch: `feature/independent-storefront-projects` — **not merged to main, not pushed**
+HEAD: `1f06747`
+Working tree: clean except `.impeccable/*.png` (unrelated, already modified
+  when the session started — left alone deliberately)
 
-## 1. Current objective
+## 1. Read these first
 
-Two threads in flight: (a) the payment gateway itself — only one rail
-(Banco Económico QR) and no payout disbursement adapter are real, and
-(b) the merchant storefront product — categories, richer products,
-finances, and a full visual redesign, refined further on 2026-08-08.
-(b) doesn't move (a) forward; the payment-rail work is still where it
-was.
+- `docs/CATALOG_ARRANGEMENT.md` — the catalog arrangement feature, now implemented
+- `docs/STOREFRONT_DESIGN_LEVEL_UP.md` — **new**, the design gap vs amboras.com, phased
+- `docs/DOMAIN_SHOP_READINESS.md` — **new**, why nobody can buy a domain yet
+- `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/progress.md` — the build ledger, with all
+  37 rulings, their reasoning and what each costs if wrong
+- `.superpowers/sdd/design-phase0-report.md` — what Phase 0 changed and what it skipped
 
-## 2. Next action
+## 2. Next action — pick one, they are independent
 
-Implement a real payout disbursement adapter, replacing
-`apps/api/src/payouts/adapters/mock-bank-disbursement.adapter.ts`. Not
-started — this session went entirely toward storefront features instead
-(see §6).
+**(a) Storefront design, Phase 1+** — `docs/STOREFRONT_DESIGN_LEVEL_UP.md`.
+Phase 0 is committed but **changes nothing until the four benchmark stores are
+regenerated**. Do that first and look at the captures before building further.
+The later phases touch `commerce.js` / `commerce-pages.css`, which are served
+live to every published store; the spec isolates the risky `line-height`
+change with its own revert threshold.
 
-### Done when
-- `mock-bank-disbursement.adapter.ts` is swappable for a real adapter
-  the same way `BanecoQrAdapter` swaps in for `MockQrRailAdapter` (one
-  class + one provider wire-up, no caller changes)
-- Idempotency implemented (a retried disbursement can't double-pay)
-- Failed-payout retry policy exists and is bounded (not infinite retry)
-- Bank reference persisted on the `Payout` row
-- Payout webhook/status reconciliation works (bank confirms async)
-- Tests added
-- Mock adapter remains usable/selectable in test environments
+**(b) Domain shop** — `docs/DOMAIN_SHOP_READINESS.md`. The backend is real at
+every hop; two things block it, one of which only the owner can do (§4).
 
-### Blocked by
-- Selecting a bank/payout provider and obtaining real API credentials —
-  no provider chosen yet, this is a decision only the user can make
+**(c) Merge this branch.** The catalog work is review-clean. See §3.
 
-## 3. Current production readiness
+## 3. Catalog arrangement — done, ready to merge
 
-**REAL:**
-- Banco Económico QR Simple (`BanecoQrAdapter`) — flagged off by default,
-  enable via `BANECO_QR_ENABLED=true`
+Store owners choose how products are arranged: one grid (`all`, the default
+every existing store is on), sections per collection, a separate products
+page, or a tab per collection. Plus collections that work like playlists, two
+platform-owned pages with real hosted URLs, a Studio panel, and a YAPI chat
+flow that **asks before applying**.
 
-**MOCK:**
-- Card payments (`mock-card.adapter.ts`)
-- Tigo Money (`mock-tigo-money.adapter.ts`)
-- Bank transfer (`mock-bank-transfer.adapter.ts`)
-- Payout/disbursement to merchant bank accounts (`mock-bank-disbursement.adapter.ts`)
-- SIN/SIAT e-invoicing (`mock-sin-invoicing.adapter.ts` — SIAT's own API
-  was unreachable when built, broken TLS chain)
+- 8 planned tasks, 12 fix rounds, a whole-feature review and a scoped
+  re-review. Final verdict: **ready with one logged follow-up**.
+- Both migrations applied against a real local database holding 42 stores /
+  83 products; all 42 backfilled to `catalogLayout='all'`.
+- All four arrangements verified in a browser at 1280×844 and 390×844.
+- Suites at review time: api 840 serial, checkout 227 + 4 SEO, studio 44 unit
+  + 164 Playwright, all `tsc` clean.
 
-**DO NOT deploy for real-money production.** Even the one real rail
-(QR) can't complete end-to-end yet — see §2. Everything in §6 below is
-storefront/UX, not payment-rail work — it doesn't change this section.
+**Known, accepted, logged — not bugs to re-find:**
+- Under `tabs`, `/productos` is not linked from the storefront but is still in
+  the sitemap. Direct consequence of the owner's own §7 decision.
+- A genuine yes phrased `"dale, va a quedar lindo"` falls into the
+  confirm-twice guard, because `va a` is a mind-change marker. Benign
+  direction: a false negative costs one extra confirmation; a false positive
+  changes a live store.
+- The YAPI recogniser is a whitelist and will always miss some phrasings. That
+  is deliberate — the owner chose ask-before-applying precisely so misses are
+  cheap. Do not "improve" it into silently applying changes.
 
-## 4. Architectural decisions
+## 4. Domain shop — blocked, and one blocker is the owner's
 
-Don't reverse these without a deliberate reason — they're intentional,
-not accidental gaps.
+A merchant **cannot buy a domain today**, for two independent reasons:
 
-- **Default settlement mode is `AGGREGATOR`**, not `FACILITATOR`.
-  pagosYa pools funds, deducts its fee, auto-sweeps the payable balance
-  to the merchant's KYC bank account once `ACTIVE`.
-- **`FACILITATOR` merchants are deliberately skipped by the payout
-  worker** (`payouts.service.ts` `createDuePayouts` filters to
-  `AGGREGATOR` only) — the card network/bank is expected to settle
-  directly to them; pagosYa never holds their money.
-- **LIVE API keys are gated on KYC approval regardless of settlement
-  mode** (`issueLiveKeys` checks `MerchantStatus.ACTIVE`) — TEST-mode
-  keys are never gated.
-- **Checkout branding belongs to the merchant, not pagosYa.** Each
-  store shows its own logo/banner/background (color or photo);
-  pagosYa's own brand (colorful parrot mark) is only used in
-  the merchant dashboard and ops console chrome, never injected into a
-  storefront.
-- **Stores/products persist in Postgres.** Merchant dashboard's login
-  token is `sessionStorage`. A buyer's cart is `localStorage` per store.
-- **Rail selection is a single pluggable registry** (`RailRegistry` +
-  one adapter class per rail, wired in `rails.module.ts`).
-- **Store background image takes priority over background color** when
-  both are set — the color is only a fallback shown while the image
-  loads, not a layered/combined effect.
-- **Categories are optional and additive.** A store with zero categories
-  renders exactly as before (flat product list, no section headers) —
-  category UI only appears once at least one category actually exists.
-- **"Most sold product" only counts cart-checkout purchases.** It reads
-  `PaymentIntent.metadata.cart`, which only exists for storefront/cart
-  checkouts (`StoresService.createCartCheckout`) — a merchant's own
-  API-created `PaymentIntent` has no cart metadata and correctly can't
-  be attributed to a specific catalog product.
-- **Store view counting is a plain counter, not analytics.** Incremented
-  once per `getStorePublic` call, not deduplicated per visitor. Good
-  enough for "is anyone looking at this store," not a substitute for
-  real analytics.
-- **Stock is enforced twice.** A soft check at cart-checkout (nice error
-  message), and a hard atomic `stock: { gte: quantity }` guard on
-  decrement at payment success — the second one is what actually
-  prevents overselling under a race; the first is just UX.
+1. **No credentials.** Every `NAMECOM_*` / `DOMAIN_*` variable is absent, so
+   config throws 503 and the UI degrades correctly. Unblocking needs a funded
+   Name.com reseller account and a Cloudflare for SaaS zone — **owner-only work.**
+2. **No Studio entry point at all.** The UI exists only in the merchant
+   dashboard, three layers deep. Nothing in `apps/merchant-studio` references
+   it. A panel spec is in §6 of the readiness doc — it must add both the
+   toolbar button *and* the `source-business-workspace.ts` catalog entry;
+   adding only the button reproduces a bug found and fixed this session.
 
-## 5. Current system state
+**Fix before going live, regardless of the above:** a paid order can stall
+forever with no support case. The escalation in `domain-commerce.service.ts`
+excludes `AWAITING_PAYMENT`, which is exactly the status a paid-but-
+unregistered order holds. Merchant pays, receives nothing, nobody is told.
+Also `CUSTOM_DOMAIN_CNAME_TARGET` has a default, so its guard can never fire —
+it fails open where every other variable fails closed.
 
-- **API**: running locally, `apps/api` (`pnpm run start:dev`), port 3000
-- **Checkout**: running locally, `apps/checkout` (`pnpm run dev`), port 5173
-- **Dashboard**: stopped (was run repeatedly this session for QA, not
-  left up — `apps/merchant-dashboard`, `node server.mjs`, port 4323)
-- **Ops**: stopped (`apps/ops`, port 4322, tested once for the delivery-failures panel)
-- **Database**: embedded Postgres, port 54329, running; 19 migrations, all applied cleanly
-- **Payment rails**: see §3
-- **Payouts**: worker code complete and running, disbursement itself is mocked (see §3)
+## 5. Storefront design — Phase 0 landed, with a cost
 
-## 6. Changes made this session
+Phase 0 is generator-prompt and token work only. No kit file was touched, so
+no published storefront changed. It covers five type roles with a constrained
+display:body ratio, an ink-opacity ladder, an eight-step spacing scale, a `ch`
+measure cap, a five-slot accent budget sampled from the merchant's own goods,
+and a persisted per-store photography scene contract so a catalogue reads as
+one shoot rather than one-off packshots.
 
-Full narrative for every item below is in `docs/SESSION_LOG.md`, under
-2026-08-07 (the original storefront/finances build-out) and 2026-08-08
-(this session: sizing refinements, real bug fixes, first commit).
+**Decide before the next generation run:** the stable prompt grew ~4.6 KB
+(~2,300 input tokens, ~0.6 credits per attempt). A merchant on a 10-credit
+ceiling can no longer afford a repair after a truncated first response; a test
+fixture was raised 10 → 12 to reflect that. `minCredits` scales automatically
+so nobody is silently under-provisioned, but the practical floor rose.
 
-### CI: migration-safety job
-`.github/workflows/ci.yml` — new job applies the PR base branch's
-migrations + seed data, then the PR's new migrations on top, catching
-exactly the class of bug a real earlier migration had (NOT NULL column,
-no backfill, only breaks with pre-existing data). Verified with a
-throwaway bad migration that it actually fails the same way.
+**Open, from the spec's §13:** one italic role currently forces a sans-led
+concept into a serif partner (only two bundled fonts carry true italics);
+reading a merchant's uploaded photos to set the surface colour is unbuilt, and
+is the half that would fix grey-on-cream for *existing* catalogues without
+regenerating; card/scene aspect is not yet a merchant choice.
 
-### Frontend tests for apps/checkout (new)
-Vitest + jsdom added from scratch — 20 tests now covering the storefront
-(categories, tags, stock, sold-out state, gallery), payment form
-(merchant identity, tab switching, XSS escaping), and payment outcomes.
+**Caveat on the reference:** amboras publishes no live demo store. Their
+example links are static screenshots of product detail pages only. Their
+marketing CSS was quoted exactly; everything about their storefronts is
+measured off pixels and stated as ratios. Nobody has seen their homepages.
 
-### Background-worker failures surfaced
-`payouts`/`invoicing`/`webhooks` workers now log `warn` (retrying) vs.
-`error` (exhausted, giving up) instead of one flat `warn` — and one
-silent path (provider-returned failure) now logs at all. New
-`GET /internal/delivery_failures` + ops console panel showing exhausted
-vs. retrying deliveries.
+## 6. Production readiness — unchanged, carried forward, NOT re-verified
 
-### Store catalog v2 (schema + API + dashboard + storefront)
-New `Category` model, `Store.tagline`/`bannerUrl`,
-`PaymentLink.imageUrls` (array, replaced `imageUrl` with a properly
-backfilled migration)/`tags`/`stock`. New `apps/api/src/categories/`
-module. Dashboard: category management, richer product form (gallery
-upload, tags, stock, category select). Storefront: products grouped
-into category sections, image galleries with thumbnails, tag badges,
-stock display + cart cap, sold-out state.
+**REAL:** Banco Económico QR Simple (`BanecoQrAdapter`), flagged off by
+default via `BANECO_QR_ENABLED`.
 
-### Finanzas dashboard menu (new)
-New `apps/api/src/finances/` module: total revenue, inventory value,
-store views (`Store.viewCount`, new), top-selling products. Merchant-
-wide, not per-store.
+**MOCK:** card, Tigo Money, bank transfer, payout/disbursement to merchant
+bank accounts, SIN/SIAT e-invoicing.
 
-### Storefront visual redesign
-Big circular logo overlapping the banner, gradient title/buttons/tag
-colors, card hover lift + image zoom, staggered entrance animation
-(first paint only), gallery crossfade — all native CSS, no animation
-library (see §4-adjacent note in `docs/SESSION_LOG.md` for why not
-literally Framer Motion). Caught and fixed two bugs introduced earlier
-in the same session while doing this (merchant background-color
-override had silently stopped working; store title briefly rendered
-uppercase) — both live-verified fixed.
+**DO NOT deploy for real-money production.** No payment-rail work happened this
+session, so this section is inherited from the previous handoff and was not
+re-checked. Verify before trusting it.
 
-### Store background image (new)
-`Store.backgroundImageUrl`, independent of `backgroundColor`. Full-page,
-with a dark scrim so text stays readable against any photo. Dashboard
-upload field added.
+## 7. Local development
 
-### 2026-08-08: storefront sizing/legibility fixes + clear-field bug
-Full detail in `docs/SESSION_LOG.md`. Summary:
-- `body.store-page #app` reverted `1400px → 640px` (2026-08-07's redesign
-  had made the storefront too wide/sparse per live feedback); logo then
-  re-enlarged and moved top-left overlapping the banner per follow-up
-  feedback.
-- Fixed an unstyled inline SVG (`.store-about-icon`) rendering as a giant
-  book graphic in the "Nuestra historia" section.
-- Added Instagram/WhatsApp logo icons to store link buttons, matched by
-  URL domain (`store.links` has no platform field).
-- `.merchant-header`/`.store-about` cards made transparent (were opaque/
-  frosted panels) with larger type; legibility over a background photo
-  now comes from light text + drop-shadow instead of a glass panel.
-- **Fixed the "can't clear an optional field" bug** noted below in §9 as
-  known-minor — store fields (tagline, logo/banner/background-image
-  URLs, contact phone/email, about text, announcement) and product
-  fields (description, stock, category, color) can now be cleared back
-  to empty, not just overwritten. DTOs widened to accept explicit `null`
-  (mirroring the pre-existing `accentColor` pattern); dashboard sends
-  `null` for emptied fields and gained "Quitar" buttons for the three
-  image fields, which previously had no clear affordance at all.
-- Near-miss: an automated dashboard click meant to select a store row
-  landed on "Eliminar" instead, likely triggering the confirm()-dialog-
-  hangs-automation issue (see §10). Caught immediately, user asked to
-  dismiss manually, store confirmed intact afterward — no data lost.
-
-## 7. Tests / verification
-
-- `pnpm exec jest` (apps/api): **110/110 passing**
-- `pnpm test` (apps/checkout, Vitest): **29/29 passing**
-- `tsc --noEmit` (api + checkout): clean
-- Migrations: all applied cleanly against the live local DB
-- Extensive browser QA (Claude-in-Chrome) across 2026-08-07:
-  storefront categories/gallery/tags/stock/sold-out, dashboard category
-  + product CRUD, Finanzas numbers against real seeded activity, ops
-  delivery-failures panel with seeded test failures, background image +
-  scrim + glass header, hover/animation states. All test/demo data
-  created for these checks was cleaned up afterward via API calls.
-  2026-08-08's changes were verified live in-browser (storefront sizing/
-  icons/transparency) except the dashboard clear-field fix, which was
-  verified by code review + passing tests only, not live-clicked, after
-  the Eliminar near-miss above cut the dashboard browser session short.
-
-## 8. Known bugs
-
-- None currently known. (Two were introduced and self-caught/fixed
-  within this same session — see §6's "Storefront visual redesign" —
-  not carried forward as open issues.)
-
-## 9. Missing / mocked functionality
-
-**Priority 1** (blocks real money end-to-end):
-- Real payout/disbursement bank adapter — see §2
-- Settlement-mode has no dashboard/signup toggle (API-only DTO field;
-  user chose "flip the default" over building this in an earlier session)
-
-**Priority 2**:
-- Real card rail
-- Real Tigo Money rail
-- Real bank-transfer rail
-- SIN/SIAT e-invoicing integration
-- Per-merchant/per-store payment-method opt-out (every checkout always
-  shows all four rails; QR's only toggle is the global
-  `BANECO_QR_ENABLED` env flag, not per-merchant)
-
-**Security follow-up (not a code task, from an earlier session):**
-- A demo merchant's TEST-mode secret key was committed to git history in
-  earlier versions of `HANDOFF.md` (removed from the file, already on
-  GitHub via prior pushes). TEST-mode keys can't reach LIVE money. Low
-  priority, but purging git history is the real fix if it matters.
-
-## 10. Database / migration warnings
-
-- **4 new migrations this session**, all straightforward additive/
-  backfilled — no data-loss risk like the one below:
-  `20260807142552_settlement_mode_default_aggregator`,
-  `20260807160924_store_catalog_v2`, `20260807164022_store_view_count`,
-  `20260807173744_store_background_image`.
-- **`20260807024643_multi_store` was rewritten in place in an earlier
-  session** (not a fix-forward migration) because it never successfully
-  applied anywhere with real data. Any other checkout with pre-existing
-  `PaymentLink` rows and a half-applied copy of this migration needs
-  `prisma migrate resolve --rolled-back 20260807024643_multi_store`
-  before `migrate deploy` will succeed — a plain `git pull` isn't enough.
-- Two unrelated leftover test stores ("Tienda QA Test") remain in the
-  live local DB from a much earlier session's manual QA — harmless,
-  delete via the dashboard when a human's at the keyboard. **Do not
-  delete via Claude-in-Chrome automation** — the delete confirm dialog
-  hangs it (confirmed twice now, most recently 2026-08-08 when a
-  misclicked automated action nearly deleted a real store; see §6).
-
-## 11. Local development
-
-- `pnpm run dev:db` — starts embedded Postgres (port 54329)
-- `pnpm --filter @pagosya/shared-types run build` — required before
-  `apps/api` watch mode picks up shared types
+- `pnpm run dev:db` — embedded Postgres, port 54329. `pg_isready` is **not**
+  installed on this machine; use `npx prisma migrate status` instead.
 - `apps/api`: `pnpm run start:dev` (port 3000)
-- `apps/checkout`: `pnpm run dev` (port 5173), now also `pnpm test` (Vitest)
-- `apps/merchant-dashboard` / `apps/ops`: `node server.mjs` (ports 4323 / 4322)
-- If the dev DB gets reset, re-run `pnpm run seed` after
-- Demo credentials, merchant API keys, store links: see `seed.ts` and
-  `.env` — **not reproduced here.**
+- `apps/checkout`: `pnpm run dev` — **the real configured port is 5174**, not 5173
+- `apps/merchant-dashboard` / `apps/ops`: `node server.mjs` (4323 / 4322)
+- **Known env mismatch, pre-existing:** `apps/checkout/.env` points at API port
+  3001 while `apps/api/.env` uses 3000. This cost a verification agent real time.
+- Some `source-generation` / `source-projects` / `stores.service` specs time out
+  under parallel load and pass in isolation or with `--runInBand`. Verified
+  twice this session — flake, not a regression.
 
-## 12. Files worth reading next
+## 8. Migration warnings
 
-- `apps/api/src/payouts/adapters/mock-bank-disbursement.adapter.ts` — what §2's task replaces
-- `apps/api/src/payouts/payout-delivery.worker.ts` — how disbursement is triggered/retried today
-- `apps/checkout/src/main.ts` (`renderStore`/`renderProductCard`) — this session's storefront work, if extending it further
-- `apps/api/src/finances/finances.service.ts` — the Finanzas aggregation logic, if adding more metrics
-- `.github/workflows/ci.yml` — the new migration-safety job, if it needs tuning
+- Two new migrations: `20260916120000_store_collections`,
+  `20260916130000_store_catalog_layout`. Both applied cleanly to a real local
+  database with pre-existing data; constraints and cascades verified
+  functionally; test data removed afterwards.
+- `20260807024643_multi_store` was rewritten in place in an earlier session.
+  Any checkout with pre-existing `PaymentLink` rows and a half-applied copy
+  needs `prisma migrate resolve --rolled-back 20260807024643_multi_store`
+  before `migrate deploy` succeeds. A plain `git pull` is not enough.
+- Two leftover "Tienda QA Test" stores remain in the local DB from an older
+  session. **Do not delete them via browser automation** — the confirm dialog
+  hangs it, confirmed twice.
+
+## 9. Pre-existing bug worth fixing sometime
+
+`CategoriesService.reorder` accepts a duplicate id standing in for an omitted
+one, so a category silently keeps a stale `sortOrder` and the merchant's saved
+order is wrong. The identical bug was found and fixed in the new
+`CollectionsService`; categories was deliberately left alone to keep this
+branch scoped. `apps/api/src/categories/categories.service.ts`.

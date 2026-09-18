@@ -1,0 +1,173 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans en toda la experiencia: nombre de producto 52/0.98 en escritorio y 34/1.02 en móvil; precio 24; encabezados secundarios 28; cuerpo 16/1.55; etiquetas y opciones 13–14 semibold. Espaciado abierto y letter-spacing mínimo de -0.025em en títulos para reforzar la precisión.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "product-configurator",
+      "material-note"
+    ],
+    "catalogSection": "product-configurator",
+    "mobileRule": "Header de 56 px con nombre abreviado visualmente mediante reflujo, no truncado, y “Mi pedido (0)” siempre visible. Galería horizontal con miniaturas táctiles debajo; panel de compra en flujo normal, swatches de 44 px y capacidad/cantidad en filas que envuelven sin desbordar. Barra inferior de compra solo aparece después de que el botón original sale del viewport y refleja variante y precio."
+  },
+  "assets": [
+    {
+      "path": "assets/image-9c4db2099869.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d5b34d383f0c.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-dbdc2c596f17.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e23264b4bbe2.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-9c350aaceaa8.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d5b34d383f0c.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-9c4db2099869.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-dbdc2c596f17.jpg",
+      "role": "product",
+      "description": "Real supplied product photography for this fictional catalog. Product packaging may say SAVIA; preserve it exactly as a stocked brand.",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f5f1e8",
+      "resolved": "#f5f1e8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#1d2a23",
+      "resolved": "#1d2a23",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#314a3b",
+      "resolved": "#314a3b",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffdf8",
+      "resolved": "#fffdf8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fffdf8",
+      "resolved": "#fffdf8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#d8d2c5",
+      "resolved": "#d8d2c5",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "3px",
+      "resolved": "3px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "'Instrument Sans',sans-serif",
+      "resolved": "'Instrument Sans',sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "'Instrument Sans',sans-serif",
+      "resolved": "'Instrument Sans',sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

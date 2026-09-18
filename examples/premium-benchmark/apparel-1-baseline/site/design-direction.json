@@ -1,0 +1,65 @@
+{
+  "concepts": [
+    {
+      "name": "Etiqueta abierta",
+      "premise": "Una tienda editorial y tipográfica que convierte cada prenda en una ficha de confección ampliada. Abre con una portada asimétrica —marca y manifiesto breve a la izquierda, compra inmediata a la derecha— y después alterna escala monumental con detalle compacto. Se diferencia de los otros conceptos por su apertura dividida, catálogo vertical de alta densidad y jerarquía serif dominante.",
+      "opening": "Masthead fino con “Trama”, enlaces Inicio y Prendas, y “Mi pedido · 0” siempre visible. Debajo, una composición 40/60: el nombre y la frase “Cotidiano, bien elegido” ocupan el margen izquierdo; la camisa abre el catálogo a la derecha con nombre, precio desde Bs 140, selectores Color/Talla y Añadir. La camiseta aparece inmediatamente debajo, sin simulaciones visuales de producto.",
+      "flow": "Inicio conduce directamente de la apertura comprable a las dos fichas completas y termina con una nota breve sobre selección de variantes y retiro. La página de producto amplía descripción, etiquetas y matriz de color/talla junto a un resumen de compra fijo. Carrito y checkout conservan líneas editoriales, totales claros, edición de variantes y retiro como modalidad disponible; sin promesas ni políticas inventadas.",
+      "typography": "Instrument Serif para marca, títulos y precios expresivos; Instrument Sans para navegación, selectores y datos. H1 de 76–104 px en escritorio, 48 px en tableta, 40 px en 390 y 34 px en 320; títulos de producto 30–42 px; cuerpo 16–18 px; controles 15 px semibold. Tracking de display entre -0.035em y -0.02em.",
+      "imagery": "Sin fotografías ni miniaturas falsas. El producto se representa mediante nombre, composición y datos reales. Papel marfil, tinta casi negra y azul cobalto reservado para selección activa, precio y acciones. Reglas finas, pequeños rótulos laterales y bloques de texto funcionan como lenguaje de etiqueta textil, sin ilustraciones de prendas.",
+      "mobile": "La división se vuelve secuencia: marca y frase compactas, seguidas por la camisa comprable dentro del primer viewport. Los selectores se organizan en filas envolventes de 44 px; precio y Añadir comparten una banda inferior sin posición fija invasiva. “Mi pedido · 0” permanece visible junto al menú. La matriz de variantes de producto pasa a grupos táctiles por Color y Talla.",
+      "layout": {
+        "sections": [
+          "opening-catalog",
+          "material-note",
+          "pickup-close"
+        ],
+        "catalogSection": "opening-catalog",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Índice cobalto",
+      "premise": "Una interfaz de compra veloz inspirada en un índice de taller: catálogo primero, compacto y casi tabular, con ambos productos comparables desde el inicio. Se diferencia de “Etiqueta abierta” por eliminar la portada dividida y de “Pliegue” por priorizar densidad, sans condensada y comparación simultánea en lugar de relato o gran escala.",
+      "opening": "Header de dos niveles muy corto: Trama y “Mi pedido · 0” arriba; debajo, anclas Camisa y Camiseta. El catálogo comienza de inmediato como dos franjas horizontales. Cada franja agrupa nombre, descripción mínima, precio inicial, disponibilidad de opciones y botón “Elegir”. En escritorio ambas quedan visibles; en móvil la primera incluye selectores y Añadir, mientras la segunda asoma como siguiente elección.",
+      "flow": "Al elegir una prenda, su franja se expande en el mismo catálogo para mostrar Color y Talla, precio actualizado y Añadir; solo una permanece abierta para evitar ruido. La página de producto usa una columna de información y otra de compra, con estados agotados explícitos. El carrito adopta una lista editable y checkout una secuencia lineal: pedido, retiro y pago, con resumen persistente en escritorio y en flujo normal en móvil.",
+      "typography": "Oswald para marca, nombres de producto y cifras grandes; Instrument Sans para descripciones y controles. Marca de 42–54 px, encabezado principal de 52–72 px, producto de 30–38 px y cuerpo de 15–17 px. En móvil: marca 32 px, producto 28 px y controles 15 px. Mayúsculas solo en microetiquetas; tracking de titulares de -0.02em a 0.",
+      "imagery": "No utiliza imágenes. Fondo papel blanco cálido con bandas de tinta y una única banda cobalto para el producto activo. Las opciones se leen como muestras tipográficas: “Crudo”, “Azul”, “S”, “M”, “L”; nunca como fotografías ni siluetas. Divisores gruesos y números de precio crean ritmo utilitario.",
+      "mobile": "El encabezado mantiene Trama, menú y “Mi pedido · 0” en una línea legible. Cada producto se convierte en acordeón semántico; la opción abierta presenta botones de ancho flexible y Añadir a 100%. El resumen del checkout no es fijo para no reducir el área útil. A 320 px, precio y acción se apilan y los estados agotados permanecen legibles.",
+      "layout": {
+        "sections": [
+          "catalog-index",
+          "choice-guide"
+        ],
+        "catalogSection": "catalog-index",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Pliegue cotidiano",
+      "premise": "Una portada tipográfica espaciosa trata el nombre de la tienda como una pieza impresa doblada: una gran palabra “Trama” atraviesa campos de papel y cobalto antes de revelar dos productos en composiciones independientes. Se diferencia de los otros conceptos por su introducción autónoma, ritmo pausado, serif suave y presentación de producto tipo póster en vez de catálogo inmediato o índice denso.",
+      "opening": "Header transparente sobre papel con Inicio, Prendas y “Mi pedido · 0”. La portada muestra “Trama” a gran escala, la línea “Prendas cotidianas con colores y tallas” y un enlace ancla “Ver las prendas”. Un pliegue cobalto ocupa un lateral como plano geométrico CSS, sin fingir una prenda. Los productos comienzan en el bloque siguiente.",
+      "flow": "Tras la portada, la camisa aparece en un bloque horizontal con descripción, etiquetas, precio y compra; la camiseta invierte la alineación para generar un segundo pliegue. Una breve comparación final aclara únicamente las opciones reales disponibles. La página de producto conserva el gran título y sitúa selectores en un panel de papel superpuesto. Carrito y checkout reducen la escala, pero mantienen pliegues, serif y acentos cobalto alrededor del resumen y retiro.",
+      "typography": "Fraunces variable para el wordmark, titulares y precios; Bricolage Grotesque para navegación, texto y controles. Wordmark de 128–190 px en escritorio, 88 px en tableta, 62 px en 390 y 50 px en 320; títulos de producto 42–64 px; cuerpo 17–19 px; controles 15–16 px. Tracking de display de -0.04em, con saltos naturales.",
+      "imagery": "Composición enteramente tipográfica y geométrica: planos sólidos, reglas y cambios de orientación construidos en CSS. Marfil y tinta dominan; el cobalto actúa como un pliegue continuo que reaparece en páginas de producto y checkout. No hay dibujos de prendas, marcos vacíos ni fotografías inventadas.",
+      "mobile": "El gran wordmark se divide en dos líneas si lo exige el ancho; el plano cobalto pasa detrás de una franja lateral y nunca cubre texto. El enlace a prendas queda visible en la apertura, pero la compra requiere desplazamiento. Los bloques alternos pierden la inversión visual y mantienen orden constante: nombre, descripción, opciones, precio y Añadir. Header compacto con “Mi pedido · 0” fuera del menú.",
+      "layout": {
+        "sections": [
+          "fold-intro",
+          "garment-catalog",
+          "option-comparison"
+        ],
+        "catalogSection": "garment-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Etiqueta abierta” equilibra el carácter premium solicitado con una ruta de compra inmediata. El catálogo tiene solo dos prendas, la camisa posee opciones reales de Color y Talla y la camiseta de Talla, por lo que una ficha editorial ampliada permite entenderlas sin una cuadrícula innecesaria. La apertura muestra nombre, precio y acción pese a no existir fotografías, y el sistema tinta–papel con c"
+  }
+}

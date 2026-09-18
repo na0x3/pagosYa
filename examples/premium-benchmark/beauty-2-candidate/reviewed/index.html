@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bruma — cuidado cosmético en varios volúmenes</title>
+  <meta name="description" content="Elige crema de manos o jabón líquido Bruma en el volumen adecuado para casa o viaje.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-home">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Bruma, inicio"><span data-store-name>Bruma</span></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu"><img src="assets/icons/menu.svg" alt=""> <span class="sr-only">Abrir menú</span></button>
+    <nav class="site-nav" id="site-menu" aria-label="Navegación principal">
+      <a href="#catalogo-inmediato" aria-current="page">Productos</a>
+      <a href="#guia-de-volumen">Volúmenes</a>
+      <a href="#cierre-retiro">Retiro</a>
+    </nav>
+    <button class="order-button" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><b aria-label="Productos en el pedido">· <span data-cart-count>0</span></b></button>
+  </header>
+
+  <main>
+    <section id="catalogo-inmediato" class="catalog-opening" aria-labelledby="catalog-title">
+      <div class="catalog-heading">
+        <div>
+          <p class="eyebrow">Cuidado diario · casa y viaje</p>
+          <h1 id="catalog-title">Elige por volumen.</h1>
+        </div>
+        <p>Dos esenciales cotidianos, en formatos que se ajustan a tu ritmo.</p>
+      </div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+    </section>
+
+    <section id="guia-de-volumen" class="volume-guide" aria-labelledby="volume-title">
+      <div class="volume-figures" aria-hidden="true"><span>30 / 60</span><span>250 / 500</span></div>
+      <div class="volume-copy">
+        <p class="eyebrow">Una decisión simple</p>
+        <h2 id="volume-title">Un formato para llevar.<br>Otro para quedarse.</h2>
+        <p>Compara las opciones de cada producto y elige el volumen que prefieras antes de añadirlo a tu pedido.</p>
+        <a class="text-link" href="#catalogo-inmediato">Volver a los productos <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+    </section>
+
+    <section id="cierre-retiro" class="pickup-close" aria-labelledby="pickup-title">
+      <p class="eyebrow">Tu pedido, a tu manera</p>
+      <h2 id="pickup-title">Compra con calma.<br>Retira cuando corresponda.</h2>
+      <p>La modalidad disponible para pedidos físicos es retiro. Los detalles se muestran durante el proceso de compra.</p>
+      <a class="primary-link" href="#catalogo-inmediato">Elegir producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+    </section>
+  </main>
+
+  <div data-pagosya-contact hidden></div>
+  <div data-pagosya-cart hidden></div>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+
+  <template data-pagosya-product-template>
+    <article class="volume-product">
+      <div class="product-main">
+        <p class="eyebrow">Esencial Bruma</p>
+        <h2 data-product-field="name"></h2>
+        <p class="product-description" data-product-field="description"></p>
+        <a class="menu-item__details text-link" data-product-link href="product.html">Ver producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+      <div class="product-choice">
+        <span class="choice-label">Volumen</span>
+        <div class="product-options" data-product-field="options"></div>
+      </div>
+      <div class="product-purchase">
+        <strong class="menu-item__price" data-product-field="price"></strong>
+        <button class="menu-add" type="button" data-product-add>Añadir</button>
+      </div>
+    </article>
+  </template>
+
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html"><span data-store-name>Bruma</span></a>
+    <p>Cuidado cosmético diario en varios volúmenes.</p>
+    <button class="footer-order" type="button" data-cart-open>Mi pedido · <span data-cart-count>0</span></button>
+  </footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

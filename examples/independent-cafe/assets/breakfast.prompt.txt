@@ -1,0 +1,13 @@
+Use case: photorealistic-natural
+Asset type: standalone landscape hero photograph for an illustrative Café Aroma demo storefront.
+Primary request: original editorial breakfast photograph, close-up flaky golden croissant on a cream ceramic plate and a cappuccino in a small handmade ceramic cup with simple leaf latte art.
+Scene/backdrop: authentic café tabletop beside a window, ivory stone table with a subtle espresso-brown linen edge.
+Style/medium: high-end natural food photography, true-to-life textures, quiet unposed warmth.
+Composition/framing: horizontal landscape 3:2, close three-quarter angle, cup in lower-left foreground and croissant on plate in upper-right, both subjects clear and comfortably within the image edges; frame filled with tabletop and breakfast.
+Lighting/mood: warm natural morning window light, gentle directional shadows and soft ambient fill.
+Color palette: ivory, espresso brown, golden pastry, muted terracotta undertones.
+Materials/textures: visible crisp laminated pastry layers, lightly speckled cream ceramics, fine linen weave, natural milk foam.
+Constraints: generate a fresh standalone photograph, not a website screenshot or design board. No text, no people, no labels, no logos, no watermark. Illustrative demo image, not documentary evidence of a real business.
+
+Generation: built-in image_gen tool; source generated at 1536 × 1024.
+Delivery: WebP resized using cwebp to 1100 px width at quality 76.

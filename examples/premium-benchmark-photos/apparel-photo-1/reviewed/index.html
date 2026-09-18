@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  
+  
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+<title>Trama — Camisas y camisetas cotidianas</title><meta name="description" content="Prendas cotidianas de Trama: camisas y camisetas en colores y tallas disponibles."><meta name="robots" content="index, follow, max-image-preview:large"><link rel="canonical" href="http://localhost:5175/s/whh80wia"><meta property="og:type" content="website"><meta property="og:title" content="Trama — Camisas y camisetas cotidianas"><meta property="og:description" content="Prendas cotidianas de Trama: camisas y camisetas en colores y tallas disponibles."><meta property="og:url" content="http://localhost:5175/s/whh80wia"><meta name="twitter:card" content="summary"><script type="application/ld+json" data-pagosya-seo>{"@context":"https://schema.org","@graph":[]}</script></head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="header-main">
+      <a class="wordmark" href="index.html" aria-label="Trama, inicio">Trama</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+      <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span class="cart-count">(<span data-cart-count>0</span>)</span></button>
+    </div>
+    <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+      <a href="#catalogo-muestrario">Prendas</a>
+      <a href="#nota-de-coleccion">Colección</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="catalogo-muestrario" class="catalog-section" aria-labelledby="catalog-title">
+      <div class="section-heading">
+        <p class="eyebrow">Muestrario 01 · Prendas cotidianas</p>
+        <h1 id="catalog-title">Elige tu trama</h1>
+        <p>Color, talla y forma para vestir todos los días.</p>
+      </div>
+      <div data-pagosya-catalog aria-live="polite"></div>
+    </section>
+
+    <section id="nota-de-coleccion" class="collection-note" aria-labelledby="collection-title">
+      <p class="eyebrow">Nota de colección</p>
+      <h2 id="collection-title">Dos esenciales.<br>Distintas maneras de llevarlos.</h2>
+      <p>Una camisa de algodón de cuello clásico y una camiseta de cuello redondo. La selección se concentra en colores y tallas, sin apartarse de lo cotidiano.</p>
+      <a class="text-link" href="#catalogo-muestrario">Volver a las prendas <img src="assets/icons/arrow-right.svg" alt=""></a>
+    </section>
+
+    <section id="banda-cotidiana" class="photo-band" aria-label="Prendas Trama en contexto">
+      <figure><img src="assets/image-110f11deb8ee.jpg" alt="Camisa cruda de algodón sobre una mesa de madera"></figure>
+      <div class="band-label"><span>Trama</span><p>Prendas para el ritmo cotidiano</p></div>
+      <figure><img src="assets/image-1d93eab93271.jpg" alt="Camiseta gris de cuello redondo sobre una cama"></figure>
+    </section>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+
+  <footer class="site-footer"><a class="wordmark" href="index.html">Trama</a><p>Prendas cotidianas con colores y tallas.</p></footer>
+
+  <template data-pagosya-product-template>
+    <article class="swatch-card">
+      <a class="product-media menu-item__details" data-product-link aria-label="Ver producto"><span data-product-media><img data-product-field="image" alt=""></span></a>
+      <div class="product-copy">
+        <p class="product-code">Prenda · Trama</p>
+        <h2><a data-product-link data-product-field="name"></a></h2>
+        <p class="product-description" data-product-field="description"></p>
+        <div class="product-options" data-product-field="options"></div>
+        <div class="product-purchase"><strong data-product-field="price"></strong><button type="button" data-product-add>Añadir</button></div>
+        <a class="detail-link" data-product-link>Ver detalles <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+    </article>
+  </template>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

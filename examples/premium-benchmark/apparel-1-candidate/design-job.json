@@ -1,0 +1,58 @@
+{
+  "id": "cmu0ewv2e0001vjrirogts82y",
+  "requestId": "30c1d7ea-f733-4e68-824f-602b716ee1a3",
+  "revision": 1,
+  "page": "index.html",
+  "status": "FAILED",
+  "stage": "REPAIR",
+  "maxCredits": 150,
+  "reservedCredits": 12.9763,
+  "observedCredits": 12.9763,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "96a81d89-f9eb-4372-9814-ab42742e1048",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:55:30.069Z",
+      "finishedAt": "2026-09-13T22:55:34.439Z",
+      "actualMicroUsd": 17280,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "8c5397ac-1b38-4186-892a-e1eba25089fd",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:55:35.491Z",
+      "finishedAt": "2026-09-13T22:55:46.783Z",
+      "actualMicroUsd": 112483,
+      "reservedMicroUsd": 850000
+    }
+  ],
+  "error": "\nInvalid `this.prisma.storeSourceGeneration.updateMany()` invocation in\n/Users/saramia/pagosYa/apps/api/src/stores/source-generation.service.ts:552:65\n\n  549 const candidate = await this.projects.prepare({ ...saveInput, files: [...execution.snapshot.files.filter(file => !editable(file.path)), ...authored] });\n  550 assertSourceCommerceContract(candidate);\n  551 signal.throwIfAborted();\n→ 552 const completed = await this.prisma.storeSourceGeneration.updateMany(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23514\", message: \"new row for relation \\\"StoreSourceGeneration\\\" violates check constraint \\\"StoreS",
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:55:28.071Z",
+  "updatedAt": "2026-09-13T22:55:46.784Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La propuesta mantiene una identidad editorial coherente y una jerarquía clara entre producto, precio y acción principal. El problema visible relevante aparece en la adaptación móvil de los enlaces secundarios.",
+    "findings": [
+      {
+        "category": "readability",
+        "location": "Enlaces secundarios «Ver prenda» de ambas tarjetas de producto",
+        "severity": "major",
+        "viewport": "mobile",
+        "correction": "Reservar suficiente ancho para mantener «Ver prenda» en una sola línea junto a la flecha, o replantear la fila de acciones para que el enlace ocupe una línea propia sin competir con el botón principal.",
+        "observation": "El ancho asignado al enlace es demasiado estrecho y divide el texto en tres líneas («Ver / prend / a»), mientras la flecha queda separada. Esto dificulta el escaneo y hace que la acción secundaria se perciba como un elemento roto."
+      }
+    ],
+    "preference": "uncertain",
+    "responseId": "resp_008b3384701eba90016aa729e32f3487d28868b28e651f42f2",
+    "regressions": [],
+    "providerMicroUsd": 17280
+  },
+  "resumeAvailable": false
+}

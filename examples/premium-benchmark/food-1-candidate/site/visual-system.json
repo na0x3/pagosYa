@@ -1,0 +1,156 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Fraunces variable para títulos cálidos y expresivos; Instrument Sans para navegación, opciones, precios y checkout. H1 de 72–92 px en escritorio, 46 px en tableta y 38 px en móvil; títulos de producto de 42/34/30 px; cuerpo de 17/16 px. Etiquetas y precios en sans de 13–16 px, sin mayúsculas excesivas.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "morning-cover",
+      "pantry-catalog",
+      "formats-note"
+    ],
+    "catalogSection": "pantry-catalog",
+    "mobileRule": "La portada se convierte en texto breve seguido por una imagen 4:3; no se superpone texto sobre las etiquetas. Cabecera compacta con navegación visible y “Mi pedido (0)” siempre expuesto. Productos en una sola columna, selectores de ancho completo y botón de añadir de 48 px. En producto, la compra sigue inmediatamente a la primera imagen; el resumen deja de ser fijo. Checkout conserva líneas editoriales y campos apilados."
+  },
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-06465dbb2877.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7afdd1c26f9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-5d185857f7d9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-ceff3979a97c.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-6039f6dfd423.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f5efdf",
+      "resolved": "#f5efdf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#173d2d",
+      "resolved": "#173d2d",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#e96c24",
+      "resolved": "#e96c24",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#b8ad91",
+      "resolved": "#b8ad91",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Fraunces,serif",
+      "resolved": "Fraunces,serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

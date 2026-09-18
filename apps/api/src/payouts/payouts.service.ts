@@ -8,15 +8,15 @@ export class PayoutsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Sum of MERCHANT_PAYABLE ledger entries for this merchant — credits from
-   * captures, debits from refunds *and* from prior successful payouts (see
-   * LedgerService.buildPayoutJournal). That invariant is what makes this
-   * always equal the currently-*unpaid* balance, with no separate bookkeeping.
+   * Sum of MERCHANT_PAYABLE ledger entries for this merchant in one currency.
+   * Credits from captures, debits from refunds and prior payouts (see
+   * LedgerService.buildPayoutJournal), so this is the currently-unpaid balance.
+   * Never sum across currencies: a USD cent is not a boliviano cent.
    */
-  async getPayableBalance(merchantId: string): Promise<number> {
+  async getPayableBalance(merchantId: string, currency = "BOB"): Promise<number> {
     const rows = await this.prisma.ledgerEntry.groupBy({
       by: ["direction"],
-      where: { merchantId, account: LedgerAccount.MERCHANT_PAYABLE },
+      where: { merchantId, account: LedgerAccount.MERCHANT_PAYABLE, currency },
       _sum: { amount: true },
     });
     const credit = rows.find((r) => r.direction === LedgerDirection.CREDIT)?._sum.amount ?? 0;
@@ -24,11 +24,26 @@ export class PayoutsService {
     return credit - debit;
   }
 
+  async getPayableBalances(merchantId: string): Promise<{ currency: string; payableBalance: number }[]> {
+    const rows = await this.prisma.ledgerEntry.groupBy({
+      by: ["currency", "direction"],
+      where: { merchantId, account: LedgerAccount.MERCHANT_PAYABLE },
+      _sum: { amount: true },
+    });
+    const byCurrency = new Map<string, number>();
+    for (const row of rows) {
+      const signed = (row._sum.amount ?? 0) * (row.direction === LedgerDirection.CREDIT ? 1 : -1);
+      byCurrency.set(row.currency, (byCurrency.get(row.currency) ?? 0) + signed);
+    }
+    return [...byCurrency.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([currency, payableBalance]) => ({ currency, payableBalance }));
+  }
+
   /**
-   * Enqueues a PENDING Payout for every AGGREGATOR merchant with a positive
-   * unpaid balance and no payout already in flight. A real deployment would
-   * run this on a daily cron; PayoutDeliveryWorker calls it on a short
-   * interval purely to make the flow demonstrable.
+   * Enqueues one PENDING Payout per (merchant, currency) with a positive unpaid
+   * balance and no payout of that currency already in flight. USD balances
+   * wait until the merchant's approved KYC has a USD bank account.
    */
   async createDuePayouts(): Promise<void> {
     const merchants = await this.prisma.merchant.findMany({
@@ -36,13 +51,8 @@ export class PayoutsService {
     });
 
     for (const merchant of merchants) {
-      const inFlight = await this.prisma.payout.findFirst({
-        where: { merchantId: merchant.id, status: PayoutStatus.PENDING },
-      });
-      if (inFlight) continue;
-
-      const balance = await this.getPayableBalance(merchant.id);
-      if (balance <= 0) continue;
+      const balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
+      if (!balances.length) continue;
 
       const approvedKyc = await this.prisma.merchantKycSubmission.findFirst({
         where: { merchantId: merchant.id, status: KycStatus.APPROVED },
@@ -50,14 +60,20 @@ export class PayoutsService {
       });
       if (!approvedKyc) continue; // shouldn't happen for an ACTIVE merchant, but never guess a bank account
 
-      await this.prisma.payout.create({
-        data: {
-          merchantId: merchant.id,
-          amount: balance,
-          bankAccount: approvedKyc.payoutBankAccount,
-          nextRetryAt: new Date(),
-        },
-      });
+      for (const { currency, payableBalance } of balances) {
+        const bankAccount =
+          currency === "BOB" ? approvedKyc.payoutBankAccount : currency === "USD" ? approvedKyc.payoutUsdBankAccount : null;
+        if (!bankAccount) continue;
+
+        const inFlight = await this.prisma.payout.findFirst({
+          where: { merchantId: merchant.id, currency, status: PayoutStatus.PENDING },
+        });
+        if (inFlight) continue;
+
+        await this.prisma.payout.create({
+          data: { merchantId: merchant.id, amount: payableBalance, currency, bankAccount, nextRetryAt: new Date() },
+        });
+      }
     }
   }
 

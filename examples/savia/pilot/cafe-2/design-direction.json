@@ -1,0 +1,64 @@
+{
+  "concepts": [
+    {
+      "name": "La barra tipográfica",
+      "premise": "Una carta compacta que funciona como la barra del café: nombre, tamaño, precio y acción se leen de izquierda a derecha en líneas continuas. A diferencia de los otros conceptos, abre directamente con los tres productos en una lista densa, sin portada ni tarjetas; prioriza la elección inmediata y convierte las reglas, subrayados y columnas en la identidad.",
+      "opening": "Masthead bajo con «Lumbre · Pilot 2», una breve línea «Café preparado al momento · para recoger» y «Mi pedido (0)». El catálogo comienza dentro de los primeros 240 px. La primera fila muestra Café filtrado, selector 250/350 ml, precio actualizado, cantidad y «Añadir» sin desplazamiento en escritorio y móvil.",
+      "flow": "Inicio: carta completa → nota breve sobre preparación y recogida → pie. Cada producto abre una ficha con el mismo renglón editorial ampliado: nombre, descripción única, opciones reales, precio, control de cantidad y compra; al no existir imágenes, no aparece galería ni espacio reservado. Carrito y checkout repiten la tabla de pedido, con variantes y cantidades claramente editables, y concentran el cierre en recogida y pago sin inventar instrucciones.",
+      "typography": "Bricolage Grotesque variable como única familia. Marca 700, 30–36 px; títulos de producto 650, 32–48 px; precios 700; texto y controles 16–18 px. En móvil, marca 24 px y productos 27–30 px. Mayúsculas pequeñas y espaciadas solo para etiquetas; encabezados con tracking de -0.025em.",
+      "imagery": "No usa fotografías ni falsos thumbnails. La expresión procede de líneas berenjena de distintos grosores, pequeños puntos de preparación y números de precio alineados como una carta impresa. Fondo papel marfil con textura CSS extremadamente sutil; el producto siempre permanece puramente tipográfico.",
+      "mobile": "Cabecera fija y baja con marca abreviada legible, botón de menú y «Mi pedido (0)» siempre visible. Cada producto se reordena en tres franjas: nombre/precio, tamaños y cantidad/añadir; controles de al menos 44 px y sin desplazamiento horizontal. La primera compra queda visible en 390×844. En checkout, el resumen pasa a filas apiladas sin perder variante ni edición.",
+      "layout": {
+        "sections": [
+          "carta-barra",
+          "nota-recogida"
+        ],
+        "catalogSection": "carta-barra",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Pliego de sobremesa",
+      "premise": "Una apertura espaciosa inspirada en un pequeño pliego de menú doblado: marca y frase ocupan una mitad, mientras la otra anticipa los tres nombres y precios. Después, el catálogo se presenta como tres capítulos amplios. Frente a la barra compacta, ralentiza la entrada y da más protagonismo editorial a cada bebida; frente al tercer concepto, usa serif y composición asimétrica en vez de una matriz utilitaria.",
+      "opening": "Portada autónoma en dos columnas sobre papel claro. A la izquierda, «Lumbre» en gran escala y el subtítulo de cafetería de barrio; a la derecha, un índice real con Café filtrado, Latte y Chocolate caliente y sus precios desde Bs 15, Bs 22 y Bs 20, enlazados al catálogo. Un trazo vertical berenjena simula el pliegue. El pedido permanece accesible en el masthead, aunque los botones de añadir aparecen al llegar a la carta.",
+      "flow": "Inicio: pliego introductorio → carta en capítulos → cierre de recogida. Los capítulos alternan alineación y escala, pero mantienen juntos nombre, descripción, tamaños, precio, cantidad y compra. La ficha de producto convierte un capítulo en página completa, sin galería vacía, con opciones como pestañas editoriales. Carrito y checkout adoptan el formato de recibo sobrio sobre una columna central.",
+      "typography": "Instrument Serif para marca y títulos, con curvas cálidas; Instrument Sans para navegación, precios, opciones y compra. Marca 76–112 px en escritorio y 50–62 px en móvil; productos 44–64 px/34–42 px; cuerpo 17 px. Tracking de títulos -0.03em y etiquetas sans en 13 px con espaciado amplio.",
+      "imagery": "Composición enteramente tipográfica. Líneas de pliegue, filetes y numerales sobredimensionados funcionan como estructura, no como ilustraciones de producto. Berenjena profundo sobre marfil, con un único acento arcilla reservado para estado seleccionado y confirmación de añadido.",
+      "mobile": "La portada se convierte en un pliego vertical compacto: palabra Lumbre, subtítulo e índice enlazado; no intenta forzar el producto completo sobre el primer pantallazo. «Mi pedido (0)» queda fuera del menú. Los capítulos dejan de alternar lados y usan sangrías variables para conservar el ritmo editorial; opciones y compra ocupan filas separadas y cómodas.",
+      "layout": {
+        "sections": [
+          "pliego-intro",
+          "capitulos-carta",
+          "cierre-recogida"
+        ],
+        "catalogSection": "capitulos-carta",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Pizarra de tres columnas",
+      "premise": "Una interfaz de pedido organizada como una pizarra contemporánea, pero sin imitar tiza: tres columnas visibles, una por bebida, y una banda inferior que resume el pedido. Se diferencia del primer concepto por su presentación simultánea en paneles verticales y jerarquía condensada; del segundo, por abrir con compra real y por su densidad operativa, sin portada narrativa.",
+      "opening": "Tras un masthead de 64–72 px, una franja breve indica «Preparado al momento · para recoger» y da paso inmediato a tres columnas. Cada columna muestra nombre, descripción corta, botones 250/350 ml, precio, cantidad y «Añadir». Los tres productos caben en escritorio; en 390 px aparece completa la primera columna antes del pliegue.",
+      "flow": "Inicio: matriz de pedido → franja de funcionamiento de la carta → pie compacto. La ficha de producto amplía una columna en una composición 60/40: información a la izquierda y panel de selección a la derecha, que colapsa en móvil; no reserva galería al no haber imágenes. Carrito se presenta como banda/listado y checkout como formulario modular con resumen persistente, conservando bordes rectos y etiquetas condensadas.",
+      "typography": "Oswald variable para marca, nombres y precios, compensado con Instrument Sans en descripciones y controles. Marca 34–42 px; nombres 38–54 px; precios 28–34 px; cuerpo 16 px. En móvil, nombres 34 px. Los titulares son estrechos pero permiten salto natural, con tracking de -0.015em.",
+      "imagery": "Sin imágenes. La matriz usa bordes finos berenjena, fondos de papel alternados apenas perceptibles y grandes iniciales tipográficas recortadas dentro de cada columna como decoración no comercial. Los estados elegidos se resuelven con inversión berenjena/marfil, no con cajas de colores arbitrarias.",
+      "mobile": "La matriz se transforma en una secuencia vertical con un indicador textual «1 de 3 bebidas» no interactivo y navegación por anclas, sin carrusel ni gesto oculto. La barra superior conserva menú y «Mi pedido (0)». Nombre, precio y compra permanecen unidos; selectores envuelven correctamente a 320 px y todos los controles alcanzan 44 px.",
+      "layout": {
+        "sections": [
+          "matriz-pedido",
+          "ritual-recogida"
+        ],
+        "catalogSection": "matriz-pedido",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "La barra tipográfica encaja mejor con una cafetería de barrio orientada a recoger, un catálogo real de solo tres bebidas y dos tamaños por producto. Como no hay fotografías ni logo confirmado, convierte la tipografía y las líneas en identidad sin inventar contenido, y permite que nombre, precio, variante y acción aparezcan inmediatamente tanto en 1280 como en 390 px."
+  }
+}

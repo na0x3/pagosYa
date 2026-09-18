@@ -1,0 +1,80 @@
+{
+  "assets": {
+    "hero": "/v1/uploads/c7dce1be-3a9a-41b4-b321-ece85d7b556f.jpg",
+    "parka": "/v1/uploads/4873f77d-f7bd-4b0f-ac2b-8819fd39a9ff.jpg",
+    "pack": "/v1/uploads/21b6dd90-5513-4571-bbc9-14f4a14d03ea.jpg",
+    "bottle": "/v1/uploads/19bc730a-d5b7-4a27-8fc1-79a4b7b0e248.jpg",
+    "kit": "/v1/uploads/57a606e8-417e-472f-bdbe-fe9081a4d8fc.jpg"
+  },
+  "products": [
+    {
+      "id": "cmu1u670l003jwh564vn2luzr",
+      "name": "Parka Cráter 01",
+      "variants": 120
+    },
+    {
+      "id": "cmu1u671x003lwh56eolhu7zv",
+      "name": "Mochila Rover 02",
+      "variants": 72
+    },
+    {
+      "id": "cmu1u6737003nwh569tq0ebqk",
+      "name": "Botella Órbita 03",
+      "variants": 72
+    },
+    {
+      "id": "cmu1u674f003pwh56lg93jqty",
+      "name": "Kit de Misión 04",
+      "variants": 48
+    }
+  ],
+  "storeId": "cmu1u5gst002rwh56rp6b63xc",
+  "merchantId": "cmu1u5got002lwh564ec4eya1",
+  "slug": "dl7xxazz",
+  "url": "http://localhost:5175/s/dl7xxazz",
+  "requestId": "820bda7e-ce3f-4ecb-a2dc-88e9ea1f5084",
+  "originalUploads": {
+    "hero": "/v1/uploads/21299130-5f79-42f6-91ae-6543ecdf707f.png",
+    "parka": "/v1/uploads/50bb35da-fba6-44ed-92d1-8e2b0228645a.png",
+    "pack": "/v1/uploads/9bdb8864-616f-47ce-b80c-1a38636dc41c.png",
+    "bottle": "/v1/uploads/b6b74f0c-c95f-4d36-87b4-7c5d9e73f34b.png",
+    "kit": "/v1/uploads/a484d4a0-0ab9-4cff-aa61-e258e3622164.png"
+  },
+  "revision": 3,
+  "generation": {
+    "id": "cmu1uvelf005twh56atjxs0oi",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 33,
+    "maxCredits": 500,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 54667,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 71948,
+          "cachedInputTokens": 7411,
+          "outputTokens": 3361,
+          "providerMicroUsd": 328333
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 1330,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 55443,
+    "status": "COMPLETED"
+  },
+  "publication": {
+    "contactFormEnabled": false,
+    "payments": "test",
+    "revision": 3,
+    "version": 3,
+    "publishedAt": "2026-09-14T23:11:19.451Z",
+    "active": true,
+    "slug": "dl7xxazz",
+    "experiment": null
+  }
+}

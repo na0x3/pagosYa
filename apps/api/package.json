@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nest build",
     "start": "node dist/src/main.js",
-    "start:dev": "nest start --watch",
+    "start:dev": "nest start --watch --watchAssets",
     "seed": "ts-node prisma/seed.ts",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json",
@@ -13,7 +13,6 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@pagosya/access-control": "workspace:*",
     "@aws-sdk/client-s3": "^3.864.0",
     "@nest-lab/throttler-storage-redis": "1.2.0",
     "@nestjs/common": "^11.2.1",
@@ -25,20 +24,31 @@
     "@nestjs/throttler": "^6.2.1",
     "@pagosya/shared-types": "workspace:*",
     "@prisma/client": "^5.20.0",
+    "@types/react": "^19.2.14",
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "esbuild": "0.28.2",
+    "motion": "13.1.1",
+    "lottie-web": "5.13.0",
     "express": "^5.2.1",
     "google-auth-library": "11.0.2",
     "helmet": "^8.3.0",
     "ioredis": "5.7.0",
     "multer": "^2.2.0",
     "nanoid": "^3.3.18",
+    "parse5": "7.3.0",
     "pdfkit": "^0.19.1",
+    "playwright": "1.62.1",
+    "postcss": "8.5.25",
     "qrcode": "^1.5.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.18.1",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "tailwindcss": "3.4.19",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
@@ -50,12 +60,13 @@
     "@types/node": "^20.16.11",
     "@types/pdfkit": "^0.17.6",
     "@types/qrcode": "^1.5.6",
+    "@types/react-dom": "^19.2.3",
     "@types/supertest": "^6.0.2",
     "jest": "^29.7.0",
+    "next": "15.5.25",
     "prisma": "^5.20.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
+    "ts-node": "^10.9.2"
   }
 }

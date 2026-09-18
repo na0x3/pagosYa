@@ -1,0 +1,74 @@
+{
+  "concepts": [
+    {
+      "name": "Manual de Campo 001",
+      "premise": "La interpretación más fiel del encargo: una portada de revista cinematográfica abre la experiencia y conduce a una colección editorial de cuatro piezas. Se distingue de las otras propuestas por su hero dividido entre tipografía y paisaje, catálogo asimétrico y secuencia narrativa completa —portada, parte de expedición, equipo, manifiesto, FAQ— con abundante aire.",
+      "opening": "Masthead técnico compacto sobre hueso. Debajo, una portada de gran formato: el titular “EQUIPO PARA / OTROS MUNDOS.” ocupa el tercio izquierdo y la campaña assets/image-d7a9c0dba65d.jpg se extiende hacia la derecha, con object-position que mantiene libre al excursionista y evita texto sobre su figura. Kicker, CTA bermellón “Preparar mi expedición” y enlace “Explorar la misión” quedan en una columna opaca de alto contraste, no superpuestos sobre la persona.",
+      "flow": "Tras el hero aparece una franja estrecha “Expedición 001 / Terreno desconocido”. El catálogo combina una Parka destacada a doble ancho con Mochila, Botella y Kit en módulos menores. Sigue un manifiesto bermellón con “LA CURIOSIDAD ES NUESTRO NORTE.” y una trayectoria orbital lineal; después, FAQ factual. Producto usa foto grande y panel de configuración con cuatro grupos nativos; carrito es un drawer industrial “Lista de carga”; checkout es “Registro de expedición” a dos columnas. Cierra un word",
+      "typography": "Oswald variable para titulares condensados y wordmark; Instrument Sans para lectura y controles; códigos técnicos en una pila monoespaciada local del sistema. H1 de 112–176px en escritorio, 58–76px en móvil; H2 de 64–104px/42–58px; cuerpo 16–18px; microtexto 11–12px en mayúsculas espaciadas. Letter-spacing de displays entre -0.035em y -0.01em, siempre con wrapping natural.",
+      "imagery": "Hero: assets/image-d7a9c0dba65d.jpg, recorte panorámico con el excursionista preservado a la derecha. Catálogo y detalles: Parka assets/image-d89b02e383f1.jpg, Mochila assets/image-a1be9b4c2923.jpg, Botella assets/image-4d9eab2b58fa.jpg y Kit assets/image-c40ec7b8528c.jpg; sin filtros ni recoloración, con encuadres completos y fondos nativos. Cada detalle incluye una vez “Fotografía del color de portada”.",
+      "mobile": "Header de dos filas muy compacto: marca y navegación visible arriba; botón permanente “Mi pedido” o “Lista de carga” con conteo debajo o al costado, nunca dentro del menú. El hero se convierte en portada apilada: titular y acciones primero, fotografía panorámica después con el excursionista visible. Catálogo en una columna, sin perder la jerarquía destacada de Parka. Selectores de variantes ocupan todo el ancho, acciones y cantidad tienen mínimo 44px, drawer a pantalla completa y checkout apil",
+      "layout": {
+        "sections": [
+          "cover-001",
+          "expedition-strip",
+          "field-catalog",
+          "north-manifesto",
+          "buying-faq"
+        ],
+        "catalogSection": "field-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Cuadrícula de Carga",
+      "premise": "Una alternativa más útil y densa que prioriza la comparación: después de una portada fotográfica más baja, los cuatro productos aparecen en una matriz regular de inventario. Frente al catálogo asimétrico del primer concepto y la secuencia inmersiva del tercero, aquí dominan columnas, reglas, fichas y una navegación rápida propia de una lista de equipo.",
+      "opening": "La campaña assets/image-d7a9c0dba65d.jpg ocupa una banda panorámica de aproximadamente 62vh. El titular vive en un bloque hueso vertical independiente a la izquierda y la fotografía comienza a su lado, por lo que el excursionista permanece despejado. Un índice lateral marca 001, colección y accesos a “Equipo”, “Misión” y “Preguntas”.",
+      "flow": "La franja de expedición se integra al borde inferior de la portada. El catálogo es una cuadrícula 2×2 de igual peso con nombre, código, precio real y acción juntos bajo cada fotografía; facilita comparar los cuatro artículos antes de configurar. Un módulo negro explica “Diseñamos equipo…” y da paso al manifiesto bermellón. El FAQ adopta filas de manual desplegables. Producto mantiene foto y configurador en una retícula 7/5; carrito y checkout repiten cabeceras tabulares, reglas finas y numerales",
+      "typography": "Bricolage Grotesque variable en peso 700–800 para grandes titulares y 400–600 para interfaz, logrando una voz más mecánica y ancha que el concepto uno; microcódigos en monoespaciada del sistema. H1 96–150px/52–68px, H2 52–78px/36–48px, nombres de producto 26–34px/24–28px y cuerpo 15–17px. Mayúsculas técnicas con tracking positivo; displays no más cerrados que -0.03em.",
+      "imagery": "La campaña usa assets/image-d7a9c0dba65d.jpg en una ventana panorámica separada del texto. Las cuatro fotos aprobadas —assets/image-d89b02e383f1.jpg, assets/image-a1be9b4c2923.jpg, assets/image-4d9eab2b58fa.jpg y assets/image-c40ec7b8528c.jpg— aparecen con proporción cuadrada uniforme y object-fit contain/crop prudente según el producto, sin alterar colores. En detalles se amplían sobre fondo hueso y reciben la nota de color de portada una sola vez.",
+      "mobile": "La portada pasa a una secuencia compacta de bloque tipográfico, acciones y fotografía 16:10; el índice se vuelve una línea horizontal. La cuadrícula 2×2 se conserva en 390px solo si nombre, precio y acción caben cómodamente; a 320px cambia a una columna. Navegación, conteo y botón “Mi pedido” permanecen visibles. En detalle, foto, precio y configuración se apilan; opciones largas como Complementos usan botones de ancho completo y wrapping natural.",
+      "layout": {
+        "sections": [
+          "indexed-cover",
+          "load-strip",
+          "equipment-grid",
+          "brand-statement",
+          "mission-panel",
+          "manual-faq"
+        ],
+        "catalogSection": "equipment-grid",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Trayectoria de Expedición",
+      "premise": "La versión más espacial y secuencial: una portada fotográfica casi de galería inicia un recorrido vertical donde los productos alternan de lado como hitos de una ruta. A diferencia de la matriz comparativa y el catálogo destacado de las otras opciones, cada pieza recibe un momento fotográfico propio y el manifiesto interrumpe la expedición a mitad de camino.",
+      "opening": "Una composición de dos niveles: primero una banda hueso con kicker, titular masivo y acciones; inmediatamente debajo, la campaña assets/image-d7a9c0dba65d.jpg a ancho completo. Una fina línea orbital conecta visualmente ambos planos sin cruzar texto ni excursionista. La fotografía conserva el paisaje abierto y su figura a la derecha como destino de la trayectoria.",
+      "flow": "Una franja técnica introduce “Terreno desconocido”. El catálogo se presenta como cuatro capítulos alternados: Parka y Botella alineadas a la izquierda, Mochila y Kit a la derecha, cada uno con foto amplia y bloque inseparable de nombre, precio y acción. Tras los dos primeros productos aparece el manifiesto bermellón; la colección continúa después, y el FAQ cierra la ruta. En producto, la foto ocupa una primera escena y el configurador sigue en flujo normal; en escritorio puede quedar pegajoso, y",
+      "typography": "Oswald variable para titulares verticales y numeración de misión, combinado con Fraunces solo en citas breves del manifiesto para aportar un contraste editorial inesperado; Instrument Sans en comercio, formularios y lectura. H1 118–188px/56–72px, capítulos 72–118px/40–56px, cuerpo 16–18px y códigos 11px. El serif nunca invade controles o nombres de producto; tracking de display entre -0.035em y 0.",
+      "imagery": "La campaña assets/image-d7a9c0dba65d.jpg es una lámina panorámica completa, sin texto encima. Las fotos de Parka assets/image-d89b02e383f1.jpg, Mochila assets/image-a1be9b4c2923.jpg, Botella assets/image-4d9eab2b58fa.jpg y Kit assets/image-c40ec7b8528c.jpg alternan entre retratos grandes y recortes cuadrados respetuosos del objeto. No se recolorean. Los detalles muestran la imagen aprobada con la leyenda única “Fotografía del color de portada”.",
+      "mobile": "La trayectoria deja de alternar y se convierte en una línea vertical fina al margen; cada producto mantiene imagen, nombre, precio y acción en un solo bloque. El hero reduce su titular antes de la imagen para evitar superposición. Header compacto con navegación visible y “Mi pedido” con conteo siempre accesible. La posible fijación del configurador se desactiva; los cuatro grupos, cantidad y añadir quedan en flujo, a ancho completo y con 44px mínimos. Movimiento orbital lento se sustituye por la",
+      "layout": {
+        "sections": [
+          "trajectory-cover",
+          "terrain-register",
+          "route-catalog",
+          "vermilion-interlude",
+          "route-continuation",
+          "expedition-faq"
+        ],
+        "catalogSection": "route-catalog",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Manual de Campo 001” sigue con mayor precisión la secuencia solicitada: navegación técnica, hero cinematográfico, franja de Expedición 001, colección de cuatro productos, manifiesto bermellón, FAQ y cierre tipográfico. Aprovecha las cinco fotografías aprobadas en sus roles exactos, mantiene visibles los cuatro productos existentes y sus 312 combinaciones mediante detalles con cuatro grupos n"
+  }
+}

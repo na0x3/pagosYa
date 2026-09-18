@@ -1,0 +1,6 @@
+(function(){
+  var toggle=document.querySelector('.menu-toggle'),nav=document.querySelector('.site-nav');
+  if(toggle&&nav){toggle.addEventListener('click',function(){var open=toggle.getAttribute('aria-expanded')==='true';toggle.setAttribute('aria-expanded',String(!open));nav.classList.toggle('is-open',!open)});nav.addEventListener('click',function(e){if(e.target.closest('a')){nav.classList.remove('is-open');toggle.setAttribute('aria-expanded','false')}})}
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-product-add],.menu-add');if(!b)return;var old=b.querySelector('span')?b.querySelector('span').textContent:b.textContent;setTimeout(function(){b.classList.add('is-added');var s=b.querySelector('span');if(s)s.textContent='Añadido';else b.textContent='Añadido';setTimeout(function(){b.classList.remove('is-added');if(s)s.textContent=old;else b.textContent=old},1100)},120)});
+  document.addEventListener('pagosya:ready',function(){document.querySelectorAll('.pantry-item').forEach(function(card,i){var chapter=card.querySelector('.chapter');if(chapter)chapter.textContent=i===0?'Capítulo cítrico':'Capítulo de granola';card.querySelectorAll('img[data-product-field="image"]').forEach(function(img){var name=card.querySelector('[data-product-field="name"]');img.alt=name?name.textContent:''})})});
+})();

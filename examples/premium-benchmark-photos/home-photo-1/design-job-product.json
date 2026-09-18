@@ -1,0 +1,78 @@
+{
+  "id": "cmu2un6os000r9lvh3qecyqn1",
+  "requestId": "becab6b4-e810-4998-a70e-93fd4a9db89a",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 20.8707,
+  "observedCredits": 20.8707,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "cd50c1d4-0d94-43cb-8c91-423c82ae4ba9",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:51:25.263Z",
+      "finishedAt": "2026-09-15T15:51:39.341Z",
+      "actualMicroUsd": 24172,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "836eecf3-422c-4bd4-9c9f-aeaa6ad27671",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:51:39.781Z",
+      "finishedAt": "2026-09-15T15:52:10.710Z",
+      "actualMicroUsd": 144263,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "0fbc68e6-a4e6-4683-b101-518b5b75a013",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:52:14.453Z",
+      "finishedAt": "2026-09-15T15:52:34.109Z",
+      "actualMicroUsd": 40272,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:51:22.780Z",
+  "updatedAt": "2026-09-15T15:52:34.113Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A es preferible: conserva una galería móvil legible, con fotografía principal amplia y las dos miniaturas visibles. La compra mantiene una jerarquía clara y el botón incluye el importe de partida. Queda por clarificar el estado de selección antes de añadir el producto.",
+    "findings": [
+      {
+        "category": "consistency",
+        "location": "Selector de tamaño y acción principal",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Aplicar un estado seleccionado claramente distinguible y mostrar junto a la etiqueta el valor elegido. Tras elegirlo, actualizar la acción con el total correspondiente en lugar del importe de partida.",
+        "observation": "Las dos opciones de tamaño se presentan con el mismo tratamiento visual y no se aprecia cuál está elegida; a la vez, la acción mantiene un importe «desde» y aparece el aviso de que falta seleccionar una opción. Esto deja sin un total o configuración inequívoca el momento de compra."
+      },
+      {
+        "category": "layout",
+        "location": "Columna de compra, entre las opciones de tamaño y el selector de cantidad",
+        "severity": "minor",
+        "viewport": "desktop",
+        "correction": "Reducir ese espacio para mantener tamaño, cantidad y botón como una secuencia de compra más compacta, sin alterar la separación posterior hacia el reaseguro y los detalles.",
+        "observation": "Hay un bloque vertical amplio vacío entre las opciones y la cantidad, que separa artificialmente los controles que preceden a la acción principal."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_0bf66eaa46b7e095016aa969af61ac87d2895e2371acc0e7a3",
+    "regressions": [
+      "En B, en móvil, la galería pasa a mostrar junto a la imagen principal una franja lateral recortada con una miniatura diminuta, mientras que A presenta ambas miniaturas completas y legibles debajo de la foto."
+    ],
+    "providerMicroUsd": 40272
+  },
+  "resumeAvailable": false
+}

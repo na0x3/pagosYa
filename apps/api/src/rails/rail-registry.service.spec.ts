@@ -81,3 +81,14 @@ describe("MockTigoMoneyAdapter", () => {
     expect(result.status).toBe("succeeded");
   });
 });
+
+describe("RailRegistry explicit-only adapters", () => {
+  it("never resolves an explicit-only adapter by method type, but resolves it by id", () => {
+    const mockCard = { railId: "mock_card", supportedMethodTypes: ["CARD"] } as any;
+    const dlocal = { railId: "dlocal", explicitOnly: true, supportedMethodTypes: ["CARD", "LOCAL_METHOD"] } as any;
+    const registry = new RailRegistry([dlocal, mockCard]);
+    expect(registry.getForMethodType("CARD" as any)).toBe(mockCard);
+    expect(() => registry.getForMethodType("LOCAL_METHOD" as any)).toThrow();
+    expect(registry.get("dlocal")).toBe(dlocal);
+  });
+});

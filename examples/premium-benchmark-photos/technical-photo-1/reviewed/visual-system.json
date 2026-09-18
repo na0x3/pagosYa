@@ -1,0 +1,137 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans variable en toda la interfaz: wordmark 800; títulos 700 de 52/54 px en escritorio y 34/36 px en móvil; nombres de producto 650 de 30/34 y 24/28; cuerpo 400 de 16/24; precios 700 de 22/24; etiquetas técnicas 600 de 12 px en mayúsculas con tracking 0.08em. Números y opciones alineados con claridad, sin apariencia de terminal.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-mesa",
+      "criterios-de-eleccion"
+    ],
+    "catalogSection": "catalogo-mesa",
+    "mobileRule": "Cabecera de una línea con “Punto.” y “Mi pedido (0)” siempre visible. Cada banda se convierte en una secuencia compacta: imagen 46vh máximo, nombre y precio en la misma zona, selector de ancho completo y botón de 48 px. La segunda imagen queda en la ficha, no compite con la compra inicial. A 320 px, opciones apiladas y cantidad/añadir en filas separadas."
+  },
+  "assets": [
+    {
+      "path": "assets/image-9dd0655fb51d.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-8b9ccfb58a58.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-aaad3a22e445.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-7324486b3691.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f4f5f0",
+      "resolved": "#f4f5f0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#171a18",
+      "resolved": "#171a18",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#c8f135",
+      "resolved": "#c8f135",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#11150d",
+      "resolved": "#11150d",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#aeb3aa",
+      "resolved": "#aeb3aa",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Instrument,system-ui,sans-serif",
+      "resolved": "Instrument,system-ui,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Instrument,system-ui,sans-serif",
+      "resolved": "Instrument,system-ui,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

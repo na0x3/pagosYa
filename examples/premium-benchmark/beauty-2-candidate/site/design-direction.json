@@ -1,0 +1,68 @@
+{
+  "concepts": [
+    {
+      "name": "Barra de volúmenes",
+      "premise": "Una tienda compacta y catalog-first que trata los volúmenes como la principal herramienta de decisión. Se diferencia de las otras propuestas por abrir directamente con los dos productos comprables, una alta densidad útil y una jerarquía sans contemporánea, sin antesala editorial.",
+      "opening": "Masthead bajo con “Bruma”, descriptor breve y “Mi pedido · 0”. Inmediatamente debajo, una franja de catálogo dividida en dos filas: Crema de manos y Jabón líquido. Cada fila muestra nombre, descripción, selector segmentado de volumen, precio que responde a la selección y botón “Añadir”. El primer producto completo aparece dentro de los primeros 320 px.",
+      "flow": "Inicio: catálogo inmediato → nota breve sobre elección entre casa y viaje → cierre tipográfico con retiro como modalidad disponible. Producto: nombre y descripción a gran escala a la izquierda; panel de elección fijo dentro del flujo a la derecha con volumen, precio, cantidad y añadir. Carrito y checkout conservan las filas horizontales, con variantes muy visibles y resumen compacto; el retiro aparece solo donde corresponde al proceso.",
+      "typography": "Instrument Sans en toda la experiencia, con pesos 400–700. Marca a 28/30, títulos de producto a 40/42 en escritorio y 30/32 en móvil, precios a 22/24, texto a 16/24 y etiquetas a 12/16 en mayúsculas espaciadas. Contraste por escala y peso, no por exceso de estilos.",
+      "imagery": "No hay fotografías ni logo suministrado. La identidad surge de campos tipográficos, líneas finas color ciruela y grandes cifras “30 / 60 / 250 / 500” usadas como información editorial, nunca como dibujos de envases. Fondo marfil lavanda, texto ciruela oscuro y selección en lavanda suave.",
+      "mobile": "Cabecera de una sola línea con marca, menú y “Mi pedido · 0” siempre visible. Los productos pasan a bloques apilados sin perder nombre, precio ni acción; los volúmenes ocupan todo el ancho y los botones mantienen 44 px de alto. Las cifras editoriales se reducen y quedan detrás de su propio espacio, sin solapar controles.",
+      "layout": {
+        "sections": [
+          "catalogo-inmediato",
+          "guia-de-volumen",
+          "cierre-retiro"
+        ],
+        "catalogSection": "catalogo-inmediato",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Pausa Bruma",
+      "premise": "Una apertura tipográfica espaciosa que convierte el nombre y la frase de marca en una pausa serena antes de comprar. Frente al catálogo inmediato, separa identidad y compra; frente a la tercera propuesta, emplea una secuencia editorial vertical, menor densidad y una voz serif dominante.",
+      "opening": "Un bloque introductorio claro con “Bruma” en serif grande, la frase “Cuidado cosmético diario en varios volúmenes” y un enlace ancla “Ver los dos productos”. Una columna lateral enumera discretamente “Casa / Viaje” como contexto de elección, sin afirmar usos específicos para cada tamaño ni simular envases.",
+      "flow": "Inicio: introducción tipográfica → catálogo de dos fichas abiertas y asimétricas → guía comparativa de volúmenes basada únicamente en nombres y precios → cierre con acceso al pedido. Producto: título serif amplio, descripción y etiqueta real; debajo, un configurador horizontal de volumen, precio, cantidad y añadir. Carrito usa una composición de recibo editorial; checkout cambia a una columna calmada con resumen persistente y elección de retiro, manteniendo la misma regla fina y numerales.",
+      "typography": "Fraunces variable para marca, títulos y precios; Instrument Sans para navegación, descripciones y controles. Marca a 96/90 en escritorio, 58/56 en tableta y 46/44 en móvil; títulos de producto a 48/50 y 34/36; cuerpo a 16/25. Letter-spacing de display en -0.025em, con palabras libres para envolver.",
+      "imagery": "Sin activos visuales disponibles. No se inventan fotografías, ilustraciones ni envases. La composición usa grandes áreas claras, reglas verticales, palabras parcialmente alineadas al borde y bloques de color lavanda muy pálido como soporte editorial; ciruela para texto y botones.",
+      "mobile": "La portada conserva el gran nombre, pero se comprime para que el ancla al catálogo sea inmediata. La columna “Casa / Viaje” se vuelve una línea secundaria. Las fichas pasan de composición alternada a una sola columna; selector, precio y añadir permanecen juntos. “Mi pedido · 0” queda fuera del menú en la cabecera.",
+      "layout": {
+        "sections": [
+          "portada-pausa",
+          "catalogo-editorial",
+          "comparador-de-formatos",
+          "salida-al-pedido"
+        ],
+        "catalogSection": "catalogo-editorial",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Mesa de elección",
+      "premise": "Una interfaz de comparación inspirada en una mesa de formulación sobria: primero se elige el producto y luego el volumen dentro de una matriz común. Se distingue de las otras por su apertura funcional en dos columnas, presentación tabular en lugar de fichas o relato vertical, tipografía condensada para datos y una secuencia centrada en comparar antes de añadir.",
+      "opening": "Bajo una cabecera compacta, una banda partida muestra a la izquierda el nombre Bruma y una explicación de una línea; a la derecha, un índice ancla con “Crema de manos” y “Jabón líquido”. El catálogo comienza enseguida como matriz: productos en filas y volúmenes disponibles en controles claramente asociados, con precio y añadir en la misma línea.",
+      "flow": "Inicio: índice y contexto breve → matriz de compra → detalle expandible de cada producto con sus descripciones reales → franja final del pedido. Producto: encabezado estrecho con nombre y etiqueta; una mesa central presenta cada volumen como opción seleccionable y actualiza el precio antes de añadir. Carrito se organiza como lista de preparación con producto, volumen, cantidad y subtotal; checkout emplea dos columnas —datos y resumen— que se apilan en móvil, con retiro integrado sin promesas log",
+      "typography": "Oswald variable para marca, nombres y cifras de volumen; Instrument Sans para texto y controles. Marca a 64/64, encabezados a 42/44 y cifras a 34/36; en móvil 42/44, 30/32 y 26/28. Los nombres mantienen espaciado natural y el condensado permite una matriz clara sin reducir la legibilidad.",
+      "imagery": "No se usan imágenes porque no fueron suministradas. La identidad se construye con una retícula visible, encabezados de columna, puntos tipográficos y bandas planas lavanda/ciruela. No hay siluetas, dibujos de frascos ni miniaturas vacías; el dato de volumen ocupa el papel visual que normalmente tendría una foto.",
+      "mobile": "La matriz se transforma en dos grupos de producto, no en una tabla horizontal desplazable. Cada grupo conserva selector, precio y añadir como unidad, con controles de ancho completo. El índice se vuelve una barra de anclas de dos líneas. La cabecera mantiene “Mi pedido · 0” visible junto al menú.",
+      "layout": {
+        "sections": [
+          "indice-de-eleccion",
+          "matriz-catalogo",
+          "detalles-del-cuidado",
+          "franja-del-pedido"
+        ],
+        "catalogSection": "matriz-catalogo",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Barra de volúmenes” responde mejor al catálogo real de solo dos productos, ambos con exactamente dos variantes de volumen y sin fotografías ni logo. Prioriza la acción solicitada —elegir variante y añadir— desde el primer tramo, utiliza únicamente las descripciones, etiqueta y precios confirmados, y adapta con claridad la compra para casa o viaje sin inventar beneficios ni imágenes."
+  }
+}

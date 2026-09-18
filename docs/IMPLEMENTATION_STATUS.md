@@ -1,5 +1,7 @@
 # Events MVP implementation status
 
+> Archived 2026-09-12: the Events, ticketing, Face Entry, and event edge implementations have been retired. This document describes the former implementation.
+
 Updated: 2026-08-27
 
 Legend: `[x]` complete, `[~]` implemented with a documented production follow-up, `[ ]` not implemented.

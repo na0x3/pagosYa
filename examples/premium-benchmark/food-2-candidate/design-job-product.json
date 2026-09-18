@@ -1,0 +1,70 @@
+{
+  "id": "cmu2tk9pd002atxeva2kbcp2h",
+  "requestId": "010066de-c093-4a14-a43c-bfdb198facd1",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 17.0299,
+  "observedCredits": 17.0299,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "ab9eaf53-6f33-4f99-bdcb-9439c95d184c",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:21:10.282Z",
+      "finishedAt": "2026-09-15T15:21:18.455Z",
+      "actualMicroUsd": 6165,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "d662bf4e-3439-43e0-bbb0-54e284cc90a6",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:21:19.500Z",
+      "finishedAt": "2026-09-15T15:22:06.018Z",
+      "actualMicroUsd": 125051,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "9ed32b10-15ab-494e-835d-1fffd7c6e061",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:22:10.245Z",
+      "finishedAt": "2026-09-15T15:22:28.316Z",
+      "actualMicroUsd": 39083,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:21:07.106Z",
+  "updatedAt": "2026-09-15T15:22:28.319Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A es preferible: deja una configuración inicial elegida, muestra el total en la acción principal y permite entender la compra sin el estado bloqueado de B. También evita el enlace de volver duplicado sobre las migas de pan que aparece en B.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Galería al inicio de la ficha",
+        "severity": "major",
+        "viewport": "mobile",
+        "correction": "Llevar la imagen principal a todo el ancho útil en móvil y colocar las miniaturas debajo, en una tira horizontal o como indicadores compactos; mantener una previsualización de cada imagen con tamaño legible.",
+        "observation": "La foto principal ocupa solo parte del ancho disponible porque comparte fila con una columna de miniaturas muy alta. Esto debilita la presencia editorial de la fotografía en móvil y deja la miniatura dentro de un marco desproporcionadamente grande."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_018921e3912bba9f016aa962a36bc887d2b5e3a3303df078d6",
+    "regressions": [
+      "Frente a B, A abre la galería en la segunda imagen en lugar de la primera; la imagen principal sigue siendo legible, pero la vista inicial ofrece menos contexto del conjunto de producto que la composición de varias botellas de B."
+    ],
+    "providerMicroUsd": 39083
+  },
+  "resumeAvailable": false
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Botella Ritual — Forma · Pilot 1</title>
+  <meta name="description" content="Elige el color y la capacidad de la Botella Ritual de acero inoxidable SAVIA y añádela a tu pedido.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="store-page home-page">
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Forma · Pilot 1, inicio"><span>Forma ·</span> Pilot 1</a>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a class="product-nav" href="#product-configurator">Botella Ritual</a>
+      <button class="cart-control" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span class="cart-count">(<span data-cart-count>0</span>)</span></button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="product-configurator" aria-label="Configura tu Botella Ritual">
+      <div data-pagosya-catalog></div>
+    </section>
+
+    <section id="material-note" aria-labelledby="material-title">
+      <div class="material-copy">
+        <p class="eyebrow">Precisión cotidiana</p>
+        <h2 id="material-title">Hecha para acompañar el ritmo de cada día.</h2>
+        <p>Acero inoxidable, acabado mate y tapa roscada reunidos en una forma sencilla de llevar. Tres colores permiten elegir una presencia más serena, cálida o luminosa.</p>
+        <dl class="facts">
+          <div><dt>Material</dt><dd>Acero inoxidable</dd></div>
+          <div><dt>Acabado</dt><dd>Mate</dd></div>
+          <div><dt>Cierre</dt><dd>Tapa roscada</dd></div>
+        </dl>
+      </div>
+      <figure class="material-photo">
+        <img src="assets/image-d5b34d383f0c.jpg" alt="Botella Ritual SAVIA en color Salvia, con acabado mate y tapa roscada">
+      </figure>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html"><span>Forma ·</span> Pilot 1</a>
+    <p>Botellas reutilizables de acero inoxidable.</p>
+    <button class="footer-cart" type="button" data-cart-open>Revisar mi pedido <span>(<span data-cart-count>0</span>)</span></button>
+  </footer>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <div data-pagosya-cart hidden></div>
+  <div data-pagosya-contact hidden></div>
+
+  <aside class="mobile-purchase" aria-label="Compra rápida">
+    <span><strong data-sticky-variant>Botella Ritual</strong><small data-sticky-price>Elige color y capacidad</small></span>
+    <button type="button" data-sticky-add>Añadir</button>
+  </aside>
+
+  <template data-pagosya-product-template>
+    <article class="ritual-product">
+      <div class="ritual-gallery" data-product-media>
+        <div class="gallery-stage">
+          <img class="ritual-main-image" data-product-field="image" src="assets/image-c9f5308636b1.jpg" alt="Botella Ritual SAVIA en colores Salvia, Coral y Marfil">
+        </div>
+        <div class="gallery-thumbs" aria-label="Vistas de la Botella Ritual">
+          <button type="button" class="gallery-thumb is-active" data-gallery-src="assets/image-c9f5308636b1.jpg" data-gallery-label="Los tres colores" aria-pressed="true"><img src="assets/image-c9f5308636b1.jpg" alt="Los tres colores disponibles"></button>
+          <button type="button" class="gallery-thumb" data-gallery-src="assets/image-d5b34d383f0c.jpg" data-gallery-label="Salvia" aria-pressed="false"><img src="assets/image-d5b34d383f0c.jpg" alt="Botella color Salvia"></button>
+          <button type="button" class="gallery-thumb" data-gallery-src="assets/image-9c4db2099869.jpg" data-gallery-label="Coral" aria-pressed="false"><img src="assets/image-9c4db2099869.jpg" alt="Botella color Coral"></button>
+          <button type="button" class="gallery-thumb" data-gallery-src="assets/image-dbdc2c596f17.jpg" data-gallery-label="Marfil" aria-pressed="false"><img src="assets/image-dbdc2c596f17.jpg" alt="Botella color Marfil"></button>
+        </div>
+      </div>
+      <div class="ritual-panel">
+        <p class="eyebrow">Acero inoxidable · SAVIA</p>
+        <h1 data-product-field="name"></h1>
+        <div class="ritual-price" data-product-field="price"></div>
+        <p class="ritual-description" data-product-field="description"></p>
+        <div class="ritual-options" data-product-field="options"></div>
+        <div class="purchase-row">
+          <div class="local-quantity" aria-label="Cantidad">
+            <span>Cantidad</span>
+            <div>
+              <button type="button" data-qty-minus aria-label="Reducir cantidad"><img src="assets/icons/minus.svg" alt=""></button>
+              <output data-qty-output aria-live="polite">1</output>
+              <button type="button" data-qty-plus aria-label="Aumentar cantidad"><img src="assets/icons/plus.svg" alt=""></button>
+            </div>
+          </div>
+          <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+        </div>
+        <a class="product-detail-link" data-product-link href="product.html">Ver todos los detalles <img src="assets/icons/arrow-right.svg" alt=""></a>
+      </div>
+    </article>
+  </template>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

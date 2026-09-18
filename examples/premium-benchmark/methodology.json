@@ -1,0 +1,669 @@
+{
+  "cases": [
+    {
+      "id": "food",
+      "name": "Mesa Clara",
+      "business": "Despensa de jugo y granola en formatos individuales y packs",
+      "audience": "Personas que preparan desayunos en casa",
+      "direction": "Editorial cálido, fotografía real del catálogo SAVIA, color cítrico con propósito y compra clara.",
+      "products": [
+        {
+          "name": "Jugo naranja + jengibre",
+          "description": "Naranja y jengibre en una botella de vidrio. Elige 330 ml o 750 ml, individual o en pack de 3. Una pausa cítrica para acompañar tu día.",
+          "amount": 1800,
+          "variants": [
+            {
+              "id": "var_7na2baxzc1pu",
+              "name": "330 ml / Individual",
+              "stock": 20,
+              "amount": 1800,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "330 ml"
+                },
+                {
+                  "name": "Presentación",
+                  "value": "Individual"
+                }
+              ],
+              "imageUrl": "/v1/uploads/fef30d69-dc8c-4c23-9e6d-a92d7bf9acbc.jpg"
+            },
+            {
+              "id": "var_tjo7ekr3nzln",
+              "name": "330 ml / Pack de 3",
+              "stock": 20,
+              "amount": 5000,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "330 ml"
+                },
+                {
+                  "name": "Presentación",
+                  "value": "Pack de 3"
+                }
+              ],
+              "imageUrl": "/v1/uploads/6b022d56-52b7-4b70-b5b4-670456ca73b7.jpg"
+            },
+            {
+              "id": "var_gn9j017pttgj",
+              "name": "750 ml / Individual",
+              "stock": 20,
+              "amount": 3400,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "750 ml"
+                },
+                {
+                  "name": "Presentación",
+                  "value": "Individual"
+                }
+              ],
+              "imageUrl": "/v1/uploads/fef30d69-dc8c-4c23-9e6d-a92d7bf9acbc.jpg"
+            },
+            {
+              "id": "var_q9z2dxa8haaw",
+              "name": "750 ml / Pack de 3",
+              "stock": 20,
+              "amount": 9600,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "750 ml"
+                },
+                {
+                  "name": "Presentación",
+                  "value": "Pack de 3"
+                }
+              ],
+              "imageUrl": "/v1/uploads/6b022d56-52b7-4b70-b5b4-670456ca73b7.jpg"
+            }
+          ]
+        },
+        {
+          "name": "Granola de la casa",
+          "description": "Avena, almendras y arándanos para acompañar yogur, fruta o tus desayunos. Disponible en Original o Cacao, en 250 g y 500 g. Contiene almendras.",
+          "amount": 3200,
+          "variants": [
+            {
+              "id": "var_aoxjeqkcy1qq",
+              "name": "Original / 250 g",
+              "stock": 20,
+              "amount": 3200,
+              "options": [
+                {
+                  "name": "Sabor",
+                  "value": "Original"
+                },
+                {
+                  "name": "Peso",
+                  "value": "250 g"
+                }
+              ],
+              "imageUrl": "/v1/uploads/c2038b1a-d15d-4e16-b243-11640f2a791b.jpg"
+            },
+            {
+              "id": "var_3bq67fs5clws",
+              "name": "Original / 500 g",
+              "stock": 20,
+              "amount": 5900,
+              "options": [
+                {
+                  "name": "Sabor",
+                  "value": "Original"
+                },
+                {
+                  "name": "Peso",
+                  "value": "500 g"
+                }
+              ],
+              "imageUrl": "/v1/uploads/c2038b1a-d15d-4e16-b243-11640f2a791b.jpg"
+            },
+            {
+              "id": "var_5q2jp82tbmvp",
+              "name": "Cacao / 250 g",
+              "stock": 20,
+              "amount": 3500,
+              "options": [
+                {
+                  "name": "Sabor",
+                  "value": "Cacao"
+                },
+                {
+                  "name": "Peso",
+                  "value": "250 g"
+                }
+              ],
+              "imageUrl": "/v1/uploads/24c88ec2-98dd-404b-b661-cbec583db407.jpg"
+            },
+            {
+              "id": "var_z66khzj3zz9m",
+              "name": "Cacao / 500 g",
+              "stock": 20,
+              "amount": 6500,
+              "options": [
+                {
+                  "name": "Sabor",
+                  "value": "Cacao"
+                },
+                {
+                  "name": "Peso",
+                  "value": "500 g"
+                }
+              ],
+              "imageUrl": "/v1/uploads/24c88ec2-98dd-404b-b661-cbec583db407.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "apparel",
+      "name": "Trama",
+      "business": "Prendas cotidianas con colores y tallas",
+      "audience": "Adultos que buscan ropa informal",
+      "direction": "Moda contemporánea: contraste tinta y papel, tipografía elegante, acento azul cobalto. Sin fotografías disponibles: no inventarlas.",
+      "products": [
+        {
+          "name": "Camisa de algodón de manga larga",
+          "description": "Algodón, cuello clásico y manga larga. Dos colores, tres tallas.",
+          "amount": 14000,
+          "variants": [
+            {
+              "id": "var_ulwclbmbdvgf",
+              "name": "Crudo / S",
+              "amount": 14000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Crudo"
+                },
+                {
+                  "name": "Talla",
+                  "value": "S"
+                }
+              ],
+              "stock": 8
+            },
+            {
+              "id": "var_bw96fapcbysi",
+              "name": "Crudo / M",
+              "amount": 14000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Crudo"
+                },
+                {
+                  "name": "Talla",
+                  "value": "M"
+                }
+              ],
+              "stock": 8
+            },
+            {
+              "id": "var_cgi93e3e75ui",
+              "name": "Crudo / L",
+              "amount": 14000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Crudo"
+                },
+                {
+                  "name": "Talla",
+                  "value": "L"
+                }
+              ],
+              "stock": 8
+            },
+            {
+              "id": "var_rqsnacwwjq4c",
+              "name": "Azul / S",
+              "amount": 15000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Azul"
+                },
+                {
+                  "name": "Talla",
+                  "value": "S"
+                }
+              ],
+              "stock": 8
+            },
+            {
+              "id": "var_isj8614ya0q1",
+              "name": "Azul / M",
+              "amount": 15000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Azul"
+                },
+                {
+                  "name": "Talla",
+                  "value": "M"
+                }
+              ],
+              "stock": 8
+            },
+            {
+              "id": "var_4s13eq1iihnq",
+              "name": "Azul / L",
+              "amount": 15000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Azul"
+                },
+                {
+                  "name": "Talla",
+                  "value": "L"
+                }
+              ],
+              "stock": 0
+            }
+          ]
+        },
+        {
+          "name": "Camiseta esencial",
+          "description": "Cuello redondo. Disponible en tres tallas.",
+          "amount": 8500,
+          "variants": [
+            {
+              "id": "var_ktdjrmpah2sl",
+              "name": "S",
+              "amount": 8500,
+              "options": [
+                {
+                  "name": "Talla",
+                  "value": "S"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_hkp6g81c2kxh",
+              "name": "M",
+              "amount": 9200,
+              "options": [
+                {
+                  "name": "Talla",
+                  "value": "M"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_0itvxerwknvx",
+              "name": "L",
+              "amount": 9900,
+              "options": [
+                {
+                  "name": "Talla",
+                  "value": "L"
+                }
+              ],
+              "stock": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "beauty",
+      "name": "Bruma",
+      "business": "Cuidado cosmético diario en varios volúmenes",
+      "audience": "Personas que eligen formatos para casa y viaje",
+      "direction": "Sereno y contemporáneo: lavanda suave, ciruela y fondo claro, tipografía legible. Sin fotos; trabajar con el catálogo y tipografía sin dibujar envases.",
+      "products": [
+        {
+          "name": "Crema de manos",
+          "description": "Crema cosmética sin perfume. Elige el volumen.",
+          "amount": 4500,
+          "variants": [
+            {
+              "id": "var_gdnb27efe1as",
+              "name": "30 ml",
+              "amount": 4500,
+              "options": [
+                {
+                  "name": "Volumen",
+                  "value": "30 ml"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_nu3ii9hhj733",
+              "name": "60 ml",
+              "amount": 5200,
+              "options": [
+                {
+                  "name": "Volumen",
+                  "value": "60 ml"
+                }
+              ],
+              "stock": 12
+            }
+          ]
+        },
+        {
+          "name": "Jabón líquido",
+          "description": "Jabón líquido para uso cotidiano.",
+          "amount": 3800,
+          "variants": [
+            {
+              "id": "var_i23t8z07jp5n",
+              "name": "250 ml",
+              "amount": 3800,
+              "options": [
+                {
+                  "name": "Volumen",
+                  "value": "250 ml"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_66jq90uip39x",
+              "name": "500 ml",
+              "amount": 4500,
+              "options": [
+                {
+                  "name": "Volumen",
+                  "value": "500 ml"
+                }
+              ],
+              "stock": 12
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "technical",
+      "name": "Punto",
+      "business": "Accesorios de escritorio con especificaciones claras",
+      "audience": "Personas que equipan un espacio de trabajo",
+      "direction": "Precisión técnica con verde lima, grafito y blanco, diagramación legible. No hay fotos ni diagramas suministrados: no inventar dibujos de productos.",
+      "products": [
+        {
+          "name": "Lámpara de escritorio USB-C",
+          "description": "Alimentación USB-C. Brazo ajustable y acabado mate. No incluye adaptador de pared.",
+          "amount": 22000,
+          "variants": [
+            {
+              "id": "var_86ulmmehu3x9",
+              "name": "Negro",
+              "amount": 22000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Negro"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_yhphu8zw7qip",
+              "name": "Marfil",
+              "amount": 22700,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Marfil"
+                }
+              ],
+              "stock": 12
+            }
+          ]
+        },
+        {
+          "name": "Soporte para portátil",
+          "description": "Soporte de aluminio para mesa. Dos tamaños.",
+          "amount": 16000,
+          "variants": [
+            {
+              "id": "var_d0wtos1445na",
+              "name": "Compacto",
+              "amount": 16000,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "Compacto"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_ef4firbbsipo",
+              "name": "Amplio",
+              "amount": 16700,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "Amplio"
+                }
+              ],
+              "stock": 12
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "name": "Pliegue",
+      "business": "Textiles de hogar con materiales y tamaños",
+      "audience": "Personas que renuevan detalles de su casa",
+      "direction": "Hogar editorial: terracota, rosa apagado y fondo crema con espacios deliberados. No hay fotografías: no usar imágenes ajenas ni inventar el aspecto del producto.",
+      "products": [
+        {
+          "name": "Funda de cojín",
+          "description": "Funda de lino, cierre oculto. No incluye relleno.",
+          "amount": 11000,
+          "variants": [
+            {
+              "id": "var_af2kasmwh91g",
+              "name": "40 × 40 cm",
+              "amount": 11000,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "40 × 40 cm"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_qmn8q55sw7m8",
+              "name": "50 × 50 cm",
+              "amount": 11700,
+              "options": [
+                {
+                  "name": "Tamaño",
+                  "value": "50 × 50 cm"
+                }
+              ],
+              "stock": 12
+            }
+          ]
+        },
+        {
+          "name": "Manta de algodón",
+          "description": "Manta tejida de algodón para sofá.",
+          "amount": 18000,
+          "variants": [
+            {
+              "id": "var_pvp6032pqgiv",
+              "name": "Arena",
+              "amount": 18000,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Arena"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_zknragyx8vok",
+              "name": "Arcilla",
+              "amount": 18700,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Arcilla"
+                }
+              ],
+              "stock": 12
+            },
+            {
+              "id": "var_zuuaup4x6e61",
+              "name": "Oliva",
+              "amount": 19400,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Oliva"
+                }
+              ],
+              "stock": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "single",
+      "name": "Aire",
+      "business": "Una botella reutilizable con colores y capacidades",
+      "audience": "Personas que llevan agua durante el día",
+      "direction": "Una pieza, muy bien presentada. Fotografía proporcionada de SAVIA, fondo cálido claro, color en las botellas y opciones visibles.",
+      "products": [
+        {
+          "name": "Botella Ritual",
+          "description": "Botella reutilizable de acero inoxidable con acabado mate y tapa roscada. Elige tu color y capacidad para acompañar tus pequeños rituales de cada día.",
+          "amount": 8900,
+          "variants": [
+            {
+              "id": "var_tsxsdv3owvmd",
+              "name": "Salvia / 500 ml",
+              "stock": 20,
+              "amount": 8900,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Salvia"
+                },
+                {
+                  "name": "Capacidad",
+                  "value": "500 ml"
+                }
+              ],
+              "imageUrl": "/v1/uploads/930e5665-a1d6-4f47-a88c-d1c43219040e.jpg"
+            },
+            {
+              "id": "var_p4oxup1sfxch",
+              "name": "Salvia / 750 ml",
+              "stock": 20,
+              "amount": 10900,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Salvia"
+                },
+                {
+                  "name": "Capacidad",
+                  "value": "750 ml"
+                }
+              ],
+              "imageUrl": "/v1/uploads/930e5665-a1d6-4f47-a88c-d1c43219040e.jpg"
+            },
+            {
+              "id": "var_ilndyj2rtm1z",
+              "name": "Coral / 500 ml",
+              "stock": 20,
+              "amount": 8900,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Coral"
+                },
+                {
+                  "name": "Capacidad",
+                  "value": "500 ml"
+                }
+              ],
+              "imageUrl": "/v1/uploads/b3c09f08-fbc1-4ca0-870a-89f781026876.jpg"
+            },
+            {
+              "id": "var_cz16wh7hizpq",
+              "name": "Coral / 750 ml",
+              "stock": 20,
+              "amount": 10900,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Coral"
+                },
+                {
+                  "name": "Capacidad",
+                  "value": "750 ml"
+                }
+              ],
+              "imageUrl": "/v1/uploads/b3c09f08-fbc1-4ca0-870a-89f781026876.jpg"
+            },
+            {
+              "id": "var_4qt2w1x88rgr",
+              "name": "Marfil / 500 ml",
+              "stock": 20,
+              "amount": 8900,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Marfil"
+                },
+                {
+                  "name": "Capacidad",
+                  "value": "500 ml"
+                }
+              ],
+              "imageUrl": "/v1/uploads/4769f812-f28e-4747-b69f-7b28f1880fd1.jpg"
+            },
+            {
+              "id": "var_dmryke3sbock",
+              "name": "Marfil / 750 ml",
+              "stock": 20,
+              "amount": 10900,
+              "options": [
+                {
+                  "name": "Color",
+                  "value": "Marfil"
+                },
+                {
+                  "name": "Capacidad",
+                  "value": "750 ml"
+                }
+              ],
+              "imageUrl": "/v1/uploads/4769f812-f28e-4747-b69f-7b28f1880fd1.jpg"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "repetitions": 3,
+  "arms": [
+    "baseline",
+    "candidate"
+  ],
+  "model": "gpt-5.6-sol",
+  "maxCreditsPerGeneration": 200,
+  "notes": "Both arms use the same current generator. Candidate additionally receives the durable review/repair workflow. Independent initial generations; identical fixture briefs, catalog and owned photo bytes. No publication or live purchases."
+}

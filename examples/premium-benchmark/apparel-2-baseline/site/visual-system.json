@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Fraunces variable para nombres y precios de gran escala; Instrument Sans para navegación, opciones y checkout. H1 de 64–84 px en escritorio, 38–46 px en móvil; texto de 16–18 px. Cursivas de Fraunces reservadas para «cotidiano» y pequeñas notas, nunca para controles.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-muestrario",
+      "nota-de-trama"
+    ],
+    "catalogSection": "catalogo-muestrario",
+    "mobileRule": "Cabecera de dos líneas: TRAMA y «Mi pedido 0» siempre visibles; navegación secundaria mínima. Las fichas se apilan, pero la primera conserva nombre, precio, color, talla y botón antes del primer scroll. Selectores de 44 px, acciones a ancho completo y resumen de pedido sin desplazamiento horizontal."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f1ecdf",
+      "resolved": "#f1ecdf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#171714",
+      "resolved": "#171714",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#1646d8",
+      "resolved": "#1646d8",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fff",
+      "resolved": "#fff",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#f8f4e9",
+      "resolved": "#f8f4e9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#817d72",
+      "resolved": "#817d72",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0px",
+      "resolved": "0px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "\"Fraunces\",serif",
+      "resolved": "\"Fraunces\",serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

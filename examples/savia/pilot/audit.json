@@ -1,0 +1,702 @@
+[
+  {
+    "id": "pantry-2",
+    "viewport": "desktop",
+    "expected": {
+      "sections": [
+        "ritual-catalog",
+        "table-pairing"
+      ],
+      "catalogSection": "ritual-catalog",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 779.1640625,
+      "width": 1280,
+      "x": 0,
+      "y": 160
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 748.4453125,
+          "width": 156.09375,
+          "x": 554.5859375,
+          "y": 699.25
+        },
+        "name": "Jugo naranja + jengibre",
+        "price": {
+          "bottom": 639.921875,
+          "width": 74.9765625,
+          "x": 635.703125,
+          "y": 612.078125
+        }
+      },
+      {
+        "buy": {
+          "bottom": 748.4453125,
+          "width": 156.09375,
+          "x": 1093.1796875,
+          "y": 699.25
+        },
+        "name": "Granola de la casa",
+        "price": {
+          "bottom": 639.921875,
+          "width": 78.515625,
+          "x": 1170.7578125,
+          "y": 612.078125
+        }
+      }
+    ],
+    "scrollWidth": 1280,
+    "visibleImagesReady": true,
+    "width": 1280,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-pantry-2-desktop.jpg"
+  },
+  {
+    "id": "pantry-2",
+    "viewport": "mobile",
+    "expected": {
+      "sections": [
+        "ritual-catalog",
+        "table-pairing"
+      ],
+      "catalogSection": "ritual-catalog",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 1070.546875,
+      "width": 390,
+      "x": 0,
+      "y": 140
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 563.2734375,
+          "width": 202.703125,
+          "x": 171.296875,
+          "y": 514.078125
+        },
+        "name": "Jugo naranja + jengibre",
+        "price": {
+          "bottom": 470.0859375,
+          "width": 74.9765625,
+          "x": 299.0234375,
+          "y": 442.2421875
+        }
+      },
+      {
+        "buy": {
+          "bottom": 1053.546875,
+          "width": 202.703125,
+          "x": 171.296875,
+          "y": 1004.3515625
+        },
+        "name": "Granola de la casa",
+        "price": {
+          "bottom": 960.359375,
+          "width": 78.515625,
+          "x": 295.484375,
+          "y": 932.515625
+        }
+      }
+    ],
+    "scrollWidth": 390,
+    "visibleImagesReady": true,
+    "width": 390,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-pantry-2-mobile.jpg"
+  },
+  {
+    "id": "hydration-2",
+    "viewport": "desktop",
+    "expected": {
+      "sections": [
+        "product-studio",
+        "material-note",
+        "color-lineup"
+      ],
+      "catalogSection": "product-studio",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 766,
+      "width": 1203.203125,
+      "x": 38.3984375,
+      "y": 116
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 609.4140625,
+          "width": 163.296875,
+          "x": 876.3828125,
+          "y": 561.4140625
+        },
+        "name": "Botella Ritual",
+        "price": {
+          "bottom": 482.4140625,
+          "width": 401.4140625,
+          "x": 776.1875,
+          "y": 454.4140625
+        }
+      }
+    ],
+    "scrollWidth": 1280,
+    "visibleImagesReady": true,
+    "width": 1280,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-hydration-2-desktop.jpg"
+  },
+  {
+    "id": "hydration-2",
+    "viewport": "mobile",
+    "expected": {
+      "sections": [
+        "product-studio",
+        "material-note",
+        "color-lineup"
+      ],
+      "catalogSection": "product-studio",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 795,
+      "width": 362,
+      "x": 14,
+      "y": 94
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 770,
+          "width": 261.8046875,
+          "x": 114.1953125,
+          "y": 722
+        },
+        "name": "Botella Ritual",
+        "price": {
+          "bottom": 665,
+          "width": 362,
+          "x": 14,
+          "y": 637
+        }
+      }
+    ],
+    "scrollWidth": 390,
+    "visibleImagesReady": true,
+    "width": 390,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-hydration-2-mobile.jpg"
+  },
+  {
+    "id": "cafe-1",
+    "viewport": "desktop",
+    "expected": {
+      "sections": [
+        "carta-directa",
+        "nota-de-barra"
+      ],
+      "catalogSection": "carta-directa",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 728.1015625,
+      "width": 1132,
+      "x": 74,
+      "y": 241.984375
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 379.0234375,
+          "width": 411.015625,
+          "x": 782.9765625,
+          "y": 333.0234375
+        },
+        "name": "Café filtrado",
+        "price": {
+          "bottom": 289.984375,
+          "width": 411.015625,
+          "x": 782.9765625,
+          "y": 265.984375
+        }
+      },
+      {
+        "buy": {
+          "bottom": 541.0625,
+          "width": 411.015625,
+          "x": 782.9765625,
+          "y": 495.0625
+        },
+        "name": "Latte",
+        "price": {
+          "bottom": 452.0234375,
+          "width": 411.015625,
+          "x": 782.9765625,
+          "y": 428.0234375
+        }
+      },
+      {
+        "buy": {
+          "bottom": 703.1015625,
+          "width": 411.015625,
+          "x": 782.9765625,
+          "y": 657.1015625
+        },
+        "name": "Chocolate caliente",
+        "price": {
+          "bottom": 614.0625,
+          "width": 411.015625,
+          "x": 782.9765625,
+          "y": 590.0625
+        }
+      }
+    ],
+    "scrollWidth": 1280,
+    "visibleImagesReady": true,
+    "width": 1280,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-cafe-1-desktop.jpg"
+  },
+  {
+    "id": "cafe-1",
+    "viewport": "mobile",
+    "expected": {
+      "sections": [
+        "carta-directa",
+        "nota-de-barra"
+      ],
+      "catalogSection": "carta-directa",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 896.390625,
+      "width": 358,
+      "x": 16,
+      "y": 225.2734375
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 437.3125,
+          "width": 327,
+          "x": 38,
+          "y": 391.3125
+        },
+        "name": "Café filtrado",
+        "price": {
+          "bottom": 350.2734375,
+          "width": 327,
+          "x": 38,
+          "y": 326.2734375
+        }
+      },
+      {
+        "buy": {
+          "bottom": 648.3515625,
+          "width": 327,
+          "x": 38,
+          "y": 602.3515625
+        },
+        "name": "Latte",
+        "price": {
+          "bottom": 561.3125,
+          "width": 327,
+          "x": 38,
+          "y": 537.3125
+        }
+      },
+      {
+        "buy": {
+          "bottom": 878.390625,
+          "width": 327,
+          "x": 38,
+          "y": 832.390625
+        },
+        "name": "Chocolate caliente",
+        "price": {
+          "bottom": 791.3515625,
+          "width": 327,
+          "x": 38,
+          "y": 767.3515625
+        }
+      }
+    ],
+    "scrollWidth": 390,
+    "visibleImagesReady": true,
+    "width": 390,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-cafe-1-mobile.jpg"
+  },
+  {
+    "id": "pantry-1",
+    "viewport": "desktop",
+    "expected": {
+      "sections": [
+        "catalogo-mesa",
+        "pareja-cotidiana",
+        "nota-despensa"
+      ],
+      "catalogSection": "catalogo-mesa",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 902.5234375,
+      "width": 1097.609375,
+      "x": 91.1953125,
+      "y": 224.65625
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 821.5234375,
+          "width": 155.296875,
+          "x": 460.203125,
+          "y": 775.5234375
+        },
+        "name": "Jugo naranja + jengibre",
+        "price": {
+          "bottom": 814.2734375,
+          "width": 84.484375,
+          "x": 116.1953125,
+          "y": 782.7734375
+        }
+      },
+      {
+        "buy": {
+          "bottom": 845.5234375,
+          "width": 155.296875,
+          "x": 1008.5078125,
+          "y": 799.5234375
+        },
+        "name": "Granola de la casa",
+        "price": {
+          "bottom": 838.2734375,
+          "width": 84.484375,
+          "x": 664.5,
+          "y": 806.7734375
+        }
+      }
+    ],
+    "scrollWidth": 1280,
+    "visibleImagesReady": true,
+    "width": 1280,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-pantry-1-desktop.jpg"
+  },
+  {
+    "id": "pantry-1",
+    "viewport": "mobile",
+    "expected": {
+      "sections": [
+        "catalogo-mesa",
+        "pareja-cotidiana",
+        "nota-despensa"
+      ],
+      "catalogSection": "catalogo-mesa",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 1341,
+      "width": 366,
+      "x": 12,
+      "y": 216
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 726,
+          "width": 155.296875,
+          "x": 205.703125,
+          "y": 680
+        },
+        "name": "Jugo naranja + jengibre",
+        "price": {
+          "bottom": 718.75,
+          "width": 84.484375,
+          "x": 29,
+          "y": 687.25
+        }
+      },
+      {
+        "buy": {
+          "bottom": 1288,
+          "width": 155.296875,
+          "x": 205.703125,
+          "y": 1242
+        },
+        "name": "Granola de la casa",
+        "price": {
+          "bottom": 1280.75,
+          "width": 84.484375,
+          "x": 29,
+          "y": 1249.25
+        }
+      }
+    ],
+    "scrollWidth": 390,
+    "visibleImagesReady": true,
+    "width": 390,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-pantry-1-mobile.jpg"
+  },
+  {
+    "id": "hydration-1",
+    "viewport": "desktop",
+    "expected": {
+      "sections": [
+        "product-configurator",
+        "material-note"
+      ],
+      "catalogSection": "product-configurator",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 665.3828125,
+      "width": 1203.203125,
+      "x": 38.3984375,
+      "y": 89.59375
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 495.9921875,
+          "width": 358.21875,
+          "x": 883.3828125,
+          "y": 445.1953125
+        },
+        "name": "Botella Ritual",
+        "price": {
+          "bottom": 246.65625,
+          "width": 490.21875,
+          "x": 751.3828125,
+          "y": 217.859375
+        }
+      }
+    ],
+    "scrollWidth": 1280,
+    "visibleImagesReady": true,
+    "width": 1280,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-hydration-1-desktop.jpg"
+  },
+  {
+    "id": "hydration-1",
+    "viewport": "mobile",
+    "expected": {
+      "sections": [
+        "product-configurator",
+        "material-note"
+      ],
+      "catalogSection": "product-configurator",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 867.8046875,
+      "width": 366,
+      "x": 12,
+      "y": 68
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 831.5078125,
+          "width": 231,
+          "x": 143,
+          "y": 780.7109375
+        },
+        "name": "Botella Ritual",
+        "price": {
+          "bottom": 619.671875,
+          "width": 358,
+          "x": 16,
+          "y": 593.2734375
+        }
+      }
+    ],
+    "scrollWidth": 390,
+    "visibleImagesReady": true,
+    "width": 390,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-hydration-1-mobile.jpg"
+  },
+  {
+    "id": "cafe-2",
+    "viewport": "desktop",
+    "expected": {
+      "sections": [
+        "carta-barra",
+        "nota-recogida"
+      ],
+      "catalogSection": "carta-barra",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 448.75,
+      "width": 1177.609375,
+      "x": 51.1953125,
+      "y": 221.8046875
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 282.453125,
+          "width": 165.484375,
+          "x": 1063.3125,
+          "y": 235.8046875
+        },
+        "name": "Café filtrado",
+        "price": {
+          "bottom": 278.6171875,
+          "width": 70.375,
+          "x": 429.0703125,
+          "y": 252.6328125
+        }
+      },
+      {
+        "buy": {
+          "bottom": 358.1015625,
+          "width": 165.484375,
+          "x": 1063.3125,
+          "y": 311.453125
+        },
+        "name": "Latte",
+        "price": {
+          "bottom": 354.265625,
+          "width": 75.171875,
+          "x": 424.2734375,
+          "y": 328.28125
+        }
+      },
+      {
+        "buy": {
+          "bottom": 433.75,
+          "width": 165.484375,
+          "x": 1063.3125,
+          "y": 387.1015625
+        },
+        "name": "Chocolate caliente",
+        "price": {
+          "bottom": 429.9140625,
+          "width": 75.71875,
+          "x": 423.7265625,
+          "y": 403.9296875
+        }
+      }
+    ],
+    "scrollWidth": 1280,
+    "visibleImagesReady": true,
+    "width": 1280,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-cafe-2-desktop.jpg"
+  },
+  {
+    "id": "cafe-2",
+    "viewport": "mobile",
+    "expected": {
+      "sections": [
+        "carta-barra",
+        "nota-recogida"
+      ],
+      "catalogSection": "carta-barra",
+      "standaloneIntro": false,
+      "productsInOpening": true
+    },
+    "catalog": {
+      "bottom": 604.75,
+      "width": 358,
+      "x": 16,
+      "y": 144.90625
+    },
+    "fonts": "loaded",
+    "height": 844,
+    "narrowParagraphs": [],
+    "products": [
+      {
+        "buy": {
+          "bottom": 283.1875,
+          "width": 165.484375,
+          "x": 208.515625,
+          "y": 236.5390625
+        },
+        "name": "Café filtrado",
+        "price": {
+          "bottom": 191.890625,
+          "width": 70.375,
+          "x": 303.625,
+          "y": 165.90625
+        }
+      },
+      {
+        "buy": {
+          "bottom": 436.46875,
+          "width": 165.484375,
+          "x": 208.515625,
+          "y": 389.8203125
+        },
+        "name": "Latte",
+        "price": {
+          "bottom": 345.171875,
+          "width": 75.171875,
+          "x": 298.828125,
+          "y": 319.1875
+        }
+      },
+      {
+        "buy": {
+          "bottom": 589.75,
+          "width": 165.484375,
+          "x": 208.515625,
+          "y": 543.1015625
+        },
+        "name": "Chocolate caliente",
+        "price": {
+          "bottom": 498.453125,
+          "width": 75.71875,
+          "x": 298.28125,
+          "y": 472.46875
+        }
+      }
+    ],
+    "scrollWidth": 390,
+    "visibleImagesReady": true,
+    "width": 390,
+    "screenshot": "/Users/saramia/pagosYa/examples/savia/review/pilot-cafe-2-mobile.jpg"
+  }
+]

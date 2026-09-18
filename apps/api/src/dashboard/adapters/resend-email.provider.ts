@@ -29,12 +29,12 @@ export class ResendEmailProvider implements EmailProvider {
   async send(req: SendEmailRequest): Promise<void> {
     this.resend ??= new Resend(this.apiKey);
     const { error } = await this.resend.emails.send({
-      from: this.fromAddress,
+      from: req.from || this.fromAddress,
       to: req.to,
       subject: req.subject,
       text: req.body,
       ...(req.replyTo ? { replyTo: req.replyTo } : {}),
-    });
+    }, req.idempotencyKey ? { idempotencyKey: req.idempotencyKey } : undefined);
     if (error) {
       // Matches the rest of the app's outbox/worker pattern: log and let the
       // caller's retry path (email verification can just be re-triggered by

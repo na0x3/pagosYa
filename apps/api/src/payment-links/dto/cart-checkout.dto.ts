@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
+import { ShippingDestinationDto } from "../../shipping/bolivia-address";
 
 export class CartItemDto {
   @ApiProperty()
@@ -12,11 +13,10 @@ export class CartItemDto {
   @IsString()
   variantId?: string;
 
-  @ApiProperty({ required: false, type: [String], description: "Selected additive extra ids." })
+  @ApiProperty({ required: false, type: [String], description: "Selected additive extra ids. An id repeats once per pick inside a choose-N group." })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(12)
-  @ArrayUnique()
+  @ArrayMaxSize(48)
   @IsString({ each: true })
   extraIds?: string[];
 
@@ -28,6 +28,22 @@ export class CartItemDto {
 }
 
 export class CartCheckoutDto {
+  @IsOptional() @Matches(/^[a-zA-Z0-9_-]{32}$/) funnelToken?: string;
+  @IsOptional() @Matches(/^[a-f0-9]{64}$/) recoveryToken?: string;
+  @IsOptional() @Matches(/^[A-Z]{2}$/) shippingCountry?: string;
+  @IsOptional() @IsString() @MaxLength(20) @Matches(/^[A-Za-z0-9 -]{1,20}$/) shippingPostalCode?: string;
+  @IsOptional() @IsString() @MaxLength(50) @Matches(/^[a-fA-F0-9-]{32,39}$/) creditCode?: string;
+  @IsOptional() @IsString() @MaxLength(48) shippingZoneId?: string;
+  @IsOptional() @IsString() @MaxLength(500) shippingAddress?: string;
+
+  @IsOptional()
+  @Matches(/^[a-zA-Z0-9_-]{32}$/)
+  sourceVisitToken?: string;
+
+  @IsOptional()
+  @Matches(/^[a-zA-Z0-9_-]{8,40}$/)
+  partnerCode?: string;
+
   @ApiProperty({ type: [CartItemDto] })
   @IsArray()
   @ArrayMinSize(1)
@@ -53,4 +69,7 @@ export class CartCheckoutDto {
   @IsIn(["pickup", "delivery"])
   fulfillmentMethod?: "pickup" | "delivery";
 
+  @ApiProperty({ required: false, type: () => ShippingDestinationDto })
+  @IsOptional() @ValidateNested() @Type(() => ShippingDestinationDto)
+  shippingDestination?: ShippingDestinationDto;
 }

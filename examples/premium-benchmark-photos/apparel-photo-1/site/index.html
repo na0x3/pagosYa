@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trama — Camisas y camisetas cotidianas</title>
+  <meta name="description" content="Elige prendas cotidianas de Trama por color y talla: camisa de algodón y camiseta esencial.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="announcement"><span>Recogida disponible</span></div>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="wordmark" href="index.html" aria-label="Trama, inicio"><span data-store-name>Trama</span><small>Prendas cotidianas con colores y tallas</small></a>
+      <button class="menu-toggle icon-button" type="button" aria-label="Abrir menú" aria-controls="site-nav" aria-expanded="false"><img src="assets/icons/menu.svg" alt=""></button>
+      <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+        <a href="#catalogo-mesa">Catálogo</a><a href="#camisa">Camisa</a><a href="#camiseta">Camiseta</a>
+      </nav>
+      <button class="cart-button" type="button" data-cart-open aria-label="Abrir Mi pedido"><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span class="cart-count" data-cart-count>0</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="catalogo-mesa" class="catalog-section">
+      <div class="section-intro">
+        <div><p class="eyebrow">La mesa de selección</p><h1>Dos prendas, decisiones claras.</h1></div>
+        <p class="subhead">Elige color o talla y suma tu pieza al pedido.</p>
+      </div>
+      <div data-pagosya-catalog aria-label="Catálogo de prendas"></div>
+    </section>
+
+    <section id="detalles-cotidianos" class="editorial-strip" aria-labelledby="detalles-title">
+      <header class="editorial-heading"><p class="eyebrow">De cerca</p><h2 id="detalles-title">Detalles para todos los días.</h2></header>
+      <article class="detail-story">
+        <img src="assets/image-c31788d5846f.jpg" alt="Camisa cruda doblada sobre una mesa de madera" loading="lazy">
+        <div><p class="label">Camisa de algodón</p><p>Cuello clásico y manga larga en una prenda disponible en dos colores.</p><a href="#camisa">Ver la camisa <img src="assets/icons/arrow-right.svg" alt=""></a></div>
+      </article>
+      <article class="detail-story detail-story--reverse">
+        <img src="assets/image-7ef7d25d1813.jpg" alt="Camiseta gris extendida en un entorno doméstico" loading="lazy">
+        <div><p class="label">Camiseta esencial</p><p>Cuello redondo y una selección directa entre tres tallas.</p><a href="#camiseta">Ver la camiseta <img src="assets/icons/arrow-right.svg" alt=""></a></div>
+      </article>
+    </section>
+  </main>
+
+  <template data-pagosya-product-template>
+    <article class="selection-card">
+      <a class="product-media menu-item__details" data-product-link><span data-product-media><img data-product-field="image" alt=""></span></a>
+      <div class="product-copy">
+        <a class="product-name menu-item__details" data-product-link><h3 data-product-field="name"></h3></a>
+        <p class="product-description" data-product-field="description"></p>
+        <div class="product-price" data-product-field="price"></div>
+        <div class="product-options" data-product-field="options"></div>
+        <div class="purchase-row"><button class="menu-add" type="button" data-product-add>Añadir al pedido</button><span class="add-feedback" role="status" aria-live="polite"></span></div>
+      </div>
+    </article>
+  </template>
+
+  <div class="contact-slot" data-pagosya-contact hidden></div>
+  <div data-pagosya-cart hidden></div>
+  <div class="global-status" data-pagosya-status role="status" aria-live="polite"></div>
+
+  <footer class="site-footer"><a class="footer-wordmark" href="index.html">Trama</a><p>Prendas cotidianas con colores y tallas.</p><nav aria-label="Enlaces del pie"><a href="#catalogo-mesa">Catálogo</a><button type="button" data-cart-open>Mi pedido <span data-cart-count>0</span></button></nav></footer>
+
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Bricolage Grotesque variable en todo el sistema. Marca 26/28, títulos de bebida 42/42 en escritorio y 30/31 en móvil, precios 22/24, cuerpo 16/23 y metadatos 12/16 en mayúsculas con espaciado amplio. Los tamaños usan cifras tabulares; titulares con letter-spacing de -0.025em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "carta-directa",
+      "nota-de-barra"
+    ],
+    "catalogSection": "carta-directa",
+    "mobileRule": "Cabecera de dos líneas: marca y “Mi pedido · 0” quedan visibles; Carta puede ir como ancla secundaria, no dentro de un menú obligatorio. Cada bebida se convierte en una fila vertical compacta con nombre/precio juntos, botones segmentados de 44 px para volumen, stepper y Añadir de ancho disponible. La primera compra permanece dentro de 390×844 y todo funciona estáticamente con movimiento reducido."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f4eddd",
+      "resolved": "#f4eddd",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#32162f",
+      "resolved": "#32162f",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#8b452c",
+      "resolved": "#8b452c",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf0",
+      "resolved": "#fffaf0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fbf6e9",
+      "resolved": "#fbf6e9",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#5a3654",
+      "resolved": "#5a3654",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Bricolage Grotesque\",sans-serif",
+      "resolved": "\"Bricolage Grotesque\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "\"Bricolage Grotesque\",sans-serif",
+      "resolved": "\"Bricolage Grotesque\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

@@ -14,8 +14,10 @@ export class PayoutsController {
   @ApiBearerAuth()
   @UseGuards(MerchantAuthGuard)
   async getBalance(@CurrentMerchant() merchant: { id: string }) {
-    const payableBalance = await this.payouts.getPayableBalance(merchant.id);
-    return { payableBalance, currency: "BOB" };
+    const balances = await this.payouts.getPayableBalances(merchant.id);
+    const payableBalance = balances.find((b) => b.currency === "BOB")?.payableBalance ?? 0;
+    // payableBalance/currency stay for existing dashboard clients; balances is the source of truth.
+    return { payableBalance, currency: "BOB", balances };
   }
 
   @Get("payouts.pdf")

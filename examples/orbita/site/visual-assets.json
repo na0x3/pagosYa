@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/image-4d9eab2b58fa.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Botella Órbita 03 en color grafito; color de portada, sin filtros ni recoloración."
+    },
+    {
+      "path": "assets/image-a1be9b4c2923.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Mochila Rover 02 en color bermellón; color de portada, sin filtros ni recoloración."
+    },
+    {
+      "path": "assets/image-c40ec7b8528c.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Kit de Misión 04 con estuche y parches; foto de producto, no campaña."
+    },
+    {
+      "path": "assets/image-d7a9c0dba65d.jpg",
+      "role": "background",
+      "description": "Fotografía de campaña para el hero a gran escala; paisaje marciano con excursionista a la derecha, que debe permanecer visible y sin texto encima."
+    },
+    {
+      "path": "assets/image-d89b02e383f1.jpg",
+      "role": "product",
+      "description": "Fotografía aprobada de Parka Cráter 01 en color hueso; color de portada, sin filtros ni recoloración."
+    }
+  ]
+}

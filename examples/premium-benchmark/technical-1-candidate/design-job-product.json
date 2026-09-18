@@ -1,0 +1,68 @@
+{
+  "id": "cmu2tn48y0034txevn17346o3",
+  "requestId": "bf7827de-d90b-4d56-9536-cc009e4491ae",
+  "revision": 2,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 21.6568,
+  "observedCredits": 21.6568,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "6f7309a7-a05b-401a-aeae-79fdbc9d9d24",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:23:22.724Z",
+      "finishedAt": "2026-09-15T15:23:30.657Z",
+      "actualMicroUsd": 20719,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "b1bfe22e-ae26-4a73-8cae-6f6ec9d738ed",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:23:31.712Z",
+      "finishedAt": "2026-09-15T15:24:33.180Z",
+      "actualMicroUsd": 160247,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "f5d19e3a-ee8e-47fc-b623-e6350818b03f",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:24:36.804Z",
+      "finishedAt": "2026-09-15T15:24:48.792Z",
+      "actualMicroUsd": 35602,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:23:20.002Z",
+  "updatedAt": "2026-09-15T15:24:48.795Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "B es preferible: elimina la navegación duplicada de A, hace explícita la opción elegida y muestra el importe en la acción principal sin perder información útil. La jerarquía de compra y la composición móvil son más claras, pero persiste una carencia importante en la ficha.",
+    "findings": [
+      {
+        "category": "imagery",
+        "location": "Área principal de producto, antes del nombre y la configuración",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Incorporar la fotografía de producto confirmada como bloque principal —aproximadamente la mitad del ancho en escritorio y ancho completo en móvil— con miniaturas legibles si existen imágenes adicionales. No sustituir su ausencia por ilustraciones o diagramas inventados.",
+        "observation": "La ficha no presenta fotografía ni otro recurso visual del producto. En escritorio, todo el ancho de contenido queda destinado a texto y controles; en móvil tampoco hay una imagen a ancho completo. Esto impide la anatomía esperada de una página de producto, donde la visualización del artículo debe dominar el primer bloque de compra."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_0ccbf5829f04c061016aa9633597b087d28091adc04480f2ba",
+    "regressions": [],
+    "providerMicroUsd": 35602
+  },
+  "resumeAvailable": false
+}

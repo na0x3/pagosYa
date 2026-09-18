@@ -1,0 +1,76 @@
+{
+  "id": "cmu2t9h2n0001txevelihlf5i",
+  "requestId": "d51e13bb-14e9-4de6-8d73-bc435d88b82c",
+  "revision": 1,
+  "page": "product.html",
+  "status": "RETAINED_BASELINE",
+  "stage": "COMPARE",
+  "maxCredits": 150,
+  "reservedCredits": 18.1728,
+  "observedCredits": 18.1728,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "c4ee3df1-b162-4603-b21b-def8a0057fe4",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:12:46.453Z",
+      "finishedAt": "2026-09-15T15:12:56.265Z",
+      "actualMicroUsd": 7446,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "10c62fff-3f0c-40ca-ad00-bc81dd8dee89",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:12:56.831Z",
+      "finishedAt": "2026-09-15T15:14:11.522Z",
+      "actualMicroUsd": 137507,
+      "reservedMicroUsd": 850000
+    },
+    {
+      "id": "21b98d49-2b99-4726-8322-ebad6e74e769",
+      "stage": "COMPARE",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-15T15:14:15.496Z",
+      "finishedAt": "2026-09-15T15:14:28.679Z",
+      "actualMicroUsd": 36775,
+      "reservedMicroUsd": 250000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-15T15:12:43.440Z",
+  "updatedAt": "2026-09-15T15:14:28.683Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "A es preferible: conserva el mismo contenido útil y elimina la navegación duplicada que B añade antes de las migas. Aún queda una página de compra muy desbalanceada en escritorio y la acción principal no comunica el total resultante.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Bloque principal de producto, a la derecha del título y de las opciones",
+        "severity": "major",
+        "viewport": "desktop",
+        "correction": "No inventar imágenes; en su lugar, redistribuir el layout para que la información y configuración de compra aprovechen el ancho disponible en escritorio, o reservar ese espacio solo si existe un recurso visual confirmado que pueda ocuparlo.",
+        "observation": "La interfaz de producto queda contenida en una columna de aproximadamente la mitad del ancho, mientras la otra mitad permanece vacía de principio a fin. Al no haber fotografía disponible, ese vacío domina la composición y debilita la jerarquía de la ficha."
+      },
+      {
+        "category": "readability",
+        "location": "Área de cantidad y botón “Añadir al pedido”",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Cuando haya una combinación elegida, mostrar el total correspondiente dentro de la acción principal o inmediatamente asociado a ella, manteniendo cantidad y CTA como un único bloque de compra.",
+        "observation": "La cantidad y el botón están próximos, pero la acción solo muestra el texto de añadido; no incorpora un total visible tras las opciones, pese a que color y talla presentan precios que pueden variar."
+      }
+    ],
+    "preference": "candidate",
+    "responseId": "resp_03c56e8792b0cd8f016aa960c8da6887d2a1efe4ad6d6e0ab6",
+    "regressions": [],
+    "providerMicroUsd": 36775
+  },
+  "resumeAvailable": false
+}

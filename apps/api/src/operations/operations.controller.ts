@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { GoogleCalendarService } from "./google-calendar.service";
@@ -65,6 +65,10 @@ export class OperationsController {
   createIntegration(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateIntegrationDto) { return this.operations.createIntegration(this.merchantId(req), storeId, dto); }
   @Get("integrations")
   listIntegrations(@Req() req: MerchantRequest, @Param("storeId") storeId: string) { return this.operations.listIntegrations(this.merchantId(req), storeId); }
+  @Get("integrations/:id/mappings")
+  listProductMappings(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string) { return this.operations.listProductMappings(this.merchantId(req), storeId, id); }
+  @Delete("integrations/:id/mappings/:mappingId")
+  deleteProductMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Param("mappingId") mappingId: string) { return this.operations.deleteProductMapping(this.merchantId(req), storeId, id, mappingId); }
   @Post("integrations/:id/mappings")
   createProductMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: CreateProductMappingDto) { return this.operations.createProductMapping(this.merchantId(req), storeId, id, dto); }
   @Post("integrations/:id/subscription-plan-mappings")

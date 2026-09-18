@@ -1,7 +1,9 @@
+import { sourceVisitToken } from './source-attribution';
+import { storePartnerCode } from "./partner-referral";
 import { PaymentIntent, PaymentMethodType } from "@pagosya/shared-types";
 import type { StoreSiteDocument } from "./site-document";
 
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/v1";
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/v1";
 const API_ROOT_URL = API_BASE_URL.replace(/\/v1\/?$/, "");
 
 export interface CheckoutSession {
@@ -11,6 +13,7 @@ export interface CheckoutSession {
   status: string;
   description: string | null;
   merchantName: string;
+  branding?: import("@pagosya/shared-types").CheckoutBranding | null;
   metadata: Record<string, unknown> | null;
   recipient: {
     name: string | null;
@@ -19,6 +22,7 @@ export interface CheckoutSession {
     phone: string | null;
   } | null;
   trackingToken: string | null;
+  international?: { available: boolean };
 }
 
 async function parseOrThrow<T>(response: Response): Promise<T> {
@@ -55,6 +59,7 @@ export async function fetchSession(clientSecret: string, publishableKey?: string
  * customer buying several things adds them to one Cart and pays once.
  */
 export interface StoreItem {
+  fulfillmentType?: 'PHYSICAL' | 'DIGITAL';
   id: string;
   categoryId: string | null;
   name: string;
@@ -62,14 +67,15 @@ export interface StoreItem {
   imageUrls: string[];
   imagePositions?: string[];
   tags: string[];
+  recommendedProductIds: string[];
   // null = unlimited/not tracked, 0 = genuinely sold out.
   stock: number | null;
   // Cart enforcement ceiling. This remains available when exact inventory is
   // hidden from storefront copy, so the shopper still cannot exceed stock.
   purchaseLimit?: number | null;
   color: string | null;
-  variants: Array<{ id: string; name: string; amount: number; stock?: number | null; purchaseLimit?: number | null }>;
-  extras: Array<{ id: string; name: string; amount: number; required: boolean; available: boolean; groupName?: string; freeAllowance?: number }>;
+  variants: Array<{ id: string; name: string; amount: number; options?: Array<{ name: string; value: string }>; imageUrl?: string; stock?: number | null; purchaseLimit?: number | null }>;
+  extras: Array<{ id: string; name: string; amount: number; required: boolean; available: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string; imageUrl?: string }>;
   amount: number;
   currency: string;
   discountPercent: number | null;
@@ -82,6 +88,8 @@ export interface StoreItem {
 export interface StoreCategory {
   id: string;
   name: string;
+  bannerUrl?: string | null;
+  highlights?: string[];
 }
 
 /** Merchant-defined link button (social profile, catalog, map, ...) shown under the store header. */
@@ -99,14 +107,19 @@ export interface StoreHeroSlide {
   body?: string;
   ctaLabel?: string;
   ctaUrl?: string;
+  titleStyle?: import("./site-document").StoreCanvasTextStyle;
+  bodyStyle?: import("./site-document").StoreCanvasTextStyle;
 }
 
 export const STORE_MOTION_EXPERIENCES = [
-  "story-scroll", "coverflow-carousel", "hero-carousel", "image-stream",
+  "story-scroll", "hero-carousel", "image-stream",
   "scroll-expansion", "hero-gallery-scroll", "stagger-testimonials",
   "portfolio-scroller", "circle-reveal", "clarity-marquee",
   "layered-text", "text-rotate", "text-glitch", "text-reveal-block", "text-along-path",
-  "full-screen-chapters", "magnetic-target", "frame-sequence", "3d-gallery",
+  "full-screen-chapters", "magnetic-target", "frame-sequence",
+  "video-background",
+  "draggable-cards", "perspective-carousel", "link-preview", "video-pin-reveal",
+  "gallery-accordion", "split-scroll", "sticky-gallery", "sticky-story", "text-parallax",
 ] as const;
 export type StoreMotionExperience = (typeof STORE_MOTION_EXPERIENCES)[number];
 export type StoreContentSection = "hero" | "products" | "about" | "gallery" | "contact" | "location" | "links" | "motion" | `motion-${StoreMotionExperience}` | `animation-${string}` | `site-${string}`;
@@ -124,12 +137,27 @@ export interface StoreEditorialImage {
   textWidthPercent?: number;
   textAlign?: "left" | "center" | "right";
   textColor?: string;
+  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
+}
+
+export interface StoreAnimationTextBlock {
+  id: string;
+  role: "title" | "subtitle";
+  text: string;
+  textPositionX?: number;
+  textPositionY?: number;
+  textScale?: number;
+  textWidthPercent?: number;
+  textAlign?: "left" | "center" | "right";
+  textColor?: string;
+  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
 }
 
 export interface StoreAnimation {
   id: string;
   name: string;
   type: StoreMotionExperience;
+  pageId?: string;
   title?: string;
   subtitle?: string;
   productId?: string;
@@ -145,6 +173,8 @@ export interface StoreAnimation {
   textWidth?: "narrow" | "medium" | "wide";
   textColor?: string;
   backgroundColor?: string;
+  fontStyle?: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
+  textBlocks?: StoreAnimationTextBlock[];
   media: StoreEditorialImage[];
 }
 
@@ -172,6 +202,7 @@ export interface StoreLocation {
 }
 
 export interface Store {
+  publishedSourceRevision?: number | null;
   storeId: string;
   storeName: string;
   tagline: string | null;
@@ -208,7 +239,7 @@ export interface Store {
   // "#RRGGBB" brand accent; null = default palette accent.
   accentColor: string | null;
   // Curated merchant storefront font family.
-  fontStyle: "modern" | "editorial" | "friendly" | "classic" | "geometric";
+  fontStyle: "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
   // "rounded" | "pill" | "square"
   buttonStyle: string;
   // "chalkboard" | "kraft" | "painted" — storefront ground material.
@@ -219,7 +250,7 @@ export interface Store {
   announcementSpeed: number;
   announcementSize: "small" | "medium" | "large";
   announcementColor: string;
-  announcementFont?: "store" | "modern" | "editorial" | "friendly" | "classic" | "geometric";
+  announcementFont?: "store" | "modern" | "editorial" | "friendly" | "classic" | "geometric" | "artisan" | "condensed" | "luxury";
   announcementEffect?: "none" | "wave" | "pulse" | "sparkle";
   promotionEnabled: boolean;
   promotionImageUrl: string | null;
@@ -233,7 +264,7 @@ export interface Store {
   contentOrder?: StoreContentSection[];
   sectionBackgrounds?: Record<string, string>;
   layoutStyle?: "cinematic" | "editorial" | "collage" | "catalog-first";
-  experienceStyle?: "coverflow" | "diagonal-marquee" | "story-scroller";
+  experienceStyle?: "editorial-grid" | "story-scroller";
   motionDuoEnabled?: boolean;
   motionExperience?: StoreMotionExperience;
   motionExperiences?: StoreMotionExperience[];
@@ -248,11 +279,18 @@ export interface Store {
   leadCaptureUrl: string | null;
   cartRecommendationsEnabled: boolean;
   cartRecommendationProductIds: string[];
+  creditsEnabled?: boolean;
+  digitalGoodsEnabled?: boolean;
+  shippingEnabled?: boolean;
+  shippingPickupEnabled?: boolean;
+  shippingCarriersEnabled?: boolean;
+  bundlesEnabled?: boolean;
   showLowStockToCustomers: boolean;
   appointmentOfferings?: AppointmentOffering[];
   links: StoreLink[];
   categories: StoreCategory[];
   items: StoreItem[];
+  collections: { id: string; slug: string; name: string; productIds: string[] }[];
 }
 
 export interface PublishedStore {
@@ -280,12 +318,18 @@ export interface PublishedStoresResponse {
 
 /** Resolve a "/v1/uploads/..." path (product photo, store logo) against the API host. */
 export function assetUrl(path: string | null): string | null {
-  return path ? `${API_ROOT_URL}${path}` : null;
+  if (!path?.trim()) return null;
+  const value = path.trim();
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  return `${API_ROOT_URL}${value.startsWith("/") ? value : `/${value}`}`;
 }
 
 export async function fetchStore(slug: string, options: { preview?: boolean } = {}): Promise<Store> {
+  if (!options.preview) storePartnerCode(slug);
   const previewQuery = options.preview ? "?preview=1" : "";
-  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/store${previewQuery}`);
+  // A storefront is merchant-authored live data. Never reuse an earlier GET
+  // after the merchant saves and then opens or reloads the public link.
+  const response = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/store${previewQuery}`, { cache: "no-store" });
   return parseOrThrow<Store>(response);
 }
 
@@ -340,10 +384,19 @@ export interface CartCheckoutResult {
   fulfillmentMethod?: "pickup" | "delivery";
 }
 
+export interface TrackedShipment {
+  carrierName: string;
+  status: string;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  events: Array<{ status: string; description: string | null; occurredAt: string }>;
+}
+
 export interface TrackedOrder {
   reference: string;
   storeName: string;
   items: Array<{
+    paymentLinkId?: string;
     name: string;
     variantName?: string;
     extras?: Array<{ name: string }>;
@@ -360,6 +413,7 @@ export interface TrackedOrder {
   fulfillment: { locationName: string; method: "pickup" | "delivery" | null; readyAt: string | null } | null;
   store: { slug: string; logoUrl: string | null; contactPhone: string | null; contactEmail: string | null } | null;
   delivery: { status: string; estimatedAt: string | null; deliveredAt: string | null } | null;
+  shipment?: TrackedShipment | null;
 }
 
 export async function fetchTrackedOrder(token: string): Promise<TrackedOrder> {
@@ -384,16 +438,26 @@ export async function quotePromoCode(slug: string, code: string): Promise<PromoC
 
 /** This call is what would otherwise be a merchant backend's own POST /v1/payment_intents —
  * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
+export type CartFulfillment = { shippingCountry?: string; shippingPostalCode?: string; creditCode?: string; locationId?: string; fulfillmentMethod?: "pickup" | "delivery"; shippingZoneId?: string; shippingAddress?: string; shippingDestination?: { department: string; city: string; street: string; references?: string; lat: number; lng: number; recipientName: string; recipientPhone: string } };
+export type CartQuote = { creditAmount?: number; orderTotal?: number; subtotal: number; discountAmount: number; shippingAmount: number; amount: number; currency: string; shippingOptions: Array<{ id: string; name: string; amount: number; currency: string; carrierId?: string | null }> };
+export async function quoteCart(slug: string, items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[], promoCode?: string, fulfillment?: CartFulfillment): Promise<CartQuote> {
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/shipping/quote`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ items, ...(promoCode ? { promoCode } : {}), ...fulfillment }),
+  });
+  return parseOrThrow<CartQuote>(response);
+}
 export async function checkoutCart(
   slug: string,
   items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[],
   promoCode?: string,
-  fulfillment?: { locationId: string; fulfillmentMethod: "pickup" | "delivery" },
+  fulfillment?: CartFulfillment,
+  funnelToken?: string,
 ): Promise<CartCheckoutResult> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/cart-checkout`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ items, ...(promoCode ? { promoCode } : {}), ...fulfillment }),
+    body: JSON.stringify({ items, funnelToken, recoveryToken: (window as any).PAGOSYA_RETENTION_STATE?.slug === slug ? (window as any).PAGOSYA_RETENTION_STATE.token || undefined : undefined, sourceVisitToken: sourceVisitToken(slug), partnerCode: storePartnerCode(slug), ...(promoCode ? { promoCode } : {}), ...fulfillment }),
   });
   return parseOrThrow<CartCheckoutResult>(response);
 }
@@ -419,6 +483,15 @@ export async function submitStoreLead(
   return parseOrThrow<{ submitted: true }>(response);
 }
 
+export async function subscribeStoreNewsletter(slug: string, email: string): Promise<{ subscribed: true }> {
+  const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/newsletter`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return parseOrThrow<{ subscribed: true }>(response);
+}
+
 export interface CustomerContact {
   name: string;
   email: string;
@@ -434,8 +507,9 @@ export interface CustomerContact {
 export async function confirmPaymentIntent(
   paymentIntentId: string,
   clientSecret: string,
-  paymentMethod: { type: PaymentMethodType; token: string },
+  paymentMethod: { type: PaymentMethodType; token: string; metadata?: Record<string, unknown> },
   customer: CustomerContact,
+  international?: { rail: "dlocal"; country: string },
 ): Promise<{ paymentIntent: PaymentIntent; railResult: { status: string; actionRequired?: unknown; failureReason?: string } }> {
   const customerName = customer.name.trim();
   const customerDocument = customer.document?.trim();
@@ -455,8 +529,27 @@ export async function confirmPaymentIntent(
       customerLatitude: customer.customerLatitude,
       customerLongitude: customer.customerLongitude,
       customerLocationAccuracy: customer.customerLocationAccuracy,
+      ...(international ?? {}),
     }),
   });
+  return parseOrThrow(response);
+}
+
+export interface InternationalMethods {
+  country: string;
+  quote: { amount: number; currency: "USD"; originalAmount: number; originalCurrency: string; rate: number };
+  methods: { id: string; kind: "CARD" | "LOCAL_METHOD"; name: string; logo: string | null }[];
+}
+
+export async function fetchInternationalMethods(clientSecret: string, country: string): Promise<InternationalMethods> {
+  const response = await fetch(`${API_BASE_URL}/checkout/international_methods`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${clientSecret}` },
+    body: JSON.stringify({ country }),
+  });
+  // The FX-quote provider can be briefly down; surface that as a distinct
+  // code so the caller can show a friendlier message than the raw body.
+  if (response.status === 409) throw new Error("intl_fx_rate_unavailable");
   return parseOrThrow(response);
 }
 
@@ -533,9 +626,10 @@ export async function simulateRailCallback(
   const internalSecret = import.meta.env.VITE_DEV_INTERNAL_RAIL_CALLBACK_SECRET;
   if (!internalSecret) throw new Error("VITE_DEV_INTERNAL_RAIL_CALLBACK_SECRET is not set");
 
-  await fetch(`${API_ROOT_URL}/internal/rails/${railId}/callback`, {
+  const response = await fetch(`${API_ROOT_URL}/internal/rails/${railId}/callback`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${internalSecret}` },
     body: JSON.stringify({ paymentIntentId, status, railReference: `dev_sim_${Date.now()}` }),
   });
+  if (!response.ok) throw new Error(`Rail callback failed (${response.status})`);
 }

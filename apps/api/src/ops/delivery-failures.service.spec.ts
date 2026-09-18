@@ -5,6 +5,7 @@ function makeFakePrisma() {
     payout: { findMany: jest.fn() },
     invoice: { findMany: jest.fn() },
     webhookEvent: { findMany: jest.fn() },
+    storeEmailDelivery: { findMany: jest.fn().mockResolvedValue([]) },
   };
 }
 

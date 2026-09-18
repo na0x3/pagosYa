@@ -1,0 +1,50 @@
+/* Merchant payment form. Deliberately scoped away from the pagosYa printer overlay. */
+body.payment-page.store-branded-checkout { background:var(--checkout-background); }
+body.payment-page.store-branded-checkout #app {
+  --pg-font:var(--checkout-body-font);
+  --debt-ink:var(--checkout-foreground);
+  --debt-paper:var(--checkout-surface);
+  --debt-blue:var(--checkout-background);
+  --debt-yellow:var(--checkout-surface);
+  --debt-green:var(--checkout-surface);
+  --debt-violet:var(--checkout-background);
+  --checkout-line:color-mix(in srgb,var(--checkout-foreground) 24%,transparent);
+  color:var(--checkout-foreground);background:var(--checkout-background);font-family:var(--checkout-body-font);
+  border-color:var(--checkout-line);box-shadow:none;
+}
+.store-branded-checkout #app :is(input,select,textarea,button) { font-family:var(--checkout-body-font); }
+.store-branded-checkout #app .payment-summary-panel { background:var(--checkout-background);border-color:var(--checkout-line); }
+.store-branded-checkout #app .payment-form-panel { background:var(--checkout-surface); }
+.store-branded-checkout #app .merchant-row { gap:16px;align-items:center;margin-bottom:64px; }
+.store-branded-checkout #app .merchant-avatar { background:transparent;border:1px solid var(--checkout-line);border-radius:var(--checkout-radius);color:inherit; }
+.store-branded-checkout #app .checkout-store-logo { width:64px;height:64px;object-fit:contain;flex:none; }
+.store-branded-checkout #app .merchant-name { font-family:var(--checkout-heading-font);font-size:clamp(28px,4vw,52px);line-height:1.1;font-weight:600;overflow-wrap:anywhere; }
+.store-branded-checkout #app .checkout-summary-label { margin:0 0 16px;font-size:13px;letter-spacing:.08em;text-transform:uppercase; }
+.store-branded-checkout #app .amount { font-family:var(--checkout-heading-font);font-size:clamp(40px,5vw,68px);line-height:1.1;font-weight:500;overflow-wrap:anywhere; }
+.store-branded-checkout #app .description { margin-top:24px;font-size:16px;line-height:1.65;font-weight:400;overflow-wrap:anywhere; }
+.store-branded-checkout #app .payment-page-title { font-family:var(--checkout-heading-font);font-weight:500; }
+.store-branded-checkout #app .field label { font-size:14px;font-weight:600; }
+.store-branded-checkout #app .field :is(input,select,textarea) { min-height:48px;font-size:16px;border:1px solid var(--checkout-line);border-radius:var(--checkout-radius);background:transparent;color:inherit; }
+.store-branded-checkout #app .field :is(input,textarea)::placeholder { color:var(--checkout-foreground);opacity:.6; }
+.store-branded-checkout #app .field :is(input,select,textarea):focus { border-color:var(--checkout-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--checkout-accent) 25%,transparent); }
+.store-branded-checkout #app :is(.hint,.location-status,.delivery-request-toggle small,.direct-charge-context p,.direct-charge-context span) { color:var(--checkout-foreground);font-size:12px;line-height:1.5; }
+.store-branded-checkout #app .field-error:not(:empty) { color:var(--checkout-foreground);font-size:13px;font-weight:700; }
+.store-branded-checkout #app [aria-invalid=true] { outline:2px solid var(--checkout-foreground);outline-offset:2px; }
+.store-branded-checkout #app .delivery-request { background:transparent;border:1px solid var(--checkout-line);border-radius:var(--checkout-radius); }
+.store-branded-checkout #app .delivery-request-fields { border-color:var(--checkout-line); }
+.store-branded-checkout #app .delivery-request-icon { border:0;background:transparent; }
+.store-branded-checkout #app .delivery-request-toggle input { accent-color:var(--checkout-accent); }
+.store-branded-checkout #app .tabs { padding:0;border:0;background:transparent;gap:8px; }
+.store-branded-checkout #app .tab { border:1px solid var(--checkout-line);border-radius:var(--checkout-radius);background:transparent;color:inherit;box-shadow:none;min-height:60px; }
+.store-branded-checkout #app .tab.active { background:var(--checkout-accent);border-color:var(--checkout-accent);color:var(--checkout-accent-foreground);box-shadow:none; }
+.store-branded-checkout #app :is(button.primary,.location-capture) { border:1px solid var(--checkout-accent);border-radius:var(--checkout-radius);background:var(--checkout-accent);color:var(--checkout-accent-foreground);box-shadow:none;transform:none; }
+.store-branded-checkout #app button.primary { min-height:56px;font-size:16px;font-weight:600; }
+.store-branded-checkout #app :is(button.primary,.location-capture):hover:not(:disabled) { filter:brightness(.94);box-shadow:none;transform:none; }
+.store-branded-checkout #app button.secondary { border:0;border-radius:var(--checkout-radius);background:transparent;color:inherit;text-decoration:underline;text-underline-offset:4px;min-height:44px; }
+.store-branded-checkout #app :is(button,a):focus-visible { outline:2px solid var(--checkout-foreground);outline-offset:4px; }
+.store-branded-checkout #app .payment-secure-note { background:var(--checkout-surface);border-top:1px solid var(--checkout-line);color:inherit;font-size:12px; }
+.store-branded-checkout #app .payment-secure-note svg { color:inherit; }
+.store-branded-checkout #app .checkout-preview-notice { margin:0 0 32px;padding-bottom:12px;border-bottom:1px solid var(--checkout-line);font-size:12px;line-height:1.5; }
+@media(max-width:760px){.store-branded-checkout #app .merchant-row{margin-bottom:32px}.store-branded-checkout #app .checkout-store-logo{width:48px;height:48px}.store-branded-checkout #app .description{margin-top:16px}.store-branded-checkout #app .checkout-preview-notice{margin-bottom:20px}}
+
+.store-branded-checkout #app .tab svg { color:currentColor; }

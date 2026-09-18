@@ -1,0 +1,31 @@
+{
+  "id": "cmu0eyuzh001svjri5bwmws6f",
+  "requestId": "b28a0b56-c57a-4f3f-8352-ec26e02d3de0",
+  "revision": 1,
+  "page": "index.html",
+  "status": "FAILED",
+  "stage": "REVIEW_BASELINE",
+  "maxCredits": 150,
+  "reservedCredits": 15,
+  "observedCredits": 0,
+  "repairs": 0,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "3a709265-4197-46eb-905f-43ae19bf829a",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "unknown",
+      "startedAt": "2026-09-13T22:57:03.308Z",
+      "finishedAt": "2026-09-13T22:57:04.324Z",
+      "actualMicroUsd": null,
+      "reservedMicroUsd": 150000
+    }
+  ],
+  "error": "No se completó la evaluación visual.",
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:57:01.277Z",
+  "updatedAt": "2026-09-13T22:57:04.325Z",
+  "report": null,
+  "resumeAvailable": true
+}

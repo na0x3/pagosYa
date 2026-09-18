@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { json, type NextFunction, type Request, type Response } from "express";
+import { randomUUID } from "node:crypto";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
@@ -39,6 +40,14 @@ async function bootstrap() {
   const trustProxy = config.get<false | number | string>("app.trustProxy") ?? false;
   if (trustProxy !== false) app.set("trust proxy", trustProxy);
 
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const supplied = req.get("x-request-id");
+    const requestId = supplied && /^[A-Za-z0-9._-]{1,100}$/.test(supplied) ? supplied : `req_${randomUUID()}`;
+    req.headers["x-request-id"] = requestId;
+    res.setHeader("X-Request-Id", requestId);
+    next();
+  });
+
   app.use(
     helmet({
       contentSecurityPolicy: false,
@@ -66,7 +75,15 @@ async function bootstrap() {
   // Slightly above Express's 100kb default for general headroom. Product photos and
   // merchant logos go through multipart uploads (see UploadsModule), not JSON bodies,
   // so this limit no longer needs to accommodate base64 image payloads.
-  app.use(json({ limit: "1mb", strict: true, reviver: safeJsonReviver }));
+  app.use(json({
+    limit: "1mb",
+    strict: true,
+    reviver: safeJsonReviver,
+    // Signed webhooks are verified over the exact bytes received, not a re-serialization.
+    verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
+      if (req.url?.startsWith("/v1/webhooks/dlocal/")) req.rawBody = Buffer.from(buf);
+    },
+  }));
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (jsonIsTooComplex(req.body)) {
       return res.status(400).json({ statusCode: 400, message: "JSON body is too deeply nested or complex" });

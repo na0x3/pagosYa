@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Finalizar pedido — Punto</title>
+  <meta name="description" content="Revisa tu pedido de Punto y continúa al pago de forma segura.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-checkout">
+  <header class="site-header">
+    <div class="masthead">
+      <a class="wordmark" href="index.html">Punto<span aria-hidden="true">.</span></a>
+      <button class="cart-trigger" type="button" data-cart-open aria-label="Abrir mi pedido"><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span aria-hidden="true">·</span><span data-cart-count>0</span></button>
+    </div>
+    <nav class="site-nav" aria-label="Navegación principal"><a href="index.html#catalogo-tecnico">Equipo</a><a href="index.html#comparacion-esencial">Comparación</a><span aria-current="page">Finalizar pedido</span></nav>
+  </header>
+  <main class="commerce-main checkout-main">
+    <a class="back-link" href="index.html#catalogo-tecnico"><img src="assets/icons/arrow-left.svg" alt=""> Seguir eligiendo</a>
+    <div data-pagosya-checkout-page></div>
+  </main>
+  <footer class="site-footer"><a class="wordmark wordmark-small" href="index.html">Punto<span aria-hidden="true">.</span></a><p>Accesorios de escritorio con especificaciones claras.</p></footer>
+  <section data-pagosya-cart hidden aria-label="Mi pedido"></section>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

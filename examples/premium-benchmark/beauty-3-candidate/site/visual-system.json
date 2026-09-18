@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Instrument Sans en toda la interfaz: marca 700 a 54/58 px (34/38 móvil), nombres 600 a 30/34 (25/29 móvil), texto 400 a 16/25, precios 600 a 18/22 y etiquetas 12 px en mayúsculas espaciadas. Letter-spacing de títulos: -0.03em.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-mostador",
+      "nota-cotidiana"
+    ],
+    "catalogSection": "catalogo-mostador",
+    "mobileRule": "Cabecera de dos niveles muy compacta: marca arriba y “Mi pedido · 0” siempre visible junto al control de menú. Los productos pasan a una columna, con selector segmentado de 44 px y bloque precio–añadir que envuelve sin recortes a 320 px. Se reduce el numeral decorativo para no competir con la compra."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f8f4ed",
+      "resolved": "#f8f4ed",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#311e2e",
+      "resolved": "#311e2e",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#60334f",
+      "resolved": "#60334f",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf4",
+      "resolved": "#fffaf4",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#eee7f1",
+      "resolved": "#eee7f1",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#cfc1d6",
+      "resolved": "#cfc1d6",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "3px",
+      "resolved": "3px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "concepts": [
+    {
+      "name": "Muestrario editorial",
+      "premise": "Una tienda-catálogo que abre directamente con las dos prendas, tratadas como páginas enfrentadas de un muestrario. Es la opción más inmediata y densa: a diferencia de las otras propuestas, no antepone manifiesto ni índice; cada producto reúne nombre, variantes, precio y compra en una composición horizontal sin tarjeta convencional.",
+      "opening": "Masthead compacto con TRAMA, enlace al catálogo y «Mi pedido 0». Debajo, el catálogo comienza antes de 320 px: la camisa ocupa el panel dominante y la camiseta una columna secundaria; ambos muestran precio inicial, selectores y «Añadir al pedido» en el primer viewport de escritorio y móvil.",
+      "flow": "Inicio centrado en elegir color y talla; las descripciones breves aparecen junto a sus controles. La página de producto amplía la misma ficha con título de gran escala, descripción, opciones y bloque de compra fijo en lectura, sin galería vacía. Carrito y checkout conservan líneas editoriales, totales claros y selección de recogida, sin inventar datos de ubicación.",
+      "typography": "Fraunces variable para nombres y precios de gran escala; Instrument Sans para navegación, opciones y checkout. H1 de 64–84 px en escritorio, 38–46 px en móvil; texto de 16–18 px. Cursivas de Fraunces reservadas para «cotidiano» y pequeñas notas, nunca para controles.",
+      "imagery": "Sin fotografías ni miniaturas falsas. El producto se representa únicamente mediante contenido real y campos tipográficos. Líneas finas repetidas, remates de registro y grandes planos de papel/crudo crean una alusión abstracta al tejido; el cobalto identifica selección y acciones, no áreas decorativas arbitrarias.",
+      "mobile": "Cabecera de dos líneas: TRAMA y «Mi pedido 0» siempre visibles; navegación secundaria mínima. Las fichas se apilan, pero la primera conserva nombre, precio, color, talla y botón antes del primer scroll. Selectores de 44 px, acciones a ancho completo y resumen de pedido sin desplazamiento horizontal.",
+      "layout": {
+        "sections": [
+          "catalogo-muestrario",
+          "nota-de-trama"
+        ],
+        "catalogSection": "catalogo-muestrario",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "La palabra viste",
+      "premise": "Una apertura tipográfica espaciosa convierte el nombre Trama en la identidad principal antes de comprar. Se diferencia del muestrario por su entrada pausada y del índice por evitar una tabla utilitaria: el relato se construye con escala, ritmo y contraste, seguido de dos bandas de producto completas.",
+      "opening": "Una portada corta, no fotográfica, compone «TRAMA» en letras monumentales sobre papel cálido, atravesada por la frase «Prendas cotidianas / colores y tallas» y un enlace «Ver las prendas». Un pliegue cobalto vertical conduce al catálogo, que comienza después de esta introducción.",
+      "flow": "Tras la portada, cada producto ocupa una banda de ancho completo: información a la izquierda y configuración de compra a la derecha, alternando alineación sin alterar el orden de lectura. La página de producto reutiliza el pliegue cobalto como columna de opciones. Carrito y checkout reducen la escala y convierten ese pliegue en una barra de progreso y resumen, con recogida como método disponible.",
+      "typography": "Oswald variable para el wordmark y titulares condensados; Instrument Serif para descripciones breves y precios; Instrument Sans para controles. TRAMA alcanza 18–22vw en escritorio y 27vw en móvil, con límites para no recortar; nombres de producto de 42–58 px y 32–38 px en móvil.",
+      "imagery": "La ausencia de fotos se vuelve deliberada mediante letras recortadas por bloques CSS, reglas verticales y cambios de tinta a cobalto. No hay siluetas de prendas ni imágenes simuladas. Las variantes de color se expresan con texto y muestras geométricas claramente etiquetadas como opciones.",
+      "mobile": "La palabra TRAMA se divide de forma natural en dos líneas si lo exige 320 px; nunca usa nowrap. «Mi pedido 0» permanece junto al wordmark compacto. La portada se reduce a unos 55–65vh y el catálogo queda después; las bandas alternas pasan a una secuencia uniforme de nombre, descripción, opciones, precio y acción.",
+      "layout": {
+        "sections": [
+          "portada-palabra",
+          "catalogo-bandas",
+          "cierre-recogida"
+        ],
+        "catalogSection": "catalogo-bandas",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice de uso diario",
+      "premise": "Una interfaz inspirada en una hoja de especificaciones de moda: precisa, asimétrica y rápida de comparar. A diferencia de la portada expresiva, abre con un índice funcional; a diferencia del muestrario, separa exploración y configuración, llevando primero a la persona a escoger entre dos nombres y después a las fichas detalladas.",
+      "opening": "Bajo una cabecera negra con TRAMA y «Mi pedido 0», una tabla editorial muestra los dos productos como filas grandes: nombre, rasgo real, tallas disponibles y precio «desde». Cada fila enlaza a su ficha dentro del catálogo. Un bloque cobalto estrecho contiene el lema, no una llamada de compra ficticia.",
+      "flow": "El índice permite comparar algodón/manga larga frente a cuello redondo y las tallas existentes. El catálogo posterior presenta fichas desplegadas con selectores propios: color y talla para la camisa, talla para la camiseta, estados no disponibles visibles y acción junto al precio. Producto, carrito y checkout adoptan la misma retícula de columnas y resumen tabular.",
+      "typography": "Bricolage Grotesque como única familia, usando extremos de peso y tamaño: wordmark 800, nombres 600, metadatos 400 y precios 700. Titulares de 54–72 px en escritorio y 34–42 px en móvil; etiquetas de 12–13 px en mayúsculas con tracking abierto.",
+      "imagery": "Identidad completamente tipográfica con una retícula de líneas, números de columna y bloques sólidos de tinta, papel y cobalto. Los números funcionan como coordenadas editoriales, no como productos o afirmaciones. No se reservan áreas de medios ni se crean ilustraciones de ropa.",
+      "mobile": "El índice deja de ser tabla y se convierte en dos filas apiladas con nombre, rasgo, tallas y precio legibles; el enlace ocupa 44 px. La cabecera mantiene «Mi pedido 0» fuera del menú. En las fichas, opciones y compra quedan agrupadas y los estados agotados no dependen solo del color.",
+      "layout": {
+        "sections": [
+          "indice-prendas",
+          "catalogo-especificaciones"
+        ],
+        "catalogSection": "catalogo-especificaciones",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "El catálogo confirmado contiene solo dos prendas y ambas dependen de variantes concretas de talla; la camisa también exige color. «Muestrario editorial» hace visibles desde el inicio nombres, precios y acciones, priorizando la compra solicitada sin necesitar fotografías —no hay ninguna suministrada—. El contraste tinta/papel y el acento cobalto siguen la dirección explícita, mientras la jerarquía"
+  }
+}

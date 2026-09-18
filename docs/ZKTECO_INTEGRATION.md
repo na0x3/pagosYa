@@ -1,5 +1,7 @@
 # ZKTeco SpeedFace-V5 integration boundary
 
+> Archived 2026-09-12: the Events, ticketing, Face Entry, and event edge implementations have been retired. This document describes the former implementation.
+
 Target hardware: **ZKTeco SpeedFace-V5**
 
 Status: real adapter intentionally blocked pending official vendor documentation.

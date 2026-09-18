@@ -1,0 +1,8 @@
+Use case: ui-mockup
+Asset type: high-fidelity desktop web app composition probe, 16:10 landscape
+Primary request: Design the pagosYa merchant home as a task-concourse workspace where Yapi turns one merchant request into a visible sequence of safe actions and a live result. This is an operating app.
+Structure: slim left nav with four grouped destinations; a wide top prompt spanning the main workspace; below it, a ruled central action board with fixed columns "TAREA", "ESTADO", "CAMBIO", "APROBACIÓN" and four live rows; the selected row opens a large storefront preview directly beneath the board without leaving the page. A narrow right column shows the current store, safety boundary, and next required business action. The grid is familiar and semantic, not theatrical.
+Visual system: retain pagosYa Terminal Ledger rather than literal train-station styling. Matte graphite row headers, warm paper rows, 3px black frames, white monospace labels, amber active row lamp, green success, violet pending, blue information. Near-square corners and hard block shadow. No gradients, no glow, no excessive animation, no rounded card grid.
+Content: exact major labels: "PAGOSYA", "CREAR", "VENDER", "COBRAR", "CUMPLIR", "¿QUÉ QUIERES HACER?", "TAREA", "ESTADO", "CAMBIO", "APROBACIÓN", "CATÁLOGO IMPORTADO", "SITIO GENERADO", "ESPERANDO TU REVISIÓN", "VISTA PRIVADA", "APROBAR BORRADOR", "YAPI NUNCA CAMBIA PRECIOS NI COBROS SIN PEDÍRTELO". Other copy should be short and indistinct.
+Interaction implication: row state changes are the only motion; selecting a row focuses the corresponding preview state; advanced admin tools are secondary.
+Constraints: production-grade app UI, no marketing language, no fake claims or charts, no illustration, no code editor, no watermark.

@@ -2,12 +2,19 @@
   "name": "@pagosya/merchant-dashboard",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "node --watch --watch-preserve-output server.mjs",
+    "dev": "pnpm run build:studio && node --watch --watch-preserve-output server.mjs",
     "start": "node server.mjs",
-    "test": "playwright test"
+    "build": "pnpm run build:studio && tsc -p tsconfig.json && vite build",
+    "test": "pnpm run test:unit && playwright test",
+    "test:unit": "node --test unit/*.test.mjs src/*.test.mjs",
+    "build:studio": "pnpm --filter @pagosya/merchant-studio exec vite build --mode embedded"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8"
   }
 }

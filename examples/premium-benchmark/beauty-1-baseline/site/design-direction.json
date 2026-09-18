@@ -1,0 +1,65 @@
+{
+  "concepts": [
+    {
+      "name": "Carta de volúmenes",
+      "premise": "Una tienda catalog-first concebida como una carta cosmética precisa: los dos productos aparecen juntos y cada volumen se elige en línea. Frente a los otros conceptos, prioriza densidad útil, comparación inmediata y una jerarquía tipográfica sobria en lugar de una portada o un recorrido por pasos.",
+      "opening": "Masthead compacto con “Bruma”, el descriptor y navegación a Productos y Recogida. Debajo comienza inmediatamente una tabla editorial de dos filas: nombre, descripción, etiqueta cuando existe, selector de volumen, precio actualizado y “Añadir”. En escritorio ambas filas entran en la primera vista; en móvil abre directamente con Crema de manos, su precio y compra. “Mi pedido · 0” permanece visible en el encabezado móvil.",
+      "flow": "Inicio: elección directa entre Crema de manos y Jabón líquido, seguida de una breve nota factual sobre recogida. La página de producto amplía la misma fila en una composición de dos columnas, con descripción, selector Volumen, precio, cantidad y añadir agrupados. El pedido usa una lista tipográfica compacta con edición de volumen/cantidad; checkout continúa con resumen persistente y recogida, sin bloques promocionales ni afirmaciones añadidas.",
+      "typography": "Instrument Sans variable en toda la interfaz. Bruma en 48–72 px y peso 600; nombres de producto en 30–42 px; precios con cifras amplias en 24–30 px; cuerpo 16–18 px. Etiquetas y encabezados funcionales en 12–13 px, mayúsculas espaciadas. En móvil, marca 30 px, producto 28 px y controles 16 px; letter-spacing de titulares entre -0.03em y -0.01em.",
+      "imagery": "No usa fotografías, envases ni ilustraciones. La identidad nace de reglas finas color ciruela, grandes campos lavanda muy pálida y la alternancia entre texto alineado y cifras. El volumen seleccionado se enfatiza con un subrayado ancho, no con tarjetas repetidas.",
+      "mobile": "Encabezado de dos líneas muy compacto: Bruma y “Mi pedido · 0” siempre visibles; menú para enlaces secundarios. Cada producto se convierte en una ficha abierta sin marco, con nombre, descripción, selector segmentado de 44 px, precio y botón ancho. El primer producto y su acción quedan visibles antes del pliegue a 390 px; a 320 px los selectores envuelven sin recortar.",
+      "layout": {
+        "sections": [
+          "catalogo-carta",
+          "recogida-breve"
+        ],
+        "catalogSection": "catalogo-carta",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Bruma en pausa",
+      "premise": "Una portada tipográfica espaciosa presenta la marca antes de comprar y convierte el pequeño catálogo en dos capítulos verticales. Se distingue de la carta por su ritmo lento, grandes titulares serif y productos apilados; se distingue del tercer concepto porque no utiliza una interfaz de elección por pasos.",
+      "opening": "Portada clara y asimétrica: “Bruma” ocupa el lado izquierdo y el descriptor “Cuidado cosmético diario en varios volúmenes” forma una columna estrecha a la derecha, con un enlace “Ver los dos productos”. Una banda inferior lavanda anticipa “Casa / viaje” como contexto de elección, sin inventar usos específicos para cada tamaño. El catálogo comienza después de esta introducción.",
+      "flow": "Tras la portada, Crema de manos y Jabón líquido aparecen como capítulos alternados: un gran nombre y descripción a un lado, compra al otro. La etiqueta “Sin perfume” solo acompaña a la crema. Cada página de producto conserva el vacío editorial, con el nombre como cabecera, variantes de volumen en una línea y un bloque de compra fijo dentro de la columna. Carrito y checkout reducen la escala, usando una hoja clara central, resumen ciruela y recogida como única modalidad disponible.",
+      "typography": "Instrument Serif para marca y titulares, combinado con Instrument Sans para información y controles. Marca 96–150 px en escritorio, productos 58–84 px y cuerpo 17–19 px; en móvil, marca 64 px y productos 40 px. Precio en sans 26 px. Los saltos son naturales, sin nowrap; titulares a -0.035em y textos funcionales a espaciado normal.",
+      "imagery": "Composición exclusivamente tipográfica. Un gran punto tipográfico y líneas de borde actúan como puntuación editorial, sin representar envases ni productos. Fondo marfil claro, lavanda empolvada en bandas puntuales y ciruela profunda para texto y acciones.",
+      "mobile": "La portada se recompone en bloque: marca, descriptor y enlace, manteniendo aire sin ocupar una pantalla completa. El encabezado conserva “Mi pedido · 0” fuera del menú. Los capítulos pasan a una sola columna; volumen, precio y añadir permanecen juntos y el botón tiene al menos 44 px. El checkout elimina cualquier columna lateral y coloca el resumen antes del pago.",
+      "layout": {
+        "sections": [
+          "portada-pausa",
+          "catalogo-capitulos",
+          "nota-recogida"
+        ],
+        "catalogSection": "catalogo-capitulos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Elige tu medida",
+      "premise": "Una experiencia guiada que organiza el catálogo por decisiones: primero producto y después volumen, con un resumen de compra siempre legible. A diferencia de la carta simultánea y los capítulos editoriales, emplea una composición modular de tres paneles y una jerarquía condensada, casi de mostrador contemporáneo.",
+      "opening": "Una frase breve, “Dos cuidados. Cuatro medidas.”, introduce un selector horizontal con Crema de manos y Jabón líquido. El producto activo muestra de inmediato descripción, volúmenes, precio y añadir en un panel contiguo; el segundo nombre sigue visible como alternativa. No hay imágenes ni falsos envases. En móvil, el selector se vuelve una barra de pestañas bajo el masthead y “Mi pedido · 0” permanece a la derecha.",
+      "flow": "El catálogo interactivo concentra la compra en un solo escenario y debajo ofrece una comparación textual de los cuatro formatos, sin adjudicar beneficios no confirmados. La página de producto adopta la misma lógica de selección, pero añade cantidad y la etiqueta factual correspondiente. Al añadir, un panel lateral de pedido reutiliza el resumen compacto; checkout se presenta como una secuencia clara de datos, recogida y pago, con totales visibles.",
+      "typography": "Oswald variable para marca, cifras y titulares; Instrument Sans para descripciones, variantes y formularios. Titular 72–110 px, nombres 36–52 px, cifras de volumen 28–38 px y cuerpo 16–18 px. En móvil, titular 46 px y nombres 30 px. Oswald aporta verticalidad sin comprimir controles; letter-spacing de display entre -0.02em y 0.",
+      "imagery": "Sin recursos figurativos. La identidad se apoya en columnas verticales, numerales de volumen sobredimensionados y divisores lavanda. Ciruela para el panel activo y fondo casi blanco para la zona de decisión; el contraste nunca altera la apariencia de un producto inexistente.",
+      "mobile": "El escenario de tres paneles se convierte en secuencia: pestañas de producto, descripción y compra. El producto activo conserva nombre, precio y añadir en la primera vista a 390 px, mientras el otro sigue accesible con un toque. A 320 px, volúmenes forman una cuadrícula de dos columnas y el precio se coloca encima del botón para evitar compresión. Movimiento limitado a cambios de estado; con reducción de movimiento, el contenido cambia sin transición.",
+      "layout": {
+        "sections": [
+          "selector-medida",
+          "comparador-formatos",
+          "cierre-recogida"
+        ],
+        "catalogSection": "selector-medida",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Carta de volúmenes” responde mejor al catálogo real de solo dos productos y cuatro variantes, hace visible la acción principal sin desplazamiento y permite comparar los precios desde Bs 45 y Bs 38 sin inventar imágenes ni beneficios. La estructura compacta también favorece la elección entre formatos para casa y viaje, mantiene la recogida como único cumplimiento confirmado y traslada con claridad"
+  }
+}

@@ -1,5 +1,7 @@
 # PagosYa Events integration plan
 
+Archived on 2026-09-12: Events, ticket sales, Face Entry, the event edge service, and their dashboard screens have been retired. This document records the former design, not currently available functionality. Existing database tables and migration history are retained for historical data.
+
 Status date: 2026-08-27
 
 ## 1. Current PagosYa architecture

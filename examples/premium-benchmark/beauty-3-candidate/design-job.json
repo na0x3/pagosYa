@@ -1,0 +1,66 @@
+{
+  "id": "cmu0exx820013vjri3qddhn9n",
+  "requestId": "490c8517-80f1-4643-8eee-8b566376c164",
+  "revision": 1,
+  "page": "index.html",
+  "status": "FAILED",
+  "stage": "REPAIR",
+  "maxCredits": 150,
+  "reservedCredits": 14.175,
+  "observedCredits": 14.175,
+  "repairs": 1,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "3963cc8a-4e02-4f90-a242-93cb073f93d7",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:56:19.030Z",
+      "finishedAt": "2026-09-13T22:56:23.953Z",
+      "actualMicroUsd": 18655,
+      "reservedMicroUsd": 150000
+    },
+    {
+      "id": "458a3743-c46f-4cbc-97d7-c62d00c02c2a",
+      "stage": "REPAIR",
+      "repair": 1,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:56:25.001Z",
+      "finishedAt": "2026-09-13T22:56:47.457Z",
+      "actualMicroUsd": 123095,
+      "reservedMicroUsd": 850000
+    }
+  ],
+  "error": "\nInvalid `this.prisma.storeSourceGeneration.updateMany()` invocation in\n/Users/saramia/pagosYa/apps/api/src/stores/source-generation.service.ts:552:65\n\n  549 const candidate = await this.projects.prepare({ ...saveInput, files: [...execution.snapshot.files.filter(file => !editable(file.path)), ...authored] });\n  550 assertSourceCommerceContract(candidate);\n  551 signal.throwIfAborted();\n→ 552 const completed = await this.prisma.storeSourceGeneration.updateMany(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23514\", message: \"new row for relation \\\"StoreSourceGeneration\\\" violates check constraint \\\"StoreS",
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:56:17.523Z",
+  "updatedAt": "2026-09-13T22:56:47.458Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La identidad serena y contemporánea se mantiene de forma consistente, con catálogo y tipografía como protagonistas. La compra es clara dentro de cada ficha, pero la composición desperdicia mucho espacio vertical antes de los productos.",
+    "findings": [
+      {
+        "category": "layout",
+        "location": "Zona superior vacía de cada ficha de producto",
+        "severity": "major",
+        "viewport": "both",
+        "correction": "Reducir de forma sustancial la altura reservada antes del contenido de las fichas, manteniendo una separación vertical más contenida y uniforme para que nombres, volumen, precio y acción aparezcan antes.",
+        "observation": "Entre el separador bajo el encabezado del mostrador y el contenido de cada producto hay un bloque vacío muy alto. En móvil, esta separación hace que la primera ficha comience cerca de la mitad de la pantalla y alarga notablemente el recorrido entre productos."
+      },
+      {
+        "category": "layout",
+        "location": "Transición entre la primera y la segunda ficha de producto",
+        "severity": "minor",
+        "viewport": "mobile",
+        "correction": "Acercar el inicio de la segunda ficha al cierre de la primera o usar un espaciado intertarjeta más compacto y consistente con la jerarquía del mostrador.",
+        "observation": "Tras el borde inferior de la primera ficha se acumula otro espacio vacío amplio antes del rótulo de la segunda, por lo que los dos productos se perciben menos como parte de un mismo mostrador comparable."
+      }
+    ],
+    "preference": "uncertain",
+    "responseId": "resp_0ec880812647467d016aa72a13a86487d28b9d6add7f765352",
+    "regressions": [],
+    "providerMicroUsd": 18655
+  },
+  "resumeAvailable": false
+}

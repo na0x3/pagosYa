@@ -16,8 +16,11 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from "class-validator";
+import { BOLIVIA_DEPARTMENTS } from "../../shipping/bolivia-address";
+import { SIZE_CLASSES } from "../../shipping/parcel";
 
 const CURRENCIES = ["BOB", "USD"] as const;
 
@@ -106,6 +109,17 @@ export class CreateAutomationDto {
 }
 
 export class CreateDeliveryZoneDto {
+  @IsOptional() @IsString({ message: 'Elige un courier disponible.' }) @MinLength(1, { message: 'Elige un courier disponible.' }) @MaxLength(48, { message: 'Elige un courier disponible.' }) carrierId?: string;
+  @IsOptional() @IsArray({ message: 'Elige departamentos válidos.' }) @ArrayMaxSize(9, { message: 'Elige departamentos válidos.' }) @IsIn([...BOLIVIA_DEPARTMENTS], { each: true, message: 'Elige departamentos válidos.' }) departments?: string[];
+  @IsOptional() @IsArray({ message: 'Elige tamaños de paquete válidos.' }) @ArrayMaxSize(3, { message: 'Elige tamaños de paquete válidos.' }) @IsIn(SIZE_CLASSES, { each: true, message: 'Elige tamaños de paquete válidos.' }) sizeClasses?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(250) @Matches(/^[A-Z]{2}$/, { each: true }) countryCodes?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(100) @Matches(/^[A-Z0-9]{1,12}$/, { each: true }) postalPrefixes?: string[];
+  @IsOptional() @IsIn(['BOB', 'USD']) currency?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(2147483647) freeAbove?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(2147483647) maximumOrder?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100000000) minimumWeightGrams?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100000000) maximumWeightGrams?: number;
+
   @IsString()
   @MaxLength(80)
   name!: string;
@@ -412,6 +426,12 @@ export class CreateProductMappingDto {
   @IsString()
   paymentLinkId!: string;
 
+  @ApiPropertyOptional({ description: "Required when the product has option combinations: the combination this SKU counts." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  variantId?: string;
+
   @IsString()
   @MaxLength(120)
   externalSku!: string;
@@ -427,10 +447,24 @@ export class InboundStockItemDto {
   @MaxLength(120)
   externalSku!: string;
 
+  @ApiPropertyOptional({ description: "Absolute units counted by your system. Send stock or delta, not both." })
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1_000_000)
-  stock!: number;
+  stock?: number;
+
+  @ApiPropertyOptional({ description: "When your count was taken. pagosYa subtracts units it sold after this moment so they are not overwritten." })
+  @IsOptional()
+  @IsDateString()
+  asOf?: string;
+
+  @ApiPropertyOptional({ description: "Units to add (positive) or remove (negative), e.g. a delivery or an in-store sale." })
+  @IsOptional()
+  @IsInt()
+  @Min(-1_000_000)
+  @Max(1_000_000)
+  delta?: number;
 }
 
 export class InboundStockSyncDto {

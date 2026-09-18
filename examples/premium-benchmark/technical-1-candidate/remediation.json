@@ -1,0 +1,33 @@
+{
+  "method": "Codex runtime correction, no model generation",
+  "revision": 2,
+  "digest": "dfb723f3f2fd3f9486a79a04200d8c4810b920f1bd38c4382524085ca0e0e5f5",
+  "shopping": [
+    {
+      "width": 1280,
+      "productId": "cmu0ewht6004st6nwxy934apa",
+      "status": "passed",
+      "variantId": "var_86ulmmehu3x9"
+    },
+    {
+      "width": 1280,
+      "productId": "cmu0ewht8004ut6nwvaz59fsm",
+      "status": "passed",
+      "variantId": "var_d0wtos1445na"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0ewht6004st6nwxy934apa",
+      "status": "passed",
+      "variantId": "var_86ulmmehu3x9"
+    },
+    {
+      "width": 390,
+      "productId": "cmu0ewht8004ut6nwvaz59fsm",
+      "status": "passed",
+      "variantId": "var_d0wtos1445na"
+    }
+  ],
+  "originalEvidence": "evidence.json",
+  "reason": "Authored !important fixed cart positioning obstructed the mobile checkout CTA. Shared checkout layout now overrides drawer positioning."
+}

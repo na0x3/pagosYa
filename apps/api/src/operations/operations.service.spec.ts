@@ -52,10 +52,13 @@ describe("OperationsService operational calendar", () => {
   it("lists only active stock connections for the owned store", async () => {
     const prisma = makePrisma();
     prisma.integrationConnection.findMany.mockResolvedValue([{ id: "integration_1", name: "Caja Café", status: "ACTIVE" }]);
+    (prisma as any).integrationProductMapping = { count: jest.fn().mockResolvedValue(4) };
+    (prisma as any).integrationSyncRun.findFirst = jest.fn().mockResolvedValue({ status: "SUCCEEDED", itemCount: 3, details: { skipped: [{ externalSku: "X", reason: "SKU sin vincular a un producto en pagosYa" }] } });
     const service = makeService(prisma);
 
+    // Each connection carries how many SKUs are linked and the last sync report.
     await expect(service.listIntegrations("merchant_1", "store_1")).resolves.toEqual([
-      { id: "integration_1", name: "Caja Café", status: "ACTIVE" },
+      { id: "integration_1", name: "Caja Café", status: "ACTIVE", mappingCount: 4, lastRun: expect.objectContaining({ itemCount: 3 }) },
     ]);
     expect(prisma.integrationConnection.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { merchantId: "merchant_1", storeId: "store_1", status: "ACTIVE" },
@@ -117,6 +120,8 @@ describe("OperationsService operational calendar", () => {
 });
 
 describe("OperationsService external subscriptions", () => {
+  afterEach(() => jest.useRealTimers());
+
   it("verifies an active integration without exposing or storing its secret", async () => {
     const prisma = makePrisma();
     const service = makeService(prisma);
@@ -224,6 +229,7 @@ describe("OperationsService external subscriptions", () => {
   });
 
   it("offers only slots that are free in both pagosYa and Google Calendar", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-08-31T12:00:00.000Z"));
     const prisma = makePrisma();
     const calendar = {
       createEvent: jest.fn(), updateEvent: jest.fn(), deleteEvent: jest.fn(),
@@ -331,5 +337,48 @@ describe("OperationsService external subscriptions", () => {
     expect(prisma.customerSubscription.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ nextBillingAt: currentNextBillingAt }),
     }));
+  });
+});
+
+describe("OperationsService inbound stock merge", () => {
+  async function setup(product: any, mappings: any[]) {
+    const prisma = makePrisma() as any;
+    const secretHash = await argon2.hash("sync_secret");
+    prisma.integrationConnection.findFirst.mockResolvedValue({ id: "conn_1", merchantId: "merchant_1", storeId: "store_1", name: "ERP", status: "ACTIVE", secretHash });
+    prisma.integrationProductMapping = { findMany: jest.fn().mockResolvedValue(mappings) };
+    prisma.integrationSyncRun.create.mockResolvedValue({ id: "run_1" });
+    prisma.paymentLink.findFirst.mockResolvedValue(product);
+    prisma.inventoryMovement.aggregate = jest.fn().mockResolvedValue({ _sum: { quantityDelta: -2 } });
+    return { prisma, service: makeService(prisma) };
+  }
+  const lamp = { id: "lamp", storeId: "store_1", stock: 24, variants: [{ id: "negro", name: "Negro", amount: 100, stock: 12 }, { id: "marfil", name: "Marfil", amount: 100, stock: 12 }] };
+
+  it("writes a combination's stock, subtracts pagosYa sales after asOf and keeps the product total consistent", async () => {
+    const { prisma, service } = await setup(lamp, [{ externalSku: "LAMP-NEGRO", paymentLinkId: "lamp", variantId: "negro" }]);
+    const result = await service.syncStockInbound("conn_1", "sync_secret", { items: [{ externalSku: "LAMP-NEGRO", stock: 7, asOf: "2026-09-15T10:00:00.000Z" }] } as any);
+    expect(result).toMatchObject({ updated: 1, skipped: 0, results: [{ externalSku: "LAMP-NEGRO", variantId: "negro", stock: 5, soldAfterCount: 2 }] });
+    expect(prisma.paymentLink.update).toHaveBeenCalledWith({ where: { id: "lamp" }, data: { variants: [{ ...lamp.variants[0], stock: 5 }, lamp.variants[1]], stock: 17 } });
+    expect(prisma.inventoryMovement.aggregate).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ variantId: "negro", sourceType: { in: ["ORDER", "POS"] } }) }));
+    expect(prisma.inventoryMovement.create).toHaveBeenCalledWith({ data: expect.objectContaining({ variantId: "negro", quantityDelta: -7, stockAfter: 5 }) });
+  });
+
+  it("applies deltas and reports every SKU it could not apply instead of dropping it", async () => {
+    const { prisma, service } = await setup(lamp, [
+      { externalSku: "LAMP-MARFIL", paymentLinkId: "lamp", variantId: "marfil" },
+      { externalSku: "LAMP-WHOLE", paymentLinkId: "lamp", variantId: null },
+    ]);
+    const result = await service.syncStockInbound("conn_1", "sync_secret", { items: [
+      { externalSku: "LAMP-MARFIL", delta: -4 },
+      { externalSku: "LAMP-WHOLE", stock: 3 },
+      { externalSku: "NOPE", stock: 1 },
+      { externalSku: "BOTH", stock: 1, delta: 1 },
+    ] } as any);
+    expect(result.results).toEqual([expect.objectContaining({ externalSku: "LAMP-MARFIL", stock: 8 })]);
+    expect(result.skippedItems).toEqual([
+      { externalSku: "LAMP-WHOLE", reason: "El producto tiene combinaciones: vincula este SKU a una combinación" },
+      { externalSku: "NOPE", reason: "SKU sin vincular a un producto en pagosYa" },
+      { externalSku: "BOTH", reason: "Envía stock o delta (solo uno)" },
+    ]);
+    expect(prisma.integrationSyncRun.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "SUCCEEDED", itemCount: 1, details: expect.objectContaining({ skipped: result.skippedItems }) }) }));
   });
 });

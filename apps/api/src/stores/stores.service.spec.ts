@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { MerchantStatus, PromoDiscountType, StoreStatus } from "@prisma/client";
 import { StoresService } from "./stores.service";
 
@@ -8,6 +8,7 @@ function makeFakePrisma() {
     merchant: { findUniqueOrThrow: jest.fn() },
     paymentLink: { findMany: jest.fn(), groupBy: jest.fn().mockResolvedValue([]), update: jest.fn() },
     storeLead: { create: jest.fn().mockResolvedValue({ id: "lead_1" }) },
+    storeNewsletterSubscriber: { upsert: jest.fn().mockResolvedValue({ id: "subscriber_1" }) },
     storeOrder: { create: jest.fn().mockResolvedValue({ id: "order_1" }) },
     category: { findMany: jest.fn().mockResolvedValue([]) },
     storeLink: {
@@ -17,6 +18,9 @@ function makeFakePrisma() {
     },
     storeProductStat: { findMany: jest.fn().mockResolvedValue([]) },
     appointmentServiceOffering: { findMany: jest.fn().mockResolvedValue([]) },
+    event: { findMany: jest.fn().mockResolvedValue([]) },
+    mediaAsset: { findMany: jest.fn().mockResolvedValue([]) },
+    collection: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   // Batch transactions resolve their prepared operations; interactive ones
@@ -36,9 +40,29 @@ function makeFakeUploads() {
 }
 
 const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE };
+const publicItem = { imageUrls: [], tags: [], stock: null, color: null, amount: 0, currency: "BOB", categoryId: null, description: null, variants: [], extras: [] };
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
 
 describe("StoresService.create", () => {
+  it.each([StoreStatus.ACTIVE, StoreStatus.ARCHIVED])("allows another store when an existing store is %s", async (status) => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue({ ...store, status });
+    prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_2", ...data }));
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await expect(service.create("m_1", { name: "Otra tienda" } as any)).resolves.toMatchObject({ id: "store_2", merchantId: "m_1", name: "Otra tienda" });
+    expect(prisma.store.create).toHaveBeenCalledTimes(1);
+    expect(prisma.store.delete).not.toHaveBeenCalled();
+  });
+
+  it("still retries a public slug collision", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.create.mockRejectedValueOnce({ code: "P2002", meta: { target: ["slug"] } })
+      .mockResolvedValueOnce({ ...store, name: "Mi tienda" });
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await expect(service.create("m_1", { name: "Mi tienda" } as any)).resolves.toMatchObject({ id: store.id });
+    expect(prisma.store.create).toHaveBeenCalledTimes(2);
+  });
+
   it("starts a new store with an editable opening animation and contact/location at the end", async () => {
     const prisma = makeFakePrisma();
     prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
@@ -150,6 +174,22 @@ describe("StoresService.listPublishedStores", () => {
   });
 });
 
+describe("StoresService.subscribeNewsletter", () => {
+  it("normalizes the email and reactivates an existing subscriber without duplicates", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await expect(service.subscribeNewsletter("abc123", "  Cliente@Example.COM ")).resolves.toEqual({ subscribed: true });
+
+    expect(prisma.storeNewsletterSubscriber.upsert).toHaveBeenCalledWith({
+      where: { storeId_email: { storeId: "store_1", email: "cliente@example.com" } },
+      create: { storeId: "store_1", email: "cliente@example.com" },
+      update: { isActive: true },
+    });
+  });
+});
+
 describe("StoresService.submitLead", () => {
   it("emails the merchant's configured contact with customer and cart details", async () => {
     const prisma = makeFakePrisma();
@@ -236,6 +276,27 @@ describe("StoresService.submitLead", () => {
 
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({ to: "merchant@example.com" }));
     expect(paymentIntents.create).not.toHaveBeenCalled();
+  });
+
+  it("lists a picked-flavour box with its counts in the merchant's order email", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, name: "The Bake Lab", checkoutMode: "external", contactEmail: null });
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "owner@gmail.com" });
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "box_4", name: "Caja de 4", amount: 8000, currency: "BOB", variants: [],
+      extras: [
+        { id: "matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", pickCount: 4 },
+        { id: "pistacho", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", pickCount: 4 },
+      ],
+    }]);
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+
+    await expect(service.submitLead("abc123", { email: "maria@gmail.com", items: [{ paymentLinkId: "box_4", extraIds: ["matcha", "matcha"], quantity: 1 }] }))
+      .rejects.toThrow('Elige 4 en "Sabores" para "Caja de 4" (elegiste 2)');
+    await service.submitLead("abc123", { email: "maria@gmail.com", items: [{ paymentLinkId: "box_4", extraIds: ["pistacho", "matcha", "matcha", "matcha"], quantity: 1 }] });
+
+    expect(email.send.mock.calls[0][0].body).toContain("Caja de 4 (Matcha ×3 · Pistacho) × 1");
   });
 
   it("accepts an email-only checkout lead for an external store", async () => {
@@ -614,6 +675,70 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({ amount: 7400 }));
   });
 
+  it("sells a box whose flavours are picked with repeats and describes each count", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    prisma.paymentLink.findMany.mockResolvedValue([{
+      id: "box_4", name: "Caja de 4", amount: 8000, currency: "BOB", stock: null,
+      extras: [
+        { id: "matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4 },
+        { id: "pistacho", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4 },
+      ],
+    }]);
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["matcha", "pistacho", "matcha"], quantity: 1 }] }))
+      .rejects.toThrow('Elige 4 en "Sabores" para "Caja de 4" (elegiste 3)');
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["pistacho", "matcha", "pistacho", "matcha"], quantity: 2 }] });
+
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 16000,
+      description: "Caja de 4 + Matcha ×2 + Pistacho ×2 x2",
+      metadata: expect.objectContaining({ cart: [expect.objectContaining({
+        extraIds: ["matcha", "matcha", "pistacho", "pistacho"],
+        extras: [expect.objectContaining({ id: "matcha" }), expect.objectContaining({ id: "matcha" }), expect.objectContaining({ id: "pistacho" }), expect.objectContaining({ id: "pistacho" })],
+        quantity: 2, unitAmount: 8000,
+      })] }),
+    }));
+  });
+
+  it("takes each picked flavour out of its own product's stock", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue(merchant);
+    const catalog = [
+      { id: "box_4", name: "Caja de 4", amount: 8000, currency: "BOB", stock: null, status: "ACTIVE", extras: [
+        { id: "x_matcha", name: "Matcha", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+        { id: "x_pistacho", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "pistacho" },
+      ] },
+      { id: "matcha", name: "Matcha", amount: 2200, currency: "BOB", stock: 3, status: "ACTIVE", extras: [] },
+      { id: "pistacho", name: "Pistacho", amount: 2200, currency: "BOB", stock: null, status: "ACTIVE", extras: [] },
+    ];
+    prisma.paymentLink.findMany.mockImplementation(({ where }: any) => Promise.resolve(catalog.filter(item => where.id.in.includes(item.id))));
+    const paymentIntents = makeFakePaymentIntents();
+    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+
+    await expect(service.createCartCheckout("abc123", { items: [
+      { paymentLinkId: "box_4", extraIds: ["x_matcha", "x_matcha", "x_pistacho", "x_pistacho"], quantity: 1 },
+      { paymentLinkId: "matcha", quantity: 2 },
+    ] })).rejects.toThrow('Solo quedan 3 unidades de "Matcha"');
+
+    await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["x_matcha", "x_pistacho", "x_pistacho", "x_pistacho"], quantity: 3 }] });
+    expect(paymentIntents.create).toHaveBeenCalledWith("m_1", true, expect.objectContaining({
+      amount: 24000,
+      metadata: expect.objectContaining({ cart: [expect.objectContaining({ extras: expect.arrayContaining([expect.objectContaining({ id: "x_matcha", productId: "matcha" })]) })] }),
+    }));
+
+    catalog.splice(1, 1);
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["x_matcha", "x_pistacho", "x_pistacho", "x_pistacho"], quantity: 1 }] }))
+      .rejects.toThrow('"Matcha" ya no está disponible');
+    // The flavours that remain still sell.
+    await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["x_pistacho", "x_pistacho", "x_pistacho", "x_pistacho"], quantity: 1 }] }))
+      .resolves.toEqual(expect.objectContaining({ cartDescription: "Caja de 4 + Pistacho ×4 x1" }));
+  });
+
   it("rejects a cart whose combined products exceed one shared extra pool", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
@@ -666,6 +791,42 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
 });
 
 describe("StoresService.getStorePublic — sold counts", () => {
+
+  it("shows box choices with their product's live name and photo, and drops unavailable ones", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { ...publicItem, id: "box", name: "Caja", extras: [
+        { id: "x1", name: "Old name", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "matcha" },
+        { id: "x2", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "pistacho" },
+        { id: "x3", name: "Archivada", amount: 0, required: false, groupName: "Sabores", pickCount: 4, productId: "archived" },
+      ] },
+      { ...publicItem, id: "matcha", name: "Matcha verde", imageUrls: ["/v1/uploads/matcha.jpg"], stock: 5 },
+      { ...publicItem, id: "pistacho", name: "Pistacho", imageUrls: [], stock: 0 },
+    ]);
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.items.find((item: any) => item.id === "box")!.extras).toEqual([
+      { id: "x1", name: "Matcha verde", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4, productId: "matcha", imageUrl: "/v1/uploads/matcha.jpg", available: true },
+      { id: "x2", name: "Pistacho", amount: 0, required: false, groupName: "Sabores", freeAllowance: 0, pickCount: 4, productId: "pistacho", available: false },
+    ]);
+  });
+
+  it("publishes active bundles only when bundles are enabled", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, bundlesEnabled: true });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+    (prisma as any).storeBundle = { findMany: jest.fn().mockResolvedValue([{ id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "a", quantity: 1 }], minimumQuantity: 2, discountPercent: 10, active: true, storeId: "store_1", createdAt: new Date() }]) };
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    expect((await service.getStorePublic("abc123", { trackView: false })).bundles).toEqual([
+      { id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "a", quantity: 1 }], minimumQuantity: 2, discountPercent: 10 },
+    ]);
+    expect((prisma as any).storeBundle.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { storeId: "store_1", active: true } }));
+    prisma.store.findUnique.mockResolvedValue({ ...store, bundlesEnabled: false });
+    expect((await service.getStorePublic("abc123", { trackView: false })).bundles).toEqual([]);
+  });
+
   it("returns the merchant-authored public location block", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue({
@@ -735,7 +896,9 @@ describe("StoresService.getStorePublic — sold counts", () => {
         textWidth: "wide",
         textColor: "#fff4d6",
         backgroundColor: "#26170d",
-        media: [{ imageUrl: "/v1/uploads/open.webp", title: "Lana" }],
+        fontStyle: "classic",
+        textBlocks: [{ id: "title-1", role: "title", text: "Una segunda historia", textPositionX: 18, textPositionY: 30, textScale: 120, textWidthPercent: 62, textAlign: "left", textColor: "#ffffff", fontStyle: "editorial" }],
+        media: [{ imageUrl: "/v1/uploads/open.webp", title: "Lana", fontStyle: "geometric" }],
       },
       {
         id: "cierre",
@@ -765,6 +928,29 @@ describe("StoresService.getStorePublic — sold counts", () => {
       "links",
       "contact",
       "location",
+    ]);
+  });
+
+  it("reads legacy Scroll Expansion entries with only their two rendered image roles", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({
+      ...store,
+      animations: [{
+        id: "expand",
+        name: "Expansión",
+        type: "scroll-expansion",
+        media: Array.from({ length: 8 }, (_, index) => ({ imageUrl: `/v1/uploads/expand-${index + 1}.webp` })),
+      }],
+      contentOrder: ["hero", "animation-expand", "products", "links"],
+    });
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const result = await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any)
+      .getStorePublic("abc123", { trackView: false });
+
+    expect(result.animations[0].media.map((entry: any) => entry.imageUrl)).toEqual([
+      "/v1/uploads/expand-1.webp",
+      "/v1/uploads/expand-2.webp",
     ]);
   });
 
@@ -895,6 +1081,41 @@ describe("StoresService.getStorePublic — sold counts", () => {
 
     expect(result.items[0].soldCount).toBe(0);
   });
+
+  it("defaults catalogLayout to the single grid for a store that never set it", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue(store);
+    prisma.paymentLink.findMany.mockResolvedValue([]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.catalogLayout).toBe("all");
+  });
+
+  it("keeps only the active product in a collection that also references an archived one", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findUnique.mockResolvedValue({ ...store, catalogLayout: "sections" });
+    prisma.paymentLink.findMany.mockResolvedValue([
+      { id: "link_1", name: "Corte", imageUrls: [], tags: [], stock: null, color: null, amount: 5000, currency: "BOB", categoryId: null, description: null },
+    ]);
+    prisma.collection.findMany.mockResolvedValue([
+      {
+        id: "col_1",
+        name: "Verano",
+        slug: "verano",
+        products: [{ paymentLinkId: "link_1" }, { paymentLinkId: "link_archived" }],
+      },
+    ]);
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const result = await service.getStorePublic("abc123", { trackView: false });
+
+    expect(result.catalogLayout).toBe("sections");
+    expect(result.collections).toEqual([
+      { id: "col_1", name: "Verano", slug: "verano", productIds: ["link_1"] },
+    ]);
+  });
 });
 
 describe("StoresService.update — accentColor clearing", () => {
@@ -908,7 +1129,7 @@ describe("StoresService.update — accentColor clearing", () => {
 
     expect(prisma.store.update).toHaveBeenCalledWith({
       where: { id: "store_1" },
-      data: { accentColor: null },
+      data: { accentColor: null, websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
     });
   });
 
@@ -925,7 +1146,135 @@ describe("StoresService.update — accentColor clearing", () => {
   });
 });
 
+describe("StoresService.update — animation media roles", () => {
+  it("stores only the two ordered images that Scroll Expansion can render", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue(store);
+    const media = Array.from({ length: 8 }, (_, index) => ({ imageUrl: `/v1/uploads/expand-${index + 1}.webp` }));
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await service.update("m_1", "store_1", {
+      animations: [{ id: "expand", name: "Expansión", type: "scroll-expansion", media }],
+    } as any);
+
+    expect(prisma.store.update.mock.calls[0][0].data.animations[0].media).toEqual(media.slice(0, 2));
+  });
+});
+
 describe("StoresService.update — authored AI site", () => {
+  it("persists an explicit generated-section deletion without treating partial edits as deletions", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: kind, body: "", ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: [], items: [],
+    });
+    const siteDocument = { version: 1, theme: {}, sections: [section("opening", "hero"), section("story", "story"), section("shop", "catalog"), section("information", "contact")] };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteDeletedSectionIds: ["story"],
+      siteSections: [{ ...section("shop", "catalog"), title: "Catálogo actualizado", heightPx: 720, mobileHeightPx: 480 }],
+    } as any);
+
+    const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.sections.map((entry: any) => entry.id)).toEqual(["opening", "shop", "information"]);
+    expect(saved.sections.find((entry: any) => entry.id === "shop").title).toBe("Catálogo actualizado");
+    expect(saved.sections.find((entry: any) => entry.id === "shop")).toMatchObject({ heightPx: 720, mobileHeightPx: 480 });
+  });
+
+  it("persists editable header links and a structured footer inside the site document", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: [], items: [],
+    });
+    const siteDocument = {
+      version: 1,
+      theme: { pageBackground: "#f5f2ea", accentColor: "#315c49", headingFont: "editorial", bodyFont: "grotesk" },
+      navigation: { layout: "centered", sticky: false, transparent: false, logoTreatment: "wordmark" },
+      sections: [section("opening", "hero"), section("story", "story"), section("shop", "catalog"), section("information", "contact")],
+    };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteNavigation: {
+        layout: "centered",
+        barStyle: "full",
+        brandPosition: "center",
+        navPosition: "right",
+        searchPosition: "left",
+        profilePosition: "right",
+        cartPosition: "left",
+        brandStyle: { textOffsetX: -32, textOffsetY: 8, textOffsetBasis: "element" },
+        taglineStyle: { textOffsetX: 6, textOffsetY: 10, textOffsetBasis: "element" },
+        sticky: true,
+        transparent: false,
+        logoTreatment: "wordmark",
+      },
+      siteNavigationItems: [
+        { id: "home", label: "Inicio", target: "home", style: { textOffsetX: 14, textOffsetY: -5, textOffsetBasis: "element" } },
+        { id: "story-link", label: "Nuestra historia", target: "section", sectionId: "story" },
+      ],
+      siteFooter: {
+        enabled: true,
+        brandDescription: "Hecho en Bolivia.",
+        columns: [{ id: "visit", title: "Visítanos", items: [{ id: "address", label: "La Paz", href: "" }] }],
+        copyright: "© 2026 Mi tienda",
+        badge: "Tienda impulsada por pagosYa",
+      },
+    } as any);
+
+    const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.navigation).toEqual(expect.objectContaining({
+      barStyle: "full",
+      brandPosition: "center",
+      navPosition: "right",
+      searchPosition: "left",
+      profilePosition: "right",
+      cartPosition: "left",
+      brandStyle: { textOffsetX: -32, textOffsetY: 8, textOffsetBasis: "element" },
+      taglineStyle: { textOffsetX: 6, textOffsetY: 10, textOffsetBasis: "element" },
+    }));
+    expect(saved.navigation.items).toEqual([
+      { id: "home", label: "Inicio", target: "home", style: { textOffsetX: 14, textOffsetY: -5, textOffsetBasis: "element" } },
+      { id: "story-link", label: "Nuestra historia", target: "section", sectionId: "story" },
+    ]);
+    expect(saved.footer).toEqual(expect.objectContaining({ enabled: true, brandDescription: "Hecho en Bolivia.", copyright: "© 2026 Mi tienda" }));
+  });
+
+  it("persists a coherent art direction without replacing brand colors or content", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, family: "editorial", layout: "split", width: "wide", align: "left", motion: "none",
+      title: `${kind} propio`, body: `Texto ${kind}`, ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: kind === "hero" ? ["/v1/uploads/hero.webp"] : [], items: [],
+    });
+    const siteDocument = {
+      version: 1, direction: "Dirección anterior",
+      designGenome: { composition: "editorial-split", rhythm: "balanced", geometry: "soft", colorStrategy: "accent-led", mediaStrategy: "natural", typeScale: "balanced", motionLanguage: "still" },
+      theme: { pageBackground: "#f5f2ea", textColor: "#171717", accentColor: "#315c49", secondaryColor: "#c9a86a", surfaceColor: "#ffffff", mutedColor: "#626262", borderColor: "#c9c9c4", headingFont: "editorial", bodyFont: "grotesk", radius: 8, shadow: "soft", productLayout: "editorial", displayScale: "balanced", density: "balanced", imageTreatment: "natural" },
+      navigation: { layout: "centered", sticky: false, transparent: false, logoTreatment: "wordmark" },
+      motion: { intensity: "restrained" },
+      merchandising: { featuredProductIds: ["product_1"], productOrderIds: ["product_1"], spotlightLayout: "collection", showDescriptions: true },
+      sections: [section("opening", "hero"), section("shop", "catalog"), section("information", "contact")],
+    };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteArtDirection: "cinematic-atelier",
+    } as any);
+
+    const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.artDirection).toBe("cinematic-atelier");
+    expect(saved.designGenome.composition).toBe("gallery-axis");
+    expect(saved.theme).toEqual(expect.objectContaining({ pageBackground: "#f5f2ea", accentColor: "#315c49", productLayout: "showcase", displayScale: "monumental" }));
+    expect(saved.sections.find((entry: any) => entry.kind === "hero")).toEqual(expect.objectContaining({ title: "hero propio", mediaUrls: ["/v1/uploads/hero.webp"], family: "cinematic", layout: "full-bleed" }));
+    expect(saved.merchandising.featuredProductIds).toEqual(["product_1"]);
+  });
+
   it("keeps the bespoke structure while projecting compatible editor changes", async () => {
     const prisma = makeFakePrisma();
     const section = (id: string, kind: string) => ({
@@ -960,6 +1309,106 @@ describe("StoresService.update — authored AI site", () => {
     expect(saved.theme.accentColor).toBe("#aa2244");
     expect(saved.experience.type).toBe("none");
   });
+
+  it("persists bounded copy, layout, motion and scene edits for a generated scrolling story", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: `${kind} title`, body: `${kind} body`, ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: [], items: [],
+    });
+    const story = {
+      ...section("brand-story", "story"),
+      layout: "stacked",
+      width: "full",
+      motion: "story-scroll",
+      mediaUrls: ["/v1/uploads/one.webp"],
+      items: [{ title: "Texto original", body: "Historia original", mediaUrl: "/v1/uploads/one.webp" }],
+    };
+    const siteDocument = {
+      version: 1,
+      theme: { pageBackground: "#f5f2ea", accentColor: "#315c49", headingFont: "editorial", bodyFont: "grotesk" },
+      sections: [section("opening", "hero"), story, section("shop", "catalog"), section("information", "contact")],
+    };
+    prisma.store.findFirst.mockResolvedValue({ ...store, bannerUrl: null, aboutImageUrl: null, editorialGallery: [], siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteSections: [{
+        id: "brand-story", title: "Detrás de QUEMADO2", body: "Una historia editable", ctaLabel: "Conoce más",
+        family: "cinematic",
+        layout: "rail", width: "wide", align: "right", motion: "parallax",
+        backgroundColor: "#9b3527", textColor: "#fffaf2",
+        mediaUrls: ["/v1/uploads/one.webp"],
+        items: [{ title: "Texto con espacios", body: "La segunda animación también se puede editar", mediaUrl: "/v1/uploads/one.webp" }],
+        blocks: [{
+          id: "chapter-1", kind: "group", slot: "chapters", role: "primary", text: "", mediaUrl: null,
+          children: [
+            { id: "chapter-1-heading", kind: "heading", slot: "chapters", role: "secondary", text: "Texto con espacios", mediaUrl: null, children: [] },
+            { id: "chapter-1-media", kind: "media", slot: "chapters", role: "primary", text: "", mediaUrl: "/v1/uploads/one.webp", children: [] },
+          ],
+        }],
+      }],
+    } as any);
+
+    const savedStory = prisma.store.update.mock.calls[0][0].data.siteDocument.sections.find((entry: any) => entry.id === "brand-story");
+    expect(savedStory).toMatchObject({
+      title: "Detrás de QUEMADO2", body: "Una historia editable", ctaLabel: "Conoce más",
+      family: "cinematic",
+      layout: "rail", width: "wide", align: "right", motion: "parallax",
+      backgroundColor: "#9b3527", textColor: "#fffaf2",
+      mediaUrls: ["/v1/uploads/one.webp"],
+    });
+    expect(savedStory.items[0]).toEqual({ title: "Texto con espacios", body: "La segunda animación también se puede editar", mediaUrl: "/v1/uploads/one.webp" });
+    expect(savedStory.blocks).toEqual([{ id: "chapter-1", kind: "group", slot: "chapters", role: "primary", text: "", mediaUrl: null, children: [
+      { id: "chapter-1-heading", kind: "heading", slot: "chapters", role: "secondary", text: "Texto con espacios", mediaUrl: null, children: [] },
+      { id: "chapter-1-media", kind: "media", slot: "chapters", role: "primary", text: "", mediaUrl: "/v1/uploads/one.webp", children: [] },
+    ] }]);
+  });
+
+  it("rejects a generated-section image that is not owned by the merchant", async () => {
+    const prisma = makeFakePrisma();
+    const siteDocument = {
+      version: 1,
+      theme: {},
+      sections: [{
+        id: "brand-story", kind: "story", layout: "stacked", width: "full", align: "left", motion: "story-scroll",
+        title: "Historia", body: "", ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: [], items: [],
+      }],
+    };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
+
+    await expect(new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteSections: [{
+        id: "brand-story", title: "Historia", body: "", ctaLabel: "", layout: "stacked", width: "full", align: "left", motion: "story-scroll",
+        backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: ["/v1/uploads/not-owned.webp"],
+        items: [{ title: "Escena", body: "", mediaUrl: "/v1/uploads/not-owned.webp" }],
+      }],
+    } as any)).rejects.toThrow(BadRequestException);
+    expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+
+  it("adds a bounded merchant-authored section without changing commerce sections", async () => {
+    const prisma = makeFakePrisma();
+    const section = (id: string, kind: string) => ({
+      id, kind, layout: "split", width: "wide", align: "left", motion: "none",
+      title: kind, body: "", ctaLabel: "", backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: [], items: [],
+    });
+    const siteDocument = { version: 1, theme: {}, sections: [section("opening", "hero"), section("shop", "catalog"), section("information", "contact")] };
+    prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
+    prisma.store.update.mockResolvedValue(store);
+
+    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+      siteSections: [{
+        id: "story-new", kind: "story", title: "Nueva historia", body: "Un relato nuevo", ctaLabel: "",
+        layout: "offset", width: "wide", align: "left", motion: "reveal", backgroundColor: "#fffaf2", textColor: "#171717",
+        mediaUrls: [], items: [],
+      }],
+    } as any);
+
+    const saved = prisma.store.update.mock.calls[0][0].data.siteDocument;
+    expect(saved.sections.map((entry: any) => entry.kind)).toEqual(["hero", "catalog", "contact", "story"]);
+    expect(saved.sections.at(-1)).toEqual(expect.objectContaining({ id: "story-new", title: "Nueva historia", motion: "reveal" }));
+  });
 });
 
 describe("StoresService.update — board texture", () => {
@@ -973,8 +1422,38 @@ describe("StoresService.update — board texture", () => {
 
     expect(prisma.store.update).toHaveBeenCalledWith({
       where: { id: "store_1" },
-      data: { boardTexture: "kraft" },
+      data: { boardTexture: "kraft", websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
     });
+  });
+});
+
+describe("StoresService.update — catalog layout", () => {
+  it("persists an explicitly chosen catalog layout", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue(store);
+    prisma.store.update.mockResolvedValue({ ...store, catalogLayout: "sections" });
+
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    await service.update("m_1", "store_1", { catalogLayout: "sections" } as any);
+
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "store_1" },
+      data: { catalogLayout: "sections", websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
+    });
+  });
+});
+
+describe("StoresService.create — catalog layout", () => {
+  it("persists an explicitly chosen catalog layout on a new store", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
+    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+
+    await service.create("m_1", { name: "Tienda nueva", catalogLayout: "tabs" } as any);
+
+    expect(prisma.store.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ catalogLayout: "tabs" }),
+    }));
   });
 });
 
@@ -1056,7 +1535,7 @@ describe("StoresService.saveSettings", () => {
     );
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { name: "Renamed" } });
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "store_1" }, data: { name: "Renamed", websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } } });
     expect(prisma.storeLink.createMany).toHaveBeenCalledWith({
       data: [{ storeId: "store_1", label: "Instagram", url: "https://instagram.com/x", sortOrder: 0 }],
     });
@@ -1121,6 +1600,10 @@ describe("StoresService.remove", () => {
       { imageUrls: ["/v1/uploads/product-a-1.png", "/v1/uploads/product-a-2.png"] },
       { imageUrls: ["/v1/uploads/product-b-1.png"] },
     ]);
+    prisma.category.findMany.mockResolvedValue([
+      { bannerUrl: "/v1/uploads/category-a.png" },
+      { bannerUrl: null },
+    ]);
     const uploads = makeFakeUploads();
 
     const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, uploads as any);
@@ -1134,6 +1617,8 @@ describe("StoresService.remove", () => {
       "/v1/uploads/story.png",
       "/v1/uploads/hero.png",
       "/v1/uploads/workshop.png",
+      "/v1/uploads/category-a.png",
+      null,
       "/v1/uploads/product-a-1.png",
       "/v1/uploads/product-a-2.png",
       "/v1/uploads/product-b-1.png",

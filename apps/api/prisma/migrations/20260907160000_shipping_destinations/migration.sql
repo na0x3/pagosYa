@@ -1,0 +1,1 @@
+ALTER TABLE "DeliveryZone" ADD COLUMN "countryCodes" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[], ADD COLUMN "postalPrefixes" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

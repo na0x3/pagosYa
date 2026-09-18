@@ -1,0 +1,67 @@
+{
+  "id": "food-2-baseline",
+  "arm": "baseline",
+  "fixture": "food",
+  "repeat": 2,
+  "merchantId": "cmu0ecq4m000s4gwz3gan23ng",
+  "storeId": "cmu0ecq4o000u4gwzx35ymp7g",
+  "slug": "1l54c1dd",
+  "status": "completed",
+  "maxCredits": 200,
+  "createdAt": "2026-09-13T22:39:48.553Z",
+  "assets": [
+    "/v1/uploads/230d37bb-417c-4fb6-b44b-9fb8dd0ec707.jpg",
+    "/v1/uploads/5426a18c-5d4f-4c9a-b214-6acc818dea9c.jpg",
+    "/v1/uploads/a6a4f513-ff5c-41d0-9cb0-e3dfc3b6b1c0.jpg",
+    "/v1/uploads/982db8a5-56db-46cf-932c-208bd893bcd8.jpg",
+    "/v1/uploads/eff2f0b5-a7de-4275-981f-728b88c624c5.jpg",
+    "/v1/uploads/2e7c9cb7-a7b9-40e2-abeb-543b8d533b52.jpg",
+    "/v1/uploads/9ac86a25-a6b7-4536-bc17-ae62509c8820.jpg"
+  ],
+  "generation": {
+    "id": "cmu0ecq5k001e4gwzvajec3ry",
+    "requestedModel": "gpt-5.6-sol",
+    "model": "gpt-5.6-sol",
+    "credits": 39,
+    "maxCredits": 200,
+    "attempts": [
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "design",
+        "durationMs": 41041,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 15124,
+          "cachedInputTokens": 0,
+          "outputTokens": 2226,
+          "providerMicroUsd": 120137,
+          "cacheWriteTokens": 15121
+        },
+        "reasoningEffort": "low",
+        "selectedIndex": 0,
+        "selectionSource": "planner"
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "phase": "source",
+        "durationMs": 80311,
+        "status": "COMPLETED",
+        "usage": {
+          "inputTokens": 23457,
+          "cachedInputTokens": 0,
+          "outputTokens": 8016,
+          "providerMicroUsd": 262803,
+          "cacheWriteTokens": 8655
+        },
+        "reasoningEffort": "medium",
+        "reasoningTokens": 429,
+        "responseStatus": "completed"
+      }
+    ],
+    "durationMs": 121386,
+    "status": "COMPLETED"
+  },
+  "revision": 1,
+  "digest": "6c3ef4fff7c0726e6f42756f8f0c4f2a37e93bcca94b4124748ada3e5225d5d3",
+  "elapsedMs": 121691
+}

@@ -14,7 +14,7 @@ export interface SupportActor {
   role: OpsRole;
 }
 
-function actorLabel(actor: SupportActor): string {
+export function actorLabel(actor: SupportActor): string {
   return `${actor.name} <${actor.email}>`;
 }
 
@@ -269,7 +269,7 @@ export class SupportService {
             take: 10,
           },
           kycSubmissions: {
-            select: { id: true, legalName: true, taxId: true, legalRepName: true, legalRepDocumentId: true, payoutBankAccount: true, status: true, reviewNote: true, reviewedAt: true, createdAt: true },
+            select: { id: true, legalName: true, taxId: true, legalRepName: true, legalRepDocumentId: true, payoutBankAccount: true, payoutUsdBankAccount: true, status: true, reviewNote: true, reviewedAt: true, createdAt: true },
             orderBy: { createdAt: "desc" },
             take: 1,
           },
@@ -302,6 +302,7 @@ export class SupportService {
             taxId: maskTail(kyc.taxId),
             legalRepDocumentId: maskTail(kyc.legalRepDocumentId),
             payoutBankAccount: maskTail(kyc.payoutBankAccount),
+            payoutUsdBankAccount: maskTail(kyc.payoutUsdBankAccount),
           })),
         },
       };

@@ -368,7 +368,6 @@ footer a { font-weight: 800; }
 .modal-close { position: absolute; top: 12px; right: 12px; min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--forest); font-size: 12px; font-weight: 800; }
 .modal-primary { border-color: var(--forest); background: var(--forest); color: var(--white); }
 
-.coverflow-story { margin-top: 92px; padding: clamp(36px, 6vw, 72px) 0; border-block: 1px solid var(--line); }
 .experience-heading { margin-bottom: 26px; }
 .animation-builder { display: grid; grid-template-columns: minmax(280px,.72fr) minmax(0,1.28fr); gap: clamp(30px,6vw,86px); width: min(1240px, calc(100% - 40px)); margin: clamp(72px, 10vw, 132px) auto 52px; }
 .animation-builder-copy { max-width: 720px; align-self: start; position: sticky; top: 28px; }

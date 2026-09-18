@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pliegue | Textiles para el hogar</title>
+  <meta name="description" content="Fundas de lino y mantas de algodón para renovar los detalles de tu casa.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+<header class="site-header">
+  <a class="wordmark" href="index.html" aria-label="Pliegue, inicio">Pliegue</a>
+  <nav class="site-nav" aria-label="Navegación principal">
+    <a href="#catalogo-editorial">Productos</a>
+    <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span data-cart-count>0</span></button>
+  </nav>
+</header>
+<main>
+  <section id="catalogo-editorial" aria-labelledby="titulo-catalogo">
+    <div class="opening-line">
+      <p>Textiles de hogar · lino y algodón</p>
+      <h1 id="titulo-catalogo">Detalles que cambian el <em>ritmo</em> de una habitación.</h1>
+    </div>
+    <div data-pagosya-catalog aria-label="Productos"></div>
+    <template data-pagosya-product-template>
+      <article class="editorial-product">
+        <a class="product-media menu-item__details" data-product-link href="product.html"><span data-product-media><img data-product-field="image" alt=""></span></a>
+        <div class="product-copy">
+          <p class="material" data-product-field="description"></p>
+          <h2 data-product-field="name"></h2>
+          <div class="product-options" data-product-field="options"></div>
+          <div class="purchase-line">
+            <p class="menu-item__price" data-product-field="price"></p>
+            <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+          </div>
+          <a class="detail-link" data-product-link href="product.html">Ver producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+        </div>
+      </article>
+    </template>
+  </section>
+  <section id="textura-en-casa" aria-labelledby="titulo-textura">
+    <header class="texture-heading">
+      <p>Pliegues habitados</p>
+      <h2 id="titulo-textura">Texturas para cambiar el ritmo de una habitación.</h2>
+    </header>
+    <div class="home-diptych">
+      <figure><img src="assets/image-e58bfe385a7a.jpg" alt="Funda de cojín terracota sobre un sofá claro"><figcaption>Lino · funda de cojín</figcaption></figure>
+      <figure><img src="assets/image-f82f55029d51.jpg" alt="Manta de algodón con flecos sobre un sillón"><figcaption>Algodón · manta tejida</figcaption></figure>
+    </div>
+  </section>
+</main>
+<div data-pagosya-status role="status" aria-live="polite"></div>
+<div data-pagosya-cart hidden></div>
+<div data-pagosya-contact hidden></div>
+<footer class="site-footer"><a class="wordmark" href="index.html">Pliegue</a><p>Textiles de hogar con materiales y tamaños.</p><button type="button" data-cart-open>Mi pedido <span data-cart-count>0</span></button></footer>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

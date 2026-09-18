@@ -1,0 +1,64 @@
+{
+  "concepts": [
+    {
+      "name": "Mostrador sereno",
+      "premise": "Una tienda breve y directamente comprable para un catálogo de solo dos productos. Abre con ambos artículos en un mostrador tipográfico asimétrico, a diferencia de la portada editorial del segundo concepto y la tabla comparativa del tercero. La identidad nace de líneas finas, mucho fondo claro y controles en ciruela, sin simular envases.",
+      "opening": "Masthead compacto con “Bruma”, descriptor y “Mi pedido · 0”. Inmediatamente debajo, Crema de manos y Jabón líquido aparecen lado a lado: nombre, descripción, selector de volumen, precio actualizado y botón “Añadir”. En móvil se muestra primero la Crema de manos completa dentro del primer viewport y el segundo producto continúa en flujo.",
+      "flow": "Compra directa desde Inicio; el nombre abre una página de producto con descripción, etiqueta real cuando corresponda, selector de volumen, precio, cantidad y añadir. El carrito conserva filas sobrias con edición de cantidad. Checkout en una columna clara: resumen, datos necesarios, modalidad de retiro y pago, sin promociones ni afirmaciones inventadas.",
+      "typography": "Instrument Sans en toda la interfaz: marca 700 a 54/58 px (34/38 móvil), nombres 600 a 30/34 (25/29 móvil), texto 400 a 16/25, precios 600 a 18/22 y etiquetas 12 px en mayúsculas espaciadas. Letter-spacing de títulos: -0.03em.",
+      "imagery": "No usa fotografías, ilustraciones ni siluetas de envases. La composición se construye con divisores lavanda, numerales de volumen a gran escala como texto auxiliar y superficies marfil; esos números nunca sustituyen nombres, precios o selectores reales.",
+      "mobile": "Cabecera de dos niveles muy compacta: marca arriba y “Mi pedido · 0” siempre visible junto al control de menú. Los productos pasan a una columna, con selector segmentado de 44 px y bloque precio–añadir que envuelve sin recortes a 320 px. Se reduce el numeral decorativo para no competir con la compra.",
+      "layout": {
+        "sections": [
+          "catalogo-mostador",
+          "nota-cotidiana"
+        ],
+        "catalogSection": "catalogo-mostador",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "Pausa Bruma",
+      "premise": "Una portada tipográfica espaciosa presenta la marca antes de comprar. Su recorrido es más contemplativo que el mostrador inmediato del primer concepto y menos analítico que la comparación del tercero: primero establece tono, después ofrece dos fichas horizontales de producto con ritmos distintos.",
+      "opening": "Una composición de altura moderada cruza “Bruma” en ciruela con el descriptor en una columna estrecha y la frase funcional “Dos cuidados. El volumen que necesitas.” No contiene imágenes ni afirmaciones de beneficio. Un enlace “Ver productos” baja al catálogo; “Mi pedido · 0” permanece en la cabecera.",
+      "flow": "Tras la portada, cada producto ocupa una franja horizontal: nombre y texto a la izquierda, volúmenes y compra a la derecha. La Crema de manos incorpora únicamente su etiqueta confirmada “Sin perfume”. La página de producto invierte la jerarquía —nombre grande, opciones en un panel lateral—; carrito y checkout adoptan una hoja central con resumen fijo en escritorio y resumen desplegable en móvil.",
+      "typography": "Fraunces para marca y titulares: 72/76 px en portada (44/47 móvil), 42/46 en producto (32/35 móvil), peso 500 y -0.035em. Instrument Sans para navegación, descripciones y comercio: 16/25 px; botones 15/18 semibold; microtexto 12/16. Los precios usan Instrument Sans 700 para máxima lectura.",
+      "imagery": "Identidad totalmente tipográfica. Palabras recortadas por cambios de columna, filetes verticales lavanda y pequeños puntos de tinta ciruela crean profundidad sin dibujar productos. Fondo hueso, texto ciruela oscuro y lavanda solo para planos secundarios.",
+      "mobile": "La portada se recompone en una retícula de dos bandas y evita palabras sin salto forzado. “Mi pedido · 0” queda visible fuera del menú. Las fichas horizontales pasan a bloques sin reservar áreas multimedia; opciones, precio y añadir forman un único grupo con controles de al menos 44 px.",
+      "layout": {
+        "sections": [
+          "portada-pausa",
+          "catalogo-franjas",
+          "cierre-bruma"
+        ],
+        "catalogSection": "catalogo-franjas",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Índice de volúmenes",
+      "premise": "Convierte el catálogo pequeño en un índice premium de alta utilidad. En lugar de tarjetas o una portada narrativa, abre con una tabla editorial donde cada fila es un producto y cada volumen funciona como elección inmediata. Es más denso, alineado y comparativo que los otros dos conceptos.",
+      "opening": "Debajo de una cabecera de una sola línea aparece “Cuidado diario / elige tu volumen” y la tabla real del catálogo. Las columnas son producto, descripción, volumen, precio y acción; Crema de manos abre seleccionada en 30 ml por Bs 45 y Jabón líquido en 250 ml por Bs 38. En móvil cada fila se transforma en una banda comprable apilada.",
+      "flow": "La selección de volumen actualiza el precio en la misma fila y “Añadir” confirma la elección sin abandonar el índice. El nombre conduce a una página de producto compacta, organizada como ficha técnica editorial. El carrito se presenta como una lista numerada por nombres —sin numerales decorativos repetidos— y el checkout continúa con retícula de campos y resumen lateral, mostrando solo retiro como cumplimiento disponible.",
+      "typography": "Oswald para marca, encabezados y nombres: marca 48/50 px (34/36 móvil), producto 32/36 (27/31 móvil), etiquetas de columna 13/16 en mayúsculas. Instrument Sans para descripciones, selectores, precios y botones a 15–18 px. Títulos con -0.02em; cuerpo con espaciado normal.",
+      "imagery": "Sin imágenes ni dibujos. La tabla utiliza una trama CSS muy tenue de líneas horizontales, amplios campos blancos y una única banda lavanda para la fila activa. Ciruela casi negra para texto; lavanda grisácea para reglas y estados, evitando una sucesión de cajas coloreadas.",
+      "mobile": "Desaparecen solo los encabezados de columna, no la información. Cada producto conserva nombre, descripción, selector, precio y añadir juntos. La cabecera mantiene “Mi pedido · 0” visible; filas con separación por regla, no por tarjetas. Controles de ancho completo o flexible y altura mínima de 44 px a 320 px.",
+      "layout": {
+        "sections": [
+          "catalogo-indice",
+          "guia-volumen"
+        ],
+        "catalogSection": "catalogo-indice",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Mostrador sereno” se ajusta mejor a un catálogo real de solo dos productos, ambos con variantes de volumen y sin fotografías. Prioriza la acción solicitada —elegir volumen y añadir— desde el primer viewport, usa la paleta confirmada de lavanda, ciruela y fondo claro, y evita inventar envases, beneficios o contenido adicional. También permite distinguir con claridad la etiqueta real “Sin perfume”"
+  }
+}

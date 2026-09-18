@@ -4,8 +4,6 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CardLoader from "@/components/ui/card-stack-loader";
-import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
-import DiagonalMarqueeCarousel from "@/components/ui/great-ui-diagonal-marquee-carousel";
 import { Component as InteractiveVideoPortfolioScroller } from "@/components/ui/interactive-video-portfolio-scroller";
 import BentoDashboard from "@/components/ui/bento-dashboard";
 import FlowArt, { FlowSection } from "@/components/ui/story-scroll";
@@ -22,7 +20,6 @@ const ClarityMarquee = dynamic(() => import("@/components/ui/vercep-feature-1").
 const FullScreenScrollFX = dynamic(() => import("@/components/ui/full-screen-scroll-fx").then((module) => module.FullScreenScrollFX), { ssr: false });
 const CursorFloatingTarget = dynamic(() => import("@/components/ui/motion-cursor-floating-target"), { ssr: false });
 const FrameSequenceHero = dynamic(() => import("@/components/ui/mac-book-neo-hero").then((module) => module.FrameSequenceHero), { ssr: false });
-const InfiniteGallery = dynamic(() => import("@/components/ui/3d-gallery-photography"), { ssr: false });
 
 type Product = {
   id: string;
@@ -88,7 +85,6 @@ const parallaxImages = [
 ];
 
 type AnimationStyle =
-  | "coverflow-carousel"
   | "hero-carousel"
   | "image-stream"
   | "scroll-expansion"
@@ -102,18 +98,15 @@ type AnimationStyle =
   | "clarity-marquee"
   | "full-screen-chapters"
   | "magnetic-target"
-  | "frame-sequence"
-  | "3d-gallery";
+  | "frame-sequence";
 
 const animationOptions: Array<{ value: AnimationStyle; label: string; description: string }> = [
-  { value: "coverflow-carousel", label: "Carrusel en profundidad", description: "Recorre productos como portadas superpuestas." },
   { value: "hero-carousel", label: "Portada editorial", description: "Una imagen protagonista cambia por capítulos." },
   { value: "video-pill", label: "Video que se abre", description: "Una ventana de video crece hasta ocupar la escena." },
   { value: "circle-reveal", label: "Revelado circular", description: "El video nace en el centro y descubre la historia." },
   { value: "portfolio-scroller", label: "Menú de momentos", description: "Cada tramo del scroll activa un video y su relato." },
   { value: "full-screen-chapters", label: "Capítulos a pantalla completa", description: "Palabras e imágenes avanzan como una secuencia dirigida." },
   { value: "frame-sequence", label: "Secuencia por fotogramas", description: "El desplazamiento controla cada paso de preparación." },
-  { value: "3d-gallery", label: "Galería tridimensional", description: "Las fotos atraviesan el espacio con rueda, teclado o gesto." },
   { value: "magnetic-target", label: "Llamado magnético", description: "Una invitación responde al cursor sin mover el contenido." },
   { value: "clarity-marquee", label: "Preguntas en movimiento", description: "Las dudas frecuentes forman un ritmo editorial continuo." },
   { value: "image-stream", label: "Corriente de imágenes", description: "La fotografía rodea un mensaje central." },
@@ -165,7 +158,7 @@ export default function Home() {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [variant, setVariant] = useState("small");
   const [showDemoNotice, setShowDemoNotice] = useState(false);
-  const [animationStyles, setAnimationStyles] = useState<AnimationStyle[]>(["coverflow-carousel"]);
+  const [animationStyles, setAnimationStyles] = useState<AnimationStyle[]>(["hero-carousel"]);
   const demoDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -305,13 +298,6 @@ export default function Home() {
           )}
         </section>
 
-        <section className="coverflow-story" aria-labelledby="coverflow-title">
-          <div className="experience-heading">
-            <h2 id="coverflow-title">La historia sigue más allá del catálogo.</h2>
-          </div>
-          <CoverflowCarousel slides={experienceSlides} showCaption showNavigation showPagination cardWidth="clamp(180px, 27vw, 330px)" />
-        </section>
-
         <section className="story" aria-labelledby="story-title">
           <div className="story-copy">
             <h2 id="story-title">Matcha sin ceremonia complicada.</h2>
@@ -363,7 +349,6 @@ export default function Home() {
           <FlowSection aria-label="Momento" className="bg-[#f3eee5] text-[#0b2116]"><div className="matcho-flow-grid"><div><h2>Hecho<br />para<br />tu ritmo.</h2><p>Un ritual cotidiano, frío y directo.</p></div><img src="/matcho/gallery-1.jpg" alt="Detalle del ritual MATCHO" /></div></FlowSection>
         </FlowArt>
       ) : null}
-      {animationStyles.includes("coverflow-carousel") ? <section className="animation-stage"><CoverflowCarousel slides={experienceSlides} showCaption showNavigation showPagination cardWidth="clamp(190px, 28vw, 350px)" /></section> : null}
       {animationStyles.includes("hero-carousel") ? <section className="animation-stage full-bleed"><HeroCarousel items={heroItems} defaultIndex={1} brand="MATCHO" className="h-[720px]" /></section> : null}
       {animationStyles.includes("video-pill") ? <WorkPageHero /> : null}
       {animationStyles.includes("circle-reveal") ? <HeroScrollVideoReveal /> : null}
@@ -391,15 +376,6 @@ export default function Home() {
           steps={sequenceSteps}
         />
       ) : null}
-      {animationStyles.includes("3d-gallery") ? (
-        <section className="relative h-screen min-h-[620px] overflow-hidden bg-[#0b2116] text-white">
-          <InfiniteGallery images={parallaxImages} speed={1.1} zSpacing={3} visibleCount={10} className="h-full w-full" />
-          <div className="pointer-events-none absolute inset-0 grid place-items-center px-5 text-center mix-blend-difference">
-            <h2 className="max-w-[13ch] font-serif text-[clamp(2.5rem,7vw,6rem)] leading-[0.95] tracking-[-0.04em]"><em>La imagen se acerca;</em><br />el producto se entiende.</h2>
-          </div>
-          <p className="pointer-events-none absolute inset-x-4 bottom-7 text-center text-xs font-bold tracking-[0.14em] uppercase">Rueda, flechas o gesto · el movimiento vuelve solo después de 3 segundos</p>
-        </section>
-      ) : null}
       {animationStyles.includes("image-stream") ? <ImageStreamHero images={parallaxImages} className="h-[680px] w-full bg-[#e5dfd4]"><div className="relative z-10 grid h-full place-items-center px-6 text-center"><h2 className="max-w-[10ch] text-5xl font-semibold tracking-tight text-[#0b2116] sm:text-7xl">La marca sigue en movimiento.</h2></div></ImageStreamHero> : null}
       {animationStyles.includes("scroll-expansion") ? <ScrollExpandMedia mediaType="image" mediaSrc="/matcho/hero.png" bgImageSrc="/matcho/background.png" title="El ritual MATCHO" date="Hecho al momento" scrollToExpand="Desplázate para abrir la imagen" textBlend /> : null}
       {animationStyles.includes("stagger-testimonials") ? <section className="animation-stage"><StaggerTestimonials testimonials={testimonialItems} /></section> : null}
@@ -412,11 +388,6 @@ export default function Home() {
       {animationStyles.includes("zoom-parallax") ? <ZoomParallax images={parallaxImages} /> : null}
 
       <div className="store-shell store-shell-after-motion">
-
-        <section className="moving-gallery" aria-label="Galería MATCHO en movimiento">
-          <div className="moving-gallery-copy"><h2>Sabores que se mueven contigo.</h2></div>
-          <DiagonalMarqueeCarousel className="h-[720px]" cardClassName="h-[220px] w-[310px]" />
-        </section>
 
         <section className="showcase-finances" aria-labelledby="showcase-finances-title">
           <div className="experience-heading"><h2 id="showcase-finances-title">Una lectura clara del negocio.</h2></div>

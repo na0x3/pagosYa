@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Finalizar pedido — Trama</title>
+  <meta name="description" content="Revisa y completa tu pedido de Trama.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="checkout-page">
+  <header class="site-header">
+    <div class="header-primary">
+      <a class="wordmark" href="index.html" aria-label="Trama, inicio">TRAMA</a>
+      <button class="order-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span class="order-count" data-cart-count>0</span>
+      </button>
+    </div>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="index.html#catalogo-muestrario">Catálogo</a>
+      <a href="index.html#nota-de-trama">La trama</a>
+    </nav>
+  </header>
+
+  <main class="checkout-main">
+    <div class="page-kicker">
+      <a href="index.html#catalogo-muestrario"><span aria-hidden="true">←</span> Seguir eligiendo</a>
+      <span>Pedido · Trama</span>
+    </div>
+    <div data-pagosya-checkout-page></div>
+  </main>
+
+  <div data-pagosya-status role="status" aria-live="polite"></div>
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html">TRAMA</a><p>Prendas cotidianas con colores y tallas.</p><a href="index.html#catalogo-muestrario">Catálogo</a>
+  </footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

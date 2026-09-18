@@ -1,0 +1,11 @@
+# Optional creative artwork library
+
+`apps/api/src/stores/source-kit/creative-assets/` contains 32 Microsoft Fluent Emoji illustrations: 16 subjects in flat SVG and dimensional PNG styles. Each catalog entry records its subject/style tags, thumbnail path, source URL at a pinned upstream commit, MIT license, byte size and SHA-256. The full upstream license is included.
+
+`searchCreativeAssets()` retrieves matches from the merchant’s brief/request using subject and style terms, including common Spanish aliases. It returns no artwork when nothing matches. Both the concept planner and implementation model receive the matching local paths and descriptions. On new designs, redesigns, or explicit artwork edits, up to two PNG thumbnails use remaining vision slots; merchant photos retain priority and the six-image cap remains. Thumbnails are explicitly labelled as decorative library art. Text-only DeepSeek models receive the textual catalog without image inputs.
+
+The model can choose no library assets and author original code-native artwork. This is a starter collection, not an exhaustive asset service or a set of website templates. There is no automatic decoration, random sticker insertion, or required illustration style. Motion and Lottie are available for authored animation; this collection currently contains static artwork, not third-party Lottie packs.
+
+Use complete literal paths such as `/assets/creative/fluent-flat/coffee.svg`. `withSourceAssets()` bundles referenced assets before preflight and snapshot saving. Only selected artwork, its license, and its provenance entries enter the snapshot/export; thumbnails shown to the model are not automatically added to the site. Existing asset bytes survive local edits. The static build copies SVG as well as PNG, and Next exports place the assets under `public/assets/creative/`.
+
+To extend the collection, add subjects/styles to `scripts/sync-creative-assets.mjs` and run `node scripts/sync-creative-assets.mjs`. The importer uses pinned upstream URLs, validates SVG/PNG payloads and saves provenance. Add Spanish aliases when useful and review each new source’s license before adding a different pack. Generation reads local files and never downloads artwork at request time.

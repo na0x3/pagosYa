@@ -20,7 +20,7 @@ export class RailRegistry {
   }
 
   getForMethodType(type: PaymentMethodType): PaymentRailAdapter {
-    const adapter = [...this.byId.values()].find((a) => a.supportedMethodTypes.includes(type));
+    const adapter = [...this.byId.values()].find((a) => !a.explicitOnly && a.supportedMethodTypes.includes(type));
     if (!adapter) throw new UnsupportedPaymentMethodError(type);
     return adapter;
   }

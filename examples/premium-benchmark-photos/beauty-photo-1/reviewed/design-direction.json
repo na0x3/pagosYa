@@ -1,0 +1,67 @@
+{
+  "concepts": [
+    {
+      "name": "Ritual en dos gestos",
+      "premise": "Una portada fotográfica serena presenta los dos gestos de la rutina —hidratar y limpiar— antes de pasar a un catálogo breve. A diferencia de la densidad comercial del segundo concepto y del selector por contexto del tercero, abre con una composición editorial asimétrica y concede gran escala a las fotografías reales.",
+      "opening": "Encabezado claro con “Bruma”, enlaces a Productos y Mi pedido, y contador siempre visible. Debajo, una portada dividida: “Cuidado diario, en tu medida” y un acceso “Elegir producto” a la izquierda; a la derecha, assets/image-49363bd178b6.jpg en un recorte vertical 4:5, manteniendo el tubo completo como foco. Una pequeña leyenda “Casa o viaje” conecta el mensaje con los volúmenes sin inventar beneficios.",
+      "flow": "La portada lleva a dos fichas amplias alternadas. Crema de manos muestra nombre, descripción, etiqueta Sin perfume, selector 30/60 ml, precio actualizado y Añadir; Jabón líquido repite la lógica con 250/500 ml, sin repetir el tratamiento visual. La página de producto usa galería lateral, selector de volumen y compra fija dentro del panel de información. Carrito y checkout continúan con fondo marfil, divisores finos, miniaturas reales, cantidades claras y recogida como modalidad disponible; sin «",
+      "typography": "Instrument Serif para Bruma y titulares editoriales; Instrument Sans para navegación, precios, selectores y textos. Escritorio: marca 34 px, h1 68–82 px, h2 44 px, cuerpo 17 px. Móvil: marca 27 px, h1 43 px, h2 33 px, cuerpo 16 px. Ciruela para texto principal, lavanda para acentos y marfil cálido como base.",
+      "imagery": "assets/image-49363bd178b6.jpg lidera la portada con foco central en el tubo y su etiqueta. En catálogo, assets/image-df8cb044d4b4.jpg funciona como vista limpia de la crema y assets/image-e6ed32c54de5.jpg como vista limpia del jabón; recortes 4:5 con producto completo, sin alterar color ni etiqueta. Las escenas assets/image-49363bd178b6.jpg y assets/image-f285b2310535.jpg forman las segundas vistas de producto, con recorte más ancho y foco en el envase. No se añaden imágenes ajenas ni decorados.",
+      "mobile": "La portada pasa a texto sobre una franja clara y fotografía 4:5 debajo; el producto sigue completo y el botón aparece antes de la imagen. Cada ficha apila fotografía, nombre, selector, precio y botón de 48 px. “Mi pedido (0)” permanece en el encabezado fuera del menú. En producto, la compra deja de ser lateral y queda inmediatamente después de la primera imagen.",
+      "layout": {
+        "sections": [
+          "intro-ritual",
+          "catalogo-dos-gestos",
+          "nota-formatos"
+        ],
+        "catalogSection": "catalogo-dos-gestos",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    },
+    {
+      "name": "Botiquín Bruma",
+      "premise": "Una tienda compacta y directamente comprable, inspirada en el orden de una repisa de baño: los dos productos aparecen desde el primer tramo con controles visibles. Frente a la portada editorial del primer concepto y al recorrido guiado del tercero, prioriza comparación inmediata, mayor densidad y una jerarquía tipográfica totalmente sans.",
+      "opening": "Masthead de 72 px con Bruma, “Productos” y “Mi pedido (0)”. El catálogo comienza debajo con una línea compacta —“Diario. Simple. En tu volumen.”— y una cuadrícula de dos productos. En cada columna aparecen desde el inicio fotografía, nombre, precio inicial, selector de volumen y Añadir; se diseña para que esos elementos sean visibles sin desplazamiento tanto a 1280×844 como a 390×844.",
+      "flow": "En escritorio, las dos referencias se comparan en paralelo y sus variantes se eligen con botones segmentados. En móvil, abre una ficha compacta de Crema de manos totalmente comprable y continúa con Jabón líquido. Un bloque final explica únicamente lo confirmado: crema sin perfume, volúmenes disponibles y recogida en checkout. La página de producto amplía la misma ficha con galería de dos imágenes. Carrito y checkout se sienten como una hoja de pedido precisa: filas, subtotales, edición de unidad",
+      "typography": "Bricolage Grotesque en toda la interfaz: peso 650 para marca y títulos, 500 para controles, 400 para lectura. Escritorio: marca 30 px, lema 40 px, productos 28 px, precio 20 px. Móvil: marca 25 px, lema 29 px, productos 24 px, cuerpo 15–16 px. Mayúsculas pequeñas solo para etiquetas funcionales; espaciado abierto y números tabulares.",
+      "imagery": "assets/image-df8cb044d4b4.jpg y assets/image-e6ed32c54de5.jpg son las imágenes principales, en fondos claros y recortes cuadrados que preservan cada envase completo. Las fotografías ambientales assets/image-49363bd178b6.jpg y assets/image-f285b2310535.jpg aparecen únicamente en las galerías de detalle y en una banda final de dos imágenes, con foco central en el producto. Bordes ciruela finos y superficies marfil sustituyen las tarjetas coloreadas repetitivas.",
+      "mobile": "El catálogo comienza dentro de los primeros 160 px del documento. Cada producto se presenta como una fila editorial compacta: miniatura de 112 px, información al lado y compra a todo el ancho debajo; la primera referencia muestra nombre, precio y Añadir antes de 844 px. Selectores envuelven sin desbordar a 320 px y todos los controles miden al menos 44 px. “Mi pedido (0)” queda visible junto a la marca.",
+      "layout": {
+        "sections": [
+          "catalogo-repisa",
+          "detalle-esencial",
+          "galeria-cotidiana"
+        ],
+        "catalogSection": "catalogo-repisa",
+        "standaloneIntro": false,
+        "productsInOpening": true
+      }
+    },
+    {
+      "name": "¿Dónde va contigo?",
+      "premise": "La compra se organiza por situación —viaje o casa— para convertir los cuatro volúmenes en la estructura de navegación. A diferencia del relato fotográfico del primero y la comparación simultánea del segundo, utiliza un selector inicial y revela una recomendación de formato sin afirmar propiedades nuevas; ambos productos siguen accesibles en el catálogo.",
+      "opening": "Una escena apaisada usa assets/image-f285b2310535.jpg como fondo a la derecha, con el dispensador como foco y espacio claro de la propia fotografía para el título a la izquierda: “Un formato para cada lugar”. Dos anclas visibles, “Para llevar” y “Para casa”, conducen a grupos de volumen; un enlace secundario baja a “Ver los dos productos”. No hay producto plenamente comprable en este primer bloque.",
+      "flow": "Tras la apertura aparecen dos franjas de selección: “Para llevar” destaca Crema de manos 30 ml; “Para casa” presenta Crema 60 ml y Jabón líquido 250/500 ml sin proclamar usos no confirmados. Luego, el catálogo canónico reúne ambos productos con todos sus selectores, precios y acciones. La página de producto abre con una galería grande y un panel de compra sobrio; carrito y checkout conservan las etiquetas de contexto como orientación visual, pero muestran nombres y variantes reales como datos de",
+      "typography": "Oswald para títulos de contexto y cifras de volumen; Instrument Sans para marca, descripciones y comercio. Escritorio: h1 76 px condensado, rótulos 18 px, nombres 30 px, cuerpo 17 px. Móvil: h1 46 px, nombres 25 px, cuerpo 16 px. El contraste entre volúmenes grandes y texto tranquilo crea identidad sin competir con las etiquetas de los envases.",
+      "imagery": "assets/image-f285b2310535.jpg abre con recorte panorámico y foco en la bomba; en móvil cambia a 4:5 para conservar el frasco completo. assets/image-49363bd178b6.jpg acompaña “Para llevar”, centrada en el tubo. Las vistas limpias assets/image-df8cb044d4b4.jpg y assets/image-e6ed32c54de5.jpg sostienen el catálogo y las páginas de producto. El tratamiento alterna escena cálida a sangre y fotografía limpia con mucho aire, sin filtros que cambien la lavanda, la ciruela o el tono del jabón.",
+      "mobile": "El selector de contexto se convierte en dos anclas apiladas bajo el título; la fotografía conserva altura suficiente sin cubrir texto ni acciones. Las franjas de formato pasan a carriles verticales y el catálogo mantiene nombre, volumen, precio y Añadir como un solo grupo. Encabezado de dos líneas controladas con marca, menú y “Mi pedido (0)” siempre expuesto; compra y cantidades funcionan a 320 px.",
+      "layout": {
+        "sections": [
+          "intro-contexto",
+          "formatos-viaje",
+          "formatos-casa",
+          "catalogo-completo"
+        ],
+        "catalogSection": "catalogo-completo",
+        "standaloneIntro": true,
+        "productsInOpening": false
+      }
+    }
+  ],
+  "selected": 0,
+  "selection": {
+    "source": "planner",
+    "rationale": "“Ritual en dos gestos” aprovecha mejor las cuatro fotografías suministradas —una toma limpia y una ambiental para cada uno de los dos productos— y da a la fotografía el liderazgo solicitado. Su recorrido breve encaja con un catálogo de solo Crema de manos y Jabón líquido, mantiene visibles sus volúmenes reales (30/60 ml y 250/500 ml) y expresa la dirección confirmada de lavanda suave, ciruela,fárr"
+  }
+}

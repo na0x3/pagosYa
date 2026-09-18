@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsEmail, IsEnum, IsNumber, IsObject, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { IsBoolean, IsEmail, IsEnum, IsIn, IsNumber, IsObject, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from "class-validator";
 import { PaymentMethodType } from "@prisma/client";
 
 export class PaymentMethodInputDto {
@@ -27,6 +27,16 @@ export class ConfirmPaymentIntentDto {
   @ValidateNested()
   @Type(() => PaymentMethodInputDto)
   paymentMethod!: PaymentMethodInputDto;
+
+  @ApiPropertyOptional({ enum: ["dlocal"], description: "Route this payment through an international rail instead of the domestic one for the method type." })
+  @IsOptional()
+  @IsIn(["dlocal"])
+  rail?: "dlocal";
+
+  @ApiPropertyOptional({ description: "Shopper's ISO-3166 alpha-2 country, required with rail=dlocal.", example: "BR" })
+  @IsOptional()
+  @Matches(/^[A-Z]{2}$/)
+  country?: string;
 
   @ApiPropertyOptional({
     description: "Buyer name for the Factura Electrónica, if the merchant has invoicing configured. Defaults to \"SIN NOMBRE\".",

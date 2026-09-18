@@ -1,0 +1,3 @@
+ALTER TABLE "Category"
+ADD COLUMN "bannerUrl" TEXT,
+ADD COLUMN "highlights" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

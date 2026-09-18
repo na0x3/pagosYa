@@ -14,7 +14,7 @@ import { AuthModule } from "../auth/auth.module";
       storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
         if (!ALLOWED_MIME_TO_EXT[file.mimetype]) {
-          cb(new BadRequestException("Formato no soportado (usa PNG, JPEG, WEBP, GIF, MP4 o WEBM)"), false);
+          cb(new BadRequestException("Formato no soportado (usa PNG, JPEG, WEBP, GIF, MP4, WEBM o WOFF2)"), false);
           return;
         }
         cb(null, true);

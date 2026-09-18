@@ -121,3 +121,25 @@ describe("payment form (?client_secret=...)", () => {
     expect(navigator.geolocation.getCurrentPosition).toHaveBeenCalledOnce();
   });
 });
+
+
+describe('store checkout fulfillment handoff', () => {
+  it('keeps the selected delivery address when switching payment methods', async () => {
+    mockSession({ metadata: { cart: [], fulfillment: { method: 'delivery', address: 'Calle 10, puerta azul', locationName: 'Sucursal central' } } });
+    await loadCheckout('/?client_secret=pi_1_secret_abc');
+    expect(document.body.classList.contains('store-payment-page')).toBe(true);
+    expect(document.querySelector('#deliveryRequested')).toBeNull();
+    const field = document.querySelector<HTMLTextAreaElement>('#deliveryAddress')!;
+    expect(field.value).toBe('Calle 10, puerta azul');
+    field.value = 'Calle 10, segundo piso'; field.dispatchEvent(new Event('input'));
+    document.querySelector<HTMLButtonElement>('.tab[data-type="QR"]')!.click();
+    expect(document.querySelector<HTMLTextAreaElement>('#deliveryAddress')!.value).toBe('Calle 10, segundo piso');
+  });
+  it('does not ask a pickup customer to request delivery again', async () => {
+    mockSession({ metadata: { cart: [], fulfillment: { method: 'pickup', locationName: 'Sucursal central' } } });
+    await loadCheckout('/?client_secret=pi_1_secret_abc');
+    expect(document.querySelector('#deliveryRequested')).toBeNull();
+    expect(document.querySelector<HTMLElement>('.delivery-request-fields')!.hidden).toBe(true);
+    expect(document.querySelector('.delivery-request')?.textContent).toContain('Recoger en tienda');
+  });
+});

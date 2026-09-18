@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Finalizar pedido | Bruma</title>
+  <meta name="description" content="Revisa y finaliza tu pedido de productos Bruma.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="checkout-page">
+  <a class="skip-link" href="#checkout">Ir al pedido</a>
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="Bruma, inicio">Bruma</a>
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a href="index.html#catalogo-dos-gestos">Productos</a>
+      <button class="cart-trigger" type="button" data-cart-open>
+        <img src="assets/icons/shopping-bag.svg" alt="">
+        <span>Mi pedido</span> (<span data-cart-count>0</span>)
+      </button>
+    </nav>
+  </header>
+  <main class="checkout-main" id="checkout">
+    <div class="checkout-heading">
+      <p class="eyebrow">Tu selección</p>
+      <h1>Finalizar pedido</h1>
+    </div>
+    <div data-pagosya-checkout-page></div>
+  </main>
+  <div class="store-status" data-pagosya-status role="status" aria-live="polite"></div>
+  <footer class="site-footer">
+    <a class="wordmark" href="index.html">Bruma</a>
+    <p>Cuidado cosmético diario en varios volúmenes.</p>
+    <a href="index.html#catalogo-dos-gestos">Productos</a>
+  </footer>
+  <script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

@@ -78,6 +78,15 @@ export class MerchantSessionService {
     return this.issueSession(user);
   }
 
+  /**
+   * Public entry point for callers that have already proven mailbox control
+   * some other way than login()/loginWithGoogle() — e.g. MerchantUserService
+   * consuming a valid password-reset token. Same session as a normal login.
+   */
+  async createSession(user: { id: string; merchantId: string; email: string }) {
+    return this.issueSession(user);
+  }
+
   private async issueSession(user: { id: string; merchantId: string; email: string }) {
     const token = `dash_${generateSecretPart()}`;
     // Session tokens carry ~190 bits of randomness, so a deterministic SHA-256
@@ -90,8 +99,8 @@ export class MerchantSessionService {
       // Serialize session issuance per user across API replicas. Without this,
       // simultaneous logins can both decide they are the primary session or
       // briefly exceed the three-session cap.
-      if (typeof tx.$executeRawUnsafe === "function") {
-        await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", user.id);
+      if (typeof tx.$executeRaw === "function") {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${user.id}, 0))`;
       }
       await tx.merchantSession.updateMany({
         where: { merchantUserId: user.id, isPrimary: true, expiresAt: { lte: new Date() } },

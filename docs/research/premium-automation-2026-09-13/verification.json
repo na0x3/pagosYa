@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "tests": {
+    "source": 411,
+    "database": 17,
+    "checkout": 208,
+    "studio": 5
+  },
+  "allPassed": true,
+  "providerCallsInTests": "mocked except local browser rendering; no live inference",
+  "liveBenchmark": "examples/premium-benchmark/results.json",
+  "logs": {
+    "source": [
+      "Test Suites: 40 passed, 40 total",
+      "Tests:       411 passed, 411 total"
+    ],
+    "database": [
+      "Test Suites: 1 passed, 1 total",
+      "Tests:       17 passed, 17 total"
+    ],
+    "checkout": [
+      " Test Files  15 passed (15)",
+      "      Tests  208 passed (208)"
+    ],
+    "studio": [
+      "  5 passed (8.1s)"
+    ],
+    "apiBuild": [
+      "$ nest build"
+    ],
+    "studioBuild": [
+      "\u2713 built in 296ms"
+    ]
+  }
+}

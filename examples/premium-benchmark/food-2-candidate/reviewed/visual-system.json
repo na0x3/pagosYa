@@ -1,0 +1,156 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Fraunces variable para títulos con contraste suave y Instrument Sans para navegación, opciones, precios y checkout. Escala: 68/64 px en títulos editoriales de escritorio, 42/42 en tablet, 36/37 en móvil; producto 30/32 y cuerpo 16/24. Mayúsculas pequeñas y espaciadas sólo para rótulos, nunca para textos largos.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-mesa",
+      "ritual-domestico",
+      "recogida-clara"
+    ],
+    "catalogSection": "catalogo-mesa",
+    "mobileRule": "Header de 60 px con marca tipográfica, botón de menú y “Mi pedido (0)” siempre visible. Las fichas dejan de ser columnas: imagen 128 px de alto, nombre, precio, selectores de 44 px y botón ancho. El color cítrico se limita a selección activa, precio y botón; el resto mantiene fondo avena. La galería de producto pasa a carrusel horizontal con controles accesibles, y el resumen del pedido permanece después de los artículos, sin barras flotantes que tapen opciones."
+  },
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-06465dbb2877.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-d7afdd1c26f9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-5d185857f7d9.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-ceff3979a97c.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    },
+    {
+      "path": "assets/image-6039f6dfd423.jpg",
+      "role": "unknown",
+      "description": "",
+      "kind": "image"
+    }
+  ],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f4eddf",
+      "resolved": "#f4eddf",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#253128",
+      "resolved": "#253128",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#d85c22",
+      "resolved": "#d85c22",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf1",
+      "resolved": "#fffaf1",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#fbf7ee",
+      "resolved": "#fbf7ee",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#b9ad98",
+      "resolved": "#b9ad98",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "2px",
+      "resolved": "2px",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "\"Instrument Sans\",sans-serif",
+      "resolved": "\"Instrument Sans\",sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Fraunces,serif",
+      "resolved": "Fraunces,serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mesa Clara | Jugo y granola para el desayuno</title>
+  <meta name="description" content="Elige jugo de naranja con jengibre y granola de la casa en formatos individuales o packs para preparar tu desayuno.">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+<header class="site-header">
+  <a class="wordmark" href="index.html" aria-label="Mesa Clara, inicio">Mesa Clara</a>
+  <nav class="desktop-nav" aria-label="Navegación principal"><a href="#catalogo-capitulos">Productos</a><a href="#detalle-ingredientes">La despensa</a></nav>
+  <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav"><img src="assets/icons/menu.svg" alt="">Menú</button>
+  <button class="cart-trigger" type="button" data-cart-open><img src="assets/icons/shopping-bag.svg" alt="">Mi pedido <span class="cart-count">(<span data-cart-count>0</span>)</span></button>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil" hidden><a href="#catalogo-capitulos">Productos</a><a href="#detalle-ingredientes">La despensa</a></nav>
+</header>
+<main>
+  <section id="portada-mesa" class="opening">
+    <div class="opening-copy"><p class="eyebrow">Despensa para desayunos</p><h1>Dos cosas claras para empezar el día</h1><p>Jugo cítrico y granola de la casa, en el formato que mejor cabe en tu mesa.</p><a class="primary-link" href="#catalogo-capitulos">Elegir un producto <img src="assets/icons/arrow-right.svg" alt=""></a></div>
+    <figure class="opening-photo"><img src="assets/image-f1220ebdbbf1.jpg" alt="Tres botellas de jugo de naranja y jengibre SAVIA junto a naranjas" fetchpriority="high"><a href="#catalogo-capitulos" class="photo-tab">Elegir jugo <img src="assets/icons/arrow-right.svg" alt=""></a></figure>
+  </section>
+  <section id="atajo-despensa" class="pantry-strip" aria-label="Productos de la despensa">
+    <a href="#catalogo-capitulos"><span>01</span><strong>Jugo naranja + jengibre</strong><small>330 ml y 750 ml</small></a>
+    <a href="#catalogo-capitulos"><span>02</span><strong>Granola de la casa</strong><small>250 g y 500 g</small></a>
+  </section>
+  <section id="catalogo-capitulos" class="catalog-section">
+    <header class="section-heading"><p class="eyebrow">Elige para tu mesa</p><h2>La despensa de la mañana</h2><p>Configura tamaño, sabor o presentación antes de añadir.</p></header>
+    <div data-pagosya-catalog aria-live="polite"></div>
+    <template data-pagosya-product-template>
+      <article class="menu-item chapter-card">
+        <a class="chapter-media menu-item__details" data-product-link data-product-media aria-label="Ver producto"><img data-product-field="image" alt="" class="menu-item__image"></a>
+        <div class="chapter-copy">
+          <p class="chapter-number eyebrow">Producto</p>
+          <h3><a data-product-link data-product-field="name"></a></h3>
+          <p class="product-description" data-product-field="description"></p>
+          <div class="chapter-options" data-product-field="options"></div>
+          <div class="chapter-purchase"><span class="menu-item__price" data-product-field="price"></span><button class="menu-add" type="button" data-product-add>Añadir al pedido</button></div>
+          <p class="add-feedback" role="status" aria-live="polite"></p>
+          <a class="details-link" data-product-link>Ver producto <img src="assets/icons/arrow-right.svg" alt=""></a>
+        </div>
+      </article>
+    </template>
+  </section>
+  <section id="detalle-ingredientes" class="ingredient-story">
+    <div class="story-copy"><p class="eyebrow">Dos maneras de servir</p><h2>Botella fría.<br>Bol a tu manera.</h2><p>El jugo combina naranja y jengibre en botella de vidrio. La granola reúne avena, almendras y arándanos para acompañar yogur o fruta.</p><p class="allergen"><strong>Importante:</strong> la granola contiene almendras.</p></div>
+    <figure class="story-image story-juice"><img src="assets/image-d7afdd1c26f9.jpg" alt="Botella y vaso de jugo con naranja y jengibre"></figure>
+    <figure class="story-image story-granola"><img src="assets/image-ceff3979a97c.jpg" alt="Bol con granola, almendras y arándanos junto al frasco"></figure>
+  </section>
+  <section id="cierre-claro" class="closing"><p class="eyebrow">Mesa Clara</p><h2>Tu desayuno empieza con una elección sencilla.</h2><a class="primary-link" href="#catalogo-capitulos">Ver los productos <img src="assets/icons/arrow-right.svg" alt=""></a></section>
+</main>
+<div data-pagosya-status role="status" aria-live="polite"></div>
+<div data-pagosya-contact hidden></div><div data-pagosya-cart hidden></div>
+<footer class="site-footer"><a class="wordmark" href="index.html">Mesa Clara</a><p>Jugo y granola en formatos individuales y packs.</p><button type="button" data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></footer>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body></html>

@@ -1,0 +1,39 @@
+{
+  "id": "cmu0exoxk000rvjrie6nj1r8o",
+  "requestId": "00d683a5-46e6-4920-97c7-768d41e0f9ed",
+  "revision": 1,
+  "page": "index.html",
+  "status": "UNCHANGED",
+  "stage": "REVIEW_BASELINE",
+  "maxCredits": 150,
+  "reservedCredits": 1.5717,
+  "observedCredits": 1.5717,
+  "repairs": 0,
+  "maxRepairs": 1,
+  "receipts": [
+    {
+      "id": "3f3b8b78-098d-4155-afa3-7aabc6e01aab",
+      "stage": "REVIEW_BASELINE",
+      "repair": 0,
+      "status": "completed",
+      "startedAt": "2026-09-13T22:56:10.083Z",
+      "finishedAt": "2026-09-13T22:56:12.238Z",
+      "actualMicroUsd": 15717,
+      "reservedMicroUsd": 150000
+    }
+  ],
+  "error": null,
+  "resultRevision": null,
+  "createdAt": "2026-09-13T22:56:06.777Z",
+  "updatedAt": "2026-09-13T22:56:12.240Z",
+  "report": {
+    "model": "gpt-5.6-terra",
+    "summary": "La composición mantiene una identidad serena y contemporánea, con jerarquía clara de productos y llamadas a la acción. No se observan problemas visibles importantes que requieran corrección.",
+    "findings": [],
+    "preference": "uncertain",
+    "responseId": "resp_07b132600fd5f669016aa72a0abf4c87d2bb7c654aa73bf399",
+    "regressions": [],
+    "providerMicroUsd": 15717
+  },
+  "resumeAvailable": false
+}

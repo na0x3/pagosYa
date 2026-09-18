@@ -219,9 +219,12 @@ export class FinancesService {
       : null;
     if (storeId && !selectedStore) throw new NotFoundException("Store not found");
 
+    // These totals are reported in BOB. International (dLocal) charges are stored in
+    // USD cents, so summing them in would inflate BOB revenue ~7x.
     const succeededWhere = {
       merchantId,
       status: PaymentIntentStatus.SUCCEEDED,
+      currency: "BOB",
       ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
     };
     const now = new Date();
@@ -266,6 +269,7 @@ export class FinancesService {
             FROM "PaymentIntent"
             WHERE "merchantId" = ${merchantId}
               AND status = 'SUCCEEDED'
+              AND currency = ${"BOB"}
               AND NULLIF(metadata ->> 'storeId', '') IS NULL
           `),
       this.prisma.$queryRaw<{ weekday: number; amount: bigint; count: bigint; monthAmount: bigint }[]>(Prisma.sql`
@@ -282,6 +286,7 @@ export class FinancesService {
           AND t."createdAt" >= ${ninetyDaysAgo}
           AND pi."merchantId" = ${merchantId}
           AND pi.status = 'SUCCEEDED'
+          AND pi.currency = ${"BOB"}
           ${storeActivityScope}
         GROUP BY weekday
       `),

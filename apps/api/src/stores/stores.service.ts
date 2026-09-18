@@ -1,4 +1,8 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
+import { creditQuote, reserveCredit } from '../commerce-platform/credit-ledger';
+import { bestBundleDiscount, type Bundle } from './bundle-pricing';
+import { quoteShipping, type ShippingOption } from './shipping-rates';
+import { computeParcel, type Parcel } from '../shipping/parcel';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
@@ -15,21 +19,27 @@ import {
   type StoreAnimationDto,
   type StoreLocationDto,
 } from "./dto/create-store.dto";
+import { readCatalogLayout } from "./catalog-layout";
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { SetStoreLinksDto } from "./dto/set-store-links.dto";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 import { SaveStoreSettingsDto } from "./dto/save-store-settings.dto";
+import { SaveWebsiteDraftDto } from "./dto/save-website-draft.dto";
+import { assertWebsiteRevision, saveWebsiteDraftPatch, websiteDraft, websiteEditorStore, websiteUpdateData, WebsiteDraft } from "./website-draft";
 import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { CreateQuickQrPaymentDto } from "./dto/create-quick-qr-payment.dto";
 import { PromoCodesService } from "../promo-codes/promo-codes.service";
 import { createOrderTrackingToken } from "../consumer/order-tracking-token";
+import { applySiteArtDirection, resolveSiteSectionFamily, siteSectionBlockSlotIsSupported } from "@pagosya/shared-types";
 
 const slugPart = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 const MAX_DESCRIPTION_LENGTH = 480;
 const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
-type ProductVariant = { id: string; name: string; amount: number; stock?: number | null };
+import type { ProductVariant } from '../payment-links/product-variants';
+import { pickedProductQuantities, resolveSelectedExtras, selectedExtrasLabel } from '../payment-links/product-extras';
+import type { CartItemDto } from '../payment-links/dto/cart-checkout.dto';
 type ProductExtra = {
   id: string;
   name: string;
@@ -37,6 +47,8 @@ type ProductExtra = {
   required: boolean;
   groupName?: string;
   freeAllowance?: number;
+  pickCount?: number;
+  productId?: string;
   inventoryKey?: string;
   inventoryName?: string;
   stock?: number;
@@ -62,11 +74,25 @@ type StoreEditorialImage = {
   textWidthPercent?: number;
   textAlign?: string;
   textColor?: string;
+  fontStyle?: string;
+};
+type StoreAnimationTextBlock = {
+  id: string;
+  role: "title" | "subtitle";
+  text: string;
+  textPositionX?: number;
+  textPositionY?: number;
+  textScale?: number;
+  textWidthPercent?: number;
+  textAlign?: string;
+  textColor?: string;
+  fontStyle?: string;
 };
 type StoreAnimation = {
   id: string;
   name: string;
   type: string;
+  pageId?: string;
   title?: string;
   subtitle?: string;
   productId?: string;
@@ -82,6 +108,8 @@ type StoreAnimation = {
   textWidth?: string;
   textColor?: string;
   backgroundColor?: string;
+  fontStyle?: string;
+  textBlocks?: StoreAnimationTextBlock[];
   media: StoreEditorialImage[];
 };
 const DEFAULT_STORE_ANIMATION: StoreAnimation = {
@@ -107,6 +135,10 @@ type StoreLocation = {
   mapEmbedUrl?: string;
   description?: string;
   highlight?: string;
+  department?: string;
+  city?: string;
+  lat?: number;
+  lng?: number;
   pickupEnabled: boolean;
   deliveryEnabled: boolean;
   openingHours: Array<{ day: number; open: string; close: string; closed: boolean }>;
@@ -120,6 +152,9 @@ function storeLocationSnapshot(locations: StoreLocationDto[]): StoreLocation[] {
     ...(location.mapEmbedUrl?.trim() ? { mapEmbedUrl: location.mapEmbedUrl.trim() } : {}),
     ...(location.description?.trim() ? { description: location.description.trim() } : {}),
     ...(location.highlight?.trim() ? { highlight: location.highlight.trim() } : {}),
+    ...(location.department ? { department: location.department } : {}),
+    ...(location.city?.trim() ? { city: location.city.trim() } : {}),
+    ...(location.lat != null && location.lng != null ? { lat: location.lat, lng: location.lng } : {}),
     pickupEnabled: location.pickupEnabled,
     deliveryEnabled: location.deliveryEnabled,
     openingHours: (location.openingHours || []).map((hours) => ({ day: hours.day, open: hours.open, close: hours.close, closed: hours.closed })),
@@ -215,6 +250,8 @@ function readProductExtras(value: Prisma.JsonValue): ProductExtra[] {
       typeof (entry as Record<string, unknown>).required === "boolean" &&
       (!("groupName" in entry) || typeof (entry as Record<string, unknown>).groupName === "string") &&
       (!("freeAllowance" in entry) || (Number.isInteger((entry as Record<string, unknown>).freeAllowance) && ((entry as Record<string, unknown>).freeAllowance as number) >= 0)) &&
+      (!("productId" in entry) || typeof (entry as Record<string, unknown>).productId === "string") &&
+      (!("pickCount" in entry) || (Number.isInteger((entry as Record<string, unknown>).pickCount) && ((entry as Record<string, unknown>).pickCount as number) >= 1)) &&
       (!("inventoryKey" in entry) || typeof (entry as Record<string, unknown>).inventoryKey === "string") &&
       (!("inventoryName" in entry) || typeof (entry as Record<string, unknown>).inventoryName === "string") &&
       (!("stock" in entry) || (Number.isInteger((entry as Record<string, unknown>).stock) && ((entry as Record<string, unknown>).stock as number) >= 0)),
@@ -337,7 +374,7 @@ function readStoreMotionExperiences(value: unknown, legacy: unknown): string[] {
   const unique = [...new Set(selected)];
   if (unique.length) return unique;
   if (typeof legacy === "string" && (STORE_MOTION_EXPERIENCES as readonly string[]).includes(legacy)) return [legacy];
-  return ["coverflow-carousel"];
+  return ["hero-carousel"];
 }
 
 function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
@@ -361,12 +398,45 @@ function readStoreEditorialGallery(value: unknown): StoreEditorialImage[] {
       ...(typeof entry.textWidthPercent === "number" && Number.isInteger(entry.textWidthPercent) && entry.textWidthPercent >= 20 && entry.textWidthPercent <= 100 ? { textWidthPercent: entry.textWidthPercent } : {}),
       ...(typeof entry.textAlign === "string" && ["left", "center", "right"].includes(entry.textAlign) ? { textAlign: entry.textAlign } : {}),
       ...(typeof entry.textColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.textColor) ? { textColor: entry.textColor } : {}),
+      ...(typeof entry.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(entry.fontStyle) ? { fontStyle: entry.fontStyle } : {}),
     }));
+}
+
+function animationMediaLimit(type: string): number {
+  return ["circle-reveal", "magnetic-target", "video-background", "link-preview", "video-pin-reveal"].includes(type)
+    ? 1
+    : type === "scroll-expansion" ? 2 : 8;
+}
+
+function readStoreAnimationTextBlocks(value: unknown): StoreAnimationTextBlock[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const block = entry as Prisma.JsonObject;
+    if (typeof block.id !== "string" || !/^[a-z0-9][a-z0-9_-]{0,47}$/.test(block.id)) return [];
+    if (block.role !== "title" && block.role !== "subtitle") return [];
+    if (typeof block.text !== "string" || !block.text.trim()) return [];
+    return [{
+      id: block.id,
+      role: block.role,
+      text: block.text.slice(0, 220),
+      ...(typeof block.textPositionX === "number" && Number.isInteger(block.textPositionX) && block.textPositionX >= 0 && block.textPositionX <= 100 ? { textPositionX: block.textPositionX } : {}),
+      ...(typeof block.textPositionY === "number" && Number.isInteger(block.textPositionY) && block.textPositionY >= 0 && block.textPositionY <= 100 ? { textPositionY: block.textPositionY } : {}),
+      ...(typeof block.textScale === "number" && Number.isInteger(block.textScale) && block.textScale >= 50 && block.textScale <= 200 ? { textScale: block.textScale } : {}),
+      ...(typeof block.textWidthPercent === "number" && Number.isInteger(block.textWidthPercent) && block.textWidthPercent >= 20 && block.textWidthPercent <= 100 ? { textWidthPercent: block.textWidthPercent } : {}),
+      ...(typeof block.textAlign === "string" && ["left", "center", "right"].includes(block.textAlign) ? { textAlign: block.textAlign } : {}),
+      ...(typeof block.textColor === "string" && /^#[0-9a-f]{6}$/i.test(block.textColor) ? { textColor: block.textColor } : {}),
+      ...(typeof block.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(block.fontStyle) ? { fontStyle: block.fontStyle } : {}),
+    } as StoreAnimationTextBlock];
+  }).slice(0, 24);
+}
+
+function normalizeAnimationMedia<T extends { type: string; media: unknown[] }>(animation: T): T {
+  return { ...animation, media: animation.media.slice(0, animationMediaLimit(animation.type)) };
 }
 
 const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "story-scroll": "Story Scroll",
-  "coverflow-carousel": "Coverflow",
   "hero-carousel": "Hero editorial",
   "image-stream": "Image Stream",
   "scroll-expansion": "Scroll Expansion",
@@ -378,7 +448,16 @@ const LEGACY_ANIMATION_NAMES: Record<string, string> = {
   "full-screen-chapters": "Capítulos a pantalla completa",
   "magnetic-target": "Llamado magnético",
   "frame-sequence": "Secuencia por fotogramas",
-  "3d-gallery": "Galería tridimensional",
+  "video-background": "Video de fondo",
+  "draggable-cards": "Tarjetas arrastrables",
+  "perspective-carousel": "Carrusel con perspectiva",
+  "link-preview": "Vista previa de enlace",
+  "video-pin-reveal": "Video revelado",
+  "gallery-accordion": "Galería acordeón",
+  "split-scroll": "Relato dividido",
+  "sticky-gallery": "Galería fija",
+  "sticky-story": "Historia fija",
+  "text-parallax": "Texto en paralaje",
 };
 
 function readStoreAnimations(
@@ -405,6 +484,7 @@ function readStoreAnimations(
           id: entry.id as string,
           name: (entry.name as string).slice(0, 60),
           type: entry.type as string,
+          ...(typeof entry.pageId === "string" && /^[a-z][a-z0-9-]{0,47}$/.test(entry.pageId) ? { pageId: entry.pageId } : {}),
           ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
           ...(typeof entry.subtitle === "string" && entry.subtitle ? { subtitle: entry.subtitle } : {}),
           ...(typeof entry.productId === "string" && entry.productId ? { productId: entry.productId.slice(0, 80) } : {}),
@@ -420,7 +500,9 @@ function readStoreAnimations(
           ...(typeof entry.textWidth === "string" && ["narrow", "medium", "wide"].includes(entry.textWidth) ? { textWidth: entry.textWidth } : {}),
           ...(typeof entry.textColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.textColor) ? { textColor: entry.textColor } : {}),
           ...(typeof entry.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(entry.backgroundColor) ? { backgroundColor: entry.backgroundColor } : {}),
-          media: readStoreEditorialGallery(entry.media),
+          ...(typeof entry.fontStyle === "string" && ["modern", "editorial", "friendly", "classic", "geometric", "artisan", "condensed", "luxury"].includes(entry.fontStyle) ? { fontStyle: entry.fontStyle } : {}),
+          ...(readStoreAnimationTextBlocks(entry.textBlocks).length ? { textBlocks: readStoreAnimationTextBlocks(entry.textBlocks) } : {}),
+          media: readStoreEditorialGallery(entry.media).slice(0, animationMediaLimit(entry.type as string)),
         }))
     : [];
   if (parsed.length || !enabled) return parsed;
@@ -429,7 +511,7 @@ function readStoreAnimations(
     name: LEGACY_ANIMATION_NAMES[type] ?? `Animación ${index + 1}`,
     type,
     title: LEGACY_ANIMATION_NAMES[type] ?? `Animación ${index + 1}`,
-    media: legacyGallery.map((image) => ({ ...image })),
+    media: legacyGallery.slice(0, animationMediaLimit(type)).map((image) => ({ ...image })),
   }));
 }
 
@@ -445,13 +527,24 @@ function synchronizedSiteDocument(
   currentStore?: SiteDocumentLegacyStore,
 ): Prisma.InputJsonValue | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  const document = JSON.parse(JSON.stringify(value)) as Record<string, any>;
+  let document = JSON.parse(JSON.stringify(value)) as Record<string, any>;
   if (document.version !== 1 || !document.theme || !Array.isArray(document.sections)) return undefined;
+  if (dto.siteArtDirection !== undefined) document = applySiteArtDirection(document as any, dto.siteArtDirection) as Record<string, any>;
+  if (dto.sitePages !== undefined) {
+    const slugs = new Set<string>();
+    document.pages = dto.sitePages.map((page) => {
+      const slug = page.slug.trim().toLowerCase();
+      if (slugs.has(slug)) throw new BadRequestException("Cada página necesita una URL distinta");
+      slugs.add(slug);
+      return { id: page.id, label: page.label.trim(), slug };
+    });
+  }
+  const pageIds = new Set((Array.isArray(document.pages) ? document.pages : []).map((page: Record<string, unknown>) => page.id));
   const theme = document.theme as Record<string, unknown>;
   if (dto.backgroundColor !== undefined && dto.backgroundColor) theme.pageBackground = dto.backgroundColor;
   if (dto.accentColor !== undefined && dto.accentColor) theme.accentColor = dto.accentColor;
   if (dto.fontStyle !== undefined) {
-    const fontRoles: Record<string, string> = { modern: "grotesk", editorial: "editorial", friendly: "humanist", classic: "classic", geometric: "geometric" };
+    const fontRoles: Record<string, string> = { modern: "grotesk", editorial: "editorial", friendly: "humanist", classic: "classic", geometric: "geometric", artisan: "artisan", condensed: "condensed", luxury: "luxury" };
     theme.headingFont = fontRoles[dto.fontStyle] ?? theme.headingFont;
     theme.bodyFont = fontRoles[dto.fontStyle] ?? theme.bodyFont;
   }
@@ -462,42 +555,255 @@ function synchronizedSiteDocument(
     document.experience = { ...document.experience, type: "none" };
   }
   const backgrounds = dto.sectionBackgrounds ?? {};
+  const canvasTextStyle = (style: Record<string, unknown> | undefined) => style ? {
+    ...(Number.isInteger(style.textScale) ? { textScale: style.textScale } : {}),
+    ...(Number.isInteger(style.textWidthPercent) ? { textWidthPercent: Math.min(100, Math.max(20, Number(style.textWidthPercent))) } : {}),
+    ...(["left", "center", "right"].includes(String(style.textAlign)) ? { textAlign: style.textAlign } : {}),
+    ...(typeof style.textColor === "string" ? { textColor: style.textColor.toLowerCase() } : {}),
+    ...(typeof style.fontStyle === "string" ? { fontStyle: style.fontStyle } : {}),
+    ...(Number.isInteger(style.textOffsetX) ? { textOffsetX: Math.min(1000, Math.max(-1000, Number(style.textOffsetX))) } : {}),
+    ...(Number.isInteger(style.textOffsetY) ? { textOffsetY: Math.min(1000, Math.max(-1000, Number(style.textOffsetY))) } : {}),
+    ...(["element", "section"].includes(String(style.textOffsetBasis)) ? { textOffsetBasis: style.textOffsetBasis } : {}),
+  } : undefined;
+  const normalizedBlocks = (blocks: unknown, sectionKind: string) => {
+    if (!Array.isArray(blocks)) return undefined;
+    const ids = new Set<string>();
+    const visit = (block: any, depth: number): Record<string, unknown> => {
+      if (!block || typeof block !== "object" || Array.isArray(block) || depth > 1) throw new BadRequestException("La estructura de bloques de la sección no es válida");
+      if (ids.has(block.id) || !siteSectionBlockSlotIsSupported(sectionKind as any, block.slot)) throw new BadRequestException("Un bloque usa un id o una ranura no válida");
+      if (depth === 1 && (block.kind === "group" || block.children?.length)) throw new BadRequestException("Los bloques solo pueden tener un nivel de contenido anidado");
+      ids.add(block.id);
+      return {
+        id: block.id,
+        kind: block.kind,
+        slot: block.slot,
+        role: block.role,
+        text: block.text || "",
+        mediaUrl: block.mediaUrl || null,
+        ...(canvasTextStyle(block.style as Record<string, unknown> | undefined) ? { style: canvasTextStyle(block.style as Record<string, unknown>) } : {}),
+        children: (block.children || []).map((child: unknown) => visit(child, depth + 1)),
+      };
+    };
+    return blocks.map((block) => visit(block, 0));
+  };
   const backgroundKey: Record<string, string> = { hero: "hero", story: "about", catalog: "products", gallery: "gallery", contact: "contact", location: "location", links: "links" };
-  document.sections = document.sections.filter((entry: unknown) => !(entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).kind === "benefits")).map((entry: unknown) => {
+  const projectedLegacyKinds = new Set<string>();
+  const deletedSectionIds = new Set(dto.siteDeletedSectionIds ?? []);
+  const requiredSiteSectionIds = new Set(["hero", "catalog", "contact"].flatMap((kind) => {
+    const section = document.sections.find((entry: unknown) => {
+      if (!(entry && typeof entry === "object" && !Array.isArray(entry))) return false;
+      const candidate = entry as Record<string, unknown>;
+      return candidate.kind === kind && !candidate.pageId;
+    }) as Record<string, unknown> | undefined;
+    return typeof section?.id === "string" ? [section.id] : [];
+  }));
+  document.sections = document.sections.filter((entry: unknown) => {
+    if (!(entry && typeof entry === "object" && !Array.isArray(entry))) return false;
+    const candidate = entry as Record<string, unknown>;
+    if (candidate.kind === "benefits") return false;
+    return requiredSiteSectionIds.has(String(candidate.id || "")) || !deletedSectionIds.has(String(candidate.id || ""));
+  }).map((entry: unknown) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
     const section = { ...(entry as Record<string, any>) };
+    if (["hero", "story", "catalog", "gallery", "contact", "location", "links"].includes(section.kind)) {
+      section.family = resolveSiteSectionFamily(section.kind, section.family, document.designGenome);
+    }
+    const projectLegacy = !section.pageId && !projectedLegacyKinds.has(section.kind);
+    if (!section.pageId) projectedLegacyKinds.add(section.kind);
     const setText = (field: "title" | "body", candidate: unknown) => {
       if (candidate === null || typeof candidate === "string") section[field] = candidate || "";
     };
-    if (section.kind === "hero") {
+    if (projectLegacy && section.kind === "hero") {
       setText("title", dto.tagline);
       if (dto.bannerUrl !== undefined && currentStore && dto.bannerUrl !== currentStore.bannerUrl) section.mediaUrls = dto.bannerUrl ? [dto.bannerUrl] : [];
-    } else if (section.kind === "story") {
+    } else if (projectLegacy && section.kind === "story") {
       setText("title", dto.aboutTitle);
       setText("body", dto.aboutText !== undefined ? dto.aboutText : dto.aboutSubtitle);
       if (dto.aboutImageUrl !== undefined && currentStore && dto.aboutImageUrl !== currentStore.aboutImageUrl) section.mediaUrls = dto.aboutImageUrl ? [dto.aboutImageUrl] : [];
-    } else if (section.kind === "catalog") {
+    } else if (projectLegacy && section.kind === "catalog") {
       setText("title", dto.catalogTitle);
       setText("body", dto.catalogSubtitle);
-    } else if (section.kind === "gallery") {
+    } else if (projectLegacy && section.kind === "gallery") {
       setText("title", dto.galleryTitle);
       setText("body", dto.gallerySubtitle);
       if (dto.editorialGallery !== undefined && currentStore && JSON.stringify(dto.editorialGallery) !== JSON.stringify(currentStore.editorialGallery)) {
         section.mediaUrls = dto.editorialGallery.map((image) => image.imageUrl).filter(Boolean);
       }
-    } else if (section.kind === "contact") {
+    } else if (projectLegacy && section.kind === "contact") {
       setText("title", dto.contactTitle);
       setText("body", dto.contactSubtitle);
-    } else if (section.kind === "location") {
+    } else if (projectLegacy && section.kind === "location") {
       setText("title", dto.locationTitle);
       setText("body", dto.locationSubtitle);
-    } else if (section.kind === "links") {
+    } else if (projectLegacy && section.kind === "links") {
       setText("title", dto.linksTitle);
     }
     const background = backgrounds[`site-${section.id}`] ?? backgrounds[backgroundKey[section.kind]];
     if (background) section.backgroundColor = background;
+    const authored = dto.siteSections?.find((candidate) => candidate.id === section.id);
+    if (authored) {
+      if (authored.pageId && !pageIds.has(authored.pageId)) throw new BadRequestException("Una sección apunta a una página que no existe");
+      if (authored.pageId) section.pageId = authored.pageId;
+      else delete section.pageId;
+      if (section.kind === "catalog") section.productIds = [...new Set(authored.productIds || [])].slice(0, 200);
+      section.title = authored.title;
+      section.family = resolveSiteSectionFamily(section.kind, authored.family ?? section.family, document.designGenome);
+      section.body = authored.body;
+      section.ctaLabel = authored.ctaLabel;
+      section.layout = authored.layout;
+      section.width = authored.width;
+      if (authored.heightPx !== undefined) section.heightPx = authored.heightPx;
+      else delete section.heightPx;
+      if (authored.mobileHeightPx !== undefined) section.mobileHeightPx = authored.mobileHeightPx;
+      else delete section.mobileHeightPx;
+      section.align = authored.align;
+      section.motion = authored.motion;
+      section.backgroundColor = authored.backgroundColor.toLowerCase();
+      section.textColor = authored.textColor.toLowerCase();
+      section.titleStyle = canvasTextStyle(authored.titleStyle as Record<string, unknown> | undefined);
+      section.bodyStyle = canvasTextStyle(authored.bodyStyle as Record<string, unknown> | undefined);
+      section.mediaUrls = [...authored.mediaUrls];
+      section.items = Array.isArray(section.items)
+        ? section.items.map((item: unknown, index: number) => {
+            if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+            const copy = authored.items[index];
+            return copy ? {
+              ...(item as Record<string, unknown>),
+              title: copy.title || "",
+              body: copy.body || "",
+              mediaUrl: copy.mediaUrl || null,
+              titleStyle: canvasTextStyle(copy.titleStyle as Record<string, unknown> | undefined),
+              bodyStyle: canvasTextStyle(copy.bodyStyle as Record<string, unknown> | undefined),
+            } : item;
+          })
+        : [];
+      if (authored.blocks !== undefined) section.blocks = normalizedBlocks(authored.blocks, section.kind);
+    }
+    if (Array.isArray(section.blocks) && authored?.blocks === undefined) {
+      const standardBlocks = new Map(section.blocks.map((block: Record<string, any>) => [block.id, block]));
+      if (standardBlocks.has("heading")) standardBlocks.get("heading")!.text = section.title || "";
+      if (standardBlocks.has("body")) standardBlocks.get("body")!.text = section.body || "";
+      if (standardBlocks.has("action")) standardBlocks.get("action")!.text = section.ctaLabel || "";
+      (section.mediaUrls || []).forEach((mediaUrl: string, index: number) => {
+        const block = standardBlocks.get(`media-${index + 1}`);
+        if (block) block.mediaUrl = mediaUrl;
+      });
+    }
     return section;
   });
+  const existingSectionIds = new Set(document.sections.map((section: Record<string, unknown>) => section.id));
+  const singletonKinds = new Set(["contact", "location", "links"]);
+  for (const authored of dto.siteSections ?? []) {
+    if (existingSectionIds.has(authored.id) || authored.kind === "hero") continue;
+    if (singletonKinds.has(authored.kind) && document.sections.some((section: Record<string, unknown>) => section.kind === authored.kind)) continue;
+    if (authored.pageId && !pageIds.has(authored.pageId)) throw new BadRequestException("Una sección apunta a una página que no existe");
+    document.sections.push({
+      id: authored.id,
+      ...(authored.pageId ? { pageId: authored.pageId } : {}),
+      ...(authored.kind === "catalog" ? { productIds: [...new Set(authored.productIds || [])].slice(0, 200) } : {}),
+      kind: authored.kind,
+      family: resolveSiteSectionFamily(authored.kind as any, authored.family, document.designGenome),
+      title: authored.title,
+      body: authored.body,
+      ctaLabel: authored.ctaLabel,
+      layout: authored.layout,
+      width: authored.width,
+      ...(authored.heightPx !== undefined ? { heightPx: authored.heightPx } : {}),
+      ...(authored.mobileHeightPx !== undefined ? { mobileHeightPx: authored.mobileHeightPx } : {}),
+      align: authored.align,
+      motion: authored.motion,
+      backgroundColor: authored.backgroundColor.toLowerCase(),
+      textColor: authored.textColor.toLowerCase(),
+      titleStyle: canvasTextStyle(authored.titleStyle as Record<string, unknown> | undefined),
+      bodyStyle: canvasTextStyle(authored.bodyStyle as Record<string, unknown> | undefined),
+      mediaUrls: [...authored.mediaUrls],
+      items: authored.items.map((item) => ({
+        title: item.title || "",
+        body: item.body || "",
+        mediaUrl: item.mediaUrl || null,
+        titleStyle: canvasTextStyle(item.titleStyle as Record<string, unknown> | undefined),
+        bodyStyle: canvasTextStyle(item.bodyStyle as Record<string, unknown> | undefined),
+      })),
+      ...(authored.blocks !== undefined ? { blocks: normalizedBlocks(authored.blocks, authored.kind) } : {}),
+    });
+    existingSectionIds.add(authored.id);
+  }
+  if (dto.siteNavigation !== undefined) {
+    const navigation = document.navigation && typeof document.navigation === "object" && !Array.isArray(document.navigation)
+      ? document.navigation as Record<string, unknown>
+      : null;
+    if (!navigation) throw new BadRequestException("La navegación del sitio no es válida");
+    navigation.layout = dto.siteNavigation.layout;
+    navigation.barStyle = dto.siteNavigation.barStyle || "floating";
+    navigation.brandPosition = dto.siteNavigation.brandPosition || (dto.siteNavigation.layout === "centered" ? "center" : "left");
+    navigation.navPosition = dto.siteNavigation.navPosition || (dto.siteNavigation.layout === "split" ? "left" : "center");
+    navigation.searchPosition = dto.siteNavigation.searchPosition || "right";
+    navigation.profilePosition = dto.siteNavigation.profilePosition || "right";
+    navigation.cartPosition = dto.siteNavigation.cartPosition || "right";
+    const brandStyle = canvasTextStyle(dto.siteNavigation.brandStyle as Record<string, unknown> | undefined);
+    const taglineStyle = canvasTextStyle(dto.siteNavigation.taglineStyle as Record<string, unknown> | undefined);
+    if (brandStyle) navigation.brandStyle = brandStyle;
+    else delete navigation.brandStyle;
+    if (taglineStyle) navigation.taglineStyle = taglineStyle;
+    else delete navigation.taglineStyle;
+    navigation.sticky = dto.siteNavigation.sticky;
+    navigation.transparent = dto.siteNavigation.transparent;
+    navigation.logoTreatment = dto.siteNavigation.logoTreatment;
+  }
+  if (dto.siteNavigationItems !== undefined) {
+    const navigation = document.navigation && typeof document.navigation === "object" && !Array.isArray(document.navigation)
+      ? document.navigation as Record<string, unknown>
+      : null;
+    if (!navigation) throw new BadRequestException("La navegación del sitio no es válida");
+    for (const item of dto.siteNavigationItems) {
+      if (item.target === "section" && (!item.sectionId || !existingSectionIds.has(item.sectionId))) {
+        throw new BadRequestException("Un enlace de navegación apunta a una sección que no existe");
+      }
+      if (item.target === "page" && (!item.pageId || !pageIds.has(item.pageId))) {
+        throw new BadRequestException("Un enlace de navegación apunta a una página que no existe");
+      }
+    }
+    navigation.items = dto.siteNavigationItems.map((item) => ({
+      id: item.id,
+      label: item.label.trim(),
+      target: item.target,
+      ...(item.target === "section" ? { sectionId: item.sectionId } : {}),
+      ...(item.target === "page" ? { pageId: item.pageId } : {}),
+      ...(canvasTextStyle(item.style as Record<string, unknown> | undefined) ? { style: canvasTextStyle(item.style as Record<string, unknown>) } : {}),
+    }));
+  }
+  if (dto.siteFooter !== undefined) {
+    document.footer = {
+      enabled: dto.siteFooter.enabled,
+      brandDescription: dto.siteFooter.brandDescription.trim(),
+      columns: dto.siteFooter.columns.map((column) => ({
+        id: column.id,
+        title: column.title.trim(),
+        items: column.items.map((item) => ({ id: item.id, label: item.label.trim(), href: item.href.trim() })),
+      })),
+      copyright: dto.siteFooter.copyright.trim(),
+      badge: dto.siteFooter.badge.trim(),
+      ...(dto.siteFooter.newsletter ? { newsletter: {
+        enabled: dto.siteFooter.newsletter.enabled,
+        title: dto.siteFooter.newsletter.title.trim(),
+        body: dto.siteFooter.newsletter.body.trim(),
+        buttonLabel: dto.siteFooter.newsletter.buttonLabel.trim(),
+        successMessage: dto.siteFooter.newsletter.successMessage.trim(),
+      } } : {}),
+    };
+  }
+  if (dto.siteCatalogMenuStyle !== undefined || dto.siteCatalogCollections !== undefined) {
+    const merchandising = document.merchandising && typeof document.merchandising === "object" && !Array.isArray(document.merchandising)
+      ? document.merchandising as Record<string, unknown>
+      : {};
+    if (dto.siteCatalogMenuStyle !== undefined) merchandising.collectionMenuStyle = dto.siteCatalogMenuStyle;
+    if (dto.siteCatalogCollections !== undefined) merchandising.collections = dto.siteCatalogCollections.map((collection) => ({
+      id: collection.id,
+      name: collection.name.trim(),
+      productIds: [...new Set(collection.productIds)],
+    }));
+    document.merchandising = merchandising;
+  }
   return document as Prisma.InputJsonValue;
 }
 
@@ -507,6 +813,7 @@ function storeUpdateData(
   currentStore?: SiteDocumentLegacyStore,
 ): Prisma.StoreUpdateInput {
   const siteDocument = synchronizedSiteDocument(currentSiteDocument, dto, currentStore);
+  const normalizedAnimations = dto.animations?.map(normalizeAnimationMedia);
   return {
     ...(dto.name !== undefined && { name: dto.name }),
     ...(dto.tagline !== undefined && { tagline: dto.tagline }),
@@ -555,6 +862,7 @@ function storeUpdateData(
     ...(dto.contentOrder !== undefined && { contentOrder: dto.contentOrder as unknown as Prisma.InputJsonValue }),
     ...(dto.sectionBackgrounds !== undefined && { sectionBackgrounds: dto.sectionBackgrounds as unknown as Prisma.InputJsonValue }),
     ...(dto.layoutStyle !== undefined && { layoutStyle: dto.layoutStyle }),
+    ...(dto.catalogLayout !== undefined && { catalogLayout: dto.catalogLayout }),
     ...(dto.experienceStyle !== undefined && { experienceStyle: dto.experienceStyle }),
     ...(dto.motionDuoEnabled !== undefined && { motionDuoEnabled: dto.motionDuoEnabled }),
     ...(dto.motionExperience !== undefined && { motionExperience: dto.motionExperience }),
@@ -562,11 +870,11 @@ function storeUpdateData(
       motionExperiences: dto.motionExperiences as unknown as Prisma.InputJsonValue,
       motionExperience: dto.motionExperiences[0],
     }),
-    ...(dto.animations !== undefined && {
-      animations: dto.animations as unknown as Prisma.InputJsonValue,
-      motionDuoEnabled: dto.animations.length > 0,
-      motionExperiences: [...new Set(dto.animations.map((animation) => animation.type))] as unknown as Prisma.InputJsonValue,
-      motionExperience: dto.animations[0]?.type ?? "coverflow-carousel",
+    ...(normalizedAnimations !== undefined && {
+      animations: normalizedAnimations as unknown as Prisma.InputJsonValue,
+      motionDuoEnabled: normalizedAnimations.length > 0,
+      motionExperiences: [...new Set(normalizedAnimations.map((animation) => animation.type))] as unknown as Prisma.InputJsonValue,
+      motionExperience: normalizedAnimations[0]?.type ?? "clarity-marquee",
     }),
     ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
     ...(dto.buttonVariant !== undefined && { buttonVariant: dto.buttonVariant }),
@@ -691,10 +999,10 @@ export class StoresService implements OnModuleDestroy {
     };
   }
 
-  /** A merchant can run several independent stores under one account — each gets its own slug/branding/catalog. */
+  /** Stores keep independent catalogs and designs under the authenticated merchant. */
   async create(merchantId: string, dto: CreateStoreDto) {
     if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
-    const animations = dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }];
+    const animations = (dto.animations ?? [{ ...DEFAULT_STORE_ANIMATION, media: [] }]).map(normalizeAnimationMedia);
     const contentOrder = dto.contentOrder
       ? [...(dto.animations === undefined ? [animationContentSection(DEFAULT_STORE_ANIMATION.id)] : []), ...dto.contentOrder]
       : dto.animations === undefined
@@ -721,7 +1029,7 @@ export class StoresService implements OnModuleDestroy {
             backgroundImageUrl: null,
             contactPhone: dto.contactPhone,
             contactEmail: dto.contactEmail,
-            contactFormEnabled: dto.contactFormEnabled,
+            contactFormEnabled: dto.contactFormEnabled ?? false,
             contactFormEmail: dto.contactFormEmail,
             contactTitle: dto.contactTitle,
             contactSubtitle: dto.contactSubtitle,
@@ -761,6 +1069,7 @@ export class StoresService implements OnModuleDestroy {
             contentOrder: contentOrder as unknown as Prisma.InputJsonValue,
             ...(dto.sectionBackgrounds !== undefined && { sectionBackgrounds: dto.sectionBackgrounds as unknown as Prisma.InputJsonValue }),
             ...(dto.layoutStyle !== undefined && { layoutStyle: dto.layoutStyle }),
+            ...(dto.catalogLayout !== undefined && { catalogLayout: dto.catalogLayout }),
             ...(dto.experienceStyle !== undefined && { experienceStyle: dto.experienceStyle }),
             ...(dto.motionDuoEnabled !== undefined && { motionDuoEnabled: dto.motionDuoEnabled }),
             ...(dto.motionExperience !== undefined && { motionExperience: dto.motionExperience }),
@@ -771,7 +1080,7 @@ export class StoresService implements OnModuleDestroy {
             animations: animations as unknown as Prisma.InputJsonValue,
             motionDuoEnabled: animations.length > 0,
             motionExperiences: [...new Set(animations.map((animation: StoreAnimationDto | StoreAnimation) => animation.type))] as unknown as Prisma.InputJsonValue,
-            motionExperience: animations[0]?.type ?? "coverflow-carousel",
+            motionExperience: animations[0]?.type ?? "clarity-marquee",
             ...(dto.editorialGallery !== undefined && { editorialGallery: dto.editorialGallery as unknown as Prisma.InputJsonValue }),
             buttonVariant: dto.buttonVariant,
             buttonMotion: dto.buttonMotion,
@@ -788,7 +1097,8 @@ export class StoresService implements OnModuleDestroy {
           },
         });
       } catch (err) {
-        const isUniqueSlugClash = (err as { code?: string })?.code === "P2002";
+        const uniqueError = err as { code?: string; meta?: { target?: string[] | string } };
+        const isUniqueSlugClash = uniqueError.code === "P2002" && uniqueError.meta?.target?.includes("slug");
         if (!isUniqueSlugClash || attempt === 4) throw err;
       }
     }
@@ -802,6 +1112,7 @@ export class StoresService implements OnModuleDestroy {
       // Links ride along so the dashboard's store editor can populate its
       // link rows without a second request per store.
       include: {
+        sourceProject: { select: { revision: true } },
         links: { orderBy: { sortOrder: "asc" } },
         customDomains: {
           orderBy: { createdAt: "asc" },
@@ -814,17 +1125,18 @@ export class StoresService implements OnModuleDestroy {
   async update(merchantId: string, id: string, dto: UpdateStoreDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
+    await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
     if (dto.locations !== undefined) {
       assertValidStoreLocations(dto.locations);
       return this.prisma.$transaction(async (tx) => {
-        const updated = await tx.store.update({ where: { id }, data: storeUpdateData(dto, store.siteDocument, store) });
+        const updated = await tx.store.update({ where: { id }, data: { ...storeUpdateData(dto, store.siteDocument, store), websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } } });
         await this.syncLocationInventory(tx, id, dto.locations!);
         return updated;
       });
     }
     return this.prisma.store.update({
       where: { id },
-      data: storeUpdateData(dto, store.siteDocument, store),
+      data: { ...storeUpdateData(dto, store.siteDocument, store), websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
     });
   }
 
@@ -833,6 +1145,7 @@ export class StoresService implements OnModuleDestroy {
   async saveSettings(merchantId: string, id: string, dto: SaveStoreSettingsDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
+    await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
     const { links, locations, ...storeDto } = dto;
     if (locations !== undefined) assertValidStoreLocations(locations);
     return this.prisma.$transaction(async (tx) => {
@@ -840,6 +1153,8 @@ export class StoresService implements OnModuleDestroy {
         where: { id },
         data: {
           ...storeUpdateData(storeDto, store.siteDocument, store),
+          websiteRevision: { increment: 1 },
+          websitePublishedRevision: { increment: 1 },
           ...(locations !== undefined && { locations: storeLocationSnapshot(locations) as unknown as Prisma.InputJsonValue }),
         },
       });
@@ -851,6 +1166,110 @@ export class StoresService implements OnModuleDestroy {
       const savedLinks = await tx.storeLink.findMany({ where: { storeId: id }, orderBy: { sortOrder: "asc" } });
       return { ...updated, links: savedLinks };
     });
+  }
+
+  async saveWebsiteDraft(merchantId: string, id: string, dto: SaveWebsiteDraftDto) {
+    const published = await this.prisma.store.findFirst({ where: { id, merchantId } });
+    if (!published) throw new NotFoundException("Store not found");
+    assertWebsiteRevision(published, dto.revision);
+    const store = websiteEditorStore(published);
+    await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
+    if (dto.locations !== undefined) assertValidStoreLocations(dto.locations);
+    const { revision, links, inventoryProductIds = [], ...settings } = dto;
+    const data = storeUpdateData(settings, store.siteDocument, store) as Prisma.JsonObject;
+    let inventory: Pick<WebsiteDraft, "inventoryChanges" | "locationInventory"> | undefined;
+    if (inventoryProductIds.length && dto.locations) {
+      const products = await this.prisma.paymentLink.findMany({ where: { storeId: id, id: { in: inventoryProductIds } }, select: { id: true, name: true, stock: true, locationStocks: true } });
+      if (products.length !== inventoryProductIds.length) throw new BadRequestException("Uno de los productos del ajuste de inventario ya no pertenece a esta tienda.");
+      const previousChanges = websiteDraft(published)?.inventoryChanges ?? [];
+      const inventoryChanges = previousChanges.filter((change) => !inventoryProductIds.includes(change.id));
+      const sameLocations = (a: unknown, b: unknown) => JSON.stringify(Object.entries((a || {}) as object).sort()) === JSON.stringify(Object.entries((b || {}) as object).sort());
+      for (const product of products) {
+        if (!dto.locations.every((location) => location.inventory?.some((entry) => entry.paymentLinkId === product.id))) throw new BadRequestException(`Completa el stock de ${product.name} en cada ubicación.`);
+        const previous = previousChanges.find((change) => change.id === product.id);
+        if (previous && (previous.beforeStock !== product.stock || !sameLocations(previous.beforeLocations, product.locationStocks))) {
+          throw new ConflictException(`El stock de ${product.name} cambió. Revisa el inventario antes de guardar ese ajuste.`);
+        }
+        const locationStocks = Object.fromEntries(dto.locations.map((location) => {
+          const allocation = location.inventory!.find((entry) => entry.paymentLinkId === product.id)!;
+          return [location.id, allocation.stock === undefined ? 0 : allocation.stock];
+        }));
+        const values = Object.values(locationStocks);
+        const stock = !values.length ? product.stock : values.some((value) => value === null) ? null : values.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+        if (stock !== product.stock || !sameLocations(locationStocks, product.locationStocks)) inventoryChanges.push({ id: product.id, name: product.name, beforeStock: product.stock, beforeLocations: product.locationStocks, stock, locationStocks });
+      }
+      inventory = { inventoryChanges, locationInventory: dto.locations.map((location) => ({ id: location.id, inventory: inventoryChanges.map((change) => ({ paymentLinkId: change.id, stock: change.locationStocks[location.id] ?? null })) })) };
+    }
+    return saveWebsiteDraftPatch(this.prisma, published, revision, data, links, undefined, inventory);
+  }
+
+  async publishWebsiteDraft(merchantId: string, id: string, revision: number) {
+    const store = await this.prisma.store.findFirst({ where: { id, merchantId }, include: { links: { orderBy: { sortOrder: "asc" } } } });
+    if (!store) throw new NotFoundException("Store not found");
+    assertWebsiteRevision(store, revision);
+    const draft = websiteDraft(store);
+    if (!draft) throw new BadRequestException("Guarda un borrador antes de publicarlo.");
+    // Capture every field being promoted, including link order, for restoration.
+    const before = Object.fromEntries(Object.keys(draft.data).map((key) => [key, (store as any)[key] ?? null]));
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.store.updateMany({
+        where: { id, merchantId, websiteRevision: revision, websitePublishedRevision: draft.basePublishedRevision },
+        data: { ...websiteUpdateData(draft.data) as Prisma.StoreUpdateManyMutationInput,
+          websiteDraft: Prisma.DbNull, websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
+      });
+      if (result.count !== 1) throw new ConflictException("El borrador cambió antes de publicar. Revisa los cambios más recientes.");
+      for (const change of draft.inventoryChanges ?? []) {
+        const changed = await tx.paymentLink.updateMany({ where: { id: change.id, storeId: id, stock: change.beforeStock,
+          locationStocks: { equals: change.beforeLocations === null ? Prisma.DbNull : change.beforeLocations as Prisma.InputJsonValue } },
+          data: { stock: change.stock, locationStocks: change.locationStocks } });
+        if (changed.count !== 1) throw new ConflictException(`El stock de ${change.name} cambió. No publicamos nada; revisa ese ajuste de inventario.`);
+      }
+      await tx.storeVisualVersion.create({ data: { storeId: id, label: "Antes de publicar", source: `publish:${revision}`,
+        snapshot: { ...before, links: store.links.map(({ label, url }) => ({ label, url })) } as Prisma.InputJsonObject } });
+      if (draft.links) {
+        await tx.storeLink.deleteMany({ where: { storeId: id } });
+        await tx.storeLink.createMany({ data: draft.links.map((link, sortOrder) => ({ storeId: id, ...link, sortOrder })) });
+      }
+      return tx.store.findUniqueOrThrow({ where: { id }, include: { links: { orderBy: { sortOrder: "asc" } } } });
+    });
+  }
+
+  async discardWebsiteDraft(merchantId: string, id: string, revision: number) {
+    // Explicit recovery when a public settings change made a draft obsolete.
+    const result = await this.prisma.store.updateMany({ where: { id, merchantId, websiteRevision: revision },
+      data: { websiteDraft: Prisma.DbNull, websiteRevision: { increment: 1 } } });
+    if (result.count !== 1) throw new ConflictException("El borrador cambió. Recarga antes de descartarlo.");
+    return this.prisma.store.findFirstOrThrow({ where: { id, merchantId }, include: { links: { orderBy: { sortOrder: "asc" } } } });
+  }
+
+  private async assertOwnedSiteSectionMedia(merchantId: string, dto: UpdateStoreDto, currentDocument: Prisma.JsonValue | null) {
+    if (!dto.siteSections?.length) return;
+    const blockMedia = (blocks: Array<{ mediaUrl?: string | null; children?: any[] }> = []): string[] => blocks.flatMap((block) => [
+      ...(block.mediaUrl ? [block.mediaUrl] : []),
+      ...blockMedia(block.children || []),
+    ]);
+    const requested = new Set(dto.siteSections.flatMap((section) => [
+      ...section.mediaUrls,
+      ...section.items.flatMap((item) => item.mediaUrl ? [item.mediaUrl] : []),
+      ...blockMedia(section.blocks || []),
+    ]));
+    const current = new Set<string>();
+    if (currentDocument && typeof currentDocument === "object" && !Array.isArray(currentDocument)) {
+      const sections = Array.isArray((currentDocument as Record<string, unknown>).sections)
+        ? (currentDocument as Record<string, unknown>).sections as Array<Record<string, unknown>>
+        : [];
+      sections.forEach((section) => {
+        if (Array.isArray(section.mediaUrls)) section.mediaUrls.forEach((url) => typeof url === "string" && current.add(url));
+        if (Array.isArray(section.items)) section.items.forEach((item) => {
+          if (item && typeof item === "object" && !Array.isArray(item) && typeof (item as Record<string, unknown>).mediaUrl === "string") current.add((item as Record<string, unknown>).mediaUrl as string);
+        });
+        if (Array.isArray(section.blocks)) blockMedia(section.blocks as any[]).forEach((url) => current.add(url));
+      });
+    }
+    const newUrls = [...requested].filter((url) => !current.has(url));
+    if (!newUrls.length) return;
+    const owned = await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: newUrls } }, select: { url: true } });
+    if (owned.length !== newUrls.length) throw new BadRequestException("Una o más imágenes de la sección no pertenecen a tu cuenta");
   }
 
   private async syncLocationInventory(tx: Prisma.TransactionClient, storeId: string, locations: StoreLocationDto[]) {
@@ -876,6 +1295,7 @@ export class StoresService implements OnModuleDestroy {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
     await this.prisma.$transaction([
+      this.prisma.store.update({ where: { id }, data: { websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } } }),
       this.prisma.storeLink.deleteMany({ where: { storeId: id } }),
       this.prisma.storeLink.createMany({
         data: dto.links.map((link, index) => ({ storeId: id, label: link.label, url: link.url, sortOrder: index })),
@@ -904,7 +1324,10 @@ export class StoresService implements OnModuleDestroy {
     // Cascade deletes the DB rows (Category, PaymentLink), but not the actual
     // photo files those rows pointed at — gather every url this store owns
     // before the rows disappear, then clean them off disk once they're gone.
-    const links = await this.prisma.paymentLink.findMany({ where: { storeId: id }, select: { imageUrls: true } });
+    const [links, categories] = await Promise.all([
+      this.prisma.paymentLink.findMany({ where: { storeId: id }, select: { imageUrls: true } }),
+      this.prisma.category.findMany({ where: { storeId: id }, select: { bannerUrl: true } }),
+    ]);
     const fileUrls = [
       store.logoUrl,
       store.bannerUrl,
@@ -912,9 +1335,15 @@ export class StoresService implements OnModuleDestroy {
       store.aboutImageUrl,
       ...readStoreHeroSlides(store.heroSlides).map((slide) => slide.imageUrl),
       ...readStoreEditorialGallery(store.editorialGallery).map((image) => image.imageUrl),
+      ...categories.map((category) => category.bannerUrl),
       ...links.flatMap((l) => l.imageUrls),
     ];
 
+    if (this.prisma.domainOrder && await this.prisma.domainOrder.count({ where: { storeId: id, status: { not: 'QUOTED' } } })) {
+      throw new BadRequestException('Archiva esta tienda para conservar el registro y los pagos de sus dominios.');
+    }
+    if (this.prisma.domainOrder) await this.prisma.domainOrder.deleteMany({ where: { storeId: id, status: 'QUOTED' } });
+    if (store.creditsEnabled || store.digitalGoodsEnabled) throw new BadRequestException('Archiva esta tienda para conservar saldos y descargas de pedidos existentes.');
     await this.prisma.store.delete({ where: { id } });
     await this.uploads.deleteFiles(fileUrls);
     return { success: true };
@@ -928,7 +1357,7 @@ export class StoresService implements OnModuleDestroy {
    */
   async findActiveBySlugPublic(slug: string) {
     const store = await this.prisma.store.findUnique({ where: { slug } });
-    if (!store || store.status !== StoreStatus.ACTIVE) throw new NotFoundException("Esta tienda ya no está disponible");
+    if (!store || store.status !== StoreStatus.ACTIVE || store.sourcePublicationPaused) throw new NotFoundException("Esta tienda ya no está disponible");
     return store;
   }
 
@@ -938,6 +1367,7 @@ export class StoresService implements OnModuleDestroy {
     const term = search?.trim().slice(0, 80);
     const where: Prisma.StoreWhereInput = {
       status: StoreStatus.ACTIVE,
+      sourcePublicationPaused: false,
       merchant: { status: MerchantStatus.ACTIVE },
       paymentLinks: { some: { status: PaymentLinkStatus.ACTIVE } },
       ...(term ? {
@@ -1018,15 +1448,35 @@ export class StoresService implements OnModuleDestroy {
     };
   }
 
+  /** Box picks consume their linked product's stock: load the linked products that are not
+   * already cart lines, and count every pick (× line quantity) toward each product. */
+  private async pickedProductStock(storeId: string, links: Array<{ id: string; extras: Prisma.JsonValue }>, items: CartItemDto[]) {
+    const linksById = new Map(links.map((link) => [link.id, link]));
+    const picked = pickedProductQuantities(items, (item) => readProductExtras(linksById.get(item.paymentLinkId)?.extras ?? []));
+    const missing = [...picked.keys()].filter((id) => !linksById.has(id));
+    const linked = missing.length
+      ? await this.prisma.paymentLink.findMany({ where: { id: { in: missing }, storeId, status: PaymentLinkStatus.ACTIVE } })
+      : [];
+    for (const id of missing) {
+      if (linked.some((link) => link.id === id)) continue;
+      const name = links.flatMap((link) => readProductExtras(link.extras)).find((extra) => extra.productId === id)?.name;
+      throw new BadRequestException(`"${name ?? "Un producto de la caja"}" ya no está disponible`);
+    }
+    return { picked, linked };
+  }
+
   /** Public — no auth, called by the checkout page's landing view before any payment exists. */
-  async getStorePublic(slug: string, options: { trackView?: boolean } = {}) {
-    const store = await this.findActiveBySlugPublic(slug);
+  async getStorePublic(slug: string, options: { trackView?: boolean; ownerMerchantId?: string } = {}) {
+    const store = options.ownerMerchantId
+      ? await this.prisma.store.findFirst({ where: { slug, merchantId: options.ownerMerchantId } })
+      : await this.findActiveBySlugPublic(slug);
+    if (!store) throw new NotFoundException('Store not found');
     // Not deduplicated per visitor/session — a lightweight external-audience
     // counter for the merchant's Finanzas view, not full analytics. Checkout
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
-    const trackView = options.trackView !== false;
-    const [items, categories, links, productStats, appointmentOfferings] = await Promise.all([
+    const trackView = !options.ownerMerchantId && options.trackView !== false;
+    const [items, categories, links, productStats, appointmentOfferings, collections] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
@@ -1039,10 +1489,20 @@ export class StoresService implements OnModuleDestroy {
         select: { id: true, name: true, durationMinutes: true, bufferMinutes: true, price: true, currency: true, color: true },
         orderBy: { name: "asc" },
       }),
+      this.prisma.collection.findMany({
+        where: { storeId: store.id },
+        orderBy: { sortOrder: 'asc' },
+        include: { products: { orderBy: { sortOrder: 'asc' }, select: { paymentLinkId: true } } },
+      }),
     ]);
     if (trackView) this.queueStoreView(store.id);
 
     const soldByProduct = new Map(productStats.map((stat) => [stat.paymentLinkId, stat.quantity]));
+    const itemsById = new Map(items.map((item) => [item.id, item]));
+    const bundles = store.bundlesEnabled
+      ? (await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true }, orderBy: { createdAt: "asc" } }))
+          .map(({ id, name, kind, items: bundleItems, minimumQuantity, discountPercent }) => ({ id, name, kind, items: bundleItems as Array<{ productId: string; quantity: number }>, minimumQuantity, discountPercent }))
+      : [];
     const sharedExtraStock = new Map<string, number>();
     for (const item of items) {
       for (const extra of readProductExtras(item.extras)) {
@@ -1069,7 +1529,9 @@ export class StoresService implements OnModuleDestroy {
     }));
     return {
       storeId: store.id,
+      publishedSourceRevision: store.publishedSourceRevision ?? null,
       storeName: store.name,
+      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
       bannerUrl: store.bannerUrl,
@@ -1136,18 +1598,38 @@ export class StoresService implements OnModuleDestroy {
       leadCaptureUrl: store.leadCaptureUrl,
       cartRecommendationsEnabled: store.cartRecommendationsEnabled,
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
+      bundles,
       showLowStockToCustomers: store.showLowStockToCustomers,
       appointmentOfferings,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
-      categories: categories.map((c) => ({ id: c.id, name: c.name })),
+      catalogLayout: readCatalogLayout(store.catalogLayout),
+      collections: collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+        slug: collection.slug,
+        // Only products the shopper can actually see travel with the collection.
+        productIds: collection.products
+          .map((row) => row.paymentLinkId)
+          .filter((id) => publicProductIds.has(id)),
+      })),
+      categories: categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        bannerUrl: c.bannerUrl,
+        highlights: c.highlights.slice(0, 4),
+      })),
       items: items.map((item) => ({
         id: item.id,
         categoryId: item.categoryId,
+        fulfillmentType: item.fulfillmentType,
         name: item.name,
         description: item.description,
         imageUrls: item.imageUrls,
         imagePositions: item.imagePositions,
         tags: item.tags,
+        specifications: Array.isArray(item.specifications) ? item.specifications : [],
+        highlights: Array.isArray(item.highlights) ? item.highlights : [],
+        recommendedProductIds: item.recommendedProductIds,
         // null = unlimited/not tracked; 0 means genuinely sold out, both are
         // meaningfully different from "in stock" and the storefront needs to
         // tell them apart.
@@ -1162,14 +1644,21 @@ export class StoresService implements OnModuleDestroy {
           ...(store.showLowStockToCustomers ? {} : { stock: variant.stock === 0 ? 0 : null }),
           ...(variant.stock !== undefined ? { purchaseLimit: variant.stock } : {}),
         })),
-        extras: readProductExtras(item.extras).map((extra) => ({
-          id: extra.id,
-          name: extra.name,
-          amount: extra.amount,
-          required: extra.required,
-          ...(extra.groupName ? { groupName: extra.groupName, freeAllowance: extra.freeAllowance ?? 0 } : {}),
-          available: extra.stock === undefined || (extra.inventoryKey ? sharedExtraStock.get(extra.inventoryKey) !== 0 : extra.stock !== 0),
-        })),
+        // A box choice that stands for a product shows that product's live name and photo; one that was
+        // archived or deleted drops out of the box instead of selling something the store no longer offers.
+        extras: readProductExtras(item.extras).flatMap((extra) => {
+          const product = extra.productId ? itemsById.get(extra.productId) : undefined;
+          if (extra.productId && !product) return [];
+          return [{
+            id: extra.id,
+            name: product?.name ?? extra.name,
+            amount: extra.amount,
+            required: extra.required,
+            ...(extra.groupName ? { groupName: extra.groupName, freeAllowance: extra.freeAllowance ?? 0, ...(extra.pickCount ? { pickCount: extra.pickCount } : {}) } : {}),
+            ...(product ? { productId: product.id, ...(product.imageUrls[0] ? { imageUrl: product.imageUrls[0] } : {}) } : {}),
+            available: (extra.stock === undefined || (extra.inventoryKey ? sharedExtraStock.get(extra.inventoryKey) !== 0 : extra.stock !== 0)) && product?.stock !== 0,
+          }];
+        }),
         amount: item.amount,
         currency: item.currency,
         discountPercent: item.discountPercent,
@@ -1182,19 +1671,14 @@ export class StoresService implements OnModuleDestroy {
 
   /** Public — turns a cart (one or more items, from the same store as `slug`) into a
    * single PaymentIntent, i.e. one payment/one QR for the whole cart. */
-  async createCartCheckout(slug: string, dto: CartCheckoutDto) {
+  async createCartCheckout(slug: string, dto: CartCheckoutDto, quoteOnly = false) {
     const store = await this.findActiveBySlugPublic(slug);
     if (store.checkoutMode === "whatsapp" || store.checkoutMode === "external") {
       throw new BadRequestException("Esta tienda no tiene habilitados los pagos integrados");
     }
+    const funnelVisit = !quoteOnly && dto.funnelToken ? await this.prisma.storeFunnelVisit.findFirst({ where: { token: dto.funnelToken, storeId: store.id, createdAt: { gte: new Date(Date.now() - 86400000) } }, select: { id: true } }) : null;
+    const sourceVisit = dto.sourceVisitToken ? await this.prisma.storeSourceVisit.findFirst({ where: { token: dto.sourceVisitToken, createdAt: { gte: new Date(Date.now() - 30 * 86400000) }, experiment: { storeId: store.id } }, select: { id: true } }) : null;
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: store.merchantId } });
-    const locations = readStoreLocations(store.locations);
-    const fulfillmentLocation = locations.length ? locations.find((location) => location.id === dto.locationId) : undefined;
-    if (locations.length && !fulfillmentLocation) throw new BadRequestException("Elige una ubicación para tu pedido");
-    if (fulfillmentLocation && dto.fulfillmentMethod === "pickup" && !fulfillmentLocation.pickupEnabled) throw new BadRequestException("Esta ubicación no ofrece retiro");
-    if (fulfillmentLocation && dto.fulfillmentMethod === "delivery" && !fulfillmentLocation.deliveryEnabled) throw new BadRequestException("Esta ubicación no ofrece entrega");
-    if (fulfillmentLocation && !dto.fulfillmentMethod) throw new BadRequestException("Elige retiro o entrega");
-    const fulfillmentReadyAt = fulfillmentLocation ? nextStoreLocationOpenAt(fulfillmentLocation) : null;
 
     const quantityByLinkId = new Map<string, number>();
     for (const item of dto.items) {
@@ -1208,6 +1692,17 @@ export class StoresService implements OnModuleDestroy {
       throw new BadRequestException("Uno o más productos del carrito ya no están disponibles");
     }
 
+    const digitalOnly = links.every(link => link.fulfillmentType === 'DIGITAL');
+    const digitalAssets = store.digitalGoodsEnabled ? await this.prisma.digitalAsset.findMany({ where: { storeId: store.id, productId: { in: links.map(link => link.id) }, active: true }, select: { id: true, productId: true } }) : [];
+    for (const link of links) if (link.fulfillmentType === 'DIGITAL' && !digitalAssets.some(asset => asset.productId === link.id)) throw new BadRequestException(`El archivo de "${link.name}" no está disponible.`);
+    const locations = digitalOnly ? [] : readStoreLocations(store.locations);
+    const fulfillmentLocation = locations.length ? locations.find((location) => location.id === dto.locationId) : undefined;
+    if (locations.length && !fulfillmentLocation) throw new BadRequestException("Elige una ubicación para tu pedido");
+    if (fulfillmentLocation && dto.fulfillmentMethod === "pickup" && !fulfillmentLocation.pickupEnabled) throw new BadRequestException("Esta ubicación no ofrece retiro");
+    if (fulfillmentLocation && dto.fulfillmentMethod === "delivery" && !fulfillmentLocation.deliveryEnabled) throw new BadRequestException("Esta ubicación no ofrece entrega");
+    if (fulfillmentLocation && !dto.fulfillmentMethod) throw new BadRequestException("Elige retiro o entrega");
+    const fulfillmentReadyAt = fulfillmentLocation ? nextStoreLocationOpenAt(fulfillmentLocation) : null;
+
     const currency = links[0].currency;
     if (links.some((l) => l.currency !== currency)) {
       throw new BadRequestException("Todos los productos del carrito deben usar la misma moneda");
@@ -1217,9 +1712,10 @@ export class StoresService implements OnModuleDestroy {
     // guarantee against overselling is the atomic decrement on payment
     // success (see PaymentIntentsService.applyRailResult), which never lets
     // stock go negative even if two carts race past this check.
-    for (const l of links) {
-      const requested = quantityByLinkId.get(l.id)!;
-      if (fulfillmentLocation) {
+    const { picked, linked } = await this.pickedProductStock(store.id, links, dto.items);
+    for (const l of [...links, ...linked]) {
+      const requested = (quantityByLinkId.get(l.id) ?? 0) + (picked.get(l.id) ?? 0);
+      if (quantityByLinkId.has(l.id) && fulfillmentLocation && l.fulfillmentType !== 'DIGITAL') {
         const branchStock = readLocationStocks(l.locationStocks)[fulfillmentLocation.id] ?? 0;
         if (branchStock !== null && branchStock < requested) {
           throw new BadRequestException(`La ubicación ${fulfillmentLocation.name} no tiene suficiente stock de "${l.name}"`);
@@ -1243,6 +1739,7 @@ export class StoresService implements OnModuleDestroy {
         quantity: number;
         unitAmount: number;
         optionStock?: number | null;
+        digitalAssetIds?: string[];
       }
     >();
     for (const item of dto.items) {
@@ -1258,15 +1755,8 @@ export class StoresService implements OnModuleDestroy {
         throw new BadRequestException(`"${link.name}" no tiene opciones`);
       }
 
-      const selectedExtraIds = [...(item.extraIds ?? [])].sort();
-      const selectedExtras = extras.filter((extra) => selectedExtraIds.includes(extra.id));
-      if (selectedExtras.length !== selectedExtraIds.length) {
-        throw new BadRequestException(`Un extra de "${link.name}" ya no está disponible`);
-      }
-      const missingRequired = extras.filter((extra) => extra.required && !selectedExtraIds.includes(extra.id));
-      if (missingRequired.length) {
-        throw new BadRequestException(`Elige ${missingRequired.map((extra) => `"${extra.name}"`).join(", ")} para "${link.name}"`);
-      }
+      const selectedExtras = resolveSelectedExtras(link.name, extras, item.extraIds);
+      const selectedExtraIds = selectedExtras.map((extra) => extra.id);
       const exhaustedExtra = selectedExtras.find((extra) => extra.stock === 0);
       if (exhaustedExtra) throw new BadRequestException(`"${exhaustedExtra.name}" está agotado`);
 
@@ -1276,6 +1766,7 @@ export class StoresService implements OnModuleDestroy {
       else {
         selectedLines.set(lineKey, {
           paymentLinkId: link.id,
+          ...(link.fulfillmentType === 'DIGITAL' ? { digitalAssetIds: digitalAssets.filter(asset => asset.productId === link.id).map(asset => asset.id) } : {}),
           ...(variant && { variantId: variant.id, variantName: variant.name }),
           ...(variant && variant.stock !== undefined && { optionStock: variant.stock }),
           ...(selectedExtraIds.length && { extraIds: selectedExtraIds, extras: selectedExtras }),
@@ -1314,26 +1805,59 @@ export class StoresService implements OnModuleDestroy {
     const promoDiscountAmount = promo
       ? this.promoCodes!.discountAmount(subtotal, promo.discountType, promo.discountValue)
       : 0;
-    const amount = subtotal - promoDiscountAmount;
+    const bundles = store.bundlesEnabled ? await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true } }) : [];
+    const bundle = bestBundleDiscount(bundles as unknown as Bundle[], cartLines);
+    const discountAmount = Math.max(promoDiscountAmount, bundle.amount);
+    let shipping: ShippingOption | null = null;
+    let parcel: Parcel | null = null;
+    let shippingOptions: ShippingOption[] = [];
+    if (store.shippingEnabled && !digitalOnly) {
+      if (!quoteOnly && !dto.fulfillmentMethod) throw new BadRequestException('Elige retiro o envío.');
+      if (dto.fulfillmentMethod === 'pickup' && !store.shippingPickupEnabled) throw new BadRequestException('Esta tienda no ofrece retiro.');
+      const weightGrams = links.some(link => link.shippingWeightGrams == null) ? null : links.reduce((sum, link) => sum + link.shippingWeightGrams! * quantityByLinkId.get(link.id)!, 0);
+      // Digital lines ship nothing, so they don't shape the box (the legacy weight above still counts every line).
+      parcel = computeParcel(links.filter(link => link.fulfillmentType !== 'DIGITAL').map(link => ({ quantity: quantityByLinkId.get(link.id)!, weightGrams: link.shippingWeightGrams, lengthCm: link.lengthCm, widthCm: link.widthCm, heightCm: link.heightCm, fragile: link.fragile, noStack: link.noStack })));
+      const rates = await this.prisma.deliveryZone.findMany({ where: { storeId: store.id, isActive: true, ...(store.shippingCarriersEnabled ? {} : { carrierId: null }) } });
+      const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, shippingDepartment: dto.shippingDestination?.department, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams, sizeClass: parcel.sizeClass });
+      shippingOptions = quote.options;
+      if (dto.fulfillmentMethod === 'delivery') {
+        shipping = quote.selected;
+        if (!quoteOnly && (!shipping || !dto.shippingAddress?.trim())) throw new BadRequestException('Elige una opción de envío y escribe la dirección.');
+        if (!quoteOnly && shipping?.carrierId && !store.shippingCarriersEnabled) throw new BadRequestException('La opción de envío no está disponible para este pedido.');
+        if (!quoteOnly && shipping?.carrierId && !dto.shippingDestination) throw new BadRequestException('Completa la dirección de entrega y marca tu ubicación en el mapa.');
+      }
+    } else if (dto.shippingZoneId && !digitalOnly) throw new BadRequestException('Esta tienda no tiene tarifas de envío activadas.');
+    const shippingAmount = shipping?.amount ?? 0;
+    const amount = subtotal - discountAmount + shippingAmount;
+    if (dto.creditCode && !store.creditsEnabled) throw new BadRequestException('Esta tienda no acepta códigos de saldo.');
+    const creditAmount = dto.creditCode ? (await creditQuote(this.prisma, store.id, dto.creditCode, currency, amount)).amount : 0;
+    if (quoteOnly) return { orderTotal: amount, creditAmount, subtotal, discountAmount, shippingAmount, amount: amount - creditAmount, currency, shippingOptions, sizeClass: parcel?.sizeClass ?? null, shippingEnabled: store.shippingEnabled && !digitalOnly, pickupEnabled: store.shippingPickupEnabled };
+
 
     let description = cartLines
-      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${line.extras.map((extra) => extra.name).join(" + ")}` : ""} x${line.quantity}`)
+      .map((line) => `${line.name}${line.variantName ? ` (${line.variantName})` : ""}${line.extras?.length ? ` + ${selectedExtrasLabel(line.extras)}` : ""} x${line.quantity}`)
       .join(", ");
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       description = description.slice(0, MAX_DESCRIPTION_LENGTH - 1) + "…";
     }
 
+    // Snapshot the server-owned rate on the order; later edits cannot change it.
+    const partner = dto.partnerCode ? await this.prisma.storePartner.findFirst({
+      where: { storeId: store.id, code: dto.partnerCode, active: true },
+    }) : null;
     const livemode = merchant.status === MerchantStatus.ACTIVE;
     const checkout = await this.prisma.$transaction(async (tx) => {
-      const created = await this.paymentIntents.createInTransaction(tx, store.merchantId, livemode, {
+      let created = await this.paymentIntents.createInTransaction(tx, store.merchantId, livemode, {
         amount,
         currency,
         description,
         metadata: {
           cart: cartLines,
           storeId: store.id,
-          ...(fulfillmentLocation ? { fulfillment: { locationId: fulfillmentLocation.id, locationName: fulfillmentLocation.name, method: dto.fulfillmentMethod, ...(fulfillmentReadyAt ? { readyAt: fulfillmentReadyAt.toISOString() } : {}) } } : {}),
-          ...(promo ? {
+          ...(shipping ? { shipping: { ...shipping, address: dto.shippingAddress!.trim(), ...(dto.shippingCountry ? { country: dto.shippingCountry } : {}), ...(dto.shippingPostalCode ? { postalCode: dto.shippingPostalCode } : {}) }, subtotal } : {}),
+          ...(fulfillmentLocation ? { fulfillment: { locationId: fulfillmentLocation.id, locationName: fulfillmentLocation.name, method: dto.fulfillmentMethod, ...(dto.fulfillmentMethod === 'delivery' && dto.shippingAddress?.trim() ? { address: dto.shippingAddress.trim() } : {}), ...(fulfillmentReadyAt ? { readyAt: fulfillmentReadyAt.toISOString() } : {}) } } : {}),
+          ...(bundle.amount > promoDiscountAmount ? { bundle: { id: bundle.id, name: bundle.name, discountAmount: bundle.amount }, subtotal } : {}),
+          ...(promo && promoDiscountAmount >= bundle.amount ? {
             promoCode: promo.code,
             promoDiscountType: promo.discountType,
             promoDiscountValue: promo.discountValue,
@@ -1342,24 +1866,46 @@ export class StoresService implements OnModuleDestroy {
           } : {}),
         },
       });
+      if (dto.creditCode) {
+        const applied = await reserveCredit(tx, created.id, store.id, dto.creditCode, currency, amount);
+        created = await tx.paymentIntent.update({ where: { id: created.id }, data: { amount: amount - applied, metadata: { ...(created.metadata as Prisma.JsonObject), storeCredit: { amount: applied, orderTotal: amount } } } });
+      }
       const order = await tx.storeOrder.create({
         data: {
           paymentIntentId: created.id,
+          ...(sourceVisit ? { sourceVisitId: sourceVisit.id } : {}),
+          ...(funnelVisit ? { funnelVisitId: funnelVisit.id } : {}),
+          ...(partner ? { partnerId: partner.id, partnerCommissionBps: partner.commissionBps } : {}),
           merchantId: store.merchantId,
           storeId: store.id,
           storeName: store.name,
+          ...(!fulfillmentLocation && store.shippingEnabled && !digitalOnly ? { fulfillmentMethod: dto.fulfillmentMethod } : {}),
           ...(fulfillmentLocation ? {
             fulfillmentLocationId: fulfillmentLocation.id,
             fulfillmentLocationName: fulfillmentLocation.name,
             fulfillmentMethod: dto.fulfillmentMethod,
             ...(fulfillmentReadyAt ? { fulfillmentReadyAt } : {}),
           } : {}),
+          ...(shipping?.carrierId && dto.shippingDestination ? {
+            shippingDepartment: dto.shippingDestination.department,
+            shippingCity: dto.shippingDestination.city.trim(),
+            shippingStreet: dto.shippingDestination.street.trim(),
+            shippingReferences: dto.shippingDestination.references?.trim() || null,
+            shippingLat: dto.shippingDestination.lat,
+            shippingLng: dto.shippingDestination.lng,
+            recipientName: dto.shippingDestination.recipientName.trim(),
+            recipientPhone: dto.shippingDestination.recipientPhone.replace(/\s+/g, ''),
+          } : {}),
+          ...(parcel && shipping?.carrierId ? { parcel: parcel as Prisma.InputJsonValue } : {}),
           items: cartLines as Prisma.InputJsonValue,
           amount,
           currency,
           statusEvents: { create: { status: OrderFulfillmentStatus.AWAITING_PAYMENT } },
         },
       });
+      if (shipping?.carrierId) await tx.shipment.create({ data: { orderId: order.id, storeId: store.id, merchantId: store.merchantId, carrierId: shipping.carrierId, quoteId: shipping.id, quotedAmount: shipping.amount, currency: shipping.currency } });
+      else if (shipping) await tx.deliveryAssignment.create({ data: { merchantId: store.merchantId, storeId: store.id, orderId: order.id, zoneId: shipping.id, fee: shipping.amount, address: dto.shippingAddress!.trim() } });
+      if (created.amount === 0 && dto.creditCode) created = await this.paymentIntents.completeCreditPaymentInTransaction(tx, created.id);
       return { intent: created, orderId: order.id };
     });
 
@@ -1372,6 +1918,7 @@ export class StoresService implements OnModuleDestroy {
       cartDescription: description,
       contactPhone: store.contactPhone,
       contactEmail: store.contactEmail,
+      ...(!fulfillmentLocation && store.shippingEnabled && !digitalOnly ? { fulfillmentMethod: dto.fulfillmentMethod } : {}),
       ...(fulfillmentLocation ? { fulfillmentLocationName: fulfillmentLocation.name, fulfillmentMethod: dto.fulfillmentMethod } : {}),
     };
   }
@@ -1381,7 +1928,6 @@ export class StoresService implements OnModuleDestroy {
    * from this store so the notification cannot be used to spoof its catalog. */
   async submitLead(slug: string, dto: SubmitStoreLeadDto) {
     const store = await this.findActiveBySlugPublic(slug);
-    if (!this.emailProvider) throw new BadRequestException("El correo de interesados todavía no está disponible");
 
     const isContactMessage = dto.items.length === 0;
     if (isContactMessage && !store.contactFormEnabled) {
@@ -1438,15 +1984,8 @@ export class StoresService implements OnModuleDestroy {
         throw new BadRequestException(`"${link.name}" no tiene opciones`);
       }
 
-      const selectedExtraIds = [...(item.extraIds ?? [])].sort();
-      const extras = availableExtras.filter((extra) => selectedExtraIds.includes(extra.id));
-      if (extras.length !== selectedExtraIds.length) {
-        throw new BadRequestException(`Un extra de "${link.name}" ya no está disponible`);
-      }
-      const missingRequired = availableExtras.filter((extra) => extra.required && !selectedExtraIds.includes(extra.id));
-      if (missingRequired.length) {
-        throw new BadRequestException(`Elige ${missingRequired.map((extra) => `"${extra.name}"`).join(", ")} para "${link.name}"`);
-      }
+      const extras = resolveSelectedExtras(link.name, availableExtras, item.extraIds);
+      const selectedExtraIds = extras.map((extra) => extra.id);
 
       requestedByProduct.set(link.id, (requestedByProduct.get(link.id) ?? 0) + item.quantity);
       if (variant && typeof variant.stock === "number") {
@@ -1470,7 +2009,7 @@ export class StoresService implements OnModuleDestroy {
       }
 
       const unitAmount = discountedProductAmount(link, variant?.amount ?? link.amount) + selectedExtrasAmount(extras);
-      const details = [variant?.name, ...extras.map((extra) => extra.name)].filter(Boolean).join(" · ");
+      const details = [variant?.name, selectedExtrasLabel(extras, " · ")].filter(Boolean).join(" · ");
       return {
         paymentLinkId: link.id,
         name: link.name,
@@ -1483,9 +2022,10 @@ export class StoresService implements OnModuleDestroy {
         currency: link.currency,
       };
     });
-    for (const link of links) {
-      const requested = requestedByProduct.get(link.id) ?? 0;
-      if (fulfillmentLocation) {
+    const { picked, linked } = await this.pickedProductStock(store.id, links, dto.items);
+    for (const link of [...links, ...linked]) {
+      const requested = (requestedByProduct.get(link.id) ?? 0) + (picked.get(link.id) ?? 0);
+      if (fulfillmentLocation && requestedByProduct.has(link.id)) {
         const branchStock = readLocationStocks(link.locationStocks)[fulfillmentLocation.id] ?? 0;
         if (branchStock !== null && requested > branchStock) {
           throw new BadRequestException(`La ubicación ${fulfillmentLocation.name} no tiene suficiente stock de "${link.name}"`);
@@ -1538,15 +2078,6 @@ export class StoresService implements OnModuleDestroy {
           "Este mensaje fue enviado por pagosYa. Responde al correo indicado por el cliente.",
         ].join("\n");
 
-    await this.emailProvider.send({
-      to: recipient,
-      subject: isContactMessage
-        ? `Nuevo mensaje para ${store.name}: ${customerName}`
-        : `Nuevo interesado en ${store.name}: ${dto.name?.trim() || customerEmail}`,
-      body,
-      replyTo: customerEmail,
-      failLoudly: true,
-    });
     const lead = await this.prisma.storeLead.create({
       data: {
         merchantId: store.merchantId,
@@ -1561,6 +2092,26 @@ export class StoresService implements OnModuleDestroy {
       },
       select: { id: true },
     });
+    await this.emailProvider?.send({
+      to: recipient,
+      subject: isContactMessage
+        ? `Nuevo mensaje para ${store.name}: ${customerName}`
+        : `Nuevo interesado en ${store.name}: ${dto.name?.trim() || customerEmail}`,
+      body,
+      replyTo: customerEmail,
+      failLoudly: true,
+    }).catch(() => this.logger.warn("Lead saved; email notification failed"));
     return { submitted: true, leadId: lead.id };
+  }
+
+  async subscribeNewsletter(slug: string, rawEmail: string) {
+    const store = await this.findActiveBySlugPublic(slug);
+    const email = rawEmail.trim().toLowerCase();
+    await this.prisma.storeNewsletterSubscriber.upsert({
+      where: { storeId_email: { storeId: store.id, email } },
+      create: { storeId: store.id, email },
+      update: { isActive: true },
+    });
+    return { subscribed: true };
   }
 }

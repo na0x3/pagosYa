@@ -1,0 +1,7 @@
+.commerce-review-tools { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 18px 0 4px; padding: 12px 0; border-block: 1px solid #aaa79f; }
+.commerce-review-tools label { flex: 1; max-width: 260px; margin: 0; }
+.commerce-review-tools small { color: #555550; }
+.commerce-review-tools + article { border-top: 0; }
+.commerce-review-tools ~ article { padding: 18px 0; border-bottom: 1px solid #aaa79f; }
+.brand-import [data-review-more] { margin-top: 16px; }
+@media (max-width: 480px) { .commerce-review-tools { align-items: stretch; flex-direction: column; } .commerce-review-tools label { max-width: none; } }

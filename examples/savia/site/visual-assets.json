@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/image-f1220ebdbbf1.jpg",
+      "role": "product",
+      "description": "Jugo naranja + jengibre; also use as Savia hero photo."
+    },
+    {
+      "path": "assets/image-e2dc7f4f02d3.jpg",
+      "role": "product",
+      "description": "Granola de la casa."
+    },
+    {
+      "path": "assets/image-c9f5308636b1.jpg",
+      "role": "product",
+      "description": "Botella Ritual: Salvia, Coral, Marfil."
+    },
+    {
+      "path": "assets/video-d2f1f17e3310.mp4",
+      "role": "business",
+      "description": "Orange juice preparation stock video, use in editorial section with visible playback controls."
+    },
+    {
+      "path": "assets/image-7f7a1768a2f5.jpg",
+      "role": "reference",
+      "description": "Amboras reference: rich colorful product panels, never embed this screenshot."
+    },
+    {
+      "path": "assets/bottle-salvia.jpg",
+      "role": "product",
+      "description": "Savia bottle-salvia: approved coordinated product photography."
+    },
+    {
+      "path": "assets/bottle-coral.jpg",
+      "role": "product",
+      "description": "Savia bottle-coral: approved coordinated product photography."
+    },
+    {
+      "path": "assets/bottle-marfil.jpg",
+      "role": "product",
+      "description": "Savia bottle-marfil: approved coordinated product photography."
+    },
+    {
+      "path": "assets/juice-studio.jpg",
+      "role": "product",
+      "description": "Savia juice-studio: approved coordinated product photography."
+    },
+    {
+      "path": "assets/juice-ritual.jpg",
+      "role": "product",
+      "description": "Savia juice-ritual: approved coordinated product photography."
+    },
+    {
+      "path": "assets/granola-studio.jpg",
+      "role": "product",
+      "description": "Savia granola-studio: approved coordinated product photography."
+    },
+    {
+      "path": "assets/granola-ritual.jpg",
+      "role": "product",
+      "description": "Savia granola-ritual: approved coordinated product photography."
+    },
+    {
+      "path": "assets/granola-cacao.jpg",
+      "role": "product",
+      "description": "Savia granola-cacao: approved coordinated product photography."
+    }
+  ]
+}

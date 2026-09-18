@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Punto — lámparas y soportes para escritorio</title>
+  <meta name="description" content="Accesorios de escritorio con especificaciones claras: lámpara USB-C y soporte de aluminio para portátil.">
+  <link rel="stylesheet" href="brand.css">
+  <link rel="stylesheet" href="commerce-pages.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="masthead">
+  <a class="brand" href="index.html" aria-label="Punto, inicio"><strong data-store-name>Punto</strong><span>Accesorios de escritorio con especificaciones claras</span></a>
+  <nav class="nav" id="site-nav" aria-label="Navegación principal">
+    <a href="#catalogo-secuencia">Inicio</a><a href="#catalogo-secuencia">Elegir</a><a href="#comparacion-01-02">Comparar</a><a href="#doble-vista">Detalles</a>
+  </nav>
+  <div class="header-actions">
+    <button class="menu-toggle icon-button" type="button" aria-label="Abrir menú" aria-controls="site-nav" aria-expanded="false"><img src="assets/icons/menu.svg" alt=""></button>
+    <button class="cart-trigger" type="button" data-cart-open aria-label="Abrir Mi pedido"><img src="assets/icons/shopping-bag.svg" alt=""><span>Mi pedido</span><span class="cart-count" data-cart-count>0</span></button>
+  </div>
+</header>
+<main>
+  <section id="catalogo-secuencia" class="sequence-section" aria-labelledby="sequence-title">
+    <div class="sequence-intro">
+      <div><p class="eyebrow">Secuencia 01—02</p><h1 id="sequence-title">¿Qué necesita tu mesa?</h1><p class="subhead">Primero la función. Después, la variante precisa.</p></div>
+      <div class="function-tabs" role="tablist" aria-label="Elegir función">
+        <button type="button" role="tab" aria-selected="true" data-view="luz">01 Luz</button>
+        <button type="button" role="tab" aria-selected="false" data-view="altura">02 Altura</button>
+      </div>
+    </div>
+    <div id="catalogo-list" data-pagosya-catalog aria-live="polite"></div>
+    <template data-pagosya-product-template>
+      <article class="sequence-card">
+        <a class="product-media" data-product-link><img data-product-field="image" alt=""></a>
+        <div class="product-copy">
+          <p class="product-index label-text" aria-hidden="true"></p>
+          <h2 data-product-field="name"></h2>
+          <p class="product-description" data-product-field="description"></p>
+          <div class="product-options" data-product-field="options"></div>
+          <div class="purchase-row">
+            <div class="price-group"><span class="label-text">Desde</span><span class="product-price" data-product-field="price"></span></div>
+            <button class="menu-add" type="button" data-product-add>Añadir al pedido</button>
+          </div>
+          <a class="detail-link" data-product-link>Ver ficha completa <img src="assets/icons/arrow-right.svg" alt=""></a>
+        </div>
+      </article>
+    </template>
+  </section>
+
+  <section id="comparacion-01-02" class="comparison" aria-labelledby="comparison-title">
+    <div class="section-heading"><p class="eyebrow">Comparación funcional</p><h2 id="comparison-title">Dos piezas, una decisión clara.</h2><p class="subhead">Compara únicamente los datos confirmados de cada producto.</p></div>
+    <table>
+      <thead><tr><th scope="col">Dato</th><th scope="col">01 · Lámpara</th><th scope="col">02 · Soporte</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Función</th><td data-label="01 · Lámpara">Luz de escritorio</td><td data-label="02 · Soporte">Altura para portátil</td></tr>
+        <tr><th scope="row">Construcción</th><td data-label="01 · Lámpara">Brazo ajustable, acabado mate</td><td data-label="02 · Soporte">Aluminio para mesa</td></tr>
+        <tr><th scope="row">Variantes</th><td data-label="01 · Lámpara">Negro o Marfil</td><td data-label="02 · Soporte">Compacto o Amplio</td></tr>
+        <tr><th scope="row">Precio inicial</th><td data-label="01 · Lámpara" class="table-price">Bs 220</td><td data-label="02 · Soporte" class="table-price">Bs 160</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="doble-vista" class="double-view" aria-labelledby="double-title">
+    <div class="section-heading"><p class="eyebrow">Segunda vista</p><h2 id="double-title">Perfil y presencia.</h2><p class="subhead">Dos fotografías adicionales para observar cada pieza en su propio entorno.</p></div>
+    <div class="double-images">
+      <figure><img src="assets/image-230ec71ebf2b.jpg" alt="Lámpara de escritorio negra vista sobre una superficie"><figcaption><span>01</span>Lámpara de escritorio USB-C</figcaption></figure>
+      <figure><img src="assets/image-b6bb8e6448f4.jpg" alt="Soporte de aluminio para portátil sobre una mesa"><figcaption><span>02</span>Soporte para portátil</figcaption></figure>
+    </div>
+  </section>
+</main>
+<div data-pagosya-cart hidden></div>
+<div class="site-status" data-pagosya-status role="status" aria-live="polite"></div>
+<div data-pagosya-contact hidden></div>
+<footer class="footer"><a class="footer-brand" href="index.html">Punto</a><p>Accesorios de escritorio con especificaciones claras.</p><a href="#catalogo-secuencia">Volver a elegir</a></footer>
+<script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>
+</body>
+</html>

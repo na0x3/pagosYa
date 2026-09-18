@@ -1,0 +1,113 @@
+{
+  "version": 3,
+  "typography": {
+    "display": "Bricolage Grotesque variable en toda la tienda. Bruma a 30–36 px; títulos de producto 44–64 px en escritorio y 32–38 px en móvil; cifras de volumen 88–150 px como señal tipográfica; cuerpo 16–18 px; precios 20–24 px. Peso y escala, no una segunda fuente, crean la jerarquía.",
+    "rule": "Keep text legible, with natural wrapping and a clear hierarchy."
+  },
+  "iconography": {
+    "family": "lucide-local",
+    "vocabulary": [
+      "shopping-bag",
+      "shopping-cart",
+      "arrow-right",
+      "arrow-left",
+      "chevron-down",
+      "chevron-right",
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "search",
+      "menu",
+      "map-pin",
+      "clock",
+      "phone",
+      "mail",
+      "truck",
+      "package",
+      "heart",
+      "shield-check",
+      "credit-card",
+      "calendar",
+      "utensils",
+      "coffee"
+    ]
+  },
+  "motion": {
+    "mode": "subtle",
+    "reducedMotion": "Respect prefers-reduced-motion and provide a pause path for continuous movement."
+  },
+  "layout": {
+    "sectionOrder": [
+      "catalogo-franjas",
+      "guia-volumen",
+      "recogida-cierre"
+    ],
+    "catalogSection": "catalogo-franjas",
+    "mobileRule": "Cabecera de dos filas muy baja: marca arriba; “Mi pedido 0” siempre visible junto al menú. El primer producto empieza antes de 200 px y muestra nombre, precio, selector y “Añadir” dentro de la primera pantalla de 390×844. Las opciones se convierten en dos botones de 44 px y las franjas se apilan sin perder sus divisores característicos."
+  },
+  "assets": [],
+  "invariants": [
+    "Carry this project’s chosen identity through header, homepage, product page, cart, checkout and footer.",
+    "Use real merchant data and confirmed local assets. Never invent products, prices, claims or image URLs.",
+    "Keep product names, prices and purchase actions legible and associated.",
+    "Preserve unrelated source on local edits; explicit current requests may change any requested visual property.",
+    "Keep payment, cart, stock and checkout behavior platform-owned."
+  ],
+  "tokens": {
+    "background": {
+      "authored": "#f6f4ee",
+      "resolved": "#f6f4ee",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "foreground": {
+      "authored": "#211820",
+      "resolved": "#211820",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent": {
+      "authored": "#5b284b",
+      "resolved": "#5b284b",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "accent-foreground": {
+      "authored": "#fffaf4",
+      "resolved": "#fffaf4",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "surface": {
+      "authored": "#ddd4ee",
+      "resolved": "#ddd4ee",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "border": {
+      "authored": "#6c5267",
+      "resolved": "#6c5267",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "radius": {
+      "authored": "0",
+      "resolved": "0",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "body-font": {
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    },
+    "heading-font": {
+      "authored": "Bricolage,sans-serif",
+      "resolved": "Bricolage,sans-serif",
+      "source": "authored",
+      "path": "styles.css"
+    }
+  }
+}
