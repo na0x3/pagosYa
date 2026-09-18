@@ -25,4 +25,11 @@ describe('renderWaybillPdf', () => {
     expect(pdf.toString('latin1').match(/\/Type \/Page\b/g)).toHaveLength(1);
     expect(pdf.length).toBeGreaterThan((await renderWaybillPdf(input)).length);
   });
+  it('keeps a long carrier name clear of the handling banner on one page', async () => {
+    const parcel: Parcel = { weightGrams: 1200, lengthCm: 30, widthCm: 20, heightCm: 15, fragile: true, noStack: false, sizeClass: 'AUTO' };
+    const carrierName = 'Transportes y Encomiendas Interdepartamentales del Oriente Boliviano S.R.L.';
+    const pdf = await renderWaybillPdf({ ...input, carrierName, parcel });
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pdf.toString('latin1').match(/\/Type \/Page\b/g)).toHaveLength(1);
+  });
 });

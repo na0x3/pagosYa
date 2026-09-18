@@ -60,14 +60,20 @@ describe('shipping settings carriers', () => {
     await vi.waitFor(() => expect(api.saveShippingWeight).toHaveBeenCalled());
     expect(api.saveShippingWeight).toHaveBeenCalledWith('st_1', 'pl_1', { weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: true, noStack: true });
   });
-  it('hides the size-class picker when couriers are disabled but keeps product dimensions', async () => {
-    const state = { enabled: true, pickupEnabled: true, carriersEnabled: false, prepMinutes: 60, rates: [], products: [{ id: 'pl_1', name: 'Taza', shippingWeightGrams: null }], carriers: [] };
+  it('keeps the weight-only product form and no size-class picker when couriers are disabled', async () => {
+    const state = { enabled: true, pickupEnabled: true, carriersEnabled: false, prepMinutes: 60, rates: [], products: [{ id: 'pl_1', name: 'Taza', shippingWeightGrams: null, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: true, noStack: false }], carriers: [] };
     const api: any = { shippingSettings: vi.fn(async () => state), saveShippingWeight: vi.fn(async () => ({})), saveShippingSettings: vi.fn(async () => state) };
     await openShippingSettings(api, 'st_1');
     expect(document.querySelector('input[name=sizeClasses]')).toBeNull();
     const product = document.querySelector<HTMLFormElement>('[data-product-weight="pl_1"]')!;
+    expect(product.querySelectorAll('input').length).toBe(1);
+    expect(product.querySelector('[name=lengthCm], [name=fragile], [name=noStack]')).toBeNull();
+    expect(document.body.textContent).toContain('Peso de los productos');
+    expect(document.body.textContent).not.toContain('medidas');
+    (product.querySelector('[name=weightGrams]') as HTMLInputElement).value = '750';
     product.dispatchEvent(new Event('submit', { cancelable: true }));
-    await vi.waitFor(() => expect(api.saveShippingWeight).toHaveBeenCalledWith('st_1', 'pl_1', { weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, fragile: false, noStack: false }));
+    await vi.waitFor(() => expect(api.saveShippingWeight).toHaveBeenCalledWith('st_1', 'pl_1', { weightGrams: 750 }));
+    await vi.waitFor(() => expect(document.querySelector('[role=status]')?.textContent).toBe('Peso guardado.'));
   });
 });
 

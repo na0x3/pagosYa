@@ -48,7 +48,8 @@ export class ShippingController {
     await this.owner(merchant.id, storeId);
     const profile: Pick<ShippingWeightDto, 'lengthCm' | 'widthCm' | 'heightCm' | 'fragile' | 'noStack'> = {};
     for (const key of ['lengthCm', 'widthCm', 'heightCm'] as const) if (dto[key] !== undefined) profile[key] = dto[key] ?? null;
-    for (const key of ['fragile', 'noStack'] as const) if (dto[key] !== undefined) profile[key] = dto[key];
+    // null is treated as omitted: these columns are non-nullable booleans.
+    for (const key of ['fragile', 'noStack'] as const) if (dto[key] != null) profile[key] = dto[key];
     if (!(await this.prisma.paymentLink.updateMany({ where: { id: productId, storeId }, data: { shippingWeightGrams: dto.weightGrams ?? null, ...profile } })).count) throw new NotFoundException('Producto no encontrado');
     return { weightGrams: dto.weightGrams ?? null, ...profile };
   }

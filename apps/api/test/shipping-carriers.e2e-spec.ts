@@ -138,6 +138,20 @@ describe('Carrier shipping checkout', () => {
     expect(JSON.stringify(badDims.body)).toContain('Las medidas deben ser números enteros entre 1 y 500 cm.');
     await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 700 }).expect(200);
     expect(await prisma.paymentLink.findUniqueOrThrow({ where: { id: productId } })).toMatchObject({ shippingWeightGrams: 700, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: true });
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 700, fragile: null, noStack: null }).expect(200);
+    expect(await prisma.paymentLink.findUniqueOrThrow({ where: { id: productId } })).toMatchObject({ fragile: true, noStack: false });
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 500 }).expect(200);
+  });
+
+  it('sizes the parcel from physical lines only when the cart also holds a digital product', async () => {
+    const digitalId = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/payment_links`).set(auth()).send({ name: 'Guía PDF', amount: 5000, currency: 'BOB' }).expect(201)).body.id;
+    await prisma.paymentLink.update({ where: { id: digitalId }, data: { fulfillmentType: 'DIGITAL' } });
+    await prisma.store.update({ where: { id: storeId }, data: { digitalGoodsEnabled: true } });
+    await prisma.digitalAsset.create({ data: { storeId, productId: digitalId, storageKey: `test/${digitalId}.pdf`, filename: 'guia.pdf', mimeType: 'application/pdf', byteSize: 10 } });
+    const moto = (await prisma.deliveryZone.findFirstOrThrow({ where: { storeId, name: 'Moto SCZ' } })).id;
+    const quote = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send({ ...cart(), shippingZoneId: undefined, items: [{ paymentLinkId: productId, quantity: 1 }, { paymentLinkId: digitalId, quantity: 1 }] }).expect(201)).body;
+    expect(quote.sizeClass).toBe('MOTO');
+    expect(quote.shippingOptions.map((o: any) => o.id)).toContain(moto);
   });
 
   it('stores branch coordinates for pickup origins', async () => {

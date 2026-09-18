@@ -20,6 +20,7 @@ import {
   ValidateNested,
 } from "class-validator";
 import { BOLIVIA_DEPARTMENTS } from "../../shipping/bolivia-address";
+import { SIZE_CLASSES } from "../../shipping/parcel";
 
 const CURRENCIES = ["BOB", "USD"] as const;
 
@@ -110,7 +111,7 @@ export class CreateAutomationDto {
 export class CreateDeliveryZoneDto {
   @IsOptional() @IsString({ message: 'Elige un courier disponible.' }) @MinLength(1, { message: 'Elige un courier disponible.' }) @MaxLength(48, { message: 'Elige un courier disponible.' }) carrierId?: string;
   @IsOptional() @IsArray({ message: 'Elige departamentos válidos.' }) @ArrayMaxSize(9, { message: 'Elige departamentos válidos.' }) @IsIn([...BOLIVIA_DEPARTMENTS], { each: true, message: 'Elige departamentos válidos.' }) departments?: string[];
-  @IsOptional() @IsArray({ message: 'Elige tamaños de paquete válidos.' }) @ArrayMaxSize(3, { message: 'Elige tamaños de paquete válidos.' }) @IsIn(['MOTO', 'AUTO', 'CAMIONETA'], { each: true, message: 'Elige tamaños de paquete válidos.' }) sizeClasses?: string[];
+  @IsOptional() @IsArray({ message: 'Elige tamaños de paquete válidos.' }) @ArrayMaxSize(3, { message: 'Elige tamaños de paquete válidos.' }) @IsIn(SIZE_CLASSES, { each: true, message: 'Elige tamaños de paquete válidos.' }) sizeClasses?: string[];
   @IsOptional() @IsArray() @ArrayMaxSize(250) @Matches(/^[A-Z]{2}$/, { each: true }) countryCodes?: string[];
   @IsOptional() @IsArray() @ArrayMaxSize(100) @Matches(/^[A-Z0-9]{1,12}$/, { each: true }) postalPrefixes?: string[];
   @IsOptional() @IsIn(['BOB', 'USD']) currency?: string;
