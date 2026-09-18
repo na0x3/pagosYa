@@ -15,9 +15,9 @@ export class SwitchCarrierDto {
 }
 
 export class UpdateCarrierDto {
-  @IsOptional() @IsString() @MaxLength(80) name?: string;
-  @IsOptional() @IsString() @MaxLength(300) trackingUrlTemplate?: string;
-  @IsOptional() @IsBoolean() isActive?: boolean;
-  @IsOptional() @IsBoolean() platformEnabled?: boolean;
-  @IsOptional() @IsInt() @Min(0) @Max(5000) platformMarginBps?: number;
+  @IsOptional() @IsString({ message: 'Escribe un nombre válido.' }) @MaxLength(80, { message: 'Escribe un nombre válido.' }) name?: string;
+  @IsOptional() @IsString({ message: 'La plantilla de seguimiento no es válida.' }) @MaxLength(300, { message: 'La plantilla de seguimiento no es válida.' }) trackingUrlTemplate?: string;
+  @IsOptional() @IsBoolean({ message: 'Indica si el courier está activo.' }) isActive?: boolean;
+  @IsOptional() @IsBoolean({ message: 'Indica si el courier está habilitado en la plataforma.' }) platformEnabled?: boolean;
+  @IsOptional() @IsInt({ message: 'El margen debe estar entre 0 y 5000 puntos básicos.' }) @Min(0, { message: 'El margen debe estar entre 0 y 5000 puntos básicos.' }) @Max(5000, { message: 'El margen debe estar entre 0 y 5000 puntos básicos.' }) platformMarginBps?: number;
 }
