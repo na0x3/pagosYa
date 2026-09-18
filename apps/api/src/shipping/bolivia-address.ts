@@ -21,12 +21,12 @@ class InsideBolivia implements ValidatorConstraintInterface {
 }
 
 export class ShippingDestinationDto {
-  @IsIn(BOLIVIA_DEPARTMENTS) department!: Department;
-  @IsString() @MinLength(2) @MaxLength(80) city!: string;
-  @IsString() @MinLength(3) @MaxLength(200) street!: string;
-  @IsOptional() @IsString() @MaxLength(300) references?: string;
-  @IsNumber() @Validate(InsideBolivia) lat!: number;
-  @IsNumber() lng!: number;
-  @IsString() @MinLength(2) @MaxLength(120) recipientName!: string;
-  @Matches(/^\+?[0-9 ]{7,16}$/) recipientPhone!: string;
+  @IsIn(BOLIVIA_DEPARTMENTS, { message: 'Elige un departamento válido.' }) department!: Department;
+  @IsString({ message: 'Escribe la ciudad.' }) @MinLength(2, { message: 'Escribe la ciudad.' }) @MaxLength(80, { message: 'Escribe la ciudad.' }) city!: string;
+  @IsString({ message: 'Escribe la calle y el número.' }) @MinLength(3, { message: 'Escribe la calle y el número.' }) @MaxLength(200, { message: 'Escribe la calle y el número.' }) street!: string;
+  @IsOptional() @IsString({ message: 'Las referencias son demasiado largas.' }) @MaxLength(300, { message: 'Las referencias son demasiado largas.' }) references?: string;
+  @IsNumber({}, { message: 'Marca tu ubicación en el mapa.' }) @Validate(InsideBolivia) lat!: number;
+  @IsNumber({}, { message: 'Marca tu ubicación en el mapa.' }) lng!: number;
+  @IsString({ message: 'Escribe el nombre de quien recibe.' }) @MinLength(2, { message: 'Escribe el nombre de quien recibe.' }) @MaxLength(120, { message: 'Escribe el nombre de quien recibe.' }) recipientName!: string;
+  @Matches(/^\+?[0-9 ]{7,16}$/, { message: 'Escribe un teléfono válido (7 a 16 dígitos).' }) recipientPhone!: string;
 }

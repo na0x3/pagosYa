@@ -22,4 +22,11 @@ describe('Bolivian shipping destination', () => {
       expect((await validate(plainToInstance(ShippingDestinationDto, { ...valid, ...changed }))).length).toBeGreaterThan(0);
     }
   });
+  it('produces Spanish error messages', async () => {
+    const errors = await validate(plainToInstance(ShippingDestinationDto, { ...valid, recipientPhone: 'abc' }));
+    expect(errors.length).toBeGreaterThan(0);
+    const phoneError = errors.find(e => e.property === 'recipientPhone');
+    expect(phoneError?.constraints).toBeDefined();
+    expect(Object.values(phoneError?.constraints || {})[0]).toContain('Escribe un teléfono válido');
+  });
 });
