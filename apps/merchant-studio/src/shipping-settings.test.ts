@@ -29,4 +29,11 @@ describe('shipping settings carriers', () => {
     form.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(api.saveShippingSettings).toHaveBeenCalledWith('st_1', expect.objectContaining({ carriersEnabled: true, prepMinutes: 30 })));
   });
+  it('does not show a carrier suffix on rates when couriers are disabled', async () => {
+    const state = { enabled: true, pickupEnabled: true, carriersEnabled: false, prepMinutes: 60, rates: [{ id: 'rate_1', name: 'La Paz · Estándar', currency: 'BOB', fee: 1500, freeAbove: null, countryCodes: [], postalPrefixes: [], isActive: true }], products: [], carriers: [] };
+    const api: any = { shippingSettings: vi.fn(async () => state), saveShippingSettings: vi.fn(async () => state) };
+    await openShippingSettings(api, 'st_1');
+    const article = document.querySelector('article')!;
+    expect(article.textContent).not.toContain('Reparto propio');
+  });
 });

@@ -7,7 +7,7 @@ export async function renderShipmentPanel(container, api, orderId) {
   const draw = (message = '') => {
     if (!shipment) { container.innerHTML = ''; return; }
     const s = shipment;
-    container.innerHTML = `<div class="shipment-panel"><strong>${esc(s.carrier.name)} · ${esc(LABELS[s.status] ?? s.status)}</strong>
+    container.innerHTML = `<div class="shipment-panel"><strong>${esc(s.carrier?.name ?? 'Courier')} · ${esc(LABELS[s.status] ?? s.status)}</strong>
       ${s.trackingNumber ? `<span>Nº ${esc(s.trackingNumber)}${s.trackingUrl && /^https:\/\//.test(s.trackingUrl) ? ` · <a href="${esc(s.trackingUrl)}" target="_blank" rel="noopener noreferrer">rastrear</a>` : ''}</span>` : ''}
       ${s.hasLabel ? '<button type="button" class="ghost" data-shipment-label>Descargar guía (PDF)</button>' : ''}
       ${TRACKABLE.includes(s.status) ? `<form data-shipment-tracking><label>Nº de seguimiento<input name="trackingNumber" required maxlength="60" value="${esc(s.trackingNumber ?? '')}"></label><button>Guardar</button></form><button type="button" class="ghost" data-shipment-delivered>Marcar entregado</button>` : ''}

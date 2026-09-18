@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-// jsdom is not installed directly under apps/merchant-dashboard; resolve it from
-// the copy pnpm hoisted for apps/checkout (see env-notes.md resolution for T14).
-import { JSDOM } from '../../checkout/node_modules/jsdom/lib/api.js';
+import { JSDOM } from 'jsdom';
 import { renderShipmentPanel } from './shipment-panel.mjs';
 
 const booked = { id: 'shp_1', status: 'BOOKED', carrier: { name: 'Servientrega Bolivia', mode: 'MANUAL' }, trackingNumber: null, trackingUrl: null, hasLabel: true, lastError: null, events: [] };
