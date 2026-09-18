@@ -11,6 +11,7 @@ import '../../api/src/stores/source-kit/retention.js';
 import { mountDigitalDownloads } from './digital-downloads';
 import { mountComebackCard } from './comeback-card';
 import { mountCartQuote } from './cart-quote';
+import { readDestinationDraft } from './shipping-destination';
 import { PaymentMethodType, resolveSiteSectionFamily } from "@pagosya/shared-types";
 import {
   API_BASE_URL,
@@ -5781,6 +5782,7 @@ function cartFulfillmentState(store: Store, lines = cartLineEntries(store)) {
 
 function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: Store): void {
   const previousAddress = dialog.querySelector<HTMLInputElement>("[data-address]")?.value || "";
+  const previousDestination = readDestinationDraft(dialog);
   const currency = store.items[0]?.currency || "BOB";
   const lines = cartLineEntries(store);
   const promo = activePromoForStore(store);
@@ -5883,7 +5885,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
     slug, items: lines.map(line => ({ paymentLinkId: line.product.id, variantId: line.variant?.id, extraIds: line.extras.map(extra => extra.id), quantity: line.quantity })),
     credits: store.creditsEnabled, promoCode: promo?.code, shipping: store.shippingEnabled === true && !lines.every(line => line.product.fulfillmentType === 'DIGITAL'), pickup: store.shippingPickupEnabled !== false,
     fulfillment: fulfillment.selectedLocation && fulfillment.method ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method } : undefined,
-    address: previousAddress, money: formatAmount,
+    address: previousAddress, carriers: store.shippingCarriersEnabled === true, destination: previousDestination, money: formatAmount,
     onQuote: quote => { const total = dialog.querySelector('.cart-review-total strong'); if (total) total.textContent = formatAmount(quote.amount, quote.currency); },
   }) : undefined;
   dialog.querySelector<HTMLButtonElement>(".cart-review-close")?.addEventListener("click", () => dialog.close());

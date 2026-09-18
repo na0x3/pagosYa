@@ -283,6 +283,7 @@ export interface Store {
   digitalGoodsEnabled?: boolean;
   shippingEnabled?: boolean;
   shippingPickupEnabled?: boolean;
+  shippingCarriersEnabled?: boolean;
   bundlesEnabled?: boolean;
   showLowStockToCustomers: boolean;
   appointmentOfferings?: AppointmentOffering[];
@@ -437,8 +438,8 @@ export async function quotePromoCode(slug: string, code: string): Promise<PromoC
 
 /** This call is what would otherwise be a merchant backend's own POST /v1/payment_intents —
  * one PaymentIntent for the whole cart, so one QR/payment covers every item in it. */
-export type CartFulfillment = { shippingCountry?: string; shippingPostalCode?: string; creditCode?: string; locationId?: string; fulfillmentMethod?: "pickup" | "delivery"; shippingZoneId?: string; shippingAddress?: string };
-export type CartQuote = { creditAmount?: number; orderTotal?: number; subtotal: number; discountAmount: number; shippingAmount: number; amount: number; currency: string; shippingOptions: Array<{ id: string; name: string; amount: number; currency: string }> };
+export type CartFulfillment = { shippingCountry?: string; shippingPostalCode?: string; creditCode?: string; locationId?: string; fulfillmentMethod?: "pickup" | "delivery"; shippingZoneId?: string; shippingAddress?: string; shippingDestination?: { department: string; city: string; street: string; references?: string; lat: number; lng: number; recipientName: string; recipientPhone: string } };
+export type CartQuote = { creditAmount?: number; orderTotal?: number; subtotal: number; discountAmount: number; shippingAmount: number; amount: number; currency: string; shippingOptions: Array<{ id: string; name: string; amount: number; currency: string; carrierId?: string | null }> };
 export async function quoteCart(slug: string, items: { paymentLinkId: string; variantId?: string; extraIds?: string[]; quantity: number }[], promoCode?: string, fulfillment?: CartFulfillment): Promise<CartQuote> {
   const response = await fetch(`${API_BASE_URL}/stores/public/${slug}/shipping/quote`, {
     method: 'POST', headers: { 'content-type': 'application/json' },

@@ -1530,7 +1530,7 @@ export class StoresService implements OnModuleDestroy {
       storeId: store.id,
       publishedSourceRevision: store.publishedSourceRevision ?? null,
       storeName: store.name,
-      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, bundlesEnabled: store.bundlesEnabled,
+      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
       bannerUrl: store.bannerUrl,

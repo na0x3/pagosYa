@@ -154,7 +154,7 @@ export class SourceGenerationService {
     if (!owner) throw new NotFoundException("Store not found");
     const data = await this.stores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
     const retention = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } });
-    return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, bundlesEnabled: data.bundlesEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
+    return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,
@@ -195,7 +195,7 @@ export class SourceGenerationService {
     if (!/^https?:$/.test(apiUrl.protocol) || apiUrl.username || apiUrl.password) throw new ServiceUnavailableException("PUBLIC_API_URL no es una URL pública válida.");
     if (this.config.get<string>("app.environment") === "production" && apiUrl.protocol !== "https:") throw new ServiceUnavailableException("PUBLIC_API_URL debe usar HTTPS en producción.");
     const data = {
-      storeName: publicStore.storeName, creditsEnabled: publicStore.creditsEnabled, digitalGoodsEnabled: publicStore.digitalGoodsEnabled, shippingEnabled: publicStore.shippingEnabled, shippingPickupEnabled: publicStore.shippingPickupEnabled, bundlesEnabled: publicStore.bundlesEnabled, logoUrl: publicStore.logoUrl, tagline: publicStore.tagline, checkoutMode: dto.revision === 0 ? "payment" : publicStore.checkoutMode,
+      storeName: publicStore.storeName, creditsEnabled: publicStore.creditsEnabled, digitalGoodsEnabled: publicStore.digitalGoodsEnabled, shippingEnabled: publicStore.shippingEnabled, shippingPickupEnabled: publicStore.shippingPickupEnabled, shippingCarriersEnabled: publicStore.shippingCarriersEnabled, bundlesEnabled: publicStore.bundlesEnabled, logoUrl: publicStore.logoUrl, tagline: publicStore.tagline, checkoutMode: dto.revision === 0 ? "payment" : publicStore.checkoutMode,
       contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
       contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
       categories: publicStore.categories, locations: publicStore.locations,
