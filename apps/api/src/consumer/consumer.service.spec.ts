@@ -19,7 +19,8 @@ function setup() {
     storeOrderStatusEvent: { create: jest.fn() },
     $transaction: jest.fn(async (value: any) => typeof value === "function" ? value(prisma) : Promise.all(value)),
   };
-  return { prisma, service: new ConsumerService(prisma, {} as any, {} as any, {} as any, { cancelForOrder: jest.fn() } as any) };
+  const shipments = { cancelForOrder: jest.fn() };
+  return { prisma, shipments, service: new ConsumerService(prisma, {} as any, {} as any, {} as any, shipments as any) };
 }
 
 describe("ConsumerService affiliation consent", () => {
@@ -121,5 +122,19 @@ describe("ConsumerService fulfillment transitions", () => {
     const { prisma, service } = setup();
     prisma.storeOrder.findFirst.mockResolvedValue({ id: "order_1", merchantId: "merchant_1", status: OrderFulfillmentStatus.PAID });
     await expect(service.updateOrderStatus("merchant_1", "order_1", OrderFulfillmentStatus.DELIVERED)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it.each([
+    [OrderFulfillmentStatus.PAID, OrderFulfillmentStatus.CANCELED, true],
+    [OrderFulfillmentStatus.PAID, OrderFulfillmentStatus.REFUNDED, true],
+    [OrderFulfillmentStatus.READY_FOR_PICKUP, OrderFulfillmentStatus.DELIVERED, false],
+  ])("from %s to %s cancels the carrier shipment: %s", async (from, to, cancels) => {
+    const { prisma, shipments, service } = setup();
+    prisma.storeOrder.findFirst.mockResolvedValue({ id: "order_1", merchantId: "merchant_1", status: from });
+    prisma.storeOrder.updateMany.mockResolvedValue({ count: 1 });
+    prisma.storeOrder.findUniqueOrThrow.mockResolvedValue({ id: "order_1", status: to });
+    await service.updateOrderStatus("merchant_1", "order_1", to);
+    if (cancels) expect(shipments.cancelForOrder).toHaveBeenCalledWith(prisma, "order_1");
+    else expect(shipments.cancelForOrder).not.toHaveBeenCalled();
   });
 });

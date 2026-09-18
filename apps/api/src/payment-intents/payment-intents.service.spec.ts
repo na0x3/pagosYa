@@ -575,3 +575,42 @@ describe("PaymentIntentsService receipts", () => {
     expect(body).not.toMatch(/\(\d/);
   });
 });
+
+describe("PaymentIntentsService carrier shipments", () => {
+  it("arms a pending carrier shipment when store credit pays the whole order", async () => {
+    const tx: any = {
+      paymentIntent: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "pi_1", merchantId: "m_1", status: "REQUIRES_PAYMENT_METHOD", amount: 0, currency: "BOB", metadata: {} }),
+        update: jest.fn().mockResolvedValue({ id: "pi_1", status: "SUCCEEDED" }),
+      },
+      storeCreditReservation: { findUnique: jest.fn().mockResolvedValue({ status: "RESERVED", amount: 12500, creditId: "cr_1" }), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      storeCreditEntry: { create: jest.fn() },
+      storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", amount: 12500 }), update: jest.fn() },
+      shipment: { updateMany: jest.fn(async () => ({ count: 1 })) },
+    };
+    const service = new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, {} as any, noopConfig());
+    for (const method of ["assertCartStillAvailable", "decrementStockForCart", "recordCartSales", "recordProductStats"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
+    jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
+
+    await service.completeCreditPaymentInTransaction(tx, "pi_1");
+
+    expect(tx.storeOrder.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "order_1" }, data: expect.objectContaining({ status: "PAID" }) }));
+    expect(tx.shipment.updateMany).toHaveBeenCalledWith({ where: { orderId: "order_1", status: "BOOKING", nextAttemptAt: null }, data: { nextAttemptAt: expect.any(Date) } });
+  });
+
+  it("cancels a still-unbooked carrier shipment when the unpaid order is canceled", async () => {
+    const tx: any = {
+      $queryRaw: jest.fn().mockResolvedValue([{ status: "REQUIRES_PAYMENT_METHOD", metadata: {} }]),
+      paymentIntent: { update: jest.fn().mockResolvedValue({ id: "pi_1", status: "CANCELED" }) },
+      storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", status: "AWAITING_PAYMENT" }), update: jest.fn() },
+      shipment: { updateMany: jest.fn(async () => ({ count: 1 })) },
+      appointment: { updateMany: jest.fn() },
+    };
+    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+
+    await service.cancelById("pi_1");
+
+    expect(tx.storeOrder.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "order_1" } }));
+    expect(tx.shipment.updateMany).toHaveBeenCalledWith({ where: { orderId: "order_1", status: "BOOKING" }, data: { status: "CANCELED", nextAttemptAt: null } });
+  });
+});

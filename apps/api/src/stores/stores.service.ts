@@ -1806,7 +1806,7 @@ export class StoresService implements OnModuleDestroy {
       if (!quoteOnly && !dto.fulfillmentMethod) throw new BadRequestException('Elige retiro o envío.');
       if (dto.fulfillmentMethod === 'pickup' && !store.shippingPickupEnabled) throw new BadRequestException('Esta tienda no ofrece retiro.');
       const weightGrams = links.some(link => link.shippingWeightGrams == null) ? null : links.reduce((sum, link) => sum + link.shippingWeightGrams! * quantityByLinkId.get(link.id)!, 0);
-      const rates = await this.prisma.deliveryZone.findMany({ where: { storeId: store.id, isActive: true } });
+      const rates = await this.prisma.deliveryZone.findMany({ where: { storeId: store.id, isActive: true, ...(store.shippingCarriersEnabled ? {} : { carrierId: null }) } });
       const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, shippingDepartment: dto.shippingDestination?.department, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams });
       shippingOptions = quote.options;
       if (dto.fulfillmentMethod === 'delivery') {

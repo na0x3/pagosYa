@@ -279,6 +279,7 @@ export class PaymentIntentsService {
           where: { id: order.id },
           data: { status: OrderFulfillmentStatus.CANCELED, statusEvents: { create: { status: OrderFulfillmentStatus.CANCELED } } },
         });
+        await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING' }, data: { status: 'CANCELED', nextAttemptAt: null } });
       }
       await tx.appointment.updateMany({
         where: { depositPaymentIntentId: id, status: "PENDING" },
