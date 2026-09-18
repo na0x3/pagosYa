@@ -44,14 +44,16 @@ export function destinationMarkup(saved: Record<string, string> = {}): string {
     <input type="hidden" name="destLat" value="${v('destLat')}"><input type="hidden" name="destLng" value="${v('destLng')}">
     <div class="shipping-map" data-shipping-map style="height:220px;border-radius:12px" role="group" aria-label="Mapa: mueve el marcador a tu puerta"></div>
     <button type="button" class="ghost" data-use-location>Usar mi ubicación</button>
-    <p class="hint" data-pin-status role="status">Marca tu puerta en el mapa.</p></fieldset>`;
+    <p class="cart-fulfillment-hint" data-pin-status role="status">Marca tu puerta en el mapa.</p></fieldset>`;
 }
 
-/** The destination to send, or undefined until department and a pin inside Bolivia are set. */
+/** The destination to send, or undefined until every required field is valid and a pin inside Bolivia is set.
+ * A partial destination would be rejected by the API, so callers never send one. */
 export function readDestination(root: ParentNode): ShippingDestination | undefined {
   const get = (name: string) => root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name=${name}]`)?.value.trim() || '';
   const lat = Number(get('destLat') || Number.NaN), lng = Number(get('destLng') || Number.NaN);
   if (!get('destDepartment') || !insideBolivia(lat, lng)) return undefined;
+  if ([...root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-shipping-destination] [required]')].some(input => !input.checkValidity())) return undefined;
   return { department: get('destDepartment'), city: get('destCity'), street: get('destStreet'), references: get('destReferences') || undefined, lat, lng, recipientName: get('destName'), recipientPhone: get('destPhone') };
 }
 
@@ -86,10 +88,13 @@ export async function mountDestinationMap(root: ParentNode, onPin: () => void = 
     if (!box.isConnected) return;
     const start = pinned() ? [Number(lat.value), Number(lng.value)] : DEPARTMENT_CENTERS[department.value] || DEPARTMENT_CENTERS.LA_PAZ;
     const map = L.map(box).setView(start, pinned() ? 17 : 13);
+    // The cart dialog may still be opening (unsized) when the map mounts; re-measure so tiles fill the box.
+    requestAnimationFrame(() => map.invalidateSize?.());
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => map.invalidateSize?.()).observe(box);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
     if (L.Icon?.Default) L.Icon.Default.imagePath = `${LEAFLET}images/`;
     marker = L.marker(start, { draggable: true, keyboard: true, title: 'Tu puerta', alt: 'Tu puerta: usa las flechas para moverla' }).addTo(map);
-    marker.on('dragend', () => { const p = marker.getLatLng(); if (!setPin(p.lat, p.lng) && lat.value) marker.setLatLng([Number(lat.value), Number(lng.value)]); });
+    marker.on('dragend', () => { const p = marker.getLatLng(); if (!setPin(p.lat, p.lng)) marker.setLatLng(lat.value ? [Number(lat.value), Number(lng.value)] : DEPARTMENT_CENTERS[department.value] || DEPARTMENT_CENTERS.LA_PAZ); });
     // Leaflet markers are focusable but not keyboard-draggable; arrow keys move the pin (Shift for bigger steps).
     marker.getElement?.()?.addEventListener('keydown', (event: KeyboardEvent) => {
       const step = ({ ArrowUp: [1, 0], ArrowDown: [-1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] } as Record<string, number[]>)[event.key]; if (!step) return;

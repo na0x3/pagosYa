@@ -62,7 +62,8 @@ export function mountCartQuote(root: HTMLElement, options: {
   // Department-scoped carrier rates only appear once the destination is complete, so re-quote when that changes.
   let quotedDepartment: string | undefined;
   function destinationChanged() { if (readDestination(root)?.department !== quotedDepartment) { if (rate) rate.value = ''; void refresh(); } }
-  root.querySelector('[name=destDepartment]')?.addEventListener('change', destinationChanged);
+  // Any destination field can complete (or break) the destination; `change` fires once per edit, not per keystroke.
+  root.querySelector('[data-shipping-destination]')?.addEventListener('change', destinationChanged);
   root.querySelectorAll('[data-country],[data-postal]').forEach(el => el.addEventListener('input', () => { sequence++; quote = null; if (rate) rate.value = ''; status.textContent = 'Vuelve a calcular las tarifas para este destino.'; retry.hidden = false; }));
   methodInput?.addEventListener('change', () => { if (rate) rate.value = ''; void refresh(); });
   rate?.addEventListener('change', () => void refresh());

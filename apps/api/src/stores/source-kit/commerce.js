@@ -1369,7 +1369,8 @@
       select?.addEventListener("change", () => { updateMethods(el); updateShipping(el); });
       el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
       el.querySelector('[name=shippingZoneId]')?.addEventListener('change', () => void shippingQuote(el));
-      el.querySelector('[name=destDepartment]')?.addEventListener('change', () => { const rate = el.querySelector('[name=shippingZoneId]'); if (rate) rate.value = ''; void shippingQuote(el); });
+      // Re-quote only with a complete destination; a partial one would be rejected by the API.
+      el.querySelector('[name=destDepartment]')?.addEventListener('change', () => { if (!shippingDestination(el)) return; const rate = el.querySelector('[name=shippingZoneId]'); if (rate) rate.value = ''; void shippingQuote(el); });
       el.querySelectorAll('[name=shippingCountry],[name=shippingPostalCode]').forEach(field => field.addEventListener('input', () => updateShipping(el)));
       el.querySelector('[data-credit-apply]')?.addEventListener('click', () => void applyCredit(el));
       el.querySelector('[name=creditCode]')?.addEventListener('input', () => { el.dataset.creditReady = 'false'; el.querySelector('[data-credit-status]').textContent = 'Aplica el código para actualizar el total.'; });
@@ -1503,10 +1504,13 @@
       const pinned = insideBolivia(Number(lat.value || NaN), Number(lng.value || NaN));
       const start = pinned ? [Number(lat.value), Number(lng.value)] : DEPARTMENT_CENTERS[dept] || DEPARTMENT_CENTERS.LA_PAZ;
       const map = L.map(box).setView(start, pinned ? 17 : 13);
+      // The panel may still be settling when the map mounts; re-measure so tiles fill the box.
+      requestAnimationFrame(() => map.invalidateSize?.());
+      if (window.ResizeObserver) new ResizeObserver(() => map.invalidateSize?.()).observe(box);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
       if (L.Icon?.Default) L.Icon.Default.imagePath = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/';
       marker = L.marker(start, { draggable: true, keyboard: true, title: 'Tu puerta', alt: 'Tu puerta: usa las flechas para moverla' }).addTo(map);
-      marker.on('dragend', () => { const p = marker.getLatLng(); if (!setPin(p.lat, p.lng) && lat.value) marker.setLatLng([Number(lat.value), Number(lng.value)]); });
+      marker.on('dragend', () => { const p = marker.getLatLng(); if (!setPin(p.lat, p.lng)) marker.setLatLng(lat.value ? [Number(lat.value), Number(lng.value)] : DEPARTMENT_CENTERS[panel.querySelector('[name=destDepartment]').value] || DEPARTMENT_CENTERS.LA_PAZ); });
       // Leaflet markers are focusable but not keyboard-draggable; arrow keys move the pin (Shift for bigger steps).
       marker.getElement?.()?.addEventListener('keydown', event => {
         const step = { ArrowUp: [1, 0], ArrowDown: [-1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[event.key]; if (!step) return;
@@ -1523,6 +1527,7 @@
     const get = name => panel.querySelector(`[name=${name}]`)?.value.trim() || '';
     const lat = Number(get('destLat') || NaN), lng = Number(get('destLng') || NaN);
     if (!get('destDepartment') || !insideBolivia(lat, lng)) return undefined;
+    if ([...panel.querySelectorAll('[data-shipping-destination] [required]')].some(input => !input.checkValidity())) return undefined;
     return { department: get('destDepartment'), city: get('destCity'), street: get('destStreet'), references: get('destReferences') || undefined, lat, lng, recipientName: get('destName'), recipientPhone: get('destPhone') };
   }
   function syncShippingAddress(panel) {

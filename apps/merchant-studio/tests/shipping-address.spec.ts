@@ -22,7 +22,13 @@ async function open(page: Page, data: Record<string, unknown>, { leaflet = true 
     const url = route.request().url();
     if (url.endsWith('/stores/public/kit/store')) return route.fulfill({ json: store });
     if (url.includes('/stores/public/kit/content')) return route.fulfill({ json: { articles: [], reviews: [], bundles: [] } });
-    if (url.endsWith('/stores/public/kit/shipping/quote')) { bodies.push(route.request().postDataJSON()); return route.fulfill({ json: quote }); }
+    if (url.endsWith('/stores/public/kit/shipping/quote')) {
+      const body = route.request().postDataJSON(); bodies.push(body);
+      // Like the API's DTO: a destination without city/street/recipient is a 400.
+      const d = body.shippingDestination;
+      if (d && !(d.city && d.street && d.recipientName && d.recipientPhone)) return route.fulfill({ status: 400, json: { message: ['Escribe la ciudad.'] } });
+      return route.fulfill({ json: quote });
+    }
     // Answer checkout with an error so the page stays put after the payload is captured.
     if (url.endsWith('/stores/public/kit/cart-checkout')) { checkouts.push(route.request().postDataJSON()); return route.fulfill({ status: 400, json: { message: 'Pedido de prueba recibido.' } }); }
     return route.fulfill({ status: 404, json: { message: 'No encontrado' } });
@@ -68,6 +74,25 @@ test('carrier stores collect a structured Bolivian address and a map pin', async
   await page.getByRole('button', { name: 'Pagar con pagosYa' }).click();
   await expect.poll(() => bodies.checkouts.length).toBe(1);
   expect(bodies.checkouts[0]).toMatchObject({ fulfillmentMethod: 'delivery', shippingZoneId: 'z1', shippingAddress: 'Av. Busch 55, Santa Cruz', shippingDestination: { department: 'SANTA_CRUZ', lat: -17.78, lng: -63.18, recipientName: 'Ana Quispe' } });
+});
+
+test('pinning first never sends a partial destination', async ({ page }) => {
+  const bodies = await open(page, { shippingCarriersEnabled: true });
+  await expect(page.getByLabel('Departamento')).toBeVisible();
+  expect(await page.evaluate(() => (window as any).__pagosyaSetPin(-17.78, -63.18))).toBe(true);
+  await page.getByLabel('Departamento').selectOption('SANTA_CRUZ');
+  await page.getByLabel('Ciudad').fill('Santa Cruz');
+  await page.getByLabel('Calle y número').fill('Av. Busch 55');
+  await page.getByLabel('Nombre de quien recibe').fill('Ana Quispe');
+  await page.getByLabel('Teléfono de quien recibe').fill('71234567');
+  await page.getByRole('button', { name: 'Calcular envío' }).click();
+  await expect(page.getByLabel('Opción de envío')).toContainText('Servientrega · Santa Cruz');
+  const sent = bodies.filter(body => body.shippingDestination);
+  expect(sent).toHaveLength(1);
+  expect(sent[0].shippingDestination).toEqual({ department: 'SANTA_CRUZ', city: 'Santa Cruz', street: 'Av. Busch 55', lat: -17.78, lng: -63.18, recipientName: 'Ana Quispe', recipientPhone: '71234567' });
+  // Changing the department of a complete destination re-quotes with it.
+  await page.getByLabel('Departamento').selectOption('COCHABAMBA');
+  await expect.poll(() => bodies.filter(body => body.shippingDestination).at(-1)?.shippingDestination.department).toBe('COCHABAMBA');
 });
 
 test('the address and "Usar mi ubicación" keep working when the map cannot load', async ({ page, context }) => {

@@ -12,14 +12,20 @@ function mount(extra: Partial<Parameters<typeof mountCartQuote>[1]> = {}) {
   return { root, finish };
 }
 const field = (root: HTMLElement, name: string) => root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name=${name}]`)!;
-function fill(root: HTMLElement, name: string, value: string) { const el = field(root, name); el.value = value; el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); }
+function fill(root: HTMLElement, name: string, value: string) { const el = field(root, name); el.value = value; if (el.tagName !== 'SELECT') el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
 async function choose(root: HTMLElement, selector: string, value: string) { const el = root.querySelector<HTMLSelectElement>(selector)!; el.value = value; el.dispatchEvent(new Event('change')); await vi.waitFor(() => expect(root.querySelector('[data-quote-status]')!.textContent).not.toBe('Calculando total…')); }
 
 beforeEach(() => {
   bodies.length = 0;
   document.body.innerHTML = '';
   // No Leaflet in jsdom: the map must degrade to address + "Usar mi ubicación".
-  vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => { bodies.push(JSON.parse(String(init.body))); return new Response(JSON.stringify(quote), { status: 200, headers: { 'content-type': 'application/json' } }); }));
+  // Like the API's DTO: a destination without city/street/recipient is a 400.
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body)); bodies.push(body);
+    const d = body.shippingDestination;
+    if (d && !(d.city && d.street && d.recipientName && d.recipientPhone)) return new Response(JSON.stringify({ message: ['Escribe la ciudad.'] }), { status: 400, headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify(quote), { status: 200, headers: { 'content-type': 'application/json' } });
+  }));
 });
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -50,6 +56,24 @@ describe('cart quote for carrier stores', () => {
     await choose(root, '[data-rate]', 'z1');
     expect(bodies.at(-1)).toMatchObject({ fulfillmentMethod: 'delivery', shippingZoneId: 'z1', shippingAddress: 'Av. Busch 55, Santa Cruz', shippingDestination: { lat: -17.78 } });
     expect(finish?.()).toMatchObject({ shippingAddress: 'Av. Busch 55, Santa Cruz', shippingDestination: { department: 'SANTA_CRUZ', recipientPhone: '71234567' } });
+  });
+
+  it('pin first, then the fields: quotes once, with the full destination, when it becomes complete', async () => {
+    const { root, finish } = mount({ carriers: true });
+    await choose(root, '[data-method]', 'delivery');
+    fill(root, 'destDepartment', 'SANTA_CRUZ');
+    expect((window as any).__pagosyaSetPin(-17.78, -63.18)).toBe(true);
+    fill(root, 'destCity', 'Santa Cruz'); fill(root, 'destStreet', 'Av. Busch 55'); fill(root, 'destName', 'Ana Quispe');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(bodies.filter(body => body.shippingDestination)).toHaveLength(0);
+    fill(root, 'destPhone', '71234567');
+    await vi.waitFor(() => expect(root.querySelectorAll('[data-rate] option')).toHaveLength(2));
+    const sent = bodies.filter(body => body.shippingDestination);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].shippingDestination).toEqual({ department: 'SANTA_CRUZ', city: 'Santa Cruz', street: 'Av. Busch 55', lat: -17.78, lng: -63.18, recipientName: 'Ana Quispe', recipientPhone: '71234567' });
+    await choose(root, '[data-rate]', 'z1');
+    expect(root.querySelector('[data-quote-status]')!.textContent).toContain('Total');
+    expect(finish?.()).toMatchObject({ shippingZoneId: 'z1', shippingDestination: { city: 'Santa Cruz' } });
   });
 
   it('keeps the single address field and sends no destination when carriers are off', async () => {
