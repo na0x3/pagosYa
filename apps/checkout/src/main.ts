@@ -43,6 +43,7 @@ import {
   StoreLink,
   DebtCollectionInfo,
   TrackedOrder,
+  TrackedShipment,
 } from "./api";
 import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, isNavigableRedirect, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
@@ -650,6 +651,27 @@ function trackingStatusClass(status: string): string {
   return "is-active";
 }
 
+const SHIPMENT_LABELS: Record<string, string> = {
+  BOOKING: "Preparando el envío",
+  BOOKED: "Guía generada",
+  PICKED_UP: "Recogido por el courier",
+  IN_TRANSIT: "En camino",
+  DELIVERED: "Entregado",
+  FAILED: "Estamos resolviendo un problema con el envío",
+  CANCELED: "Envío cancelado",
+  RETURNED: "Devuelto",
+};
+
+function shipmentMarkup(shipment: TrackedShipment | null | undefined): string {
+  if (!shipment) return "";
+  const link = shipment.trackingUrl && /^https:\/\//.test(shipment.trackingUrl)
+    ? `<a href="${escapeHtml(shipment.trackingUrl)}" target="_blank" rel="noopener noreferrer">Rastrear en ${escapeHtml(shipment.carrierName)}</a>`
+    : "";
+  return `<section class="tracking-shipment" aria-label="Envío"><h2>Envío con ${escapeHtml(shipment.carrierName)}</h2>
+    <p><strong>${escapeHtml(SHIPMENT_LABELS[shipment.status] ?? shipment.status)}</strong>${shipment.trackingNumber ? ` · Nº ${escapeHtml(shipment.trackingNumber)}` : ""}</p>${link}
+    <ol>${shipment.events.map((e) => `<li><time datetime="${escapeHtml(e.occurredAt)}">${escapeHtml(new Date(e.occurredAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" }))}</time> ${escapeHtml(e.description ?? SHIPMENT_LABELS[e.status] ?? e.status)}</li>`).join("")}</ol></section>`;
+}
+
 function trackingTimelineHtml(order: TrackedOrder): string {
   const rankByStatus: Record<string, number> = {
     AWAITING_PAYMENT: 0,
@@ -796,6 +818,7 @@ function trackedOrderHtml(order: TrackedOrder, token: string): string {
       <h2>Progreso</h2>
       <div id="tracking-timeline">${trackingTimelineHtml(order)}</div>
     </section>
+    ${shipmentMarkup(order.shipment)}
     <section class="tracking-order-section">
       <div class="tracking-section-head"><h2>Tu pedido</h2><strong>${formatAmount(order.amount, order.currency)}</strong></div>
       ${order.fulfillment ? `<p class="tracking-fulfillment">${ICON_MAP_PIN}<span><strong>${order.fulfillment.method === "delivery" ? "Entrega desde" : "Retiro en"} ${escapeHtml(order.fulfillment.locationName)}</strong>${order.fulfillment.readyAt ? `<small>Disponible desde ${escapeHtml(new Intl.DateTimeFormat("es-BO", { timeZone: "America/La_Paz", dateStyle: "full", timeStyle: "short" }).format(new Date(order.fulfillment.readyAt)))}</small>` : ""}</span></p>` : ""}

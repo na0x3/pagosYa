@@ -16,6 +16,7 @@ function setup() {
     storeOrder: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn(), findUniqueOrThrow: jest.fn() },
     paymentIntent: { update: jest.fn() },
     deliveryAssignment: { findUnique: jest.fn() },
+    shipment: { findUnique: jest.fn(async () => null) },
     storeOrderStatusEvent: { create: jest.fn() },
     $transaction: jest.fn(async (value: any) => typeof value === "function" ? value(prisma) : Promise.all(value)),
   };
@@ -76,7 +77,7 @@ describe("ConsumerService guest order tracking", () => {
     prisma.deliveryAssignment.findUnique.mockResolvedValue(null);
 
     await expect(service.trackOrder(createOrderTrackingToken(orderId, secret))).resolves.toMatchObject({
-      reference: "0A1WOUG3", paymentStatus: "SUCCEEDED", status: OrderFulfillmentStatus.PREPARING,
+      reference: "0A1WOUG3", paymentStatus: "SUCCEEDED", status: OrderFulfillmentStatus.PREPARING, shipment: null,
     });
   });
 

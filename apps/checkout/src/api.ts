@@ -383,6 +383,14 @@ export interface CartCheckoutResult {
   fulfillmentMethod?: "pickup" | "delivery";
 }
 
+export interface TrackedShipment {
+  carrierName: string;
+  status: string;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  events: Array<{ status: string; description: string | null; occurredAt: string }>;
+}
+
 export interface TrackedOrder {
   reference: string;
   storeName: string;
@@ -404,6 +412,7 @@ export interface TrackedOrder {
   fulfillment: { locationName: string; method: "pickup" | "delivery" | null; readyAt: string | null } | null;
   store: { slug: string; logoUrl: string | null; contactPhone: string | null; contactEmail: string | null } | null;
   delivery: { status: string; estimatedAt: string | null; deliveredAt: string | null } | null;
+  shipment?: TrackedShipment | null;
 }
 
 export async function fetchTrackedOrder(token: string): Promise<TrackedOrder> {

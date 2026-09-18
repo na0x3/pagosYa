@@ -108,6 +108,10 @@ describe('Carrier shipping checkout', () => {
     expect((await prisma.storeOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('SHIPPED');
     await request(app.getHttpServer()).post(`/v1/shipments/${view.id}/delivered`).set(auth()).expect(201);
     expect((await prisma.storeOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('DELIVERED');
+
+    const trackedByBuyer = (await request(app.getHttpServer()).get(`/v1/orders/track/${paid.trackingToken}`).expect(200)).body;
+    expect(trackedByBuyer.shipment).toMatchObject({ carrierName: 'Servientrega Bolivia', trackingNumber: 'SV-000123', status: 'DELIVERED' });
+    expect(JSON.stringify(trackedByBuyer.shipment)).not.toMatch(/labelFileId|recipientPhone|lastError/);
   });
 
   it('stores branch coordinates for pickup origins', async () => {

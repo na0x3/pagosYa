@@ -49,7 +49,7 @@ export class ConsumerService {
       },
     });
     if (!order) throw new NotFoundException("No encontramos ese seguimiento de pedido");
-    const [store, delivery] = await Promise.all([
+    const [store, delivery, shipment] = await Promise.all([
       this.prisma.store.findUnique({
         where: { id: order.storeId },
         select: { slug: true, logoUrl: true, contactPhone: true, contactEmail: true },
@@ -57,6 +57,15 @@ export class ConsumerService {
       this.prisma.deliveryAssignment.findUnique({
         where: { orderId: order.id },
         select: { status: true, estimatedAt: true, deliveredAt: true },
+      }),
+      this.prisma.shipment.findUnique({
+        where: { orderId: order.id },
+        select: {
+          status: true,
+          trackingNumber: true,
+          carrier: { select: { name: true, trackingUrlTemplate: true } },
+          events: { orderBy: { occurredAt: "asc" }, select: { status: true, description: true, occurredAt: true } },
+        },
       }),
     ]);
     return {
@@ -77,6 +86,13 @@ export class ConsumerService {
       statusEvents: order.statusEvents.map((event) => ({ status: event.status, createdAt: event.createdAt })),
       store,
       delivery,
+      shipment: shipment ? {
+        carrierName: shipment.carrier.name,
+        status: shipment.status,
+        trackingNumber: shipment.trackingNumber,
+        trackingUrl: ShipmentsService.trackingUrl(shipment.carrier.trackingUrlTemplate, shipment.trackingNumber),
+        events: shipment.events,
+      } : null,
     };
   }
 
