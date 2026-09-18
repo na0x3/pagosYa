@@ -169,7 +169,8 @@ export function requestedSourceVariants(value: unknown, instruction: string, amo
   if (value == null) return undefined;
   if (!Array.isArray(value) || value.length > 256) throw new BadRequestException('Usa hasta 256 combinaciones por producto.');
   if (!value.length) return undefined;
-  if (!sourceOptionRequest(instruction)) throw new BadRequestException('Pide las opciones explícitamente.');
+  // Unrequested combinations are the model's invention: drop them and keep the product, rather than failing the whole request.
+  if (!sourceOptionRequest(instruction)) return undefined;
   const variants = value.map(raw => changes(raw,instruction,amount,currency,images,true) as ProductVariantDto);
   normalizeProductVariants(variants);
   return variants;

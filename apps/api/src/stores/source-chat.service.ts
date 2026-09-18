@@ -148,7 +148,7 @@ export class SourceChatService {
       const decision: SourceConversationDecision = { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
         storeId, model: input.model, instruction: input.instruction, productPhoto, buildNow: ['generate', 'quick'].includes(input.setupAction || ''),
         revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [],
-        messages: [...history.messages, userMessage], assetUrls: allAssets,
+        messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
       })) };
       const correctedUses = honorImageContent(input.instruction, input.assetUrls?.length ? input.assetUrls : allAssets, decision.imageUses);
       if (JSON.stringify(correctedUses) !== JSON.stringify(decision.imageUses)) {

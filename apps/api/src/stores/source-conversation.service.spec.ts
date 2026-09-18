@@ -48,6 +48,15 @@ describe('Source conversation interpretation', () => {
     expect(body.instructions).toContain(SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS);
     expect(JSON.parse(body.input[0].content[1].text).websiteReferences).toEqual(websiteReferences);
   });
+
+  it('shows the editor browser-check findings to the decision model', async () => {
+    const { service } = setup();
+    respond(reply());
+    const browserReview = ['Imágenes rotas: 2 imágenes no pudieron cargarse', 'Catálogo: añade un producto con nombre y precio'];
+    await service.decide('merchant', { ...input(), instruction: 'Corrige lo detectado', browserReview });
+    const context = JSON.parse(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content[1].text);
+    expect(context.browserReview).toEqual(browserReview);
+  });
   it('uses the selected DeepSeek model for chat with OpenAI disabled', async () => {
     const { service, config } = setup();
     config.get.mockImplementation((key: string) => key === 'app.deepSeek.apiKey' ? 'deepseek-test-key' : key === 'app.deepSeek.enabled');

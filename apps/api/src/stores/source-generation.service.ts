@@ -7,7 +7,7 @@ import { SOURCE_PRODUCT_OPTIONS } from './source-product-options';
 import { MAX_SOURCE_VIDEO_BYTES, sourceVideo } from './source-media';
 import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
 import { derivePhotoFacts } from './source-photo-facts';
-import { BUNDLED_PHOTO, bundledPhotoPath, productPhotoReferences, rewriteProductPhotos, uploadPath } from './source-product-photos';
+import { BUNDLED_PHOTO, authoredUploadReferences, bundledPhotoPath, productPhotoReferences, rewriteAuthoredUploads, rewriteProductPhotos, uploadPath } from './source-product-photos';
 import { samplePhotoColours } from './source-photo-sampler';
 import { searchCreativeAssets, creativeAssetFile } from './source-creative-assets';
 import { requestsImageContent } from './source-image-intent';
@@ -147,6 +147,26 @@ export class SourceGenerationService {
     for (const [ref, url] of resolved) if (!owned.has(url)) resolved.delete(ref);
     rewriteProductPhotos(generated?.products, generated?.productOperations, resolved);
     return owned;
+  }
+
+  /** Bundles the merchant's own uploads that the model wrote straight into page code (a hero photo taken from the
+   * catalog) and points the code at the bundled copy; the storefront sandbox cannot load raw upload URLs. */
+  private async bundleAuthoredUploads(merchantId: string, files: SourceProjectFileDto[], assets: SourceProjectFileDto[]) {
+    const refs = authoredUploadReferences(files);
+    if (!refs.length) return;
+    const urls = [...new Set(refs.map(uploadPath))];
+    const owned = new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: urls } }, select: { url: true } })).map(asset => asset.url));
+    const resolved = new Map<string, string>();
+    for (const ref of refs) {
+      const url = uploadPath(ref);
+      if (!owned.has(url)) continue;
+      const bytes = await this.uploads.getBuffer(url.split('/').at(-1)!);
+      if (!bytes) continue;
+      const path = bundledPhotoPath(bytes, url);
+      if (!assets.some(file => file.path === path)) assets.push({ path, content: bytes.toString('base64'), encoding: 'base64' });
+      resolved.set(ref, `/${path}`);
+    }
+    rewriteAuthoredUploads(files, resolved);
   }
 
   async catalog(merchantId: string, storeId: string) {
@@ -529,6 +549,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               validateGeneratedSource(generated.files);
               if (generated.design) validateSourceDesignImplementation(generated.design, generated.files);
             }
+            await this.bundleAuthoredUploads(merchantId, generated.files, assets);
             // Check the same asset set the save carries forward: new uploads plus previously bundled assets.
             const preflightAssets = [...assets, ...retainedAssets.filter(file => !assets.some(asset => asset.path === file.path) && !generated.files.some(generatedFile => generatedFile.path === file.path))];
             const preflightFiles = await withSourceFonts(await withSourceAssets([...generated.files, ...preflightAssets], previousFiles, assetLegend, imageUses, photoFacts));

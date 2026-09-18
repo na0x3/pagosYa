@@ -32,6 +32,10 @@ describe('chat product combinations',()=>{
   ])('rejects invented inventory, prices, images and choices',value=>{
     expect(()=>requestedSourceVariants([value],'Color Negro, talla M, cinco de cada una',12000,'BOB',new Set())).toThrow();
   });
+  it('ignores combinations the merchant never asked for instead of failing the product',()=>{
+    const instruction='Crea 3 productos: Chompa de alpaca natural (Bs 480, 12 unidades), Chalina de telar terracota (Bs 220, 20 unidades) y Gorro andino de alpaca (Bs 150, 30 unidades).';
+    expect(requestedSourceVariants([{...raw,name:'Talla M',options:null}],instruction,48000,'BOB',new Set())).toBeUndefined();
+  });
   it('rejects duplicate combinations and inconsistent dimensions',()=>{
     const variant={name:'Negro / M',amount:12000,stock:5,options:raw.options};
     expect(()=>normalizeProductVariants([variant,variant])).toThrow();

@@ -7,6 +7,15 @@ it('bundles only referenced authentic icons and includes their license', async (
   expect(files.some(f => f.path === 'assets/icons/coffee.svg')).toBe(false);
   expect(files.find(f => f.path.endsWith('shopping-bag.svg'))?.content).toContain('viewBox="0 0 24 24"');
 });
+it('bundles icons named through a dynamic icon path', async () => {
+  const header = [
+    'const Icon = ({ name }: { name: string }) => <img className="site-icon" src={`/assets/icons/${name}.svg`} alt="" />;',
+    'export const Header = () => <header><Icon name="menu" /><button><Icon name="shopping-bag" /></button></header>;',
+  ].join('\n');
+  const files = await withSourceAssets([{ path: 'components/Header.tsx', content: header }]);
+  expect(files.map(f => f.path)).toEqual(expect.arrayContaining(['assets/icons/menu.svg', 'assets/icons/shopping-bag.svg', 'assets/icons/LICENSE.txt']));
+  expect(files.some(f => f.path === 'assets/icons/coffee.svg')).toBe(false);
+});
 it('preserves confirmed roles on text-only revisions and ignores stale manifest entries', async () => {
   const photo = { path: 'assets/photo.png', content: 'aGVsbG8=', encoding: 'base64' as const };
   const first = await withSourceAssets([photo], [], [{ path: photo.path, original: '/v1/uploads/a.png' }], [{ url: '/v1/uploads/a.png', role: 'reference', description: 'Layout reference, not product photography' }]);

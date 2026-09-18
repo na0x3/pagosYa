@@ -30,9 +30,12 @@ export function sourceAssetInventory(files: SourceProjectFileDto[]): SourceAsset
 export async function withSourceAssets(files: SourceProjectFileDto[], previous: SourceProjectFileDto[] = [], legend: Array<{ original: string; path: string }> = [], uses: SourceImageUse[] = [], photos: Record<string, SourcePhotoFacts> = {}) {
   const result = withCreativeAssets(files.filter(f => f.path !== SOURCE_ASSET_MANIFEST));
   const source = files.filter(f => /\.(css|html|tsx|jsx)$/.test(f.path)).map(f => f.content).join('\n');
+  // An `assets/icons/${name}.svg` helper never spells the literal path, so a quoted icon name counts as a reference.
+  const dynamicIcons = /assets\/icons\/\$\{/.test(source);
   for (const name of SOURCE_ICON_NAMES) {
     const path = `assets/icons/${name}.svg`;
-    if (source.includes(path) && !result.some(f => f.path === path)) result.push({ path, content: await readFile(join(__dirname, 'source-kit/icons', `${name}.svg`), 'utf8') });
+    const named = dynamicIcons && new RegExp(`["'\`]${name}["'\`]`).test(source);
+    if ((source.includes(path) || named) && !result.some(f => f.path === path)) result.push({ path, content: await readFile(join(__dirname, 'source-kit/icons', `${name}.svg`), 'utf8') });
   }
   if (result.some(f => f.path.startsWith('assets/icons/')) && !result.some(f => f.path === 'assets/icons/LICENSE.txt')) result.push({ path: 'assets/icons/LICENSE.txt', content: await readFile(join(__dirname, 'source-kit/icons/LICENSE.txt'), 'utf8') });
   const remembered = sourceAssetInventory(previous);

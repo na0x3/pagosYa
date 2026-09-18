@@ -1,4 +1,17 @@
-import { bundledPhotoPath, productPhotoReferences, rewriteProductPhotos, uploadPath } from './source-product-photos';
+import { authoredUploadReferences, bundledPhotoPath, productPhotoReferences, rewriteAuthoredUploads, rewriteProductPhotos, uploadPath } from './source-product-photos';
+
+it('finds upload URLs written straight into authored pages and rewrites them to bundled paths', () => {
+  const files = [
+    { path: 'components/home.tsx', content: "const boxPhoto = '/v1/uploads/987f0ee4-7008.jpg';\n<img src={boxPhoto} /><img src=\"http://localhost:3001/v1/uploads/aa11.png\" />" },
+    { path: 'styles/globals.css', content: '.hero{background:url(/v1/uploads/987f0ee4-7008.jpg)}' },
+    { path: 'assets/image-aaaaaaaaaaaa.jpg', content: 'bytes', encoding: 'base64' as const },
+  ];
+  expect(authoredUploadReferences(files).sort()).toEqual(['/v1/uploads/987f0ee4-7008.jpg', 'http://localhost:3001/v1/uploads/aa11.png']);
+  rewriteAuthoredUploads(files, new Map([['/v1/uploads/987f0ee4-7008.jpg', '/assets/image-bbbbbbbbbbbb.jpg']]));
+  expect(files[0].content).toContain("'/assets/image-bbbbbbbbbbbb.jpg'");
+  expect(files[0].content).toContain('http://localhost:3001/v1/uploads/aa11.png');
+  expect(files[1].content).toBe('.hero{background:url(/assets/image-bbbbbbbbbbbb.jpg)}');
+});
 
 it('collects every photo a generated catalog names, including variant photos and operations', () => {
   const products = [{ imageUrls: ['assets/image-aaaaaaaaaaaa.jpg'], variants: [{ imageUrl: 'http://localhost:3000/v1/uploads/b.jpg' }] }];

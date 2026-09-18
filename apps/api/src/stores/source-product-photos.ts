@@ -35,6 +35,24 @@ export function rewriteProductPhotos(products: unknown, operations: unknown, res
   }
 }
 
+/** Upload URLs the model wrote straight into page code (e.g. a hero `<img src="/v1/uploads/x.jpg">`). The storefront
+ * sandbox only loads bundled assets, so these render broken unless they are bundled and rewritten. */
+const AUTHORED_UPLOAD = /(?:https?:\/\/[^\s"'`()<>]+)?\/v1\/uploads\/[a-f0-9-]+\.(?:png|jpe?g|webp)/gi;
+const AUTHORED = /\.(?:tsx|jsx|ts|js|html|css)$/;
+type AuthoredFile = { path: string; content: string; encoding?: string };
+
+export function authoredUploadReferences(files: AuthoredFile[]): string[] {
+  return [...new Set(files.filter(file => AUTHORED.test(file.path) && file.encoding !== 'base64').flatMap(file => file.content.match(AUTHORED_UPLOAD) || []))];
+}
+
+/** Rewrites, in place, each resolved upload reference to its bundled path; unresolved ones stay as written. */
+export function rewriteAuthoredUploads(files: AuthoredFile[], resolved: Map<string, string>): void {
+  for (const file of files) {
+    if (!AUTHORED.test(file.path) || file.encoding === 'base64') continue;
+    file.content = file.content.replace(AUTHORED_UPLOAD, ref => resolved.get(ref) ?? ref);
+  }
+}
+
 /** The bundled path a photo gets when a site is generated: its content hash, not its upload name. */
 export const bundledPhotoPath = (bytes: Buffer, url: string) =>
   `assets/image-${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.${url.split('.').at(-1)!.toLowerCase()}`;
