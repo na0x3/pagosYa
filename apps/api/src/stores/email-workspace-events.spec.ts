@@ -17,7 +17,7 @@ function harness(livemode = true) {
         storeEmailDelivery: { upsert: jest.fn().mockResolvedValue({}) },
         subscriptionInvoice: { updateMany: jest.fn(), findFirst: jest.fn().mockResolvedValue({ id: 'invoice-1', storeId: 'store-a', subscriptionId: 'subscription-1', amount: 18000, currency: 'BOB' }) },
         customerSubscription: { findUnique: jest.fn().mockResolvedValue({ customerEmail: 'buyer@example.test', customerName: 'Ana' }) },
-        appointment: { updateMany: jest.fn() }, storeCredit: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockImplementation(({ data }) => ({ id: 'gift-1', ...data })) }, storeCreditEntry: { create: jest.fn() },
+        appointment: { updateMany: jest.fn() }, shipment: { updateMany: jest.fn(async () => ({ count: 0 })) }, storeCredit: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockImplementation(({ data }) => ({ id: 'gift-1', ...data })) }, storeCreditEntry: { create: jest.fn() },
     };
     db.$transaction = jest.fn((fn: any) => fn(db));
     const email = { send: jest.fn() };
@@ -50,7 +50,7 @@ describe('email lifecycle hooks', () => {
     });
     it('queues delivery notifications in the same transaction as the status event', async () => {
         const { db } = harness();
-        const consumer = new ConsumerService(db, {} as any, {} as any, {} as any);
+        const consumer = new ConsumerService(db, {} as any, {} as any, {} as any, { cancelForOrder: jest.fn() } as any);
         await consumer.updateOrderStatus('merchant', 'order-1', OrderFulfillmentStatus.DELIVERED);
         expect(db.storeEmailDelivery.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ kind: 'WORKSPACE_DELIVERED', sourceId: 'event-1' }) }));
     });

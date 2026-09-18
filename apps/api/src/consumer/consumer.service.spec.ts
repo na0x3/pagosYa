@@ -19,7 +19,7 @@ function setup() {
     storeOrderStatusEvent: { create: jest.fn() },
     $transaction: jest.fn(async (value: any) => typeof value === "function" ? value(prisma) : Promise.all(value)),
   };
-  return { prisma, service: new ConsumerService(prisma, {} as any, {} as any, {} as any) };
+  return { prisma, service: new ConsumerService(prisma, {} as any, {} as any, {} as any, { cancelForOrder: jest.fn() } as any) };
 }
 
 describe("ConsumerService affiliation consent", () => {
@@ -65,7 +65,7 @@ describe("ConsumerService guest order tracking", () => {
 
   it("returns payment and fulfillment as separate public states", async () => {
     const { prisma } = setup();
-    const service = new ConsumerService(prisma, { get: jest.fn().mockReturnValue(secret) } as any, {} as any, {} as any);
+    const service = new ConsumerService(prisma, { get: jest.fn().mockReturnValue(secret) } as any, {} as any, {} as any, { cancelForOrder: jest.fn() } as any);
     prisma.storeOrder.findUnique.mockResolvedValue({
       id: orderId, paymentIntentId: "pi_1", storeId: "store_1", storeName: "Tienda Uno", items: [], amount: 1200, currency: "BOB",
       status: OrderFulfillmentStatus.PREPARING, createdAt: new Date("2026-08-23T10:00:00Z"), updatedAt: new Date("2026-08-23T10:05:00Z"),
@@ -81,7 +81,7 @@ describe("ConsumerService guest order tracking", () => {
 
   it("claims an order only for the account that matches the checkout email", async () => {
     const { prisma } = setup();
-    const service = new ConsumerService(prisma, { get: jest.fn().mockReturnValue(secret) } as any, {} as any, {} as any);
+    const service = new ConsumerService(prisma, { get: jest.fn().mockReturnValue(secret) } as any, {} as any, {} as any, { cancelForOrder: jest.fn() } as any);
     prisma.storeOrder.findUnique.mockResolvedValue({ id: orderId, paymentIntentId: "pi_1", paymentIntent: { customerEmail: "ana@example.com" } });
     await expect(service.claimTrackedOrder("user_1", createOrderTrackingToken(orderId, secret))).resolves.toEqual({ claimed: true });
     expect(prisma.storeOrder.update).toHaveBeenCalledWith({ where: { id: orderId }, data: { consumerUserId: "user_1" } });
@@ -101,7 +101,7 @@ describe("ConsumerService account verification", () => {
       },
     };
     const email = { send: jest.fn().mockRejectedValue(new Error("provider unavailable")) };
-    const service = new ConsumerService(prisma, { get: jest.fn().mockReturnValue("http://localhost:4324") } as any, {} as any, email as any);
+    const service = new ConsumerService(prisma, { get: jest.fn().mockReturnValue("http://localhost:4324") } as any, {} as any, email as any, { cancelForOrder: jest.fn() } as any);
 
     await expect(service.signup("Ana", "ana@gmail.com", "778899", "password123")).rejects.toBeInstanceOf(ServiceUnavailableException);
   });

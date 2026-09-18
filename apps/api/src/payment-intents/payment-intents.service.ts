@@ -169,6 +169,7 @@ export class PaymentIntentsService {
     await this.recordProductStats(tx, intent.merchantId, metadata);
     const updated = await tx.paymentIntent.update({ where: { id }, data: { status: 'SUCCEEDED', metadata } });
     await tx.storeOrder.update({ where: { id: order.id }, data: { status: 'PAID', statusEvents: { create: { status: 'PAID' } } } });
+    await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING', nextAttemptAt: null }, data: { nextAttemptAt: new Date() } });
     await this.webhooks.enqueueEvent(tx, intent.merchantId, 'payment_intent.succeeded', { id, amount: 0, creditAmount: reservation.amount, orderTotal: order.amount, currency: intent.currency, status: 'SUCCEEDED' });
     await this.invoicing.enqueueInvoice(tx, intent.merchantId, { paymentIntentId: id, amount: order.amount, currency: intent.currency, customerName: null, customerDocument: null });
     return updated;
@@ -603,6 +604,7 @@ export class PaymentIntentsService {
               statusEvents: { create: { status: OrderFulfillmentStatus.PAID } },
             },
           });
+          await tx.shipment.updateMany({ where: { orderId: order.id, status: 'BOOKING', nextAttemptAt: null }, data: { nextAttemptAt: new Date() } });
         }
         const debtMetadata = (current.metadata as { debt?: { debtRecordId?: string; debtRecordIds?: string[] } } | null)?.debt;
         const debtRecordIds = [...new Set([

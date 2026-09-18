@@ -1,6 +1,6 @@
 import { creditQuote, reserveCredit } from '../commerce-platform/credit-ledger';
 import { bestBundleDiscount, type Bundle } from './bundle-pricing';
-import { quoteShipping } from './shipping-rates';
+import { quoteShipping, type ShippingOption } from './shipping-rates';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
@@ -1800,18 +1800,20 @@ export class StoresService implements OnModuleDestroy {
     const bundles = store.bundlesEnabled ? await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true } }) : [];
     const bundle = bestBundleDiscount(bundles as unknown as Bundle[], cartLines);
     const discountAmount = Math.max(promoDiscountAmount, bundle.amount);
-    let shipping: { id: string; name: string; amount: number; currency: string } | null = null;
-    let shippingOptions: Array<{ id: string; name: string; amount: number; currency: string }> = [];
+    let shipping: ShippingOption | null = null;
+    let shippingOptions: ShippingOption[] = [];
     if (store.shippingEnabled && !digitalOnly) {
       if (!quoteOnly && !dto.fulfillmentMethod) throw new BadRequestException('Elige retiro o envío.');
       if (dto.fulfillmentMethod === 'pickup' && !store.shippingPickupEnabled) throw new BadRequestException('Esta tienda no ofrece retiro.');
       const weightGrams = links.some(link => link.shippingWeightGrams == null) ? null : links.reduce((sum, link) => sum + link.shippingWeightGrams! * quantityByLinkId.get(link.id)!, 0);
       const rates = await this.prisma.deliveryZone.findMany({ where: { storeId: store.id, isActive: true } });
-      const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams });
+      const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, shippingDepartment: dto.shippingDestination?.department, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams });
       shippingOptions = quote.options;
       if (dto.fulfillmentMethod === 'delivery') {
         shipping = quote.selected;
         if (!quoteOnly && (!shipping || !dto.shippingAddress?.trim())) throw new BadRequestException('Elige una opción de envío y escribe la dirección.');
+        if (!quoteOnly && shipping?.carrierId && !store.shippingCarriersEnabled) throw new BadRequestException('La opción de envío no está disponible para este pedido.');
+        if (!quoteOnly && shipping?.carrierId && !dto.shippingDestination) throw new BadRequestException('Completa la dirección de entrega y marca tu ubicación en el mapa.');
       }
     } else if (dto.shippingZoneId && !digitalOnly) throw new BadRequestException('Esta tienda no tiene tarifas de envío activadas.');
     const shippingAmount = shipping?.amount ?? 0;
@@ -1873,13 +1875,24 @@ export class StoresService implements OnModuleDestroy {
             fulfillmentMethod: dto.fulfillmentMethod,
             ...(fulfillmentReadyAt ? { fulfillmentReadyAt } : {}),
           } : {}),
+          ...(shipping?.carrierId && dto.shippingDestination ? {
+            shippingDepartment: dto.shippingDestination.department,
+            shippingCity: dto.shippingDestination.city.trim(),
+            shippingStreet: dto.shippingDestination.street.trim(),
+            shippingReferences: dto.shippingDestination.references?.trim() || null,
+            shippingLat: dto.shippingDestination.lat,
+            shippingLng: dto.shippingDestination.lng,
+            recipientName: dto.shippingDestination.recipientName.trim(),
+            recipientPhone: dto.shippingDestination.recipientPhone.replace(/\s+/g, ''),
+          } : {}),
           items: cartLines as Prisma.InputJsonValue,
           amount,
           currency,
           statusEvents: { create: { status: OrderFulfillmentStatus.AWAITING_PAYMENT } },
         },
       });
-      if (shipping) await tx.deliveryAssignment.create({ data: { merchantId: store.merchantId, storeId: store.id, orderId: order.id, zoneId: shipping.id, fee: shipping.amount, address: dto.shippingAddress!.trim() } });
+      if (shipping?.carrierId) await tx.shipment.create({ data: { orderId: order.id, storeId: store.id, merchantId: store.merchantId, carrierId: shipping.carrierId, quoteId: shipping.id, quotedAmount: shipping.amount, currency: shipping.currency } });
+      else if (shipping) await tx.deliveryAssignment.create({ data: { merchantId: store.merchantId, storeId: store.id, orderId: order.id, zoneId: shipping.id, fee: shipping.amount, address: dto.shippingAddress!.trim() } });
       if (created.amount === 0 && dto.creditCode) created = await this.paymentIntents.completeCreditPaymentInTransaction(tx, created.id);
       return { intent: created, orderId: order.id };
     });

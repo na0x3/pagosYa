@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
+import { ShippingDestinationDto } from "../../shipping/bolivia-address";
 
 export class CartItemDto {
   @ApiProperty()
@@ -68,4 +69,7 @@ export class CartCheckoutDto {
   @IsIn(["pickup", "delivery"])
   fulfillmentMethod?: "pickup" | "delivery";
 
+  @ApiProperty({ required: false, type: () => ShippingDestinationDto })
+  @IsOptional() @ValidateNested() @Type(() => ShippingDestinationDto)
+  shippingDestination?: ShippingDestinationDto;
 }
