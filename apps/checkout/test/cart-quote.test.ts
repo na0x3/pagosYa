@@ -47,6 +47,9 @@ describe('cart quote for carrier stores', () => {
     fill(root, 'destDepartment', 'SANTA_CRUZ'); fill(root, 'destCity', 'Santa Cruz'); fill(root, 'destStreet', 'Av. Busch 55');
     fill(root, 'destName', 'Ana Quispe'); fill(root, 'destPhone', '71234567');
     expect(readDestination(root)).toBeUndefined();
+    // The carrier rate is the one that needs the pin.
+    await vi.waitFor(() => expect(root.querySelectorAll('[data-rate] option')).toHaveLength(2));
+    await choose(root, '[data-rate]', 'z1');
     expect(() => finish?.()).toThrow('marca tu puerta');
     expect((window as any).__pagosyaSetPin(-34.6, -58.38)).toBe(false);
     expect(root.querySelector('[data-pin-status]')!.textContent).toBe('La ubicación debe estar dentro de Bolivia.');
@@ -74,6 +77,23 @@ describe('cart quote for carrier stores', () => {
     await choose(root, '[data-rate]', 'z1');
     expect(root.querySelector('[data-quote-status]')!.textContent).toContain('Total');
     expect(finish?.()).toMatchObject({ shippingZoneId: 'z1', shippingDestination: { city: 'Santa Cruz' } });
+  });
+
+  it('own-rider rates on a carrier store keep the plain address: no pin, no recipient needed', async () => {
+    const ownRider = { ...quote, shippingOptions: [{ id: 'z2', name: 'Reparto propio', amount: 1500, currency: 'BOB', carrierId: null }] };
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => { bodies.push(JSON.parse(String(init.body))); return new Response(JSON.stringify(ownRider), { status: 200, headers: { 'content-type': 'application/json' } }); }));
+    const { root, finish } = mount({ carriers: true });
+    await choose(root, '[data-method]', 'delivery');
+    await vi.waitFor(() => expect(root.querySelectorAll('[data-rate] option')).toHaveLength(2));
+    await choose(root, '[data-rate]', 'z2');
+    // Nothing typed yet: the address is still required, like on stores without carriers.
+    expect(() => finish?.()).toThrow('completa la dirección');
+    fill(root, 'destStreet', 'Av. Busch 55'); fill(root, 'destCity', 'Santa Cruz'); fill(root, 'destReferences', 'Portón verde');
+    await vi.waitFor(() => expect(root.querySelector('[data-quote-status]')!.textContent).not.toBe('Calculando total…'));
+    expect(readDestination(root)).toBeUndefined();
+    const selected = finish?.();
+    expect(selected).toMatchObject({ fulfillmentMethod: 'delivery', shippingZoneId: 'z2', shippingAddress: 'Av. Busch 55, Santa Cruz, Portón verde' });
+    expect(selected).not.toHaveProperty('shippingDestination');
   });
 
   it('keeps the single address field and sends no destination when carriers are off', async () => {

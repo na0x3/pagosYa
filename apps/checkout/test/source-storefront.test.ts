@@ -111,3 +111,34 @@ it('writes the bare /productos and /c/<collection> back to the URL bar on a cust
   expect(window.location.search).not.toContain('source_page');
   expect(window.location.search).not.toContain('c=verano');
 });
+
+it('lets the hosted storefront load the carrier map and ask for the buyer position', async () => {
+  window.history.replaceState({}, '', '/s/tienda');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => site() }));
+  expect(await mountPublishedSource(document.querySelector('#app')!, 'tienda', store, vi.fn(), true)).toBe(true);
+  const frame = document.querySelector('iframe')!;
+  expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-forms');
+  expect(frame.getAttribute('allow')).toBe('geolocation');
+  const csp = new DOMParser().parseFromString(frame.srcdoc, 'text/html').querySelector('meta[http-equiv="Content-Security-Policy"]')!.getAttribute('content')!;
+  const directive = (name: string) => csp.split(';').map(part => part.trim()).find(part => part.startsWith(`${name} `));
+  expect(directive('script-src')).toBe("script-src 'unsafe-inline' data: https://cdnjs.cloudflare.com");
+  expect(directive('style-src')).toBe("style-src 'unsafe-inline' data: https://cdnjs.cloudflare.com");
+  expect(directive('img-src')).toBe('img-src data: blob: https://cdnjs.cloudflare.com https://*.tile.openstreetmap.org');
+  expect(directive('connect-src')).toBe("connect-src 'none'");
+});
+
+it('answers the kit location request with this page geolocation', async () => {
+  window.history.replaceState({}, '', '/s/tienda');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => site() }));
+  const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { latitude: -17.78, longitude: -63.18 } } as GeolocationPosition));
+  Object.defineProperty(navigator, 'geolocation', { value: { getCurrentPosition }, configurable: true });
+  await mountPublishedSource(document.querySelector('#app')!, 'tienda', store, vi.fn(), true);
+  const frame = document.querySelector('iframe')!;
+  const source = frame.contentWindow!;
+  const replies: unknown[] = [];
+  const post = vi.spyOn(source, 'postMessage').mockImplementation(((message: unknown) => { replies.push(message); }) as Window['postMessage']);
+  window.dispatchEvent(new MessageEvent('message', { data: { type: 'pagosya:hosted-request', id: 7, action: 'location', body: {} }, origin: 'null', source }));
+  await vi.waitFor(() => expect(replies).toEqual([{ type: 'pagosya:hosted-response', id: 7, result: { ok: true, body: { lat: -17.78, lng: -63.18 } } }]));
+  expect(getCurrentPosition).toHaveBeenCalledOnce();
+  post.mockRestore();
+});

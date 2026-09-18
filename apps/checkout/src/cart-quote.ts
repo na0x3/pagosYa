@@ -1,5 +1,5 @@
 import { quoteCart, type CartFulfillment, type CartQuote } from './api';
-import { destinationMarkup, mountDestinationMap, readDestination, reportDestinationValidity } from './shipping-destination';
+import { destinationMarkup, mountDestinationMap, plainDestinationAddress, readDestination, reportDestinationValidity } from './shipping-destination';
 
 /** The server owns discounts and fees. Any cart rerender discards the old quote. */
 export function mountCartQuote(root: HTMLElement, options: {
@@ -25,12 +25,16 @@ export function mountCartQuote(root: HTMLElement, options: {
   const rate = root.querySelector<HTMLSelectElement>('[data-rate]');
   const status = root.querySelector<HTMLElement>('[data-quote-status]')!;
   const retry = root.querySelector<HTMLButtonElement>('[data-retry]')!;
+  // Only carrier rates need the structured destination and pin; own-rider rates keep the plain address.
+  // Kept across re-quotes (the quote itself is cleared while one is in flight).
+  const rateCarriers = new Map<string, string | null>();
+  const carrierRate = (zoneId?: string) => Boolean(zoneId && rateCarriers.get(zoneId));
   function selection(): CartFulfillment | undefined {
     const creditCode = root.querySelector<HTMLInputElement>('[data-credit]')?.value.trim() || undefined;
     if (!options.shipping) return { ...options.fulfillment, creditCode };
     const fulfillmentMethod = options.fulfillment?.fulfillmentMethod || methodInput!.value as 'pickup' | 'delivery';
     const destination = options.carriers && fulfillmentMethod === 'delivery' ? readDestination(root) : undefined;
-    return { ...options.fulfillment, creditCode, fulfillmentMethod, ...(fulfillmentMethod === 'delivery' ? { shippingCountry: root.querySelector<HTMLInputElement>('[data-country]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: root.querySelector<HTMLInputElement>('[data-postal]')?.value.trim() || undefined, shippingZoneId: rate?.value || undefined, shippingAddress: options.carriers ? destination && `${destination.street}, ${destination.city}` : address?.value.trim(), ...(destination ? { shippingDestination: destination } : {}) } : {}) };
+    return { ...options.fulfillment, creditCode, fulfillmentMethod, ...(fulfillmentMethod === 'delivery' ? { shippingCountry: root.querySelector<HTMLInputElement>('[data-country]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: root.querySelector<HTMLInputElement>('[data-postal]')?.value.trim() || undefined, shippingZoneId: rate?.value || undefined, shippingAddress: options.carriers ? carrierRate(rate?.value) ? destination && `${destination.street}, ${destination.city}` : plainDestinationAddress(root) || undefined : address?.value.trim(), ...(destination ? { shippingDestination: destination } : {}) } : {}) };
   }
   async function refresh() {
     const requestId = ++sequence;
@@ -45,6 +49,7 @@ export function mountCartQuote(root: HTMLElement, options: {
       const result = await quoteCart(options.slug, options.items, options.promoCode, selected);
       if (requestId !== sequence || !root.isConnected) return;
       quote = result;
+      for (const option of result.shippingOptions) rateCarriers.set(option.id, option.carrierId ?? null);
       if (rate) {
         const previous = rate.value;
         rate.replaceChildren(new Option('Selecciona una tarifa', ''), ...result.shippingOptions.map(item => new Option(`${item.name} · ${options.money(item.amount, item.currency)}`, item.id)));
@@ -75,8 +80,13 @@ export function mountCartQuote(root: HTMLElement, options: {
     if (!quote) throw new Error('Espera a que se calcule el total o vuelve a calcularlo.');
     const selected = selection();
     if (options.carriers && options.shipping && selected?.fulfillmentMethod === 'delivery') {
-      if (!reportDestinationValidity(root)) throw new Error('Completa la dirección de entrega.');
-      if (!selected.shippingDestination) throw new Error('Completa la dirección de entrega y marca tu puerta en el mapa.');
+      if (carrierRate(selected.shippingZoneId)) {
+        if (!reportDestinationValidity(root)) throw new Error('Completa la dirección de entrega.');
+        if (!selected.shippingDestination) throw new Error('Completa la dirección de entrega y marca tu puerta en el mapa.');
+      } else if (!selected.shippingAddress) {
+        root.querySelector<HTMLInputElement>('[name=destStreet]')?.reportValidity();
+        throw new Error('Selecciona una tarifa de envío y completa la dirección.');
+      }
     }
     if (options.shipping && selected?.fulfillmentMethod === 'delivery' && (!selected.shippingZoneId || !selected.shippingAddress)) throw new Error('Selecciona una tarifa de envío y completa la dirección.');
     return selected;

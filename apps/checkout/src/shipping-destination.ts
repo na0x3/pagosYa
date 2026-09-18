@@ -8,6 +8,9 @@ export const DEPARTMENT_CENTERS: Record<string, [number, number]> = { LA_PAZ: [-
 export const insideBolivia = (lat: number, lng: number) => Number.isFinite(lat) && Number.isFinite(lng) && lat >= -23 && lat <= -9.6 && lng >= -69.7 && lng <= -57.4;
 
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+/** Subresource Integrity for the cdnjs Leaflet 1.9.4 files (sha512 of the exact bytes served). */
+export const LEAFLET_JS_SRI = 'sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==';
+export const LEAFLET_CSS_SRI = 'sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==';
 const FIELDS = ['destDepartment', 'destCity', 'destStreet', 'destReferences', 'destName', 'destPhone', 'destLat', 'destLng'] as const;
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
@@ -19,8 +22,8 @@ function loadLeaflet(): Promise<Leaflet> {
   if (existing) return Promise.resolve(existing);
   leafletLoading ??= new Promise((resolve, reject) => {
     const fail = () => { leafletLoading = null; reject(new Error('No se pudo cargar el mapa.')); };
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = `${LEAFLET}leaflet.min.css`; document.head.append(css);
-    const script = document.createElement('script'); script.src = `${LEAFLET}leaflet.min.js`;
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.integrity = LEAFLET_CSS_SRI; css.crossOrigin = 'anonymous'; css.href = `${LEAFLET}leaflet.min.css`; document.head.append(css);
+    const script = document.createElement('script'); script.integrity = LEAFLET_JS_SRI; script.crossOrigin = 'anonymous'; script.src = `${LEAFLET}leaflet.min.js`;
     script.onload = () => (window as any).L ? resolve((window as any).L) : fail(); script.onerror = fail;
     document.head.append(script);
   });
@@ -55,6 +58,12 @@ export function readDestination(root: ParentNode): ShippingDestination | undefin
   if (!get('destDepartment') || !insideBolivia(lat, lng)) return undefined;
   if ([...root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-shipping-destination] [required]')].some(input => !input.checkValidity())) return undefined;
   return { department: get('destDepartment'), city: get('destCity'), street: get('destStreet'), references: get('destReferences') || undefined, lat, lng, recipientName: get('destName'), recipientPhone: get('destPhone') };
+}
+
+/** Own-rider (non-carrier) rates keep a plain address: street, city and references, no pin. */
+export function plainDestinationAddress(root: ParentNode): string {
+  const get = (name: string) => root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name=${name}]`)?.value.trim() || '';
+  return [get('destStreet'), get('destCity'), get('destReferences')].filter(Boolean).join(', ');
 }
 
 /** Reports the first missing required field; true when every required field is filled. */

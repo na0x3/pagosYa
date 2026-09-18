@@ -78,7 +78,10 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     if (!href.startsWith('#') && !resolve(href)?.path.endsWith('.html')) el.removeAttribute('href');
   });
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
-  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
+  // Published (hosted) storefronts may load Leaflet from cdnjs and OpenStreetMap tiles for the carrier
+  // delivery pin; Studio previews stay fully offline.
+  const map = navigation.hosted === true ? { script: ' https://cdnjs.cloudflare.com', style: ' https://cdnjs.cloudflare.com', img: ' https://cdnjs.cloudflare.com https://*.tile.openstreetmap.org' } : { script: '', style: '', img: '' };
+  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:${map.script}; style-src 'unsafe-inline' data:${map.style}; img-src data: blob:${map.img}; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
   doc.head.prepend(policy);
   const flag = doc.createElement("script");
   const encoded = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');

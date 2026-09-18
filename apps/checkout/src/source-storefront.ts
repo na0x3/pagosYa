@@ -35,6 +35,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (!document.querySelector('link[rel=canonical]')) document.title = store.storeName;
   const frame = document.createElement('iframe');
   frame.title = store.storeName; frame.setAttribute('sandbox', 'allow-scripts allow-forms'); frame.referrerPolicy = 'no-referrer';
+  // Carrier checkouts pin the buyer's door; the kit also asks this page for the position (action 'location').
+  frame.setAttribute('allow', 'geolocation');
   frame.style.cssText = 'display:block;width:100%;height:100dvh;border:0;background:white';
   app.replaceChildren(frame);
   document.body.classList.add('source-store-page');
@@ -109,13 +111,19 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       } catch {}
       return;
     }
-    if (data?.type !== 'pagosya:hosted-request' || !Number.isSafeInteger(data.id) || !['checkout', 'lead', 'catalog', 'shipping', 'content', 'review', 'retention'].includes(data.action)) return;
+    if (data?.type !== 'pagosya:hosted-request' || !Number.isSafeInteger(data.id) || !['checkout', 'lead', 'catalog', 'shipping', 'content', 'review', 'retention', 'location'].includes(data.action)) return;
     const target = event.source as Window;
     const reply = (ok: boolean, body: unknown) => target.postMessage({ type: 'pagosya:hosted-response', id: data.id, result: { ok, body } }, '*');
     if (pending.has(data.action)) { reply(false, { message: 'Ya hay una solicitud en curso.' }); return; }
     pending.add(data.action);
     try {
       if (data.action === 'catalog') { reply(true, store); return; }
+      if (data.action === 'location') {
+        // The opaque sandboxed frame cannot use geolocation itself; this page (geolocation=(self)) asks on its behalf.
+        if (!navigator.geolocation) { reply(false, { message: 'Tu navegador no comparte la ubicación.' }); return; }
+        const position = await new Promise<GeolocationPosition | null>(resolve => navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: true, timeout: 10000 }));
+        reply(Boolean(position), position ? { lat: position.coords.latitude, lng: position.coords.longitude } : { message: 'No pudimos obtener tu ubicación.' }); return;
+      }
       const body = data.body && typeof data.body === 'object' ? data.body : {};
       if (data.action === 'retention') {
         const path = typeof body.path === 'string' ? body.path : '';

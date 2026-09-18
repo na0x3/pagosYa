@@ -1453,13 +1453,19 @@
   const DEPARTMENTS = [['LA_PAZ','La Paz'],['SANTA_CRUZ','Santa Cruz'],['COCHABAMBA','Cochabamba'],['ORURO','Oruro'],['POTOSI','Potosí'],['CHUQUISACA','Chuquisaca'],['TARIJA','Tarija'],['BENI','Beni'],['PANDO','Pando']];
   const DEPARTMENT_CENTERS = { LA_PAZ: [-16.5, -68.15], SANTA_CRUZ: [-17.78, -63.18], COCHABAMBA: [-17.39, -66.16], ORURO: [-17.97, -67.11], POTOSI: [-19.58, -65.75], CHUQUISACA: [-19.05, -65.26], TARIJA: [-21.53, -64.73], BENI: [-14.83, -64.9], PANDO: [-11.03, -68.77] };
   const insideBolivia = (lat, lng) => Number.isFinite(lat) && Number.isFinite(lng) && lat >= -23 && lat <= -9.6 && lng >= -69.7 && lng <= -57.4;
+  // Subresource Integrity for the cdnjs Leaflet 1.9.4 files (sha512 of the exact bytes served).
+  const LEAFLET_JS_SRI = 'sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==';
+  const LEAFLET_CSS_SRI = 'sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==';
+  // Quoted rates by id → carrierId (null for the store's own riders). Only carrier rates need the pin.
+  const shippingRateCarriers = new Map();
+  const carrierRateSelected = panel => { const id = panel?.querySelector('[name=shippingZoneId]')?.value; return Boolean(id && shippingRateCarriers.get(id)); };
   let leafletLoading = null;
   function loadLeaflet() {
     if (window.L) return Promise.resolve(window.L);
     leafletLoading ??= new Promise((resolve, reject) => {
       const fail = () => { leafletLoading = null; reject(new Error('No se pudo cargar el mapa.')); };
-      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.append(css);
-      const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.integrity = LEAFLET_CSS_SRI; css.crossOrigin = 'anonymous'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.append(css);
+      const script = document.createElement('script'); script.integrity = LEAFLET_JS_SRI; script.crossOrigin = 'anonymous'; script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
       script.onload = () => window.L ? resolve(window.L) : fail(); script.onerror = fail;
       document.head.append(script);
     });
@@ -1493,9 +1499,17 @@
     };
     if (preview || config.demo || location.hostname === 'localhost') window.__pagosyaSetPin = setPin;
     panel.querySelector('[data-use-location]').addEventListener('click', () => {
+      const failed = () => { status.textContent = 'No pudimos obtener tu ubicación; marca tu puerta en el mapa.'; };
+      // A hosted storefront runs in an opaque sandboxed frame, so the hosting page asks for the position.
+      // This works whether or not the map (Leaflet or its tiles) loaded.
+      if (hosted && window.PAGOSYA_HOSTED_REQUEST) {
+        status.textContent = 'Buscando tu ubicación…';
+        window.PAGOSYA_HOSTED_REQUEST('location', {}).then(result => { if (result?.ok && Number.isFinite(result.body?.lat) && Number.isFinite(result.body?.lng)) setPin(result.body.lat, result.body.lng); else failed(); }, failed);
+        return;
+      }
       if (!navigator.geolocation) { status.textContent = 'Tu navegador no comparte la ubicación.'; return; }
       status.textContent = 'Buscando tu ubicación…';
-      navigator.geolocation.getCurrentPosition(p => setPin(p.coords.latitude, p.coords.longitude), () => { status.textContent = 'No pudimos obtener tu ubicación; marca tu puerta en el mapa.'; }, { enableHighAccuracy: true, timeout: 10000 });
+      navigator.geolocation.getCurrentPosition(p => setPin(p.coords.latitude, p.coords.longitude), failed, { enableHighAccuracy: true, timeout: 10000 });
     });
     try {
       const L = await loadLeaflet();
@@ -1531,8 +1545,12 @@
     return { department: get('destDepartment'), city: get('destCity'), street: get('destStreet'), references: get('destReferences') || undefined, lat, lng, recipientName: get('destName'), recipientPhone: get('destPhone') };
   }
   function syncShippingAddress(panel) {
-    const field = panel?.querySelector('[name=shippingAddress]'); const dest = shippingDestination(panel);
-    if (field && dest) field.value = `${dest.street}, ${dest.city}`;
+    const field = panel?.querySelector('[name=shippingAddress]'); if (!field || !panel.querySelector('[data-shipping-destination]')) return;
+    const dest = shippingDestination(panel);
+    if (carrierRateSelected(panel)) { if (dest) field.value = `${dest.street}, ${dest.city}`; return; }
+    // Own-rider rates keep today's plain address: street, city and references, no pin needed.
+    const get = name => panel.querySelector(`[name=${name}]`)?.value.trim() || '';
+    field.value = [get('destStreet'), get('destCity'), get('destReferences')].filter(Boolean).join(', ');
   }
   function digitalOnlyCart() { return cart.size > 0 && [...cart.keys()].every(id => cartLine(id)?.p.fulfillmentType === 'DIGITAL'); }
   function updateMethods(el, selected) {
@@ -1582,6 +1600,7 @@
     try {
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), fulfillmentMethod: 'delivery', locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: selected || undefined, creditCode: panel.querySelector('[name=creditCode]')?.value.trim() || undefined, shippingDestination: shippingDestination(panel) }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudo calcular el envío.');
+      for (const option of quote.shippingOptions || []) shippingRateCarriers.set(option.id, option.carrierId || null);
       if (panel.querySelector('[name=shippingZoneId]') !== select || select.value !== selected) return;
       panel.dataset.discountedSubtotal = String(quote.subtotal - (quote.discountAmount || 0));
       panel.querySelector('.order-total strong').textContent = money(quote.amount, quote.currency);
@@ -1614,8 +1633,16 @@
       panel?.querySelector('[name=location]')?.focus(); return false;
     }
     if (store.shippingCarriersEnabled && panel?.querySelector('[data-shipping-destination]') && panel.querySelector('[name=method]')?.value === 'delivery' && !digitalOnlyCart()) {
-      for (const input of panel.querySelectorAll('[data-shipping-destination] [required]')) if (!input.reportValidity()) { input.focus(); return false; }
-      if (!shippingDestination(panel)) { message('Marca tu puerta en el mapa.'); panel.querySelector('[data-pin-status]').textContent = 'Marca tu puerta en el mapa o usa "Usar mi ubicación".'; return false; }
+      if (carrierRateSelected(panel)) {
+        for (const input of panel.querySelectorAll('[data-shipping-destination] [required]')) if (!input.reportValidity()) { input.focus(); return false; }
+        if (!shippingDestination(panel)) { message('Marca tu puerta en el mapa.'); panel.querySelector('[data-pin-status]').textContent = 'Marca tu puerta en el mapa o usa "Usar mi ubicación".'; return false; }
+      } else {
+        const street = panel.querySelector('[name=destStreet]');
+        if (street && !street.value.trim()) {
+          street.setCustomValidity('Escribe la dirección y una referencia para la entrega.'); street.reportValidity(); street.focus();
+          street.addEventListener('input', () => street.setCustomValidity(''), { once: true }); return false;
+        }
+      }
       syncShippingAddress(panel);
     }
     const field = panel?.querySelector('[name=shippingAddress]');
