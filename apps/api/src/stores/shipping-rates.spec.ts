@@ -26,4 +26,14 @@ describe('Authoritative shipping rates', () => {
     expect(quoteShipping([weighted], { ...input, weightGrams: 1001 }).options).toHaveLength(0);
     expect(quoteShipping([weighted], { ...input, weightGrams: null }).options).toHaveLength(0);
   });
+  it('matches departments and rejects rates for other departments or unknown destinations', () => {
+    const scz = { ...rate, id: 'scz', departments: ['SANTA_CRUZ'], carrierId: 'car_servientrega' };
+    const input = { currency: 'BOB', subtotal: 5000, weightGrams: null, shippingDepartment: 'SANTA_CRUZ' };
+    expect(quoteShipping([scz], input).options).toEqual([{ id: 'scz', name: 'La Paz', amount: 1500, currency: 'BOB', carrierId: 'car_servientrega' }]);
+    expect(quoteShipping([scz], { ...input, shippingDepartment: 'LA_PAZ' }).options).toHaveLength(0);
+    expect(quoteShipping([scz], { ...input, shippingDepartment: undefined }).options).toHaveLength(0);
+  });
+  it('keeps rates without departments available everywhere and reports own-rider rates as carrierId null', () => {
+    expect(quoteShipping([rate], { currency: 'BOB', subtotal: 5000, weightGrams: null, shippingDepartment: 'BENI' }).options[0].carrierId).toBeNull();
+  });
 });
