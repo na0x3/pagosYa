@@ -15,7 +15,16 @@ class ShippingSettingsDto {
   @Max(1440, { message: 'El tiempo de preparación debe estar entre 0 y 1440 minutos.' })
   prepMinutes?: number;
 }
-class ShippingWeightDto { @ValidateIf((_object, value) => value !== null) @IsInt() @Min(0) @Max(100000000) weightGrams!: number | null; }
+const DIMENSION_MESSAGE = 'Las medidas deben ser números enteros entre 1 y 500 cm.';
+class ShippingWeightDto {
+  @ValidateIf((_object, value) => value !== null) @IsInt() @Min(0) @Max(100000000) weightGrams!: number | null;
+  // Omitted = unchanged; null = clear.
+  @IsOptional() @IsInt({ message: DIMENSION_MESSAGE }) @Min(1, { message: DIMENSION_MESSAGE }) @Max(500, { message: DIMENSION_MESSAGE }) lengthCm?: number | null;
+  @IsOptional() @IsInt({ message: DIMENSION_MESSAGE }) @Min(1, { message: DIMENSION_MESSAGE }) @Max(500, { message: DIMENSION_MESSAGE }) widthCm?: number | null;
+  @IsOptional() @IsInt({ message: DIMENSION_MESSAGE }) @Min(1, { message: DIMENSION_MESSAGE }) @Max(500, { message: DIMENSION_MESSAGE }) heightCm?: number | null;
+  @IsOptional() @IsBoolean({ message: 'Indica si el producto es frágil.' }) fragile?: boolean;
+  @IsOptional() @IsBoolean({ message: 'Indica si el producto se puede apilar.' }) noStack?: boolean;
+}
 @UseGuards(MerchantAuthGuard)
 @Controller('v1/stores/:storeId/shipping')
 export class ShippingController {
@@ -29,7 +38,7 @@ export class ShippingController {
     const store = await this.owner(merchant.id, storeId);
     const [rates, products, carriers] = await Promise.all([
       this.prisma.deliveryZone.findMany({ where: { storeId }, orderBy: { name: 'asc' } }),
-      this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, orderBy: { name: 'asc' }, select: { id: true, name: true, shippingWeightGrams: true } }),
+      this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, orderBy: { name: 'asc' }, select: { id: true, name: true, shippingWeightGrams: true, lengthCm: true, widthCm: true, heightCm: true, fragile: true, noStack: true } }),
       this.prisma.shippingCarrier.findMany({ where: { isActive: true, mode: 'MANUAL' }, orderBy: { name: 'asc' }, select: { id: true, code: true, name: true, mode: true } }),
     ]);
     return { enabled: store.shippingEnabled, pickupEnabled: store.shippingPickupEnabled, carriersEnabled: store.shippingCarriersEnabled, prepMinutes: store.shippingPrepMinutes, rates, products, carriers };
@@ -37,8 +46,11 @@ export class ShippingController {
   @Patch('products/:productId')
   async weight(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('productId') productId: string, @Body() dto: ShippingWeightDto) {
     await this.owner(merchant.id, storeId);
-    if (!(await this.prisma.paymentLink.updateMany({ where: { id: productId, storeId }, data: { shippingWeightGrams: dto.weightGrams ?? null } })).count) throw new NotFoundException('Producto no encontrado');
-    return { weightGrams: dto.weightGrams ?? null };
+    const profile: Pick<ShippingWeightDto, 'lengthCm' | 'widthCm' | 'heightCm' | 'fragile' | 'noStack'> = {};
+    for (const key of ['lengthCm', 'widthCm', 'heightCm'] as const) if (dto[key] !== undefined) profile[key] = dto[key] ?? null;
+    for (const key of ['fragile', 'noStack'] as const) if (dto[key] !== undefined) profile[key] = dto[key];
+    if (!(await this.prisma.paymentLink.updateMany({ where: { id: productId, storeId }, data: { shippingWeightGrams: dto.weightGrams ?? null, ...profile } })).count) throw new NotFoundException('Producto no encontrado');
+    return { weightGrams: dto.weightGrams ?? null, ...profile };
   }
   @Patch('rates/:rateId')
   async toggle(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('rateId') rateId: string, @Body() dto: ShippingRateStatusDto) {

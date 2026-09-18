@@ -114,6 +114,32 @@ describe('Carrier shipping checkout', () => {
     expect(JSON.stringify(trackedByBuyer.shipment)).not.toMatch(/labelFileId|recipientPhone|lastError/);
   });
 
+  it('classifies the parcel, hides motorbike rates for big boxes and snapshots the parcel', async () => {
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: true }).expect(200);
+    const moto = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Moto SCZ', fee: 1500, departments: ['SANTA_CRUZ'], carrierId: 'car_other', sizeClasses: ['MOTO'] }).expect(201)).body.id;
+    const small = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send({ ...cart(), shippingZoneId: undefined }).expect(201)).body;
+    expect(small.sizeClass).toBe('MOTO');
+    expect(small.shippingOptions.map((o: any) => o.id)).toContain(moto);
+    const big = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send({ ...cart(), shippingZoneId: undefined, items: [{ paymentLinkId: productId, quantity: 20 }] }).expect(201)).body;
+    expect(big.sizeClass).not.toBe('MOTO');
+    expect(big.shippingOptions.map((o: any) => o.id)).not.toContain(moto);
+    const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send({ ...cart(), shippingZoneId: moto }).expect(201)).body;
+    const order = await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paid.id } });
+    expect(order.parcel).toMatchObject({ sizeClass: 'MOTO', fragile: true, weightGrams: 500 });
+  });
+
+  it('keeps the parcel off own-rider orders and validates parcel inputs in Spanish', async () => {
+    const own = await prisma.deliveryZone.create({ data: { merchantId, storeId, name: 'Moto propia 2', fee: 1000, currency: 'BOB' } });
+    const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send({ ...cart(), shippingZoneId: own.id, shippingDestination: undefined }).expect(201)).body;
+    expect((await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paid.id } })).parcel).toBeNull();
+    const badSize = await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Bici', fee: 1, sizeClasses: ['BICI'] }).expect(400);
+    expect(JSON.stringify(badSize.body)).toContain('Elige tamaños de paquete válidos.');
+    const badDims = await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 500, lengthCm: 0 }).expect(400);
+    expect(JSON.stringify(badDims.body)).toContain('Las medidas deben ser números enteros entre 1 y 500 cm.');
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}/shipping/products/${productId}`).set(auth()).send({ weightGrams: 700 }).expect(200);
+    expect(await prisma.paymentLink.findUniqueOrThrow({ where: { id: productId } })).toMatchObject({ shippingWeightGrams: 700, lengthCm: 20, widthCm: 15, heightCm: 10, fragile: true });
+  });
+
   it('stores branch coordinates for pickup origins', async () => {
     const updated = (await request(app.getHttpServer()).patch(`/v1/stores/${storeId}`).set(auth()).send({ locations: [{ id: 'centro', name: 'Centro', address: 'Calle 21 #100', department: 'LA_PAZ', city: 'La Paz', lat: -16.5, lng: -68.12, pickupEnabled: true, deliveryEnabled: true }] }).expect(200)).body;
     expect(updated.locations[0]).toMatchObject({ department: 'LA_PAZ', lat: -16.5 });

@@ -36,4 +36,13 @@ describe('Authoritative shipping rates', () => {
   it('keeps rates without departments available everywhere and reports own-rider rates as carrierId null', () => {
     expect(quoteShipping([rate], { currency: 'BOB', subtotal: 5000, weightGrams: null, shippingDepartment: 'BENI' }).options[0].carrierId).toBeNull();
   });
+  it('restricts rates to their size classes and never matches an unknown size', () => {
+    const moto = { ...rate, id: 'moto', sizeClasses: ['MOTO'] };
+    const base = { currency: 'BOB', subtotal: 5000, weightGrams: 500 };
+    expect(quoteShipping([moto], { ...base, sizeClass: 'MOTO' }).options).toHaveLength(1);
+    expect(quoteShipping([moto], { ...base, sizeClass: 'AUTO' }).options).toHaveLength(0);
+    expect(quoteShipping([moto], { ...base, sizeClass: null }).options).toHaveLength(0);
+    expect(quoteShipping([rate], { ...base, sizeClass: null }).options).toHaveLength(1);
+    expect(quoteShipping([rate, { ...rate, id: 'empty', sizeClasses: [] }], base).options).toHaveLength(2);
+  });
 });

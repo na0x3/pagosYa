@@ -610,7 +610,7 @@ export class OperationsService {
     await this.ownedStore(merchantId, storeId);
     if (dto.maximumOrder !== undefined && dto.maximumOrder < (dto.minimumOrder ?? 0) || dto.maximumWeightGrams !== undefined && dto.maximumWeightGrams < (dto.minimumWeightGrams ?? 0)) throw new BadRequestException('Revisa los límites de importe y peso.');
     if (dto.carrierId && !(await this.prisma.shippingCarrier.findFirst({ where: { id: dto.carrierId, isActive: true, mode: 'MANUAL' } }))) throw new BadRequestException('Elige un courier disponible.');
-    return this.prisma.deliveryZone.create({ data: { countryCodes: dto.countryCodes, postalPrefixes: dto.postalPrefixes, currency: dto.currency ?? 'BOB', freeAbove: dto.freeAbove, maximumOrder: dto.maximumOrder, minimumWeightGrams: dto.minimumWeightGrams, maximumWeightGrams: dto.maximumWeightGrams, merchantId, storeId, name: dto.name.trim(), fee: dto.fee, minimumOrder: dto.minimumOrder ?? 0, radiusKm: dto.radiusKm, estimatedMinutes: dto.estimatedMinutes, carrierId: dto.carrierId ?? null, departments: dto.departments ?? [] } });
+    return this.prisma.deliveryZone.create({ data: { countryCodes: dto.countryCodes, postalPrefixes: dto.postalPrefixes, currency: dto.currency ?? 'BOB', freeAbove: dto.freeAbove, maximumOrder: dto.maximumOrder, minimumWeightGrams: dto.minimumWeightGrams, maximumWeightGrams: dto.maximumWeightGrams, merchantId, storeId, name: dto.name.trim(), fee: dto.fee, minimumOrder: dto.minimumOrder ?? 0, radiusKm: dto.radiusKm, estimatedMinutes: dto.estimatedMinutes, carrierId: dto.carrierId ?? null, departments: dto.departments ?? [], sizeClasses: [...new Set(dto.sizeClasses ?? [])] } });
   }
 
   async createCourier(merchantId: string, storeId: string, dto: CreateCourierDto) {

@@ -1,6 +1,7 @@
 import { creditQuote, reserveCredit } from '../commerce-platform/credit-ledger';
 import { bestBundleDiscount, type Bundle } from './bundle-pricing';
 import { quoteShipping, type ShippingOption } from './shipping-rates';
+import { computeParcel, type Parcel } from '../shipping/parcel';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
@@ -1808,13 +1809,15 @@ export class StoresService implements OnModuleDestroy {
     const bundle = bestBundleDiscount(bundles as unknown as Bundle[], cartLines);
     const discountAmount = Math.max(promoDiscountAmount, bundle.amount);
     let shipping: ShippingOption | null = null;
+    let parcel: Parcel | null = null;
     let shippingOptions: ShippingOption[] = [];
     if (store.shippingEnabled && !digitalOnly) {
       if (!quoteOnly && !dto.fulfillmentMethod) throw new BadRequestException('Elige retiro o envío.');
       if (dto.fulfillmentMethod === 'pickup' && !store.shippingPickupEnabled) throw new BadRequestException('Esta tienda no ofrece retiro.');
       const weightGrams = links.some(link => link.shippingWeightGrams == null) ? null : links.reduce((sum, link) => sum + link.shippingWeightGrams! * quantityByLinkId.get(link.id)!, 0);
+      parcel = computeParcel(links.map(link => ({ quantity: quantityByLinkId.get(link.id)!, weightGrams: link.shippingWeightGrams, lengthCm: link.lengthCm, widthCm: link.widthCm, heightCm: link.heightCm, fragile: link.fragile, noStack: link.noStack })));
       const rates = await this.prisma.deliveryZone.findMany({ where: { storeId: store.id, isActive: true, ...(store.shippingCarriersEnabled ? {} : { carrierId: null }) } });
-      const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, shippingDepartment: dto.shippingDestination?.department, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams });
+      const quote = quoteShipping(rates, { shippingCountry: dto.shippingCountry, shippingPostalCode: dto.shippingPostalCode, shippingDepartment: dto.shippingDestination?.department, zoneId: dto.fulfillmentMethod === 'pickup' ? undefined : dto.shippingZoneId, currency, subtotal: subtotal - discountAmount, weightGrams, sizeClass: parcel.sizeClass });
       shippingOptions = quote.options;
       if (dto.fulfillmentMethod === 'delivery') {
         shipping = quote.selected;
@@ -1827,7 +1830,7 @@ export class StoresService implements OnModuleDestroy {
     const amount = subtotal - discountAmount + shippingAmount;
     if (dto.creditCode && !store.creditsEnabled) throw new BadRequestException('Esta tienda no acepta códigos de saldo.');
     const creditAmount = dto.creditCode ? (await creditQuote(this.prisma, store.id, dto.creditCode, currency, amount)).amount : 0;
-    if (quoteOnly) return { orderTotal: amount, creditAmount, subtotal, discountAmount, shippingAmount, amount: amount - creditAmount, currency, shippingOptions, shippingEnabled: store.shippingEnabled && !digitalOnly, pickupEnabled: store.shippingPickupEnabled };
+    if (quoteOnly) return { orderTotal: amount, creditAmount, subtotal, discountAmount, shippingAmount, amount: amount - creditAmount, currency, shippingOptions, sizeClass: parcel?.sizeClass ?? null, shippingEnabled: store.shippingEnabled && !digitalOnly, pickupEnabled: store.shippingPickupEnabled };
 
 
     let description = cartLines
@@ -1892,6 +1895,7 @@ export class StoresService implements OnModuleDestroy {
             recipientName: dto.shippingDestination.recipientName.trim(),
             recipientPhone: dto.shippingDestination.recipientPhone.replace(/\s+/g, ''),
           } : {}),
+          ...(parcel && shipping?.carrierId ? { parcel: parcel as Prisma.InputJsonValue } : {}),
           items: cartLines as Prisma.InputJsonValue,
           amount,
           currency,

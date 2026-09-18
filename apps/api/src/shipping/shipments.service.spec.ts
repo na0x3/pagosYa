@@ -31,7 +31,7 @@ function fakePrisma() {
 }
 
 function seed(db: any, overrides: any = {}) {
-  db.orders.set('ord_1', { id: 'ord_1', storeId: 'st_1', storeName: 'Tienda Sol', status: 'PAID', paymentIntentId: 'pi_1', amount: 16500, currency: 'BOB', items: [{ name: 'Café', quantity: 1 }], fulfillmentLocationId: 'loc1', shippingDepartment: 'SANTA_CRUZ', shippingCity: 'Santa Cruz', shippingStreet: 'Av. Busch 55', shippingReferences: null, shippingLat: -17.78, shippingLng: -63.18, recipientName: 'Ana', recipientPhone: '+59171111111' });
+  db.orders.set('ord_1', { id: 'ord_1', storeId: 'st_1', storeName: 'Tienda Sol', status: 'PAID', paymentIntentId: 'pi_1', amount: 16500, currency: 'BOB', items: [{ name: 'Café', quantity: 1 }], fulfillmentLocationId: 'loc1', shippingDepartment: 'SANTA_CRUZ', shippingCity: 'Santa Cruz', shippingStreet: 'Av. Busch 55', shippingReferences: null, shippingLat: -17.78, shippingLng: -63.18, recipientName: 'Ana', recipientPhone: '+59171111111', parcel: null });
   db.shipments.set('shp_1', { id: 'shp_1', orderId: 'ord_1', storeId: 'st_1', merchantId: 'm_1', carrierId: 'car_servientrega', status: 'BOOKING', bookingAttempts: 0, nextAttemptAt: new Date(), quotedAmount: 1500, currency: 'BOB', trackingNumber: null, carrierRef: null, labelFileId: null, lastError: null, ...overrides });
 }
 
@@ -49,6 +49,16 @@ describe('ShipmentsService', () => {
     expect(files.put).toHaveBeenCalledWith(expect.any(Buffer), 'application/pdf');
     expect(db.orders.get('ord_1').status).toBe('PREPARING');
     expect(db.events.map((e: any) => e.status)).toEqual(['BOOKED']);
+  });
+
+  it("passes the order's parcel snapshot and its weight to the carrier", async () => {
+    const { db, client } = fakePrisma(); seed(db);
+    const parcel = { weightGrams: 1200, lengthCm: 30, widthCm: 20, heightCm: 15, fragile: true, noStack: false, sizeClass: 'MOTO' };
+    db.orders.get('ord_1').parcel = parcel;
+    const manual = new ManualCarrier();
+    const book = jest.spyOn(manual, 'book');
+    await new ShipmentsService(client, new CarrierRegistry(manual), files as any, config as any).book('shp_1');
+    expect(book).toHaveBeenCalledWith(expect.objectContaining({ weightGrams: 1200, parcel }), null);
   });
 
   it('ignores shipments that are not in BOOKING', async () => {

@@ -195,7 +195,11 @@ export class MerchantStudioApi {
   saveShippingSettings(storeId: string, input: { enabled: boolean; pickupEnabled: boolean; carriersEnabled?: boolean; prepMinutes?: number }): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping`, { method: 'POST', body: JSON.stringify(input) }); }
   createShippingRate(storeId: string, input: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/delivery/zones`, { method: 'POST', body: JSON.stringify(input) }); }
   toggleShippingRate(storeId: string, rateId: string, active: boolean): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/rates/${encodeURIComponent(rateId)}`, { method: 'PATCH', body: JSON.stringify({ active }) }); }
-  saveShippingWeight(storeId: string, productId: string, weightGrams: number | null): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify({ weightGrams }) }); }
+  /** Accepts a bare weight (legacy callers) or the full parcel profile; omitted profile fields stay unchanged. */
+  saveShippingWeight(storeId: string, productId: string, input: number | null | { weightGrams: number | null; lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null; fragile?: boolean; noStack?: boolean }): Promise<any> {
+    const body = typeof input === 'object' && input !== null ? input : { weightGrams: input };
+    return this.request(`/stores/${encodeURIComponent(storeId)}/shipping/products/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify(body) });
+  }
   // Buying a domain and connecting it to this store. Every route reports itself
   // unavailable until the operator supplies registrar and hosting credentials.
   domainShop(storeId: string): Promise<DomainShopState> { return this.request(`/stores/${encodeURIComponent(storeId)}/domain-shop`); }

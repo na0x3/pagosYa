@@ -1,8 +1,9 @@
 import type { ShipmentStatus } from '@prisma/client';
+import type { Parcel } from '../parcel';
 
 export type CarrierCredentials = Record<string, string>;
 export type ShipmentParty = { name: string; phone: string; department: string; city: string; street: string; references?: string; lat?: number | null; lng?: number | null };
-export type BookInput = { shipmentId: string; orderReference: string; origin: ShipmentParty; destination: ShipmentParty; weightGrams: number | null; declaredAmount: number; currency: string; pickupAt: Date | null; items: Array<{ name: string; quantity: number }> };
+export type BookInput = { shipmentId: string; orderReference: string; origin: ShipmentParty; destination: ShipmentParty; weightGrams: number | null; parcel: Parcel | null; declaredAmount: number; currency: string; pickupAt: Date | null; items: Array<{ name: string; quantity: number }> };
 export type BookResult = { trackingNumber: string | null; carrierRef: string | null; labelPdf: Buffer | null; cost: number | null; needsWaybill: boolean };
 export type CarrierRef = { carrierRef: string | null; trackingNumber: string | null };
 export type TrackingUpdate = { status: ShipmentStatus; occurredAt: Date; description?: string; location?: string; carrierEventId?: string };

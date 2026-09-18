@@ -6,7 +6,8 @@ import { PrivateFilesService } from '../commerce-platform/private-files.service'
 import { queueStoreEmail } from '../stores/email-workspace.config';
 import { createOrderTrackingToken } from '../consumer/order-tracking-token';
 import { CarrierRegistry } from './carriers/carrier-registry';
-import type { ShipmentParty } from './carriers/carrier';
+import type { BookInput, ShipmentParty } from './carriers/carrier';
+import type { Parcel } from './parcel';
 import { renderWaybillPdf } from './waybill-pdf';
 
 // Ruling R1: DEVELOPMENT_ORDER_TRACKING_SECRET is not exported from
@@ -96,7 +97,8 @@ export class ShipmentsService {
       const adapter = this.carriers.get(shipment.carrier.code, shipment.carrier.mode);
       const items = (Array.isArray(order.items) ? order.items : []).map((i: any) => ({ name: String(i.name ?? 'Producto'), quantity: Number(i.quantity) || 1 }));
       const pickupAt = adapter.supportsScheduledPickup ? new Date(Date.now() + (store?.shippingPrepMinutes ?? 60) * 60_000) : null;
-      const input = { shipmentId: shipment.id, orderReference: order.id.slice(-8).toUpperCase(), origin, destination, weightGrams: null, declaredAmount: order.amount - shipment.quotedAmount, currency: shipment.currency, pickupAt, items };
+      const parcel = (order.parcel ?? null) as unknown as Parcel | null;
+      const input: BookInput = { shipmentId: shipment.id, orderReference: order.id.slice(-8).toUpperCase(), origin, destination, weightGrams: parcel?.weightGrams ?? null, parcel, declaredAmount: order.amount - shipment.quotedAmount, currency: shipment.currency, pickupAt, items };
       const result = await adapter.book(input, null);
       const pdf = result.labelPdf ?? (result.needsWaybill ? await renderWaybillPdf({ ...input, carrierName: shipment.carrier.name, storeName: store?.name ?? order.storeName }) : null);
       const labelFileId = pdf ? await this.files.put(pdf, 'application/pdf') : null;
