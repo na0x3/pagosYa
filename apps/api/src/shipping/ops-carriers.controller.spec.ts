@@ -14,6 +14,13 @@ describe('OpsCarriersController', () => {
     await expect(controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: 'http://x.example/{tracking}' })).rejects.toThrow('https');
     await expect(controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: 'https://x.example/' })).rejects.toThrow('{tracking}');
   });
+  it('rejects templates with quotes, angle brackets or whitespace (they would break out of the buyer page href)', async () => {
+    tx.shippingCarrier.update.mockClear();
+    for (const template of ['https://x.example/{tracking}" onmouseover="alert(1)', "https://x.example/{tracking}'", 'https://x.example/<b>{tracking}', 'https://x.example/{tracking}>', 'https://x.example/a b/{tracking}', 'https://x.example/\t{tracking}', 'https://x.example/{tracking}`']) {
+      await expect(controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: template })).rejects.toThrow('La plantilla no puede tener comillas, < > ni espacios.');
+    }
+    expect(tx.shippingCarrier.update).not.toHaveBeenCalled();
+  });
   it('clears the tracking template when given an empty string', async () => {
     await controller.update({ id: 'ops_1' } as any, 'car_ocs', { trackingUrlTemplate: '' });
     expect(tx.shippingCarrier.update).toHaveBeenCalledWith({ where: { id: 'car_ocs' }, data: { trackingUrlTemplate: null } });

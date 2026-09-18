@@ -31,6 +31,8 @@ export class OpsCarriersController {
       } else {
         if (!trimmed.startsWith('https://')) throw new BadRequestException('La plantilla debe usar https.');
         if (!trimmed.includes('{tracking}')) throw new BadRequestException('La plantilla debe incluir {tracking}.');
+        // The URL lands in an href on the public tracking page; quotes, angle brackets or whitespace could break out of it.
+        if (/["'`<>\s]/.test(trimmed)) throw new BadRequestException('La plantilla no puede tener comillas, < > ni espacios.');
         data.trackingUrlTemplate = trimmed;
       }
     }

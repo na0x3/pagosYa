@@ -663,14 +663,17 @@ const SHIPMENT_LABELS: Record<string, string> = {
   RETURNED: "Devuelto",
 };
 
+// escapeHtml (textContent → innerHTML) leaves quotes alone; attribute values need them encoded too.
+const escapeAttr = (value: string) => escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 function shipmentMarkup(shipment: TrackedShipment | null | undefined): string {
   if (!shipment) return "";
   const link = shipment.trackingUrl && /^https:\/\//.test(shipment.trackingUrl)
-    ? `<a href="${escapeHtml(shipment.trackingUrl)}" target="_blank" rel="noopener noreferrer">Rastrear en ${escapeHtml(shipment.carrierName)}</a>`
+    ? `<a href="${escapeAttr(shipment.trackingUrl)}" target="_blank" rel="noopener noreferrer">Rastrear en ${escapeHtml(shipment.carrierName)}</a>`
     : "";
   return `<section class="tracking-shipment" aria-label="Envío"><h2>Envío con ${escapeHtml(shipment.carrierName)}</h2>
     <p><strong>${escapeHtml(SHIPMENT_LABELS[shipment.status] ?? shipment.status)}</strong>${shipment.trackingNumber ? ` · Nº ${escapeHtml(shipment.trackingNumber)}` : ""}</p>${link}
-    <ol>${shipment.events.map((e) => `<li><time datetime="${escapeHtml(e.occurredAt)}">${escapeHtml(new Date(e.occurredAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" }))}</time> ${escapeHtml(e.description ?? SHIPMENT_LABELS[e.status] ?? e.status)}</li>`).join("")}</ol></section>`;
+    <ol>${shipment.events.map((e) => `<li><time datetime="${escapeAttr(e.occurredAt)}">${escapeHtml(new Date(e.occurredAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" }))}</time> ${escapeHtml(e.description ?? SHIPMENT_LABELS[e.status] ?? e.status)}</li>`).join("")}</ol></section>`;
 }
 
 function trackingTimelineHtml(order: TrackedOrder): string {

@@ -85,6 +85,25 @@ describe("buyer tracking page shipment rendering", () => {
     expect(shipmentSection.textContent).toContain("Entregado al destinatario");
   });
 
+  it("keeps a quote in an https tracking URL inside the href attribute", async () => {
+    const order = baseOrder({
+      shipment: {
+        carrierName: "Servientrega Bolivia",
+        status: "IN_TRANSIT",
+        trackingNumber: "SV-1",
+        trackingUrl: `https://t.example/x" onmouseover="globalThis.__xss=3" data-x='`,
+        events: [],
+      },
+    });
+
+    await loadTracking(order);
+
+    const link = document.querySelector<HTMLAnchorElement>(".tracking-shipment a")!;
+    expect(link.getAttribute("onmouseover")).toBeNull();
+    expect(link.getAttributeNames().sort()).toEqual(["href", "rel", "target"]);
+    expect(link.getAttribute("href")).toBe(`https://t.example/x" onmouseover="globalThis.__xss=3" data-x='`);
+  });
+
   it("renders nothing when there is no shipment", async () => {
     await loadTracking(baseOrder({ shipment: null }));
     expect(document.querySelector(".tracking-shipment")).toBeNull();
