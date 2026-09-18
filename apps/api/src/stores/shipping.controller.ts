@@ -1,28 +1,34 @@
 import { Body, Controller, Get, Patch, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
-import { IsBoolean, IsInt, ValidateIf, Min, Max } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, ValidateIf, Min, Max } from 'class-validator';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
 class ShippingRateStatusDto { @IsBoolean() active!: boolean; }
-class ShippingSettingsDto { @IsBoolean() enabled!: boolean; @IsBoolean() pickupEnabled!: boolean; }
+class ShippingSettingsDto {
+  @IsBoolean() enabled!: boolean;
+  @IsBoolean() pickupEnabled!: boolean;
+  @IsOptional() @IsBoolean() carriersEnabled?: boolean;
+  @IsOptional() @IsInt() @Min(0) @Max(1440) prepMinutes?: number;
+}
 class ShippingWeightDto { @ValidateIf((_object, value) => value !== null) @IsInt() @Min(0) @Max(100000000) weightGrams!: number | null; }
 @UseGuards(MerchantAuthGuard)
 @Controller('v1/stores/:storeId/shipping')
 export class ShippingController {
   constructor(private readonly prisma: PrismaService) {}
   private async owner(merchantId: string, storeId: string) {
-    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { shippingEnabled: true, shippingPickupEnabled: true } });
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { shippingEnabled: true, shippingPickupEnabled: true, shippingCarriersEnabled: true, shippingPrepMinutes: true } });
     if (!store) throw new NotFoundException('Store not found'); return store;
   }
   @Get()
   async get(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string) {
     const store = await this.owner(merchant.id, storeId);
-    const [rates, products] = await Promise.all([
+    const [rates, products, carriers] = await Promise.all([
       this.prisma.deliveryZone.findMany({ where: { storeId }, orderBy: { name: 'asc' } }),
       this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, orderBy: { name: 'asc' }, select: { id: true, name: true, shippingWeightGrams: true } }),
+      this.prisma.shippingCarrier.findMany({ where: { isActive: true, mode: 'MANUAL' }, orderBy: { name: 'asc' }, select: { id: true, code: true, name: true, mode: true } }),
     ]);
-    return { enabled: store.shippingEnabled, pickupEnabled: store.shippingPickupEnabled, rates, products };
+    return { enabled: store.shippingEnabled, pickupEnabled: store.shippingPickupEnabled, carriersEnabled: store.shippingCarriersEnabled, prepMinutes: store.shippingPrepMinutes, rates, products, carriers };
   }
   @Patch('products/:productId')
   async weight(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('productId') productId: string, @Body() dto: ShippingWeightDto) {
@@ -40,7 +46,7 @@ export class ShippingController {
   @Post()
   async save(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() dto: ShippingSettingsDto) {
     await this.owner(merchant.id, storeId);
-    await this.prisma.store.update({ where: { id: storeId }, data: { shippingEnabled: dto.enabled, shippingPickupEnabled: dto.pickupEnabled } });
+    await this.prisma.store.update({ where: { id: storeId }, data: { shippingEnabled: dto.enabled, shippingPickupEnabled: dto.pickupEnabled, ...(dto.carriersEnabled !== undefined ? { shippingCarriersEnabled: dto.carriersEnabled } : {}), ...(dto.prepMinutes !== undefined ? { shippingPrepMinutes: dto.prepMinutes } : {}) } });
     return this.get(merchant, storeId);
   }
 }

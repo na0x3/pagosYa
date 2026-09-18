@@ -19,9 +19,9 @@ describe('Carrier shipping checkout', () => {
     const store = (await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Tienda Courier' }).expect(201)).body;
     storeId = store.id; slug = store.slug;
     productId = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/payment_links`).set(auth()).send({ name: 'Café', amount: 10000, currency: 'BOB', shippingWeightGrams: 500 }).expect(201)).body.id;
-    await request(app.getHttpServer()).post(`/v1/stores/${storeId}/shipping`).set(auth()).send({ enabled: true, pickupEnabled: false }).expect(201);
-    merchantId = (await prisma.store.update({ where: { id: storeId }, data: { shippingCarriersEnabled: true } })).merchantId;
-    rateId = (await prisma.deliveryZone.create({ data: { merchantId, storeId, name: 'Servientrega · Santa Cruz', fee: 2500, currency: 'BOB', departments: ['SANTA_CRUZ'], carrierId: 'car_servientrega' } })).id;
+    await request(app.getHttpServer()).post(`/v1/stores/${storeId}/shipping`).set(auth()).send({ enabled: true, pickupEnabled: false, carriersEnabled: true, prepMinutes: 45 }).expect(201);
+    merchantId = (await prisma.store.findUniqueOrThrow({ where: { id: storeId } })).merchantId;
+    rateId = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Servientrega · Santa Cruz', fee: 2500, departments: ['SANTA_CRUZ'], carrierId: 'car_servientrega' }).expect(201)).body.id;
   });
   afterAll(async () => { await app?.close(); });
 
@@ -78,5 +78,38 @@ describe('Carrier shipping checkout', () => {
     const order = await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paid.id } });
     expect(await prisma.shipment.findUnique({ where: { orderId: order.id } })).toBeNull();
     expect(await prisma.deliveryAssignment.findUnique({ where: { orderId: order.id } })).not.toBeNull();
+  });
+
+  it('lets the merchant see the shipment, download the waybill, add tracking and mark delivered', async () => {
+    const settings = (await request(app.getHttpServer()).get(`/v1/stores/${storeId}/shipping`).set(auth()).expect(200)).body;
+    expect(settings).toMatchObject({ carriersEnabled: true, prepMinutes: 45 });
+    expect(settings.carriers.map((c: any) => c.code)).toEqual(expect.arrayContaining(['servientrega', 'ocs', 'correos_bo']));
+    expect(settings.carriers.map((c: any) => c.code)).not.toContain('dhl_express');
+    await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'X', fee: 1, departments: ['LIMA'] }).expect(400);
+    await request(app.getHttpServer()).post(`/v1/stores/${storeId}/operations/delivery/zones`).set(auth()).send({ name: 'Y', fee: 1, carrierId: 'car_dhl_express' }).expect(400);
+
+    const paid = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send(cart()).expect(201)).body;
+    await pay(paid);
+    await app.get(ShipmentBookingWorker).tick();
+    const order = await prisma.storeOrder.findUniqueOrThrow({ where: { paymentIntentId: paid.id } });
+    const view = (await request(app.getHttpServer()).get(`/v1/orders/${order.id}/shipment`).set(auth()).expect(200)).body;
+    expect(view).toMatchObject({ status: 'BOOKED', hasLabel: true, carrier: { code: 'servientrega' } });
+    const pdf = await request(app.getHttpServer()).get(`/v1/shipments/${view.id}/label`).set(auth()).buffer(true)
+      .parse((res, cb) => { const chunks: Buffer[] = []; res.on('data', d => chunks.push(d)); res.on('end', () => cb(null, Buffer.concat(chunks))); }).expect(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+    const other = (await request(app.getHttpServer()).post('/v1/merchants').send({ name: 'CarrierOther', email: 'carrier-other@test.example', settlementMode: 'AGGREGATOR' }).expect(201)).body.testKeys.secretKey;
+    await request(app.getHttpServer()).get(`/v1/shipments/${view.id}/label`).set({ Authorization: `Bearer ${other}` }).expect(404);
+    const tracked = (await request(app.getHttpServer()).post(`/v1/shipments/${view.id}/tracking`).set(auth()).send({ trackingNumber: 'SV-000123' }).expect(201)).body;
+    expect(tracked).toMatchObject({ status: 'IN_TRANSIT', trackingNumber: 'SV-000123' });
+    expect((await prisma.storeOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('SHIPPED');
+    await request(app.getHttpServer()).post(`/v1/shipments/${view.id}/delivered`).set(auth()).expect(201);
+    expect((await prisma.storeOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('DELIVERED');
+  });
+
+  it('stores branch coordinates for pickup origins', async () => {
+    const updated = (await request(app.getHttpServer()).patch(`/v1/stores/${storeId}`).set(auth()).send({ locations: [{ id: 'centro', name: 'Centro', address: 'Calle 21 #100', department: 'LA_PAZ', city: 'La Paz', lat: -16.5, lng: -68.12, pickupEnabled: true, deliveryEnabled: true }] }).expect(200)).body;
+    expect(updated.locations[0]).toMatchObject({ department: 'LA_PAZ', lat: -16.5 });
+    await request(app.getHttpServer()).patch(`/v1/stores/${storeId}`).set(auth()).send({ locations: [{ id: 'x', name: 'X', lat: 40, lng: -3, pickupEnabled: true, deliveryEnabled: true }] }).expect(400);
   });
 });

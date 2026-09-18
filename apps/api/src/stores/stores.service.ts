@@ -134,6 +134,10 @@ type StoreLocation = {
   mapEmbedUrl?: string;
   description?: string;
   highlight?: string;
+  department?: string;
+  city?: string;
+  lat?: number;
+  lng?: number;
   pickupEnabled: boolean;
   deliveryEnabled: boolean;
   openingHours: Array<{ day: number; open: string; close: string; closed: boolean }>;
@@ -147,6 +151,10 @@ function storeLocationSnapshot(locations: StoreLocationDto[]): StoreLocation[] {
     ...(location.mapEmbedUrl?.trim() ? { mapEmbedUrl: location.mapEmbedUrl.trim() } : {}),
     ...(location.description?.trim() ? { description: location.description.trim() } : {}),
     ...(location.highlight?.trim() ? { highlight: location.highlight.trim() } : {}),
+    ...(location.department ? { department: location.department } : {}),
+    ...(location.city?.trim() ? { city: location.city.trim() } : {}),
+    ...(location.lat !== undefined ? { lat: location.lat } : {}),
+    ...(location.lng !== undefined ? { lng: location.lng } : {}),
     pickupEnabled: location.pickupEnabled,
     deliveryEnabled: location.deliveryEnabled,
     openingHours: (location.openingHours || []).map((hours) => ({ day: hours.day, open: hours.open, close: hours.close, closed: hours.closed })),

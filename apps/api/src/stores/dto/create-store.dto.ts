@@ -9,6 +9,7 @@ import {
   IsEmail,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
@@ -23,6 +24,7 @@ import {
 } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
+import { BOLIVIA_DEPARTMENTS } from "../../shipping/bolivia-address";
 import { CATALOG_LAYOUTS, type CatalogLayout } from "../catalog-layout";
 import {
   SITE_ART_DIRECTIONS,
@@ -1006,6 +1008,31 @@ export class StoreLocationDto {
   @IsSafeText()
   @MaxLength(140)
   highlight?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(BOLIVIA_DEPARTMENTS)
+  department?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(-23.0)
+  @Max(-9.6)
+  lat?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(-69.7)
+  @Max(-57.4)
+  lng?: number;
 
   @ApiProperty()
   @IsBoolean()
