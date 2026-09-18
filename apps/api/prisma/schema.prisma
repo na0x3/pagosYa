@@ -65,6 +65,8 @@ enum LedgerAccount {
   PAGOSYA_FEE_REVENUE
   RESERVE
   RAIL_COST
+  SHIPPING_CLEARING
+  COURIER_PAYABLE
 }
 
 enum InternationalPaymentsStatus {
@@ -608,6 +610,9 @@ model Store {
   bundlesEnabled Boolean @default(false)
   shippingEnabled Boolean @default(false)
   shippingPickupEnabled Boolean @default(true)
+  shippingCarriersEnabled Boolean               @default(false)
+  shippingPrepMinutes     Int                   @default(60)
+  carrierAccounts         StoreCarrierAccount[]
   brandProfile StoreBrandProfile?
   brandRevisions StoreBrandRevision[]
   aiUsage StoreAiUsage[]
@@ -926,6 +931,15 @@ model StoreOrder {
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   statusEvents            StoreOrderStatusEvent[]
+  shippingDepartment String?
+  shippingCity       String?
+  shippingStreet     String?
+  shippingReferences String?
+  shippingLat        Float?
+  shippingLng        Float?
+  recipientName      String?
+  recipientPhone     String?
+  shipment           Shipment?
 
   @@index([consumerUserId, createdAt])
   @@index([merchantId, createdAt])
@@ -1645,6 +1659,10 @@ model DeliveryZone {
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  // null = the store's own riders (pre-carrier behavior).
+  carrierId   String?
+  carrier     ShippingCarrier? @relation(fields: [carrierId], references: [id], onDelete: SetNull)
+  departments String[]         @default([])
 
   @@unique([storeId, name])
   @@index([storeId, isActive])
@@ -2327,4 +2345,128 @@ model StoreFunnelVisit {
   orders StoreOrder[]
   @@unique([storeId, sessionHash])
   @@index([storeId, createdAt])
+}
+
+enum CarrierMode {
+  API
+  MANUAL
+}
+
+enum CarrierAccountType {
+  MERCHANT
+  PLATFORM
+}
+
+enum ShipmentStatus {
+  BOOKING
+  BOOKED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  CANCELED
+  RETURNED
+}
+
+enum ShipmentChargeKind {
+  SURCHARGE
+  CANCELLATION_FEE
+  CREDIT
+}
+
+model ShippingCarrier {
+  id                  String                @id @default(cuid())
+  code                String                @unique
+  name                String
+  mode                CarrierMode
+  // "{tracking}" is replaced with the URL-encoded tracking number.
+  trackingUrlTemplate String?
+  platformEnabled     Boolean               @default(false)
+  platformMarginBps   Int                   @default(0)
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  accounts            StoreCarrierAccount[]
+  shipments           Shipment[]
+  zones               DeliveryZone[]
+}
+
+model StoreCarrierAccount {
+  id                    String             @id @default(cuid())
+  storeId               String
+  store                 Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  carrierId             String
+  carrier               ShippingCarrier    @relation(fields: [carrierId], references: [id])
+  accountType           CarrierAccountType @default(MERCHANT)
+  credentialsCiphertext String?
+  credentialsHint       String?
+  isActive              Boolean            @default(true)
+  lastVerifiedAt        DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@unique([storeId, carrierId])
+}
+
+model Shipment {
+  id                String             @id @default(cuid())
+  orderId           String             @unique
+  order             StoreOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  storeId           String
+  merchantId        String
+  carrierId         String
+  carrier           ShippingCarrier    @relation(fields: [carrierId], references: [id])
+  accountType       CarrierAccountType @default(MERCHANT)
+  // Phase 1: the DeliveryZone id that priced this shipment. Phase 2: signed quote id.
+  quoteId           String?
+  quotedAmount      Int
+  marginAmount      Int                @default(0)
+  actualCost        Int?
+  currency          String             @default("BOB")
+  status            ShipmentStatus     @default(BOOKING)
+  trackingNumber    String?
+  carrierRef        String?
+  labelFileId       String?
+  pickupScheduledAt DateTime?
+  bookingAttempts   Int                @default(0)
+  // null = not armed yet (order unpaid). Payment success sets it to now().
+  nextAttemptAt     DateTime?
+  lastError         String?
+  bookedAt          DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  events            ShipmentEvent[]
+  charges           ShipmentCharge[]
+
+  @@index([status, nextAttemptAt])
+  @@index([storeId, status, createdAt])
+}
+
+model ShipmentEvent {
+  id             String         @id @default(cuid())
+  shipmentId     String
+  shipment       Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status         ShipmentStatus
+  description    String?
+  location       String?
+  occurredAt     DateTime       @default(now())
+  carrierEventId String?
+  createdAt      DateTime       @default(now())
+
+  @@unique([shipmentId, carrierEventId])
+  @@index([shipmentId, occurredAt])
+}
+
+model ShipmentCharge {
+  id            String             @id @default(cuid())
+  shipmentId    String
+  shipment      Shipment           @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  kind          ShipmentChargeKind
+  amount        Int
+  reason        String
+  ledgerGroupId String?
+  createdAt     DateTime           @default(now())
+
+  @@index([shipmentId])
 }
