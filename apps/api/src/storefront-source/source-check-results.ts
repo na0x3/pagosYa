@@ -1,8 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { ArrayMaxSize, IsArray, IsBoolean } from 'class-validator';
-import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { kitPath } from '@pagosya/storefront-kit';
+import { currentSourceRuntimeBundle } from './source-runtime';
 import type { PrismaService } from '../prisma/prisma.service';
 import { sourceProjectDigest, type SourceProjectSnapshot } from './source-project';
 
@@ -22,15 +20,14 @@ export function boundedSourceFindings(findings: unknown) {
   return findings;
 }
 
-/** Hash the same concatenation served as commerce.js by currentSourceRuntime, never authored code. */
+/** Checks and publications identify the same complete trusted runtime bundle. */
 export async function sourceRuntimeDigest() {
-  const commerce = (await Promise.all(['privacy.js', 'commerce.js', 'retention.js'].map(name => readFile(kitPath(name), 'utf8')))).join('\n');
-  return createHash('sha256').update(commerce).digest('hex');
+  return (await currentSourceRuntimeBundle()).digest;
 }
 
-export async function requireSourceChecks(prisma: PrismaService, storeId: string, revision: number, snapshot: SourceProjectSnapshot) {
+export async function requireSourceChecks(prisma: PrismaService, storeId: string, revision: number, snapshot: SourceProjectSnapshot, runtimeDigest?: string) {
   const result = await prisma.sourceCheckResult.findFirst({
-    where: { storeId, revision, passed: true, snapshotDigest: sourceProjectDigest(snapshot), runtimeDigest: await sourceRuntimeDigest() },
+    where: { storeId, revision, passed: true, snapshotDigest: sourceProjectDigest(snapshot), runtimeDigest: runtimeDigest ?? await sourceRuntimeDigest() },
     select: { id: true },
   });
   if (!result) throw new ConflictException('Revisa la tienda en escritorio y móvil antes de publicarla.');

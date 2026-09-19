@@ -1,7 +1,7 @@
 import { boundedSourceFindings, requireSourceChecks, sourceRuntimeDigest, SourceCheckResultDto } from './source-check-results';
 import { isPublicStore, PUBLIC_STORE_WHERE } from '../stores/active-store';
 import { assertSourceCommerceContract } from './source-commerce-contract';
-import { currentSourceRuntime } from './source-runtime';
+import { currentSourceRuntime, currentSourceRuntimeBundle, withSourceRuntime, type SourceRuntimeFiles, type TrustedSourceRuntimeBundle } from './source-runtime';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { Prisma } from '@prisma/client';
@@ -24,7 +24,7 @@ export function experimentEvidence(a: { visitors: number; buyers: number }, b: {
 }
 
 export async function publicationState(prisma: PrismaService, storeId: string) {
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { contactFormEnabled: true, publicVisibility: true, sourcePublicationPaused: true, publishedSourceRevision: true, sourcePublicationVersion: true, sourcePublishedAt: true, status: true, slug: true, checkoutMode: true, merchant: { select: { status: true } } } });
+  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { contactFormEnabled: true, publicVisibility: true, sourcePublicationPaused: true, publishedSourceRevision: true, publishedRuntimeDigest: true, sourcePublicationVersion: true, sourcePublishedAt: true, status: true, slug: true, checkoutMode: true, merchant: { select: { status: true } } } });
   const experiment = await prisma.storeSourceExperiment.findFirst({ where: { storeId, status: 'RUNNING' } }) || await prisma.storeSourceExperiment.findFirst({ where: { storeId }, orderBy: [{ endedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }] });
   let test: any = null;
   if (experiment) {
@@ -47,7 +47,7 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
     });
     test = { ...experiment, activeStoreId: undefined, variants, evidence: experimentEvidence(variants[0], variants[1], experiment.startedAt, new Date(), orders.length > 10000), truncated: orders.length > 10000 };
   }
-  return { contactFormEnabled: store.contactFormEnabled, payments: store.checkoutMode === 'payment' ? store.merchant.status === 'ACTIVE' ? 'live' : 'test' : 'contact', revision: store.publishedSourceRevision, version: store.sourcePublicationVersion, publishedAt: store.sourcePublishedAt, active: isPublicStore(store), slug: store.slug, experiment: test };
+  return { contactFormEnabled: store.contactFormEnabled, payments: store.checkoutMode === 'payment' ? store.merchant.status === 'ACTIVE' ? 'live' : 'test' : 'contact', revision: store.publishedSourceRevision, runtimeDigest: store.publishedRuntimeDigest, version: store.sourcePublicationVersion, publishedAt: store.sourcePublishedAt, active: isPublicStore(store), slug: store.slug, experiment: test };
 }
 
 @Injectable()
@@ -93,15 +93,32 @@ export class SourcePublishingService {
     }
     return publicationState(this.prisma, storeId);
   }
+  /** Records the trusted runtime a publication went live with. Stores keep following the latest kit, so
+   * platform fixes reach every published store; the record makes an explicit rollback possible. */
+  private async recordRuntime(tx: Prisma.TransactionClient, storeId: string, bundle: TrustedSourceRuntimeBundle) {
+    // Immutable content is deduplicated globally; each store publication remains auditable.
+    await tx.sourceRuntimeBundle.upsert({ where: { digest: bundle.digest }, create: { digest: bundle.digest, files: bundle.files }, update: {} });
+    await tx.storeRuntimePublication.create({ data: { storeId, digest: bundle.digest, publishedAt: new Date() } });
+  }
+  /** Pin a runtime this store has published before, or pass null to follow the latest kit again. */
+  async rollbackRuntime(merchantId: string, storeId: string, digest: string | null, expectedVersion: number) {
+    return this.change(merchantId, storeId, expectedVersion, async tx => {
+      if (digest !== null && !(await tx.storeRuntimePublication.findFirst({ where: { storeId, digest } }))) throw new NotFoundException('Este runtime no pertenece al historial de publicaciones de la tienda.');
+      await tx.store.update({ where: { id: storeId }, data: { publishedRuntimeDigest: digest } });
+    });
+  }
   async publish(merchantId: string, storeId: string, revision: number, expected: number) {
     const store = await this.owner(merchantId, storeId);
     if (store.status !== 'ACTIVE') throw new BadRequestException('Activa la tienda antes de publicar este diseño.');
     const snapshot = await this.snapshot(storeId, revision);
     assertSourceCommerceContract(snapshot);
-    await requireSourceChecks(this.prisma, storeId, revision, snapshot);
+    const runtime = await currentSourceRuntimeBundle();
+    await requireSourceChecks(this.prisma, storeId, revision, snapshot, runtime.digest);
     return this.change(merchantId, storeId, expected, async tx => {
       if (await tx.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } })) throw new ConflictException('Detén la prueba antes de publicar otro diseño.');
-      await tx.store.update({ where: { id: storeId }, data: { publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: revision, sourcePublishedAt: new Date() } });
+      await this.recordRuntime(tx, storeId, runtime);
+      // A new publication was checked against the latest kit, so it clears any earlier rollback pin.
+      await tx.store.update({ where: { id: storeId }, data: { publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: revision, publishedRuntimeDigest: null, sourcePublishedAt: new Date() } });
     });
   }
   async visibility(merchantId: string, storeId: string, published: boolean, expected: number) {
@@ -122,8 +139,10 @@ export class SourcePublishingService {
     assertSourceCommerceContract(a); assertSourceCommerceContract(b);
     const authored = (s: SourceProjectSnapshot) => JSON.stringify(s.files.filter(f => /\.(html|css|js)$/.test(f.path) && !['config.js', 'commerce.js'].includes(f.path)).sort((x,y)=>x.path.localeCompare(y.path)));
     if (store.publishedSourceRevision === revision || authored(a) === authored(b)) throw new BadRequestException('Elige una alternativa con un cambio de diseño para comparar.');
-    await requireSourceChecks(this.prisma, storeId, revision, b);
+    const runtime = await currentSourceRuntimeBundle();
+    await requireSourceChecks(this.prisma, storeId, revision, b, runtime.digest);
     return this.change(merchantId, storeId, expected, async tx => {
+      await this.recordRuntime(tx, storeId, runtime);
       await tx.storeSourceExperiment.create({ data: { storeId, activeStoreId: storeId, controlRevision: store.publishedSourceRevision!, variantRevision: revision } });
     });
   }
@@ -136,11 +155,13 @@ export class SourcePublishingService {
     return this.change(merchantId, storeId, expected, async tx => {
       const ended = await tx.storeSourceExperiment.updateMany({ where: { id: experimentId, storeId, status: 'RUNNING' }, data: { status: apply ? 'COMPLETED' : 'STOPPED', activeStoreId: null, winner, endedAt: new Date() } });
       if (!ended.count) throw new ConflictException('Esta prueba ya terminó.');
-      if (apply) await tx.store.update({ where: { id: storeId }, data: { publishedSourceRevision: winner === 'A' ? state.experiment.controlRevision : state.experiment.variantRevision, sourcePublishedAt: new Date() } });
+      if (apply) {
+        await tx.store.update({ where: { id: storeId }, data: { publishedSourceRevision: winner === 'A' ? state.experiment.controlRevision : state.experiment.variantRevision, sourcePublishedAt: new Date() } });
+      }
     });
   }
   async publicSite(slug: string, visitorId?: string) {
-    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true } });
+    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true, publishedRuntimeDigest: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
     if (!store.publishedSourceRevision) return { published: false };
     let revision = store.publishedSourceRevision, visitToken: string | null = null;
@@ -159,8 +180,13 @@ export class SourcePublishingService {
       revision = visit.variant === 'B' ? experiment.variantRevision : experiment.controlRevision; visitToken = visit.token;
     }
     const snapshot = await this.snapshot(store.id, revision);
-    // Always use the trusted current commerce runtime; authored scripts stay isolated.
-    const { files } = await currentSourceRuntime(snapshot);
+    // Hosted publications keep their trusted kit even after a deployment; previews use the current kit.
+    const runtime = store.publishedRuntimeDigest
+      ? await this.prisma.sourceRuntimeBundle.findUniqueOrThrow({ where: { digest: store.publishedRuntimeDigest } })
+      : null;
+    const { files } = runtime
+      ? await withSourceRuntime(snapshot, { digest: runtime.digest, files: runtime.files as SourceRuntimeFiles })
+      : await currentSourceRuntime(snapshot);
     // Export tooling is private. Only the selected public revision's browser assets leave the API.
     return { published: true, revision, visitToken, analyticsAvailable: true, snapshot: { ...snapshot, brief: {}, files: files.filter(f => /\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) && !['server.mjs', 'build.mjs'].includes(f.path)) } };
   }

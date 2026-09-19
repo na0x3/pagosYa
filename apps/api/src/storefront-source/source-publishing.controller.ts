@@ -1,6 +1,6 @@
 import { SourceCheckResultDto } from './source-check-results';
 import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength, Max, Matches } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
@@ -11,6 +11,16 @@ import { SendSourceMessageDto } from './dto/send-source-message.dto';
 class PublishDto {
   @IsInt() @Min(1) revision!: number;
   @IsInt() @Min(0) publicationVersion!: number;
+}
+class RuntimeRollbackDto {
+  // null returns the store to the latest trusted runtime.
+  @IsOptional()
+  @Matches(/^[a-f0-9]{64}$/, { message: 'El digest debe ser un SHA-256 válido.' })
+  digest!: string | null;
+  @IsInt({ message: 'La versión esperada debe ser un entero.' })
+  @Min(0, { message: 'La versión esperada no puede ser negativa.' })
+  @Max(2147483647, { message: 'La versión esperada supera el límite permitido.' })
+  expectedVersion!: number;
 }
 class VisibilityDto {
   @IsInt() @Min(0) publicationVersion!: number;
@@ -34,6 +44,10 @@ export class SourcePublishingController {
   @Post('publish')
   publish(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: PublishDto) {
     return this.publishing.publish(m.id, id, body.revision, body.publicationVersion);
+  }
+  @Post('runtime/rollback')
+  rollbackRuntime(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: RuntimeRollbackDto) {
+    return this.publishing.rollbackRuntime(m.id, id, body.digest ?? null, body.expectedVersion);
   }
   @Post('visibility')
   visibility(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: VisibilityDto) {

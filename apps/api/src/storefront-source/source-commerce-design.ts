@@ -8,10 +8,10 @@ const block = (html: string, name: string) => html.match(new RegExp(`<${name}\\b
 const normalize = (html: string) => html.replace(/\s+/g, ' ').trim();
 
 /** Share the homepage's design with stock commerce pages; custom page content stays authored. */
-export async function withSourceCommerceDesign(files: SourceProjectFileDto[]): Promise<SourceProjectFileDto[]> {
+export async function withSourceCommerceDesign(files: SourceProjectFileDto[], trustedTemplate?: string): Promise<SourceProjectFileDto[]> {
   const home = files.find(file => file.path === 'index.html')?.content;
   if (!home) return files;
-  const template = await readFile(kitPath('product.html'), 'utf8');
+  const template = trustedTemplate ?? await readFile(kitPath('product.html'), 'utf8');
   const homeHead = block(home, 'head') || '';
   const styles = [...homeHead.matchAll(/<link\b[^>]*>/gi)].map(match => match[0]).filter(tag => {
     const href = attribute(tag, 'href');

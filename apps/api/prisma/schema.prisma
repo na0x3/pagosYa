@@ -793,6 +793,9 @@ model Store {
   visualSignatures             StoreVisualSignature[]
   publicVisibility             Boolean                          @default(false)
   sourcePublicationPaused      Boolean                          @default(false)
+  publishedRuntimeDigest       String?
+  publishedRuntime             SourceRuntimeBundle? @relation(fields: [publishedRuntimeDigest], references: [digest], onDelete: Restrict)
+  runtimePublications          StoreRuntimePublication[]
   publishedSourceRevision      Int?
   sourcePublicationVersion     Int @default(0)
   sourcePublishedAt            DateTime?
@@ -1208,6 +1211,25 @@ model StoreSourceVersion {
   checkResults SourceCheckResult[]
 
   @@id([storeId, revision])
+}
+
+model SourceRuntimeBundle {
+  digest       String @id
+  files        Json
+  createdAt    DateTime @default(now())
+  stores       Store[]
+  publications StoreRuntimePublication[]
+}
+
+model StoreRuntimePublication {
+  id          String @id @default(cuid())
+  storeId     String
+  store       Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  digest      String
+  runtime     SourceRuntimeBundle @relation(fields: [digest], references: [digest], onDelete: Restrict)
+  publishedAt DateTime @default(now())
+
+  @@index([storeId, digest, publishedAt])
 }
 
 model SourceCheckResult {

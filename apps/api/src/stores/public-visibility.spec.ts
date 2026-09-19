@@ -52,6 +52,8 @@ function setup() {
   };
   // Publishing requires the browser checks to have passed for the exact revision (task 1.5).
   prisma.sourceCheckResult = { findFirst: jest.fn().mockResolvedValue({ id: 'passing-check' }) };
+  prisma.sourceRuntimeBundle = { upsert: jest.fn(async () => ({})) };
+  prisma.storeRuntimePublication = { create: jest.fn(async () => ({})) };
   prisma.$transaction = jest.fn(async (work) => {
     if (Array.isArray(work)) return Promise.all(work);
     const before = structuredClone(row);

@@ -25,11 +25,11 @@ export function sourceMotionMode(files: SourceProjectFileDto[] = []): SourceMoti
   try { const mode = readConfig(files).motion; return SOURCE_MOTION_MODES.includes(mode) ? mode : 'subtle'; }
   catch { return 'subtle'; }
 }
-export async function withSourceMotion(files: SourceProjectFileDto[], mode: SourceMotionMode): Promise<SourceProjectFileDto[]> {
+export async function withSourceMotion(files: SourceProjectFileDto[], mode: SourceMotionMode, trustedRuntime?: string): Promise<SourceProjectFileDto[]> {
   if (!SOURCE_MOTION_MODES.includes(mode)) throw new BadRequestException('Elige un modo de movimiento válido.');
   const config = readConfig(files);
   if (!files.some(f => f.path === 'commerce.js' && f.encoding !== 'base64')) throw new BadRequestException('Este sitio necesita el runtime de comercio.');
-  const runtime = await readFile(kitPath('video.js'), 'utf8') + '\n' + await readFile(kitPath('motion.js'), 'utf8');
+  const runtime = trustedRuntime ?? (await readFile(kitPath('video.js'), 'utf8') + '\n' + await readFile(kitPath('motion.js'), 'utf8'));
   return files.map(file => file.path === 'config.js'
     ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, motion: mode })};\n` }
     : file.path === 'commerce.js'

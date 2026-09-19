@@ -1,4 +1,4 @@
-import { currentSourceRuntime } from './source-runtime';
+import { currentSourceRuntime, currentSourceRuntimeBundle, sourceRuntimeBundleDigest, withSourceRuntime } from './source-runtime';
 
 describe('current source runtime hardening', () => {
   it('retrofits the global layout floor and referenced local fonts for older snapshots', async () => {
@@ -41,5 +41,18 @@ describe('current source runtime hardening', () => {
       expect(page).toContain('class="site-footer"');
       expect(page).toContain('Pie de Marca');
     }
+  });
+});
+
+
+describe('runtime bundle integrity', () => {
+  const snapshot = { schemaVersion: 1 as const, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [] };
+  it('rejects corrupted or incomplete pinned bundles instead of silently substituting the current kit', async () => {
+    const bundle = await currentSourceRuntimeBundle();
+    bundle.files[0].content += 'corrupto';
+    await expect(withSourceRuntime(snapshot, bundle)).rejects.toMatchObject({ status: 409 });
+    bundle.files.pop();
+    bundle.digest = sourceRuntimeBundleDigest(bundle.files);
+    await expect(withSourceRuntime(snapshot, bundle)).rejects.toMatchObject({ status: 409 });
   });
 });
