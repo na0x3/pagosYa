@@ -1280,27 +1280,59 @@
     const card = ownCards[0], photo = card?.querySelector('.menu-item__image');
     if (photo && !el.hasAttribute('data-pagosya-grid') && getComputedStyle(el).display === 'block' && photo.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.6) el.setAttribute('data-pagosya-grid', '');
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
-    readableCards(el, [...el.querySelectorAll('.menu-item:not([data-custom-product])')]);
+    readableText(el);
   }
   // Card text must not disappear into the card: switch to the store's text or background color, whichever reads.
-  function readableCards(el, cards) {
-    if (!cards.length) return;
-    const probe = document.createElement('span'); probe.hidden = true; el.append(probe);
-    const rgba = value => { probe.style.color = ''; probe.style.color = value; const n = (getComputedStyle(probe).color.match(/[\d.]+/g) || []).map(Number); return n.length >= 3 ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null; };
+  // WCAG AA guard for runtime-owned text only: 4.5:1 for body text, 3:1 for large text. Text over
+  // photographs or gradients is left alone (its real background is unknown); authored markup outside
+  // the commerce slots is never touched.
+  const CONTRAST_SLOTS = '[data-pagosya-catalog],[data-pagosya-product-page],[data-pagosya-cart],[data-pagosya-checkout-page],dialog[data-pagosya-product]';
+  function readableText(root) {
+    if (!root || !root.isConnected) return;
+    const probe = document.createElement('span'); probe.hidden = true; root.append(probe);
+    // Browsers report color-mix() results as color(srgb r g b / a) with 0–1 channels, not rgb().
+    const parseColor = value => { const n = (String(value).match(/[\d.]+/g) || []).map(Number); if (n.length < 3) return null; const scale = /^color\(srgb/i.test(value) ? 255 : 1; return [n[0] * scale, n[1] * scale, n[2] * scale, n.length > 3 ? n[3] : 1]; };
+    const rgba = value => { probe.style.color = ''; probe.style.color = value; return parseColor(getComputedStyle(probe).color); };
     const luminance = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
     const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
     const candidates = ['var(--store-foreground, var(--brand-foreground, #111111))', 'var(--store-background, var(--brand-background, #ffffff))', '#111111', '#ffffff'].map(rgba).filter(Boolean);
-    for (const card of cards) {
-      let node = card, background = null;
-      while (node && node.nodeType === 1) { const color = rgba(getComputedStyle(node).backgroundColor); if (color && color[3] > .5) { background = color; break; } node = node.parentElement; }
-      background = background || [255, 255, 255, 1];
-      const text = rgba(getComputedStyle(card.querySelector('h3') || card).color);
-      if (!text || contrast(text, background) >= 3) continue;
+    const backgroundOf = element => {
+      for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+        const color = parseColor(style.backgroundColor);
+        if (color && color[3] > .5) return color;
+        if (node.tagName === 'IMG' || node.tagName === 'VIDEO') return null;
+      }
+      return [255, 255, 255, 1];
+    };
+    const elements = [root, ...root.querySelectorAll('h1,h2,h3,h4,h5,p,span,a,button,label,li,strong,small,dt,dd,th,td,legend,summary,output')].slice(0, 800);
+    for (const element of elements) {
+      if (element === probe || element.closest('[data-pagosya-contrast="skip"]')) continue;
+      if (![...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim())) continue;
+      const style = getComputedStyle(element);
+      const text = parseColor(style.color);
+      const background = backgroundOf(element);
+      if (!text || !background || text[3] < .5) continue;
+      const size = parseFloat(style.fontSize) || 16, bold = (parseInt(style.fontWeight, 10) || 400) >= 700;
+      const required = size >= 24 || (size >= 18.66 && bold) ? 3 : 4.5;
+      if (contrast(text, background) >= required) continue;
       // Prefer the store's own colors when they read; fall back to the strongest contrast.
-      const chosen = candidates.find(c => contrast(c, background) >= 4.5) || candidates.reduce((best, c) => contrast(c, background) > contrast(best, background) ? c : best);
-      card.style.color = `rgb(${chosen.slice(0, 3).join(',')})`;
+      const chosen = candidates.find(c => contrast(c, background) >= required) || candidates.reduce((best, c) => contrast(c, background) > contrast(best, background) ? c : best);
+      element.style.color = `rgb(${chosen.slice(0, 3).join(',')})`;
+      element.dataset.pagosyaContrast = 'corrected';
     }
     probe.remove();
+  }
+  let contrastQueued = false;
+  function queueReadableText() {
+    if (contrastQueued) return;
+    contrastQueued = true;
+    setTimeout(() => { contrastQueued = false; document.querySelectorAll(CONTRAST_SLOTS).forEach(readableText); }, 120);
+  }
+  if (typeof MutationObserver === 'function') {
+    const watch = () => new MutationObserver(records => { if (records.some(record => record.type === 'childList' && (record.target.closest?.(CONTRAST_SLOTS) || [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.(CONTRAST_SLOTS) || node.querySelector?.(CONTRAST_SLOTS)))))) queueReadableText(); }).observe(document.body, { childList: true, subtree: true });
+    if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
   }
   const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';
   const collections = () => Array.isArray(store.collections) ? store.collections : [];
