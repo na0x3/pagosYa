@@ -48,6 +48,8 @@ async function workspace(page, withSite = false) {
     else if (path === '/merchants/invoicing_profile') body = { status: 'NOT_CONFIGURED' };
     else if (path === '/merchants/finances') body = { totalRevenue: 0, paymentCount: 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: 'BOB' };
     else if (path === '/auth/google') body = { enabled: false };
+    else if (path.endsWith('/domain-shop')) body = { available: false, sandbox: true, tlds: [], orders: [] };
+    else if (path.endsWith('/product-highlights/suggestions')) body = { highlights: [] };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   await page.goto('/#dashboard-stores');
@@ -56,6 +58,22 @@ async function workspace(page, withSite = false) {
   if (withSite) await expect(editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Mi café' })).toBeVisible();
   else await expect(editor.locator('[data-setup-prompt]')).toHaveText(prompt('business'));
   return { editor, products, requests };
+}
+
+// New products are created through YAPI's eight-step guide in #productGuideFrame.
+async function createProductWithGuide(page, name, price) {
+  const guide = page.frameLocator('#productGuideFrame');
+  const next = guide.locator('.product-next');
+  const reach = step => expect(guide.locator('[data-product-step]')).toHaveText(`Paso ${step} de 8`);
+  await guide.getByLabel('Nombre del producto').fill(name);
+  for (let step = 1; step < 8; step++) {
+    await reach(step);
+    if (step === 3) await guide.getByLabel('Precio (Bs)').fill(price);
+    await next.click();
+  }
+  await reach(8);
+  await next.click();
+  await expect(guide.getByText(`${name} ya está en tu catálogo.`)).toBeVisible();
 }
 
 test('retired sections are absent and old view selections fall back to the overview', async ({ page }) => {
@@ -98,9 +116,7 @@ test('store opens the shared editor; setup and an unsent message survive product
   await editor.getByRole('button', { name: 'Revisar productos', exact: true }).click();
 
   await expect(page.locator('#paymentLinksSection')).toBeVisible();
-  await page.locator('#productCreateDisclosure > summary').click();
-  await page.locator('#paymentLinkName').fill('Café en grano'); await page.locator('#paymentLinkAmount').fill('65');
-  await page.locator('#paymentLinkSubmit').click();
+  await createProductWithGuide(page, 'Café en grano', '65');
   await expect.poll(() => products.length).toBe(1);
   expect(products[0].amount).toBe(6500);
   expect(requests.find(r => r.method === 'POST' && r.path.endsWith('/payment_links')).path).toBe('/stores/store_1/payment_links');
@@ -165,10 +181,7 @@ test('saved site previews refresh the real catalog after product creation withou
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
   await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
-  await page.locator('#productCreateDisclosure > summary').click();
-  await page.locator('#paymentLinkName').fill('Café recién tostado');
-  await page.locator('#paymentLinkAmount').fill('42');
-  await page.locator('#paymentLinkSubmit').click();
+  await createProductWithGuide(page, 'Café recién tostado', '42');
   await expect.poll(() => products.length).toBe(1);
   products[0].imageUrls = ['/v1/uploads/1111-aaaa.png'];
   await page.locator('#dashboardNav [data-dashboard-view="workspace"]:not([data-studio-tool])').click();
@@ -249,7 +262,7 @@ test('integration logos load and provider details preserve the inventory draft',
   await workspace(page, { withSite: true });
   await page.evaluate(() => window.setDashboardView('integrations'));
   const frame = page.frameLocator('#storeIntegrationsFrame');
-  await expect(frame.locator('.integration-card')).toHaveCount(17);
+  await expect(frame.locator('.integration-card')).toHaveCount(20);
   const logos = frame.locator('.integration-logo img');
   for (const logo of await logos.all()) {
     await logo.scrollIntoViewIfNeeded();

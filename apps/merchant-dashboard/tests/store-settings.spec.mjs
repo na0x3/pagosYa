@@ -90,8 +90,11 @@ async function openDashboard(
 
 async function navigateDashboard(page, view) {
   const sidebar = page.locator(".dashboard-sidebar");
-  if (!(await sidebar.evaluate((element) => element.classList.contains("is-store-nav-pinned")))) {
-    await page.locator("#storeFullscreenNavHandle").click();
+  // On desktop the sidebar is docked and the menu handle is hidden; only the
+  // fullscreen storefront and narrow screens tuck the navigation behind it.
+  const handle = page.locator("#storeFullscreenNavHandle");
+  if (await handle.isVisible() && !(await sidebar.evaluate((element) => element.classList.contains("is-store-nav-pinned")))) {
+    await handle.click();
   }
   await page.locator(`.dashboard-nav-button[data-dashboard-view="${view}"]`).click();
 }
