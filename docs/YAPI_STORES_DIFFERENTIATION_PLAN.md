@@ -202,6 +202,6 @@ Decisions changed during implementation:
 
 Round 2 (same day) added: the **Comercio verificado** seal drawn outside the sandbox with a pagosYa-hosted `/verificar/:slug` page (no legal name or NIT exposed); merchant **policies** (returns, delivery, privacy, terms) linked beside purchasing, in the cart and footer; **lazy hosted images** from the platform upload path and **responsive WebP copies** with `srcset`; merchant-configured **outside links** (social, WhatsApp, tel, mailto) that open while all others stay blocked; **measured design advice** in the Studio check; a **CSP for exported stores**; DNS-prefetch hardening; and an owner **visibility switch** so a store without a YAPI design can still go live on purpose.
 
-Known residual risk: a hostile design can still open a WebRTC connection (CSP cannot block it). Moving address/phone/credit-code inputs into pagosYa's trusted checkout (task 5.2) is the fix; it changes the cart-review flow, so it needs an owner decision.
+Task 5.2 then closed that risk for platform-owned fields: shopper address, contact messages, reviews and newsletter emails are now typed in pagosYa's own secure dialog outside the frame, and the parent strips every personal field a design's frame tries to send. A hostile design can still draw its *own* look-alike inputs — no sandbox prevents that — but nothing a shopper types into pagosYa's real fields is ever inside the design.
 
 Remaining work is listed in `.superpowers/sdd/DIFFERENTIATION/progress.md`.
