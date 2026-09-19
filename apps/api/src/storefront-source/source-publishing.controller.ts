@@ -1,3 +1,4 @@
+import { SourceCheckResultDto } from './source-check-results';
 import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
@@ -26,6 +27,10 @@ class VisitDto { @IsOptional() @IsUUID('4') visitorId?: string; }
 @UseGuards(MerchantAuthGuard)
 export class SourcePublishingController {
   constructor(private readonly publishing: SourcePublishingService, private readonly generation: SourceGenerationService, private readonly projects: SourceProjectsService) {}
+  @Post('versions/:revision/checks')
+  checks(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('revision') revision: string, @Body() body: SourceCheckResultDto) {
+    return this.publishing.recordChecks(m.id, id, /^\d+$/.test(revision) ? Number(revision) : NaN, body);
+  }
   @Post('publish')
   publish(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: PublishDto) {
     return this.publishing.publish(m.id, id, body.revision, body.publicationVersion);

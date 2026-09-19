@@ -17,6 +17,7 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   const version = { revision: 1, label: 'Diseño por revisar', snapshot: copy };
   const paid: string[] = [];
   let submitted: any;
+  let recorded: any;
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
     let body: any = {};
@@ -25,6 +26,7 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
     else if (pathname.endsWith('/conversation')) body = { messages: [] };
     else if (pathname.endsWith('/catalog')) body = structuredClone(snapshotCatalog);
     else if (pathname.endsWith('/estimate')) body = { model: 'gpt-5.6-terra', reason: 'Ajuste de diseño', maxCredits: 25, estimate: { minCredits: 4, maxCredits: 10 } };
+    else if (pathname.endsWith('/versions/1/checks')) recorded = route.request().postDataJSON();
     else if (pathname.endsWith('/versions/1')) body = version;
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [version], nextBefore: null };
     else if (/\/(messages|generate)$/.test(pathname)) {
@@ -41,6 +43,9 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   const prepare = page.getByRole('button', { name: clipped ? 'Preparar correcciones' : 'Preparar ajustes de diseño' });
   await expect(prepare).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole('status', { name: 'Comprobación del navegador' })).toContainText(clipped ? 'correcciones pendientes' : 'detalles visuales');
+  await expect.poll(() => recorded?.passed).toBe(!clipped);
+  expect(recorded.findings.length).toBeGreaterThan(0);
+  expect(Object.keys(recorded).sort()).toEqual(['findings', 'passed']);
   await prepare.click();
   const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
   await expect(composer).toHaveValue(clipped ? /Controles de compra completos/ : /Sección incompleta para revisar/);

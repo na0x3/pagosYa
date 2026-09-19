@@ -324,6 +324,9 @@ export class MerchantStudioApi {
   setSourceContactForm(storeId: string, revision: number, enabled: boolean): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/contact-form`, { method: 'PATCH', body: JSON.stringify({ revision, enabled }) });
   }
+  recordSourceChecks(storeId: string, revision: number, result: { passed: boolean; findings: import('./source-checks').SourceCheck[] }, signal?: AbortSignal): Promise<JsonRecord> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}/checks`, { method: 'POST', body: JSON.stringify(result), signal });
+  }
   publishSource(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/publish`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
   }

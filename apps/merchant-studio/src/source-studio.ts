@@ -13,7 +13,7 @@ import { openCatalogArrangement } from './catalog-arrangement';
 import { openRecommendations } from './recommendations';
 import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
-import { checkSourceWebsite, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
+import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
 import { sourcePreviewDocument, receivePreviewNavigation, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
@@ -298,14 +298,22 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function checksPassed() { return !dirty() && !checking && checksKey === checkKey() && Boolean(checks?.length) && !sourceChecksBlockPublishing(checks!); }
   async function runChecks(force = false) {
     if (!version || dirty()) return;
-    const key = checkKey();
+    const key = checkKey(), checkedStoreId = storeId, checkedRevision = version.revision;
     if (!force && key === checksKey) return;
     checkAbort?.abort(); const controller = new AbortController(); checkAbort = controller;
     checksKey = key; checks = null; checking = true; updateChecks();
     try {
-      const snapshot = await loadPreviewImages(previewSnapshot());
+      let rows: SourceCheck[];
+      try {
+        const snapshot = await loadPreviewImages(previewSnapshot());
+        if (controller.signal.aborted) return;
+        rows = await checkSourceWebsite(snapshot, controller.signal);
+      } catch (error) {
+        rows = [{ label: 'Comprobación', status: 'failed', detail: error instanceof Error ? error.message : 'No se pudo comprobar.' }];
+      }
       if (controller.signal.aborted) return;
-      const rows = await checkSourceWebsite(snapshot, controller.signal); if (!controller.signal.aborted) checks = rows;
+      await api.recordSourceChecks(checkedStoreId, checkedRevision, sourceCheckResult(rows), controller.signal);
+      if (!controller.signal.aborted) checks = rows;
     }
     catch (error) { if (!controller.signal.aborted) checks = [{ label: 'Comprobación', status: 'failed', detail: error instanceof Error ? error.message : 'No se pudo comprobar.' }]; }
     finally { if (!controller.signal.aborted) { checking = false; updateChecks(); } }

@@ -1205,7 +1205,23 @@ model StoreSourceVersion {
   restoredFrom Int?
   createdAt    DateTime @default(now())
 
+  checkResults SourceCheckResult[]
+
   @@id([storeId, revision])
+}
+
+model SourceCheckResult {
+  id             String             @id @default(cuid())
+  storeId        String
+  revision       Int
+  version        StoreSourceVersion @relation(fields: [storeId, revision], references: [storeId, revision], onDelete: Cascade)
+  snapshotDigest String
+  runtimeDigest  String
+  passed         Boolean
+  findings       Json
+  createdAt      DateTime           @default(now())
+
+  @@index([storeId, revision])
 }
 
 // Snapshots are created before applying an AI proposal or restoring an older
