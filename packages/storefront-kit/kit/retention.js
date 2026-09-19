@@ -1,6 +1,12 @@
 /* Optional commerce tools share the storefront's fonts, colors and controls. */
 (() => {
   'use strict';
+  // Published stores: personal fields are typed in pagosYa's secure form outside the design, not here.
+  function secureFields(form) {
+    if (window.PAGOSYA_HOSTED !== true || !form) return;
+    form.querySelectorAll('input[name=email],input[name=name],input[name=phone],input[name=consent]').forEach(input => input.closest('label')?.remove());
+    if (!form.querySelector('.pagosya-secure-note')) form.querySelector('[type=submit]')?.insertAdjacentHTML('beforebegin', '<p class="pagosya-secure-note">Tus datos se piden en un formulario seguro de pagosYa.</p>');
+  }
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   window.PAGOSYA_COMEBACK_RENDER = function renderComeback(el, card, options = {}) {
     if (!document.getElementById('pagosya-comeback-style')) {
@@ -149,14 +155,15 @@
     host.querySelector('.signup-reopen').addEventListener('click', open);
     const photo = host.querySelector('.pagosya-signup-photo img');
     photo?.addEventListener('error', () => { photo.parentElement.innerHTML = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`; }, { once: true });
+    secureFields(dialog.querySelector('form'));
     dialog.querySelector('form').addEventListener('submit', async event => {
       event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('[type=submit]'); const status = dialog.querySelector('[role=status]');
       if (button.disabled || !form.reportValidity()) return;
       const data = new FormData(form); button.disabled = true; status.textContent = 'Un momento…';
       try {
-        await api('subscribe', { email: String(data.get('email')).trim(), consent: true,
-          ...(String(data.get('name')).trim() ? { name: String(data.get('name')).trim() } : {}),
-          ...(String(data.get('phone')).trim() ? { phone: String(data.get('phone')).trim() } : {}),
+        await api('subscribe', { email: String(data.get('email') ?? '').trim() || undefined, consent: true,
+          ...(String(data.get('name') ?? '').trim() ? { name: String(data.get('name')).trim() } : {}),
+          ...(String(data.get('phone') ?? '').trim() ? { phone: String(data.get('phone')).trim() } : {}),
           ...(data.getAll('interests').length ? { interests: data.getAll('interests') } : {}) });
         remember(); state.subscribed = true; form.hidden = true; host.querySelector('.signup-reopen').hidden = true;
         status.textContent = '¡Ya formas parte de nuestra comunidad! Revisa tu correo para recibir nuestras novedades.';
@@ -257,12 +264,13 @@
         if (panel.querySelector('[data-retention-recovery]') || !getCart().length) return;
         const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', ''); panel.append(el);
         form(el, `<h3>¿Prefieres terminar después?</h3><form><label>Tu correo<input type="email" name="email" autocomplete="email" maxlength="254" required value="${escape(state.email)}"></label><label class="retention-consent"><input type="checkbox" name="consent" required ${state.consent ? 'checked' : ''}>Acepto recibir un recordatorio de este carrito si no termino la compra.</label><button type="submit">Guardar y recordármelo</button></form>`, async data => {
-          state.email = String(data.get('email')).trim(); state.consent = true;
-          const result = await api('carts', { email: state.email, consent: true, items: getCart(), ...(state.token ? { token: state.token } : {}) }); saveToken(result.token);
+          state.email = String(data.get('email') ?? state.email ?? '').trim(); state.consent = true;
+          const result = await api('carts', { email: state.email || undefined, consent: true, items: getCart(), ...(state.token ? { token: state.token } : {}) }); saveToken(result.token);
           return 'Carrito guardado. Te enviaremos un recordatorio si no completas la compra.';
         });
-        el.querySelector('[name=email]').addEventListener('input', event => { state.email = event.target.value; });
-        el.querySelector('[name=consent]').addEventListener('change', event => { state.consent = event.target.checked; });
+        secureFields(el.querySelector('form'));
+        el.querySelector('[name=email]')?.addEventListener('input', event => { state.email = event.target.value; });
+        el.querySelector('[name=consent]')?.addEventListener('change', event => { state.consent = event.target.checked; });
       });
     }
     window.PAGOSYA_RETENTION_REFRESH = renderRecovery;

@@ -204,20 +204,28 @@ describe('Inline storefront product options', () => {
     if (mode === 'demo') expect(JSON.parse(w.sessionStorage.getItem('pagosya:cart:marca'))[0].variantId).toBe('blue-m');
   });
 
-  it('sends stable variant IDs for bundle, credit, shipping quotes and checkout through the hosted bridge', async () => {
+  it('sends stable variant IDs through the hosted bridge and leaves address and credit to the trusted pagosYa form', async () => {
     const { w, click, choose, query } = await shop({ mode: 'hosted', settings: { shippingEnabled: true, bundlesEnabled: true, creditsEnabled: true } });
     click('.menu-add'); choose(0, 'Azul'); choose(1, 'M'); click('[data-variant-add]');
     click('[data-product-close]'); click('[data-checkout]');
-    query('[name=method]').value = 'delivery'; query('[name=shippingAddress]').value = 'Calle 1';
-    click('[data-shipping-quote]'); click('[data-credit-apply]');
+    // Published stores never render the personal fields inside the design's frame.
+    expect(query('[name=shippingAddress]')).toBeNull();
+    expect(query('[name=creditCode]')).toBeNull();
+    expect(query('[data-credit-apply]')).toBeNull();
+    expect(query('.pagosya-secure-note')?.textContent).toContain('formulario seguro de pagosYa');
+    query('[name=method]').value = 'delivery';
+    click('[data-shipping-quote]');
     await new Promise(resolve => setImmediate(resolve));
     query('[name=shippingZoneId]').innerHTML = '<option value="zone">Zona</option>';
     click('[data-pay]');
     await new Promise(resolve => setImmediate(resolve));
     const calls = w.PAGOSYA_HOSTED_REQUEST.mock.calls;
-    expect(calls.filter(([action]: any[]) => action === 'shipping')).toHaveLength(3);
+    expect(calls.filter(([action]: any[]) => action === 'shipping')).toHaveLength(2);
     expect(calls.some(([action]: any[]) => action === 'checkout')).toBe(true);
-    for (const [, payload] of calls) expect(payload.items).toEqual([{ paymentLinkId: 'shirt', variantId: 'blue-m', quantity: 1 }]);
+    for (const [, payload] of calls) {
+      expect(payload.items).toEqual([{ paymentLinkId: 'shirt', variantId: 'blue-m', quantity: 1 }]);
+      expect(payload.shippingAddress).toBeUndefined(); expect(payload.creditCode).toBeUndefined();
+    }
     expect(w.fetch).not.toHaveBeenCalled();
   });
 
@@ -277,11 +285,14 @@ describe('Inline storefront product options', () => {
     w.PAGOSYA_HOSTED_REQUEST.mockImplementation(async (action: string, request: any) => ({ ok: true, body: request.path === '' ? { recoveryEnabled: true } : request.path === 'carts' ? { token: 'token' } : { items: saved } }));
     w.eval(readFileSync(kitPath('retention.js'), 'utf8'));
     await new Promise(resolve => setImmediate(resolve));
-    query('[data-retention-recovery] [name=email]').value = 'buyer@example.test';
-    query('[data-retention-recovery] [name=consent]').checked = true;
+    // The email and consent are asked by pagosYa's trusted form, not inside the design.
+    expect(query('[data-retention-recovery] [name=email]')).toBeNull();
+    expect(query('[data-retention-recovery] [name=consent]')).toBeNull();
     query('[data-retention-recovery] form').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
     await new Promise(resolve => setImmediate(resolve));
-    expect(w.PAGOSYA_HOSTED_REQUEST.mock.calls.find(([, request]: any[]) => request.path === 'carts')[1].payload.items).toEqual(saved);
+    const cartsRequest = w.PAGOSYA_HOSTED_REQUEST.mock.calls.find(([, request]: any[]) => request.path === 'carts')[1];
+    expect(cartsRequest.payload.items).toEqual(saved);
+    expect(cartsRequest.payload.email || '').toBe('');
     w.document.dispatchEvent(new w.CustomEvent('pagosya:restore-cart', { detail: { items: [] } }));
     w.PAGOSYA_PREVIEW_QUERY = '?recover=token';
     await w.PAGOSYA_RETENTION_MOUNT();

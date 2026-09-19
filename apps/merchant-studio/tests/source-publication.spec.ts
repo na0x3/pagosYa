@@ -121,7 +121,8 @@ test('published source navigates in isolation, submits real forms and hands chec
   const frame=page.frameLocator('iframe');await expect(frame.getByRole('heading',{name:'Mi tienda'})).toBeVisible();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox','allow-scripts allow-forms');
   await frame.getByRole('button',{name:'Abrir formulario de contacto'}).click();
-  await frame.getByLabel('Nombre',{exact:true}).fill('Cliente');await frame.getByLabel('Correo',{exact:true}).fill('cliente@example.com');await frame.getByLabel('Tu mensaje').fill('Consulta real');await frame.getByRole('button',{name:'Enviar consulta'}).click();
+  await expect(frame.getByLabel('Correo',{exact:true})).toHaveCount(0);await frame.getByRole('button',{name:'Enviar consulta'}).click();
+  const secure=page.getByRole('dialog',{name:/Escribe a/});await secure.getByLabel('Nombre',{exact:true}).fill('Cliente');await secure.getByLabel('Correo',{exact:true}).fill('cliente@example.com');await secure.getByLabel('Tu mensaje').fill('Consulta real');await secure.getByRole('button',{name:'Enviar consulta'}).click();
   await expect(frame.locator('[data-contact-status]')).toContainText('Consulta recibida');expect(lead).toMatchObject({name:'Cliente',message:'Consulta real'});
   // The floating contact panel stays open after sending; close it before shopping.
   await frame.getByRole('button',{name:'Cerrar formulario de contacto'}).click();

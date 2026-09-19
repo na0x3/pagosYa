@@ -168,11 +168,16 @@ test('hosted storefront subscribes and preserves saved-cart identity across page
   const path = '/@fs' + new URL('../../checkout/src/source-storefront.ts', import.meta.url).pathname;
   await page.evaluate(async ({ path, store }) => { const { mountPublishedSource } = await import(path); document.body.innerHTML = '<main id="shop"></main>'; await mountPublishedSource(document.querySelector('#shop'), 'retention-test', store, async () => { document.querySelector('#shop')!.textContent = 'Pago listo'; }); }, { path, store });
   const frame = page.frameLocator('iframe'); const signup = frame.locator('[data-pagosya-subscribe]');
-  await signup.getByLabel('Tu correo', { exact: true }).fill('cliente@example.com'); await signup.getByRole('checkbox').check(); await signup.getByRole('button', { name: 'Unirme al club' }).click();
+  await expect(signup.getByLabel('Tu correo', { exact: true })).toHaveCount(0); await signup.getByRole('button', { name: 'Unirme al club' }).click();
+  const secureSignup = page.getByRole('dialog', { name: /Novedades de/ });
+  await secureSignup.getByLabel('Tu correo').fill('cliente@example.com'); await secureSignup.getByRole('checkbox').check(); await secureSignup.getByRole('button', { name: 'Suscribirme' }).click();
   await expect(signup.getByRole('status')).toContainText('comunidad'); expect(subscribed).toBe(true);
   await signup.getByRole('button', { name: 'Cerrar suscripción' }).click();
   await frame.getByRole('button', { name: 'Añadir Café', exact: true }).click(); const recovery = frame.locator('[data-retention-recovery]');
-  await recovery.getByLabel('Tu correo', { exact: true }).fill('cliente@example.com'); await recovery.getByRole('checkbox').check(); await recovery.getByRole('button').click(); await expect(recovery.getByRole('status')).toContainText('Carrito guardado');
+  await recovery.getByRole('button').click();
+  const secureCart = page.getByRole('dialog', { name: 'Guardar tu pedido para después' });
+  await secureCart.getByLabel('Tu correo').fill('cliente@example.com'); await secureCart.getByRole('checkbox').check(); await secureCart.getByRole('button', { name: 'Enviar' }).click();
+  await expect(recovery.getByRole('status')).toContainText('Carrito guardado');
   await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
   await frame.getByRole('button', { name: 'Pagar con pagosYa' }).click(); await expect(page.getByText('Pago listo')).toBeVisible(); expect(checkout.recoveryToken).toBe('c'.repeat(64));
 });

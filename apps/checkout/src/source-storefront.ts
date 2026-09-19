@@ -1,3 +1,4 @@
+import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
 import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
 import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './source-product-capabilities';
@@ -196,7 +197,16 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     pending.add(data.action);
     try {
       if (data.action === 'catalog') { reply(true, hostedCatalogImages(API_BASE_URL).rewrite(store)); return; }
-      const body = data.body && typeof data.body === 'object' ? data.body : {};
+      // Personal fields are never taken from the design's frame: pagosYa's own dialog collects them.
+      const frameBody = withoutPersonalFields(data.action, data.body && typeof data.body === 'object' ? data.body : {});
+      const interactive = ['checkout', 'lead', 'review'].includes(data.action) || (data.action === 'retention' && ['subscribe', 'carts', 'cards'].includes(String(frameBody.path)));
+      let previous: { values?: Record<string, string | boolean>; error?: string } | undefined;
+      for (let attempt = 0; ; attempt++) {
+      const personal = interactive ? await collectPersonalFields(data.action, frameBody, { storeName: store.storeName, creditsEnabled: (store as { creditsEnabled?: boolean }).creditsEnabled }, previous) : {};
+      if (personal === null) { reply(false, { message: 'Cancelaste el formulario seguro.', cancelled: true }); return; }
+      const body: Record<string, any> = data.action === 'retention' && (frameBody.payload || Object.keys(personal).length) ? { ...frameBody, payload: { ...(frameBody.payload as object || {}), ...personal } } : { ...frameBody, ...personal };
+      // A rejected entry (wrong tracking code, invalid credit…) reopens the dialog with the shopper's values.
+      const retry = (message: string) => { if (!interactive || attempt >= 4) return false; previous = { error: message, values: Object.fromEntries(Object.entries(personal).filter(([, value]) => value !== undefined && value !== null).map(([key, value]) => [key, typeof value === 'boolean' ? value : String(value)])) }; return true; };
       if (data.action === 'retention') {
         const path = typeof body.path === 'string' ? body.path : '';
         const read = path === '' || /^(cards|carts)\/[a-f0-9]{64}$/.test(path);
@@ -204,6 +214,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         if ((!read && !write) || (read && body.payload)) throw new Error('Solicitud no válida.');
         const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/retention${path ? '/' + path : ''}`, { method: read ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(read ? {} : { body: JSON.stringify(body.payload || {}) }), signal: AbortSignal.timeout(18000) });
         const json = await result.json();
+        if (!result.ok && result.status < 500 && retry(Array.isArray(json.message) ? json.message.join(' ') : json.message || 'Revisa los datos.')) continue;
         if (result.ok && path === 'carts' && /^[a-f0-9]{64}$/.test(json.token)) { recoveryToken = json.token; try { sessionStorage.setItem(`pagosya:recovery:${slug}`, recoveryToken!); } catch {} }
         reply(result.ok, json); return;
       }
@@ -215,6 +226,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       const endpoint = checkout ? 'cart-checkout' : shipping ? 'shipping/quote' : review ? 'content/reviews' : content ? `content?locale=${encodeURIComponent(typeof body.locale === 'string' ? body.locale.slice(0, 8) : 'es')}` : 'leads';
       const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/${endpoint}`, { method: content ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(content ? {} : { body: JSON.stringify(payload) }), signal: AbortSignal.timeout(18000) });
       const json = await result.json();
+      if (!result.ok && result.status < 500 && retry(Array.isArray(json.message) ? json.message.join(' ') : json.message || 'Revisa los datos.')) continue;
       if (!result.ok) { reply(false, { message: json.message || 'No se pudo completar la solicitud.' }); return; }
       if (checkout) {
         if (typeof json.clientSecret !== 'string' || !json.clientSecret) throw new Error('No se pudo abrir el pago. Intenta de nuevo.');
@@ -225,6 +237,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         await onPayment(json.clientSecret);
         cartStorage.clear();
       } else reply(true, shipping || content ? json : { submitted: true });
+      return;
+      }
     } catch (error) { reply(false, { message: error instanceof Error ? error.message : 'No se pudo completar la solicitud.' }); }
     finally { pending.delete(data.action); }
   };

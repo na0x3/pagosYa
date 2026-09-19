@@ -126,9 +126,14 @@ test('hosted source passes shipping through its confined parent bridge', async (
   }, { path, store });
   const frame = page.frameLocator('iframe');
   await frame.getByRole('button', { name: 'Añadir Café', exact: true }).click(); await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
-  const review = frame.locator('[data-checkout-review]'); await review.getByLabel('Dirección').fill('Calle de prueba 123');
+  const review = frame.locator('[data-checkout-review]');
+  // The address is typed in pagosYa's trusted form, never inside the generated design.
+  await expect(review.getByLabel('Dirección')).toHaveCount(0);
   await review.getByRole('button', { name: 'Calcular envío' }).click(); await review.getByLabel('Opción de envío').selectOption('r1');
   await expect(review.locator('[data-shipping-status]')).toContainText('115'); await review.getByRole('button', { name: 'Pagar con pagosYa' }).click();
+  const secure = page.getByRole('dialog', { name: 'Datos para tu pedido' });
+  await expect(secure).toContainText('Formulario seguro de pagosYa');
+  await secure.getByLabel('Dirección y referencia').fill('Calle de prueba 123'); await secure.getByRole('button', { name: 'Continuar al pago' }).click();
   await expect(page.getByText('Pago listo', { exact: true })).toBeVisible();
   expect(checkout).toMatchObject({ shippingZoneId: 'r1', shippingAddress: 'Calle de prueba 123', fulfillmentMethod: 'delivery' });
 });
