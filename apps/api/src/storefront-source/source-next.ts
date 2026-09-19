@@ -43,6 +43,27 @@ export function validateNextSources(files: SourceProjectFileDto[]) {
       if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'Function') throw new BadGatewayException('No uses evaluación de código.');
       if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
         const tag = node.tagName.getText(source).split('.').at(-1)!;
+        // Inspect authored intrinsic images only; trusted UI components own their markup.
+        if (node.tagName.getText(source) === 'img') {
+          const attribute = (name: string) => node.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(source) === name) as ts.JsxAttribute | undefined;
+          const value = (attr: ts.JsxAttribute | undefined): ts.Expression | undefined => {
+            const initial = attr?.initializer;
+            let expression = initial && ts.isJsxExpression(initial) ? initial.expression : initial;
+            while (expression && ts.isParenthesizedExpression(expression)) expression = expression.expression;
+            return expression;
+          };
+          const alt = value(attribute('alt'));
+          const hiddenAttribute = attribute('aria-hidden');
+          const hidden = value(hiddenAttribute);
+          const role = value(attribute('role'));
+          const decorative = Boolean(hiddenAttribute && !hiddenAttribute.initializer) || hidden?.kind === ts.SyntaxKind.TrueKeyword || Boolean(hidden && ts.isStringLiteral(hidden) && hidden.text === 'true')
+            || Boolean(role && ts.isStringLiteral(role) && role.text === 'presentation');
+          const empty = alt && (ts.isStringLiteral(alt) || ts.isNoSubstitutionTemplateLiteral(alt)) && !alt.text.trim();
+          if (!alt || [ts.SyntaxKind.NullKeyword, ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword].includes(alt.kind)
+            || ts.isIdentifier(alt) && alt.text === 'undefined' || empty && !decorative) {
+            throw new BadGatewayException(`Añade texto alternativo (alt) a cada imagen en ${file.path}.`);
+          }
+        }
         if (['script', 'html', 'head', 'body', 'object', 'embed', 'base', 'link', 'meta'].includes(tag)) throw new BadGatewayException(`Elemento no permitido: ${tag}`);
         if (tag === 'iframe') {
           const src = node.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(source) === 'src') as ts.JsxAttribute | undefined;

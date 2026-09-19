@@ -288,3 +288,70 @@ test('overflow reports measured dimensions and carousel crop warnings clear with
   copy.files[0].content = copy.files[0].content.replace('object-fit:cover', 'object-fit:contain').replace('width:1400px', 'max-width:100%');
   expect((await check(copy)).filter(row => row.status === 'failed' || row.label.includes('Encuadre del carrusel'))).toEqual([]);
 });
+
+const keyboardLabels = ['Controles visibles con teclado', 'Nombres accesibles con teclado', 'Indicador de foco visible', 'Carrito accesible con Tab', 'Carrito abre con Enter', 'Carrito cierra con Escape', 'El foco vuelve al pedido'];
+
+for (const scenario of [
+  { name: 'unnamed control', markup: '<button id="keyboard-defect"><span aria-hidden="true">★</span></button>', css: '', label: 'Nombres accesibles con teclado' },
+  { name: 'transparent control', markup: '<button id="keyboard-defect" style="opacity:0">Oculto</button>', css: '', label: 'Controles visibles con teclado' },
+  { name: 'missing focus indicator', markup: '<button id="keyboard-defect">Sin foco</button>', css: '#keyboard-defect:focus{outline:none!important;box-shadow:none!important}', label: 'Indicador de foco visible' },
+  { name: 'unchanging shadow', markup: '<button id="keyboard-defect">Sombra fija</button>', css: '#keyboard-defect{outline:none!important;box-shadow:0 0 0 3px black!important}', label: 'Indicador de foco visible' },
+  { name: 'untabbable cart', markup: '', css: '', label: 'Carrito accesible con Tab', replace: ['<button type="button" data-cart-open', '<button tabindex="-1" type="button" data-cart-open'] },
+  { name: 'click-only cart', markup: '', css: '', label: 'Carrito abre con Enter', replace: ['<button type="button" data-cart-open>Pedido <span data-cart-count>0</span></button>', '<div tabindex="0" role="button" data-cart-open>Pedido</div>'] },
+  { name: 'cancelled Escape', markup: '<script>document.addEventListener("keydown", e => {if(e.key === "Escape") e.preventDefault()})</script>', css: '', label: 'Carrito cierra con Escape' },
+  { name: 'stolen return focus', markup: '<button id="wrong-focus">Otro control</button><script>document.addEventListener("close", () => setTimeout(() => document.getElementById("wrong-focus").focus(), 0), true)</script>', css: '', label: 'El foco vuelve al pedido' },
+]) test(`keyboard checks report ${scenario.name}`, async ({ page }) => {
+  await page.goto('/');
+  const fixture = structuredClone(snapshot);
+  if (scenario.replace) fixture.files[0].content = fixture.files[0].content.replace(scenario.replace[0], scenario.replace[1]);
+  fixture.files[0].content += `<style>${scenario.css}</style>${scenario.markup}`;
+  const checks = await page.evaluate(async value => { const { checkSourceWebsite } = await import('/src/source-checks.ts'); return checkSourceWebsite(value as any); }, fixture);
+  expect(checks.filter(row => row.label.endsWith(scenario.label) && row.status === 'failed')).toHaveLength(4);
+});
+
+test('keyboard checks preserve real focus and agree with native Tab, Enter and Escape', async ({ page }) => {
+  await page.goto('/');
+  const checks = await page.evaluate(async value => {
+    const { checkSourceWebsite } = await import('/src/source-checks.ts');
+    const input = document.createElement('input'); input.id = 'merchant-focus'; document.body.append(input); input.focus();
+    return checkSourceWebsite(value as any);
+  }, snapshot);
+  for (const label of keyboardLabels) expect(checks.filter(row => row.label.endsWith(label)).map(row => row.status)).toEqual(['passed', 'passed', 'passed', 'passed']);
+  await expect(page.locator('#merchant-focus')).toBeFocused();
+  await page.evaluate(async value => {
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
+    const frame = document.createElement('iframe'); frame.title = 'Teclado real'; frame.sandbox.add('allow-scripts');
+    frame.srcdoc = sourcePreviewDocument(value as any); document.body.replaceChildren(frame);
+  }, snapshot);
+  const frame = page.frameLocator('iframe[title="Teclado real"]');
+  const opener = frame.locator('[data-cart-open]').first();
+  await expect(opener).toBeVisible();
+  await frame.locator('body').evaluate(() => {
+    (window as any).focusBaselines = new Map([...document.querySelectorAll('*')].map(el => {
+      const style = getComputedStyle(el);
+      return [el, { outline: style.outline, shadow: style.boxShadow }];
+    }));
+  });
+  let reached = false;
+  for (let step = 0; step < 60; step++) {
+    await page.keyboard.press('Tab');
+    const active = frame.locator(':focus');
+    if (!await active.count()) { if (step) break; else continue; }
+    await expect(active).toBeVisible();
+    await expect(active).toHaveAccessibleName(/\S/);
+    expect(await active.evaluate(el => {
+      const before = (window as any).focusBaselines.get(el), after = getComputedStyle(el);
+      return after.outline !== before.outline && after.outlineStyle !== 'none' && parseFloat(after.outlineWidth) > 0
+        || after.boxShadow !== before.shadow && after.boxShadow !== 'none';
+    })).toBe(true);
+    if (await opener.evaluate(el => el === document.activeElement)) {
+      reached = true;
+      await page.keyboard.press('Enter');
+      await expect(frame.locator('dialog.cart-drawer')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(frame.locator('dialog.cart-drawer')).not.toBeVisible();
+      await expect(opener).toBeFocused();
+    }
+  }
+  expect(reached).toBe(true);
+});
