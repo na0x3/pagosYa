@@ -1,3 +1,4 @@
+import { fetchVerification, mountVerificationSeal } from './verification';
 import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
@@ -94,6 +95,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   frame.style.cssText = 'display:block;width:100%;height:100dvh;border:0;background:white';
   app.replaceChildren(frame);
   document.body.classList.add('source-store-page');
+  // The seal is platform chrome outside the sandboxed design; owner previews do not show it.
+  if (!merchantPreview) void fetchVerification(slug).then(verification => { if (verification) mountVerificationSeal(verification); });
   const cartStorage = sourceCartStorage(slug);
   const themeKey = `pagosya:source-theme:${slug}`;
   let recoveryToken: string | undefined;

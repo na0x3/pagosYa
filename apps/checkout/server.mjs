@@ -25,7 +25,7 @@ const mimeTypes = new Map([
 ]);
 
 function responsePath(pathname) {
-  if (pathname === "/" || pathname === "/index.html" || /^\/track\/[^/]+\/?$/.test(pathname) || /^\/p\/[^/]+\/?$/.test(pathname) || /^\/s\/[^/]+(?:\/p\/[^/]+)?\/?$/.test(pathname)) {
+  if (pathname === "/" || pathname === "/index.html" || /^\/track\/[^/]+\/?$/.test(pathname) || /^\/verificar\/[^/]+\/?$/.test(pathname) || /^\/p\/[^/]+\/?$/.test(pathname) || /^\/s\/[^/]+(?:\/p\/[^/]+)?\/?$/.test(pathname)) {
     return path.join(distDir, "index.html");
   }
   let decoded;

@@ -371,4 +371,33 @@ export class PublicStoresService implements OnModuleDestroy {
       update: { isActive: true },
     });
     return { subscribed: true };
-  }}
+  }
+
+  /** What a shopper may verify about a store, from platform records only. Deliberately excludes the
+   * legal name, NIT and representative: for a sole trader those identify a person. */
+  async verification(slug: string) {
+    const store = await this.prisma.store.findFirst({
+      where: { slug, ...PUBLIC_STORE_WHERE },
+      select: { id: true, name: true, slug: true, merchantId: true, createdAt: true, checkoutMode: true, merchant: { select: { status: true } },
+        customDomains: { where: { status: "ACTIVE" }, select: { hostname: true }, orderBy: { createdAt: "asc" }, take: 1 } },
+    });
+    if (!store) throw new NotFoundException("Tienda no encontrada");
+    const [kyc, invoicing, reviews] = await Promise.all([
+      this.prisma.merchantKycSubmission.findFirst({ where: { merchantId: store.merchantId, status: "APPROVED" }, orderBy: { reviewedAt: "asc" }, select: { reviewedAt: true } }),
+      this.prisma.merchantInvoicingProfile.findFirst({ where: { merchantId: store.merchantId }, select: { cuis: true } }),
+      this.prisma.storeReview.aggregate({ where: { storeId: store.id, status: "PUBLISHED" }, _count: { _all: true }, _avg: { rating: true } }),
+    ]);
+    const verified = store.merchant.status === MerchantStatus.ACTIVE && Boolean(kyc);
+    return {
+      storeName: store.name,
+      slug: store.slug,
+      verifiedBusiness: verified,
+      verifiedSince: verified ? kyc?.reviewedAt?.toISOString().slice(0, 10) ?? null : null,
+      electronicInvoicing: Boolean(invoicing?.cuis),
+      securePayments: store.checkoutMode === "payment" && verified,
+      onPlatformSince: store.createdAt.toISOString().slice(0, 10),
+      reviews: { count: reviews._count._all, average: reviews._avg.rating ? Math.round(reviews._avg.rating * 10) / 10 : null },
+      officialDomain: store.customDomains[0]?.hostname ?? null,
+    };
+  }
+}

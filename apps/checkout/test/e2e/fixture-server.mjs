@@ -29,6 +29,8 @@ const api = createServer((request, response) => {
       ? { head: '<title>Tienda de prueba</title>', body: '<h1>Tienda de prueba</h1>' }
       : url.pathname === '/v1/stores/public/seguridad/store'
         ? { storeId: 'store_seguridad', storeName: 'Tienda de prueba', publishedSourceRevision: 1, items: [], categories: [], collections: [] }
+        : url.pathname === '/v1/stores/public/seguridad/verification'
+          ? { storeName: 'Tienda de prueba', slug: 'seguridad', verifiedBusiness: true, verifiedSince: '2026-08-02', electronicInvoicing: true, securePayments: true, onPlatformSince: '2026-07-01', reviews: { count: 3, average: 4.7 }, officialDomain: null }
         : url.pathname === '/v1/stores/public/seguridad/source-site'
           ? { published: true, snapshot }
           : null;

@@ -41,6 +41,12 @@ export class StoresPublicController {
     return this.customDomains.resolve(hostname);
   }
 
+  @Get(":slug/verification")
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  verification(@Param("slug") slug: string) {
+    return this.publicStores.verification(slug);
+  }
+
   @Get(":slug/store")
   getStore(@Param("slug") slug: string, @Query("preview") preview?: string) {
     return this.publicStores.getStorePublic(slug, { trackView: preview !== "1" });

@@ -9,7 +9,7 @@ export default {
   outputDir: '../../test-results/frame-navigation',
   use: { browserName: 'chromium', headless: true },
   webServer: {
-    command: 'pnpm --filter @pagosya/shared-types build && VITE_API_BASE_URL=http://127.0.0.1:4518/v1 pnpm --filter @pagosya/checkout build && node apps/checkout/test/e2e/fixture-server.mjs',
+    command: 'pnpm_config_verify_deps_before_run=false pnpm --filter @pagosya/shared-types build && VITE_API_BASE_URL=http://127.0.0.1:4518/v1 pnpm_config_verify_deps_before_run=false pnpm --filter @pagosya/checkout build && node apps/checkout/test/e2e/fixture-server.mjs',
     cwd: new URL('../../../..', import.meta.url).pathname,
     url: 'http://127.0.0.1:4517/s/seguridad',
     timeout: 120_000,

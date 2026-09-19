@@ -1,3 +1,4 @@
+import { mountVerificationPage } from './verification';
 import { sourceCanConfigureProduct } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
 import { markPrivateStorePage } from './store-seo';
@@ -30,6 +31,13 @@ import { renderProductPage } from "./storefront/product-page";
 import { renderStore } from "./storefront/store-page";
 
 async function main() {
+  const verificationRoute = /^\/verificar\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
+  if (verificationRoute) {
+    let slug = '';
+    try { slug = decodeURIComponent(verificationRoute); } catch {}
+    await mountVerificationPage(slug, app);
+    return;
+  }
   const intlReturn = parseReturnParams(window.location.search);
   if (intlReturn) {
     await renderInternationalReturn(intlReturn.paymentIntentId);
