@@ -48,6 +48,21 @@ One folder per NestJS module; `app.module.ts` wires them together. Grouped by re
 
 Conventions: controllers stay thin and call a service; DTOs in `dto/` validate input; every query that touches store data is scoped to a store the caller owns.
 
+## Checkout app (`apps/checkout/src`)
+
+`main.ts` is a thin bootstrap: it reads the URL, decides which page to show (store, payment, debt collection, order tracking, international return), and wires the editor bridge when the page runs inside the Studio preview. Everything else lives in feature folders:
+
+| Folder | What it holds |
+|--------|---------------|
+| `storefront/` | The store itself. `store-page.ts` renders the store and product pages, the catalog grid, in-store navigation and the cart review dialog; these call each other, so they share one module. Around it: routes, header/footer, catalog, product cards, locations, theme, motion. |
+| `cart/` | Cart contents, prices, discounts, stock limits, promo codes, persistence (`cart.ts`) and what the review dialog shows (`cart-review.ts`). |
+| `checkout/` | Payment form, payment result screens, buyer contact details, debt collection. |
+| `orders/` | The order tracking page. |
+| `preview-editor/` | Only active inside the Studio editor iframe: patch sanitizing, selection, toolbar, gestures, annotations, live updates, and `bridge.ts` (the message listener). Layered base → toolbar → selection → gestures → annotate, with no import cycles. |
+| `ui/` | Icons, HTML formatting/escaping, color math, the `#app` mount point. |
+
+Mutable page state lives on the `state` object in `state.ts` (ES modules cannot reassign imported variables); `preview-mode.ts` holds the URL-derived preview/editor/owner flags.
+
 ## Storefront runtime
 
 Generated storefronts ship small browser runtimes (`commerce.js`, `privacy.js`, `retention.js`, `video.js`), which live in the `@pagosya/storefront-kit` package (`packages/storefront-kit/kit/`). The API copies them into published sites via `kitPath()`/`readKitFile()`; `checkout` and `merchant-studio` import them from the package for rendering and previews.
