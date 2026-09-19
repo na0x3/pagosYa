@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { PRODUCT_HIGHLIGHT_ICONS } from '../payment-links/product-highlights';
-import { join } from 'node:path';
 import { withSourceCommerceDesign } from './source-commerce-design';
+import { kitPath } from '@pagosya/storefront-kit';
 
-const kit = (path: string) => readFileSync(join(__dirname, 'source-kit', path), 'utf8');
+const kit = (path: string) => readFileSync(kitPath(path), 'utf8');
 const home = '<html><head><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="brand.css"></head><body class="brand-theme"><header class="site-header"><a class="wordmark" href="index.html"><img src="assets/logo.png">Marca</a><nav><a href="#catalogo">Catálogo</a><a href="pages/guide.html?lang=es#intro">Guía</a></nav></header><main id="catalogo">Catálogo</main><footer class="site-footer"><a href="#contacto">Contacto</a></footer></body></html>';
 const files = () => [
   { path: 'index.html', content: home },

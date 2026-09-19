@@ -6,8 +6,11 @@
     "deleteOutDir": true,
     "watchAssets": false,
     "assets": [
-      { "include": "stores/source-kit/**/*", "outDir": "dist/src" },
-      { "include": "rails/adapters/dlocal/fixtures/*.json", "watchAssets": true, "outDir": "dist/src" }
+      {
+        "include": "rails/adapters/dlocal/fixtures/*.json",
+        "watchAssets": true,
+        "outDir": "dist/src"
+      }
     ]
   }
 }

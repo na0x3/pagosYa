@@ -5,7 +5,6 @@ import { normalizeProductVariants, totalVariantStock, type ProductVariant } from
 import { applyVariantOperations } from './source-product-options';
 import { applyProductSubscriptionOperations, validateProductSubscriptions } from '../payment-links/product-subscriptions';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { currentSourceRuntime } from './source-runtime';
 import { publicationState } from './source-publishing.service';
 import { withSourceMotion, type SourceMotionMode } from './source-motion';
@@ -18,6 +17,7 @@ import { UploadsService } from "../uploads/uploads.service";
 import { EditSourceFileDto, SaveSourceProjectDto } from "./dto/save-source-project.dto";
 import { sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot, SourceProjectSnapshot } from "./source-project";
 import type { SourceProduct, SourceProductOperation } from './source-products';
+import { kitPath } from '@pagosya/storefront-kit';
 
 type GenerationSave = { id: string; enablePayments?: boolean; products?: SourceProduct[]; productOperations?: SourceProductOperation[]; data: Prisma.StoreSourceGenerationUpdateManyMutationInput };
 const summarySelect = { revision: true, label: true, digest: true, restoredFrom: true, createdAt: true } as const;
@@ -260,7 +260,7 @@ export class SourceProjectsService {
     const snapshot = sourceProjectSnapshot({ ...stored, revision, label: version.label });
     if (sourceProjectDigest(snapshot) !== version.digest) throw new ConflictException("Source project integrity check failed");
     const runtime = await currentSourceRuntime(snapshot);
-    for (const name of ['build.mjs', 'server.mjs']) { const file = runtime.files.find(f => f.path === name); if (file) file.content = await readFile(join(__dirname, 'source-kit', name), 'utf8'); }
+    for (const name of ['build.mjs', 'server.mjs']) { const file = runtime.files.find(f => f.path === name); if (file) file.content = await readFile(kitPath(name), 'utf8'); }
     return { filename: `storefront-r${revision}-${version.digest.slice(0, 12)}.zip`, buffer: sourceProjectArchive(isNextSource(runtime.files) ? { ...runtime, files: nextProjectExport(runtime.files, (await this.ownedStore(merchantId, storeId)).slug).map(f => ({ ...f, encoding: f.encoding || 'utf8' })) } : runtime, revision, version.restoredFrom) };
   }
 }

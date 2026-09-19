@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
 test('merchant reviews imported brand evidence, saves rules, and configures shipping on desktop and mobile', async ({ page }) => {
   let brand: any = { revision: 0, data: { confirmed: [], suggested: [] } };
@@ -51,7 +52,7 @@ test('merchant reviews imported brand evidence, saves rules, and configures ship
 });
 
 test('published runtime quotes shipping and submits only selected service and address', async ({ page }) => {
-  const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
   let payload: any;
   const store = { storeName: 'Café', checkoutMode: 'payment', shippingEnabled: true, shippingPickupEnabled: false, locations: [], items: [{ id: 'p1', name: 'Café', amount: 10000, currency: 'BOB', stock: 10, imageUrls: [] }], categories: [] };
   await page.goto('/?demo=1');
@@ -101,7 +102,7 @@ test('standard checkout shows server totals and requires delivery details', asyn
 });
 
 test('hosted source passes shipping through its confined parent bridge', async ({ page }) => {
-  const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
   const store = { storeName: 'Café', checkoutMode: 'payment', shippingEnabled: true, shippingPickupEnabled: false, locations: [], items: [{ id: 'p1', name: 'Café', amount: 10000, currency: 'BOB', stock: 10 }], categories: [] };
   const snapshot = { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<main><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p></main><script src="config.js"></script><script src="commerce.js"></script>' },

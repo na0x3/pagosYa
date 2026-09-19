@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './api';
-import '../../api/src/stores/source-kit/retention.js';
+import '@pagosya/storefront-kit/kit/retention.js';
 
 /** Payment proof unlocks only this order; the private email link unlocks past visits. */
 export async function mountComebackCard(root: HTMLElement, trackingToken: string, paymentIntentId?: string) {

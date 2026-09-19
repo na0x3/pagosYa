@@ -10,7 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@pagosya/shared-types": "workspace:*"
+    "@pagosya/shared-types": "workspace:*",
+    "@pagosya/storefront-kit": "workspace:*"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",

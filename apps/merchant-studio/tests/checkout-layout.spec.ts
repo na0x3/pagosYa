@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
-const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
-const retention = readFileSync(new URL('../../api/src/stores/source-kit/retention.js', import.meta.url), 'utf8');
+const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
+const retention = readFileSync(kitPath('retention.js'), 'utf8');
 
 for (const saved of [null, 'http://localhost:5199']) test(`Studio uses ${saved ? 'the configured checkout server' : 'the development checkout port'}`, async ({ page }) => {
   if (saved) await page.addInitScript(value => sessionStorage.setItem('pagosya_checkout_origin', value), saved);

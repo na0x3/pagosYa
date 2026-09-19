@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { kitPath } from '@pagosya/storefront-kit';
 const root = path.resolve(import.meta.dirname,'../../../examples/independent-cafe');
 const files: Array<{path:string;content:string;encoding:'utf8'|'base64'}> = [];
 function scan(dir:string,prefix='') { for(const e of readdirSync(dir,{withFileTypes:true})) { if(e.name==='dist'||e.name.startsWith('.'))continue;const p=path.join(dir,e.name),name=prefix+e.name;if(e.isDirectory())scan(p,name+'/');else files.push({path:name,content:readFileSync(p).toString(/\.(webp|ttf)$/.test(name)?'base64':'utf8'),encoding:/\.(webp|ttf)$/.test(name)?'base64':'utf8'}); } }
 scan(root);
-files.find(file => file.path === 'commerce.js')!.content = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+files.find(file => file.path === 'commerce.js')!.content = readFileSync(kitPath('commerce.js'), 'utf8');
 const snapshotCatalog = JSON.parse(files.find(f => f.path === 'config.js')!.content.split('=').slice(1).join('=').trim().replace(/;$/, '')).data;
 const snapshot={schemaVersion:1,brief:{businessType:'Cafetería',audience:'Vecinos',primaryAction:'Hacer un pedido',visualDirection:'Menú editorial'},files};
 

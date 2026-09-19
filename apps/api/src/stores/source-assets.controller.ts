@@ -3,7 +3,6 @@ import { IsArray, ArrayMaxSize, IsIn, IsInt, IsOptional, IsString, Max, MaxLengt
 import { Type } from 'class-transformer';
 import { Throttle } from '@nestjs/throttler';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { SourceProjectsService } from './source-projects.service';
@@ -12,6 +11,7 @@ import { SOURCE_ASSET_MANIFEST, SOURCE_ASSET_ROLES, SOURCE_ICON_NAMES, sourceAss
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from './source-generation-policy';
 import type { SourceProjectSnapshot } from './source-project';
 import { SourceProjectRevisionDto } from './dto/save-source-project.dto';
+import { kitPath } from '@pagosya/storefront-kit';
 
 class AssetRoleDto {
   @IsString() @MaxLength(200) path!: string;
@@ -36,7 +36,7 @@ export class SourceAssetsController {
   @Header('Cache-Control', 'private, no-store')
   async assets(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('revision', ParseIntPipe) revision: number) {
     const saved = await this.projects.version(merchant.id, storeId, revision);
-    const icons = await Promise.all(SOURCE_ICON_NAMES.map(async name => ({ name, path: `assets/icons/${name}.svg`, svg: await readFile(join(__dirname, 'source-kit/icons', `${name}.svg`), 'utf8') })));
+    const icons = await Promise.all(SOURCE_ICON_NAMES.map(async name => ({ name, path: `assets/icons/${name}.svg`, svg: await readFile(kitPath('icons', `${name}.svg`), 'utf8') })));
     return { revision, assets: sourceAssetInventory((saved.snapshot as unknown as SourceProjectSnapshot).files), icons, iconLibrary: 'Lucide 1.31.0' };
   }
   @Patch('assets')

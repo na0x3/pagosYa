@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const commerce=readFileSync(new URL('../../api/src/stores/source-kit/commerce.js',import.meta.url),'utf8');
+import { kitPath } from '@pagosya/storefront-kit';
+const commerce=readFileSync(kitPath('commerce.js'),'utf8');
 const store={storeName:'Prueba',checkoutMode:'payment',contactFormEnabled:true,items:[{id:'p1',name:'Café',amount:10000,currency:'BOB',stock:4}],categories:[],locations:[]};
 const snapshot={schemaVersion:1,brief:{businessType:'Café',audience:'Vecinos',primaryAction:'Comprar',visualDirection:'Editorial'},files:[
   {path:'index.html',content:'<meta charset="utf-8"><main><h1>Mi tienda</h1><a href="checkout.html">Checkout</a><section data-pagosya-catalog></section><button type="button" data-cart-open>Pedido <span data-cart-count>0</span></button><section data-pagosya-cart hidden></section><p data-pagosya-status></p></main><script src="config.js"></script><script src="commerce.js"></script>'},

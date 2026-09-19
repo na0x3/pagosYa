@@ -53,11 +53,12 @@ describe('Authored commerce routes', () => {
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
+import { kitPath } from '@pagosya/storefront-kit';
 
 // Reuse the workspace's existing DOM test dependency; no browser download or
 // production dependency is needed to execute the entire plain-JS runtime.
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
-const commerce = readFileSync(join(__dirname, 'source-kit/commerce.js'), 'utf8');
+const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 const variant = (id: string, color: string, size: string, amount = 2500, stock: number | null = 2) => ({
   id, name: `${color} / ${size}`, amount, stock,
   options: [{ name: 'Color', value: color }, { name: 'Talla', value: size }],
@@ -274,7 +275,7 @@ describe('Inline storefront product options', () => {
     click('.menu-add'); choose(0, 'Azul'); choose(1, 'M'); click('[data-variant-add]'); click('[data-product-close]');
     const saved = [{ paymentLinkId: 'shirt', variantId: 'blue-m', quantity: 1 }];
     w.PAGOSYA_HOSTED_REQUEST.mockImplementation(async (action: string, request: any) => ({ ok: true, body: request.path === '' ? { recoveryEnabled: true } : request.path === 'carts' ? { token: 'token' } : { items: saved } }));
-    w.eval(readFileSync(join(__dirname, 'source-kit/retention.js'), 'utf8'));
+    w.eval(readFileSync(kitPath('retention.js'), 'utf8'));
     await new Promise(resolve => setImmediate(resolve));
     query('[data-retention-recovery] [name=email]').value = 'buyer@example.test';
     query('[data-retention-recovery] [name=consent]').checked = true;

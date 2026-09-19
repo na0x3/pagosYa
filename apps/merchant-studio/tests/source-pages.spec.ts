@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
+import { kitPath } from '@pagosya/storefront-kit';
+const kit = (name: string) => readFileSync(kitPath(`${name}`), 'utf8');
 const photo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 const data = { storeName: 'Taller Alba', checkoutMode: 'payment', items: [{ id: 'p1', name: 'Bolso de algodón', description: 'Algodón natural. Hecho en La Paz.', tags: ['Material: Algodón natural'], amount: 15000, currency: 'BOB', stock: 3, imageUrls: [photo, photo.replace('iVBOR', 'iVBOR')] }], locations: [{ id: 'central', name: 'Taller central', address: 'La Paz', pickupEnabled: true, deliveryEnabled: true }], categories: [] };
 const files = [

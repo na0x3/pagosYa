@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { kitPath } from '@pagosya/storefront-kit';
 export const SOURCE_MOTION_MODES = ['auto', 'off', 'subtle', 'expressive'] as const;
 export type SourceMotionMode = typeof SOURCE_MOTION_MODES[number];
 export function requestedSourceMotion(instruction: string): SourceMotionMode | undefined {
@@ -29,7 +29,7 @@ export async function withSourceMotion(files: SourceProjectFileDto[], mode: Sour
   if (!SOURCE_MOTION_MODES.includes(mode)) throw new BadRequestException('Elige un modo de movimiento válido.');
   const config = readConfig(files);
   if (!files.some(f => f.path === 'commerce.js' && f.encoding !== 'base64')) throw new BadRequestException('Este sitio necesita el runtime de comercio.');
-  const runtime = await readFile(join(__dirname, 'source-kit', 'video.js'), 'utf8') + '\n' + await readFile(join(__dirname, 'source-kit', 'motion.js'), 'utf8');
+  const runtime = await readFile(kitPath('video.js'), 'utf8') + '\n' + await readFile(kitPath('motion.js'), 'utf8');
   return files.map(file => file.path === 'config.js'
     ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, motion: mode })};\n` }
     : file.path === 'commerce.js'

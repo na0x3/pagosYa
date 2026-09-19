@@ -1,9 +1,9 @@
 import { prepareSourceLocations } from './source-location';
 import { compactPreviewImageData } from './source-preview-media';
-import videoLoopRuntime from '../../api/src/stores/source-kit/video.js?raw';
-import privacyRuntime from '../../api/src/stores/source-kit/privacy.js?raw';
-import commerceRuntime from '../../api/src/stores/source-kit/commerce.js?raw';
-import retentionRuntime from '../../api/src/stores/source-kit/retention.js?raw';
+import videoLoopRuntime from '@pagosya/storefront-kit/kit/video.js?raw';
+import privacyRuntime from '@pagosya/storefront-kit/kit/privacy.js?raw';
+import commerceRuntime from '@pagosya/storefront-kit/kit/commerce.js?raw';
+import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
 
 export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" }

@@ -18,6 +18,7 @@ packages/
   shared-types/        Types shared by api, checkout, and widget. No runtime dependencies on apps.
   sdk-node/            Public Node SDK for merchant backends.
   widget-js/           Embeddable pagosya.js that mounts the checkout iframe.
+  storefront-kit/      Runtimes, page templates, fonts, and icons copied into every generated storefront.
 docs/                  Current feature docs. docs/history/ holds dated reports and archived designs.
 ```
 
@@ -45,7 +46,7 @@ Conventions: controllers stay thin and call a service; DTOs in `dto/` validate i
 
 ## Storefront runtime
 
-Generated storefronts ship small browser runtimes (`commerce.js`, `privacy.js`, `retention.js`, `video.js`), which currently live in `apps/api/src/stores/source-kit/`. The API injects them into published sites; `checkout` and `merchant-studio` import them directly for rendering and previews. Moving them into a shared package is the next cleanup step.
+Generated storefronts ship small browser runtimes (`commerce.js`, `privacy.js`, `retention.js`, `video.js`), which live in the `@pagosya/storefront-kit` package (`packages/storefront-kit/kit/`). The API copies them into published sites via `kitPath()`/`readKitFile()`; `checkout` and `merchant-studio` import them from the package for rendering and previews.
 
 ## Tests
 

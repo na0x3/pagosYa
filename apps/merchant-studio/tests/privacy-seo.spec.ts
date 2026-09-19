@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
+import { kitPath } from '@pagosya/storefront-kit';
+const kit = (name: string) => readFileSync(kitPath(`${name}`), 'utf8');
 
 test('hosted visitors opt in before attribution, can revoke it, and retain checkout and product navigation', async ({ page }) => {
   const slug = 'privacy-seo-test';

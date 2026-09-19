@@ -1,48 +1,6 @@
 [
   {
     "type": "dependency",
-    "from": "apps/checkout/src/comeback-card.ts",
-    "to": "apps/api/src/stores/source-kit/retention.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/retention.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/src/main.ts",
-    "to": "apps/api/src/stores/source-kit/retention.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/retention.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/src/privacy.ts",
-    "to": "apps/api/src/stores/source-kit/privacy.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/privacy.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "apps/checkout/src/source-storefront.ts",
     "to": "apps/merchant-studio/src/source-preview-media.ts",
     "unresolvedTo": "../../merchant-studio/src/source-preview-media",
@@ -141,20 +99,6 @@
   },
   {
     "type": "dependency",
-    "from": "apps/merchant-studio/src/comeback-preview.ts",
-    "to": "apps/api/src/stores/source-kit/retention.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/retention.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "apps/merchant-studio/src/source-create-product.ts",
     "to": "apps/merchant-dashboard/src/product-options.css",
     "unresolvedTo": "../../merchant-dashboard/src/product-options.css",
@@ -175,62 +119,6 @@
     "dependencyTypes": [
       "local",
       "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/merchant-studio/src/source-preview.ts",
-    "to": "apps/api/src/stores/source-kit/commerce.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/commerce.js?raw",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/merchant-studio/src/source-preview.ts",
-    "to": "apps/api/src/stores/source-kit/privacy.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/privacy.js?raw",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/merchant-studio/src/source-preview.ts",
-    "to": "apps/api/src/stores/source-kit/retention.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/retention.js?raw",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/merchant-studio/src/source-preview.ts",
-    "to": "apps/api/src/stores/source-kit/video.js",
-    "unresolvedTo": "../../api/src/stores/source-kit/video.js?raw",
-    "dependencyTypes": [
-      "local",
       "import"
     ],
     "rule": {

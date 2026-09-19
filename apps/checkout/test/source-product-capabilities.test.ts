@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from '../src/source-product-capabilities';
+import { kitPath } from '@pagosya/storefront-kit';
 const variant = (id: string, options = [{ name: 'Color', value: 'Salvia' }]) => ({ id, name: id, amount: 8900, options });
 describe('authored product route capability', () => {
   it('accepts real bounded options and named legacy variants', () => {
@@ -15,7 +16,7 @@ describe('authored product route capability', () => {
     }
   });
   it('requires the version present in the actual current commerce bundle', () => {
-    const runtime = readFileSync(resolve(__dirname, '../../api/src/stores/source-kit/commerce.js'), 'utf8');
+    const runtime = readFileSync(kitPath('commerce.js'), 'utf8');
     expect(runtime).toContain(SOURCE_PRODUCT_OPTIONS_MARKER);
   });
 });

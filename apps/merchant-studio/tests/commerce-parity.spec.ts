@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
 test('merchant issues credit, preserves failed submissions and uploads private files on mobile', async ({ page }) => {
   let fail = true, issued: any, upload = false; const credits: any[] = []; const files: any[] = []; const errors: string[] = [];
@@ -41,7 +42,7 @@ test('merchant issues credit, preserves failed submissions and uploads private f
 });
 
 test('exported digital checkout applies credit and omits physical delivery', async ({ page }) => {
-  const runtime = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+  const runtime = readFileSync(kitPath('commerce.js'), 'utf8');
   let payload: any; const code = 'ABCD1234-ABCD1234-ABCD1234-ABCD1234';
   const store = { storeName: 'Digital', checkoutMode: 'payment', creditsEnabled: true, shippingEnabled: true, locations: [{ id: 'branch', name: 'Local', pickupEnabled: true }], items: [{ id: 'p1', name: 'Guía', fulfillmentType: 'DIGITAL', amount: 10000, currency: 'BOB', stock: null, imageUrls: [] }], categories: [] };
   await page.goto('/?demo=1');

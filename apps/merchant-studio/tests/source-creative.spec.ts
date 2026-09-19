@@ -4,13 +4,14 @@ import { compileNextPreview, nextProjectScaffold } from '../../api/src/stores/so
 import { withCreativeAssets } from '../../api/src/stores/source-creative-assets';
 import { creativeStoreFiles } from '../../api/src/stores/fixtures/creative-store';
 import { nextBrief, nextStoreConfig } from '../../api/src/stores/fixtures/next-store';
+import { kitPath } from '@pagosya/storefront-kit';
 
 let files: Awaited<ReturnType<typeof compileNextPreview>>;
 test.beforeAll(async () => {
   const authored = creativeStoreFiles();
   files = withCreativeAssets([...authored, ...await compileNextPreview(authored), ...nextProjectScaffold('creative'),
     { path: 'brand.css', content: '/* fixture */' },
-    ...['commerce.js', 'commerce-pages.css', 'motion.js'].map(path => ({ path: path === 'motion.js' ? 'site.js' : path, content: readFileSync(new URL(`../../api/src/stores/source-kit/${path}`, import.meta.url), 'utf8') })),
+    ...['commerce.js', 'commerce-pages.css', 'motion.js'].map(path => ({ path: path === 'motion.js' ? 'site.js' : path, content: readFileSync(kitPath(`${path}`), 'utf8') })),
   ]).filter((file, index, all) => all.findLastIndex(candidate => candidate.path === file.path) === index);
 });
 

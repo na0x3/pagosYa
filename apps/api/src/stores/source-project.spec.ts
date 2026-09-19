@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
 import { SaveSourceProjectDto } from "./dto/save-source-project.dto";
+import { kitPath } from '@pagosya/storefront-kit';
 
 export function sourceFixture(): SaveSourceProjectDto {
   return {
@@ -38,7 +39,7 @@ describe("Independent source artifacts", () => {
       const archive = join(directory, 'source.zip');
       writeFileSync(archive, sourceProjectArchive(snapshot, 1));
       execFileSync('python3', ['-c', 'import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', archive, directory]);
-      writeFileSync(join(directory, 'build.mjs'), readFileSync(join(__dirname, 'source-kit/build.mjs')));
+      writeFileSync(join(directory, 'build.mjs'), readFileSync(kitPath('build.mjs')));
       execFileSync(process.execPath, ['build.mjs'], { cwd: directory });
       expect(readFileSync(join(directory, 'dist/assets/clip.mp4')).equals(bytes)).toBe(true);
     } finally { rmSync(directory, { recursive: true, force: true }); }

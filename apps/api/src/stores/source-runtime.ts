@@ -1,6 +1,5 @@
 import { withSourceSeo } from './source-seo';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { sourceMotionMode, withSourceMotion } from './source-motion';
 import type { SourceProjectSnapshot } from './source-project';
 import { sourceCommerceRoutes } from './source-commerce-pages';
@@ -8,10 +7,11 @@ import { withSourceCommerceDesign } from './source-commerce-design';
 import { withSourceFonts } from './source-fonts';
 import { withSourceAssets } from './source-asset-library';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
+import { kitPath } from '@pagosya/storefront-kit';
 
 /** Editor and hosted pages use the same commerce renderer without rewriting saved history. */
 export async function currentSourceRuntime(snapshot: SourceProjectSnapshot): Promise<SourceProjectSnapshot> {
-  const commerce = await readFile(join(__dirname, 'source-kit', 'privacy.js'), 'utf8') + '\n' + await readFile(join(__dirname, 'source-kit', 'commerce.js'), 'utf8') + '\n' + await readFile(join(__dirname, 'source-kit', 'retention.js'), 'utf8');
+  const commerce = await readFile(kitPath('privacy.js'), 'utf8') + '\n' + await readFile(kitPath('commerce.js'), 'utf8') + '\n' + await readFile(kitPath('retention.js'), 'utf8');
   const prepared = applySourceLayoutBaseline(await withSourceFonts(await withSourceAssets(snapshot.files, snapshot.files)));
   if (!prepared.some(f => f.path === 'commerce.js') || !prepared.some(f => f.path === 'config.js')) return { ...snapshot, files: prepared.map(f => ({ ...f, encoding: f.encoding || 'utf8' })) };
   const substituted = prepared.map(f => {
@@ -27,7 +27,7 @@ export async function currentSourceRuntime(snapshot: SourceProjectSnapshot): Pro
   // published before this kit existed.
   const catalogPages = await Promise.all(['productos.html', 'coleccion.html']
     .filter(path => !substituted.some(f => f.path === path))
-    .map(async path => ({ path, encoding: 'utf8' as const, content: await readFile(join(__dirname, 'source-kit', path), 'utf8') })));
+    .map(async path => ({ path, encoding: 'utf8' as const, content: await readFile(kitPath(path), 'utf8') })));
   const files = await withSourceMotion(await withSourceCommerceDesign([...substituted, ...catalogPages]), sourceMotionMode(snapshot.files));
   return withSourceSeo({ ...snapshot, files: files.map(f => ({ ...f, encoding: f.encoding || 'utf8' })) });
 }

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const commerce = readFileSync(new URL('../../api/src/stores/source-kit/privacy.js', import.meta.url), 'utf8') + '\n' + readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8') + '\n' + readFileSync(new URL('../../api/src/stores/source-kit/motion.js', import.meta.url), 'utf8');
+import { kitPath } from '@pagosya/storefront-kit';
+const commerce = readFileSync(kitPath('privacy.js'), 'utf8') + '\n' + readFileSync(kitPath('commerce.js'), 'utf8') + '\n' + readFileSync(kitPath('motion.js'), 'utf8');
 const snapshot = { schemaVersion: 1, brief: {}, files: [
   { path: 'index.html', content: '<meta charset="utf-8"><main><h1>Tienda de prueba</h1><a href="#catalogo">Catálogo</a><section id="catalogo" data-pagosya-catalog></section><button type="button" data-cart-open>Pedido <span data-cart-count>0</span></button><section data-pagosya-cart hidden></section><p data-pagosya-status></p></main><script src="config.js"></script><script src="commerce.js"></script>' },
   { path: 'config.js', content: 'window.PAGOSYA_CONFIG = '+JSON.stringify({ slug:'test', data:{ storeName:'Prueba', contactFormEnabled:true, items:[{id:'p1',name:'Café',amount:1200,currency:'BOB',stock:4}],categories:[] } })+';' },

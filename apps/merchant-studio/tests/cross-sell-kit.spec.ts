@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
-const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
+const kit = (name: string) => readFileSync(kitPath(`${name}`), 'utf8');
 // Demo catalog only. Nothing is written to a merchant store.
 const cookie = { id: 'cookie', name: 'Galleta', amount: 1800, currency: 'BOB', stock: 10, imageUrls: [] };
 const milk = { id: 'milk', name: 'Leche', amount: 1000, currency: 'BOB', stock: 10, imageUrls: [] };

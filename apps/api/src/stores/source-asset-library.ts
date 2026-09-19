@@ -4,6 +4,7 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import type { SourceImageUse } from './source-setup';
 import { withCreativeAssets } from './source-creative-assets';
 import { normalizeSourcePhotoFacts, type SourcePhotoFacts } from './source-photo-facts';
+import { kitPath } from '@pagosya/storefront-kit';
 
 export const SOURCE_ASSET_MANIFEST = 'visual-assets.json';
 export const SOURCE_ASSET_ROLES = ['logo', 'product', 'business', 'background', 'team', 'reference', 'unknown', 'unused'] as const;
@@ -32,9 +33,9 @@ export async function withSourceAssets(files: SourceProjectFileDto[], previous: 
   const source = files.filter(f => /\.(css|html|tsx|jsx)$/.test(f.path)).map(f => f.content).join('\n');
   for (const name of SOURCE_ICON_NAMES) {
     const path = `assets/icons/${name}.svg`;
-    if (source.includes(path) && !result.some(f => f.path === path)) result.push({ path, content: await readFile(join(__dirname, 'source-kit/icons', `${name}.svg`), 'utf8') });
+    if (source.includes(path) && !result.some(f => f.path === path)) result.push({ path, content: await readFile(kitPath('icons', `${name}.svg`), 'utf8') });
   }
-  if (result.some(f => f.path.startsWith('assets/icons/')) && !result.some(f => f.path === 'assets/icons/LICENSE.txt')) result.push({ path: 'assets/icons/LICENSE.txt', content: await readFile(join(__dirname, 'source-kit/icons/LICENSE.txt'), 'utf8') });
+  if (result.some(f => f.path.startsWith('assets/icons/')) && !result.some(f => f.path === 'assets/icons/LICENSE.txt')) result.push({ path: 'assets/icons/LICENSE.txt', content: await readFile(kitPath('icons/LICENSE.txt'), 'utf8') });
   const remembered = sourceAssetInventory(previous);
   const assets = sourceAssetInventory(result).filter(a => a.kind !== 'icon').map(asset => {
     const use = uses.find(u => legend.some(l => l.path === asset.path && l.original === u.url));

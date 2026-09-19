@@ -2,13 +2,13 @@
 jest.setTimeout(60_000);
 
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { captureSourceVisuals, probeSourceShopping } from './source-visual-capture';
 import { designCaptureFailures } from './source-design-evaluator';
 import { sourceProjectSnapshot } from './source-project';
+import { kitPath } from '@pagosya/storefront-kit';
 
 it('keeps checkout reachable on mobile when authored cart CSS forces a fixed full-width drawer', async () => {
-  const files = await Promise.all(['commerce.js', 'commerce-pages.css'].map(async path => ({ path, content: await readFile(join(__dirname, 'source-kit', path), 'utf8') })));
+  const files = await Promise.all(['commerce.js', 'commerce-pages.css'].map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
   const shell = (mount: string) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="commerce-pages.css"><style>body{margin:16px}[data-pagosya-cart]:not([hidden]){position:fixed!important;inset:0 0 0 auto;width:100%;height:100dvh;overflow:auto}</style>${mount}<p data-pagosya-status></p><script src="config.js" defer></script><script src="commerce.js" defer></script>`;
   const snapshot = sourceProjectSnapshot({ revision: 1, label: 'Checkout regression', brief: { businessType: 'Test', audience: 'Test', primaryAction: 'Comprar', visualDirection: 'Simple' }, files: [...files,
     { path: 'index.html', content: shell('<h1>Tienda</h1>') },
@@ -22,7 +22,7 @@ it('keeps checkout reachable on mobile when authored cart CSS forces a fixed ful
 }, 45000);
 
 it('records product page purchase metrics at the top of each viewport', async () => {
-  const files = await Promise.all(['commerce.js', 'commerce-pages.css'].map(async path => ({ path, content: await readFile(join(__dirname, 'source-kit', path), 'utf8') })));
+  const files = await Promise.all(['commerce.js', 'commerce-pages.css'].map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
   const shell = (mount: string) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="commerce-pages.css"><style>body{margin:0}</style>${mount}<p data-pagosya-status></p><script src="config.js" defer></script><script src="commerce.js" defer></script>`;
   const snapshot = sourceProjectSnapshot({ revision: 1, label: 'Product metrics', brief: { businessType: 'Test', audience: 'Test', primaryAction: 'Comprar', visualDirection: 'Simple' }, files: [...files,
     { path: 'index.html', content: shell('<h1>Tienda</h1>') },

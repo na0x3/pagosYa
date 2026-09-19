@@ -7,7 +7,7 @@ let funnelCartCount = 0;
 import { cartItemKey, parseCartItemKey, restoreCart, persistCart, pickedExtras, pickGroups, pickedExtrasLabel } from "./cart-state";
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
-import '../../api/src/stores/source-kit/retention.js';
+import '@pagosya/storefront-kit/kit/retention.js';
 import { mountDigitalDownloads } from './digital-downloads';
 import { mountComebackCard } from './comeback-card';
 import { mountCartQuote } from './cart-quote';

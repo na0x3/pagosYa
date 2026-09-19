@@ -13,6 +13,7 @@ import { SourcePublishingService } from '../src/stores/source-publishing.service
 import { UploadsService } from '../src/uploads/uploads.service';
 import { normalizeProductVariants, totalVariantStock } from '../src/payment-links/product-variants';
 import type { SourceImageUse } from '../src/stores/source-setup';
+import { kitPath } from '@pagosya/storefront-kit';
 
 async function main() {
   const folder = resolve(__dirname, '../../../examples/hilar');
@@ -70,8 +71,8 @@ async function main() {
     if (current.revision === 0 && process.argv.includes('--authored')) {
       const files: Array<{path:string;content:string;encoding?:'utf8'|'base64'}> = [];
       for (const path of ['index.html', 'product.html', 'checkout.html', 'styles.css', 'site.js']) files.push({ path, content: await readFile(resolve(folder, 'site', path), 'utf8') });
-      for (const path of ['build.mjs', 'server.mjs', 'commerce-pages.css']) files.push({ path, content: await readFile(resolve(__dirname, '../src/stores/source-kit', path), 'utf8') });
-      files.push({ path: 'commerce.js', content: (await Promise.all(['privacy.js', 'commerce.js', 'retention.js'].map(path => readFile(resolve(__dirname, '../src/stores/source-kit', path), 'utf8')))).join('\n') });
+      for (const path of ['build.mjs', 'server.mjs', 'commerce-pages.css']) files.push({ path, content: await readFile(kitPath(path), 'utf8') });
+      files.push({ path: 'commerce.js', content: (await Promise.all(['privacy.js', 'commerce.js', 'retention.js'].map(path => readFile(kitPath(path), 'utf8')))).join('\n') });
       for (const name of Object.keys(manifest)) files.push({path: 'assets/' + name + '.jpg', encoding: 'base64', content: (await readFile(resolve(folder, 'assets', name + '.jpg'))).toString('base64')});
       const data = await stores.getStorePublic(record.slug, { trackView: false, ownerMerchantId: record.merchantId });
       const storefrontConfig = { slug: record.slug, apiBaseUrl: 'http://localhost:3001/v1', checkoutOrigin: 'http://localhost:5175', productPage: 'product.html', checkoutPage: 'checkout.html', demo: false, motion: 'subtle', data: {...data, checkoutMode:'payment'} };

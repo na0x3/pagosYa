@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join, posix } from 'node:path';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { kitPath } from '@pagosya/storefront-kit';
 
 const attribute = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2];
 const block = (html: string, name: string) => html.match(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, 'i'))?.[0];
@@ -10,7 +11,7 @@ const normalize = (html: string) => html.replace(/\s+/g, ' ').trim();
 export async function withSourceCommerceDesign(files: SourceProjectFileDto[]): Promise<SourceProjectFileDto[]> {
   const home = files.find(file => file.path === 'index.html')?.content;
   if (!home) return files;
-  const template = await readFile(join(__dirname, 'source-kit', 'product.html'), 'utf8');
+  const template = await readFile(kitPath('product.html'), 'utf8');
   const homeHead = block(home, 'head') || '';
   const styles = [...homeHead.matchAll(/<link\b[^>]*>/gi)].map(match => match[0]).filter(tag => {
     const href = attribute(tag, 'href');

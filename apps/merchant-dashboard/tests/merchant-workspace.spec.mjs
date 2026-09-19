@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
 async function workspace(page, withSite = false) {
   const version = { revision: 1, label: 'Sitio guardado', snapshot: { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<h1>Mi café</h1><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js"></script><script src="commerce.js"></script>' },
     { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"data":{"items":[],"categories":[]}};' },
-    { path: 'commerce.js', content: readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8') },
+    { path: 'commerce.js', content: readFileSync(kitPath('commerce.js'), 'utf8') },
   ] } };
   const stores = ['Café Aroma', 'Taller Norte'].map((name, i) => ({ id: `store_${i + 1}`, merchantId: 'm1', slug: `tienda-${i + 1}`, name, status: 'ACTIVE', websiteRevision: 0, heroSlides: [], contentOrder: ['hero', 'products'], editorialGallery: [], links: [], locations: [], animations: [], checkoutMode: 'payment', cartRecommendationProductIds: [] }));
   const products = [], requests = [], conversations = new Map();

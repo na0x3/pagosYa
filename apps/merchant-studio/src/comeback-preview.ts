@@ -1,7 +1,7 @@
 import { sourceComebackBranding } from '@pagosya/shared-types';
 import { API_BASE_URL } from './api';
 import type { SourceSnapshot } from './source-preview';
-import '../../api/src/stores/source-kit/retention.js';
+import '@pagosya/storefront-kit/kit/retention.js';
 
 /** A visual sample only: no customer credentials, rewards or email requests. */
 export function showComebackPreview(snapshot: SourceSnapshot) {

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { compileNextPreview, nextProjectScaffold } from '../../api/src/stores/source-next';
 import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from '../../api/src/stores/fixtures/next-store';
+import { kitPath } from '@pagosya/storefront-kit';
 
 for (const hosted of [false, true]) test(`computed photo paths load in ${hosted ? 'hosted storefront' : 'Studio preview'}`, async ({ page }) => {
   const authored = nextStoreFiles();
@@ -62,7 +63,7 @@ for (const width of [1280, 390]) test(`React storefront supports state, assets a
   const files = [...authored, ...await compileNextPreview(authored), ...nextProjectScaffold('test'), nextStoreImage,
     { path: 'brand.css', content: '/* fixture */' },
     { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` },
-    ...['commerce.js', 'commerce-pages.css'].map(path => ({ path, content: readFileSync(new URL(`../../api/src/stores/source-kit/${path}`, import.meta.url), 'utf8') })),
+    ...['commerce.js', 'commerce-pages.css'].map(path => ({ path, content: readFileSync(kitPath(`${path}`), 'utf8') })),
   ];
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({ width, height: 900 }); await page.goto('/?demo=1');

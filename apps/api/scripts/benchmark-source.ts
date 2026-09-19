@@ -11,6 +11,7 @@ import { sourceProjectSnapshot } from '../src/stores/source-project';
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../src/stores/source-generation-policy';
 import { sourceDesignExploration } from '../src/stores/source-design';
 import { createHash } from 'node:crypto';
+import { kitPath } from '@pagosya/storefront-kit';
 
 const args = process.argv.slice(2);
 const option = (key: string, fallback: string) => { const index = args.indexOf(key); return index < 0 ? fallback : args[index + 1]; };
@@ -55,7 +56,7 @@ const server = createServer((req, res) => {
 async function main() {
   if (!replay && await access(join(output, 'results.json')).then(() => true, () => false)) throw new Error('This folder already contains results. Choose a new --out folder or use --recheck (no API calls).');
   await mkdir(output, { recursive: true });
-  const generatorDigest = createHash('sha256').update((await Promise.all(['source-generation.service.ts','source-design.ts','source-design-planner.ts','source-fonts.ts','source-kit/commerce.js'].map(path => readFile(resolve('src/stores', path))))).map(buffer => buffer.toString('utf8')).join('\n')).digest('hex');
+  const generatorDigest = createHash('sha256').update((await Promise.all(['source-generation.service.ts','source-design.ts','source-design-planner.ts','source-fonts.ts'].map(path => readFile(resolve('src/stores', path))).concat(readFile(kitPath('commerce.js'))))).map(buffer => buffer.toString('utf8')).join('\n')).digest('hex');
   await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
   const browser = await chromium.launch();
@@ -110,7 +111,7 @@ async function main() {
               }
             } };
             await collect(join(folder, phase));
-            files.find(f => f.path === 'commerce.js')!.content = await readFile(resolve('src/stores/source-kit/commerce.js'), 'utf8');
+            files.find(f => f.path === 'commerce.js')!.content = await readFile(kitPath('commerce.js'), 'utf8');
             versions.push({ snapshot: { files } });
             generated = { generation: { credits: 0, attempts: [] } };
             result.originalGenerationMs = original?.generationMs ?? null; result.recheck = true;

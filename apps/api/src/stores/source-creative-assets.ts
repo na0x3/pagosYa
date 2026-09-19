@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { kitPath } from '@pagosya/storefront-kit';
 
 export type CreativeAsset = { id: string; path: string; thumbnail: string; family: string; description: string; tags: string[]; license: string; source: string; bytes: number; sha256: string };
-const root = join(__dirname, 'source-kit/creative-assets');
+const root = kitPath('creative-assets');
 export function creativeAssetCatalog(): CreativeAsset[] {
   return JSON.parse(readFileSync(join(root, 'catalog.json'), 'utf8')).assets;
 }
