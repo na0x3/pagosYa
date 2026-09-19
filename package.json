@@ -2,7 +2,7 @@
   "name": "pagosya",
   "private": true,
   "version": "0.1.0",
-  "license": "AGPL-3.0-only",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=20"
   },
@@ -24,9 +24,11 @@
     "test": "pnpm -r run test",
     "test:source-requests": "pnpm --filter @pagosya/api exec node -r ts-node/register scripts/source-request-gauntlet.ts",
     "dev:independent-cafe": "node examples/independent-cafe/build.mjs && node examples/independent-cafe/server.mjs",
-    "benchmark:source": "pnpm --filter @pagosya/api exec node --env-file=.env -r ts-node/register scripts/benchmark-source.ts"
+    "benchmark:source": "pnpm --filter @pagosya/api exec node --env-file=.env -r ts-node/register scripts/benchmark-source.ts",
+    "check:boundaries": "depcruise apps packages --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json --output-type err"
   },
   "devDependencies": {
+    "dependency-cruiser": "^18.3.1",
     "embedded-postgres": "18.4.0-beta.17",
     "shadcn": "^4.16.2",
     "typescript": "^5.6.3"

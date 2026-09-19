@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check architecture boundaries
+        run: pnpm check:boundaries
+
       - name: Generate Prisma client
         run: pnpm --filter @pagosya/api exec prisma generate
 
