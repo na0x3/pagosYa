@@ -60,7 +60,7 @@ test('design checks catch a disguised hero and collapsed mobile order access, th
 test('empty status surfaces consume no space but messages remain visible', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     snapshot.files[0].content = '<style>[data-pagosya-status]{position:fixed;bottom:10px;background:black;color:white;padding:20px;min-width:40px;min-height:20px}</style>' + snapshot.files[0].content;
     const frame = document.createElement('iframe'); frame.title = 'Status'; frame.sandbox.add('allow-scripts'); frame.srcdoc = sourcePreviewDocument(snapshot as any); document.body.append(frame);
   }, structuredClone(snapshot));
@@ -77,7 +77,7 @@ test('every custom product link targets its own product and empty media links di
   custom.files[1].content = custom.files[1].content.replace('"slug":"test"', '"slug":"test","productPage":"product.html"');
   custom.files[0].content = '<template data-pagosya-product-template><article><a data-product-link class="photo" href="product.html"><img data-product-field="image"></a><h3 data-product-field="name"></h3><strong data-product-field="price"></strong><a data-product-link class="details" href="product.html">Ver detalle</a><button data-product-add>Comprar</button></article></template>' + custom.files[0].content;
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const frame = document.createElement('iframe'); frame.title = 'Links'; frame.sandbox.add('allow-scripts'); frame.srcdoc = sourcePreviewDocument(snapshot as any); document.body.append(frame);
   }, custom);
   const frame = page.frameLocator('iframe[title="Links"]');
@@ -93,7 +93,7 @@ test('authored href normalization cannot strip the product ID when opening a det
   custom.files[0].content = productTemplate + custom.files[0].content + '<script>document.querySelectorAll("[data-product-link]").forEach(link => link.href = "product.html")</script>';
   custom.files.push({ path: 'product.html', content: '<h1>Detail</h1>' });
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     window.addEventListener('message', event => { if (event.data?.type === 'pagosya:source-navigate') document.body.dataset.destination = event.data.page + event.data.query; });
     const frame = document.createElement('iframe'); frame.title = 'Bound links'; frame.sandbox.add('allow-scripts'); frame.srcdoc = sourcePreviewDocument(snapshot as any); document.body.append(frame);
   }, custom);
@@ -113,7 +113,7 @@ test('custom product compositions bind real catalog fields, keep stock controls 
     { id: 'p3', name: 'Con opciones sin stock', amount: 3000, currency: 'BOB', stock: 0, variants: [{ id: 'large', name: 'Grande', amount: 4000 }] },
   ] } }) + ';';
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const frame = document.createElement('iframe'); frame.title = 'Custom catalog'; frame.sandbox.add('allow-scripts'); frame.srcdoc = sourcePreviewDocument(snapshot as any); document.body.append(frame);
   }, custom);
   const frame = page.frameLocator('iframe[title="Custom catalog"]');
@@ -154,7 +154,7 @@ test('rendered design diagnostics expose empty sections, missed catalog layouts 
 test('the contact form is optional and keeps authored styling in preview and hosted pages', async ({page}) => {
   await page.goto('/?demo=1');
   await page.evaluate(async snapshot => {
-    const {sourcePreviewDocument} = await import('/src/source-preview.ts');
+    const {sourcePreviewDocument} = await import('/src/storefront-preview.ts');
     document.body.innerHTML='';
     for (const hosted of [false,true]) for (const enabled of [false,true]) {
       const copy=structuredClone(snapshot);

@@ -20,6 +20,7 @@ packages/
   widget-js/           Embeddable pagosya.js that mounts the checkout iframe.
   storefront-kit/      Runtimes, page templates, fonts, and icons copied into every generated storefront.
   variant-editor/      Merchant editor for product options and their priced, stocked combinations (dashboard + Studio).
+  storefront-preview/  Renders a source snapshot into a sandboxed preview document (Studio previews, checkout-hosted source stores).
 docs/                  Current feature docs. docs/history/ holds dated reports and archived designs.
 ```
 

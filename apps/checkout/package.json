@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@pagosya/shared-types": "workspace:*",
-    "@pagosya/storefront-kit": "workspace:*"
+    "@pagosya/storefront-kit": "workspace:*",
+    "@pagosya/storefront-preview": "workspace:*"
   },
   "devDependencies": {
     "@pagosya/variant-editor": "workspace:*",

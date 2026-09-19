@@ -13,6 +13,7 @@
   "dependencies": {
     "@pagosya/shared-types": "workspace:*",
     "@pagosya/storefront-kit": "workspace:*",
+    "@pagosya/storefront-preview": "workspace:*",
     "@pagosya/variant-editor": "workspace:*"
   },
   "devDependencies": {

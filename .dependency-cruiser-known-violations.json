@@ -1,90 +1,6 @@
 [
   {
     "type": "dependency",
-    "from": "apps/checkout/src/source-storefront.ts",
-    "to": "apps/merchant-studio/src/source-preview-media.ts",
-    "unresolvedTo": "../../merchant-studio/src/source-preview-media",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/src/source-storefront.ts",
-    "to": "apps/merchant-studio/src/source-preview.ts",
-    "unresolvedTo": "../../merchant-studio/src/source-preview",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/test/source-storefront-product.test.ts",
-    "to": "apps/merchant-studio/src/source-preview-media.ts",
-    "unresolvedTo": "../../merchant-studio/src/source-preview-media",
-    "dependencyTypes": [
-      "local",
-      "type-import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/test/source-storefront.test.ts",
-    "to": "apps/merchant-studio/src/source-preview-media.ts",
-    "unresolvedTo": "../../merchant-studio/src/source-preview-media",
-    "dependencyTypes": [
-      "local",
-      "type-import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/test/source-theme.test.ts",
-    "to": "apps/merchant-studio/src/source-preview-media.ts",
-    "unresolvedTo": "../../merchant-studio/src/source-preview-media",
-    "dependencyTypes": [
-      "local",
-      "type-import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/checkout/test/source-theme.test.ts",
-    "to": "apps/merchant-studio/src/source-preview.ts",
-    "unresolvedTo": "../../merchant-studio/src/source-preview",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "apps/merchant-studio/tests/source-creative.spec.ts",
     "to": "apps/api/src/stores/fixtures/creative-store.ts",
     "unresolvedTo": "../../api/src/stores/fixtures/creative-store",
@@ -298,8 +214,8 @@
   },
   {
     "type": "cycle",
-    "from": "apps/merchant-studio/src/source-preview-media.ts",
-    "to": "apps/merchant-studio/src/source-preview.ts",
+    "from": "packages/storefront-preview/src/source-preview-media.ts",
+    "to": "packages/storefront-preview/src/source-preview.ts",
     "unresolvedTo": "./source-preview",
     "dependencyTypes": [
       "local",
@@ -312,7 +228,7 @@
     },
     "cycle": [
       {
-        "name": "apps/merchant-studio/src/source-preview.ts",
+        "name": "packages/storefront-preview/src/source-preview.ts",
         "dependencyTypes": [
           "local",
           "type-only",
@@ -320,7 +236,7 @@
         ]
       },
       {
-        "name": "apps/merchant-studio/src/source-preview-media.ts",
+        "name": "packages/storefront-preview/src/source-preview-media.ts",
         "dependencyTypes": [
           "local",
           "import"

@@ -207,6 +207,9 @@ importers:
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
+      '@pagosya/storefront-preview':
+        specifier: workspace:*
+        version: link:../../packages/storefront-preview
     devDependencies:
       '@pagosya/variant-editor':
         specifier: workspace:*
@@ -398,6 +401,9 @@ importers:
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
+      '@pagosya/storefront-preview':
+        specifier: workspace:*
+        version: link:../../packages/storefront-preview
       '@pagosya/variant-editor':
         specifier: workspace:*
         version: link:../../packages/variant-editor
@@ -437,6 +443,22 @@ importers:
         version: 5.9.3
 
   packages/storefront-kit: {}
+
+  packages/storefront-preview:
+    dependencies:
+      '@pagosya/storefront-kit':
+        specifier: workspace:*
+        version: link:../storefront-kit
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vite:
+        specifier: ^5.4.8
+        version: 5.4.21(@types/node@22.19.19)(lightningcss@1.33.0)(terser@5.49.0)
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.19.19)(jsdom@25.0.1(supports-color@10.2.2))(lightningcss@1.33.0)(supports-color@10.2.2)(terser@5.49.0)
 
   packages/variant-editor:
     devDependencies:

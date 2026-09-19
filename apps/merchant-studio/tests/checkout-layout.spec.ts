@@ -16,7 +16,7 @@ for (const width of [1440, 1024, 390]) test(`checkout stays inside its authored 
   await page.setViewportSize({ width, height: 900 });
   await page.goto('/?demo=1');
   await page.evaluate(async ({ commerce, retention }) => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const snapshot = { schemaVersion: 1, brief: { businessType: 'Panadería', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Editorial' }, files: [
       { path: 'checkout.html', content: `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
         body{margin:0;font:16px/1.5 system-ui;--paper:#f1ecdf;--ink:#223528;--accent:#387845;background:var(--paper);color:var(--ink)}

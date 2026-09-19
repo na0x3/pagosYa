@@ -23,7 +23,7 @@ for (const mode of ['auto', 'off', 'reduced', 'hosted']) test(`creative tools re
   await page.setViewportSize({ width: mode === 'hosted' ? 390 : 1280, height: 900 });
   await page.goto('/?demo=1');
   await page.evaluate(async ({ snapshot, hosted }) => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     document.body.innerHTML = ''; document.body.style.margin = '0';
     const frame = document.createElement('iframe'); frame.title = 'Creative preview'; frame.sandbox.add('allow-scripts');
     frame.style.cssText = 'width:100%;height:100vh;border:0';

@@ -17,7 +17,7 @@ test('an authored sibling cart does not duplicate the active checkout form', asy
   const fixture = structuredClone(files);
   fixture.find(f => f.path === 'checkout.html')!.content = '<!doctype html><html><head><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><main><div data-pagosya-checkout-page data-pagosya-checkout></div><div data-pagosya-cart data-checkout-review="review"></div></main></body></html>';
   await page.evaluate(async files => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const frame = document.createElement('iframe'); frame.title = 'Checkout'; frame.sandbox.add('allow-scripts');
     frame.srcdoc = sourcePreviewDocument({ schemaVersion: 1, brief: { businessType: 'Tienda', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Libre' }, files }, 'checkout.html', { cart: [{ id: 'p1', quantity: 1 }] });
     document.body.append(frame);
@@ -60,7 +60,7 @@ for (const width of [1280, 390]) test(`full product tabs and automatic checkout 
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.setViewportSize({ width, height: 900 }); await page.goto('/?demo=1');
   await page.evaluate(async files => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     const snapshot = { schemaVersion: 1, brief: { businessType: 'Tienda', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Editorial' }, files };
     document.body.innerHTML = ''; document.body.style.margin = '0';
     const frame = document.createElement('iframe'); frame.sandbox.add('allow-scripts'); frame.style.cssText = 'width:100%;height:100vh;border:0'; document.body.append(frame);

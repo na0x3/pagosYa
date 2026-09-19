@@ -1,6 +1,5 @@
 import { API_BASE_URL, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
-import { sourcePreviewDocument } from './source-preview';
-import { createPreviewImageLoader } from './source-preview-media';
+import { sourcePreviewDocument, createPreviewImageLoader } from '@pagosya/storefront-preview';
 
 /** A lazy, read-only saved-design thumbnail; no conversation, checks, or generation. */
 export async function mountSourceThumbnail(app: HTMLDivElement): Promise<void> {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { collectStoreResources } from './source-library';
-import type { SourceSnapshot } from './source-preview';
+import type { SourceSnapshot } from '@pagosya/storefront-preview';
 const snapshot = (files: SourceSnapshot['files']): SourceSnapshot => ({schemaVersion:1,brief:{businessType:'',audience:'',primaryAction:'',visualDirection:''},files});
 describe('store resource library', () => {
   it('includes saved, referenced, inline and catalog media, with deduplicated uses', () => {

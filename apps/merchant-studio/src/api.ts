@@ -326,7 +326,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}`);
   }
 
-  generateSource(storeId: string, body: { revision: number; brief: import("./source-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode }): Promise<SourceRevision> {
+  generateSource(storeId: string, body: { revision: number; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/generate`, { method: "POST", body: JSON.stringify(body) });
   }
 
@@ -334,7 +334,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${target}/restore`, { method: "POST", body: JSON.stringify({ revision }) });
   }
 
-  saveSource(storeId: string, body: { revision: number; label: string; brief: import("./source-preview").SourceSnapshot["brief"]; files: import("./source-preview").SourceFile[] }): Promise<SourceRevision> {
+  saveSource(storeId: string, body: { revision: number; label: string; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; files: import("@pagosya/storefront-preview").SourceFile[] }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project`, { method: "PUT", body: JSON.stringify(body) });
   }
 
@@ -389,7 +389,7 @@ export interface SourcePublication {
   experiment: null | { id: string; status: string; startedAt: string; controlRevision: number; variantRevision: number; winner: string | null; evidence: { winner: string | null; reason: string }; variants: Array<{ variant: string; revision: number; visitors: number; buyers: number; paidOrders: number; conversionRate: number; revenue: Array<{ currency: string; amount: number }> }> };
 }
 export interface SourceState { publication?: SourcePublication; revision: number; versions: SourceRevision[]; nextBefore: number | null }
-export interface SourceVersion extends SourceRevision { snapshot: import("./source-preview").SourceSnapshot }
+export interface SourceVersion extends SourceRevision { snapshot: import("@pagosya/storefront-preview").SourceSnapshot }
 
 export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualProposal | null): string {
   const url = new URL(`/s/${encodeURIComponent(store.slug)}`, CHECKOUT_ORIGIN);

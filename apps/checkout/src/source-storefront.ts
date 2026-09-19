@@ -2,8 +2,7 @@ import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './sour
 import { createStoreFunnel } from './store-funnel';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
-import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation } from '../../merchant-studio/src/source-preview';
-import { createPreviewImageLoader } from '../../merchant-studio/src/source-preview-media';
+import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { API_BASE_URL, type Store } from './api';
 import { sourceVisitorId, rememberSourceVisit } from './source-attribution';
 import { storePartnerCode } from './partner-referral';

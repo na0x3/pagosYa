@@ -24,8 +24,8 @@ async function preview(page: import('@playwright/test').Page) {
   await page.goto('/?demo=1');
   await page.route('**/api/v1/uploads/*.png', route => route.fulfill({ contentType: 'image/png', body: route.request().url().includes('2222-bbbb') ? secondPng : png }));
   return page.evaluate(async snapshot => {
-    const { createPreviewImageLoader } = await import('/src/source-preview-media.ts' as string);
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { createPreviewImageLoader } = await import('/src/storefront-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     const hydrate = createPreviewImageLoader('/api/v1');
     const original = JSON.stringify(snapshot);
     const hydrated = await hydrate(snapshot);
@@ -110,7 +110,7 @@ test('image loader never fetches arbitrary hosts, tolerates failed uploads and r
     return route.fulfill(attempts === 1 ? { status: 404 } : { contentType: 'image/png', body: png });
   });
   const result = await page.evaluate(async snapshot => {
-    const { createPreviewImageLoader } = await import('/src/source-preview-media.ts' as string);
+    const { createPreviewImageLoader } = await import('/src/storefront-preview.ts' as string);
     const hydrate = createPreviewImageLoader('/api/v1');
     const configFile = snapshot.files.find(f => f.path === 'config.js')!;
     configFile.content = `window.PAGOSYA_CONFIG = ${JSON.stringify({ data: { items: [{ imageUrls: ['https://untrusted.invalid/arbitrary.png', 'https://untrusted.invalid/v1/uploads/1111-aaaa.png'] }] } })};`;
@@ -155,8 +155,8 @@ test('local page links navigate in the sandbox and retain the cart, while forged
   multi.files[0].content = multi.files[0].content.replace('<main', '<a href="pages/about.html#details">Cómo comprar</a><main');
   multi.files.push({ path: 'pages/about.html', content: '<h1 id="details">Cómo comprar</h1><a href="../index.html">Volver al catálogo</a><div data-pagosya-cart></div><span data-cart-count></span><script src="../config.js" defer></script><script src="../commerce.js" defer></script>' });
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument, receivePreviewNavigation } = await import('/src/source-preview.ts' as string);
-    const { createPreviewImageLoader } = await import('/src/source-preview-media.ts' as string);
+    const { sourcePreviewDocument, receivePreviewNavigation } = await import('/src/storefront-preview.ts' as string);
+    const { createPreviewImageLoader } = await import('/src/storefront-preview.ts' as string);
     const hydrated = await createPreviewImageLoader('/api/v1')(snapshot);
     const frame = document.querySelector('iframe')!;
     frame.srcdoc = sourcePreviewDocument(hydrated);

@@ -1,6 +1,6 @@
 import { CHECKOUT_ORIGIN } from './api';
 import { sourceShoppingProbe } from './source-shopping-probe';
-import { sourcePreviewDocument, type SourceSnapshot } from './source-preview';
+import { sourcePreviewDocument, type SourceSnapshot } from '@pagosya/storefront-preview';
 export type SourceCheck = { label: string; status: 'passed' | 'failed' | 'skipped' | 'warning'; detail?: string; blocking?: boolean };
 
 export function sourceChecksBlockPublishing(rows: SourceCheck[]) {

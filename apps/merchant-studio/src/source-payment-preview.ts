@@ -1,6 +1,6 @@
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { CHECKOUT_ORIGIN } from './api';
-import type { SourceSnapshot } from './source-preview';
+import type { SourceSnapshot } from '@pagosya/storefront-preview';
 import './source-payment-preview.css';
 
 import { sourcePaymentSummary } from './source-payment-summary';
