@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" type="image/png" href="/assets/logo.png">
+<link rel="icon" type="image/png" href="/assets/pagosya-mark.png">
 <title>pagosYa - Panel de comercio</title>
 <link rel="stylesheet" href="/journey.css">
 <meta name="description" content="Administra tu tienda, catálogo, cobros, desembolsos y facturación local desde pagosYa.">
@@ -111,6 +111,10 @@
   .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .brand h1 { font-size: 1.05rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
   .brand .subtitle { font-size: 0.78rem; color: var(--pg-text-muted); margin: 0; }
+  .brand h1.brand-wordmark { display: flex; margin: 0 0 4px; line-height: 0; }
+  .brand-wordmark img { height: 26px; width: auto; display: block; }
+  .brand-wordmark .brand-wordmark-dark, html[data-dashboard-theme="dark"] .brand-wordmark .brand-wordmark-light { display: none; }
+  html[data-dashboard-theme="dark"] .brand-wordmark .brand-wordmark-dark { display: block; }
   .muted { color: var(--pg-text-muted); font-size: 0.88rem; }
   .faint { color: var(--pg-text-faint); font-size: 0.8rem; }
 
@@ -3507,6 +3511,7 @@
   }
   body.is-logged-in:not(.store-preview-fullscreen) > .topbar .brand-mark { width: 38px; height: 38px; }
   body.is-logged-in:not(.store-preview-fullscreen) > .topbar .brand h1 { font-size: 1rem; }
+  body.is-logged-in:not(.store-preview-fullscreen) > .topbar .brand-wordmark img { height: 20px; }
   body.is-logged-in:not(.store-preview-fullscreen) > .topbar .brand .subtitle { font-size: .58rem; }
   body.is-logged-in:not(.store-preview-fullscreen) #app { width: 100%; }
   body.is-logged-in:not(.store-preview-fullscreen) .dashboard-shell,
@@ -3646,9 +3651,9 @@
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
   <div class="topbar">
     <div class="brand">
-      <div class="brand-mark"><img src="/assets/logo.png" alt="pagosYa"></div>
+      <div class="brand-mark"><img src="/assets/pagosya-mark.png" alt=""></div>
       <div>
-        <h1>pagosYa</h1>
+        <h1 class="brand-wordmark"><span class="sr-only">pagosYa</span><img class="brand-wordmark-light" src="/assets/pagosya-wordmark.png" alt=""><img class="brand-wordmark-dark" src="/assets/pagosya-wordmark-on-dark.png" alt=""></h1>
         <p class="subtitle">Panel de Comercio</p>
       </div>
     </div>

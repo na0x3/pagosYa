@@ -20,6 +20,9 @@ const mascotAssets = new Map([
   ["/assets/yapi-wave.png", "yapi-wave.png"],
   ["/assets/yapi-walk-a.png", "yapi-walk-a.png"],
   ["/assets/yapi-walk-b.png", "yapi-walk-b.png"],
+  ["/assets/pagosya-mark.png", "pagosya-mark.png"],
+  ["/assets/pagosya-wordmark.png", "pagosya-wordmark.png"],
+  ["/assets/pagosya-wordmark-on-dark.png", "pagosya-wordmark-on-dark.png"],
 ]);
 const sharedAssets = new Map([
   ["/assets/logo.png", path.join(dirname, "..", "..", "assets", "brand", "logo.png")],
