@@ -2878,6 +2878,8 @@
     box-shadow: 9px 9px 0 #050505; animation: gamification-toast-enter 320ms var(--ease-out-ui) both;
   }
   .gamification-toast[hidden] { display: none; }
+  /* The fullscreen storefront (z-index 4000+) would otherwise cover the toast and its close button. */
+  body.store-preview-fullscreen .gamification-toast { z-index: 4040; }
   .gamification-toast img { align-self: end; width: 86px; height: 100px; object-fit: contain; }
   .gamification-toast-copy { align-self: center; padding: 14px 8px; }
   .gamification-toast-copy strong { display: block; font-size: .8rem; }
