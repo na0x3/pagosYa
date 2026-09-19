@@ -100,6 +100,7 @@ test('published source navigates in isolation, submits real forms and hands chec
     if(p.endsWith('/leads')){lead=route.request().postDataJSON();return route.fulfill({json:{submitted:true}});}
     if(p.endsWith('/cart-checkout')){checkout=route.request().postDataJSON();return route.fulfill({json:{clientSecret:'test-checkout-secret'}});}
     if(p.endsWith('/retention')) return route.fulfill({json:{}});
+    if(p.endsWith('/verification')) return route.fulfill({json:{storeName:'Test',slug:'test',verifiedBusiness:true,verifiedSince:'2026-08-02',electronicInvoicing:false,securePayments:true,onPlatformSince:'2026-07-01',reviews:{count:0,average:null},officialDomain:null}});
     throw new Error(p);
   });
   await page.addInitScript(() => localStorage.setItem('pagosya:privacy:test', JSON.stringify({version:1,analytics:true,expires:Date.now()+86400000})));

@@ -161,6 +161,7 @@ test('hosted storefront subscribes and preserves saved-cart identity across page
     if (path.endsWith('/subscribe')) { subscribed = route.request().postDataJSON().consent; return route.fulfill({ json: { subscribed: true } }); }
     if (path.endsWith('/carts')) return route.fulfill({ json: { saved: true, token: 'c'.repeat(64) } });
     if (path.endsWith('/cart-checkout')) { checkout = route.request().postDataJSON(); return route.fulfill({ json: { clientSecret: 'test-only-secret' } }); }
+    if (path.endsWith('/verification')) return route.fulfill({ status: 404, json: { message: 'Tienda no encontrada' } });
     throw new Error(path);
   });
   await page.goto('/?demo=1');

@@ -57,6 +57,28 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         }));
       });
       if (collidingHeadings.length) warn('Líneas de título superpuestas', `Las cajas de texto de distintas líneas se cruzan en: ${collidingHeadings.slice(0, 3).map(el => el.textContent?.trim().slice(0, 100)).join(' · ')}. Revisa el interlineado, los saltos y el ancho disponible con la fuente cargada; conserva la identidad del diseño.`);
+      // Measured design craft (docs/STOREFRONT_DESIGN_LEVEL_UP.md): advisory, never a publish blocker.
+      const paragraphs = [...document.querySelectorAll<HTMLElement>('p,li')].filter(el => shown(el) && (el.textContent || '').trim().length >= 90 && !el.closest('[aria-hidden="true"],dialog'));
+      if (paragraphs.length) {
+        const metrics = paragraphs.map(el => { const style = getComputedStyle(el); const size = parseFloat(style.fontSize) || 16; const line = parseFloat(style.lineHeight) || size * 1.2; return { el, size, ratio: line / size, chars: el.getBoundingClientRect().width / (size * .5) }; });
+        const median = (values: number[]) => values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
+        if (median(metrics.map(m => m.ratio)) < 1.4) warn('Interlineado del texto', `El texto largo usa un interlineado de ${median(metrics.map(m => m.ratio)).toFixed(2)}. Entre 1,5 y 1,8 se lee con más calma.`);
+        if (median(metrics.map(m => m.size)) < 14.5) warn('Tamaño del texto', `El texto largo mide ${median(metrics.map(m => m.size)).toFixed(0)} px. Usa al menos 15 px para leer cómodo en el teléfono.`);
+        const long = metrics.filter(m => m.chars > 90);
+        if (innerWidth >= 900 && long.length > metrics.length * .3) warn('Largo de las líneas', `Algunos párrafos tienen unas ${Math.round(median(long.map(m => m.chars)))} letras por línea. Limítalos a 45–75 caracteres (max-width en ch).`);
+      }
+      const cardPhotos = [...document.querySelectorAll<HTMLImageElement>('[data-pagosya-catalog] .menu-item img')].filter(img => shown(img) && img.getBoundingClientRect().height > 40);
+      if (cardPhotos.length >= 3) {
+        const ratios = cardPhotos.map(img => { const box = img.getBoundingClientRect(); return box.width / box.height; });
+        const spread = (Math.max(...ratios) - Math.min(...ratios)) / Math.min(...ratios);
+        if (spread > .02 && !document.querySelector('[data-layout="masonry"],[data-layout="spotlight"]')) warn('Proporción de las fotos del catálogo', `Las fotos de producto tienen proporciones distintas (${Math.round(spread * 100)} % de diferencia). Usa una sola proporción para todo el catálogo.`);
+      }
+      if (innerWidth < 600) {
+        const small = [...document.querySelectorAll<HTMLElement>('a[href],button,[role="button"],input,select')].filter(el => { if (!shown(el) || el.closest('[aria-hidden="true"]')) return false; const box = el.getBoundingClientRect(); return box.width > 0 && box.height > 0 && box.width < 32 && box.height < 32; });
+        if (small.length) warn('Controles pequeños para el dedo', `${small.length} control(es) miden menos de 32 px: ${small.slice(0, 3).map(el => describe(el)).join(', ')}. Dales al menos 44 px de alto o de ancho.`);
+      }
+      const titles = [...document.querySelectorAll('h1')].filter(el => shown(el as HTMLElement));
+      if (document.querySelector('[data-pagosya-catalog]') && titles.length !== 1) warn('Título principal', titles.length ? `La página tiene ${titles.length} títulos principales (h1). Deja uno solo.` : 'La página no tiene un título principal (h1).');
       const croppedSlides = [...document.querySelectorAll<HTMLImageElement>('[aria-roledescription="carrusel"] img,[aria-roledescription="carousel"] img')].filter(img => {
         if (!img.naturalWidth || !img.naturalHeight || getComputedStyle(img).objectFit !== 'cover') return false;
         const box = img.getBoundingClientRect();

@@ -49,6 +49,8 @@ test('design checks catch a disguised hero and collapsed mobile order access, th
   const fixture = structuredClone(snapshot);
   fixture.files.push({ path: 'design-direction.json', content: JSON.stringify({ selected: 0, concepts: [{ layout: { sections: ['catalogo'], catalogSection: 'catalogo', standaloneIntro: false, productsInOpening: true } }] }) });
   fixture.files[0].content = '<style>.intro{height:1100px}@media(max-width:650px){header nav{display:none}}</style><header><nav><button data-cart-open>Mi pedido <span data-cart-count>0</span></button></nav></header><main><section id="catalogo"><div class="intro">Una portada disfrazada</div><div data-pagosya-catalog></div></section></main><section data-pagosya-cart hidden></section><p data-pagosya-status></p><script src="config.js"></script><script src="commerce.js"></script>';
+  // A single main title keeps the advisory heading check quiet; this test is about the hero and order access.
+  fixture.files[0].content = fixture.files[0].content.replace('<section id="catalogo">', '<section id="catalogo"><h1>Café de prueba</h1>');
   const check = (value: typeof snapshot) => page.evaluate(async snapshot => { const { checkSourceWebsite } = await import('/src/source-checks.ts'); return checkSourceWebsite(snapshot as any); }, value);
   const findings = await check(fixture);
   expect(findings.filter(row => row.label.includes('Productos en la primera pantalla') && row.status === 'warning')).toHaveLength(4);
