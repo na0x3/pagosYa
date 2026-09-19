@@ -1,3 +1,4 @@
+import { PUBLIC_STORE_WHERE } from '../stores/active-store';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,7 +9,7 @@ export class StoreSeoService {
   constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly config: ConfigService) {}
   private apiBase() { return (process.env.PUBLIC_API_URL || `http://localhost:${this.config.get('app.port') || 3001}/v1`).replace(/\/$/, ''); }
   async context(slug: string) {
-    const store = await this.prisma.store.findFirst({ where: { slug, status: 'ACTIVE', sourcePublicationPaused: false }, include: { customDomains: { where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' }, take: 1 } } });
+    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, include: { customDomains: { where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' }, take: 1 } } });
     if (!store) throw new NotFoundException('Tienda no encontrada.');
     const home = store.customDomains[0] ? `https://${store.customDomains[0].hostname}/` : `${this.config.get<string>('app.checkoutOrigin')!.replace(/\/$/, '')}/s/${encodeURIComponent(slug)}`;
     const productUrl = (id: string) => `${home.replace(/\/$/, '')}/p/${encodeURIComponent(id)}`;
@@ -74,7 +75,7 @@ export class StoreSeoService {
     return `# ${text(c.store.name)}\n\n> ${text(c.store.tagline || 'Catálogo y sitio oficial del negocio.')}\n\n## Sitio oficial\n\n- [Inicio](${c.home})\n- [Mapa del sitio](${c.home.replace(/\/$/, '')}/sitemap.xml)\n\n## Páginas\n\n${c.pages.filter(p => p.path !== 'index.html' && !p.noindex).map(p => `- [${text(p.title || p.path)}](${c.pageUrl(p.path)})`).join('\n')}\n\n## Productos\n\n${c.products.map(p => `- [${text(p.name)}](${c.productUrl(p.id)})`).join('\n')}\n\nLos precios y la disponibilidad vigentes se consultan en cada página de producto. Este archivo describe contenido público; no incluye pedidos, clientes ni enlaces privados.\n`;
   }
   async directory() {
-    const stores = await this.prisma.store.findMany({ where: { status: 'ACTIVE', sourcePublicationPaused: false }, select: { slug: true, name: true, customDomains: { where: { status: 'ACTIVE' }, select: { hostname: true }, take: 1, orderBy: { createdAt: 'asc' } } }, orderBy: { slug: 'asc' } });
+    const stores = await this.prisma.store.findMany({ where: { ...PUBLIC_STORE_WHERE }, select: { slug: true, name: true, customDomains: { where: { status: 'ACTIVE' }, select: { hostname: true }, take: 1, orderBy: { createdAt: 'asc' } } }, orderBy: { slug: 'asc' } });
     // Custom domains publish their own root sitemap; shared-host maps stay on their host.
     const origin = this.config.get<string>('app.checkoutOrigin')!.replace(/\/$/, '');
     return stores.filter(s => !s.customDomains.length).map(s => ({ name: s.name, home: `${origin}/s/${encodeURIComponent(s.slug)}`, sitemap: `${origin}/s/${encodeURIComponent(s.slug)}/sitemap.xml` }));

@@ -4,7 +4,7 @@ import { ConflictException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 function setup() {
-  let row: any = { id: "store-1", merchantId: "merchant-1", name: "Public name", tagline: "Public title", siteDocument: null,
+  let row: any = { id: "store-1", merchantId: "merchant-1", name: "Public name", tagline: "Public title", siteDocument: null, publicVisibility: false,
     websiteRevision: 0, websitePublishedRevision: 0, websiteDraft: null, links: [{ label: "Public", url: "https://example.com" }] };
   let versions: any[] = [];
   const prisma: any = {
@@ -42,9 +42,12 @@ describe("Private website drafts", () => {
     const saved = await stores.saveWebsiteDraft("merchant-1", "store-1", { revision: 0, name: "Private name", tagline: "Private title", links: [{ label: "New", url: "https://example.com/new" }] });
     expect(saved.name).toBe("Private name");
     expect(saved.websiteRevision).toBe(1);
+    expect(read().publicVisibility).toBe(false);
     expect(read()).toMatchObject({ name: "Public name", tagline: "Public title", links: [{ label: "Public" }], websiteDraft: { data: { name: "Private name" } } });
     await expect(stores.publishWebsiteDraft("merchant-1", "store-1", 0)).rejects.toBeInstanceOf(ConflictException);
+    expect(read().publicVisibility).toBe(false);
     const published = await stores.publishWebsiteDraft("merchant-1", "store-1", 1);
+    expect(published).toMatchObject({ publicVisibility: true });
     expect(published).toMatchObject({ name: "Private name", tagline: "Private title", websiteDraft: null, websiteRevision: 2, websitePublishedRevision: 1, links: [{ label: "New" }] });
     expect(versions()[0].snapshot).toMatchObject({ name: "Public name", tagline: "Public title", links: [{ label: "Public" }] });
   });
@@ -90,6 +93,7 @@ describe("Private website drafts", () => {
     await expect(stores.publishWebsiteDraft("merchant-1", "store-1", 1)).rejects.toThrow("connection lost");
     expect(read()).toMatchObject({ tagline: "Public title", websiteRevision: 1, websiteDraft: { data: { tagline: "Private" } } });
     expect(versions()).toEqual([]);
+    expect(read().publicVisibility).toBe(false);
   });
 
   it("does not interpret stock values in an appearance form as stock edits", async () => {

@@ -15,6 +15,7 @@ function makePrisma() {
       count: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       deleteMany: jest.fn(),
     },
   };
@@ -55,7 +56,103 @@ describe("normalizeCustomDomainHostname", () => {
 });
 
 describe("CustomDomainsService", () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it.each([400, 450])("revalidates all %i domains exactly once in bounded runs, then starts another cycle", async count => {
+    const startedAt = new Date("2026-09-19T12:00:00.000Z");
+    jest.useFakeTimers({ now: startedAt });
+    const prisma = makePrisma();
+    const domains = Array.from({ length: count }, (_, index) => ({
+      ...pendingDomain,
+      id: `domain_${String(index).padStart(3, "0")}`,
+      hostname: `tienda-${index}.bo`,
+      status: CustomDomainStatus.ACTIVE as CustomDomainStatus,
+      domainOrderId: null as string | null,
+      lastCheckedAt: index < 150 ? null : new Date("2026-09-18T12:00:00.000Z"),
+    }));
+    const excluded = [
+      { ...domains[0], id: "managed", domainOrderId: "order_1" },
+      { ...domains[0], id: "pending", status: CustomDomainStatus.PENDING },
+    ];
+    const rows = [...domains, ...excluded].reverse();
+    prisma.customDomain.findMany.mockImplementation(({ where, orderBy = [], take }) => {
+      const eligible = rows.filter(domain => domain.status === where.status && domain.domainOrderId === where.domainOrderId
+        && (!where.OR || where.OR.some((condition: { lastCheckedAt: null | { lt: Date } }) => condition.lastCheckedAt === null
+          ? domain.lastCheckedAt === null
+          : domain.lastCheckedAt !== null && domain.lastCheckedAt < condition.lastCheckedAt.lt)));
+      eligible.sort((left, right) => {
+        for (const order of orderBy) {
+          if (order.lastCheckedAt) {
+            const nullValue = order.lastCheckedAt.nulls === "first" ? -Infinity : Infinity;
+            const a = left.lastCheckedAt?.getTime() ?? nullValue;
+            const b = right.lastCheckedAt?.getTime() ?? nullValue;
+            if (a !== b) return (a < b ? -1 : 1) * (order.lastCheckedAt.sort === "asc" ? 1 : -1);
+          }
+          if (order.id && left.id !== right.id) return left.id.localeCompare(right.id) * (order.id === "asc" ? 1 : -1);
+        }
+        return 0;
+      });
+      return Promise.resolve(eligible.slice(0, take).map(domain => ({ ...domain })));
+    });
+    prisma.customDomain.updateMany.mockImplementation(({ where, data }) => {
+      const domain = rows.find(row => row.id === where.id && row.status === where.status);
+      if (domain) Object.assign(domain, data);
+      return Promise.resolve({ count: domain ? 1 : 0 });
+    });
+    const txt = jest.spyOn(dns, "resolveTxt").mockResolvedValue([["pagosya-site-verification=verification_token"]]);
+    const cname = jest.spyOn(dns, "resolveCname").mockResolvedValue(["stores.pagosya.bo"]);
+    const service = new CustomDomainsService(prisma as any, makeConfig() as any);
+
+    for (let offset = 0; offset < count; offset += 200) {
+      const checked = Math.min(200, count - offset);
+      await expect(service.reconcileActiveDomains()).resolves.toEqual({ checked });
+      jest.advanceTimersByTime(15 * 60 * 1000);
+    }
+
+    expect(prisma.customDomain.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: CustomDomainStatus.ACTIVE, domainOrderId: null }),
+      orderBy: [{ lastCheckedAt: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+      take: 200,
+    }));
+    expect(txt.mock.calls.map(([hostname]) => hostname)).toEqual(domains.map(domain => `_pagosya.${domain.hostname}`));
+    expect(cname.mock.calls.map(([hostname]) => hostname)).toEqual(domains.map(domain => domain.hostname));
+    expect(domains.every(domain => domain.lastCheckedAt !== null && domain.lastCheckedAt >= startedAt)).toBe(true);
+    expect(excluded.every(domain => domain.lastCheckedAt === null)).toBe(true);
+
+    await expect(service.reconcileActiveDomains()).resolves.toEqual({ checked: 200 });
+    expect(txt.mock.calls.slice(count).map(([hostname]) => hostname)).toEqual(domains.slice(0, 200).map(domain => `_pagosya.${domain.hostname}`));
+  });
+
+  it.each(["valid", "missing TXT", "TXT lookup failure", "missing routing"])(
+    "records the reconciliation timestamp and status for %s",
+    async outcome => {
+      const checkedAt = new Date("2026-09-19T12:00:00.000Z");
+      jest.useFakeTimers({ now: checkedAt });
+      const prisma = makePrisma();
+      prisma.customDomain.findMany.mockResolvedValue([{ ...pendingDomain, status: CustomDomainStatus.ACTIVE }]);
+      prisma.customDomain.updateMany.mockResolvedValue({ count: 1 });
+      const txt = jest.spyOn(dns, "resolveTxt");
+      if (outcome === "TXT lookup failure") txt.mockRejectedValue(new Error("ENODATA"));
+      else txt.mockResolvedValue(outcome === "missing TXT" ? [] : [["pagosya-site-verification=verification_token"]]);
+      jest.spyOn(dns, "resolveCname").mockResolvedValue(outcome === "missing routing" ? [] : ["stores.pagosya.bo"]);
+      jest.spyOn(dns, "resolve4").mockResolvedValue([]);
+      jest.spyOn(dns, "resolve6").mockResolvedValue([]);
+      const service = new CustomDomainsService(prisma as any, makeConfig() as any);
+
+      await expect(service.reconcileActiveDomains()).resolves.toEqual({ checked: 1 });
+
+      expect(prisma.customDomain.updateMany).toHaveBeenCalledWith({
+        where: { id: pendingDomain.id, status: CustomDomainStatus.ACTIVE },
+        data: {
+          status: outcome === "valid" ? CustomDomainStatus.ACTIVE : CustomDomainStatus.VERIFIED,
+          lastCheckedAt: checkedAt,
+        },
+      });
+    },
+  );
 
   it("creates a pending mapping with exact DNS instructions", async () => {
     const prisma = makePrisma();
@@ -132,7 +229,7 @@ describe("CustomDomainsService", () => {
     prisma.customDomain.findUnique.mockResolvedValue({
       ...pendingDomain,
       status: CustomDomainStatus.ACTIVE,
-      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, merchant: { status: MerchantStatus.ACTIVE } },
+      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true, merchant: { status: MerchantStatus.ACTIVE } },
     });
     const service = new CustomDomainsService(prisma as any, makeConfig() as any);
 
@@ -140,7 +237,7 @@ describe("CustomDomainsService", () => {
 
     prisma.customDomain.findUnique.mockResolvedValue({
       ...pendingDomain,
-      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, merchant: { status: MerchantStatus.ACTIVE } },
+      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true, merchant: { status: MerchantStatus.ACTIVE } },
     });
     await expect(service.resolve("www.mitienda.bo")).rejects.toBeInstanceOf(NotFoundException);
   });

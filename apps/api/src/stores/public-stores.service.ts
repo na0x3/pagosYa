@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, OnModuleDestroy } from "@nestjs/common";
-import { MerchantStatus, PaymentLinkStatus, Prisma, StoreStatus } from "@prisma/client";
+import { MerchantStatus, PaymentLinkStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { findActiveStoreBySlug } from "./active-store";
+import { findActiveStoreBySlug, PUBLIC_STORE_WHERE } from "./active-store";
 import { readCatalogLayout } from "./catalog-layout";
 import { readStoreLocations, readLocationStocks } from "./store-locations";
 import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperiences, readStoreAnimations, readStoreContentOrder } from "./store-presentation";
@@ -79,8 +79,7 @@ export class PublicStoresService implements OnModuleDestroy {
     const pageSize = Math.max(6, Math.min(60, Number.parseInt(requestedPageSize ?? "24", 10) || 24));
     const term = search?.trim().slice(0, 80);
     const where: Prisma.StoreWhereInput = {
-      status: StoreStatus.ACTIVE,
-      sourcePublicationPaused: false,
+      ...PUBLIC_STORE_WHERE,
       merchant: { status: MerchantStatus.ACTIVE },
       paymentLinks: { some: { status: PaymentLinkStatus.ACTIVE } },
       ...(term ? {

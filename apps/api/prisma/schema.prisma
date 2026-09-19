@@ -791,6 +791,7 @@ model Store {
   visualProposals              StoreVisualProposal[]
   visualVersions               StoreVisualVersion[]
   visualSignatures             StoreVisualSignature[]
+  publicVisibility             Boolean                          @default(false)
   sourcePublicationPaused      Boolean                          @default(false)
   publishedSourceRevision      Int?
   sourcePublicationVersion     Int @default(0)

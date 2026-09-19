@@ -1,14 +1,16 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Interval } from "@nestjs/schedule";
-import { CustomDomainStatus, MerchantStatus, StoreStatus } from "@prisma/client";
+import { CustomDomainStatus, MerchantStatus } from "@prisma/client";
 import { promises as dns } from "node:dns";
 import { randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { domainToASCII } from "node:url";
 import { PrismaService } from "../prisma/prisma.service";
+import { isPublicStore } from "../stores/active-store";
 
 const MAX_DOMAINS_PER_STORE = 3;
+const RECONCILIATION_BATCH_SIZE = 200;
 
 export function normalizeCustomDomainHostname(input: string): string {
   const raw = typeof input === "string" ? input.trim() : "";
@@ -52,6 +54,8 @@ export function normalizeCustomDomainHostname(input: string): string {
 
 @Injectable()
 export class CustomDomainsService {
+  private reconciliationCycleStartedAt: Date | null = null;
+
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   private targetHostname(): string {
@@ -214,11 +218,26 @@ export class CustomDomainsService {
   /** Re-check both ownership and routing so a removed DNS record cannot leave a stale active hostname. */
   @Interval("custom-domain-reconciliation", 15 * 60 * 1000)
   async reconcileActiveDomains() {
-    const domains = await this.prisma.customDomain.findMany({
-      where: { status: CustomDomainStatus.ACTIVE, domainOrderId: null },
+    const continuingCycle = this.reconciliationCycleStartedAt !== null;
+    this.reconciliationCycleStartedAt ??= new Date();
+    // Keep the final partial batch from revisiting domains checked earlier in this cycle.
+    // Persisted timestamps still prioritize unchecked domains after a process restart.
+    const findBatch = () => this.prisma.customDomain.findMany({
+      where: {
+        status: CustomDomainStatus.ACTIVE,
+        domainOrderId: null,
+        OR: [{ lastCheckedAt: null }, { lastCheckedAt: { lt: this.reconciliationCycleStartedAt! } }],
+      },
+      orderBy: [{ lastCheckedAt: { sort: "asc", nulls: "first" } }, { id: "asc" }],
       select: { id: true, hostname: true, verificationToken: true },
-      take: 200,
+      take: RECONCILIATION_BATCH_SIZE,
     });
+    let domains = await findBatch();
+    if (continuingCycle && domains.length === 0) {
+      // A cycle ending with a full batch must not cost an extra scheduled run.
+      this.reconciliationCycleStartedAt = new Date();
+      domains = await findBatch();
+    }
     for (const domain of domains) {
       const [owned, routed] = await Promise.all([this.hasVerificationRecord(domain), this.routesToTarget(domain.hostname)]);
       await this.prisma.customDomain.updateMany({
@@ -226,6 +245,7 @@ export class CustomDomainsService {
         data: { status: owned && routed ? CustomDomainStatus.ACTIVE : CustomDomainStatus.VERIFIED, lastCheckedAt: new Date() },
       });
     }
+    if (domains.length < RECONCILIATION_BATCH_SIZE) this.reconciliationCycleStartedAt = null;
     return { checked: domains.length };
   }
 
@@ -248,6 +268,8 @@ export class CustomDomainsService {
           select: {
             slug: true,
             status: true,
+            sourcePublicationPaused: true,
+            publicVisibility: true,
             merchant: { select: { status: true } },
           },
         },
@@ -257,7 +279,7 @@ export class CustomDomainsService {
       !domain ||
       domain.status !== CustomDomainStatus.ACTIVE ||
       (domain.domainOrder && (domain.domainOrder.sandbox || domain.domainOrder.status !== 'ACTIVE' || !domain.domainOrder.expiresAt || domain.domainOrder.expiresAt <= new Date())) ||
-      domain.store.status !== StoreStatus.ACTIVE ||
+      !isPublicStore(domain.store) ||
       domain.store.merchant.status !== MerchantStatus.ACTIVE
     ) {
       throw new NotFoundException("Este dominio todavía no tiene una tienda publicada.");
