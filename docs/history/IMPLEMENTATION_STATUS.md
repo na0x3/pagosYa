@@ -10,7 +10,7 @@ Legend: `[x]` complete, `[~]` implemented with a documented production follow-up
 
 - [x] Inspected PagosYa authentication, merchant/users, checkout, payment state machine, ledger, webhook outbox, site builder, dashboards, Prisma migrations, deployment and local-development tooling.
 - [x] Imported the current source tree into the initially empty `paya` workspace without copying Git history, secrets, databases or caches.
-- [x] Documented the integration in `docs/EVENTS_INTEGRATION_PLAN.md`.
+- [x] Documented the integration in `docs/history/EVENTS_INTEGRATION_PLAN.md`.
 - [x] Implemented Events as a bounded NestJS module in the existing modular monolith. There is no duplicate account, builder, checkout, online-payment or customer system.
 - [x] Preserved and extended the legacy production `Event`, `EventPriceStage`, `EventOrder`, `EventSeat` and `EventTicket` tables discovered in applied migrations.
 
@@ -61,7 +61,7 @@ Legend: `[x]` complete, `[~]` implemented with a documented production follow-up
 - [x] Isolated, fail-closed `ZKTecoSpeedFaceProvider` with no invented protocol behavior.
 - [x] Executable `apps/edge` service with normalized input validation, persistent owner-only JSON queue, exponential retry, idempotency key forwarding and `/health` lag metrics.
 - [~] Cloud remains authoritative in this MVP. Local roster/config caching and an explicitly provisioned least-privilege edge credential need deployment work before offline authorization is enabled.
-- [x] `docs/ZKTECO_INTEGRATION.md` labels confirmed, unconfirmed and vendor-documentation requirements.
+- [x] `docs/history/ZKTECO_INTEGRATION.md` labels confirmed, unconfirmed and vendor-documentation requirements.
 
 ## Privacy, security and operations
 

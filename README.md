@@ -2,9 +2,11 @@
 
 PagosYa provides merchant catalogs, storefront design with YAPI, checkout, and merchant/customer dashboards.
 
-Licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`).
+Proprietary and confidential — see [`LICENSE`](LICENSE).
 
-Events, ticket sales, Face Entry, and the venue edge service were retired on 2026-09-12. The former Events design is archived in [`docs/EVENTS_INTEGRATION_PLAN.md`](docs/EVENTS_INTEGRATION_PLAN.md). Existing database records and migration history are retained; the retired services and demo commands are no longer available.
+**New to the code?** Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) first: it maps the apps, packages, and API modules and the import rules CI enforces.
+
+Events, ticket sales, Face Entry, and the venue edge service were retired on 2026-09-12. The former Events design is archived in [`docs/history/EVENTS_INTEGRATION_PLAN.md`](docs/history/EVENTS_INTEGRATION_PLAN.md). Existing database records and migration history are retained; the retired services and demo commands are no longer available.
 
 Developer integrations are documented in [`docs/DEVELOPER_API.md`](docs/DEVELOPER_API.md). Interactive OpenAPI is enabled by default only outside production; production requires the explicit `EXPOSE_API_DOCS=true` opt-in.
 
@@ -35,7 +37,7 @@ Monorepo (pnpm workspaces):
 - `packages/sdk-node` — SDK tipado en TypeScript para el backend de los comercios.
 - `packages/shared-types` — tipos compartidos entre api, checkout y widget.
 - `apps/ops` — consola interna (HTML + JS sin build) para soporte de cuentas, revisión KYC, incidencias y auditoría. Cada agente se autentica con su propio token `ops_...` (ver Ops/auditoría abajo), no con un secreto compartido.
-- `apps/merchant-dashboard` — dashboard de comercio (HTML + JS sin build): balance, pagos, payouts, estado de KYC/facturación. Login propio (email/contraseña, `MerchantUser`/`MerchantSession`) — la llave secreta nunca toca el navegador; se usa una sola vez, desde el backend del comercio, para crear el login (`POST /v1/dashboard/signup`).
+- `apps/merchant-dashboard` — dashboard de comercio (Vite; incluye el build de `apps/merchant-studio` en `/studio`): balance, pagos, payouts, estado de KYC/facturación. Login propio (email/contraseña, `MerchantUser`/`MerchantSession`) — la llave secreta nunca toca el navegador; se usa una sola vez, desde el backend del comercio, para crear el login (`POST /v1/dashboard/signup`).
 - `apps/consumer-dashboard` — **Tiendas + Mi pagosYa** (HTML + JS sin build): abre primero el marketplace público de comercios registrados y muestra arriba el resumen de la cuenta opcional del comprador. La vista detallada reúne compras, entregas, pagos y obligaciones con múltiples comercios u organizaciones. Una conexión solo se propone cuando coinciden correo verificado y carnet normalizado con datos que la organización ya cargó; el usuario debe aceptarla antes de ver sus obligaciones.
 
 ### Cuenta del comprador y conexiones (`apps/api/src/consumer/`)

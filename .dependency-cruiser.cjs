@@ -20,13 +20,6 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
-      name: 'no-archive-imports',
-      comment: 'archive/ holds retired code for reference only.',
-      severity: 'error',
-      from: {},
-      to: { path: '^archive/' },
-    },
-    {
       name: 'no-circular',
       comment: 'Circular imports make modules impossible to understand or test in isolation.',
       severity: 'warn',

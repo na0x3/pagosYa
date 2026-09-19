@@ -2,7 +2,7 @@
 
 Read this first, every session, before touching code. It's a restart
 snapshot, not a diary — it describes *current truth*. For session narrative,
-see `docs/SESSION_LOG.md`. For architecture and how to run locally, see
+see `docs/history/SESSION_LOG.md`. For architecture and how to run locally, see
 `README.md`.
 
 **This file is only updated when the user explicitly asks.** The Stop hook

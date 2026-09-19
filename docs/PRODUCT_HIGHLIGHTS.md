@@ -1,6 +1,6 @@
 # Product highlights with animated icons
 
-Status: implemented 2026-09-15 (`docs/PRODUCT_HIGHLIGHTS_PLAN.md`). Part 2 of the product page work; Part 1 is `docs/PRODUCT_PAGE_KIT.md`.
+Status: implemented 2026-09-15 (`docs/history/PRODUCT_HIGHLIGHTS_PLAN.md`). Part 2 of the product page work; Part 1 is `docs/PRODUCT_PAGE_KIT.md`.
 
 Built as written, with these decisions made during the work:
 - The suggestion route lives with the stores module, where AI usage is recorded: `POST v1/stores/:storeId/product-highlights/suggestions`.

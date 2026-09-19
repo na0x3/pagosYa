@@ -20,4 +20,4 @@ Recovered the interrupted request to change YAPI-generated storefronts to Next.j
 
 The local exported fixture and screenshot are in `tmp/next-storefront-recovery-20260909/` (ignored by Git). No paid generation, live order/payment, merchant redesign or production publication was performed. This validates the framework integration with deterministic source; it is not a new visual-quality benchmark of model-generated sites.
 
-See [the implementation contract](source-design-generation.md#nextjs-source-and-previews) for scope and limitations.
+See [the implementation contract](../source-design-generation.md#nextjs-source-and-previews) for scope and limitations.

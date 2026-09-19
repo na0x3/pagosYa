@@ -189,7 +189,7 @@ Phase 0 is the whole of the type, rhythm and colour correction and costs no code
 
 ## 11. What this does not change
 
-- **No platform palette, family, spacing scale or page composition.** `STOREFRONT_THEME_DIRECTIONS.md` retired presets and this document does not reintroduce them. Every rule here constrains ratios, counts and consistency, never values.
+- **No platform palette, family, spacing scale or page composition.** `history/STOREFRONT_THEME_DIRECTIONS.md` retired presets and this document does not reintroduce them. Every rule here constrains ratios, counts and consistency, never values.
 - **Product-page layout.** `PRODUCT_PAGE_KIT.md` owns it. §7 adjusts tokens inside that layout; the two styles, the grid, the choice rendering and the buybox split are unchanged.
 - **Cart, checkout, payment, stock and fulfilment behaviour.** Untouched, except the `commerce-pages.css` line-height in §7, which is a typographic change with no behavioural component.
 - **All existing runtime hooks.** `data-product-option`, `data-option-value`, `data-variant-add`, `data-add`, `data-product-quantity`, `data-product-total`, `data-product-image`, `data-product-prev/next`, `data-product-count`, `data-product-sticky`, `data-product-delivery`, `data-pagosya-catalog`, `data-pagosya-cart` all keep their contracts.

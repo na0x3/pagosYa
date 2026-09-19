@@ -2,7 +2,7 @@
 
 **The new pipeline produces materially more distinct compositions in this sample. It does not yet produce uniformly polished, usable sites.** Nine saved variants now include compact ordering menus, editorial covers, a lateral café identity with ticket products, shelf-style ceramics and different uses of the supplied breakfast image. The earlier review found three closely related serif-introduction/catalog/closing pages.
 
-[Open the desktop/mobile comparison](../tmp/source-design-planned-20260909/index.html). [Independent visual assessment](../tmp/source-design-planned-20260909/ASSESSMENT-A-FINAL.md). [Independent browser evidence](../tmp/source-design-planned-20260909/EVIDENCE.md). These local evaluation artifacts are ignored by Git; this report and the implementation documentation are durable repository files.
+[Open the desktop/mobile comparison](../../tmp/source-design-planned-20260909/index.html). [Independent visual assessment](../../tmp/source-design-planned-20260909/ASSESSMENT-A-FINAL.md). [Independent browser evidence](../../tmp/source-design-planned-20260909/EVIDENCE.md). These local evaluation artifacts are ignored by Git; this report and the implementation documentation are durable repository files.
 
 ## What changed
 
@@ -12,7 +12,7 @@
 - Commerce supports different authored product arrangements without leaving blank image panels, empty status boxes or duplicate checkout forms. Empty drawer mounts stay hidden when an authored drawer trigger exists; older inline carts are preserved. All custom detail links bind to their product, and activation restores an ID stripped by presentation code.
 - Planning and implementation share the existing cost allowance, timeout and one repair. An invalid completed plan can consume that repair; it does not create an additional source retry. Ordinary edits retain their saved direction and skip exploration.
 
-[Implementation and contract details](source-design-generation.md).
+[Implementation and contract details](../source-design-generation.md).
 
 ## Final saved sample
 

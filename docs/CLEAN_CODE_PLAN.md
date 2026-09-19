@@ -6,7 +6,7 @@ Started 2026-09-18. Goal: a codebase a new engineer can understand quickly — l
 
 - **Behavior-preserving.** Each refactor is a move or extraction with tests green before and after. Feature changes go in separate commits.
 - **One phase per branch/PR**, small enough to review.
-- **Baseline first.** Record the current test/build state (the older dashboard browser suite already has 12 known failures — see `CODE_CLEANUP_2026-09-12.md`), so we never confuse old failures with new regressions.
+- **Baseline first.** Record the current test/build state (the older dashboard browser suite already has 12 known failures — see `history/CODE_CLEANUP_2026-09-12.md`), so we never confuse old failures with new regressions.
 
 ## Findings (2026-09-18 survey)
 
@@ -34,3 +34,8 @@ Started 2026-09-18. Goal: a codebase a new engineer can understand quickly — l
 6. **Enforce** — turn on boundary lint in CI so the structure can't regress.
 
 Phases 3–5 are the large ones; each should be split into several PRs.
+
+## Progress
+
+- **Phase 0 — done (2026-09-18).** Baseline: build passes; API 1396/1396 (after raising the timeout on four Next.js-compiling suites that only failed under parallel load), checkout 237/237, studio 58/58, dashboard unit tests pass. Logs in `tmp/clean-code/baseline/` (local). `pnpm check:boundaries` added to CI with 23 known cross-app import violations + 5 circular warnings recorded. A repo-wide Prettier pass was deliberately **not** done yet — it would rewrite most files and bury blame history; decide before phase 3.
+- **Phase 1 — done except `archive/`.** Dated reports, archived designs, and completed plans moved to `docs/history/` with links fixed; `docs/ARCHITECTURE.md` added and linked from the README; license made proprietary (`LICENSE`, `"license": "UNLICENSED"`). Deleting the tracked `archive/` folder was blocked by the local GateGuard hook and is still pending.

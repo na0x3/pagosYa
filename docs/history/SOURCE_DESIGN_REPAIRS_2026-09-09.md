@@ -1,6 +1,6 @@
 # Correcting generated storefront visual defects
 
-The reviewed defects are fixed in separate source copies, and Studio now checks the underlying layout problems. [Compare originals and repairs](../tmp/source-design-repaired-20260909/index.html). The original generation results remain unchanged.
+The reviewed defects are fixed in separate source copies, and Studio now checks the underlying layout problems. [Compare originals and repairs](../../tmp/source-design-repaired-20260909/index.html). The original generation results remain unchanged.
 
 ## Concrete repairs
 
@@ -39,4 +39,4 @@ This creates a repeatable workflow: render the chosen concept, identify the spec
 
 No model calls, merchant updates or deployments were made for these repairs. Passing replays of manually corrected samples must not be reported as a higher first-pass generation success rate.
 
-The [exact source patches and input digests](research/source-design-layout-repairs-20260909.json) are retained in the repository. Repaired files, screenshots, browser measurements and replay records are under `tmp/source-design-repaired-20260909/`; those local artifacts are ignored by Git. The previous [generation-quality report](SOURCE_DESIGN_VALIDATION_2026-09-09.md) remains the historical benchmark.
+The [exact source patches and input digests](../research/source-design-layout-repairs-20260909.json) are retained in the repository. Repaired files, screenshots, browser measurements and replay records are under `tmp/source-design-repaired-20260909/`; those local artifacts are ignored by Git. The previous [generation-quality report](SOURCE_DESIGN_VALIDATION_2026-09-09.md) remains the historical benchmark.

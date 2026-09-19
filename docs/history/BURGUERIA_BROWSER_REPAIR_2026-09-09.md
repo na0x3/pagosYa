@@ -14,7 +14,7 @@ Inspected the merchant's actual localhost dashboard and conversation, revisions 
 
 Revision 3 corrects `styles.css`: shrinkable manifesto columns, normal paragraph flow, contained carousel photographs, and 44px arrow/dot targets. The original slider behavior and brand palette remain. Revision 4 opens heading tracking from -0.045em to -0.04em after the new browser review identified cramped type. Neither revision invokes generation or publishes the store.
 
-The platform changes distinguish missing catalog setup from code failures, show browser results directly in the chat, wait for checks when completing a generated revision, attach current findings to subsequent requests, and explain overflow with actual measurements. See [generation contract](source-design-generation.md) for scope and limitations.
+The platform changes distinguish missing catalog setup from code failures, show browser results directly in the chat, wait for checks when completing a generated revision, attach current findings to subsequent requests, and explain overflow with actual measurements. See [generation contract](../source-design-generation.md) for scope and limitations.
 
 ## Verification
 
