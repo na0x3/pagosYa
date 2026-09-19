@@ -633,6 +633,11 @@ export class CreateStoreDto {
   @IsString({ each: true })
   cartRecommendationProductIds?: string[];
 
+  @ApiPropertyOptional({ description: "Whether shoppers may see the store. New stores stay private until the owner publishes a design or turns this on." })
+  @IsOptional()
+  @IsBoolean()
+  publicVisibility?: boolean;
+
   @ApiPropertyOptional({ description: "Shopper policies as plain text; empty or null removes one.", type: () => StorePoliciesDto })
   @IsOptional()
   @ValidateNested()

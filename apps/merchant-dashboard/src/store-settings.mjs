@@ -18,7 +18,7 @@ const POLICY_FIELDS = /** @type {const} */ ([
 /** @typedef {{ id: string, name: string, address: string, mapEmbedUrl: string, highlight: string, description: string, pickupEnabled: boolean, deliveryEnabled: boolean, openingHours: OpeningHours[], inventory: Record<string, number | null | undefined> }} EditableLocation */
 /** @typedef {{ label: string, url: string }} StoreLink */
 /** @typedef {{ id: string, name: string, status?: string, stock?: number | null, locationStocks?: Record<string, number | null> }} Product */
-/** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
+/** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, publicVisibility?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
 
 /** @type {Record<string, string>} */
 const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -122,6 +122,10 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
       </div>
       <p class="store-conversion-note" data-payment-requirement></p>
       <p class="faint" data-lead-help hidden>El correo se enviará a tu correo de soporte; si no configuraste uno, usaremos el correo de tu cuenta pagosYa.</p>
+      <label class="checkbox-row store-cart-recommendations" for="storePublicVisibility">
+        <input type="checkbox" id="storePublicVisibility">
+        <span><strong>Tienda visible al público</strong><small>Cuando está apagado, tu tienda no aparece en buscadores ni en el directorio y su enlace muestra que no está disponible. Publicar un diseño desde YAPI también la hace visible.</small></span>
+      </label>
       <label class="checkbox-row store-cart-recommendations" for="storeShowLowStock">
         <input type="checkbox" id="storeShowLowStock">
         <span><strong>Mostrar avisos de pocas unidades</strong><small>Permite que el cliente vea mensajes como “Solo quedan 3”. Si está apagado, el inventario permanece privado y solo se muestra “Agotado”.</small></span>
@@ -167,6 +171,7 @@ export function mountStoreSettings(root, deps) {
   const $ = (selector) => root.querySelector(selector);
   const nameInput = $("#storeNameInput"), taglineInput = $("#storeTaglineInput"), phoneInput = $("#storeContactPhoneInput");
   const emailInput = $("#storeContactEmailInput"), lowStockInput = $("#storeShowLowStock"), logoInput = $("#storeLogoInput");
+  const visibilityInput = /** @type {HTMLInputElement} */ ($("#storePublicVisibility"));
   const policyInput = (/** @type {string} */ key) => /** @type {HTMLTextAreaElement} */ ($(`#storePolicy-${key}`));
   const logoPreview = $("[data-logo-preview]"), logoRemove = $("[data-logo-remove]");
   const locationsList = $("#storeLocationsList"), linksHost = $("[data-links]");
@@ -420,6 +425,7 @@ export function mountStoreSettings(root, deps) {
       contactPhone: phoneInput.value.trim() || null,
       contactEmail: emailInput.value.trim() || null,
       showLowStockToCustomers: lowStockInput.checked,
+      publicVisibility: visibilityInput.checked,
       policies: Object.fromEntries(POLICY_FIELDS.map(([key]) => [key, policyInput(key).value.trim() || null])),
       ...(nextMode !== "external" && { leadCaptureUrl: null }),
       ...(locationsEdited && { locations: serializedLocations() }),
@@ -456,6 +462,7 @@ export function mountStoreSettings(root, deps) {
       phoneInput.value = store.contactPhone || "";
       emailInput.value = store.contactEmail || "";
       lowStockInput.checked = store.showLowStockToCustomers === true;
+      visibilityInput.checked = store.publicVisibility === true;
       for (const [key] of POLICY_FIELDS) policyInput(key).value = store.policies?.[key] || "";
       const checkoutMode = ["payment", "whatsapp", "external"].includes(store.checkoutMode || "") ? store.checkoutMode : "payment";
       /** @type {HTMLInputElement} */ (form.querySelector(`input[name="storeCheckoutMode"][value="${checkoutMode}"]`)).checked = true;

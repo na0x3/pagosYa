@@ -17,3 +17,13 @@ describe('store policies', () => {
     expect(storePolicies('nope')).toEqual({});
   });
 });
+
+describe('owner-controlled public visibility', () => {
+  it('accepts only a boolean and maps it onto the store update', () => {
+    const { storeUpdateData } = jest.requireActual('./store-presentation');
+    expect(validateSync(plainToInstance(UpdateStoreDto, { publicVisibility: true }), { whitelist: true, forbidNonWhitelisted: true })).toEqual([]);
+    expect(validateSync(plainToInstance(UpdateStoreDto, { publicVisibility: 'yes' }), { whitelist: true, forbidNonWhitelisted: true }).length).toBeGreaterThan(0);
+    expect(storeUpdateData(plainToInstance(UpdateStoreDto, { publicVisibility: true }))).toMatchObject({ publicVisibility: true });
+    expect(storeUpdateData(plainToInstance(UpdateStoreDto, { name: 'X' }))).not.toHaveProperty('publicVisibility');
+  });
+});

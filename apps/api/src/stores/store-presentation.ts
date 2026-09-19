@@ -676,6 +676,7 @@ export function storeUpdateData(
     }),
     ...(dto.showLowStockToCustomers !== undefined && { showLowStockToCustomers: dto.showLowStockToCustomers }),
     ...(dto.policies !== undefined && { policies: storePolicies(dto.policies) as Prisma.InputJsonValue }),
+    ...(dto.publicVisibility !== undefined && { publicVisibility: dto.publicVisibility }),
     ...(dto.salesGoalLabel !== undefined && { salesGoalLabel: dto.salesGoalLabel }),
     ...(dto.salesGoalAmount !== undefined && { salesGoalAmount: dto.salesGoalAmount }),
     ...(siteDocument !== undefined && { siteDocument }),
