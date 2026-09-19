@@ -1477,13 +1477,6 @@ test("the storefront marquesina opens text, movement, typography, effects, speed
   await expect(page.locator("#storeAnnouncementInput")).toHaveValue("Hamburguesas listas • Pedidos abiertos");
 });
 
-async function openYapi(page) {
-  const restore = page.locator("#assistantRestore");
-  if (await restore.isVisible()) await restore.click();
-  else if (await page.locator("#assistantPanel").isHidden()) await page.locator("#assistantObject").click();
-  await expect(page.locator("#assistantPanel")).toBeVisible();
-}
-
 async function prepareInventoryImport(page, responseForRequest) {
   const requests = await openDashboard(page, [store("store_1", "Primera")], async (args) => {
     if (args.path === "/stores/store_1/payment_links/import/normalize") {
@@ -2428,7 +2421,6 @@ test.skip("preview clicks edit the exact element without opening a second editor
   await expect(page.locator("#storeAccentColor")).toHaveValue(paletteColor);
   await expect(page.locator("#storeAccentToggle")).toBeChecked();
   if (process.env.CAPTURE_VISUAL_EDITOR) {
-    if (await page.locator("#assistantClose").isVisible()) await page.locator("#assistantClose").click();
     await selectInPreview({ section: "animation-opening", field: "subtitle", label: "descripción visible", animationId: "opening" });
     await page.locator("#previewContextEditor").getByLabel("Título general", { exact: true }).fill("Una historia a tu manera");
     await page.locator("#previewContextEditor").getByLabel("Alineación").selectOption("right");
@@ -4080,35 +4072,6 @@ test("merchant chooses the exact products shown as cart recommendations", async 
   });
 });
 
-// Unreachable since 11f13fd: workspace-design.css hides .assistant-dock outside the fullscreen
-// preview, and there the preview covers "Mostrar Yapi".
-test.fixme("Yapi saves a store sales goal and shows revenue progress", async ({ page }) => {
-  const goalStore = store("store_1", "Cafetería");
-  const requests = await openDashboard(page, [goalStore], ({ path, request }) => {
-    if (path === "/merchants/finances") {
-      return { totalRevenue: 250000, paymentCount: 5, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" };
-    }
-    if (path === "/stores/store_1" && request.method() === "PATCH") {
-      return { ...goalStore, ...request.postDataJSON() };
-    }
-    return undefined;
-  });
-  await openYapi(page);
-
-  await expect(page.locator("#assistantGoalView")).toBeHidden();
-  await page.getByRole("tab", { name: "Meta" }).click();
-  await expect(page.locator("#assistantGoalView")).toBeVisible();
-  await page.locator("#assistantGoalLabel").fill("Meta de agosto");
-  await page.locator("#assistantGoalAmount").fill("5000");
-  await page.locator("#assistantGoalForm").evaluate((form) => form.requestSubmit());
-
-  await expect(page.locator("#assistantGoalPercent")).toHaveText("50%");
-  await expect(page.locator("#assistantGoalSummary")).toContainText("Meta de agosto");
-  await expect(page.locator("#assistantGoalTrack")).toHaveAttribute("aria-valuenow", "50");
-  const write = requests.find((entry) => entry.path === "/stores/store_1" && entry.method === "PATCH");
-  expect(write.body).toEqual({ salesGoalLabel: "Meta de agosto", salesGoalAmount: 500000 });
-});
-
 test("finance dashboard shows monthly projection and strongest sales weekday", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Cafetería")], ({ path }) => {
     if (path === "/merchants/finances") {
@@ -4353,91 +4316,6 @@ test.fixme("a lead-only store hides NIT features until integrated payments are e
   await expect(page.locator("#info")).toContainText("registra tu NIT");
   const settingsWrite = requests.find((entry) => entry.path === "/stores/store_1/settings" && entry.method === "PUT");
   expect(settingsWrite.body).toMatchObject({ checkoutMode: "payment", leadCaptureUrl: null });
-});
-
-test("Yapi stays available without covering the appearance editor", async ({ page }) => {
-  await openDashboard(page);
-  await expect(page.locator("#assistantPanel")).toBeHidden();
-  await expect(page.locator("#assistantObject")).toHaveAttribute("aria-expanded", "false");
-  await expect(page.locator("#assistantRestore")).toBeVisible();
-  await expect(page.locator("#assistantClose")).not.toBeFocused();
-});
-
-// Unreachable since 11f13fd: workspace-design.css hides .assistant-dock outside the fullscreen
-// preview, and there the preview covers "Mostrar Yapi".
-test.fixme("Yapi calculates an honest 100% setup and explains digital invoicing", async ({ page }) => {
-  const readyStore = {
-    ...store("store_1", "Lista para vender"),
-    logoUrl: "/uploads/logo.webp",
-    bannerUrl: "/uploads/banner.webp",
-    aboutImageUrl: "/uploads/about.webp",
-    promotionImageUrl: "/uploads/promo.webp",
-    heroSlides: [{ imageUrl: "/uploads/hero-detail.webp", title: "Detalle" }],
-    contactEmail: "soporte@tienda.bo",
-  };
-  await openDashboard(page, [readyStore], ({ path }) => {
-    if (path === "/merchants/invoicing_profile") {
-      return { id: "invoice_1", nit: "123456", razonSocial: "Lista SRL", sucursal: 0, puntoVenta: 0, cuis: "CUIS-1" };
-    }
-    if (path === "/stores/store_1/payment_links") {
-      return [{
-        id: "product_1", name: "Café", amount: 2500, currency: "BOB", status: "ACTIVE", stock: 20,
-        imageUrls: ["/uploads/cafe.webp"], imagePositions: ["50% 50%"], tags: [], variants: [], categoryId: null,
-        codigoProducto: "CAFE-1", actividadEconomica: "56101", codigoProductoSin: "99100", unidadMedida: 58,
-      }];
-    }
-    return undefined;
-  });
-  await openYapi(page);
-
-  await expect(page.locator("#assistantSetupPercent")).toHaveText("100%");
-  await expect(page.locator("#assistantSetupTrack")).toHaveAttribute("aria-valuenow", "100");
-  await expect(page.locator("#assistantSetupList .is-complete")).toHaveCount(7);
-
-  await page.locator("#assistantAgentTab").click();
-  await page.locator("#assistantChatInput").fill("¿Cómo funciona el CUFD y la facturación digital?");
-  await page.locator("#assistantChatForm").evaluate((form) => form.requestSubmit());
-  await expect(page.locator("#assistantChatLog")).toContainText("CUFD se genera o renueva al emitir facturas");
-});
-
-// Unreachable since 11f13fd: workspace-design.css hides .assistant-dock outside the fullscreen
-// preview, and there the preview covers "Mostrar Yapi".
-test.fixme("Yapi reports low stock, saves notes, and stays anchored to the page", async ({ page }) => {
-  const sparseStore = { ...store("store_1", "Tienda breve"), logoUrl: "/uploads/logo.webp" };
-  await openDashboard(page, [sparseStore], ({ path }) => {
-    if (path === "/stores/store_1/payment_links") {
-      return [{
-        id: "low_1", name: "Matcha", amount: 2500, currency: "BOB", status: "ACTIVE", stock: 3,
-        imageUrls: ["/uploads/matcha.webp"], imagePositions: ["50% 50%"], tags: [], variants: [], categoryId: null,
-      }];
-    }
-    return undefined;
-  });
-  await openYapi(page);
-
-  await expect(page.locator("#assistantAlerts")).toContainText("Matcha: 3 disponibles");
-  await expect(page.locator("#assistantAlerts")).toContainText("6 imágenes recomendadas");
-  await expect(page.locator("#assistantNotificationBadge")).toHaveText("2");
-
-  await page.locator("#assistantNotesTab").click();
-  await page.locator("#assistantNoteInput").fill("Reponer matcha el viernes");
-  await page.locator("#assistantNoteForm").evaluate((form) => form.requestSubmit());
-  await expect(page.locator("#assistantNoteList")).toContainText("Reponer matcha el viernes");
-
-  await page.locator("#assistantClose").click();
-  const beforeTop = await page.locator("#assistantDock").evaluate((element) => element.getBoundingClientRect().top);
-  await page.evaluate(() => window.scrollTo(0, 500));
-  const afterTop = await page.locator("#assistantDock").evaluate((element) => element.getBoundingClientRect().top);
-  expect(afterTop).toBeLessThan(beforeTop - 300);
-
-  await page.evaluate(() => {
-    const dock = document.getElementById("assistantDock");
-    dock.style.top = `${window.scrollY + 80}px`;
-  });
-  const scrollBeforeHide = await page.evaluate(() => window.scrollY);
-  await page.locator("#assistantHide").evaluate((button) => button.click());
-  await expect(page.locator("#assistantDock")).toBeHidden();
-  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforeHide);
 });
 
 test("merchant uploads and saves a promotion image", async ({ page }) => {

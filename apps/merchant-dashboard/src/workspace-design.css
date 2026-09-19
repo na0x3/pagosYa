@@ -41,7 +41,6 @@ body.is-logged-in:not(.store-preview-fullscreen) :is(input,select,textarea) { bo
 body.is-logged-in:not(.store-preview-fullscreen) :is(.inventory-importer,.current-store-banner) { background: var(--pg-bg); border: 1px solid var(--pg-border); border-radius: 6px; box-shadow: none; }
 body.is-logged-in:not(.store-preview-fullscreen) table th { background: var(--pg-bg); color: var(--pg-text-muted); font: 600 11px/1.5 Arial,sans-serif; text-transform: uppercase; letter-spacing: .5px; }
 body.is-logged-in:not(.store-preview-fullscreen) table td { font-size: 13px; }
-body.is-logged-in:not(.store-preview-fullscreen) .assistant-dock { display: none !important; }
 .workspace-yapi { display: none; }
 body.is-logged-in:not(.store-preview-fullscreen):not([data-dashboard-view="workspace"]):not([data-dashboard-view="products"]):not(.store-preview-fullscreen) .workspace-yapi { display: block; position: fixed; z-index: 110; bottom: 20px; left: calc(50% + 120px); transform: translateX(-50%); width: min(760px, calc(100vw - 310px)); padding: 12px 16px; border: 2px solid var(--pg-border-strong); border-radius: 12px; box-shadow: 5px 5px 0 var(--pg-border-strong); background: var(--pg-surface); }
 .workspace-yapi-heading { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-bottom: 8px; }
