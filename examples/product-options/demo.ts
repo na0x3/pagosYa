@@ -2,8 +2,8 @@ import '../../apps/merchant-dashboard/src/product-options.js';
 import '../../apps/merchant-dashboard/src/product-options.css';
 import { createProductForm } from '../../apps/merchant-studio/src/source-create-product';
 import { sourcePreviewDocument } from '../../apps/merchant-studio/src/source-preview';
-import commerce from '../../apps/api/src/stores/source-kit/commerce.js?raw';
-import commerceCss from '../../apps/api/src/stores/source-kit/commerce-pages.css?raw';
+import commerce from '../../packages/storefront-kit/kit/commerce.js?raw';
+import commerceCss from '../../packages/storefront-kit/kit/commerce-pages.css?raw';
 import type { VariantDraft } from '../../apps/merchant-dashboard/src/product-options';
 
 const initial = PagosYaProductOptions.combinations([{ name: 'Color', values: ['Azul', 'Blanco', 'Negro'] }, { name: 'Talla', values: ['S', 'M', 'L'] }], [], '120');

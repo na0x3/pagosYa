@@ -29,7 +29,7 @@ export class StoreSeoService {
     const isCollectionRoute = sourcePage === 'coleccion.html';
     // coleccion.html is parameterized (one file, many collections), same as product.html: an
     // unknown or missing collection slug shows the whole catalog rather than 404ing, matching the
-    // storefront's own runtime fallback (source-kit/commerce.js) — never a canonical that implies
+    // storefront's own runtime fallback (storefront-kit commerce.js) — never a canonical that implies
     // a collection that doesn't exist.
     const collection = isCollectionRoute ? (data.collections || []).find(col => col.slug === collectionSlug) : undefined;
     const page = isCollectionRoute ? undefined : c.pages.find(p => p.path === (sourcePage || 'index.html'));
