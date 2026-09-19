@@ -200,3 +200,59 @@ describe('boxes filled with catalog products', () => {
     expect(guide.element.querySelector('[data-box-locked]')!.textContent).toContain('extras');
   });
 });
+
+describe('SIN classification for electronic invoices', () => {
+  function fiscalSetup(ready: boolean, initial?: Parameters<typeof createProductForm>[4]) {
+    const api = {
+      createProduct: vi.fn().mockResolvedValue({ id: 'p1' }), updateProduct: vi.fn().mockResolvedValue({ id: 'p1', name: 'x' }), upload: vi.fn(),
+      suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }),
+      productFiscalReady: vi.fn().mockResolvedValue(ready),
+      siatActivities: vi.fn().mockResolvedValue({ total: 1, entries: [{ codigoCaeb: '477210', descripcion: 'VENTA DE CALZADO' }] }),
+      siatUnits: vi.fn().mockResolvedValue({ total: 1, entries: [{ codigoClasificador: 58, descripcion: 'UNIDAD' }] }),
+      siatProducts: vi.fn().mockResolvedValue({ total: 1, entries: [{ codigoProducto: 123456, descripcionProducto: 'CALZADO' }] }),
+    }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-two', saved, vi.fn(), initial); document.body.append(guide.element);
+    const $ = <T extends Element>(selector: string) => guide.element.querySelector<T>(selector)!;
+    const choose = (name: string, value: string) => { const field = $<HTMLSelectElement>(`[name="${name}"]`); field.value = value; field.dispatchEvent(new Event('change', { bubbles: true })); };
+    const next = () => $('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const toReview = () => { const name = $<HTMLInputElement>('[name="name"]'); if (!name.value) { name.value = 'Nike Air Max 90'; name.dispatchEvent(new Event('input', { bubbles: true })); } next(); next(); $<HTMLInputElement>('[name="price"]').value = '850'; for (let i = 0; i < 5; i++) next(); };
+    return { api, saved, $, choose, next, toReview };
+  }
+
+  it('stays out of the way for stores that do not invoice, and saves nothing fiscal', async () => {
+    const t = fiscalSetup(false); t.toReview();
+    await vi.waitFor(() => expect(t.api.productFiscalReady).toHaveBeenCalledWith('store-two'));
+    expect(t.$<HTMLDetailsElement>('[data-product-fiscal]').hidden).toBe(true);
+    t.next(); await vi.waitFor(() => expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.createProduct.mock.calls[0][1]).not.toHaveProperty('actividadEconomica');
+    expect(t.api.siatActivities).not.toHaveBeenCalled();
+  });
+
+  it('classifies a product from the taxpayer-scoped SIN catalogs', async () => {
+    const t = fiscalSetup(true); t.toReview();
+    const fiscal = t.$<HTMLDetailsElement>('[data-product-fiscal]');
+    await vi.waitFor(() => expect(fiscal.hidden).toBe(false));
+    fiscal.open = true; fiscal.dispatchEvent(new Event('toggle'));
+    await vi.waitFor(() => expect(t.$<HTMLSelectElement>('[name="actividadEconomica"]').disabled).toBe(false));
+    t.$<HTMLInputElement>('[name="codigoProducto"]').value = 'NIKE-AM90';
+    t.choose('actividadEconomica', '477210');
+    await vi.waitFor(() => expect(t.$<HTMLSelectElement>('[name="codigoProductoSin"]').disabled).toBe(false));
+    expect(t.api.siatProducts).toHaveBeenCalledWith('477210', '');
+    t.choose('codigoProductoSin', '123456');
+    t.next();
+    expect(t.$('[data-product-error]').textContent).toContain('elige actividad, clasificación y unidad');
+    expect(t.api.createProduct).not.toHaveBeenCalled();
+    t.choose('unidadMedida', '58');
+    t.next(); await vi.waitFor(() => expect(t.saved).toHaveBeenCalledOnce());
+    expect(t.api.createProduct.mock.calls[0][1]).toMatchObject({ codigoProducto: 'NIKE-AM90', actividadEconomica: '477210', codigoProductoSin: '123456', unidadMedida: 58 });
+  });
+
+  it('reopens the saved classification when a product is edited', async () => {
+    const t = fiscalSetup(true, { id: 'p1', name: 'Nike Air Max 90', amount: 85000, codigoProducto: 'NIKE-AM90', actividadEconomica: '477210', codigoProductoSin: '123456', unidadMedida: 58 });
+    await vi.waitFor(() => expect(t.$<HTMLSelectElement>('[name="codigoProductoSin"]').value).toBe('123456'));
+    expect(t.$<HTMLDetailsElement>('[data-product-fiscal]').open).toBe(true);
+    expect(t.$<HTMLSelectElement>('[name="actividadEconomica"]').value).toBe('477210');
+    expect(t.$<HTMLSelectElement>('[name="unidadMedida"]').value).toBe('58');
+    expect(t.$<HTMLInputElement>('[name="codigoProducto"]').value).toBe('NIKE-AM90');
+  });
+});

@@ -32,7 +32,12 @@ export interface MerchantStore {
   catalogLayout?: CatalogLayout;
   cartRecommendationsEnabled?: boolean;
   cartRecommendationProductIds?: string[];
+  checkoutMode?: string;
 }
+
+/** SIN classification of a product, needed on electronic invoices. */
+export interface ProductFiscalMapping { codigoProducto?: string; actividadEconomica?: string; codigoProductoSin?: string; unidadMedida?: number }
+export interface SiatCatalog<T> { total: number; entries: T[] }
 
 export type RecommendableProduct = { id: string; name: string; status: string; recommendedProductIds?: string[] };
 
@@ -252,6 +257,27 @@ export class MerchantStudioApi {
   resumeSourceDesignJob(storeId: string, id: string): Promise<SourceDesignJob> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/design-jobs/${encodeURIComponent(id)}/resume`, { method: 'POST', body: '{}' });
   }
+  /** SIN classification applies only to stores that charge with pagosYa and already have a CUIS. */
+  async productFiscalReady(storeId: string): Promise<boolean> {
+    const [stores, profile] = await Promise.all([this.listStores(), this.request<{ cuis?: string | null } | null>("/merchants/invoicing_profile")]);
+    const store = stores.find((candidate) => candidate.id === storeId);
+    return Boolean(store && (store.checkoutMode || "payment") === "payment" && profile?.cuis);
+  }
+
+  siatActivities(): Promise<SiatCatalog<{ codigoCaeb: string; descripcion: string }>> {
+    return this.request("/siat/catalogs/activities?limit=500");
+  }
+
+  siatUnits(): Promise<SiatCatalog<{ codigoClasificador: number; descripcion: string }>> {
+    return this.request("/siat/catalogs/units?limit=500");
+  }
+
+  siatProducts(activityCode: string, query = ""): Promise<SiatCatalog<{ codigoProducto: number | string; descripcionProducto: string }>> {
+    const params = new URLSearchParams({ activityCode, limit: "300" });
+    if (query) params.set("q", query);
+    return this.request(`/siat/catalogs/products?${params}`);
+  }
+
   sourceCatalog(storeId: string): Promise<JsonRecord> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
   }
@@ -260,7 +286,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
   }
 
-  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> }): Promise<{ id: string; name: string }> {
+  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> } & ProductFiscalMapping): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 

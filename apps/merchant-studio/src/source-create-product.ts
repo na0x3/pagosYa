@@ -1,4 +1,4 @@
-import { API_BASE_URL, type MerchantStudioApi } from './api';
+import { API_BASE_URL, type MerchantStudioApi, type ProductFiscalMapping } from './api';
 import { PRODUCT_HIGHLIGHT_ICON_LABELS, type ProductHighlightInput } from './product-highlight-icons';
 import { prepareSourceImage } from './source-images';
 import { escapeHtml as escape } from './studio-ui';
@@ -10,7 +10,7 @@ import type { VariantInput } from '@pagosya/variant-editor';
 
 export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
 type BoxChoice = { id: string; name: string; imageUrls?: string[] };
-export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[] };
+export type ProductGuideRecord = { id: string; name: string; extras?: ProductExtraRecord[]; highlights?: ProductHighlightInput[]; description?: string | null; amount: number; currency?: string; stock?: number | null; imageUrls?: string[]; variants?: Array<VariantInput & { id: string }>; specifications?: ProductSpecification[] } & ProductFiscalMapping;
 export type ProductSpecification = { label: string; value: string };
 
 /** "Nombre: valor" lines to specification rows, or a message for the first invalid line. */
@@ -48,7 +48,17 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div></section>
       <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
       <section data-guide-step="7" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
-      <section data-guide-step="8" hidden><div data-product-review class="product-review"></div></section>
+      <section data-guide-step="8" hidden><div data-product-review class="product-review"></div>
+        <details class="product-fiscal" data-product-fiscal hidden><summary>Clasificación para facturar (SIN)</summary>
+          <p class="product-step-help">Opcional. Con estos datos tus facturas electrónicas llevan la clasificación que exige el SIN.</p>
+          <label>Código interno del producto<input name="codigoProducto" maxlength="64" pattern="[A-Za-z0-9._\-]+" placeholder="Ej. NIKE-AM90" autocomplete="off"></label>
+          <label>Actividad económica<select name="actividadEconomica" disabled><option value="">Cargando…</option></select></label>
+          <label>Buscar clasificación<input name="sinSearch" type="search" placeholder="Ej. calzado" autocomplete="off" disabled></label>
+          <label>Clasificación del SIN<select name="codigoProductoSin" disabled><option value="">Selecciona una actividad</option></select></label>
+          <label>Unidad de medida<select name="unidadMedida" disabled><option value="">Cargando…</option></select></label>
+          <p role="status" data-fiscal-status></p>
+        </details>
+      </section>
       <p role="alert" data-product-error hidden></p><p role="status" data-product-status></p>
       <footer><button type="button" class="product-back" data-product-back aria-label="Cancelar creación de producto">←</button><button type="submit" class="product-next" disabled>Siguiente <span aria-hidden="true">›</span></button></footer>
     </fieldset></form>`;
@@ -105,6 +115,59 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     }
   });
   const boxChosen = () => (boxChoices || []).filter(item => selectedBox.has(item.id));
+  const fiscal = dialog.querySelector<HTMLDetailsElement>('[data-product-fiscal]')!;
+  const ownCodeInput = form.elements.namedItem('codigoProducto') as HTMLInputElement;
+  const activitySelect = form.elements.namedItem('actividadEconomica') as HTMLSelectElement;
+  const sinSearchInput = form.elements.namedItem('sinSearch') as HTMLInputElement;
+  const sinCodeSelect = form.elements.namedItem('codigoProductoSin') as HTMLSelectElement;
+  const unitSelect = form.elements.namedItem('unidadMedida') as HTMLSelectElement;
+  const fiscalStatus = dialog.querySelector<HTMLElement>('[data-fiscal-status]')!;
+  const option = (value: string | number, label: string) => `<option value="${escape(String(value))}">${escape(label)}</option>`;
+  let fiscalCatalogs: Promise<void> | null = null, sinSearchTimer = 0;
+  function loadFiscalCatalogs() {
+    fiscalCatalogs ||= Promise.all([api.siatActivities(), api.siatUnits()]).then(([activities, units]) => {
+      activitySelect.innerHTML = option('', 'Selecciona una actividad') + activities.entries.map(entry => option(entry.codigoCaeb, `${entry.descripcion} · ${entry.codigoCaeb}`)).join('');
+      unitSelect.innerHTML = option('', 'Selecciona una unidad') + units.entries.map(entry => option(entry.codigoClasificador, entry.descripcion)).join('');
+      activitySelect.disabled = unitSelect.disabled = sinSearchInput.disabled = false;
+      fiscalStatus.textContent = '';
+    }).catch(cause => {
+      fiscalCatalogs = null;
+      fiscalStatus.textContent = `No pudimos cargar los catálogos del SIN${cause instanceof Error ? `: ${cause.message}` : ''}. Cierra y vuelve a abrir esta sección para reintentar.`;
+      throw cause;
+    });
+    return fiscalCatalogs;
+  }
+  async function loadSinProducts(selected = '') {
+    if (!activitySelect.value) { sinCodeSelect.innerHTML = option('', 'Selecciona una actividad'); sinCodeSelect.disabled = true; return; }
+    sinCodeSelect.disabled = true;
+    sinCodeSelect.innerHTML = option('', 'Buscando clasificaciones…');
+    try {
+      const result = await api.siatProducts(activitySelect.value, sinSearchInput.value.trim());
+      sinCodeSelect.innerHTML = option('', 'Selecciona una clasificación') + result.entries.map(entry => option(entry.codigoProducto, `${entry.descripcionProducto} · ${entry.codigoProducto}`)).join('');
+      sinCodeSelect.disabled = false;
+      if (selected && result.entries.some(entry => String(entry.codigoProducto) === selected)) sinCodeSelect.value = selected;
+      fiscalStatus.textContent = result.total ? `${result.total} clasificaciones para esta actividad.` : 'No hay coincidencias. Prueba otra búsqueda o actividad.';
+    } catch (cause) {
+      sinCodeSelect.innerHTML = option('', 'No se pudieron cargar las clasificaciones');
+      fiscalStatus.textContent = cause instanceof Error ? cause.message : 'No se pudieron cargar las clasificaciones.';
+    }
+  }
+  fiscal.addEventListener('toggle', () => { if (fiscal.open) void loadFiscalCatalogs().catch(() => undefined); });
+  activitySelect.addEventListener('change', () => { sinSearchInput.value = ''; void loadSinProducts(); });
+  sinSearchInput.addEventListener('input', () => { window.clearTimeout(sinSearchTimer); sinSearchTimer = window.setTimeout(() => void loadSinProducts(), 250); });
+  sinSearchInput.addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
+  // Only stores that invoice through pagosYa see the section; an edit reopens what was saved.
+  void Promise.resolve().then(() => api.productFiscalReady(storeId)).then(async ready => {
+    fiscal.hidden = !ready;
+    if (!ready || !initial) return;
+    ownCodeInput.value = initial.codigoProducto || '';
+    if (!initial.actividadEconomica) return;
+    fiscal.open = true;
+    await loadFiscalCatalogs();
+    activitySelect.value = initial.actividadEconomica;
+    unitSelect.value = initial.unidadMedida ? String(initial.unidadMedida) : '';
+    await loadSinProducts(initial.codigoProductoSin || '');
+  }).catch(() => undefined);
   if (initial) {
     nameInput.value = initial.name;
     (form.elements.namedItem('description') as HTMLTextAreaElement).value = initial.description || '';
@@ -200,6 +263,10 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
       if (!boxGroupInput.value.trim()) { showError('Escribe un título para la elección, por ejemplo Sabores.'); boxGroupInput.focus(); return false; }
       const count = Number(boxPickInput.value);
       if (!boxPickInput.value || !Number.isInteger(count) || count < 1 || count > 24) { showError('Indica cuántos productos elige el cliente, entre 1 y 24.'); boxPickInput.focus(); return false; }
+    }
+    if (step === 8 && !fiscal.hidden) {
+      const classification = [activitySelect.value, sinCodeSelect.value, unitSelect.value];
+      if (classification.some(Boolean) && !classification.every(Boolean)) { fiscal.open = true; showError('Para facturar este producto elige actividad, clasificación y unidad, o deja las tres vacías.'); return false; }
     }
     if (step === 5 && optionsToggle.checked) {
       try { optionEditor.values(); } catch (cause) { showError(cause instanceof Error ? cause.message : 'Revisa las opciones.'); return false; }
@@ -297,6 +364,11 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     const specifications = parseSpecificationLines(String(data.get('specifications') || '')).rows;
     // Only send the sheet when there is one to save or an existing one to clear.
     if (specifications.length || initial?.specifications?.length) Object.assign(input, { specifications });
+    if (!fiscal.hidden) {
+      const ownCode = ownCodeInput.value.trim();
+      if (ownCode) Object.assign(input, { codigoProducto: ownCode });
+      if (activitySelect.value && sinCodeSelect.value && unitSelect.value) Object.assign(input, { actividadEconomica: activitySelect.value, codigoProductoSin: sinCodeSelect.value, unidadMedida: Number(unitSelect.value) });
+    }
     const approved = highlights.map(row => ({ icon: row.icon, label: row.label.trim(), ...(row.detail?.trim() ? { detail: row.detail.trim() } : {}) })).filter(row => row.label).slice(0, 4);
     if (approved.length || initial?.highlights?.length) Object.assign(input, { highlights: approved });
     setBusy(true); showError(''); status.textContent = photos.length ? 'Subiendo fotos…' : 'Guardando producto…';

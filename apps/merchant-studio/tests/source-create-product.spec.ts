@@ -179,6 +179,7 @@ test('YAPI creates a styled scene from the uploaded product photo only after the
   await dialog.getByRole('button', { name: 'Guardar producto', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Producto creado', exact: true })).toBeVisible();
   expect(uploads).toBe(1);
-  expect(payload.imageUrls).toEqual(['/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp', '/v1/uploads/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.jpg']);
+  // An accepted scene becomes the cover (bedb693): the storefront card shows the first photo.
+  expect(payload.imageUrls).toEqual(['/v1/uploads/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.jpg', '/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.webp']);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
