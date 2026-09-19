@@ -6,11 +6,19 @@ const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "
 const MAX_LOGO_BYTES = 8_000_000;
 const EMPTY_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 
+/** Shopper policies the storefront shows beside purchasing; plain text, written by the merchant. */
+const POLICY_FIELDS = /** @type {const} */ ([
+  ["returns", "Cambios y devoluciones", "Ej.: Aceptamos cambios dentro de 7 días con la etiqueta puesta…"],
+  ["delivery", "Envíos y entregas", "Ej.: Entregamos en La Paz y El Alto en 24 a 48 horas…"],
+  ["privacy", "Privacidad", "Qué datos pides al cliente y para qué los usas"],
+  ["terms", "Términos y condiciones", "Condiciones de venta de tu negocio"],
+]);
+
 /** @typedef {{ day: number, open: string, close: string, closed: boolean }} OpeningHours */
 /** @typedef {{ id: string, name: string, address: string, mapEmbedUrl: string, highlight: string, description: string, pickupEnabled: boolean, deliveryEnabled: boolean, openingHours: OpeningHours[], inventory: Record<string, number | null | undefined> }} EditableLocation */
 /** @typedef {{ label: string, url: string }} StoreLink */
 /** @typedef {{ id: string, name: string, status?: string, stock?: number | null, locationStocks?: Record<string, number | null> }} Product */
-/** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
+/** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
 
 /** @type {Record<string, string>} */
 const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -130,6 +138,10 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
       <button type="button" class="ghost" data-link-add>+ Agregar enlace</button>
     </div>
   </section>
+  <section class="store-editor-section" aria-labelledby="storeSettingsPoliciesTitle">
+    <div class="editor-section-head"><h3 id="storeSettingsPoliciesTitle">Políticas para tus clientes</h3><p>Aparecen junto al botón de compra, en el carrito y al pie de tu tienda. Escríbelas con tus condiciones reales; YAPI no las inventa.</p></div>
+    ${POLICY_FIELDS.map(([key, label, hint]) => `<div class="full"><label for="storePolicy-${key}">${label} (opcional)</label><textarea id="storePolicy-${key}" data-policy="${key}" rows="4" maxlength="6000" placeholder="${hint}"></textarea></div>`).join("")}
+  </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsLocationsTitle">
     <div class="editor-section-head"><h3 id="storeSettingsLocationsTitle">Ubicaciones e inventario</h3><p>Agrega sucursales, define si permiten retiro o entrega y reparte el stock real de cada producto.</p></div>
     <div class="full store-locations-editor">
@@ -155,6 +167,7 @@ export function mountStoreSettings(root, deps) {
   const $ = (selector) => root.querySelector(selector);
   const nameInput = $("#storeNameInput"), taglineInput = $("#storeTaglineInput"), phoneInput = $("#storeContactPhoneInput");
   const emailInput = $("#storeContactEmailInput"), lowStockInput = $("#storeShowLowStock"), logoInput = $("#storeLogoInput");
+  const policyInput = (/** @type {string} */ key) => /** @type {HTMLTextAreaElement} */ ($(`#storePolicy-${key}`));
   const logoPreview = $("[data-logo-preview]"), logoRemove = $("[data-logo-remove]");
   const locationsList = $("#storeLocationsList"), linksHost = $("[data-links]");
   const errorEl = $("[data-error]"), statusEl = $("[data-status]"), saveButton = $("#storeSettingsSave");
@@ -407,6 +420,7 @@ export function mountStoreSettings(root, deps) {
       contactPhone: phoneInput.value.trim() || null,
       contactEmail: emailInput.value.trim() || null,
       showLowStockToCustomers: lowStockInput.checked,
+      policies: Object.fromEntries(POLICY_FIELDS.map(([key]) => [key, policyInput(key).value.trim() || null])),
       ...(nextMode !== "external" && { leadCaptureUrl: null }),
       ...(locationsEdited && { locations: serializedLocations() }),
     };
@@ -442,6 +456,7 @@ export function mountStoreSettings(root, deps) {
       phoneInput.value = store.contactPhone || "";
       emailInput.value = store.contactEmail || "";
       lowStockInput.checked = store.showLowStockToCustomers === true;
+      for (const [key] of POLICY_FIELDS) policyInput(key).value = store.policies?.[key] || "";
       const checkoutMode = ["payment", "whatsapp", "external"].includes(store.checkoutMode || "") ? store.checkoutMode : "payment";
       /** @type {HTMLInputElement} */ (form.querySelector(`input[name="storeCheckoutMode"][value="${checkoutMode}"]`)).checked = true;
       logoUrl = store.logoUrl || null;

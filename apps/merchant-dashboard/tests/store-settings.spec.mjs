@@ -991,6 +991,7 @@ test("store settings save straight to the store and its links", async ({ page })
   await page.locator("#storeTaglineInput").fill("Tostado en La Paz");
   await page.locator("#storeContactEmailInput").fill("hola@cafenorte.bo");
   await page.locator("#storeShowLowStock").check();
+  await page.getByLabel("Cambios y devoluciones (opcional)").fill("Cambios dentro de 7 días.");
   await page.getByRole("button", { name: "+ Agregar enlace" }).click();
   await page.getByLabel("Texto del enlace 1").fill("Instagram");
   await page.getByLabel("URL del enlace 1").fill("https://instagram.com/cafenorte");
@@ -999,6 +1000,7 @@ test("store settings save straight to the store and its links", async ({ page })
   await expect(page.locator("#info")).toHaveText("Datos de la tienda guardados.");
   const patch = requests.find((entry) => entry.path === "/stores/store_1" && entry.method === "PATCH");
   expect(patch.body).toMatchObject({ name: "Café Norte", tagline: "Tostado en La Paz", contactEmail: "hola@cafenorte.bo", showLowStockToCustomers: true, checkoutMode: "payment", leadCaptureUrl: null });
+  expect(patch.body.policies).toEqual({ returns: "Cambios dentro de 7 días.", delivery: null, privacy: null, terms: null });
   // Untouched locations are not re-sent, so saving cannot overwrite stock that sales changed meanwhile.
   expect(patch.body).not.toHaveProperty("locations");
   const links = requests.find((entry) => entry.path === "/stores/store_1/links" && entry.method === "PUT");

@@ -118,6 +118,41 @@ export class StoreCatalogCollectionDto {
   productIds!: string[];
 }
 
+/** Plain text only; the storefront renders it escaped, paragraph by paragraph. */
+export class StorePoliciesDto {
+  @ApiPropertyOptional({ description: "Cambios y devoluciones", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(6000)
+  returns?: string | null;
+
+  @ApiPropertyOptional({ description: "Envíos y entregas", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(6000)
+  delivery?: string | null;
+
+  @ApiPropertyOptional({ description: "Privacidad", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(6000)
+  privacy?: string | null;
+
+  @ApiPropertyOptional({ description: "Términos y condiciones", nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(6000)
+  terms?: string | null;
+}
+
 export class CreateStoreDto {
   @ApiProperty({ example: "Mi Tienda de Ropa" })
   @IsString()
@@ -597,6 +632,12 @@ export class CreateStoreDto {
   @ArrayUnique()
   @IsString({ each: true })
   cartRecommendationProductIds?: string[];
+
+  @ApiPropertyOptional({ description: "Shopper policies as plain text; empty or null removes one.", type: () => StorePoliciesDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StorePoliciesDto)
+  policies?: StorePoliciesDto;
 
   @ApiPropertyOptional({
     description: "Show low-stock quantities to storefront customers. Sold-out state remains visible.",

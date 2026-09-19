@@ -710,6 +710,33 @@
     payment: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
     chat: '<path d="M4 5h16v11H9l-5 4z"/>',
   };
+  // Merchant-authored policies, rendered as escaped text in a runtime-owned dialog.
+  const POLICY_TITLES = { returns: 'Cambios y devoluciones', delivery: 'Envíos y entregas', privacy: 'Privacidad', terms: 'Términos y condiciones' };
+  const storePolicies = () => (store.policies && typeof store.policies === 'object' ? store.policies : {});
+  function policyLinks(keys = Object.keys(POLICY_TITLES)) {
+    const present = keys.filter(key => typeof storePolicies()[key] === 'string' && storePolicies()[key].trim());
+    return present.length ? `<nav class="pagosya-policies" aria-label="Políticas de la tienda">${present.map(key => `<button type="button" data-pagosya-policy="${key}">${escape(POLICY_TITLES[key])}</button>`).join('')}</nav>` : '';
+  }
+  let policyDialog;
+  function openPolicy(key, trigger) {
+    const text = storePolicies()[key];
+    if (!POLICY_TITLES[key] || typeof text !== 'string') return;
+    if (!policyDialog) {
+      policyDialog = document.createElement('dialog');
+      policyDialog.className = 'pagosya-policy-dialog';
+      policyDialog.setAttribute('aria-labelledby', 'pagosya-policy-title');
+      policyDialog.addEventListener('click', event => { if (event.target === policyDialog || event.target.closest('[data-policy-close]')) policyDialog.close(); });
+      document.body.append(policyDialog);
+    }
+    policyDialog.innerHTML = `<header><h2 id="pagosya-policy-title">${escape(POLICY_TITLES[key])}</h2><button type="button" data-policy-close aria-label="Cerrar">×</button></header><div>${text.split(/\n{2,}/).map(paragraph => `<p>${escape(paragraph).replace(/\n/g, '<br>')}</p>`).join('')}</div><p class="pagosya-policy-dialog__store">${escape(store.storeName || '')}</p>`;
+    policyDialog.addEventListener('close', () => trigger?.focus?.(), { once: true });
+    if (typeof policyDialog.showModal === 'function') policyDialog.showModal(); else policyDialog.setAttribute('open', '');
+    policyDialog.querySelector('[data-policy-close]')?.focus();
+  }
+  document.addEventListener('click', event => {
+    const button = event.target.closest?.('[data-pagosya-policy]');
+    if (button) { event.preventDefault(); openPolicy(button.dataset.pagosyaPolicy, button); }
+  });
   // Reassurance comes only from real store settings; nothing here is a marketing claim.
   function deliveryMarkup(p) {
     const locations = store.locations || [];
@@ -725,7 +752,7 @@
     return items.length ? `<ul class="product-detail__assurances" aria-label="Entrega y pago">${items.map(item => {
       const body = `${icon(item.icon)}<div><strong>${escape(item.title)}</strong><span>${escape(item.detail)}</span></div>`;
       return `<li>${item.delivery && hasDeliveryTab ? `<button type="button" data-product-delivery>${body}</button>` : body}</li>`;
-    }).join('')}</ul>` : '';
+    }).join('')}</ul>${policyLinks(['delivery', 'returns'])}` : policyLinks(['delivery', 'returns']);
   }
   function optionsMarkup(groups) {
     return `<div class="product-detail__options">${groups.map((group, index) => {
@@ -1014,6 +1041,13 @@
   cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title');
   cartDrawer.innerHTML = '<header class="cart-drawer__header"><h2 id="cart-drawer-title">Tu pedido</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>';
   document.body.append(cartDrawer);
+  function renderPolicyLinks() {
+    cartDrawer.querySelector(':scope > .pagosya-policies')?.remove();
+    const drawerPolicies = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
+    if (drawerPolicies) cartDrawer.insertAdjacentHTML('beforeend', drawerPolicies);
+    document.querySelectorAll('[data-pagosya-policies]').forEach(slot => { slot.innerHTML = policyLinks(); slot.hidden = !slot.innerHTML; });
+  }
+  renderPolicyLinks();
   let drawerSlot, drawerPlaceholder, drawerWasHidden, drawerOverflow, drawerTrigger;
   function openCart(trigger, keyboard = false) {
     if (cartDrawer.open || checkingOut) return;
@@ -1078,6 +1112,14 @@
   shoppingStyle.textContent = `
     .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform 250ms var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),display 250ms allow-discrete,overlay 250ms allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
+    .pagosya-policies{display:flex;flex-wrap:wrap;gap:4px 16px;margin:12px 0 0}.cart-drawer>.pagosya-policies{padding:0 24px 20px}
+    .pagosya-policies button{min-height:32px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:.25em;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);cursor:pointer}
+    .pagosya-policy-dialog{box-sizing:border-box;width:min(640px,calc(100% - 32px));max-height:min(80dvh,720px);margin:auto;padding:0;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:min(var(--store-radius,12px),16px);background:var(--store-background,var(--brand-background,Canvas));color:var(--store-foreground,var(--brand-foreground,CanvasText));font:inherit;overflow:auto}
+    .pagosya-policy-dialog::backdrop{background:#0008}
+    .pagosya-policy-dialog header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:inherit;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+    .pagosya-policy-dialog h2{margin:0;font-size:1.2rem;font-family:var(--store-heading-font,inherit)}.pagosya-policy-dialog header button{width:44px;height:44px;border:0;border-radius:50%;background:none;color:inherit;font-size:26px;cursor:pointer}
+    .pagosya-policy-dialog div{padding:8px 20px}.pagosya-policy-dialog div p{margin:12px 0;line-height:1.65;max-width:66ch}
+    .pagosya-policy-dialog__store{margin:0;padding:0 20px 20px;font-size:13px;opacity:.7}
     .cart-drawer::backdrop{background:#0007}
     @starting-style{.cart-drawer[open]{transform:translateX(100%);opacity:0}}
     .cart-drawer__header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px;border-bottom:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
@@ -1803,7 +1845,7 @@
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/store`, { credentials: "omit", cache: "no-store" });
       if (!response.ok) throw new Error("No pudimos cargar la carta. Intenta de nuevo.");
       const saved = cartItems();
-      store = await response.json(); ready = true; category = "all";
+      store = await response.json(); ready = true; category = "all"; renderPolicyLinks();
       restoreCart(saved);
       render(); message("");
     } catch (error) { ready = false; render(); message(error.message); }

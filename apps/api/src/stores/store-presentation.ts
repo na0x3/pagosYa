@@ -675,8 +675,22 @@ export function storeUpdateData(
       cartRecommendationProductIds: dto.cartRecommendationProductIds as Prisma.InputJsonValue,
     }),
     ...(dto.showLowStockToCustomers !== undefined && { showLowStockToCustomers: dto.showLowStockToCustomers }),
+    ...(dto.policies !== undefined && { policies: storePolicies(dto.policies) as Prisma.InputJsonValue }),
     ...(dto.salesGoalLabel !== undefined && { salesGoalLabel: dto.salesGoalLabel }),
     ...(dto.salesGoalAmount !== undefined && { salesGoalAmount: dto.salesGoalAmount }),
     ...(siteDocument !== undefined && { siteDocument }),
   };
+}
+
+export const STORE_POLICY_KEYS = ["returns", "delivery", "privacy", "terms"] as const;
+export type StorePolicies = Partial<Record<(typeof STORE_POLICY_KEYS)[number], string>>;
+/** Keeps only non-empty, trimmed policy texts under known keys; anything else is dropped. */
+export function storePolicies(value: unknown): StorePolicies {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const result: StorePolicies = {};
+  for (const key of STORE_POLICY_KEYS) {
+    const text = typeof source[key] === "string" ? (source[key] as string).replace(/\r\n?/g, "\n").trim().slice(0, 6000) : "";
+    if (text) result[key] = text;
+  }
+  return result;
 }

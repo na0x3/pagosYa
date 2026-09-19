@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { findActiveStoreBySlug, PUBLIC_STORE_WHERE } from "./active-store";
 import { readCatalogLayout } from "./catalog-layout";
 import { readStoreLocations, readLocationStocks } from "./store-locations";
+import { storePolicies } from "./store-presentation";
 import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperiences, readStoreAnimations, readStoreContentOrder } from "./store-presentation";
 import { readProductExtras, readStringArray, readProductVariants } from "./product-pricing";
 
@@ -294,6 +295,7 @@ export class PublicStoresService implements OnModuleDestroy {
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
       bundles,
       showLowStockToCustomers: store.showLowStockToCustomers,
+      policies: storePolicies(store.policies),
       appointmentOfferings,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),
       catalogLayout: readCatalogLayout(store.catalogLayout),

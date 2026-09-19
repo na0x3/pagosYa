@@ -772,6 +772,8 @@ model Store {
   cartRecommendationProductIds Json                             @default("[]")
   // Inventory quantities stay private unless the merchant explicitly opts in.
   // Sold-out state is still public so customers cannot add unavailable items.
+  /// Merchant-authored shopper policies: { returns?, delivery?, privacy?, terms? } plain text.
+  policies Json @default("{}")
   showLowStockToCustomers      Boolean                          @default(false)
   // Optional merchant-authored sales target shown and tracked by Yapi.
   salesGoalLabel               String?

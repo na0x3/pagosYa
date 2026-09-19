@@ -177,6 +177,7 @@ body{margin:0;background:var(--ui-paper)}
 .ui-footer{background:var(--ui-ink);color:var(--ui-paper);padding-block:var(--ui-s7) var(--ui-s5);--ui-line:color-mix(in srgb,var(--ui-paper) 16%,var(--ui-ink))}.ui-footer[data-tone=paper]{background:var(--ui-paper);color:var(--ui-ink);border-top:1px solid var(--ui-line);--ui-line:color-mix(in srgb,var(--ui-ink) 14%,var(--ui-paper))}
 .ui-footer__grid{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(auto-fit,minmax(150px,1fr));gap:var(--ui-s6)}.ui-footer h2{font-size:12px;letter-spacing:var(--ui-tracking);text-transform:uppercase;font-weight:600;margin:0 0 var(--ui-s3);opacity:.7}.ui-footer ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--ui-s2)}.ui-footer a{color:inherit;text-decoration:none;opacity:.88}.ui-footer a:hover{opacity:1;text-decoration:underline;text-underline-offset:.25em}.ui-footer__brand{font-family:var(--ui-display-font);font-size:clamp(28px,3vw,44px);line-height:1.05;margin:0 0 var(--ui-s3)}.ui-footer .ui-text{color:inherit;opacity:.8}.ui-footer__base{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--ui-s3);margin-top:var(--ui-s7);padding-top:var(--ui-s4);border-top:1px solid var(--ui-line);font-size:13px;opacity:.72}
 @media (max-width:820px){.ui-footer__grid{grid-template-columns:1fr 1fr}.ui-footer__grid>:first-child{grid-column:1/-1}}
+.ui-footer__policies .pagosya-policies{margin:0}.ui-footer__policies button{color:inherit;font-size:13px}
 .ui-product-page,.ui-checkout-page{min-height:60dvh}
 /* Scroll-driven enhancements: pure CSS, so they also reach cards the commerce runtime injects.
    Browsers without view timelines keep the static, fully visible layout. */
@@ -462,7 +463,7 @@ export function SiteFooter({ name, blurb, columns = [], note, tone = 'ink' }: { 
         <div><p className="ui-footer__brand">{name}</p>{blurb ? <p className="ui-text">{blurb}</p> : null}</div>
         {columns.slice(0, 4).map(column => <div key={column.title}><h2>{column.title}</h2><ul>{column.links.slice(0, 8).map(link => <li key={link.href + link.label}><a href={link.href}>{link.label}</a></li>)}</ul></div>)}
       </div>
-      <div className="ui-footer__base"><span>© {name}</span><span>{note || 'Pagos seguros con pagosYa'}</span></div>
+      <div className="ui-footer__base"><span>© {name}</span><nav className="ui-footer__policies" data-pagosya-policies aria-label="Políticas de la tienda" hidden /><span>{note || 'Pagos seguros con pagosYa'}</span></div>
     </div>
   </footer>;
 }

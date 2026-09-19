@@ -1,3 +1,4 @@
+import { storePolicies } from '../stores/store-presentation';
 import type { PrismaService } from '../prisma/prisma.service';
 import { isPublicStore } from '../stores/active-store';
 
@@ -17,6 +18,7 @@ export type StoreKnowledge = {
   identity: { name: string; tagline?: string; about?: string; announcement?: string; checkout: string };
   trust: { verifiedBusiness: boolean; electronicInvoicing: boolean; liveStore: boolean; publishedDesign: boolean; reviews: { count: number; average: number } };
   contact: { phone: boolean; email: boolean; contactForm: boolean };
+  policies: { returns: boolean; delivery: boolean; privacy: boolean; terms: boolean };
   fulfillment: { delivery: boolean; pickup: boolean; locations: Array<{ name: string; address?: string; pickup: boolean; delivery: boolean; hours?: string }> };
   catalog: { productCount: number; categories: string[]; collections: Array<{ name: string; products: number }>; products: KnowledgeProduct[]; truncated: boolean };
   performance30d: { visits: number; productViews: number; addedToCart: number; checkoutsStarted: number; paidOrders: number; revenue: string; conversionPercent: number | null };
@@ -33,6 +35,7 @@ export type StoreKnowledgeInput = {
     name: string; tagline: string | null; aboutText: string | null; announcement: string | null; checkoutMode: string; contactPhone: string | null; contactEmail: string | null;
     contactFormEnabled: boolean; shippingEnabled: boolean; shippingPickupEnabled: boolean; locations: unknown; status: string; sourcePublicationPaused: boolean;
     publicVisibility: boolean; publishedSourceRevision: number | null; websitePublishedRevision: number; merchant: { status: string };
+    policies?: unknown;
   };
   invoicingActive: boolean;
   products: RawProduct[];
@@ -115,6 +118,9 @@ export function buildStoreKnowledge(input: StoreKnowledgeInput): StoreKnowledge 
   if (!locations.length && store.shippingPickupEnabled) gaps.push('Retiro activado pero sin sucursal cargada.');
   if (store.checkoutMode === 'payment' && store.merchant.status !== 'ACTIVE') gaps.push('Los pagos están en modo de prueba hasta que se apruebe la verificación del negocio.');
   if (!input.invoicingActive) gaps.push('La facturación electrónica SIN no está activa.');
+  const policies = storePolicies(store.policies);
+  const missingPolicies = ([['returns', 'cambios y devoluciones'], ['delivery', 'envíos y entregas']] as const).filter(([key]) => !policies[key]).map(([, label]) => label);
+  if (missingPolicies.length && input.products.length) gaps.push(`Falta la política de ${missingPolicies.join(' y de ')}; el comercio debe escribirla (YAPI no inventa condiciones).`);
   if (!input.reviews.length && input.orders.length >= 5) gaps.push('Hay ventas pero ninguna reseña publicada todavía.');
   if (input.funnel.productViews >= 50 && !input.orders.length) gaps.push(`${input.funnel.productViews} visitas vieron productos en 30 días y no hubo ventas pagadas.`);
 
@@ -129,6 +135,7 @@ export function buildStoreKnowledge(input: StoreKnowledgeInput): StoreKnowledge 
       reviews: { count: input.reviews.length, average: average(input.reviews.map(r => r.rating)) },
     },
     contact: { phone: Boolean(store.contactPhone), email: Boolean(store.contactEmail), contactForm: store.contactFormEnabled },
+    policies: { returns: Boolean(policies.returns), delivery: Boolean(policies.delivery), privacy: Boolean(policies.privacy), terms: Boolean(policies.terms) },
     fulfillment: { delivery: store.shippingEnabled || locations.some(l => l.delivery), pickup: store.shippingPickupEnabled || locations.some(l => l.pickup), locations },
     catalog: { productCount: input.products.length, categories: input.categories.slice(0, 20), collections: input.collections.slice(0, 12), products, truncated: input.products.length > MAX_PRODUCTS },
     performance30d: {
@@ -145,7 +152,7 @@ export async function loadStoreKnowledge(prisma: PrismaService, merchantId: stri
   const store = await prisma.store.findFirst({ where: { id: storeId, merchantId }, select: {
     name: true, tagline: true, aboutText: true, announcement: true, checkoutMode: true, contactPhone: true, contactEmail: true, contactFormEnabled: true,
     shippingEnabled: true, shippingPickupEnabled: true, locations: true, status: true, sourcePublicationPaused: true, publicVisibility: true,
-    publishedSourceRevision: true, websitePublishedRevision: true, merchant: { select: { status: true } },
+    publishedSourceRevision: true, websitePublishedRevision: true, policies: true, merchant: { select: { status: true } },
   } });
   if (!store) return null;
   const since = new Date(now.getTime() - 30 * 86_400_000);
