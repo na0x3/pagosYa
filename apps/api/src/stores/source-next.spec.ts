@@ -1,3 +1,6 @@
+// Compiles real Next.js projects; under a full parallel run this takes well past the 5s default.
+jest.setTimeout(60_000);
+
 import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
 import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from './fixtures/next-store';
 import { sourceProjectSnapshot } from './source-project';

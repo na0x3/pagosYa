@@ -1,3 +1,6 @@
+// Compiles real Next.js projects; under a full parallel run this takes well past the 5s default.
+jest.setTimeout(60_000);
+
 import { nextStoreFiles } from './fixtures/next-store';
 import { creativeStoreFiles } from './fixtures/creative-store';
 import { SourceDesignPlanner } from './source-design-planner';
