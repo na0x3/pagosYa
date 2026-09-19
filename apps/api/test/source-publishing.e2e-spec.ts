@@ -35,6 +35,17 @@ describe('Published source and two-version sales tests', () => {
     expect((await request(app.getHttpServer()).get('/v1/store-discovery').expect(200)).body.some((s: any) => s.home.endsWith(`/s/${slug}`))).toBe(false);
     await request(app.getHttpServer()).post(`${route}/publish`).send({revision:1,publicationVersion:0}).expect(401);
     await request(app.getHttpServer()).post(`${route}/publish`).set(auth(foreign)).send({revision:1,publicationVersion:0}).expect(404);
+    const checks = `${route}/versions/1/checks`;
+    await request(app.getHttpServer()).post(checks).send({passed:true,findings:[]}).expect(401);
+    await request(app.getHttpServer()).post(checks).set(auth(foreign)).send({passed:true,findings:[]}).expect(404);
+    await request(app.getHttpServer()).post(checks).set(auth()).send({passed:true,findings:[],snapshotDigest:'forged',runtimeDigest:'forged'}).expect(400);
+    const unchecked = await request(app.getHttpServer()).post(`${route}/publish`).set(auth()).send({revision:1,publicationVersion:0}).expect(409);
+    expect(unchecked.body.message).toBe('Revisa la tienda en escritorio y móvil antes de publicarla.');
+    await request(app.getHttpServer()).post(checks).set(auth()).send({passed:false,findings:[{label:'Móvil',status:'failed'}]}).expect(201);
+    await request(app.getHttpServer()).post(`${route}/publish`).set(auth()).send({revision:1,publicationVersion:0}).expect(409);
+    const result = await request(app.getHttpServer()).post(checks).set(auth()).send({passed:true,findings:[]}).expect(201);
+    expect(result.body.snapshotDigest).toBe((await prisma.storeSourceVersion.findUniqueOrThrow({where:{storeId_revision:{storeId,revision:1}}})).digest);
+    expect(result.body.runtimeDigest).toMatch(/^[a-f0-9]{64}$/);
     const published=await request(app.getHttpServer()).post(`${route}/publish`).set(auth()).send({revision:1,publicationVersion:0}).expect(201);
     expect(published.body).toMatchObject({revision:1,version:1,active:true});
     for (const suffix of ['store', 'seo', 'seo/sitemap.xml', 'seo/llms.txt']) await request(app.getHttpServer()).get(`/v1/stores/public/${slug}/${suffix}`).expect(200);
@@ -53,6 +64,12 @@ describe('Published source and two-version sales tests', () => {
   });
   it('pins two revisions, assigns visitors consistently and rejects concurrent publication changes', async()=>{
     await request(app.getHttpServer()).post(`${route}/experiments`).set(auth()).send({revision:1,publicationVersion:1}).expect(400);
+    // Revision A's passing check cannot authorize revision B.
+    await request(app.getHttpServer()).post(`${route}/publish`).set(auth()).send({revision:2,publicationVersion:1}).expect(409);
+    await request(app.getHttpServer()).post(`${route}/experiments`).set(auth()).send({revision:2,publicationVersion:1}).expect(409);
+    await request(app.getHttpServer()).post(`${route}/versions/2/checks`).set(auth()).send({passed:false,findings:[]}).expect(201);
+    await request(app.getHttpServer()).post(`${route}/experiments`).set(auth()).send({revision:2,publicationVersion:1}).expect(409);
+    await request(app.getHttpServer()).post(`${route}/versions/2/checks`).set(auth()).send({passed:true,findings:[]}).expect(201);
     const started=await request(app.getHttpServer()).post(`${route}/experiments`).set(auth()).send({revision:2,publicationVersion:1}).expect(201);
     testId=started.body.experiment.id;expect(started.body.version).toBe(2);
     await request(app.getHttpServer()).post(`${route}/experiments`).set(auth()).send({revision:2,publicationVersion:1}).expect(409);
@@ -87,6 +104,7 @@ describe('Published source and two-version sales tests', () => {
     const other=await request(app.getHttpServer()).post('/v1/stores').set(auth(foreign)).send({name:'Other'}).expect(201);
     const product=await request(app.getHttpServer()).post(`/v1/stores/${other.body.id}/payment_links`).set(auth(foreign)).send({name:'Otro',amount:10000,currency:'BOB'}).expect(201);
     await request(app.getHttpServer()).put(`/v1/stores/${other.body.id}/source-project`).set(auth(foreign)).send(source(0, 'Otro')).expect(200);
+    await request(app.getHttpServer()).post(`/v1/stores/${other.body.id}/source-project/versions/1/checks`).set(auth(foreign)).send({passed:true,findings:[]}).expect(201);
     await request(app.getHttpServer()).post(`/v1/stores/${other.body.id}/source-project/publish`).set(auth(foreign)).send({revision:1,publicationVersion:0}).expect(201);
     const foreignPay=await request(app.getHttpServer()).post(`/v1/stores/public/${other.body.slug}/cart-checkout`).send({sourceVisitToken:visitToken,items:[{paymentLinkId:product.body.id,quantity:1}]}).expect(201);
     expect((await prisma.storeOrder.findUniqueOrThrow({where:{paymentIntentId:foreignPay.body.id}})).sourceVisitId).toBeNull();

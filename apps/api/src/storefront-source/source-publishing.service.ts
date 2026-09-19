@@ -1,3 +1,4 @@
+import { boundedSourceFindings, requireSourceChecks, sourceRuntimeDigest, SourceCheckResultDto } from './source-check-results';
 import { isPublicStore, PUBLIC_STORE_WHERE } from '../stores/active-store';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { currentSourceRuntime } from './source-runtime';
@@ -67,6 +68,16 @@ export class SourcePublishingService {
     await withSourceMotion(snapshot.files, sourceMotionMode(snapshot.files));
     return snapshot;
   }
+  async recordChecks(merchantId: string, storeId: string, revision: number, body: SourceCheckResultDto) {
+    await this.owner(merchantId, storeId);
+    if (!Number.isInteger(revision) || revision < 1 || revision > 2147483647) throw new BadRequestException('La revisión debe ser un entero positivo.');
+    if (typeof body.passed !== 'boolean') throw new BadRequestException('El resultado debe indicar si la comprobación pasó.');
+    const findings = boundedSourceFindings(body.findings) as Prisma.InputJsonArray;
+    const snapshot = await this.snapshot(storeId, revision);
+    return this.prisma.sourceCheckResult.create({ data: {
+      storeId, revision, snapshotDigest: sourceProjectDigest(snapshot), runtimeDigest: await sourceRuntimeDigest(), passed: body.passed, findings,
+    } });
+  }
   async change(merchantId: string, storeId: string, expected: number, operation: (tx: Prisma.TransactionClient) => Promise<void>) {
     await this.owner(merchantId, storeId);
     try {
@@ -85,7 +96,9 @@ export class SourcePublishingService {
   async publish(merchantId: string, storeId: string, revision: number, expected: number) {
     const store = await this.owner(merchantId, storeId);
     if (store.status !== 'ACTIVE') throw new BadRequestException('Activa la tienda antes de publicar este diseño.');
-    assertSourceCommerceContract(await this.snapshot(storeId, revision));
+    const snapshot = await this.snapshot(storeId, revision);
+    assertSourceCommerceContract(snapshot);
+    await requireSourceChecks(this.prisma, storeId, revision, snapshot);
     return this.change(merchantId, storeId, expected, async tx => {
       if (await tx.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } })) throw new ConflictException('Detén la prueba antes de publicar otro diseño.');
       await tx.store.update({ where: { id: storeId }, data: { publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: revision, sourcePublishedAt: new Date() } });
@@ -109,6 +122,7 @@ export class SourcePublishingService {
     assertSourceCommerceContract(a); assertSourceCommerceContract(b);
     const authored = (s: SourceProjectSnapshot) => JSON.stringify(s.files.filter(f => /\.(html|css|js)$/.test(f.path) && !['config.js', 'commerce.js'].includes(f.path)).sort((x,y)=>x.path.localeCompare(y.path)));
     if (store.publishedSourceRevision === revision || authored(a) === authored(b)) throw new BadRequestException('Elige una alternativa con un cambio de diseño para comparar.');
+    await requireSourceChecks(this.prisma, storeId, revision, b);
     return this.change(merchantId, storeId, expected, async tx => {
       await tx.storeSourceExperiment.create({ data: { storeId, activeStoreId: storeId, controlRevision: store.publishedSourceRevision!, variantRevision: revision } });
     });

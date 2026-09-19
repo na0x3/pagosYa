@@ -7,6 +7,18 @@ export function sourceChecksBlockPublishing(rows: SourceCheck[]) {
   return rows.some(row => row.status === 'failed' || row.blocking);
 }
 
+/** Keep the stored report bounded; the verdict always covers the complete run. */
+export function sourceCheckResult(rows: SourceCheck[]): { passed: boolean; findings: SourceCheck[] } {
+  const findings: SourceCheck[] = [];
+  let bytes = 2; // JSON array brackets.
+  for (const row of rows) {
+    const size = new TextEncoder().encode(JSON.stringify(row)).length + (findings.length ? 1 : 0);
+    if (bytes + size > 65536 || findings.length === 1000) break;
+    findings.push(row); bytes += size;
+  }
+  return { passed: rows.length > 0 && !sourceChecksBlockPublishing(rows), findings };
+}
+
 /** Inspect links before the preview removes unsupported external resources. */
 export function sourceLinkChecks(snapshot: SourceSnapshot): SourceCheck[] {
   const pages = new Map(snapshot.files.filter(f => f.path.endsWith('.html')).map(f => [f.path, new DOMParser().parseFromString(f.content, 'text/html')]));
