@@ -200,4 +200,8 @@ Decisions changed during implementation:
 - The in-page keyboard probe (4.5) was withdrawn: it removed the guard that stops the hidden check from stealing the merchant's focus, and it flagged good stores. A real keyboard check belongs in the server's Chromium capture with trusted key events.
 - Codex was stopped after wave 2 at the owner's request (token cost); remaining work is done directly.
 
+Round 2 (same day) added: the **Comercio verificado** seal drawn outside the sandbox with a pagosYa-hosted `/verificar/:slug` page (no legal name or NIT exposed); merchant **policies** (returns, delivery, privacy, terms) linked beside purchasing, in the cart and footer; **lazy hosted images** from the platform upload path and **responsive WebP copies** with `srcset`; merchant-configured **outside links** (social, WhatsApp, tel, mailto) that open while all others stay blocked; **measured design advice** in the Studio check; a **CSP for exported stores**; DNS-prefetch hardening; and an owner **visibility switch** so a store without a YAPI design can still go live on purpose.
+
+Known residual risk: a hostile design can still open a WebRTC connection (CSP cannot block it). Moving address/phone/credit-code inputs into pagosYa's trusted checkout (task 5.2) is the fix; it changes the cart-review flow, so it needs an owner decision.
+
 Remaining work is listed in `.superpowers/sdd/DIFFERENTIATION/progress.md`.
