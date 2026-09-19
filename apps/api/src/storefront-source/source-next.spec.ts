@@ -9,6 +9,33 @@ import { creativeStoreFiles } from './fixtures/creative-store';
 import { withCreativeAssets } from './source-creative-assets';
 
 describe('Next.js storefront compilation', () => {
+  it.each([
+    '<img src="foto.png" />', '<img src="foto.png"></img>',
+    '<img {...props} />', '<img alt="" />', '<img alt={""} />',
+    '<img alt=" " />', '<img alt />', '<img alt={null} />',
+    '<img alt="" aria-hidden="false" />', '<img alt="" aria-hidden={false} />',
+    '<img alt="" role="img" />',
+  ])('rejects JSX images without alternative text: %s', markup => {
+    const files = nextStoreFiles();
+    files.push({ path: 'components/photo.tsx', content: `export const Photo = (props: any) => ${markup};` });
+    expect(() => validateNextSources(files)).toThrow('Añade texto alternativo (alt) a cada imagen en components/photo.tsx.');
+  });
+  it.each([
+    '<img alt="Café" />', '<img alt={"Café"} />', '<img alt={props.name} />',
+    '<img alt="" aria-hidden="true" />', '<img alt={""} aria-hidden={true} />', '<img alt="" aria-hidden />',
+    '<img alt="" role="presentation" />', '<img alt="" role={"presentation"} />',
+  ])('accepts named or explicitly decorative JSX images: %s', markup => {
+    const files = nextStoreFiles();
+    files.push({ path: 'components/photo.tsx', content: `export const Photo = (props: any) => ${markup};` });
+    expect(() => validateNextSources(files)).not.toThrow();
+  });
+  it('trusts UI components but still validates authored images in their children', () => {
+    const files = nextStoreFiles();
+    files.push({ path: 'components/photo.tsx', content: 'import { ProductImage as Photo } from "@pagosya/ui"; export const Gallery = () => <Photo />;' });
+    expect(() => validateNextSources(files)).not.toThrow();
+    files.at(-1)!.content = files.at(-1)!.content.replace('<Photo />', '<Photo><img src="foto.png" /></Photo>');
+    expect(() => validateNextSources(files)).toThrow('Añade texto alternativo (alt) a cada imagen en components/photo.tsx.');
+  });
   it('compiles Motion and Lottie and preserves animated semantic layout and portable assets', async () => {
     const source = creativeStoreFiles();
     const compiled = await compileNextPreview(source);
