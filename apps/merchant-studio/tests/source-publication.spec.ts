@@ -29,6 +29,7 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
     else if(p.endsWith('/alternative')){const v=structuredClone(versions[0]);v.revision=2;v.label='Beneficios claros';v.snapshot.files[0].content=v.snapshot.files[0].content.replace('Mi tienda','Beneficios claros');versions.unshift(v);body=v;}
     else if(p.endsWith('/experiments')){expect(route.request().postDataJSON()).toEqual({revision:2,publicationVersion:1});publication={...publication,version:2,experiment:{id:'e1',controlRevision:1,variantRevision:2,status:'RUNNING',startedAt:new Date().toISOString(),evidence:{winner:null,reason:'Recopilando datos'},variants:['A','B'].map((variant,i)=>({variant,revision:i+1,visitors:0,buyers:0,conversionRate:0,revenue:[]}))}};body=publication;}
     else if(p.endsWith('/experiments/finish')){expect(route.request().postDataJSON()).toEqual({experimentId:'e1',publicationVersion:2,apply:false});publication={...publication,version:3,experiment:{...publication.experiment,status:'STOPPED'}};body=publication;}
+    else if(p.endsWith('/checks'))body={id:'check'};
     else if(p.endsWith('/design-jobs'))body={enabled:false,job:null};
     else throw new Error(p);
     await route.fulfill({json:body});

@@ -84,9 +84,7 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
       const pageResults = await new Promise<SourceCheck[]>(resolve => {
         const previousFocus = document.activeElement as HTMLElement | null;
         const frame = document.createElement('iframe');
-        // The isolated document must be focusable for the keyboard probe. Restore
-        // merchant focus on completion; inert would suppress the behavior under test.
-        frame.title = 'Comprobación automática del sitio'; frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
+        frame.inert = true; frame.title = 'Comprobación automática del sitio'; frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
         frame.sandbox.add('allow-scripts'); frame.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;height:844px;border:0;pointer-events:none;`;
         let settled = false, pagePaymentOpened = false, checkoutNavigation = false;
         const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); signal?.removeEventListener('abort', abort); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }); resolve(rows); };
@@ -105,7 +103,7 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
             const extra: SourceCheck[] = [];
             if (productId && configuredCheckout && file.path === 'index.html') extra.push({ label: 'Carrito al navegar a checkout', status: checkoutNavigation ? 'passed' : 'failed' });
             if (productId && (file.path === configuredCheckout || /(?:^|\/)checkout\.html$/.test(file.path))) extra.push({ label: 'Botón de pago en checkout', status: pagePaymentOpened ? 'passed' : 'failed' });
-            finish([...extra, ...event.data.results.slice(0, 64).filter((r: any) => ['passed', 'failed', 'skipped', 'warning'].includes(r?.status) && typeof r.label === 'string').map((r: any) => ({ label: r.label.slice(0, 160), status: r.status, ...(typeof r.detail === 'string' ? { detail: r.detail.slice(0, 300) } : {}) }))]);
+            finish([...extra, ...event.data.results.slice(0, 40).filter((r: any) => ['passed', 'failed', 'skipped', 'warning'].includes(r?.status) && typeof r.label === 'string').map((r: any) => ({ label: r.label.slice(0, 160), status: r.status, ...(typeof r.detail === 'string' ? { detail: r.detail.slice(0, 300) } : {}) }))]);
           }
         };
         window.addEventListener('message', receive); signal?.addEventListener('abort', abort, { once: true });

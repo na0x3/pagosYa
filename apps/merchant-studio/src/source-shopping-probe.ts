@@ -2,6 +2,9 @@ import type { SourceCheck } from './source-checks';
 
 // This function is serialized and executes only inside an opaque preview frame.
 export function sourceShoppingProbe(design?: { sections: string[]; catalogSection: string; standaloneIntro: boolean; productsInOpening: boolean }) {
+  // Exercising the background frame must not take focus from the merchant.
+  HTMLElement.prototype.focus = () => {};
+  window.focus = () => {};
   const results: SourceCheck[] = [];
   const add = (label: string, ok: boolean, detail?: string) => results.push({ label, status: ok ? 'passed' : 'failed', ...(detail ? { detail } : {}) });
   window.addEventListener('error', event => add('JavaScript', false, String(event.message).slice(0, 160)));
@@ -166,120 +169,6 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       }
       const pause = () => new Promise(resolve => setTimeout(resolve, 80));
       const visible = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)].find(shown);
-      // A document cannot dispatch trusted keyboard input. Exercise real focus and
-      // handlers, emulating only uncancelled native defaults. Playwright covers the
-      // same journey with browser-generated Tab/Enter/Escape events.
-      results.push({ label: 'Alcance de la comprobación de teclado', status: 'skipped', detail: 'Se comprueban el foco y los manejadores con navegación emulada. La navegación nativa requiere una prueba con teclado real.' });
-      const keyboardVisible = (el: HTMLElement) => {
-        if (!shown(el)) return false;
-        const box = el.getBoundingClientRect();
-        if (box.bottom <= 0 || box.top >= innerHeight || box.right <= 0 || box.left >= innerWidth) return false;
-        for (let parent: HTMLElement | null = el; parent; parent = parent.parentElement) {
-          const style = getComputedStyle(parent);
-          if (style.opacity === '0' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
-          if (parent !== el) {
-            const bounds = parent.getBoundingClientRect();
-            if (/hidden|clip/.test(style.overflowX) && (box.right <= bounds.left || box.left >= bounds.right)) return false;
-            if (/hidden|clip/.test(style.overflowY) && (box.bottom <= bounds.top || box.top >= bounds.bottom)) return false;
-          }
-        }
-        return true;
-      };
-      const nameText = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
-        if (!(node instanceof Element) || node.matches('[hidden],[aria-hidden="true"],script,style')) return '';
-        const style = getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden') return '';
-        return node.getAttribute('aria-label') || (node instanceof HTMLImageElement ? node.alt : [...node.childNodes].map(nameText).join(' '));
-      };
-      const accessibleName = (el: HTMLElement) => {
-        if (el.closest('[aria-hidden="true"]')) return '';
-        const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)).filter(Boolean);
-        if (labelled.length) return labelled.map(label => label!.textContent || '').join(' ').trim();
-        const aria = el.getAttribute('aria-label')?.trim();
-        if (aria) return aria;
-        if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
-          const label = [...(el.labels || [])].map(nameText).join(' ').trim();
-          if (label) return label;
-          if (el instanceof HTMLInputElement && /^(button|submit|reset|image)$/.test(el.type)) return (el.alt || el.value || (el.type === 'submit' ? 'Enviar' : el.type === 'reset' ? 'Restablecer' : '')).trim();
-          return el.title.trim();
-        }
-        return nameText(el).trim() || el.title.trim();
-      };
-      const ring = (el: HTMLElement) => {
-        const style = getComputedStyle(el);
-        return { outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`, shadow: style.boxShadow,
-          outlined: !['', 'none', 'hidden'].includes(style.outlineStyle) && parseFloat(style.outlineWidth) > 0 && !/transparent|rgba\([^)]*,\s*0\)/.test(style.outlineColor),
-          shadowed: style.boxShadow.split(/,(?![^()]*\))/).some(shadow => !/transparent|rgba\([^)]*,\s*0\)/.test(shadow)
-            && (shadow.replace(/rgba?\([^)]*\)/g, '').match(/-?[\d.]+px/g) || []).some(length => parseFloat(length) !== 0)) };
-      };
-      const tabStops = () => {
-        const candidates = [...document.querySelectorAll<HTMLElement>('a[href],area[href],button,input,select,textarea,summary,[tabindex],[contenteditable="true"],audio[controls],video[controls]')]
-          .filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && shown(el));
-        return candidates.filter(el => {
-          if (!(el instanceof HTMLInputElement) || el.type !== 'radio' || !el.name) return true;
-          const group = candidates.filter((other): other is HTMLInputElement => other instanceof HTMLInputElement && other.type === 'radio' && other.name === el.name && other.form === el.form);
-          return el === (group.find(other => other.checked) || group[0]);
-        }).sort((a, b) => (a.tabIndex || Infinity) - (b.tabIndex || Infinity));
-      };
-      const key = (el: Element, type: string, value: string) => el.dispatchEvent(new KeyboardEvent(type, { key: value, code: value, bubbles: true, cancelable: true }));
-      (document.activeElement as HTMLElement | null)?.blur();
-      window.scrollTo(0, 0);
-      const stops = tabStops();
-      const unfocused = new Map(stops.map(el => [el, ring(el)]));
-      const visited = new Set<HTMLElement>();
-      const invisible: string[] = [], unnamed: string[] = [], noRing: string[] = [];
-      let keyboardOpener: HTMLElement | undefined;
-      for (let step = 0; step < stops.length; step++) {
-        const previous = document.activeElement;
-        const allowed = key(previous || document.body, 'keydown', 'Tab');
-        if (allowed && document.activeElement === previous) {
-          const next = stops[stops.indexOf(previous as HTMLElement) + 1];
-          next?.focus();
-        }
-        const active = document.activeElement as HTMLElement | null;
-        key(active || document.body, 'keyup', 'Tab');
-        if (!active || active === document.body || visited.has(active)) break;
-        visited.add(active);
-        const label = describe(active);
-        if (!keyboardVisible(active)) invisible.push(label);
-        if (!accessibleName(active)) unnamed.push(label);
-        const before = unfocused.get(active), after = ring(active);
-        if (!before || !(after.outlined && after.outline !== before.outline || after.shadowed && after.shadow !== before.shadow)) noRing.push(label);
-        if (active.matches('[data-cart-open]') && !active.closest('.cart-added')) keyboardOpener ||= active;
-      }
-      const finding = (label: string, failures: string[], advice: string) => add(label, !failures.length, failures.length ? `${advice}: ${failures.slice(0, 4).join(', ')}.` : undefined);
-      add('Recorrido con Tab', visited.size === stops.length, visited.size === stops.length ? undefined : 'El foco se detiene o se desvía antes de recorrer los controles. Revisa los manejadores de Tab.');
-      finding('Controles visibles con teclado', invisible, 'Haz visible cada control al recibir foco');
-      finding('Nombres accesibles con teclado', unnamed, 'Añade un nombre accesible a cada control');
-      finding('Indicador de foco visible', noRing, 'Añade un contorno o una sombra visible que cambie al recibir foco');
-      if (document.querySelector('[data-cart-open]')) {
-        add('Carrito accesible con Tab', Boolean(keyboardOpener), keyboardOpener ? undefined : 'El botón de pedido debe poder alcanzarse con Tab.');
-        keyboardOpener?.focus();
-        if (keyboardOpener && document.activeElement === keyboardOpener) {
-          const allowed = key(keyboardOpener, 'keydown', 'Enter') && key(keyboardOpener, 'keypress', 'Enter');
-          // Only native activation controls have an Enter-to-click default.
-          if (allowed && keyboardOpener.matches('button,a[href],input[type="button"],input[type="submit"]')) keyboardOpener.click();
-          key(keyboardOpener, 'keyup', 'Enter');
-        }
-        await pause();
-        const drawer = visible('dialog.cart-drawer[open]') as HTMLDialogElement | undefined;
-        add('Carrito abre con Enter', Boolean(drawer), drawer ? undefined : 'Activa el pedido con Enter y muestra el carrito.');
-        if (drawer) {
-          const allowed = key(document.activeElement || drawer, 'keydown', 'Escape');
-          if (allowed && drawer.open && drawer.getAttribute('closedby') !== 'none') {
-            if (drawer.dispatchEvent(new Event('cancel', { cancelable: true }))) drawer.close();
-          }
-          key(document.activeElement || drawer, 'keyup', 'Escape');
-          await pause();
-          add('Carrito cierra con Escape', !drawer.open, drawer.open ? 'Permite cerrar el pedido con Escape.' : undefined);
-          add('El foco vuelve al pedido', !drawer.open && document.activeElement === keyboardOpener, 'Al cerrar el carrito, devuelve el foco al control que lo abrió.');
-          // Cleanup only after recording failure so the shopping checks can continue.
-          if (drawer.open) { drawer.close(); await pause(); }
-        }
-      }
-      (document.activeElement as HTMLElement | null)?.blur();
-      window.scrollTo(0, 0);
       let buy = visible('[data-pagosya-catalog] button[data-add]:not(:disabled),[data-pagosya-product] button[data-add]:not(:disabled)');
       // A product with options opens its configurator on the page; the first available combination is preselected.
       const chooser = !buy ? visible('[data-pagosya-catalog] button.menu-add[data-product]:not(:disabled)') : null;

@@ -102,6 +102,7 @@ test('source studio generates, previews commerce, edits a file, restores and dow
     else if(/\/versions\/\d+$/.test(pathname))body=versions.find(v=>v.revision===Number(pathname.split('/').at(-1)));
     else if(pathname.endsWith('/catalog'))body=structuredClone(snapshotCatalog);
     else if(pathname.endsWith('/source-project'))body={revision,versions,nextBefore:null};
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${method} ${pathname}`);
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
@@ -172,7 +173,8 @@ test('failed chat generation preserves the request and permits retry', async ({ 
       revision = 1;
       body = { revision: saved, userMessage: { id: 'u', role: 'USER', content: route.request().postDataJSON().instruction }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Tu revisión está lista.', metadata: { sourceRevision: 1 } } };
       messages.push(body.userMessage, body.assistantMessage);
-    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected route ${pathname}`);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -205,6 +207,7 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [saved], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = saved;
     else if (pathname.endsWith('/catalog')) body = catalog;
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
@@ -257,7 +260,8 @@ test('free conversation is the default and model plus credit cap reach generatio
     else if (pathname.endsWith('/messages')) {
       sent = route.request().postDataJSON();
       await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ message: 'No consumió créditos. Vuelve a intentarlo.' }) }); return;
-    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -303,6 +307,7 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [{ revision: 1, label: 'Catalog' }], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = { revision: 1, label: 'Catalog', snapshot: sample };
     else if (pathname.endsWith('/estimate')) body = { model: 'gpt-5.6-terra', reason: 'Diseño', maxCredits: 50, estimate: { minCredits: 4, maxCredits: 16 } };
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(pathname);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
@@ -348,7 +353,8 @@ test('motion changes save a revision without AI generation and persist after rel
       const data=JSON.parse(config.content.slice(config.content.indexOf('=')+1).trim().replace(/;$/,''));
       config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion})+';';
       versions.unshift(next); body=next;
-    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error('Unexpected request '+pathname);
     await route.fulfill({json:body});
   });
