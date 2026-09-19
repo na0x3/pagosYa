@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
@@ -17,6 +18,9 @@ export const ALLOWED_MIME_TO_EXT: Record<string, string> = {
 };
 
 export const UPLOAD_FILENAME_PATTERN = /^[0-9a-f-]{36}\.(png|jpe?g|webp|gif|mp4|webm|woff2)$/;
+/** Widths a storefront may request; a fixed set keeps the cache (and resize work) bounded per photo. */
+export const RESPONSIVE_WIDTHS = [320, 480, 640, 960, 1280, 1600] as const;
+const RESIZABLE = /^[0-9a-f-]{36}\.(png|jpe?g|webp)$/;
 // Full-bleed storefront backgrounds need enough source pixels for high-density
 // displays. Eight megabytes leaves room for a 2880px+ JPEG, WEBP, or PNG while
 // keeping the generic image endpoint bounded.
@@ -292,6 +296,48 @@ export class UploadsService implements OnModuleInit {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;
     }
+  }
+
+  private readonly resizing = new Map<string, Promise<Buffer | null>>();
+  /** A width-limited WebP copy of a photo, generated once and cached under a private storage key that the
+   * public filename pattern can never address directly. */
+  async getResized(filename: string, width: number): Promise<{ stream: Readable; byteSize: number } | null> {
+    if (!RESIZABLE.test(filename) || !(RESPONSIVE_WIDTHS as readonly number[]).includes(width)) return null;
+    const key = `${filename.split('.')[0]}.w${width}.webp`;
+    const cached = await this.readKey(key);
+    if (cached) return { stream: Readable.from(cached), byteSize: cached.byteLength };
+    let pending = this.resizing.get(key);
+    if (!pending) {
+      pending = (async () => {
+        const original = await this.getBuffer(filename);
+        if (!original) return null;
+        const resized = await sharp(original, { limitInputPixels: 40_000_000 }).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
+        await this.writeKey(key, resized, 'image/webp').catch(() => undefined);
+        return resized;
+      })().finally(() => this.resizing.delete(key));
+      this.resizing.set(key, pending);
+    }
+    const resized = await pending;
+    return resized ? { stream: Readable.from(resized), byteSize: resized.byteLength } : null;
+  }
+
+  private async readKey(key: string): Promise<Buffer | null> {
+    if (this.s3) {
+      try {
+        const object = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+        return object.Body ? Buffer.from(await object.Body.transformToByteArray()) : null;
+      } catch (error) {
+        if ((error as { name?: string }).name === "NoSuchKey" || (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) return null;
+        throw error;
+      }
+    }
+    try { return await fs.promises.readFile(this.resolvePath(key)); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
+  }
+
+  private async writeKey(key: string, body: Buffer, contentType: string) {
+    if (this.s3) await this.s3.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }));
+    else await fs.promises.writeFile(this.resolvePath(key), body);
   }
 
   async exists(filename: string): Promise<boolean> {

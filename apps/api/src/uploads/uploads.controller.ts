@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Res,
   StreamableFile,
   UploadedFile,
@@ -19,7 +20,7 @@ import type { Response } from "express";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { PrismaService } from "../prisma/prisma.service";
-import { maxUploadBytesForMime, UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
+import { maxUploadBytesForMime, RESPONSIVE_WIDTHS, UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
 import { UploadResponseDto } from "./dto/upload-response.dto";
 
 /**
@@ -70,11 +71,15 @@ export class UploadsController {
     @Param("filename") filename: string,
     @Res({ passthrough: true }) res: Response,
     @Headers("if-none-match") ifNoneMatch?: string,
+    @Query("w") widthParam?: string,
   ): Promise<StreamableFile | undefined> {
     if (!UPLOAD_FILENAME_PATTERN.test(filename)) throw new NotFoundException("Archivo no encontrado");
-    const etag = `"${filename}"`;
+    // Storefronts request width-limited WebP copies for srcset; only the fixed widths are served.
+    const width = widthParam === undefined ? undefined : Number(widthParam);
+    if (width !== undefined && !(RESPONSIVE_WIDTHS as readonly number[]).includes(width)) throw new BadRequestException(`Ancho no disponible. Usa ${RESPONSIVE_WIDTHS.join(", ")}.`);
+    const etag = width ? `"${filename}-w${width}"` : `"${filename}"`;
     const headers = {
-      "Content-Type": this.uploads.contentTypeFor(filename),
+      "Content-Type": width ? "image/webp" : this.uploads.contentTypeFor(filename),
       "X-Content-Type-Options": "nosniff",
       "Cross-Origin-Resource-Policy": "cross-origin",
       "Content-Disposition": `inline; filename="${filename}"`,
@@ -95,8 +100,8 @@ export class UploadsController {
       return;
     }
 
-    const file = await this.uploads.getStream(filename);
-    if (!file) throw new NotFoundException("Archivo no encontrado");
+    const file = width ? await this.uploads.getResized(filename, width) : await this.uploads.getStream(filename);
+    if (!file) throw new NotFoundException(width ? "Esta imagen no tiene versiones de tamaño." : "Archivo no encontrado");
     res.set({ ...headers, "Content-Length": file.byteSize });
     return new StreamableFile(file.stream);
   }
