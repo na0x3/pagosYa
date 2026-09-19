@@ -1179,11 +1179,13 @@
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
     if (!template || !template.content) return null;
-    const root = template.content.firstElementChild?.cloneNode(true);
+    // React's client renderer appends <template> children to the element, not to its content fragment.
+    const source = template.content.children.length ? template.content : template;
+    const root = source.firstElementChild?.cloneNode(true);
     const field = name => root?.querySelector(`[data-product-field="${name}"]`);
     const detail = root?.querySelector('a[data-product-link]');
     const buy = root?.querySelector('button[data-product-add]');
-    if (template.content.children.length !== 1 || !root || !field('name') || !field('price') || !detail || !buy) {
+    if (source.children.length !== 1 || !root || !field('name') || !field('price') || !detail || !buy) {
       document.documentElement.dataset.productTemplateInvalid = 'true';
       return null;
     }

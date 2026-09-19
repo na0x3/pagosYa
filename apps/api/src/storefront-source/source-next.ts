@@ -5,7 +5,7 @@ import tailwindcss from 'tailwindcss';
 import * as ts from 'typescript';
 import { parse } from 'parse5';
 import { posix, join } from 'node:path';
-import { creativeRuntime, creativeTypes, SOURCE_CREATIVE_IMPORTS, SOURCE_CREATIVE_TOOLS } from './source-creative';
+import { creativeRuntime, creativeTypes, uiRuntime, SOURCE_CREATIVE_IMPORTS, SOURCE_CREATIVE_TOOLS } from './source-creative';
 import { sourceLocationUrl } from './source-location';
 import { validateSourceDesignImplementation, type SourceDesign } from './source-design';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
@@ -37,7 +37,7 @@ export function validateNextSources(files: SourceProjectFileDto[]) {
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
           const specifier = node.moduleSpecifier.text;
-          if (!SOURCE_CREATIVE_IMPORTS.includes(specifier) && !specifier.startsWith('./') && !specifier.startsWith('../')) throw new BadGatewayException(`Import no permitido en ${file.path}: ${specifier}. Usa React, Motion, @pagosya/creative o componentes locales.`);
+          if (!SOURCE_CREATIVE_IMPORTS.includes(specifier) && !specifier.startsWith('./') && !specifier.startsWith('../')) throw new BadGatewayException(`Import no permitido en ${file.path}: ${specifier}. Usa React, Motion, @pagosya/creative, @pagosya/ui o componentes locales.`);
         }
       }
       if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'Function') throw new BadGatewayException('No uses evaluación de código.');
@@ -66,6 +66,9 @@ export function validateNextSources(files: SourceProjectFileDto[]) {
   if (missing.length) throw new BadGatewayException(missing.join('\n'));
 }
 
+/** Virtual path of the trusted `@pagosya/ui` source; its commerce hooks count as page markup. */
+const UI_LIBRARY_PATH = 'lib/ui.tsx';
+
 type NextSlot = { children: string; attrs: Array<[string, string]>; childNames: Set<string>; propsNames: Set<string>; spreadNames: Set<string> };
 
 /** Conservative JSX structure inspection, never SSR or evaluation of merchant modules.
@@ -84,7 +87,7 @@ export function nextPageMarkup(files: SourceProjectFileDto[], name: string): str
     try { return renderExport(exportName, children, attrs); } finally { active.delete(key); }
   };
   const loadFile = (path: string) => {
-    const file = files.find(f => f.path === path);
+    const file = path === UI_LIBRARY_PATH ? { path, content: uiRuntime() } : files.find(f => f.path === path);
     if (!file) return null;
     const source = ts.createSourceFile(path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const imports = new Map<string, { path: string; exported: string }>();
@@ -125,9 +128,9 @@ export function nextPageMarkup(files: SourceProjectFileDto[], name: string): str
         for (const entry of statement.exportClause.elements) { const target = declarations.get((entry.propertyName || entry.name).text); if (target) exports.set(entry.name.text, target); }
       }
     }
-    for (const statement of source.statements) if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text.startsWith('.')) {
+    for (const statement of source.statements) if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && (statement.moduleSpecifier.text.startsWith('.') || statement.moduleSpecifier.text === '@pagosya/ui')) {
       const base = posix.normalize(posix.join(posix.dirname(path), statement.moduleSpecifier.text));
-      const target = [base, base + '.tsx', base + '/index.tsx'].find(p => files.some(f => f.path === p));
+      const target = statement.moduleSpecifier.text === '@pagosya/ui' ? UI_LIBRARY_PATH : [base, base + '.tsx', base + '/index.tsx'].find(p => files.some(f => f.path === p));
       if (target && statement.importClause?.name) imports.set(statement.importClause.name.text, { path: target, exported: 'default' });
       const bindings = statement.importClause?.namedBindings;
       if (target && bindings && ts.isNamedImports(bindings)) for (const binding of bindings.elements) {
@@ -301,8 +304,8 @@ export function repairNextSharedComponentReferences(files: SourceProjectFileDto[
 /** Type-check in memory; TypeScript reads declarations but executes no source. */
 function checkNextTypes(files: SourceProjectFileDto[]) {
   const root = join(__dirname, '__storefront__');
-  const virtual = new Map([...files.filter(f => f.path.endsWith('.tsx')), { path: 'lib/creative.tsx', content: creativeRuntime() }, { path: 'creative.d.ts', content: creativeTypes }].map(f => [join(root, f.path), f.content]));
-  const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, jsx: ts.JsxEmit.ReactJSX, strict: true, noEmit: true, skipLibCheck: true, esModuleInterop: true, types: [], baseUrl: root, paths: { '@pagosya/creative': ['lib/creative.tsx'] } };
+  const virtual = new Map([...files.filter(f => f.path.endsWith('.tsx')), { path: 'lib/creative.tsx', content: creativeRuntime() }, { path: 'lib/ui.tsx', content: uiRuntime() }, { path: 'creative.d.ts', content: creativeTypes }].map(f => [join(root, f.path), f.content]));
+  const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, jsx: ts.JsxEmit.ReactJSX, strict: true, noEmit: true, skipLibCheck: true, esModuleInterop: true, types: [], baseUrl: root, paths: { '@pagosya/creative': ['lib/creative.tsx'], '@pagosya/ui': ['lib/ui.tsx'] } };
   const host = ts.createCompilerHost(options);
   const read = host.readFile, exists = host.fileExists;
   host.readFile = path => virtual.get(path) ?? read(path);
@@ -330,6 +333,7 @@ export async function compileNextPreview(files: SourceProjectFileDto[]): Promise
   const authored = files;
   const source = new Map(authored.map(f => [f.path, f.content]));
   source.set('lib/creative.tsx', creativeRuntime());
+  source.set('lib/ui.tsx', uiRuntime());
   // Tailwind may resolve a different PostCSS 8 patch; its plugin uses the same runtime contract.
   const css = await postcss([tailwindcss({ content: authored.filter(f => f.path.endsWith('.tsx')).map(f => ({ raw: f.content, extension: 'tsx' })), corePlugins: { preflight: true } }) as unknown as import('postcss').Plugin])
     .process('@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' + source.get('styles/globals.css'), { from: undefined });
@@ -344,6 +348,7 @@ export async function compileNextPreview(files: SourceProjectFileDto[]): Promise
             const entryImport = args.importer.endsWith('preview-entry.tsx');
             if (args.namespace !== 'merchant' && !entryImport) return;
             if (args.path === '@pagosya/creative') return { path: 'lib/creative.tsx', namespace: 'merchant' };
+            if (args.path === '@pagosya/ui') return { path: 'lib/ui.tsx', namespace: 'merchant' };
             if (args.namespace === 'merchant' && args.importer === 'lib/creative.tsx' && args.path === 'lottie-web/build/player/lottie_light') return { path: require.resolve(args.path) };
             if (['react', 'react/jsx-runtime', 'motion/react', 'motion'].includes(args.path)) return { path: require.resolve(args.path) };
             if (entryImport && ['react-dom', 'react-dom/client'].includes(args.path)) return { path: require.resolve(args.path) };
@@ -369,6 +374,7 @@ export async function compileNextPreview(files: SourceProjectFileDto[]): Promise
 export function nextProjectScaffold(name: string): SourceProjectFileDto[] {
   const files: SourceProjectFileDto[] = [
     { path: 'lib/creative.tsx', content: creativeRuntime() },
+    { path: 'lib/ui.tsx', content: uiRuntime() },
     { path: 'creative.d.ts', content: creativeTypes },
     { path: NEXT_SOURCE_MARKER, content: JSON.stringify({ framework: 'next', version: 1, preview: 'react-compiled', routes: nextPages }) },
     { path: 'package.json', content: JSON.stringify({ name: `storefront-${name}`, version: '1.0.0', private: true, scripts: { dev: 'next dev', build: 'next build', start: 'node server.mjs', typecheck: 'tsc --noEmit' }, dependencies: { motion: '13.1.1', 'lottie-web': '5.13.0', next: '15.5.25', react: '19.2.6', 'react-dom': '19.2.6' }, devDependencies: { typescript: '^5.6.3', '@types/node': '^20.16.11', '@types/react': '^19.0.0', '@types/react-dom': '^19.0.0', tailwindcss: '3.4.19', postcss: '8.5.25', autoprefixer: '^10.4.20' } }, null, 2) },
@@ -376,7 +382,7 @@ export function nextProjectScaffold(name: string): SourceProjectFileDto[] {
     { path: 'tailwind.config.cjs', content: 'module.exports = { content: ["./components/**/*.tsx", "./pages/**/*.tsx"], theme: { extend: {} }, plugins: [] };\n' },
     { path: 'postcss.config.cjs', content: 'module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };\n' },
     { path: 'styles/tailwind.css', content: '@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' },
-    { path: 'tsconfig.json', content: JSON.stringify({ compilerOptions: { target: 'ES2022', lib: ['dom', 'dom.iterable', 'esnext'], allowJs: true, skipLibCheck: true, strict: true, noEmit: true, esModuleInterop: true, module: 'esnext', moduleResolution: 'bundler', resolveJsonModule: true, isolatedModules: true, jsx: 'preserve', incremental: true, baseUrl: '.', paths: { '@pagosya/creative': ['./lib/creative.tsx'] } }, include: ['next-env.d.ts', '**/*.ts', '**/*.tsx'], exclude: ['node_modules'] }, null, 2) },
+    { path: 'tsconfig.json', content: JSON.stringify({ compilerOptions: { target: 'ES2022', lib: ['dom', 'dom.iterable', 'esnext'], allowJs: true, skipLibCheck: true, strict: true, noEmit: true, esModuleInterop: true, module: 'esnext', moduleResolution: 'bundler', resolveJsonModule: true, isolatedModules: true, jsx: 'preserve', incremental: true, baseUrl: '.', paths: { '@pagosya/creative': ['./lib/creative.tsx'], '@pagosya/ui': ['./lib/ui.tsx'] } }, include: ['next-env.d.ts', '**/*.ts', '**/*.tsx'], exclude: ['node_modules'] }, null, 2) },
     { path: 'next-env.d.ts', content: '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n' },
     { path: 'pages/_app.tsx', content: `import type { AppProps } from 'next/app';\nimport '../styles/tailwind.css';\nimport '../styles/globals.css';\nexport default function App({ Component, pageProps }: AppProps) { return <Component {...pageProps} />; }\n` },
     { path: 'pages/_document.tsx', content: `import { Html, Head, Main, NextScript } from 'next/document';\nexport default function Document() { return <Html lang="es"><Head><link rel="stylesheet" href="/commerce-pages.css"/><link rel="stylesheet" href="/brand.css"/></Head><body><script src="/config.js"/><Main/><NextScript/></body></Html>; }\n` },
