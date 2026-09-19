@@ -10,5 +10,6 @@
     "lib": ["ES2022", "DOM"],
     "skipLibCheck": true
   },
-  "include": ["src/**/*.js"]
+  "include": ["src/**/*.js"],
+  "exclude": ["src/dashboard.js"]
 }

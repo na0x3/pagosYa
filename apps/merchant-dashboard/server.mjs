@@ -125,7 +125,7 @@ const server = createServer(async (req, res) => {
       res.end(css);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/workspace-design.css"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });

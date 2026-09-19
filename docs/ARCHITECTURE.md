@@ -30,7 +30,7 @@ These are enforced by `pnpm check:boundaries` (dependency-cruiser, runs in CI):
 
 1. **Apps never import another app's source.** Shared code goes in `packages/`. Existing violations are listed in `.dependency-cruiser-known-violations.json` and are being removed; adding a new one fails CI.
 2. **Packages never import apps.**
-3. **No circular imports** (currently a warning while existing cycles are removed).
+3. **No circular imports.** The few that predate the rule are listed in the known-violations file; a new one fails CI.
 
 ## API (`apps/api/src`)
 

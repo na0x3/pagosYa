@@ -22,7 +22,7 @@ module.exports = {
     {
       name: 'no-circular',
       comment: 'Circular imports make modules impossible to understand or test in isolation.',
-      severity: 'warn',
+      severity: 'error',
       from: {},
       to: { circular: true },
     },
