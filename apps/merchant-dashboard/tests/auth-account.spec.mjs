@@ -69,7 +69,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
   });
 }
 
-test("an expired session closes fullscreen and returns to sign-in", async ({ page }) => {
+test("an expired session returns to sign-in", async ({ page }) => {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "fixture@example.com");
@@ -81,14 +81,12 @@ test("an expired session closes fullscreen and returns to sign-in", async ({ pag
     contentType: "application/json",
     body: JSON.stringify(expired ? { message: "Tu sesión venció. Vuelve a iniciar sesión." } : [store]),
   }));
-  await page.goto("/#dashboard-appearance");
-  await expect(page.locator("body")).toHaveClass(/store-preview-fullscreen/);
+  await page.goto("/#dashboard-settings");
   await expect(page.locator("#storeNameInput")).toHaveValue(store.name);
   expired = true;
   await page.evaluate(() => window.refresh());
   await expect(page.locator("body")).toHaveClass(/is-logged-out/);
-  await expect(page.locator("body")).not.toHaveClass(/store-preview-fullscreen/);
-  await expect(page.locator(".store-preview-panel")).toBeHidden();
+  await expect(page.locator("#storeSettingsPage")).toBeHidden();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click({ trial: true });
   await expect(page.locator("#error")).toContainText("sesión venció");

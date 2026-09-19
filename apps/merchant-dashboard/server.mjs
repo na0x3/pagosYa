@@ -125,7 +125,7 @@ const server = createServer(async (req, res) => {
       res.end(css);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
@@ -136,13 +136,6 @@ const server = createServer(async (req, res) => {
       const content = await readFile(path.join(variantEditorDir, filename), "utf8");
       res.writeHead(200, { "content-type": filename.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", "cache-control": "no-store" });
       res.end(content); return;
-    }
-    if (["/src/store-editor/state.js", "/src/store-editor/commands.js", "/src/store-editor/persistence.js", "/src/store-editor/selection.js", "/src/store-editor/bootstrap.js"].includes(requestUrl.pathname)) {
-      const filename = requestUrl.pathname.slice("/src/store-editor/".length);
-      const source = await readFile(path.join(dirname, "src", "store-editor", filename), "utf8");
-      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
-      res.end(source);
-      return;
     }
     if (mascotAssets.has(requestUrl.pathname)) {
       const image = await readFile(path.join(dirname, "assets", mascotAssets.get(requestUrl.pathname)));
