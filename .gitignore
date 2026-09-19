@@ -27,3 +27,7 @@ pagosya-backup.dump
 apps/merchant-dashboard/public/studio/
 
 .superpowers/
+
+# Generated launch videos
+brag-output*/
+videos/
