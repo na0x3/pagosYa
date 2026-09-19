@@ -50,6 +50,8 @@ function setup() {
     collection: { findMany: jest.fn(async () => []) },
     customDomain: { findUnique: jest.fn(async () => ({ hostname: 'nueva.example', status: 'ACTIVE', store: row })) },
   };
+  // Publishing requires the browser checks to have passed for the exact revision (task 1.5).
+  prisma.sourceCheckResult = { findFirst: jest.fn().mockResolvedValue({ id: 'passing-check' }) };
   prisma.$transaction = jest.fn(async (work) => {
     if (Array.isArray(work)) return Promise.all(work);
     const before = structuredClone(row);
