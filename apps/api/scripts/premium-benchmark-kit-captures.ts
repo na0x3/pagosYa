@@ -5,12 +5,12 @@ import { ConfigService } from '@nestjs/config';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { SourceVisualReviewService } from '../src/stores/source-visual-review.service';
-import { sourceProjectSnapshot } from '../src/stores/source-project';
-import { currentSourceRuntime } from '../src/stores/source-runtime';
-import { captureSourceVisuals } from '../src/stores/source-visual-capture';
-import { designCaptureFailures } from '../src/stores/source-design-evaluator';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { SourceVisualReviewService } from '../src/storefront-source/source-visual-review.service';
+import { sourceProjectSnapshot } from '../src/storefront-source/source-project';
+import { currentSourceRuntime } from '../src/storefront-source/source-runtime';
+import { captureSourceVisuals } from '../src/storefront-source/source-visual-capture';
+import { designCaptureFailures } from '../src/storefront-source/source-design-evaluator';
 
 async function main() {
   const root = resolve(__dirname, '../../../examples/premium-benchmark-photos');

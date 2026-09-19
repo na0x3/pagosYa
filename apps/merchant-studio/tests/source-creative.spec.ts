@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { compileNextPreview, nextProjectScaffold } from '../../api/src/stores/source-next';
-import { withCreativeAssets } from '../../api/src/stores/source-creative-assets';
-import { creativeStoreFiles } from '../../api/src/stores/fixtures/creative-store';
-import { nextBrief, nextStoreConfig } from '../../api/src/stores/fixtures/next-store';
+import { compileNextPreview, nextProjectScaffold } from '../../api/src/storefront-source/source-next';
+import { withCreativeAssets } from '../../api/src/storefront-source/source-creative-assets';
+import { creativeStoreFiles } from '../../api/src/storefront-source/fixtures/creative-store';
+import { nextBrief, nextStoreConfig } from '../../api/src/storefront-source/fixtures/next-store';
 import { kitPath } from '@pagosya/storefront-kit';
 
 let files: Awaited<ReturnType<typeof compileNextPreview>>;

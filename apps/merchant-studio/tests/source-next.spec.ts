@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { compileNextPreview, nextProjectScaffold } from '../../api/src/stores/source-next';
-import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from '../../api/src/stores/fixtures/next-store';
+import { compileNextPreview, nextProjectScaffold } from '../../api/src/storefront-source/source-next';
+import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from '../../api/src/storefront-source/fixtures/next-store';
 import { kitPath } from '@pagosya/storefront-kit';
 
 for (const hosted of [false, true]) test(`computed photo paths load in ${hosted ? 'hosted storefront' : 'Studio preview'}`, async ({ page }) => {

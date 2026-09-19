@@ -1,4 +1,4 @@
-import { SourceGenerationService } from '../src/stores/source-generation.service';
+import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';

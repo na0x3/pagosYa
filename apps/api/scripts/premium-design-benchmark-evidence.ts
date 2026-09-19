@@ -6,10 +6,10 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { captureSourceVisuals, probeSourceShopping } from '../src/stores/source-visual-capture';
-import { designCaptureFailures } from '../src/stores/source-design-evaluator';
-import { sourceProjectSnapshot, type SourceProjectSnapshot } from '../src/stores/source-project';
-import { currentSourceRuntime } from '../src/stores/source-runtime';
+import { captureSourceVisuals, probeSourceShopping } from '../src/storefront-source/source-visual-capture';
+import { designCaptureFailures } from '../src/storefront-source/source-design-evaluator';
+import { sourceProjectSnapshot, type SourceProjectSnapshot } from '../src/storefront-source/source-project';
+import { currentSourceRuntime } from '../src/storefront-source/source-runtime';
 /** Product-page evidence renders with the current runtime so runtime PDP changes are measured on every stored revision. */
 async function captureProductPage(snapshot: SourceProjectSnapshot, folder: string) {
   if (!snapshot.files.some(file => file.path === 'product.html')) return { productCaptureError: 'Sin product.html en esta revisión.' };

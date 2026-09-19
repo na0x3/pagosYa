@@ -1,12 +1,12 @@
-import { SourceDesignJobWorker } from '../src/stores/source-design-job.worker';
-import * as visualCapture from '../src/stores/source-visual-capture';
+import { SourceDesignJobWorker } from '../src/storefront-source/source-design-job.worker';
+import * as visualCapture from '../src/storefront-source/source-visual-capture';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { SourceDesignJobsService } from '../src/stores/source-design-jobs.service';
-import { sourceProjectDigest, sourceProjectSnapshot } from '../src/stores/source-project';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { SourceDesignJobsService } from '../src/storefront-source/source-design-jobs.service';
+import { sourceProjectDigest, sourceProjectSnapshot } from '../src/storefront-source/source-project';
 
 describe('Durable design jobs with PostgreSQL', () => {
   const prisma = new PrismaClient();

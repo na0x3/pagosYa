@@ -1,5 +1,5 @@
 import * as path from "path";
-import type { DomainCommerceConfig } from '../stores/domains/domain-commerce.config';
+import type { DomainCommerceConfig } from '../domains/domain-commerce.config';
 
 export interface BanecoQrConfig {
   enabled: boolean;

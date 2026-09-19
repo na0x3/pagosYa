@@ -6,10 +6,10 @@ import { createServer } from 'node:http';
 import { readFile, readdir, mkdir, writeFile, access } from 'node:fs/promises';
 import { resolve, join, extname } from 'node:path';
 import { createRequire } from 'node:module';
-import { SourceGenerationService } from '../src/stores/source-generation.service';
-import { sourceProjectSnapshot } from '../src/stores/source-project';
-import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../src/stores/source-generation-policy';
-import { sourceDesignExploration } from '../src/stores/source-design';
+import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
+import { sourceProjectSnapshot } from '../src/storefront-source/source-project';
+import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../src/storefront-source/source-generation-policy';
+import { sourceDesignExploration } from '../src/storefront-source/source-design';
 import { createHash } from 'node:crypto';
 import { kitPath } from '@pagosya/storefront-kit';
 

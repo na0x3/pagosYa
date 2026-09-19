@@ -1,7 +1,7 @@
 import { ConflictException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { StoresService } from "./stores.service";
-import { VisualStudioService } from "./visual-studio.service";
+import { VisualStudioService } from "../visual-studio/visual-studio.service";
 
 function setup() {
   let row: any = { id: "store-1", merchantId: "merchant-1", name: "Public name", tagline: "Public title", siteDocument: null,

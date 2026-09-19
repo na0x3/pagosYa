@@ -6,9 +6,9 @@ import { readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { AppModule } from '../src/app.module';
-import { SourceDesignJobsService } from '../src/stores/source-design-jobs.service';
-import { SourceDesignJobWorker } from '../src/stores/source-design-job.worker';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
+import { SourceDesignJobsService } from '../src/storefront-source/source-design-jobs.service';
+import { SourceDesignJobWorker } from '../src/storefront-source/source-design-job.worker';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
 async function main() {
   // BENCHMARK_ROOT=premium-benchmark-photos reviews the photo-led fixtures.
   const folder = resolve(__dirname, '../../../examples', process.env.BENCHMARK_ROOT === 'premium-benchmark-photos' ? 'premium-benchmark-photos' : 'premium-benchmark');

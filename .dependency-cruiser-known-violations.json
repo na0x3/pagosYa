@@ -2,8 +2,8 @@
   {
     "type": "dependency",
     "from": "apps/merchant-studio/tests/source-creative.spec.ts",
-    "to": "apps/api/src/stores/fixtures/creative-store.ts",
-    "unresolvedTo": "../../api/src/stores/fixtures/creative-store",
+    "to": "apps/api/src/storefront-source/fixtures/creative-store.ts",
+    "unresolvedTo": "../../api/src/storefront-source/fixtures/creative-store",
     "dependencyTypes": [
       "local",
       "import"
@@ -16,8 +16,8 @@
   {
     "type": "dependency",
     "from": "apps/merchant-studio/tests/source-creative.spec.ts",
-    "to": "apps/api/src/stores/fixtures/next-store.ts",
-    "unresolvedTo": "../../api/src/stores/fixtures/next-store",
+    "to": "apps/api/src/storefront-source/fixtures/next-store.ts",
+    "unresolvedTo": "../../api/src/storefront-source/fixtures/next-store",
     "dependencyTypes": [
       "local",
       "import"
@@ -30,8 +30,8 @@
   {
     "type": "dependency",
     "from": "apps/merchant-studio/tests/source-creative.spec.ts",
-    "to": "apps/api/src/stores/source-creative-assets.ts",
-    "unresolvedTo": "../../api/src/stores/source-creative-assets",
+    "to": "apps/api/src/storefront-source/source-creative-assets.ts",
+    "unresolvedTo": "../../api/src/storefront-source/source-creative-assets",
     "dependencyTypes": [
       "local",
       "import"
@@ -44,8 +44,8 @@
   {
     "type": "dependency",
     "from": "apps/merchant-studio/tests/source-creative.spec.ts",
-    "to": "apps/api/src/stores/source-next.ts",
-    "unresolvedTo": "../../api/src/stores/source-next",
+    "to": "apps/api/src/storefront-source/source-next.ts",
+    "unresolvedTo": "../../api/src/storefront-source/source-next",
     "dependencyTypes": [
       "local",
       "import"
@@ -58,8 +58,8 @@
   {
     "type": "dependency",
     "from": "apps/merchant-studio/tests/source-next.spec.ts",
-    "to": "apps/api/src/stores/fixtures/next-store.ts",
-    "unresolvedTo": "../../api/src/stores/fixtures/next-store",
+    "to": "apps/api/src/storefront-source/fixtures/next-store.ts",
+    "unresolvedTo": "../../api/src/storefront-source/fixtures/next-store",
     "dependencyTypes": [
       "local",
       "import"
@@ -72,8 +72,8 @@
   {
     "type": "dependency",
     "from": "apps/merchant-studio/tests/source-next.spec.ts",
-    "to": "apps/api/src/stores/source-next.ts",
-    "unresolvedTo": "../../api/src/stores/source-next",
+    "to": "apps/api/src/storefront-source/source-next.ts",
+    "unresolvedTo": "../../api/src/storefront-source/source-next",
     "dependencyTypes": [
       "local",
       "import"

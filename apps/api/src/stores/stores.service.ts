@@ -1,12 +1,13 @@
 import { creditQuote, reserveCredit } from '../commerce-platform/credit-ledger';
 import { bestBundleDiscount, type Bundle } from './bundle-pricing';
-import { quoteShipping } from './shipping-rates';
+import { quoteShipping } from '../shipping/shipping-rates';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { MerchantStatus, OrderFulfillmentStatus, PaymentLinkStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
 import * as QRCode from "qrcode";
 import { PrismaService } from "../prisma/prisma.service";
+import { findActiveStoreBySlug } from "./active-store";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { UploadsService } from "../uploads/uploads.service";
 import {
@@ -1347,10 +1348,8 @@ export class StoresService implements OnModuleDestroy {
    * shown verbatim in the customer-facing checkout page, not a dashboard
    * error toast.
    */
-  async findActiveBySlugPublic(slug: string) {
-    const store = await this.prisma.store.findUnique({ where: { slug } });
-    if (!store || store.status !== StoreStatus.ACTIVE || store.sourcePublicationPaused) throw new NotFoundException("Esta tienda ya no está disponible");
-    return store;
+  findActiveBySlugPublic(slug: string) {
+    return findActiveStoreBySlug(this.prisma, slug);
   }
 
   async listPublishedStores(search?: string, requestedPage?: string, requestedPageSize?: string) {

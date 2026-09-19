@@ -1,14 +1,14 @@
 /** One-store recovery, authorized 2026-09-13. Dry-run by default; --apply requires revision 2. */
 import 'reflect-metadata';
 import { PrismaClient } from '@prisma/client';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { nextSourceFile, compileNextPreview } from '../src/stores/source-next';
-import { sourceHomeRegions, sourceSectionScope, validateSourceEditScope, sourceDesignAfterSectionEdit } from '../src/stores/source-edit-scope';
-import { savedSourceDesign } from '../src/stores/source-design';
-import { withSourceAssets, sourceAssetInventory } from '../src/stores/source-asset-library';
-import { buildSourceVisualSystem } from '../src/stores/source-visual-system';
-import { sourceMotionMode } from '../src/stores/source-motion';
-import { sourceProjectDigest } from '../src/stores/source-project';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { nextSourceFile, compileNextPreview } from '../src/storefront-source/source-next';
+import { sourceHomeRegions, sourceSectionScope, validateSourceEditScope, sourceDesignAfterSectionEdit } from '../src/storefront-source/source-edit-scope';
+import { savedSourceDesign } from '../src/storefront-source/source-design';
+import { withSourceAssets, sourceAssetInventory } from '../src/storefront-source/source-asset-library';
+import { buildSourceVisualSystem } from '../src/storefront-source/source-visual-system';
+import { sourceMotionMode } from '../src/storefront-source/source-motion';
+import { sourceProjectDigest } from '../src/storefront-source/source-project';
 
 const storeId = 'cmtzf4huh000517sjb76vzeyy';
 const request = 'Añade una sección de preparación orgánica';

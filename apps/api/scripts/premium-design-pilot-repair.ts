@@ -7,9 +7,9 @@ import { dirname, resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { UploadsService } from '../src/uploads/uploads.service';
-import { SourceGenerationService } from '../src/stores/source-generation.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import type { SourceImageUse } from '../src/stores/source-setup';
+import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import type { SourceImageUse } from '../src/storefront-source/source-setup';
 async function main() {
   const root = resolve(__dirname, '../../..'), folder = resolve(root, 'examples/savia/pilot');
   const results = JSON.parse(await readFile(resolve(folder, 'results.json'), 'utf8'));

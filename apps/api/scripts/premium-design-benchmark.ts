@@ -7,11 +7,11 @@ import { resolve, dirname } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StoresService } from '../src/stores/stores.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { SourceGenerationService } from '../src/stores/source-generation.service';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
 import { UploadsService } from '../src/uploads/uploads.service';
 import { normalizeProductVariants, totalVariantStock } from '../src/payment-links/product-variants';
-import { sourceProjectDigest } from '../src/stores/source-project';
+import { sourceProjectDigest } from '../src/storefront-source/source-project';
 
 async function main() {
   const arm = process.argv[2]; if (!['baseline', 'candidate'].includes(arm)) throw new Error('Choose baseline or candidate');

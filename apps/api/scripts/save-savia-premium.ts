@@ -6,10 +6,10 @@ import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { UploadsService } from '../src/uploads/uploads.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { buildSourceVisualSystem, withSourceStyleTokens } from '../src/stores/source-visual-system';
-import { sourceAssetInventory } from '../src/stores/source-asset-library';
-import type { SourceProjectFileDto } from '../src/stores/dto/save-source-project.dto';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { buildSourceVisualSystem, withSourceStyleTokens } from '../src/storefront-source/source-visual-system';
+import { sourceAssetInventory } from '../src/storefront-source/source-asset-library';
+import type { SourceProjectFileDto } from '../src/storefront-source/dto/save-source-project.dto';
 
 async function main() {
   const folder = resolve(__dirname, '../../../examples/savia');

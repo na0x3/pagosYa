@@ -1,5 +1,5 @@
-import { sourceRedesignRequested } from '../src/stores/source-context';
-import { sourceRequestProfile, type SourceVisualDomain } from '../src/stores/source-request-profile';
+import { sourceRedesignRequested } from '../src/storefront-source/source-context';
+import { sourceRequestProfile, type SourceVisualDomain } from '../src/storefront-source/source-request-profile';
 
 type Case = {
   label: string;

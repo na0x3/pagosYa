@@ -6,8 +6,8 @@ import request = require('supertest');
 import { randomUUID } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { RetentionService } from '../src/stores/retention.service';
-import { DEFAULT_RETENTION } from '../src/stores/retention.dto';
+import { RetentionService } from '../src/retention/retention.service';
+import { DEFAULT_RETENTION } from '../src/retention/retention.dto';
 import { EMAIL_PROVIDER } from '../src/dashboard/tokens';
 import { createOrderTrackingToken } from '../src/consumer/order-tracking-token';
 

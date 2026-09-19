@@ -1,4 +1,4 @@
-import { queueStoreEmail } from '../stores/email-workspace.config';
+import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";

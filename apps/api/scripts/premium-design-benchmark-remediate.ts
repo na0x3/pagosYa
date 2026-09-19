@@ -5,9 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { AppModule } from '../src/app.module';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { currentSourceRuntime } from '../src/stores/source-runtime';
-import { probeSourceShopping } from '../src/stores/source-visual-capture';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { currentSourceRuntime } from '../src/storefront-source/source-runtime';
+import { probeSourceShopping } from '../src/storefront-source/source-visual-capture';
 async function main() {
   const root = resolve(__dirname, '../../../examples/premium-benchmark'), folder = resolve(root, 'technical-1-candidate');
   const run = JSON.parse(await readFile(resolve(folder, 'receipt.json'), 'utf8'));

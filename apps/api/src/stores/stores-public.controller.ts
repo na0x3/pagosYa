@@ -1,11 +1,11 @@
-import { RetentionService } from './retention.service';
+import { RetentionService } from '../retention/retention.service';
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ApiTags } from "@nestjs/swagger";
 import { StoresService } from "./stores.service";
 import { CartCheckoutDto } from "../payment-links/dto/cart-checkout.dto";
 import { SubmitStoreLeadDto } from "./dto/submit-store-lead.dto";
-import { CustomDomainsService } from "./custom-domains.service";
+import { CustomDomainsService } from "../domains/custom-domains.service";
 import { PromoCodesService } from "../promo-codes/promo-codes.service";
 import { QuotePromoCodeDto } from "../promo-codes/dto/quote-promo-code.dto";
 import { SubscribeStoreNewsletterDto } from "./dto/subscribe-store-newsletter.dto";

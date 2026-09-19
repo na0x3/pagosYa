@@ -3,7 +3,7 @@
  * Run it when stores can be regenerated: generated sections that already show a scene as decoration
  * would otherwise repeat it right under its card. */
 import { PrismaClient } from '@prisma/client';
-import { planSceneCover } from '../src/stores/scene-cover-backfill';
+import { planSceneCover } from '../src/product-content/scene-cover-backfill';
 
 async function main() {
   const apply = process.argv.includes('--apply');

@@ -1,9 +1,9 @@
 import { StoresService } from '../src/stores/stores.service';
-import { requestedSourceProducts, requestedSourceProductOperations } from '../src/stores/source-products';
-import { SourceConversationService } from '../src/stores/source-conversation.service';
-import { SourceGenerationService } from "../src/stores/source-generation.service";
-import { SourceProjectsService } from "../src/stores/source-projects.service";
-import { StoreAgentService } from "../src/stores/store-agent.service";
+import { requestedSourceProducts, requestedSourceProductOperations } from '../src/storefront-source/source-products';
+import { SourceConversationService } from '../src/storefront-source/source-conversation.service';
+import { SourceGenerationService } from "../src/storefront-source/source-generation.service";
+import { SourceProjectsService } from "../src/storefront-source/source-projects.service";
+import { StoreAgentService } from "../src/visual-studio/store-agent.service";
 import "reflect-metadata";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";

@@ -6,7 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { SourcePublishingService } from '../src/stores/source-publishing.service';
+import { SourcePublishingService } from '../src/storefront-source/source-publishing.service';
 async function main() {
   const path = resolve(__dirname, '../../../examples/savia/demo.json');
   const record = JSON.parse(await readFile(path, 'utf8'));

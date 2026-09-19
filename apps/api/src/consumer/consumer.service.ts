@@ -1,4 +1,4 @@
-import { queueStoreEmail } from '../stores/email-workspace.config';
+import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ConsumerAffiliationStatus, DebtRecordStatus, OrderFulfillmentStatus, Prisma, StoreStatus } from "@prisma/client";

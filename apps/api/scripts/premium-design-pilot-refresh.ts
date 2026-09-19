@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { UploadsService } from '../src/uploads/uploads.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
 import { kitPath } from '@pagosya/storefront-kit';
 async function main() {
   const folder = resolve(__dirname, '../../../examples/savia/pilot');
