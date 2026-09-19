@@ -144,7 +144,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         destination.hash = next.fragment || '';
         window.history.replaceState(window.history.state, '', destination);
         if (privatePage) markPrivateStorePage();
-        else void refreshStoreSeo(slug, product || undefined, product ? undefined : next.page);
+        else void refreshStoreSeo(slug, product || undefined, product ? undefined : next.page, product ? undefined : collection || undefined);
       }
       show(next.page); return;
     }

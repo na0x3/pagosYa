@@ -54,6 +54,7 @@ describe('StoreSeoService — the two new platform-owned catalog pages (Task 8/C
       store: { findFirst: jest.fn().mockResolvedValue(store) },
       storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ snapshot: { files: opts.files || [] }, createdAt: new Date('2026-01-02T00:00:00Z') }) },
       paymentLink: { findMany: jest.fn().mockResolvedValue([]) },
+      collection: { findMany: jest.fn().mockResolvedValue([{ slug: 'invierno', updatedAt: new Date('2026-09-01') }]) },
     };
     const stores: any = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Café', tagline: 'Café de origen', items: opts.items || [], collections: opts.collections || [] }) };
     const config: any = { get: jest.fn((key: string) => (key === 'app.checkoutOrigin' ? 'https://shops.example' : key === 'app.port' ? 3001 : undefined)) };
@@ -96,5 +97,35 @@ describe('StoreSeoService — the two new platform-owned catalog pages (Task 8/C
     expect(xml).toContain('<loc>https://shops.example/s/cafe/productos</loc>');
     expect(xml).not.toContain('coleccion.html');
     expect(xml).not.toContain('product.html');
+  });
+});
+describe('StoreSeoService — React homepages, collections and locale (task 5.4)', () => {
+  const service = (files: any[]) => {
+    const store = { id: 's1', slug: 'cafe', name: 'Café', tagline: null, bannerUrl: null, logoUrl: null, customDomains: [], publishedSourceRevision: 1, updatedAt: new Date('2026-01-01T00:00:00Z') };
+    const prisma: any = {
+      store: { findFirst: jest.fn().mockResolvedValue(store) },
+      storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ snapshot: { files }, createdAt: new Date('2026-01-02T00:00:00Z') }) },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([]) },
+      collection: { findMany: jest.fn().mockResolvedValue([{ slug: 'invierno', updatedAt: new Date('2026-09-01T00:00:00Z') }]) },
+    };
+    const stores: any = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Café', items: [], collections: [] }) };
+    const config: any = { get: jest.fn((key: string) => (key === 'app.checkoutOrigin' ? 'https://shops.example' : undefined)) };
+    return new StoreSeoService(prisma, stores, config);
+  };
+  const reactShell = { path: 'index.html', content: '<!doctype html><html lang="es"><head><title></title></head><body><div id="pagosya-react-root"></div></body></html>' };
+  const layout = { path: 'source-next-layout.json', content: JSON.stringify({ 'index.html': '<main><h1>Café de altura</h1><p>Tostado cada martes en La Paz.</p><script>alert(1)</script></main>' }) };
+  it('reads a React homepage from its statically rendered layout, as text only', async () => {
+    const doc = await service([reactShell, layout]).document('cafe');
+    expect(doc.title).toBe('Café de altura');
+    expect(doc.head).toContain('Tostado cada martes en La Paz.');
+    expect(doc.body).toContain('<h1>Café de altura</h1>');
+    expect(doc.body).not.toContain('<script>');
+  });
+  it('lists collections with active products in the sitemap after the homepage, and marks the locale', async () => {
+    const seo = service([reactShell, layout]);
+    const sitemap = await seo.sitemap('cafe');
+    expect(sitemap).toContain('<loc>https://shops.example/s/cafe/c/invierno</loc>');
+    expect(sitemap.indexOf('/s/cafe</loc>')).toBeLessThan(sitemap.indexOf('/c/invierno'));
+    expect((await seo.document('cafe')).head).toContain('<meta property="og:locale" content="es_BO">');
   });
 });

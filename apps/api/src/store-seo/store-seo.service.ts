@@ -19,7 +19,15 @@ export class StoreSeoService {
     // coleccion.html is parameterized (one file, many collections via ?collection=), same as
     // product.html: it gets no single sitemap/nav entry of its own — see document() for its
     // per-collection canonical, title and description, derived at request time.
-    const pages = files.filter(f => /^(?:pages\/)?[\w-]+\.html$/.test(f.path) && !['product.html', 'checkout.html', 'coleccion.html'].includes(f.path)).map(f => ({ path: f.path, ...sourceSeoCopy(f.content) }));
+    // React storefronts compile to an empty shell; their statically rendered page markup travels in
+    // source-next-layout.json. Text is extracted from it exactly like authored HTML, never injected.
+    let layout: Record<string, string> = {};
+    try { layout = JSON.parse(files.find(f => f.path === 'source-next-layout.json')?.content || '{}') || {}; } catch { layout = {}; }
+    const pages = files.filter(f => /^(?:pages\/)?[\w-]+\.html$/.test(f.path) && !['product.html', 'checkout.html', 'coleccion.html'].includes(f.path)).map(f => {
+      const copy = sourceSeoCopy(f.content);
+      const rendered = typeof layout[f.path] === 'string' && !copy.blocks.length ? sourceSeoCopy(layout[f.path]) : null;
+      return { path: f.path, ...(rendered ? { ...rendered, title: copy.title || rendered.title, description: copy.description || rendered.description, noindex: copy.noindex } : copy) };
+    });
     return { store, home, productUrl, pageUrl, pages, modified: version?.createdAt || store.updatedAt };
   }
   async document(slug: string, productId?: string, sourcePage?: string, collectionSlug?: string) {
@@ -60,7 +68,8 @@ export class StoreSeoService {
   async map(slug: string) {
     const c = await this.context(slug);
     const products = await this.prisma.paymentLink.findMany({ where: { storeId: c.store.id, status: 'ACTIVE' }, select: { id: true, name: true, updatedAt: true }, orderBy: { id: 'asc' } });
-    return { ...c, products, entries: [...(c.pages.find(p => p.path === 'index.html')?.noindex ? [] : [{ url: c.home, updatedAt: c.modified }]), ...products.map(p => ({ url: c.productUrl(p.id), updatedAt: p.updatedAt })), ...c.pages.filter(p => p.path !== 'index.html' && !p.noindex).map(p => ({ url: c.pageUrl(p.path), updatedAt: c.modified }))] };
+    const collections = await this.prisma.collection.findMany({ where: { storeId: c.store.id, products: { some: { paymentLink: { status: 'ACTIVE' } } } }, select: { slug: true, updatedAt: true }, orderBy: { sortOrder: 'asc' } });
+    return { ...c, products, entries: [...(c.pages.find(p => p.path === 'index.html')?.noindex ? [] : [{ url: c.home, updatedAt: c.modified }]), ...collections.map(col => ({ url: `${c.home.replace(/\/$/, '')}/c/${encodeURIComponent(col.slug)}`, updatedAt: col.updatedAt })), ...products.map(p => ({ url: c.productUrl(p.id), updatedAt: p.updatedAt })), ...c.pages.filter(p => p.path !== 'index.html' && !p.noindex).map(p => ({ url: c.pageUrl(p.path), updatedAt: c.modified }))] };
   }
   async sitemap(slug: string, part?: number) {
     const c = await this.map(slug); const chunks = Math.ceil(c.entries.length / 10000);
