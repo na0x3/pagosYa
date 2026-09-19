@@ -132,7 +132,7 @@ describe("CustomDomainsService", () => {
     prisma.customDomain.findUnique.mockResolvedValue({
       ...pendingDomain,
       status: CustomDomainStatus.ACTIVE,
-      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, merchant: { status: MerchantStatus.ACTIVE } },
+      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true, merchant: { status: MerchantStatus.ACTIVE } },
     });
     const service = new CustomDomainsService(prisma as any, makeConfig() as any);
 
@@ -140,7 +140,7 @@ describe("CustomDomainsService", () => {
 
     prisma.customDomain.findUnique.mockResolvedValue({
       ...pendingDomain,
-      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, merchant: { status: MerchantStatus.ACTIVE } },
+      store: { slug: "tienda-1", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true, merchant: { status: MerchantStatus.ACTIVE } },
     });
     await expect(service.resolve("www.mitienda.bo")).rejects.toBeInstanceOf(NotFoundException);
   });

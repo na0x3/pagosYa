@@ -39,7 +39,7 @@ function makeFakeUploads() {
   return { deleteFiles: jest.fn().mockResolvedValue(undefined) };
 }
 
-const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE };
+const store = { id: "store_1", merchantId: "m_1", slug: "abc123", status: StoreStatus.ACTIVE, sourcePublicationPaused: false, publicVisibility: true };
 const publicItem = { imageUrls: [], tags: [], stock: null, color: null, amount: 0, currency: "BOB", categoryId: null, description: null, variants: [], extras: [] };
 const merchant = { id: "m_1", status: MerchantStatus.ACTIVE };
 

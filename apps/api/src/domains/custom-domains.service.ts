@@ -1,12 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Interval } from "@nestjs/schedule";
-import { CustomDomainStatus, MerchantStatus, StoreStatus } from "@prisma/client";
+import { CustomDomainStatus, MerchantStatus } from "@prisma/client";
 import { promises as dns } from "node:dns";
 import { randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { domainToASCII } from "node:url";
 import { PrismaService } from "../prisma/prisma.service";
+import { isPublicStore } from "../stores/active-store";
 
 const MAX_DOMAINS_PER_STORE = 3;
 
@@ -248,6 +249,8 @@ export class CustomDomainsService {
           select: {
             slug: true,
             status: true,
+            sourcePublicationPaused: true,
+            publicVisibility: true,
             merchant: { select: { status: true } },
           },
         },
@@ -257,7 +260,7 @@ export class CustomDomainsService {
       !domain ||
       domain.status !== CustomDomainStatus.ACTIVE ||
       (domain.domainOrder && (domain.domainOrder.sandbox || domain.domainOrder.status !== 'ACTIVE' || !domain.domainOrder.expiresAt || domain.domainOrder.expiresAt <= new Date())) ||
-      domain.store.status !== StoreStatus.ACTIVE ||
+      !isPublicStore(domain.store) ||
       domain.store.merchant.status !== MerchantStatus.ACTIVE
     ) {
       throw new NotFoundException("Este dominio todavía no tiene una tienda publicada.");

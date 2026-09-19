@@ -29,11 +29,16 @@ describe('Published source and two-version sales tests', () => {
   afterAll(async()=>{await app?.close();});
   it('keeps drafts private, publishes explicitly, and preserves the live revision during edits', async()=>{
     await request(app.getHttpServer()).put(route).set(auth()).send(source(0,'A')).expect(200);
-    expect((await request(app.getHttpServer()).get(`/v1/stores/public/${slug}/source-site`).expect(200)).body).toEqual({published:false});
+    await request(app.getHttpServer()).get(`/v1/stores/public/${slug}/source-site`).expect(404);
+    await request(app.getHttpServer()).get(`${route}/catalog`).set(auth()).expect(200);
+    for (const suffix of ['store', 'seo', 'seo/sitemap.xml', 'seo/llms.txt']) await request(app.getHttpServer()).get(`/v1/stores/public/${slug}/${suffix}`).expect(404);
+    expect((await request(app.getHttpServer()).get('/v1/store-discovery').expect(200)).body.some((s: any) => s.home.endsWith(`/s/${slug}`))).toBe(false);
     await request(app.getHttpServer()).post(`${route}/publish`).send({revision:1,publicationVersion:0}).expect(401);
     await request(app.getHttpServer()).post(`${route}/publish`).set(auth(foreign)).send({revision:1,publicationVersion:0}).expect(404);
     const published=await request(app.getHttpServer()).post(`${route}/publish`).set(auth()).send({revision:1,publicationVersion:0}).expect(201);
-    expect(published.body).toMatchObject({revision:1,version:1});
+    expect(published.body).toMatchObject({revision:1,version:1,active:true});
+    for (const suffix of ['store', 'seo', 'seo/sitemap.xml', 'seo/llms.txt']) await request(app.getHttpServer()).get(`/v1/stores/public/${slug}/${suffix}`).expect(200);
+    expect((await request(app.getHttpServer()).get('/v1/store-discovery').expect(200)).body.some((s: any) => s.home.endsWith(`/s/${slug}`))).toBe(true);
     await request(app.getHttpServer()).put(route).set(auth()).send(source(1,'B')).expect(200);
     const generation = jest.spyOn(app.get(SourceGenerationService), 'generate').mockResolvedValueOnce({ revision: 3 } as any);
     await request(app.getHttpServer()).post(`${route}/alternative`).set(auth()).send({revision:2,instruction:'Más claridad',model:'gpt-5.6-luna',maxCredits:8}).expect(201);
@@ -81,6 +86,8 @@ describe('Published source and two-version sales tests', () => {
     const forged=await pay('x'.repeat(32));expect((await prisma.storeOrder.findUniqueOrThrow({where:{paymentIntentId:forged.id}})).sourceVisitId).toBeNull();
     const other=await request(app.getHttpServer()).post('/v1/stores').set(auth(foreign)).send({name:'Other'}).expect(201);
     const product=await request(app.getHttpServer()).post(`/v1/stores/${other.body.id}/payment_links`).set(auth(foreign)).send({name:'Otro',amount:10000,currency:'BOB'}).expect(201);
+    await request(app.getHttpServer()).put(`/v1/stores/${other.body.id}/source-project`).set(auth(foreign)).send(source(0, 'Otro')).expect(200);
+    await request(app.getHttpServer()).post(`/v1/stores/${other.body.id}/source-project/publish`).set(auth(foreign)).send({revision:1,publicationVersion:0}).expect(201);
     const foreignPay=await request(app.getHttpServer()).post(`/v1/stores/public/${other.body.slug}/cart-checkout`).send({sourceVisitToken:visitToken,items:[{paymentLinkId:product.body.id,quantity:1}]}).expect(201);
     expect((await prisma.storeOrder.findUniqueOrThrow({where:{paymentIntentId:foreignPay.body.id}})).sourceVisitId).toBeNull();
   });

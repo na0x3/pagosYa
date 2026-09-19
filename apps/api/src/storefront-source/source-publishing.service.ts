@@ -1,3 +1,4 @@
+import { isPublicStore, PUBLIC_STORE_WHERE } from '../stores/active-store';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { currentSourceRuntime } from './source-runtime';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
@@ -22,7 +23,7 @@ export function experimentEvidence(a: { visitors: number; buyers: number }, b: {
 }
 
 export async function publicationState(prisma: PrismaService, storeId: string) {
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { contactFormEnabled: true, sourcePublicationPaused: true, publishedSourceRevision: true, sourcePublicationVersion: true, sourcePublishedAt: true, status: true, slug: true, checkoutMode: true, merchant: { select: { status: true } } } });
+  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { contactFormEnabled: true, publicVisibility: true, sourcePublicationPaused: true, publishedSourceRevision: true, sourcePublicationVersion: true, sourcePublishedAt: true, status: true, slug: true, checkoutMode: true, merchant: { select: { status: true } } } });
   const experiment = await prisma.storeSourceExperiment.findFirst({ where: { storeId, status: 'RUNNING' } }) || await prisma.storeSourceExperiment.findFirst({ where: { storeId }, orderBy: [{ endedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }] });
   let test: any = null;
   if (experiment) {
@@ -45,7 +46,7 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
     });
     test = { ...experiment, activeStoreId: undefined, variants, evidence: experimentEvidence(variants[0], variants[1], experiment.startedAt, new Date(), orders.length > 10000), truncated: orders.length > 10000 };
   }
-  return { contactFormEnabled: store.contactFormEnabled, payments: store.checkoutMode === 'payment' ? store.merchant.status === 'ACTIVE' ? 'live' : 'test' : 'contact', revision: store.publishedSourceRevision, version: store.sourcePublicationVersion, publishedAt: store.sourcePublishedAt, active: store.status === 'ACTIVE' && !store.sourcePublicationPaused, slug: store.slug, experiment: test };
+  return { contactFormEnabled: store.contactFormEnabled, payments: store.checkoutMode === 'payment' ? store.merchant.status === 'ACTIVE' ? 'live' : 'test' : 'contact', revision: store.publishedSourceRevision, version: store.sourcePublicationVersion, publishedAt: store.sourcePublishedAt, active: isPublicStore(store), slug: store.slug, experiment: test };
 }
 
 @Injectable()
@@ -87,7 +88,7 @@ export class SourcePublishingService {
     assertSourceCommerceContract(await this.snapshot(storeId, revision));
     return this.change(merchantId, storeId, expected, async tx => {
       if (await tx.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } })) throw new ConflictException('Detén la prueba antes de publicar otro diseño.');
-      await tx.store.update({ where: { id: storeId }, data: { sourcePublicationPaused: false, publishedSourceRevision: revision, sourcePublishedAt: new Date() } });
+      await tx.store.update({ where: { id: storeId }, data: { publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: revision, sourcePublishedAt: new Date() } });
     });
   }
   async visibility(merchantId: string, storeId: string, published: boolean, expected: number) {
@@ -97,12 +98,12 @@ export class SourcePublishingService {
       if (!store.publishedSourceRevision) throw new BadRequestException('Publica un diseño antes de cambiar su visibilidad.');
       if (published && store.status !== 'ACTIVE') throw new BadRequestException('Activa tu tienda desde el panel antes de publicarla.');
       if (!published) await tx.storeSourceExperiment.updateMany({ where: { storeId, status: 'RUNNING' }, data: { status: 'STOPPED', activeStoreId: null, endedAt: new Date() } });
-      await tx.store.update({ where: { id: storeId }, data: { sourcePublicationPaused: !published } });
+      await tx.store.update({ where: { id: storeId }, data: { sourcePublicationPaused: !published, ...(published ? { publicVisibility: true } : {}) } });
     });
   }
   async start(merchantId: string, storeId: string, revision: number, expected: number) {
     const store = await this.owner(merchantId, storeId);
-    if (store.status !== 'ACTIVE' || store.sourcePublicationPaused || !store.publishedSourceRevision) throw new BadRequestException('Publica tu diseño y activa la tienda antes de iniciar una prueba.');
+    if (!isPublicStore(store) || !store.publishedSourceRevision) throw new BadRequestException('Publica tu diseño y activa la tienda antes de iniciar una prueba.');
     if (store.checkoutMode !== 'payment') throw new BadRequestException('Activa los pagos integrados para comparar compras confirmadas.');
     const [a, b] = await Promise.all([this.snapshot(storeId, store.publishedSourceRevision), this.snapshot(storeId, revision)]);
     assertSourceCommerceContract(a); assertSourceCommerceContract(b);
@@ -125,7 +126,7 @@ export class SourcePublishingService {
     });
   }
   async publicSite(slug: string, visitorId?: string) {
-    const store = await this.prisma.store.findFirst({ where: { slug, status: 'ACTIVE', sourcePublicationPaused: false }, select: { id: true, publishedSourceRevision: true } });
+    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
     if (!store.publishedSourceRevision) return { published: false };
     let revision = store.publishedSourceRevision, visitToken: string | null = null;

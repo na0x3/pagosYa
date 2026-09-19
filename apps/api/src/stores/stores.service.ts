@@ -280,7 +280,7 @@ export class StoresService {
     return this.prisma.$transaction(async (tx) => {
       const result = await tx.store.updateMany({
         where: { id, merchantId, websiteRevision: revision, websitePublishedRevision: draft.basePublishedRevision },
-        data: { ...websiteUpdateData(draft.data) as Prisma.StoreUpdateManyMutationInput,
+        data: { ...websiteUpdateData(draft.data) as Prisma.StoreUpdateManyMutationInput, publicVisibility: true,
           websiteDraft: Prisma.DbNull, websiteRevision: { increment: 1 }, websitePublishedRevision: { increment: 1 } },
       });
       if (result.count !== 1) throw new ConflictException("El borrador cambió antes de publicar. Revisa los cambios más recientes.");
