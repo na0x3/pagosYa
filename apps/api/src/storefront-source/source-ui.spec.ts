@@ -5,6 +5,8 @@ import { uiStoreFiles } from './fixtures/ui-store';
 import { nextBrief, nextStoreConfig, nextStoreImage } from './fixtures/next-store';
 import { sourceProjectSnapshot } from './source-project';
 import { assertSourceCommerceContract } from './source-commerce-contract';
+import { SOURCE_NEXT_INSTRUCTIONS } from './source-next';
+import { SOURCE_UI_TOOLS, sourceUiComposition, sourceUiCompositionPrompt } from './source-ui';
 
 describe('@pagosya/ui storefront framework', () => {
   it('counts commerce hooks rendered by library sections as page markup', () => {
@@ -39,5 +41,15 @@ describe('@pagosya/ui storefront framework', () => {
     const files = uiStoreFiles();
     files[1].content = files[1].content.replace('<main id="contenido">', '<main id="contenido"><div dangerouslySetInnerHTML={{ __html: "<img onerror=alert(1)>" }} />');
     expect(() => validateNextSources(files)).toThrow();
+  });
+
+  it('teaches every React generation the framework and seeds varied starting combinations', () => {
+    expect(SOURCE_NEXT_INSTRUCTIONS).toContain(SOURCE_UI_TOOLS);
+    expect(SOURCE_UI_TOOLS.length).toBeLessThan(4600);
+    const first = sourceUiComposition(() => 0), last = sourceUiComposition(max => max - 1);
+    expect(first).not.toEqual(last);
+    expect(sourceUiCompositionPrompt(first)).toContain('header classic');
+    const seen = new Set(Array.from({ length: 40 }, () => JSON.stringify(sourceUiComposition())));
+    expect(seen.size).toBeGreaterThan(30);
   });
 });
