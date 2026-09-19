@@ -4005,34 +4005,6 @@ test("merchant creates and disables a shareable promo code", async ({ page }) =>
   }));
 });
 
-// Unreachable since 11f13fd hid the inline product form; the YAPI product guide has no scheduled discounts.
-test.fixme("merchant schedules a timed product discount", async ({ page }) => {
-  const discountStartsAt = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
-  const discountEndsAt = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
-  const requests = await openDashboard(page, [store("store_1", "Café Norte")], ({ path, request }) => {
-    if (path === "/stores/store_1/payment_links" && request.method() === "POST") {
-      return { id: "product_sale", status: "ACTIVE", currency: "BOB", stock: null, variants: [], extras: [], imageUrls: [], tags: [], ...request.postDataJSON() };
-    }
-    return undefined;
-  });
-
-  await navigateDashboard(page, "products");
-  await page.locator('#paymentLinkForm [name="name"]').fill("Café Geisha");
-  await page.locator('#paymentLinkForm [name="amount"]').fill("100");
-  await page.locator("#productAdvancedOptions > summary").click();
-  await page.locator("#paymentLinkDiscountToggle").check();
-  await page.locator("#paymentLinkDiscountPercent").fill("25");
-  await page.locator("#paymentLinkDiscountStartsAt").fill(discountStartsAt);
-  await page.locator("#paymentLinkDiscountEndsAt").fill(discountEndsAt);
-  await page.locator("#paymentLinkSubmit").click();
-  await expect(page.locator("#info")).toContainText("creado");
-
-  const write = requests.find((request) => request.method === "POST" && request.path === "/stores/store_1/payment_links");
-  expect(write.body.discountPercent).toBe(25);
-  expect(Date.parse(write.body.discountStartsAt)).toBeLessThan(Date.parse(write.body.discountEndsAt));
-  expect(write.body.discountEndsAt).toMatch(/Z$/);
-});
-
 test("merchant chooses which existing pictures appear in the editorial gallery", async ({ page }) => {
   const editorialStore = {
     ...store("store_1", "Zapateca"),
@@ -4577,50 +4549,6 @@ test("appearance editor remains usable at a mobile viewport", async ({ page }) =
   expect(aiButtonBox?.height).toBeGreaterThanOrEqual(44);
 });
 
-// Unreachable since 11f13fd hid the inline product form; the YAPI product guide has no SIAT classification.
-test.fixme("merchant classifies a product from readable taxpayer-scoped SIAT catalogs", async ({ page }) => {
-  const requests = await openDashboard(page, [store("store_1", "Zapatería")], ({ path, request }) => {
-    if (path === "/merchants/invoicing_profile") {
-      return { id: "profile_1", nit: "709354049", cuis: "CUIS-STORED", sucursal: 0, puntoVenta: 0 };
-    }
-    if (path === "/siat/catalogs/activities") {
-      return { total: 1, entries: [{ codigoCaeb: "477210", descripcion: "VENTA DE CALZADO" }] };
-    }
-    if (path === "/siat/catalogs/units") {
-      return { total: 1, entries: [{ codigoClasificador: 58, descripcion: "UNIDAD" }] };
-    }
-    if (path === "/siat/catalogs/products") {
-      expect(new URL(request.url()).searchParams.get("activityCode")).toBe("477210");
-      return { total: 1, entries: [{ codigoActividad: "477210", codigoProducto: 123456, descripcionProducto: "CALZADO" }] };
-    }
-    if (path === "/stores/store_1/payment_links" && request.method() === "POST") {
-      return { id: "product_1", status: "ACTIVE", imageUrls: [], imagePositions: [], tags: [], variants: [], stock: null, ...request.postDataJSON() };
-    }
-    return undefined;
-  });
-  await navigateDashboard(page, "products");
-  await page.locator("#productAdvancedOptions > summary").click();
-  await page.locator("#productFiscalMapping summary").click();
-  await expect(page.locator("#productActividadEconomica")).toBeEnabled();
-  await page.locator("#productActividadEconomica").selectOption("477210");
-  await expect(page.locator("#productCodigoProductoSin")).toBeEnabled();
-  await page.locator("#productCodigoProducto").fill("NIKE-AM90");
-  await page.locator("#productCodigoProductoSin").selectOption("123456");
-  await page.locator("#productUnidadMedida").selectOption("58");
-  await page.locator('#paymentLinkForm [name="name"]').fill("Nike Air Max 90");
-  await page.locator('#paymentLinkForm [name="amount"]').fill("850");
-  await page.locator("#paymentLinkSubmit").click();
-
-  await expect(page.locator("#info")).toContainText("creado");
-  const create = requests.find((request) => request.path === "/stores/store_1/payment_links" && request.method === "POST");
-  expect(create.body).toMatchObject({
-    codigoProducto: "NIKE-AM90",
-    actividadEconomica: "477210",
-    codigoProductoSin: "123456",
-    unidadMedida: 58,
-  });
-});
-
 test("CSV and picture import reports the committed result as successful", async ({ page }) => {
   const requests = await prepareInventoryImport(page, successfulInventoryResponse);
   expect(requests.find((request) => request.path.endsWith("/payment_links/import/normalize"))?.body).toMatchObject({
@@ -4774,82 +4702,6 @@ test("a local catalog render problem does not relabel a committed import as fail
   await expect(page.locator("#info")).toContainText("Actualiza la página para ver el catálogo completo.");
   await expect(page.locator("#error")).toBeEmpty();
   await expect(page.locator("#inventoryImportStatus")).not.toContainText("no se completó");
-});
-
-// Unreachable since 11f13fd hid the inline product form; the YAPI product guide has no photo framing.
-test.fixme("merchant can adjust each product photo focus and save the framing", async ({ page }) => {
-  const requests = await openDashboard(page, [store("store_1", "Primera")], ({ path, request }) => {
-    if (path === "/uploads") return { url: "/v1/uploads/product-focus.jpg" };
-    if (path === "/stores/store_1/payment_links" && request.method() === "POST") {
-      return { id: "product_focus", storeId: "store_1", status: "ACTIVE", currency: "BOB", variants: [], ...request.postDataJSON() };
-    }
-    return undefined;
-  });
-  await navigateDashboard(page, "products");
-  const form = page.locator("#paymentLinkForm");
-  if (!(await form.isVisible())) await page.locator("#paymentLinksSection .section-toggle").click();
-  await form.locator('[name="name"]').fill("Producto encuadrado");
-  await form.locator('[name="amount"]').fill("45");
-  await page.locator("#paymentLinkImages").setInputFiles({
-    name: "producto.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from("foto-producto"),
-  });
-  await expect(page.locator("#paymentLinkImagesPreview .gallery-frame-editor")).toHaveCount(1);
-  await page.locator("#imageFocusX0").fill("64");
-  await page.locator("#imageFocusY0").fill("22");
-  await expect(page.locator("#paymentLinkImagesPreview img")).toHaveCSS("object-position", "64% 22%");
-  const framingBounds = await page.locator("#paymentLinkImagesPreview .gallery-thumb").boundingBox();
-  await page.locator("#paymentLinkImagesPreview .gallery-thumb").dispatchEvent("click", {
-    clientX: framingBounds.x + framingBounds.width * 0.8,
-    clientY: framingBounds.y + framingBounds.height * 0.3,
-  });
-  await expect.poll(async () => page.locator("#paymentLinkImagesPreview img").evaluate((image) => getComputedStyle(image).objectPosition)).toMatch(/^80% (30|31)%$/);
-  await form.evaluate((element) => element.requestSubmit());
-  await expect(page.locator("#info")).toContainText("creado");
-
-  const createBody = requests.find((request) => request.path === "/stores/store_1/payment_links" && request.method === "POST")?.body;
-  expect(createBody).toMatchObject({ imageUrls: ["/v1/uploads/product-focus.jpg"] });
-  expect(createBody.imagePositions[0]).toMatch(/^80% (30|31)%$/);
-});
-
-// Unreachable since 11f13fd hid the inline product form; the YAPI product guide has no free extras.
-test.fixme("merchant can save a zero-priced product and grouped free extras", async ({ page }) => {
-  const requests = await openDashboard(page, [store("store_1", "Primera")], ({ path, request }) => {
-    if (path === "/stores/store_1/payment_links" && request.method() === "POST") {
-      return { id: "product_extras", storeId: "store_1", status: "ACTIVE", currency: "BOB", variants: [], ...request.postDataJSON() };
-    }
-    return undefined;
-  });
-  await navigateDashboard(page, "products");
-  const form = page.locator("#paymentLinkForm");
-  if (!(await form.isVisible())) await page.locator("#paymentLinksSection .section-toggle").click();
-  if (process.env.PAGOSYA_VISUAL_QA === "1") {
-    await form.screenshot({ path: "../../.impeccable/product-create-desktop.png" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await form.screenshot({ path: "../../.impeccable/product-create-mobile.png" });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  }
-  await form.locator('[name="name"]').fill("Pizza");
-  await form.locator('[name="amount"]').fill("0");
-  await page.locator("#productAdvancedOptions > summary").click();
-  await page.locator("#paymentLinkExtraAdd").click();
-  await page.locator(".extra-name").fill("Queso extra");
-  await page.locator(".extra-amount").fill("5.50");
-  await page.locator(".extra-required").check();
-  await page.locator(".product-extra-advanced summary").click();
-  await page.locator(".extra-group-name").fill("Guarniciones");
-  await page.locator(".extra-free-allowance").fill("2");
-  await page.locator(".extra-inventory-name").fill("Queso cottage");
-  await page.locator(".extra-stock").fill("24");
-  await form.evaluate((element) => element.requestSubmit());
-  await expect(page.locator("#info")).toContainText("creado");
-
-  const productWrite = requests.find((request) => request.path === "/stores/store_1/payment_links" && request.method === "POST")?.body;
-  expect(productWrite.amount).toBe(0);
-  expect(productWrite.extras).toEqual([
-    { name: "Queso extra", amount: 550, required: true, groupName: "Guarniciones", freeAllowance: 2, inventoryName: "Queso cottage", stock: 24 },
-  ]);
 });
 
 test("empty catalog opens the importer without the retired setup wizard", async ({ page }) => {

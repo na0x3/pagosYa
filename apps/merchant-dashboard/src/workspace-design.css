@@ -70,11 +70,6 @@ body.is-logged-in:not(.store-preview-fullscreen):not([data-dashboard-view="works
 
 body.is-logged-in #paymentLinksSection > .panel { border: 2px solid var(--pg-border-strong); }
 body.is-logged-in #paymentLinksSection > .panel > .section-head { display: none; }
-body.is-logged-in .product-create-disclosure { margin: 20px 0 26px; }
-.product-create-disclosure > summary { display: flex; width: fit-content; list-style: none; align-items: center; gap: 10px; min-height: 44px; padding: 10px 16px; border: 2px solid var(--pg-border-strong); border-radius: 5px; background: var(--pg-brand); color: var(--pg-brand-text); box-shadow: 3px 3px 0 var(--pg-border-strong); font: 700 13px Arial,sans-serif; cursor: pointer; }
-.product-create-disclosure > summary::before { content: '+'; font-size: 20px; }
-.product-create-disclosure[open] > summary::before { content: '−'; }
-.product-create-disclosure[open] .product-editor-studio { margin-top: 24px; }
 body.is-logged-in .payment-link-catalog-tools { border: 0; padding-top: 8px; }
 body.is-logged-in .panel .section-head h2 { font-size: 24px; text-transform: none; letter-spacing: -.5px; }
 body.is-logged-in .dashboard-workspace > .cards > .card:nth-child(1) { background: var(--pg-brand); color: var(--pg-brand-text); }
@@ -84,8 +79,6 @@ body.is-logged-in .dashboard-workspace > .cards > .card:nth-child(3) { backgroun
 body.is-logged-in:not(.store-preview-fullscreen) > .topbar { height: 72px; min-height: 72px; }
 body.is-logged-in:not(.store-preview-fullscreen) .topbar-actions { width: auto; flex-direction: row; align-items: center; gap: 16px; }
 body.is-logged-in .catalog-import-disclosure { display: inline-block; margin: 16px 12px 20px 0; vertical-align: top; }
-body.is-logged-in .product-create-disclosure { display: inline-block; margin: 16px 0 20px; vertical-align: top; }
-body.is-logged-in :is(.catalog-import-disclosure,.product-create-disclosure)[open] { display: block; }
 .catalog-import-disclosure > summary { min-height: 44px; display: flex; align-items: center; padding: 10px 16px; border: 1px solid var(--pg-border-strong); border-radius: 5px; font-size: 13px; cursor: pointer; }
 .catalog-import-disclosure[open] > summary { width: fit-content; margin-bottom: 18px; }
 .catalog-bulk-disclosure > summary { font-size: 12px; cursor: pointer; padding-top: 8px; }
@@ -93,7 +86,6 @@ body.is-logged-in .payment-link-group { border: 1px solid var(--pg-border); bord
 body.is-logged-in .payment-link-group.is-active .payment-link-group-head { background: var(--pg-accent-soft); color: var(--pg-text); border-bottom: 1px solid var(--pg-border); }
 body.is-logged-in .payment-link-group.is-archived .payment-link-group-head { background: var(--pg-bg); color: var(--pg-text-muted); }
 body.is-logged-in .payment-link-catalog-tools { background: transparent; }
-body.is-logged-in #paymentLinkForm [hidden] { display: none !important; }
 body.is-logged-in .workspace-header { scroll-margin-top: 90px; }
 body.is-logged-in :is(#paymentsSection,#payoutsSection,#kycSection,#liveKeysSection,#invoicingSection) > .panel { border: 2px solid var(--pg-border-strong); }
 body.is-logged-in .promo-code-studio { border: 1px solid var(--pg-border); border-radius: 6px; box-shadow: none; }
@@ -166,7 +158,7 @@ body.is-logged-in #storeRows .store-create-tile:hover { background: var(--pg-sur
 .product-yapi-guide > header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:16px; padding:20px; border-bottom:1px solid var(--pg-border); }
 .product-yapi-guide header p { margin:5px 0 0; font-size:13px; color:var(--pg-text-muted); }
 #productGuideFrame { display:block; width:100%; height:480px; border:0; }
-#productGuideFrame[hidden], #productCreateDisclosure[hidden] { display:none !important; }
+#productGuideFrame[hidden] { display:none !important; }
 .marketing-tabs{display:flex;gap:6px;overflow-x:auto;padding:6px 0 20px;margin-bottom:14px;border-bottom:1px solid var(--pg-border)}
 body.is-logged-in .marketing-tabs button{flex:none;border:1px solid transparent;box-shadow:none;background:transparent;color:var(--pg-text-muted);border-radius:6px;font:13px Arial,sans-serif;padding:10px 13px;min-height:40px}
 body.is-logged-in .marketing-tabs button[aria-pressed=true]{background:var(--pg-accent-soft);color:var(--pg-text);border-color:var(--pg-border-strong)}
