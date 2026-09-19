@@ -157,6 +157,26 @@
       try { restoreCart(JSON.parse(event.newValue || "[]")); renderCart(); } catch { /* Ignore invalid stored state. */ }
     });
   }
+  let lastHostedCart = JSON.stringify(cartItems()), pendingHostedCart, cartChangedTimer;
+  function flushHostedCart() {
+    clearTimeout(cartChangedTimer);
+    if (!pendingHostedCart) return;
+    parent.postMessage({ type: 'pagosya:cart-changed', items: pendingHostedCart }, '*');
+    pendingHostedCart = undefined;
+  }
+  function notifyHostedCart() {
+    const items = cartItems(), value = JSON.stringify(items);
+    if (value === lastHostedCart) return;
+    const validId = id => typeof id === 'string' && id.length > 0 && id.length <= 64;
+    if (items.length > 100 || items.some(item => !validId(item.id) || (item.variantId !== undefined && !validId(item.variantId)) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999 || (item.extraIds !== undefined && (!Array.isArray(item.extraIds) || item.extraIds.length > 100 || ![...item.extraIds].every(validId))))) {
+      clearTimeout(cartChangedTimer); pendingHostedCart = undefined; return;
+    }
+    lastHostedCart = value;
+    pendingHostedCart = items.map(({ extraIds, ...item }) => ({ ...item, ...(extraIds !== undefined ? { extras: extraIds } : {}) }));
+    clearTimeout(cartChangedTimer);
+    cartChangedTimer = setTimeout(flushHostedCart, 150);
+  }
+  if (hosted) window.addEventListener('pagehide', flushHostedCart);
   document.addEventListener("pagosya:serialize-cart", event => {
     if (event.detail && typeof event.detail === "object") event.detail.items = cartItems();
   });
@@ -1382,7 +1402,8 @@
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
   }
   function renderCart() {
-    if (!preview && ready) {
+    if (hosted && ready) notifyHostedCart();
+    else if (!preview && ready) {
       try {
         const value = JSON.stringify(cartItems());
         const storage = config.demo ? sessionStorage : localStorage;

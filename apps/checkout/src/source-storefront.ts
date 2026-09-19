@@ -7,6 +7,63 @@ import { API_BASE_URL, type Store } from './api';
 import { sourceVisitorId, rememberSourceVisit } from './source-attribution';
 import { storePartnerCode } from './partner-referral';
 
+type StoredCartItem = { id: string; variantId?: string; quantity: number; extras?: string[] };
+const CART_TTL = 30 * 24 * 60 * 60 * 1000;
+const cartId = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 64;
+
+// Copy only selections across the untrusted frame/storage boundary, never prices.
+function validatedCart(value: unknown, extrasKey: 'extras' | 'extraIds' = 'extras'): StoredCartItem[] | null {
+  if (!Array.isArray(value) || value.length > 100) return null;
+  const items: StoredCartItem[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || !cartId(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999) return null;
+    if (item.variantId !== undefined && !cartId(item.variantId)) return null;
+    const extras = item[extrasKey];
+    if (extras !== undefined && (!Array.isArray(extras) || extras.length > 100 || ![...extras].every(cartId))) return null;
+    items.push({ id: item.id, quantity: item.quantity, ...(item.variantId !== undefined ? { variantId: item.variantId } : {}), ...(extras !== undefined ? { extras: [...extras] } : {}) });
+  }
+  return items;
+}
+
+const previewCart = (items: StoredCartItem[]) => items.map(({ extras, ...item }) => ({ ...item, ...(extras !== undefined ? { extraIds: extras } : {}) }));
+
+function sourceCartStorage(slug: string) {
+  const key = `pagosya:cart:${slug}`, legacyKey = `pagosya:source-cart:${slug}`;
+  // Access the properties inside try blocks: browsers may throw on the getter.
+  const stores = [() => localStorage, () => sessionStorage];
+  const save = (items: StoredCartItem[]) => {
+    const value = JSON.stringify({ items, expiresAt: Date.now() + CART_TTL });
+    try {
+      localStorage.setItem(key, value);
+      try { sessionStorage.removeItem(key); } catch {}
+    } catch {
+      try { sessionStorage.setItem(key, value); } catch {}
+    }
+    try { sessionStorage.removeItem(legacyKey); } catch {}
+  };
+  const load = () => {
+    let latest: { items: StoredCartItem[]; expiresAt: number } | undefined;
+    for (const storage of stores) {
+      try {
+        const entry = JSON.parse(storage().getItem(key) || 'null');
+        const items = validatedCart(entry?.items);
+        if (items && Number.isFinite(entry.expiresAt) && entry.expiresAt > Date.now() && (!latest || entry.expiresAt >= latest.expiresAt)) latest = { items, expiresAt: entry.expiresAt };
+      } catch {}
+    }
+    if (latest) return latest.items;
+    try {
+      const legacy = validatedCart(JSON.parse(sessionStorage.getItem(legacyKey) || 'null'), 'extraIds');
+      if (legacy) { save(legacy); return legacy; }
+    } catch {}
+    return [];
+  };
+  const clear = () => {
+    for (const storage of stores) { try { storage().removeItem(key); } catch {} }
+    try { sessionStorage.removeItem(legacyKey); } catch {}
+  };
+  return { load, save, clear };
+}
+
 export async function mountPublishedSource(app: HTMLElement, slug: string, store: Store, onPayment: (secret: string) => Promise<void>, merchantPreview = false) {
   const visitorId = merchantPreview ? undefined : sourceVisitorId(slug);
   const url = `${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/source-site${visitorId ? '?visitorId=' + encodeURIComponent(visitorId) : ''}`;
@@ -37,7 +94,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   frame.style.cssText = 'display:block;width:100%;height:100dvh;border:0;background:white';
   app.replaceChildren(frame);
   document.body.classList.add('source-store-page');
-  const cartKey = `pagosya:source-cart:${slug}`;
+  const cartStorage = sourceCartStorage(slug);
   const themeKey = `pagosya:source-theme:${slug}`;
   let recoveryToken: string | undefined;
   try { recoveryToken = sessionStorage.getItem(`pagosya:recovery:${slug}`) || undefined; } catch {}
@@ -47,7 +104,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (collectionSlug) initialQuery.set('c', collectionSlug);
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
-  try { navigation.cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch {}
+  navigation.cart = previewCart(cartStorage.load());
   const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true }); };
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
@@ -56,10 +113,20 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const pending = new Set<string>();
   const receive = async (event: MessageEvent) => {
     if (event.source !== frame.contentWindow || event.origin !== 'null' || !frame.isConnected) return;
+    const data = event.data;
+    if (data?.type === 'pagosya:cart-changed') {
+      const items = validatedCart(data.items);
+      if (items) { navigation.cart = previewCart(items); cartStorage.save(items); }
+      return;
+    }
+    // Validate the raw navigation payload before the shared preview helper can
+    // truncate/filter it. Omitted carts retain the last mutation in memory.
+    const navigatingCart = data?.type === 'pagosya:source-navigate' && data.cart !== undefined ? validatedCart(data.cart, 'extraIds') : undefined;
+    if (navigatingCart === null) return;
     const next = receivePreviewNavigation(event, frame, prepared);
     if (next) {
-      navigation = { ...next, theme: next.theme || navigation.theme };
-      try { sessionStorage.setItem(cartKey, JSON.stringify(next.cart || [])); } catch {}
+      navigation = { ...next, cart: navigatingCart ? previewCart(navigatingCart) : navigation.cart, theme: next.theme || navigation.theme };
+      if (navigatingCart) cartStorage.save(navigatingCart);
       try { if (navigation.theme) sessionStorage.setItem(themeKey, navigation.theme); } catch {}
       if (!merchantPreview) {
         const destination = new URL(location.href); const params = new URLSearchParams(next.query || '');
@@ -81,7 +148,6 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       }
       show(next.page); return;
     }
-    const data = event.data;
     if (data?.type === 'pagosya:source-theme') {
       if (data.theme === 'light' || data.theme === 'dark') {
         navigation.theme = data.theme;
@@ -138,11 +204,11 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       if (checkout) {
         if (typeof json.clientSecret !== 'string' || !json.clientSecret) throw new Error('No se pudo abrir el pago. Intenta de nuevo.');
         reply(true, {}); window.removeEventListener('message', receive);
-        try { sessionStorage.removeItem(cartKey); } catch {}
         document.body.classList.remove('source-store-page');
         window.history.replaceState({ ...(window.history.state || {}), pagosYaCheckout: { clientSecret: json.clientSecret } }, '', location.href);
         markPrivateStorePage();
         await onPayment(json.clientSecret);
+        cartStorage.clear();
       } else reply(true, shipping || content ? json : { submitted: true });
     } catch (error) { reply(false, { message: error instanceof Error ? error.message : 'No se pudo completar la solicitud.' }); }
     finally { pending.delete(data.action); }

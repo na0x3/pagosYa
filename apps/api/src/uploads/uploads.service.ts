@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
+import { Readable } from "stream";
 import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
@@ -238,6 +239,41 @@ export class UploadsService implements OnModuleInit {
     return { filename, url: `/v1/uploads/${filename}`, mimeType, byteSize: buffer.byteLength };
   }
 
+  async getStream(filename: string): Promise<{ stream: Readable; byteSize: number } | null> {
+    if (!UPLOAD_FILENAME_PATTERN.test(filename)) return null;
+    if (this.s3) {
+      try {
+        const object = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: filename }));
+        if (!object.Body) return null;
+        // S3's Node HTTP handler returns a Readable; never materialize the body.
+        const stream = object.Body as Readable;
+        if (object.ContentLength === undefined) {
+          stream.destroy();
+          throw new Error("El almacenamiento no devolvió el tamaño del archivo");
+        }
+        return { stream, byteSize: object.ContentLength };
+      } catch (error) {
+        if ((error as { name?: string }).name === "NoSuchKey" || (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) return null;
+        throw error;
+      }
+    }
+    try {
+      const handle = await fs.promises.open(this.resolvePath(filename), "r");
+      try {
+        const stat = await handle.stat();
+        // The stream owns the open handle and closes it on completion or destroy.
+        return { stream: handle.createReadStream(), byteSize: stat.size };
+      } catch (error) {
+        await handle.close();
+        throw error;
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
+  // Internal image-processing callers still need complete bytes; public delivery uses getStream.
   async getBuffer(filename: string): Promise<Buffer | null> {
     if (!UPLOAD_FILENAME_PATTERN.test(filename)) return null;
     if (this.s3) {
