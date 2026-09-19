@@ -22,9 +22,12 @@ import { renderDebtCollection } from "./checkout/debt-collection";
 import { suppressStoreViewForMerchant } from "./storefront/merchant-views";
 import { standaloneStorePreviewPatch } from "./preview-editor/patch";
 import { loadCart, cartCount } from "./cart/cart";
-import { renderStoreRoute, restoreCatalogScroll, restoreCatalogPosition, catalogScrollByStore } from "./storefront/store-page";
+import { renderStoreRoute, restoreCatalogScroll, restoreCatalogPosition, catalogScrollByStore } from "./storefront/navigation";
 import { ICON_X } from "./ui/icons";
 import { bindStoreEditorCanvas, listenForStoreEditorMessages } from "./preview-editor/bridge";
+import { storefrontPages } from "./storefront/navigation";
+import { renderProductPage } from "./storefront/product-page";
+import { renderStore } from "./storefront/store-page";
 
 async function main() {
   const intlReturn = parseReturnParams(window.location.search);
@@ -219,4 +222,5 @@ window.onpopstate = (event) => {
   });
 };
 
+Object.assign(storefrontPages, { renderStore, renderProductPage });
 main();

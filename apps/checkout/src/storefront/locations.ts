@@ -1,6 +1,5 @@
 /** Store pickup/delivery locations: map embeds, opening hours, and whether a location can fulfill the cart. */
-import { Store, StoreLocation } from "../api";
-import { type cartLineEntries } from "../cart/cart-review";
+import { Store, StoreItem, StoreLocation } from "../api";
 
 
 export function safeStoreMapEmbedUrl(value: string | null | undefined): string | null {
@@ -71,7 +70,7 @@ export function locationOpeningState(location: StoreLocation, now = new Date()):
   return { isOpen: false, label: "Cerrado · revisa el horario con la tienda" };
 }
 
-export function locationCanFulfillCart(location: StoreLocation, lines: ReturnType<typeof cartLineEntries>): boolean {
+export function locationCanFulfillCart(location: StoreLocation, lines: ReadonlyArray<{ product: StoreItem; quantity: number }>): boolean {
   const requested = new Map<string, number>();
   lines.filter(line => line.product.fulfillmentType !== 'DIGITAL').forEach((line) => requested.set(line.product.id, (requested.get(line.product.id) || 0) + line.quantity));
   return [...requested].every(([paymentLinkId, quantity]) => {
