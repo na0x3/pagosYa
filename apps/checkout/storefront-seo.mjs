@@ -8,10 +8,39 @@ export function applySeoDocument(html, document, noindex = false) {
 }
 export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
   const api = apiBase.replace(/\/$/, '');
-  async function get(path) {
-    const response = await fetch(`${api}${path}`, { signal: AbortSignal.timeout(6000), headers: { Accept: 'application/json' } });
-    if (!response.ok) { const error = new Error('Store unavailable'); error.status = response.status; throw error; }
-    return response;
+  const cache = new Map();
+  const inFlight = new Map();
+  function remember(key, entry) {
+    cache.delete(key);
+    cache.set(key, entry);
+    if (cache.size > 500) cache.delete(cache.keys().next().value);
+  }
+  async function get(path, format = 'json', ttl = 30_000) {
+    const key = `${format}:${path}`;
+    const cached = cache.get(key);
+    if (cached) {
+      remember(key, cached);
+      if (cached.expiresAt > Date.now()) return cached.payload;
+    }
+    if (inFlight.has(key)) return inFlight.get(key);
+    const pending = (async () => {
+      // Only server-generated headers go upstream; never forward visitor headers.
+      const response = await fetch(`${api}${path}`, { signal: AbortSignal.timeout(6000), headers: { Accept: 'application/json' } });
+      if (!response.ok) {
+        await response.body?.cancel();
+        if (response.status === 429 && cached) return cached.payload;
+        // A revoked/missing resource must not reappear from stale cache later.
+        cache.delete(key);
+        const error = new Error('Tienda no disponible'); error.status = response.status; throw error;
+      }
+      // Share the consumed payload, not a Response whose body can only be read once.
+      const payload = format === 'json' ? await response.json() : await response.text();
+      remember(key, { payload, expiresAt: Date.now() + ttl });
+      return payload;
+    })();
+    inFlight.set(key, pending);
+    try { return await pending; }
+    finally { inFlight.delete(key); }
   }
   return async (request, response, next) => {
     if (!['GET', 'HEAD'].includes(request.method || 'GET')) return next();
@@ -30,7 +59,7 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
     const send = (status, type, body, headers = {}) => { response.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', ...headers }); response.end(request.method === 'HEAD' ? undefined : body); };
     try {
       if (customHost) {
-        const domain = await (await get(`/stores/public/domain?hostname=${encodeURIComponent(url.hostname)}`)).json();
+        const domain = await get(`/stores/public/domain?hostname=${encodeURIComponent(url.hostname)}`, 'json', 300_000);
         if (slug && slug !== domain.slug) return send(404, 'text/plain; charset=utf-8', 'Not found');
         slug = domain.slug;
         productId ||= customHostRoute?.[1];
@@ -44,11 +73,11 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
       }
       if (asset && slug) {
         const part = asset === 'sitemap.xml' && url.searchParams.has('part') ? `?part=${encodeURIComponent(url.searchParams.get('part'))}` : '';
-        const result = await get(`/stores/public/${encodeURIComponent(slug)}/seo/${asset}${part}`);
-        return send(200, asset.endsWith('.xml') ? 'application/xml; charset=utf-8' : 'text/plain; charset=utf-8', await result.text());
+        const result = await get(`/stores/public/${encodeURIComponent(slug)}/seo/${asset}${part}`, 'text');
+        return send(200, asset.endsWith('.xml') ? 'application/xml; charset=utf-8' : 'text/plain; charset=utf-8', result);
       }
       if (rootAsset) {
-        const stores = await (await get('/store-discovery')).json();
+        const stores = await get('/store-discovery');
         return rootAsset === 'sitemap.xml' ? send(200, 'application/xml; charset=utf-8', `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${stores.map(s => `<sitemap><loc>${escape(s.sitemap)}</loc></sitemap>`).join('')}</sitemapindex>`)
           : send(200, 'text/plain; charset=utf-8', `# Tiendas pagosYa\n\n## Tiendas públicas\n\n${stores.map(s => `- [${s.name.replace(/[\r\n\[\]<>]/g, ' ')}](${s.home}/llms.txt)`).join('\n')}\n`);
       }
@@ -57,7 +86,7 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
       if (productosRoute) params.set('page', 'productos.html');
       if (collectionSlug !== undefined) { params.set('page', 'coleccion.html'); params.set('collection', decodeURIComponent(collectionSlug)); }
       if (url.searchParams.has('source_page')) params.set('page', url.searchParams.get('source_page'));
-      const document = await (await get(`/stores/public/${encodeURIComponent(slug)}/seo?${params}`)).json();
+      const document = await get(`/stores/public/${encodeURIComponent(slug)}/seo?${params}`);
       const noindex = document.noindex === true || privateKeys.some(key => url.searchParams.has(key));
       // Identical initial HTML for people and crawlers; authored JS remains sandboxed.
       return send(200, 'text/html; charset=utf-8', applySeoDocument(await template(url.pathname + url.search), document, noindex), { 'X-Robots-Tag': noindex ? 'noindex, nofollow' : 'index, follow' });
