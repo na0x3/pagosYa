@@ -1,3 +1,4 @@
+import { loadStoreKnowledge } from '../store-knowledge/store-knowledge';
 import { continuedCatalogRequest, pendingCatalogRequest } from './source-catalog-request';
 import { SourceConversationFailure, safeConversationDiagnostic } from './source-conversation-failure';
 import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
@@ -147,7 +148,7 @@ export class SourceChatService {
         && Date.now() - new Date(last!.createdAt).getTime() < 10 * 60_000;
       const decision: SourceConversationDecision = { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
         storeId, model: input.model, instruction: input.instruction, productPhoto, buildNow: ['generate', 'quick'].includes(input.setupAction || ''),
-        revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [],
+        revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [], knowledge: await loadStoreKnowledge(this.prisma, merchantId, storeId).catch(() => null),
         messages: [...history.messages, userMessage], assetUrls: allAssets,
       })) };
       const correctedUses = honorImageContent(input.instruction, input.assetUrls?.length ? input.assetUrls : allAssets, decision.imageUses);
