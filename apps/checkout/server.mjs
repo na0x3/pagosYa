@@ -43,7 +43,7 @@ const seo = createStorefrontSeo({ apiBase: process.env.INTERNAL_API_BASE_URL || 
 const server = createServer(async (request, response) => {
   // Delivery checkout may request location only after the buyer presses the
   // explicit consent button. Every other browser capability remains denied.
-  applySecurityHeaders(response, { allowEmbedding: true, allowGeolocation: true });
+  applySecurityHeaders(response, { allowEmbedding: true, allowGeolocation: true, storefront: true });
   let continueRequest = false;
   await seo(request, response, () => { continueRequest = true; });
   if (!continueRequest) return;
