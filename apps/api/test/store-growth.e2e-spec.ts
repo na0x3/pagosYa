@@ -20,6 +20,8 @@ describe('Store growth: inbox, attribution and owner isolation', () => {
       if (name === 'GrowthOwner') token = result.body.testKeys.secretKey; else foreignToken = result.body.testKeys.secretKey;
     }
     const store = await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Growth Store', contactFormEnabled: true }).expect(201);
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await prisma.store.update({ where: { id: store.body.id }, data: { publicVisibility: true } });
     storeId = store.body.id; slug = store.body.slug; route = `/v1/stores/${storeId}/growth`;
     const product = await request(app.getHttpServer()).post(`/v1/stores/${storeId}/payment_links`).set(auth()).send({ name: 'Café', amount: 10000, currency: 'BOB' }).expect(201);
     productId = product.body.id;

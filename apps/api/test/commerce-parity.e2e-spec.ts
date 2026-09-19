@@ -26,6 +26,8 @@ describe('Credit ledger and digital delivery', () => {
       if (name.endsWith('Owner')) token = m.testKeys.secretKey; else other = m.testKeys.secretKey;
     }
     store = (await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Digital' }).expect(201)).body;
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await db.store.update({ where: { id: store.id }, data: { publicVisibility: true } });
     product = (await request(app.getHttpServer()).post(`/v1/stores/${store.id}/payment_links`).set(auth()).send({ name: 'Guía', amount: 10000, currency: 'BOB' }).expect(201)).body;
   });
   afterAll(async () => {

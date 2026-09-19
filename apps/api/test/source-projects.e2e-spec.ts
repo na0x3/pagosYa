@@ -47,6 +47,8 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
       else foreignToken = result.body.testKeys.secretKey;
     }
     const store = await request(app.getHttpServer()).post("/v1/stores").set(auth()).send({ name: "Original public store" }).expect(201);
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await prisma.store.update({ where: { id: store.body.id }, data: { publicVisibility: true } });
     storeId = store.body.id; slug = store.body.slug;
     route = `/v1/stores/${storeId}/source-project`;
   });

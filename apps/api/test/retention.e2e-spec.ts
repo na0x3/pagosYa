@@ -27,6 +27,8 @@ describe('Customer retention', () => {
       if (name.endsWith('Owner')) owner = merchant.testKeys.secretKey; else other = merchant.testKeys.secretKey;
     }
     store = (await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Club de pruebas' }).expect(201)).body;
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await db.store.update({ where: { id: store.id }, data: { publicVisibility: true } });
     product = (await request(app.getHttpServer()).post(`/v1/stores/${store.id}/payment_links`).set(auth()).send({ name: 'Café', amount: 1000, currency: 'BOB' }).expect(201)).body;
   });
   afterAll(async () => { await app?.close(); });
