@@ -47,7 +47,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   });
   const doc = new DOMParser().parseFromString(entry.content, "text/html");
   if (navigation.theme === 'light' || navigation.theme === 'dark') doc.documentElement.dataset.theme = navigation.theme;
-  doc.querySelectorAll("base,object,embed,meta[http-equiv],link[rel=preload],link[rel=prefetch]").forEach((el) => el.remove());
+  doc.querySelectorAll("base,object,embed,meta[http-equiv],link[rel=preload],link[rel=prefetch],link[rel=dns-prefetch],link[rel=preconnect]").forEach((el) => el.remove());
   const locationSources = prepareSourceLocations(doc);
   const layoutFile = snapshot.files.find(f => f.path === 'source-next-layout.json');
   if (layoutFile && snapshot.files.some(f => f.path === 'storefront-framework.json')) {
@@ -95,6 +95,9 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
   policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
   doc.head.prepend(policy);
+  // CSP does not govern DNS prefetching; turn it off so generated code cannot leak data through lookups.
+  const dnsPrefetch = doc.createElement('meta'); dnsPrefetch.httpEquiv = 'x-dns-prefetch-control'; dnsPrefetch.content = 'off';
+  doc.head.prepend(dnsPrefetch);
   const flag = doc.createElement("script");
   const encoded = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
   const mediaAssets = Object.fromEntries(snapshot.files.filter(file => /\.(png|jpe?g|webp|avif|gif|svg|mp4)$/i.test(file.path)).map(file => [file.path, data(file)]));

@@ -32,5 +32,6 @@ describe('hosted storefront images load lazily from the platform upload director
     expect(html).not.toContain('evil.test/;');
     expect(html).toContain('src="https://api.pagosya.test/v1/uploads/a.jpg"');
     expect(html).not.toContain('src="https://evil.test/b.jpg"');
+    expect(html).toContain('http-equiv="x-dns-prefetch-control" content="off"');
   });
 });
