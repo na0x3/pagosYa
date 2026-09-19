@@ -88,7 +88,9 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     const href = el.getAttribute("href") || '';
     if (el.getAttribute('target') === '_blank') el.setAttribute('data-preview-new-tab', 'true');
     el.removeAttribute('target');
-    if (!href.startsWith('#') && !resolve(href)?.path.endsWith('.html')) el.removeAttribute('href');
+    // Published stores keep outside links clickable; the trusted parent decides whether they may open.
+    const outside = navigation.hosted === true && /^(?:https?:|tel:|mailto:)/i.test(href);
+    if (!outside && !href.startsWith('#') && !resolve(href)?.path.endsWith('.html')) el.removeAttribute('href');
   });
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
   policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;

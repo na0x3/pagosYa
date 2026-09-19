@@ -1,3 +1,4 @@
+import { merchantDestination } from './source-links';
 import { fetchVerification, mountVerificationSeal } from './verification';
 import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
@@ -162,6 +163,16 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     if (data?.type === 'pagosya:funnel') { funnel.track(data.event, data.method); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
       try {
+        // Merchant-configured destinations (social links, WhatsApp, phone, email) open for the shopper.
+        const destination = merchantDestination(data.url, store);
+        if (destination) {
+          if (!destination.newTab) { location.assign(destination.href); return; }
+          // window.open with noopener always returns null, so a real anchor is the reliable new-tab path.
+          const link = document.createElement('a');
+          link.href = destination.href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+          link.click();
+          return;
+        }
         const url = new URL(data.url);
         const phone = String(store.contactPhone || '').replace(/\D/g, '');
         const product = store.items.find(item => url.pathname === `/s/${encodeURIComponent(slug)}/p/${encodeURIComponent(item.id)}`);
