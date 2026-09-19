@@ -65,3 +65,29 @@ describe('harmless price slips', () => {
     expect(() => requestedSourceProducts([{ name: 'Matcha', description: '', currency: 'BOB', imageUrls: [], amount: 2300, priceText: 'Bs 22' }], text, new Set())).toThrow('precios claros');
   });
 });
+
+describe('product changes are bound to the products and fields the merchant named (audit F2)', () => {
+  const catalog = [{ id: 'a', name: 'Café' }, { id: 'b', name: 'Té de coca' }, { id: 'c', name: 'Funda de cojín' }, { id: 'd', name: 'Funda de sofá' }];
+  const op = (productId: string, fields: Record<string, unknown> = {}, action = 'update') => ({ action, productId, name: null, description: null, amount: null, currency: null, priceText: null, imageUrls: null, imagePositions: null, tags: null, stock: null, color: null, ...fields });
+  it('rejects deleting a product other than the one the merchant asked to delete', () => {
+    expect(() => requestedSourceProductOperations([op('b', {}, 'delete')], 'Elimina el producto Café', catalog, new Set())).toThrow('Nombra el producto');
+    expect(requestedSourceProductOperations([op('a', {}, 'delete')], 'Elimina el producto Café', catalog, new Set())).toEqual([{ action: 'delete', productId: 'a' }]);
+  });
+  it('rejects zeroing stock while the merchant only asked to edit a description', () => {
+    expect(() => requestedSourceProductOperations([op('b', { stock: 0 })], 'Cambia la descripción del producto Café: tostado medio', catalog, new Set())).toThrow();
+    expect(() => requestedSourceProductOperations([op('a', { stock: 0 })], 'Cambia la descripción del producto Café: tostado medio', catalog, new Set())).toThrow('Solo cambio la información');
+    expect(requestedSourceProductOperations([op('a', { description: 'Tostado medio' })], 'Cambia la descripción del producto Café: tostado medio', catalog, new Set())).toEqual([{ action: 'update', productId: 'a', changes: { description: 'Tostado medio' } }]);
+  });
+  it("rejects applying one product's quoted price to another", () => {
+    expect(() => requestedSourceProductOperations([op('b', { amount: 3500, currency: 'BOB', priceText: 'Bs 35' })], 'Cambia el precio del producto Café a Bs 35', catalog, new Set())).toThrow('Nombra el producto');
+    expect(() => requestedSourceProductOperations([op('b', { amount: 3500, currency: 'BOB', priceText: 'Bs 35' })], 'Actualiza precios: Café Bs 35 y Té de coca Bs 20', catalog, new Set())).toThrow('junto al nombre');
+    expect(requestedSourceProductOperations([op('b', { amount: 2000, currency: 'BOB', priceText: 'Bs 20' })], 'Actualiza precios: Café Bs 35 y Té de coca Bs 20', catalog, new Set())[0]).toMatchObject({ productId: 'b', changes: { amount: 2000 } });
+  });
+  it('binds to the most specific product name', () => {
+    expect(() => requestedSourceProductOperations([op('d', { amount: 12000, currency: 'BOB', priceText: 'Bs 120' })], 'Cambia el precio de la funda de cojín a Bs 120', catalog, new Set())).toThrow('Nombra el producto');
+    expect(requestedSourceProductOperations([op('c', { amount: 12000, currency: 'BOB', priceText: 'Bs 120' })], 'Cambia el precio de la funda de cojín a Bs 120', catalog, new Set())[0]).toMatchObject({ productId: 'c' });
+  });
+  it('allows a store-wide change only when the merchant says so', () => {
+    expect(requestedSourceProductOperations([op('a', { stock: 0 }), op('b', { stock: 0 })], 'Marca todos los productos como agotados', catalog, new Set())).toHaveLength(2);
+  });
+});

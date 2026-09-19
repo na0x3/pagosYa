@@ -11,6 +11,7 @@ import { UpdatePaymentLinkDto } from '../payment-links/dto/update-payment-link.d
 
 type SourceCatalogItem = {
   id: string;
+  name?: string;
   imageUrls?: string[];
   variants?: ProductVariant[];
   amount?: number;
@@ -102,13 +103,48 @@ function canonicalUploadUrl(value: string): string {
   }
 }
 
+const NAME_STOPWORDS = new Set(['del', 'las', 'los', 'con', 'para', 'por', 'sin', 'una', 'the', 'and', 'for', 'with']);
+const nameTokens = (name: string) => plain(name).split(/[^a-z0-9]+/).filter(token => token.length >= 3 && !NAME_STOPWORDS.has(token));
+const wholeWord = (text: string, phrase: string) => new RegExp(`(?:^|[^a-z0-9])${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|[^a-z0-9])`).test(text);
+
+/** Products the current request names. A full name beats a partial one, and a longer full name beats one it
+ * contains, so "la funda de cojín" never authorizes a change to "Funda de sofá" or to a product called "Funda". */
+export function productsNamedIn(request: string, items: SourceCatalogItem[]): Set<string> {
+  if (items.length === 1) return new Set([items[0].id]);
+  const text = plain(request);
+  if (/\b(?:tod[oa]s|all)\b.{0,40}\b(?:productos?|articulos?|products?|catalogo)\b/.test(text)) return new Set(items.map(item => item.id));
+  const full = items.filter(item => item.name && nameTokens(item.name).length && wholeWord(text, plain(item.name.trim())));
+  if (full.length) return new Set(full.filter(item => !full.some(other => other !== item && plain(other.name!).length > plain(item.name!).length && plain(other.name!).includes(plain(item.name!)))).map(item => item.id));
+  const words = new Set(text.split(/[^a-z0-9]+/));
+  const scored = items.map(item => { const tokens = nameTokens(item.name || ''); return { id: item.id, score: tokens.length ? tokens.filter(token => words.has(token)).length / tokens.length : 0 }; });
+  const best = Math.max(0, ...scored.map(item => item.score));
+  return new Set(best > 0 ? scored.filter(item => item.score === best).map(item => item.id) : []);
+}
+
+/** A field may change only when the request talks about it, or literally contains the new value. */
+const FIELD_REQUESTS: Record<string, RegExp> = {
+  name: /\b(?:nombre|renombr\w*|llam\w*|titulo|rename|name)\b/,
+  description: /\b(?:descripci\w*|describ\w*|texto|detalles?|description)\b/,
+  imageUrls: /\b(?:fotos?|imagen(?:es)?|images?|photos?|portada|galeria)\b/,
+  imagePositions: /\b(?:fotos?|imagen(?:es)?|images?|photos?|encuadre|recorte|posicion|centr\w*)\b/,
+  tags: /\b(?:etiquetas?|tags?|categorias?|labels?)\b/,
+  stock: /\b(?:stock|agotad[oa]s?|inventario|unidades|disponibles?|existencias?|sold out|cantidad)\b/,
+  color: /\b(?:color(?:es)?|colour)\b/,
+};
+function assertFieldRequested(field: string, value: unknown, request: string) {
+  const text = plain(request);
+  if (FIELD_REQUESTS[field]?.test(text)) return;
+  if (typeof value === 'string' && value.trim().length >= 3 && text.includes(plain(value.trim()))) return;
+  throw new BadRequestException('Solo cambio la información del producto que mencionas en tu mensaje.');
+}
+
 function operationRequest(instruction: string): string {
   return instruction.split('Pedido actual del comercio:').at(-1)!.trim();
 }
 
 function hasProductMutationRequest(instruction: string): boolean {
   return /\b(?:cambia|cambiar|actualiza|actualizar|modifica|modificar|edita|editar|renombra|renombrar|pon|asigna|usa|elimina|eliminar|borra|borrar|quita|quitar|remove|delete|update|edit|rename)\b/i.test(instruction)
-    && /\b(?:producto|productos|art[ií]culo|art[ií]culos|product|products|cat[aá]logo|foto|imagen|nombre|precio|descripci[oó]n)\b/i.test(instruction);
+    && /\b(?:producto|productos|art[ií]culo|art[ií]culos|product|products|cat[aá]logo|fotos?|imagen(?:es)?|nombres?|precios?|descripci[oó]n(?:es)?|stock|inventario)\b/i.test(instruction);
 }
 
 function parsePriceQuote(quote: string, amount: number, currencyValue: string): void {
@@ -166,6 +202,7 @@ export function requestedSourceProductOperations(
     throw new BadRequestException('Solo cambio productos cuando lo pides explícitamente en el mensaje actual.');
   }
   const byId = new Map(currentItems.map(item => [item.id, item]));
+  const named = productsNamedIn(current, currentItems);
   const existingImages = new Set(currentItems.flatMap(item => (item.imageUrls || []).map(canonicalUploadUrl)));
   const acceptedImages = new Set([...allowedImages, ...existingImages].map(canonicalUploadUrl));
   return value.map(raw => {
@@ -173,6 +210,7 @@ export function requestedSourceProductOperations(
       throw new BadRequestException('Selecciona un producto existente de esta tienda para cambiarlo o eliminarlo.');
     }
     const item = raw as any;
+    if (!named.has(item.productId)) throw new BadRequestException('Nombra el producto que quieres cambiar o eliminar; solo cambio los productos que mencionas.');
     if (item.action === 'delete') {
       if (!/\b(?:elimina|eliminar|borra|borrar|quita|quitar|remove|delete)\b/i.test(current)) {
         throw new BadRequestException('Para eliminar un producto, indícalo explícitamente.');
@@ -184,6 +222,7 @@ export function requestedSourceProductOperations(
     for (const field of ['name', 'description', 'amount', 'currency', 'imageUrls', 'imagePositions', 'tags', 'stock', 'color']) {
       if (item[field] !== null && item[field] !== undefined) changes[field] = item[field];
     }
+    for (const field of Object.keys(changes)) if (!['amount', 'currency'].includes(field)) assertFieldRequested(field, changes[field], current);
     const variantOperations = requestedVariantOperations(item.variantOperations, current, byId.get(item.productId)!, acceptedImages);
     const subscriptionOperations = requestedSubscriptionOperations(item.subscriptionOperations, current);
     if (!Object.keys(changes).length && !variantOperations.length && !subscriptionOperations.length) throw new BadRequestException('Indica qué información del producto quieres cambiar.');
@@ -192,6 +231,11 @@ export function requestedSourceProductOperations(
         throw new BadRequestException('Indica el precio nuevo y la moneda; YAPI no inventa precios.');
       }
       parsePriceQuote(item.priceText, Number(changes.amount), String(changes.currency));
+      // With several products named, the quoted price must follow this product's own name.
+      const target = byId.get(item.productId)!;
+      if (named.size > 1 && !priceStatedFor(current, { name: target.name, amount: changes.amount, currency: changes.currency })) {
+        throw new BadRequestException('Escribe el precio nuevo junto al nombre de cada producto, por ejemplo «Café Bs 35».');
+      }
     } else if (item.priceText != null) {
       throw new BadRequestException('El precio solo debe enviarse cuando estás cambiando el precio.');
     }
