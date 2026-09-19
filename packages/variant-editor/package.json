@@ -1,0 +1,18 @@
+{
+  "name": "@pagosya/variant-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Merchant editor for product options (Color, Talla…) and their priced, stocked combinations",
+  "main": "variant-editor.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "default": "./variant-editor.js" },
+    "./style.css": "./variant-editor.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

@@ -4,9 +4,9 @@ import { prepareSourceImage } from './source-images';
 import { escapeHtml as escape } from './studio-ui';
 import './source-create-product.css';
 import './source-library.css';
-import '../../merchant-dashboard/src/product-options.js';
-import '../../merchant-dashboard/src/product-options.css';
-import type { VariantInput } from '../../merchant-dashboard/src/product-options';
+import '@pagosya/variant-editor';
+import '@pagosya/variant-editor/style.css';
+import type { VariantInput } from '@pagosya/variant-editor';
 
 export type ProductExtraRecord = { id: string; name: string; amount: number; required?: boolean; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string };
 type BoxChoice = { id: string; name: string; imageUrls?: string[] };

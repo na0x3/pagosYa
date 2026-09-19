@@ -19,6 +19,7 @@ packages/
   sdk-node/            Public Node SDK for merchant backends.
   widget-js/           Embeddable pagosya.js that mounts the checkout iframe.
   storefront-kit/      Runtimes, page templates, fonts, and icons copied into every generated storefront.
+  variant-editor/      Merchant editor for product options and their priced, stocked combinations (dashboard + Studio).
 docs/                  Current feature docs. docs/history/ holds dated reports and archived designs.
 ```
 

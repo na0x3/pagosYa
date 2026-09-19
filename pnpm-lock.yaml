@@ -208,6 +208,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/storefront-kit
     devDependencies:
+      '@pagosya/variant-editor':
+        specifier: workspace:*
+        version: link:../../packages/variant-editor
       jsdom:
         specifier: ^25.0.1
         version: 25.0.1(supports-color@10.2.2)
@@ -369,6 +372,10 @@ importers:
         version: 4.92.0(@cloudflare/workers-types@4.20260702.1)
 
   apps/merchant-dashboard:
+    dependencies:
+      '@pagosya/variant-editor':
+        specifier: workspace:*
+        version: link:../../packages/variant-editor
     devDependencies:
       '@pagosya/storefront-kit':
         specifier: workspace:*
@@ -391,6 +398,9 @@ importers:
       '@pagosya/storefront-kit':
         specifier: workspace:*
         version: link:../../packages/storefront-kit
+      '@pagosya/variant-editor':
+        specifier: workspace:*
+        version: link:../../packages/variant-editor
     devDependencies:
       '@playwright/test':
         specifier: ^1.55.0
@@ -427,6 +437,12 @@ importers:
         version: 5.9.3
 
   packages/storefront-kit: {}
+
+  packages/variant-editor:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
 
   packages/widget-js:
     dependencies:

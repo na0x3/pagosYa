@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@pagosya/shared-types": "workspace:*",
-    "@pagosya/storefront-kit": "workspace:*"
+    "@pagosya/storefront-kit": "workspace:*",
+    "@pagosya/variant-editor": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

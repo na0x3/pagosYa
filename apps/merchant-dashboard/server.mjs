@@ -3,9 +3,15 @@ import { watch } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { applySecurityHeaders, hardenHttpServer } from "../../scripts/http-security.mjs";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+const variantEditorDir = path.dirname(createRequire(import.meta.url).resolve("@pagosya/variant-editor"));
+const variantEditorAssets = new Map([
+  ["/variant-editor.js", "variant-editor.js"],
+  ["/variant-editor.css", "variant-editor.css"],
+]);
 const PORT = process.env.PORT ?? 4323;
 // Full-page live reload is opt-in. Native file pickers and browser-control
 // helpers can touch local files while a merchant is choosing imagery; treating
@@ -119,10 +125,16 @@ const server = createServer(async (req, res) => {
       res.end(css);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/product-options.js", "/src/product-options.css", "/src/workspace-design.css"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/workspace-design.css"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(content); return;
+    }
+    if (variantEditorAssets.has(requestUrl.pathname)) {
+      const filename = variantEditorAssets.get(requestUrl.pathname);
+      const content = await readFile(path.join(variantEditorDir, filename), "utf8");
+      res.writeHead(200, { "content-type": filename.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", "cache-control": "no-store" });
       res.end(content); return;
     }
     if (["/src/store-editor/state.js", "/src/store-editor/commands.js", "/src/store-editor/persistence.js", "/src/store-editor/selection.js", "/src/store-editor/bootstrap.js"].includes(requestUrl.pathname)) {

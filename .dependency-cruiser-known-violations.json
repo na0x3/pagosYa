@@ -29,20 +29,6 @@
   },
   {
     "type": "dependency",
-    "from": "apps/checkout/test/product-option-editor.test.ts",
-    "to": "apps/merchant-dashboard/src/product-options.js",
-    "unresolvedTo": "../../merchant-dashboard/src/product-options.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "apps/checkout/test/source-storefront-product.test.ts",
     "to": "apps/merchant-studio/src/source-preview-media.ts",
     "unresolvedTo": "../../merchant-studio/src/source-preview-media",
@@ -90,35 +76,6 @@
     "unresolvedTo": "../../merchant-studio/src/source-preview",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/merchant-studio/src/source-create-product.ts",
-    "to": "apps/merchant-dashboard/src/product-options.css",
-    "unresolvedTo": "../../merchant-dashboard/src/product-options.css",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-app-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/merchant-studio/src/source-create-product.ts",
-    "to": "apps/merchant-dashboard/src/product-options.js",
-    "unresolvedTo": "../../merchant-dashboard/src/product-options",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {

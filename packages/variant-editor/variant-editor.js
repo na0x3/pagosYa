@@ -1,7 +1,7 @@
-/* Shared by the dashboard and Studio. Amounts in this editor are decimal Bs;
+/* Merchant variant editor, shared by the dashboard and Studio. Amounts in this editor are decimal Bs;
  * the API boundary converts them to integer minor units. */
-/** @typedef {import('./product-options').VariantDraft} VariantDraft */
-/** @typedef {import('./product-options').VariantInput} VariantInput */
+/** @typedef {import('./index').VariantDraft} VariantDraft */
+/** @typedef {import('./index').VariantInput} VariantInput */
 /** @typedef {{name:string, values:string[]}} OptionGroup */
 /** @typedef {{name:string, value:string}} OptionValue */
 (() => {
@@ -60,7 +60,7 @@
     }
     return '';
   }
-  /** @param {HTMLElement} host @param {import('./product-options').EditorConfig} config */
+  /** @param {HTMLElement} host @param {import('./index').EditorConfig} config */
   function mount(host, config = {}) {
     let rows = structuredClone(config.variants || []), dirty = false, proposed = false, timer = 0;
     const first = rows[0]?.options;
