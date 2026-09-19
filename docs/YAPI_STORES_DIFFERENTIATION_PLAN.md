@@ -1,6 +1,6 @@
 # YAPI stores — differentiation plan
 
-Status: plan, 2026-09-19. Not started. Written unattended at the owner's request
+Status: in progress, 2026-09-19 — see §9 for what has landed on `feature/yapi-differentiation`. Written unattended at the owner's request
 ("take decisions yourself"); every decision is listed in §7 so it can be overturned.
 
 Evidence this plan is built on:
@@ -185,3 +185,19 @@ git worktree add .claude/worktrees/1.1-frame-src -b diff/1.1-frame-src feature/y
 codex exec -s workspace-write -C .claude/worktrees/1.1-frame-src - \
   < .superpowers/sdd/DIFFERENTIATION/tasks/1.1-frame-src.md
 ```
+
+## 9. Status (2026-09-19)
+
+Landed and verified on `feature/yapi-differentiation` (not merged to `main`):
+
+- **Security:** F1 frame navigation policy (browser-verified), F2 product-edit binding, F3 private-until-published, F4/F5 origin load, F6 domain reconciliation, API-enforced publish gate. Both Highs from the audit are closed.
+- **Design framework `@pagosya/ui`** (`packages/storefront-kit/kit/ui.tsx`): tokens, 4 headers, 4 heroes, 5 catalog layouts × 5 card styles, scroll effects including the product-grows-on-scroll `ProductShowcase`, story chapters, statement, marquee, trust strip, FAQ, footer. YAPI is taught the framework, receives a seeded starting combination per fresh design, and must author one bespoke signature component per store.
+- **Store Brain** (`apps/api/src/store-knowledge`): YAPI now sees verification, invoicing, contact, fulfillment and hours, the full catalog with 30-day sales and reviews, funnel and concrete gaps, with rules against stating unsupported facts.
+- **Quality:** cart persistence, WCAG AA contrast guard, React alt-text validation, React-homepage and collection SEO, es-BO, runtime history with opt-in rollback.
+
+Decisions changed during implementation:
+- Runtime pinning (5.6) records every publication's runtime but stores **follow the latest kit by default**; pinning happens only on an explicit rollback. Always-pin would have frozen platform fixes out of published stores.
+- The in-page keyboard probe (4.5) was withdrawn: it removed the guard that stops the hidden check from stealing the merchant's focus, and it flagged good stores. A real keyboard check belongs in the server's Chromium capture with trusted key events.
+- Codex was stopped after wave 2 at the owner's request (token cost); remaining work is done directly.
+
+Remaining work is listed in `.superpowers/sdd/DIFFERENTIATION/progress.md`.
