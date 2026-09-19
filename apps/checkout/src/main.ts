@@ -2,8 +2,6 @@ import { sourceCanConfigureProduct } from './source-product-capabilities';
 import { productOptionGroups, matchingOptionVariant, optionValueAvailable, productOptionKind, productOptionColor } from './product-options';
 import { applyCheckoutBranding } from "./checkout-branding";
 import { createStoreFunnel } from './store-funnel';
-let activeStoreFunnel: ReturnType<typeof createStoreFunnel> | null = null;
-let funnelCartCount = 0;
 import { cartItemKey, parseCartItemKey, restoreCart, persistCart, pickedExtras, pickGroups, pickedExtrasLabel } from "./cart-state";
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
@@ -35,7 +33,6 @@ import {
   CheckoutSession,
   CustomerContact,
   Store,
-  type InternationalMethods,
   type StoreAnimation,
   type StoreMotionExperience,
   StoreItem,
@@ -55,6 +52,8 @@ import {
   type StoreCanvasTextStyle,
   type StoreSiteDocument,
 } from "./site-document";
+import { type DomesticMethodType, state } from "./state";
+import { storeEditorMode, storePreviewMode, storeOwnerMode, type StorePreviewEditorSelection, type StorePreviewSection, STORE_PREVIEW_SECTIONS } from "./preview-mode";
 
 const STORE_MOTION_EXPERIENCES: readonly StoreMotionExperience[] = [
   "story-scroll", "hero-carousel", "image-stream",
@@ -146,15 +145,6 @@ function applySiteSectionPreviewHeight(section: HTMLElement, heightPx: number | 
   section.setAttribute(attribute, String(height));
   section.style.setProperty(property, `${height}px`);
 }
-
-interface LinkHeader {
-  storeName: string;
-  description: string;
-  contactPhone: string | null;
-  contactEmail: string | null;
-}
-
-type DomesticMethodType = Exclude<PaymentMethodType, PaymentMethodType.LOCAL_METHOD>;
 const DOMESTIC_METHOD_TYPES: DomesticMethodType[] = [
   PaymentMethodType.CARD,
   PaymentMethodType.TIGO_MONEY,
@@ -235,32 +225,14 @@ const ICON_CHEVRON_DOWN =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
 
 const app = document.getElementById("app")!;
-let selectedType: DomesticMethodType = PaymentMethodType.CARD;
-let internationalMode = false;
-let internationalCountry = "";
-let internationalMethods: InternationalMethods | null = null;
-let internationalMethodId = "";
-let internationalError: string | null = null;
-// Opened synchronously (still inside the submit click's user-activation
-// window) before dLocal even returns a redirect URL, so Safari's popup
-// blocker doesn't see it as script-initiated after an await. Pointed at the
-// real URL once confirmPaymentIntent resolves; closed on every outcome that
-// doesn't end up needing it.
-let pendingIntlPopup: Window | null = null;
 function closePendingIntlPopup() {
-  pendingIntlPopup?.close();
-  pendingIntlPopup = null;
+  state.pendingIntlPopup?.close();
+  state.pendingIntlPopup = null;
 }
-let linkHeader: LinkHeader | null = null;
-let activeOrderTrackingToken: string | null = null;
-let orderTrackingPoll: number | null = null;
-let orderTrackingVisibilityHandler: (() => void) | null = null;
 const CONSUMER_DASHBOARD_ORIGIN: string = import.meta.env.VITE_CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324";
 // Survives renderForm() re-renders (e.g. switching payment method tabs) so
 // typed contact info isn't lost mid-checkout.
 const customerContact: CustomerContact = { name: "", email: "", phone: "", deliveryRequested: false, deliveryAddress: "" };
-let selectedFulfillmentMethod: "pickup" | "delivery" | null = null;
-let selectedFulfillmentLocationId: string | null = null;
 // Keyed by field id so an error survives a payment-method tab switch
 // (renderForm fully re-renders on every tab click) until the field is fixed.
 const contactFieldErrors: Partial<Record<"customerName" | "customerEmail" | "customerPhone" | "deliveryAddress", string>> = {};
@@ -588,15 +560,15 @@ type StorefrontRoute = { slug: string | null; productId: string | null; category
 function storefrontRouteFromPathname(pathname: string): StorefrontRoute {
   const match = pathname.match(/^\/s\/([^/]+)(?:\/productos|(?:\/c\/([^/]+))|(?:\/p\/([^/]+)))?\/?$/);
   if (!match) {
-    const customProduct = activeCustomDomainSlug ? pathname.match(/^\/p\/([^/]+)\/?$/) : null;
-    const customCategory = activeCustomDomainSlug ? pathname.match(/^\/c\/([^/]+)\/?$/) : null;
-    const customCatalog = activeCustomDomainSlug ? /^\/productos\/?$/.test(pathname) : false;
-    if (!activeCustomDomainSlug || (pathname !== "/" && !customProduct && !customCategory && !customCatalog)) {
+    const customProduct = state.activeCustomDomainSlug ? pathname.match(/^\/p\/([^/]+)\/?$/) : null;
+    const customCategory = state.activeCustomDomainSlug ? pathname.match(/^\/c\/([^/]+)\/?$/) : null;
+    const customCatalog = state.activeCustomDomainSlug ? /^\/productos\/?$/.test(pathname) : false;
+    if (!state.activeCustomDomainSlug || (pathname !== "/" && !customProduct && !customCategory && !customCatalog)) {
       return { slug: null, productId: null, categoryId: null };
     }
     try {
       return {
-        slug: activeCustomDomainSlug,
+        slug: state.activeCustomDomainSlug,
         productId: customProduct?.[1] ? decodeURIComponent(customProduct[1]) : null,
         categoryId: customCategory?.[1] ? decodeURIComponent(customCategory[1]) : null,
       };
@@ -851,16 +823,16 @@ async function renderOrderTracking(token: string): Promise<void> {
   };
 
   await load(true);
-  if (orderTrackingPoll !== null) window.clearInterval(orderTrackingPoll);
-  if (orderTrackingVisibilityHandler) document.removeEventListener("visibilitychange", orderTrackingVisibilityHandler);
+  if (state.orderTrackingPoll !== null) window.clearInterval(state.orderTrackingPoll);
+  if (state.orderTrackingVisibilityHandler) document.removeEventListener("visibilitychange", state.orderTrackingVisibilityHandler);
   if (document.getElementById("tracking-status-region")) {
-    orderTrackingPoll = window.setInterval(() => {
+    state.orderTrackingPoll = window.setInterval(() => {
       if (document.visibilityState === "visible") void load(false);
     }, 20_000);
-    orderTrackingVisibilityHandler = () => {
+    state.orderTrackingVisibilityHandler = () => {
       if (document.visibilityState === "visible") void load(false);
     };
-    document.addEventListener("visibilitychange", orderTrackingVisibilityHandler);
+    document.addEventListener("visibilitychange", state.orderTrackingVisibilityHandler);
   }
 }
 
@@ -907,7 +879,7 @@ async function main() {
     trackingToken = null;
   }
   const clientSecret = fragmentParams.get("client_secret") ?? params.get("client_secret") ?? retainedCheckout?.clientSecret ?? null;
-  checkoutPublishableKey =
+  state.checkoutPublishableKey =
     fragmentParams.get("publishable_key") ?? params.get("publishable_key") ?? retainedCheckout?.publishableKey ?? null;
 
   // Bearer credentials belong in the fragment only long enough for this page
@@ -926,7 +898,7 @@ async function main() {
     window.history.replaceState(
       {
         ...(window.history.state ?? {}),
-        pagosYaCheckout: { clientSecret, publishableKey: checkoutPublishableKey },
+        pagosYaCheckout: { clientSecret, publishableKey: state.checkoutPublishableKey },
       },
       "",
       `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${cleanFragment ? `#${cleanFragment}` : ""}`,
@@ -945,7 +917,7 @@ async function main() {
   if (!linkSlug && !debtSlug && !clientSecret && (/^\/$/.test(window.location.pathname) || /^\/productos\/?$/.test(window.location.pathname) || /^\/(?:p|c)\/[^/]+\/?$/.test(window.location.pathname))) {
     try {
       const resolved = await resolveStoreDomain(window.location.hostname);
-      activeCustomDomainSlug = resolved.slug;
+      state.activeCustomDomainSlug = resolved.slug;
       linkSlug = resolved.slug;
     } catch {
       // The normal hosted checkout origin is not a custom domain. Preserve its
@@ -955,8 +927,8 @@ async function main() {
 
   // Keep the originating storefront available even when a payment page is
   // restored directly with both values in the URL.
-  if (linkSlug) currentStoreSlug = linkSlug;
-  if (debtSlug) currentDebtSlug = debtSlug;
+  if (linkSlug) state.currentStoreSlug = linkSlug;
+  if (debtSlug) state.currentDebtSlug = debtSlug;
   if (debtSlug && !clientSecret) {
     await renderDebtCollection(debtSlug);
     observeResize(app);
@@ -979,10 +951,10 @@ async function main() {
         const { mountPublishedSource } = await import('./source-storefront');
         if (await mountPublishedSource(app, linkSlug, renderedStore, enterPaymentFlow, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug))) return;
       }
-      activeStoreFunnel = renderedStore.publishedSourceRevision ? createStoreFunnel(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug)) : null;
-      activeStoreFunnel?.track('visit');
+      state.activeStoreFunnel = renderedStore.publishedSourceRevision ? createStoreFunnel(linkSlug, params.get('source_owner') === '1' || suppressStoreViewForMerchant(linkSlug)) : null;
+      state.activeStoreFunnel?.track('visit');
       loadCart(renderedStore);
-      funnelCartCount = cartCount();
+      state.funnelCartCount = cartCount();
       renderStoreRoute(linkSlug, renderedStore);
       restoreCatalogScroll(0);
       observeResize(app);
@@ -1105,8 +1077,8 @@ async function renderDebtCollection(slug: string) {
         payButton.textContent = "Abriendo pago…";
         try {
           const checkout = await checkoutDebt(slug, customerDocument, selectedDebtIds);
-          currentDebtSlug = slug;
-          linkHeader = {
+          state.currentDebtSlug = slug;
+          state.linkHeader = {
             storeName: checkout.companyName,
             description: checkout.description,
             contactEmail: checkout.contactEmail,
@@ -1134,8 +1106,8 @@ async function enterPaymentFlow(clientSecret: string) {
   document.body.classList.add("payment-page");
   let session: CheckoutSession;
   try {
-    session = await fetchSession(clientSecret, checkoutPublishableKey);
-    activeOrderTrackingToken = session.trackingToken ?? activeOrderTrackingToken;
+    session = await fetchSession(clientSecret, state.checkoutPublishableKey);
+    state.activeOrderTrackingToken = session.trackingToken ?? state.activeOrderTrackingToken;
   } catch (err) {
     app.innerHTML = `<div class="status failed">No se pudo cargar el pago: ${escapeHtml((err as Error).message)}</div>`;
     return;
@@ -1160,7 +1132,6 @@ async function enterPaymentFlow(clientSecret: string) {
 // keyed by storeId. A product with options can carry both Pequeña and Grande
 // as separate cart lines without duplicating the product in the catalog.
 const cart = new Map<string, number>();
-let appliedPromo: { storeId: string; code: string; discountType: "PERCENT" | "FIXED"; discountValue: number } | null = null;
 const selectedVariantByItem = new Map<string, string>();
 const selectedOptionsByItem = new Map<string, Record<string,string>>();
 const selectedExtraIdsByItem = new Map<string, string[]>();
@@ -1313,12 +1284,6 @@ function stockStatus(remaining: number | null, showLowStock: boolean): { label: 
   }
   return null;
 }
-
-// renderStore() re-runs on every qty +/- click (full re-render, not a patch)
-// — the staggered entrance animation should only ever play once, on the
-// real first paint, not replay/flash on every cart interaction.
-let hasStoreAnimatedIn = false;
-let activePromotionCleanup: (() => void) | null = null;
 document.addEventListener("visibilitychange", () => document.body.classList.toggle("motion-paused", document.hidden));
 
 function leadEmailStorageKey(storeId: string): string {
@@ -1340,14 +1305,10 @@ function saveLeadEmail(storeId: string, email: string): void {
     // The form still prefills for the current render when storage is blocked.
   }
 }
-let activeAnnouncementCleanup: (() => void) | null = null;
-let activeHeroCleanup: (() => void) | null = null;
-let activeStoreExperienceCleanup: (() => void) | null = null;
-let activeDiscountCleanup: (() => void) | null = null;
 
 function bindTimedDiscountSchedule(slug: string, store: Store): void {
-  activeDiscountCleanup?.();
-  activeDiscountCleanup = null;
+  state.activeDiscountCleanup?.();
+  state.activeDiscountCleanup = null;
   const scheduledItems = store.items.filter((item) => Number.isFinite(Date.parse(item.discountStartsAt || "")) && Number.isFinite(Date.parse(item.discountEndsAt || "")) && Date.parse(item.discountEndsAt || "") > Date.now());
   if (!scheduledItems.length) return;
   const updateLabels = () => {
@@ -1366,25 +1327,11 @@ function bindTimedDiscountSchedule(slug: string, store: Store): void {
     ? window.setTimeout(() => renderStoreRoute(slug, store, { focusPromotion: false }), Math.min(nextBoundary - now + 100, 2_147_000_000))
     : undefined;
   updateLabels();
-  activeDiscountCleanup = () => {
+  state.activeDiscountCleanup = () => {
     window.clearInterval(interval);
     if (timeout !== undefined) window.clearTimeout(timeout);
   };
 }
-
-// Search/category filter state for large catalogs — lives outside
-// renderStoreGrid() so typing/clicking doesn't need to touch (and thus
-// never loses focus on) the toolbar that renders these controls.
-let searchQuery = "";
-// "ALL" shows everything; "null" (string) is the sentinel for the
-// uncategorized/"Otros" bucket, since categoryId itself is `string | null`
-// and dataset attributes can only hold strings.
-let selectedCategoryId: string = "ALL";
-let selectedCollectionId: string = "ALL";
-let activeCatalogStoreId: string | null = null;
-// "featured" keeps the merchant's own catalog order (createdAt); the others
-// re-sort within each category section, never across section boundaries.
-let sortMode: "featured" | "price-asc" | "price-desc" | "popular" = "featured";
 
 type CatalogSection = { id: string; name: string; bannerUrl: string | null; highlights: string[]; items: StoreItem[] };
 
@@ -1534,9 +1481,9 @@ function bindPreviewBlueprints(store: Store): void {
 }
 
 function sortStoreItems(items: StoreItem[]): StoreItem[] {
-  if (sortMode === "price-asc") return [...items].sort((a, b) => discountedProductAmount(a, a.amount) - discountedProductAmount(b, b.amount));
-  if (sortMode === "price-desc") return [...items].sort((a, b) => discountedProductAmount(b, b.amount) - discountedProductAmount(a, a.amount));
-  if (sortMode === "popular") return [...items].sort((a, b) => b.soldCount - a.soldCount);
+  if (state.sortMode === "price-asc") return [...items].sort((a, b) => discountedProductAmount(a, a.amount) - discountedProductAmount(b, b.amount));
+  if (state.sortMode === "price-desc") return [...items].sort((a, b) => discountedProductAmount(b, b.amount) - discountedProductAmount(a, a.amount));
+  if (state.sortMode === "popular") return [...items].sort((a, b) => b.soldCount - a.soldCount);
   return items;
 }
 
@@ -1554,8 +1501,8 @@ function loadCart(store: Store): void {
   saved.selectedExtraIdsByItem.forEach((value, key) => selectedExtraIdsByItem.set(key, value));
 }
 function saveCart(store: Store): void {
-  const count = cartCount(); if (count > funnelCartCount) activeStoreFunnel?.track('add_to_cart');
-  funnelCartCount = count; persistCart(store.storeId, cart);
+  const count = cartCount(); if (count > state.funnelCartCount) state.activeStoreFunnel?.track('add_to_cart');
+  state.funnelCartCount = count; persistCart(store.storeId, cart);
 }
 
 function cartTotal(items: StoreItem[]): number {
@@ -1576,7 +1523,7 @@ function cartCount(): number {
 }
 
 function activePromoForStore(store: Store) {
-  return appliedPromo?.storeId === store.storeId ? appliedPromo : null;
+  return state.appliedPromo?.storeId === store.storeId ? state.appliedPromo : null;
 }
 
 function promoDiscountAmount(store: Store): number {
@@ -1595,7 +1542,7 @@ function storeCatalogUrl(slug: string): string {
   if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
-  const pathname = activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
+  const pathname = state.activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
   return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
 }
 
@@ -1605,7 +1552,7 @@ function storePageUrl(slug: string, pageSlug: string): string {
   if (storePreviewMode) params.set("preview", "1");
   if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
-  const pathname = activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
+  const pathname = state.activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
   return `${pathname}?${params.toString()}${storePreviewFragment()}`;
 }
 
@@ -1616,7 +1563,7 @@ function storeCollectionUrl(slug: string, collectionId: string): string {
   if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
-  const pathname = activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
+  const pathname = state.activeCustomDomainSlug === slug ? "/" : `/s/${encodeURIComponent(slug)}`;
   return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment() || "#store-products"}`;
 }
 
@@ -1626,20 +1573,20 @@ function categoryPageUrl(slug: string, categoryId: string): string {
   if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
-  const pathname = activeCustomDomainSlug === slug
+  const pathname = state.activeCustomDomainSlug === slug
     ? `/c/${encodeURIComponent(categoryId)}`
     : `/s/${encodeURIComponent(slug)}/c/${encodeURIComponent(categoryId)}`;
   return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
 }
 
-function productPageUrl(slug: string, productId: string, categoryId = selectedCategoryId): string {
+function productPageUrl(slug: string, productId: string, categoryId = state.selectedCategoryId): string {
   const params = new URLSearchParams();
   if (categoryId !== "ALL") params.set("category", categoryId);
   if (storePreviewMode) params.set("preview", "1");
   if (storeEditorMode) params.set("editor", "1");
   if (storeOwnerMode) params.set("owner", "1");
   const query = params.toString();
-  const pathname = activeCustomDomainSlug === slug
+  const pathname = state.activeCustomDomainSlug === slug
     ? `/p/${encodeURIComponent(productId)}`
     : `/s/${encodeURIComponent(slug)}/p/${encodeURIComponent(productId)}`;
   return `${pathname}${query ? `?${query}` : ""}${storePreviewFragment()}`;
@@ -1909,8 +1856,8 @@ function storefrontFooterHtml(store: Store): string {
 }
 
 function bindStoreAnnouncementPlayback(): void {
-  activeAnnouncementCleanup?.();
-  activeAnnouncementCleanup = null;
+  state.activeAnnouncementCleanup?.();
+  state.activeAnnouncementCleanup = null;
   const announcement = app.querySelector<HTMLElement>(".store-announcement");
   if (!announcement) return;
   let isInView = true;
@@ -1924,7 +1871,7 @@ function bindStoreAnnouncementPlayback(): void {
   observer?.observe(announcement);
   document.addEventListener("visibilitychange", syncPlayback);
   syncPlayback();
-  activeAnnouncementCleanup = () => {
+  state.activeAnnouncementCleanup = () => {
     observer?.disconnect();
     document.removeEventListener("visibilitychange", syncPlayback);
   };
@@ -1954,7 +1901,7 @@ function renderProductCard(
   // Staggered on first paint only (see hasStoreAnimatedIn) — capped so a
   // long catalog doesn't leave the last cards waiting a visible beat to
   // appear.
-  const staggerStyle = hasStoreAnimatedIn ? "" : ` style="--stagger-delay: ${Math.min(index * 45, 360)}ms"`;
+  const staggerStyle = state.hasStoreAnimatedIn ? "" : ` style="--stagger-delay: ${Math.min(index * 45, 360)}ms"`;
   const detailUrl = productPageUrl(slug, item.id);
   const discountPercent = activeProductDiscount(item);
   const saleBadgeHtml = discountPercent === null ? "" : `<div class="product-sale-badge" role="status" aria-label="${discountPercent}% de descuento activo"><strong>${discountPercent}% OFF</strong><span data-discount-ends-at="${escapeHtml(item.discountEndsAt || "")}">${escapeHtml(discountRemainingLabel(item))}</span></div>`;
@@ -2035,15 +1982,6 @@ function renderProductCard(
       }
     </div>`;
 }
-
-// Tracked so a failed/canceled payment screen can offer a real way back
-// instead of a dead end — the cart itself is already cleared by the time a
-// customer reaches the payment form (see checkoutCart's cart.clear() call),
-// so "back to store" means the plain store link, not cart restoration.
-let currentStoreSlug: string | null = null;
-let activeCustomDomainSlug: string | null = null;
-let currentDebtSlug: string | null = null;
-let checkoutPublishableKey: string | null = null;
 type StorePreviewPatch = Partial<
   Pick<
     Store,
@@ -2204,10 +2142,6 @@ function sanitizeStorePreviewProduct(value: unknown, store: Store): StoreItem | 
   }
   return preview;
 }
-
-const storePreviewMode = new URLSearchParams(window.location.search).get("preview") === "1";
-const storeEditorMode = storePreviewMode && new URLSearchParams(window.location.search).get("editor") === "1";
-const storeOwnerMode = new URLSearchParams(window.location.search).get("owner") === "1";
 if (storePreviewMode) {
   try {
     window.history.scrollRestoration = "manual";
@@ -2239,21 +2173,6 @@ function suppressStoreViewForMerchant(slug: string): boolean {
   }
 }
 
-let activePreviewStore: { slug: string; store: Store } | null = null;
-let previewReadyAnnounced = false;
-let activePreviewRenderedStore: Store | null = null;
-let activePreviewRenderSignature = "";
-let activePreviewRenderedView = "store";
-let storePreviewEditorEnabled = storeEditorMode;
-let storePreviewLockedSectionIds = new Set<string>();
-let storePreviewEditorHover: HTMLElement | null = null;
-let storePreviewEditorSelection: StorePreviewEditorSelection | null = null;
-let storePreviewInlineEditorTarget: HTMLElement | null = null;
-let storePreviewInlineEditorFinish: ((commit: boolean) => void) | null = null;
-let storePreviewPendingInlineTextCommit: { selection: StorePreviewEditorSelection; value: string } | null = null;
-let storePreviewEditorClickTimer: number | null = null;
-let storePreviewEditorSuppressNextClick = false;
-
 if (storePreviewMode) {
   document.addEventListener("click", (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -2280,8 +2199,6 @@ if (storePreviewMode) {
     }
   }, { passive: true });
 }
-const STORE_PREVIEW_SECTIONS = ["brand", "navigation", "announcement", "hero", "products", "about", "gallery", "motion", "contact", "links", "location", "footer", "promotion"] as const;
-type StorePreviewSection = (typeof STORE_PREVIEW_SECTIONS)[number];
 
 const STORE_PREVIEW_INLINE_TEXT_FIELDS = new Set([
   "storeName", "storeTagline", "title", "caption", "body", "ctaLabel",
@@ -2297,15 +2214,6 @@ const STORE_PREVIEW_INLINE_TEXT_FIELDS = new Set([
 const STORE_PREVIEW_INLINE_IMAGE_FIELDS = new Set([
   "storeLogo", "storeBanner", "aboutImage", "editorialMedia", "media", "siteMedia", "siteBlockMedia", "promotionImage", "categoryBanner",
 ]);
-
-interface StorePreviewEditorSelection {
-  section: StorePreviewSection | `animation-${string}` | `site-${string}`;
-  field: string;
-  label: string;
-  itemId?: string;
-  itemIndex?: number;
-  animationId?: string;
-}
 
 function sanitizeStorePreviewEditorSelection(value: unknown): StorePreviewEditorSelection | null {
   if (!value || typeof value !== "object") return null;
@@ -2497,7 +2405,7 @@ function bindStorePreviewPalette(toolbar: HTMLElement, controls: Record<string, 
 }
 
 function storePreviewRenderedSiteDocument(): Store["siteDocument"] | null {
-  const renderedStore = activePreviewRenderedStore ?? activePreviewStore?.store ?? activeStoreRoute?.store;
+  const renderedStore = state.activePreviewRenderedStore ?? state.activePreviewStore?.store ?? state.activeStoreRoute?.store;
   return renderedStore?.siteDocument ?? null;
 }
 
@@ -2558,12 +2466,12 @@ function updateStorePreviewFooterDraft(
 function renderStorePreviewCanvasToolbar(target: HTMLElement | null, selection: StorePreviewEditorSelection | null): void {
   const toolbar = storePreviewCanvasToolbar();
   toolbar.className = "store-preview-canvas-toolbar";
-  if (!target || !selection || !storePreviewEditorEnabled) {
+  if (!target || !selection || !state.storePreviewEditorEnabled) {
     toolbar.hidden = true;
     toolbar.replaceChildren();
     return;
   }
-  const renderedStore = activePreviewRenderedStore ?? activePreviewStore?.store ?? activeStoreRoute?.store;
+  const renderedStore = state.activePreviewRenderedStore ?? state.activePreviewStore?.store ?? state.activeStoreRoute?.store;
   const paletteColors = storePreviewUsedColors(renderedStore);
   if (selection.section === "announcement") {
     const mode = target.dataset.announcementMode === "marquee" ? "marquee" : "static";
@@ -2745,7 +2653,7 @@ function renderStorePreviewCanvasToolbar(target: HTMLElement | null, selection: 
         ${siteSections.map((section) => `<option value="section:${escapeHtml(section.id)}"${selected === `section:${section.id}` ? " selected" : ""}>${escapeHtml(section.title || "Sección")}</option>`).join("")}`;
     };
     const navigationDestinationUrl = (item: { target: "home" | "catalog" | "section" | "page"; pageId?: string }) => {
-      const storefrontSlug = activePreviewStore?.slug ?? storefrontRouteFromLocation().slug;
+      const storefrontSlug = state.activePreviewStore?.slug ?? storefrontRouteFromLocation().slug;
       if (!storefrontSlug) return "";
       if (item.target === "home") return storeCatalogUrl(storefrontSlug);
       if (item.target === "catalog") return storeCollectionUrl(storefrontSlug, "ALL");
@@ -3030,7 +2938,7 @@ function renderStorePreviewCanvasToolbar(target: HTMLElement | null, selection: 
   const isText = textFields.has(selection.field);
   const animation = renderedStore?.animations?.find((candidate) => candidate.id === selection.animationId);
   const siteSection = siteId ? renderedStore?.siteDocument?.sections?.find((candidate) => candidate.id === siteId) : undefined;
-  const siteSectionLocked = Boolean(siteId && storePreviewLockedSectionIds.has(siteId));
+  const siteSectionLocked = Boolean(siteId && state.storePreviewLockedSectionIds.has(siteId));
   const siteHasAnimation = Boolean(siteSection && siteSection.motion !== "none");
   if (!animation && !siteSection) {
     toolbar.hidden = true;
@@ -3406,26 +3314,26 @@ function markAllStorePreviewEditorTargets(
 function syncStorePreviewEditorMode(): void {
   document.documentElement.classList.toggle("store-preview-mode", storePreviewMode);
   document.documentElement.classList.toggle("store-editor-mode", storeEditorMode);
-  document.body.classList.toggle("store-preview-editor-enabled", storeEditorMode && storePreviewEditorEnabled);
-  if (!storePreviewEditorEnabled) {
-    storePreviewInlineEditorFinish?.(true);
-    storePreviewPendingInlineTextCommit = null;
-    if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
-    storePreviewEditorClickTimer = null;
-    storePreviewEditorSuppressNextClick = false;
+  document.body.classList.toggle("store-preview-editor-enabled", storeEditorMode && state.storePreviewEditorEnabled);
+  if (!state.storePreviewEditorEnabled) {
+    state.storePreviewInlineEditorFinish?.(true);
+    state.storePreviewPendingInlineTextCommit = null;
+    if (state.storePreviewEditorClickTimer !== null) window.clearTimeout(state.storePreviewEditorClickTimer);
+    state.storePreviewEditorClickTimer = null;
+    state.storePreviewEditorSuppressNextClick = false;
   }
-  if (!storePreviewEditorEnabled && storePreviewEditorHover) {
-    storePreviewEditorHover.classList.remove("store-preview-editor-hover");
-    storePreviewEditorHover = null;
+  if (!state.storePreviewEditorEnabled && state.storePreviewEditorHover) {
+    state.storePreviewEditorHover.classList.remove("store-preview-editor-hover");
+    state.storePreviewEditorHover = null;
   }
-  if (!storePreviewEditorEnabled) renderStorePreviewCanvasToolbar(null, null);
+  if (!state.storePreviewEditorEnabled) renderStorePreviewCanvasToolbar(null, null);
 }
 
 function syncStorePreviewEditorSelection(): void {
   app.querySelectorAll<HTMLElement>(".store-preview-editor-selected").forEach((element) => element.classList.remove("store-preview-editor-selected"));
   app.querySelectorAll<HTMLElement>(".store-animation-layout-selected").forEach((element) => element.classList.remove("store-animation-layout-selected"));
-  const selection = storePreviewEditorSelection;
-  if (!selection || !storePreviewEditorEnabled) {
+  const selection = state.storePreviewEditorSelection;
+  if (!selection || !state.storePreviewEditorEnabled) {
     renderStorePreviewCanvasToolbar(null, null);
     return;
   }
@@ -3939,10 +3847,10 @@ function selectionFromStorePreviewEditorTarget(target: HTMLElement): StorePrevie
 }
 
 function showStorePreviewEditorHover(target: HTMLElement | null): void {
-  if (storePreviewEditorHover && storePreviewEditorHover !== target) storePreviewEditorHover.classList.remove("store-preview-editor-hover");
-  storePreviewEditorHover = target;
+  if (state.storePreviewEditorHover && state.storePreviewEditorHover !== target) state.storePreviewEditorHover.classList.remove("store-preview-editor-hover");
+  state.storePreviewEditorHover = target;
   const label = storePreviewEditorLabel();
-  if (!target || !storePreviewEditorEnabled) {
+  if (!target || !state.storePreviewEditorEnabled) {
     label.style.display = "none";
     return;
   }
@@ -3992,7 +3900,7 @@ function insertStorePreviewInlineLineBreak(target: HTMLElement): void {
 }
 
 function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePreviewEditorSelection): void {
-  if (storePreviewInlineEditorTarget) return;
+  if (state.storePreviewInlineEditorTarget) return;
   const originalText = target.textContent || "";
   const originalBounds = target.getBoundingClientRect();
   const siteSection = selection.section.startsWith("site-")
@@ -4065,7 +3973,7 @@ function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePr
     target.style.setProperty("--canvas-text-offset-x", `${lockedTranslate.x}px`);
     target.style.setProperty("--canvas-text-offset-y", `${lockedTranslate.y}px`);
   };
-  storePreviewInlineEditorTarget = target;
+  state.storePreviewInlineEditorTarget = target;
   // Selecting inline copy must also move the dashboard to its dedicated tab.
   // The dashboard deliberately avoids focusing its mirrored field for
   // preview-originated selections, so the contenteditable node keeps focus.
@@ -4120,8 +4028,8 @@ function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePr
     target.classList.remove("store-preview-inline-editing");
     restoreInlineOffset("--canvas-text-offset-x", originalInlineOffsetX);
     restoreInlineOffset("--canvas-text-offset-y", originalInlineOffsetY);
-    storePreviewInlineEditorTarget = null;
-    if (storePreviewInlineEditorFinish === finish) storePreviewInlineEditorFinish = null;
+    state.storePreviewInlineEditorTarget = null;
+    if (state.storePreviewInlineEditorFinish === finish) state.storePreviewInlineEditorFinish = null;
     if ((!commit || value === originalText.trim()) && freezeSectionHeight && siteSection) {
       siteSection.removeAttribute(heightAttribute);
       if (originalHeightProperty) siteSection.style.setProperty(heightProperty, originalHeightProperty);
@@ -4182,12 +4090,12 @@ function beginStorePreviewInlineTextEdit(target: HTMLElement, selection: StorePr
       // patch that was already queued can arrive before it records this blur.
       // Keep the optimistic copy through those redraws until the parent echoes
       // the committed value back with PAGOSYA_STORE_EDITOR_TEXT_UPDATE.
-      storePreviewPendingInlineTextCommit = { selection, value };
+      state.storePreviewPendingInlineTextCommit = { selection, value };
       postToParent("STORE_EDITOR_INLINE_TEXT", { selection, value });
     }
     showStorePreviewEditorHover(target);
   };
-  storePreviewInlineEditorFinish = finish;
+  state.storePreviewInlineEditorFinish = finish;
   onKeydown = (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -4277,7 +4185,7 @@ function applyAnimationCopySceneLayout(copy: HTMLElement, source: HTMLElement = 
 }
 
 function beginAnimationTextGesture(event: PointerEvent, copy: HTMLElement, action: "move" | "width" | "scale"): void {
-  if (!storePreviewEditorEnabled || event.button !== 0 || storePreviewInlineEditorTarget) return;
+  if (!state.storePreviewEditorEnabled || event.button !== 0 || state.storePreviewInlineEditorTarget) return;
   if (copy.matches("[data-text-along-path]")) return;
   const section = copy.closest<HTMLElement>(".store-motion-section[data-animation-id]");
   const animationId = section?.dataset.animationId;
@@ -4328,7 +4236,7 @@ function beginAnimationTextGesture(event: PointerEvent, copy: HTMLElement, actio
   const activateGesture = () => {
     if (gestureActive) return;
     gestureActive = true;
-    storePreviewEditorSelection = selection;
+    state.storePreviewEditorSelection = selection;
     syncStorePreviewEditorSelection();
     showStorePreviewEditorHover(null);
     section.classList.add("store-animation-layout-dragging");
@@ -4392,9 +4300,9 @@ function beginAnimationTextGesture(event: PointerEvent, copy: HTMLElement, actio
     if (!moved || !commit) return;
     // Consume only the synthetic click produced by this drag. A timed lock also
     // swallowed the merchant's next intentional double-click to edit the text.
-    storePreviewEditorSuppressNextClick = true;
+    state.storePreviewEditorSuppressNextClick = true;
     window.setTimeout(() => {
-      storePreviewEditorSuppressNextClick = false;
+      state.storePreviewEditorSuppressNextClick = false;
     }, 0);
     copy.dataset.animationTextX = String(positionX);
     copy.dataset.animationTextY = String(positionY);
@@ -4424,7 +4332,7 @@ function beginAnimationTextGesture(event: PointerEvent, copy: HTMLElement, actio
 }
 
 function beginSiteSectionResizeGesture(event: PointerEvent, section: HTMLElement, selection: StorePreviewEditorSelection): void {
-  if (!storePreviewEditorEnabled || event.button !== 0 || storePreviewInlineEditorTarget) return;
+  if (!state.storePreviewEditorEnabled || event.button !== 0 || state.storePreviewInlineEditorTarget) return;
   event.preventDefault();
   event.stopPropagation();
   const viewport = activeSiteSectionViewport();
@@ -4436,7 +4344,7 @@ function beginSiteSectionResizeGesture(event: PointerEvent, section: HTMLElement
   const startY = event.clientY;
   let heightPx = startHeight;
   let moved = false;
-  storePreviewEditorSelection = selection;
+  state.storePreviewEditorSelection = selection;
   syncStorePreviewEditorSelection();
   renderStorePreviewCanvasToolbar(section, selection);
   postToParent("STORE_EDITOR_SELECT", { selection });
@@ -4526,7 +4434,7 @@ function resolveMobileSiteTextCollision(
 }
 
 function beginSiteTextGesture(event: PointerEvent, target: HTMLElement, selection: StorePreviewEditorSelection): void {
-  if (!storePreviewEditorEnabled || event.button !== 0 || storePreviewInlineEditorTarget) return;
+  if (!state.storePreviewEditorEnabled || event.button !== 0 || state.storePreviewInlineEditorTarget) return;
   const draggableSection = selection.section.startsWith("site-") || selection.section === "brand" || selection.section === "navigation";
   if (!draggableSection || target.dataset.storeEditorInline !== "text") return;
   const section = target.closest<HTMLElement>(".bespoke-zone[data-site-section], .store-site-header");
@@ -4579,7 +4487,7 @@ function beginSiteTextGesture(event: PointerEvent, target: HTMLElement, selectio
   const activate = () => {
     if (active) return;
     active = true;
-    storePreviewEditorSelection = selection;
+    state.storePreviewEditorSelection = selection;
     syncStorePreviewEditorSelection();
     // Selection normally opens its editing popover. During a drag that panel
     // obscures the exact letter position, so dismiss it until the merchant
@@ -4655,8 +4563,8 @@ function beginSiteTextGesture(event: PointerEvent, target: HTMLElement, selectio
       // The browser may have released the pointer already.
     }
     if (!moved || !commit) return;
-    storePreviewEditorSuppressNextClick = true;
-    window.setTimeout(() => { storePreviewEditorSuppressNextClick = false; }, 0);
+    state.storePreviewEditorSuppressNextClick = true;
+    window.setTimeout(() => { state.storePreviewEditorSuppressNextClick = false; }, 0);
     if (freezeSectionHeight) postToParent("STORE_EDITOR_SECTION_HEIGHT", { selection, viewport: sectionViewport, heightPx: fixedSectionHeight });
     postToParent("STORE_EDITOR_SITE_TEXT_LAYOUT", {
       selection,
@@ -4705,7 +4613,7 @@ function beginSiteTextGesture(event: PointerEvent, target: HTMLElement, selectio
 }
 
 function beginAnimationButtonGesture(event: PointerEvent, button: HTMLElement): void {
-  if (!storePreviewEditorEnabled || event.button !== 0 || storePreviewInlineEditorTarget) return;
+  if (!state.storePreviewEditorEnabled || event.button !== 0 || state.storePreviewInlineEditorTarget) return;
   const section = button.closest<HTMLElement>(".store-motion-section[data-animation-id]");
   const animationId = section?.dataset.animationId;
   if (!section || !animationId) return;
@@ -4732,7 +4640,7 @@ function beginAnimationButtonGesture(event: PointerEvent, button: HTMLElement): 
     if (!moved && Math.hypot(deltaX, deltaY) < 4) return;
     if (!moved) {
       moved = true;
-      storePreviewEditorSelection = selection;
+      state.storePreviewEditorSelection = selection;
       syncStorePreviewEditorSelection();
       showStorePreviewEditorHover(null);
       section.classList.add("store-animation-layout-dragging");
@@ -4752,8 +4660,8 @@ function beginAnimationButtonGesture(event: PointerEvent, button: HTMLElement): 
     section.classList.remove("store-animation-layout-dragging");
     try { button.releasePointerCapture?.(event.pointerId); } catch {}
     if (!moved || !commit) return;
-    storePreviewEditorSuppressNextClick = true;
-    window.setTimeout(() => { storePreviewEditorSuppressNextClick = false; }, 0);
+    state.storePreviewEditorSuppressNextClick = true;
+    window.setTimeout(() => { state.storePreviewEditorSuppressNextClick = false; }, 0);
     button.dataset.animationButtonX = String(positionX);
     button.dataset.animationButtonY = String(positionY);
     postToParent("STORE_EDITOR_ANIMATION_BUTTON_LAYOUT", {
@@ -4781,11 +4689,11 @@ function isStorePreviewTextEditingTarget(target: EventTarget | null): boolean {
 }
 
 function clearStorePreviewEditorSelection(): void {
-  const hadSelection = storePreviewEditorSelection !== null;
-  storePreviewInlineEditorFinish?.(true);
-  if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
-  storePreviewEditorClickTimer = null;
-  storePreviewEditorSelection = null;
+  const hadSelection = state.storePreviewEditorSelection !== null;
+  state.storePreviewInlineEditorFinish?.(true);
+  if (state.storePreviewEditorClickTimer !== null) window.clearTimeout(state.storePreviewEditorClickTimer);
+  state.storePreviewEditorClickTimer = null;
+  state.storePreviewEditorSelection = null;
   syncStorePreviewEditorSelection();
   showStorePreviewEditorHover(null);
   if (hadSelection) postToParent("STORE_EDITOR_SELECT", { selection: null });
@@ -4852,7 +4760,7 @@ if (storeEditorMode) {
       const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
       if (target && selection) {
         event.preventDefault();
-        storePreviewEditorSelection = selection;
+        state.storePreviewEditorSelection = selection;
         syncStorePreviewEditorSelection();
         showStorePreviewEditorHover(target);
         postToParent("STORE_EDITOR_SELECT", { selection });
@@ -4865,33 +4773,33 @@ if (storeEditorMode) {
     if (key === "z" && !event.shiftKey) {
       event.preventDefault();
       postToParent("STORE_EDITOR_UNDO", {});
-    } else if (key === "c" && storePreviewEditorSelection && STORE_PREVIEW_INLINE_TEXT_FIELDS.has(storePreviewEditorSelection.field)) {
+    } else if (key === "c" && state.storePreviewEditorSelection && STORE_PREVIEW_INLINE_TEXT_FIELDS.has(state.storePreviewEditorSelection.field)) {
       event.preventDefault();
       const selectedText = document.querySelector<HTMLElement>(".store-preview-editor-selected[data-store-editor-inline='text']");
-      postToParent("STORE_EDITOR_COPY_TEXT", { selection: storePreviewEditorSelection, value: selectedText?.textContent || "" });
-    } else if (key === "v" && storePreviewEditorSelection && STORE_PREVIEW_INLINE_TEXT_FIELDS.has(storePreviewEditorSelection.field)) {
+      postToParent("STORE_EDITOR_COPY_TEXT", { selection: state.storePreviewEditorSelection, value: selectedText?.textContent || "" });
+    } else if (key === "v" && state.storePreviewEditorSelection && STORE_PREVIEW_INLINE_TEXT_FIELDS.has(state.storePreviewEditorSelection.field)) {
       event.preventDefault();
-      postToParent("STORE_EDITOR_PASTE_TEXT", { selection: storePreviewEditorSelection });
-    } else if (key === "d" && storePreviewEditorSelection && (storePreviewEditorSelection.animationId || storePreviewEditorSelection.section.startsWith("site-"))) {
+      postToParent("STORE_EDITOR_PASTE_TEXT", { selection: state.storePreviewEditorSelection });
+    } else if (key === "d" && state.storePreviewEditorSelection && (state.storePreviewEditorSelection.animationId || state.storePreviewEditorSelection.section.startsWith("site-"))) {
       event.preventDefault();
-      postToParent("STORE_EDITOR_DUPLICATE_TEXT", { selection: storePreviewEditorSelection });
+      postToParent("STORE_EDITOR_DUPLICATE_TEXT", { selection: state.storePreviewEditorSelection });
     }
   }, true);
-  window.addEventListener("blur", () => storePreviewInlineEditorFinish?.(true));
+  window.addEventListener("blur", () => state.storePreviewInlineEditorFinish?.(true));
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") storePreviewInlineEditorFinish?.(true);
+    if (document.visibilityState === "hidden") state.storePreviewInlineEditorFinish?.(true);
   });
   app.addEventListener("pointerover", (event) => {
-    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    if (!state.storePreviewEditorEnabled || !(event.target instanceof Element)) return;
     showStorePreviewEditorHover(event.target.closest<HTMLElement>("[data-store-editor-target]"));
   }, true);
   app.addEventListener("pointerleave", () => showStorePreviewEditorHover(null), true);
   app.addEventListener("dragstart", (event) => {
-    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    if (!state.storePreviewEditorEnabled || !(event.target instanceof Element)) return;
     if (event.target.closest("[data-store-editor-draggable-text], [data-store-editor-drag-host]")) event.preventDefault();
   }, true);
   app.addEventListener("pointerdown", (event) => {
-    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    if (!state.storePreviewEditorEnabled || !(event.target instanceof Element)) return;
     const siteText = event.target.closest<HTMLElement>("[data-store-editor-target][data-store-editor-inline='text'][data-canvas-text-style]");
     const siteTextSelection = siteText ? selectionFromStorePreviewEditorTarget(siteText) : null;
     if (siteText && siteTextSelection && (siteTextSelection.section.startsWith("site-") || siteTextSelection.section === "brand" || siteTextSelection.section === "navigation")) {
@@ -4920,15 +4828,15 @@ if (storeEditorMode) {
     beginAnimationTextGesture(event, copy, action === "width" || action === "scale" ? action : "move");
   }, true);
   app.addEventListener("click", (event) => {
-    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
-    if (storePreviewEditorSuppressNextClick) {
-      storePreviewEditorSuppressNextClick = false;
+    if (!state.storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    if (state.storePreviewEditorSuppressNextClick) {
+      state.storePreviewEditorSuppressNextClick = false;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
       return;
     }
-    if (storePreviewInlineEditorTarget && event.target.closest("[contenteditable]")) return;
+    if (state.storePreviewInlineEditorTarget && event.target.closest("[contenteditable]")) return;
     // Category cards are storefront navigation first. Their dedicated
     // "Cambiar portada" canvas control still edits the image, while touching
     // anywhere on the card opens that category even inside the live preview.
@@ -4954,25 +4862,25 @@ if (storeEditorMode) {
     // edited. When another element is already selected, however, a tap on that
     // visually empty canvas should dismiss the editor first instead of merely
     // replacing it with the section-level toolbar.
-    if (selection.field === "section" && storePreviewEditorSelection) {
+    if (selection.field === "section" && state.storePreviewEditorSelection) {
       clearStorePreviewEditorSelection();
       return;
     }
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    storePreviewEditorSelection = selection;
+    state.storePreviewEditorSelection = selection;
     syncStorePreviewEditorSelection();
-    if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
+    if (state.storePreviewEditorClickTimer !== null) window.clearTimeout(state.storePreviewEditorClickTimer);
     if (target.dataset.storeEditorInline === "text" && !selection.animationId) {
-      storePreviewEditorClickTimer = null;
+      state.storePreviewEditorClickTimer = null;
       if (target.dataset.storeEditorDraggableText === "true") {
         showStorePreviewEditorHover(target);
         postToParent("STORE_EDITOR_SELECT", { selection });
         const destination = target.closest<HTMLAnchorElement>("a[href]");
         if (destination && (selection.section === "brand" || selection.section === "navigation")) {
-          storePreviewEditorClickTimer = window.setTimeout(() => {
-            storePreviewEditorClickTimer = null;
+          state.storePreviewEditorClickTimer = window.setTimeout(() => {
+            state.storePreviewEditorClickTimer = null;
             const selector = destination.dataset.storeScrollTarget || "";
             let scrollDestination: HTMLElement | null = null;
             try {
@@ -5003,28 +4911,28 @@ if (storeEditorMode) {
       // while showing the scene, so apply the selection after that update.
       syncStorePreviewEditorSelection();
       showStorePreviewEditorHover(target);
-      storePreviewEditorClickTimer = null;
+      state.storePreviewEditorClickTimer = null;
       postToParent("STORE_EDITOR_SELECT", { selection });
       return;
     }
     showStorePreviewEditorHover(target);
-    storePreviewEditorClickTimer = window.setTimeout(() => {
-      storePreviewEditorClickTimer = null;
+    state.storePreviewEditorClickTimer = window.setTimeout(() => {
+      state.storePreviewEditorClickTimer = null;
       postToParent("STORE_EDITOR_SELECT", { selection });
     }, 320);
   }, true);
   app.addEventListener("dblclick", (event) => {
-    if (!storePreviewEditorEnabled || !(event.target instanceof Element)) return;
-    storePreviewEditorSuppressNextClick = false;
+    if (!state.storePreviewEditorEnabled || !(event.target instanceof Element)) return;
+    state.storePreviewEditorSuppressNextClick = false;
     const target = event.target.closest<HTMLElement>("[data-store-editor-target]");
     const selection = target ? selectionFromStorePreviewEditorTarget(target) : null;
     if (!target || !selection || !target.dataset.storeEditorInline) return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    if (storePreviewEditorClickTimer !== null) window.clearTimeout(storePreviewEditorClickTimer);
-    storePreviewEditorClickTimer = null;
-    storePreviewEditorSelection = selection;
+    if (state.storePreviewEditorClickTimer !== null) window.clearTimeout(state.storePreviewEditorClickTimer);
+    state.storePreviewEditorClickTimer = null;
+    state.storePreviewEditorSelection = selection;
     syncStorePreviewEditorSelection();
     showStorePreviewEditorHover(null);
     if (target.dataset.storeEditorInline === "text") beginStorePreviewInlineTextEdit(target, selection);
@@ -5319,7 +5227,7 @@ function sanitizeStorePreviewPatch(value: unknown): StorePreviewPatch | null {
   }
   if (Array.isArray(source.animations)) {
     const previewSiteDocument = (clean.siteDocument as StoreSiteDocument | undefined)
-      ?? sanitizeSiteDocument(activePreviewRenderedStore?.siteDocument ?? activePreviewStore?.store.siteDocument);
+      ?? sanitizeSiteDocument(state.activePreviewRenderedStore?.siteDocument ?? state.activePreviewStore?.store.siteDocument);
     const previewPageIds = new Set(
       previewSiteDocument?.pages?.map((page) => page.id) ?? [],
     );
@@ -5433,8 +5341,8 @@ function standaloneStorePreviewPatch(): StorePreviewPatch | null {
 }
 
 function applyStoreTheme(slug: string, store: Store): void {
-  currentStoreSlug = slug;
-  if (storePreviewMode) activePreviewStore = { slug, store };
+  state.currentStoreSlug = slug;
+  if (storePreviewMode) state.activePreviewStore = { slug, store };
   document.body.classList.remove("payment-page", "payment-success-page", "debt-collection-page");
   document.body.classList.add("store-page");
   const siteDocument = sanitizeSiteDocument(store.siteDocument);
@@ -5550,8 +5458,6 @@ function applyStoreTheme(slug: string, store: Store): void {
   // catalog-first heights or collage insets inside the appearance preview.
   document.body.dataset.layoutStyle = siteDocument ? "cinematic" : store.layoutStyle || "cinematic";
 }
-
-let activeStoreRoute: { slug: string; store: Store } | null = null;
 type CatalogReturnPosition = {
   scrollY: number;
   productId?: string;
@@ -5579,12 +5485,12 @@ function collectionIdFromLocation(): string | null {
 }
 
 function renderStoreRoute(slug: string, store: Store, options: { focusPromotion?: boolean } = {}): void {
-  activeStoreRoute = { slug, store };
+  state.activeStoreRoute = { slug, store };
   const productId = productIdFromLocation();
   if (productId) renderProductPage(slug, store, productId);
   else {
-    selectedCategoryId = categoryIdFromLocation() ?? "ALL";
-    selectedCollectionId = collectionIdFromLocation() ?? "ALL";
+    state.selectedCategoryId = categoryIdFromLocation() ?? "ALL";
+    state.selectedCollectionId = collectionIdFromLocation() ?? "ALL";
     renderStore(slug, store, options);
   }
 }
@@ -5739,19 +5645,19 @@ function cartFulfillmentState(store: Store, lines = cartLineEntries(store)) {
   const methods = (["pickup", "delivery"] as const).filter((method) =>
     locations.some((location) => method === "pickup" ? location.pickupEnabled : location.deliveryEnabled),
   );
-  if (!selectedFulfillmentMethod || !methods.includes(selectedFulfillmentMethod)) selectedFulfillmentMethod = methods[0] || null;
-  const available = selectedFulfillmentMethod
+  if (!state.selectedFulfillmentMethod || !methods.includes(state.selectedFulfillmentMethod)) state.selectedFulfillmentMethod = methods[0] || null;
+  const available = state.selectedFulfillmentMethod
     ? locations.filter((location) =>
-        (selectedFulfillmentMethod === "pickup" ? location.pickupEnabled : location.deliveryEnabled) && locationCanFulfillCart(location, lines),
+        (state.selectedFulfillmentMethod === "pickup" ? location.pickupEnabled : location.deliveryEnabled) && locationCanFulfillCart(location, lines),
       )
     : [];
-  if (!available.some((location) => location.id === selectedFulfillmentLocationId)) {
-    selectedFulfillmentLocationId = available[0]?.id || null;
+  if (!available.some((location) => location.id === state.selectedFulfillmentLocationId)) {
+    state.selectedFulfillmentLocationId = available[0]?.id || null;
   }
   return {
     locations,
-    method: selectedFulfillmentMethod,
-    selectedLocation: available.find((location) => location.id === selectedFulfillmentLocationId) || null,
+    method: state.selectedFulfillmentMethod,
+    selectedLocation: available.find((location) => location.id === state.selectedFulfillmentLocationId) || null,
     available,
   };
 }
@@ -5782,7 +5688,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
         const opening = locationOpeningState(location);
         const disabled = !supportsMethod || !hasStock;
         return `<label class="cart-fulfillment-location${disabled ? " is-unavailable" : ""}">
-          <input type="radio" name="fulfillmentLocation" value="${escapeHtml(location.id)}" ${location.id === selectedFulfillmentLocationId ? "checked" : ""} ${disabled ? "disabled" : ""}>
+          <input type="radio" name="fulfillmentLocation" value="${escapeHtml(location.id)}" ${location.id === state.selectedFulfillmentLocationId ? "checked" : ""} ${disabled ? "disabled" : ""}>
           <span><strong>${escapeHtml(location.name)}</strong>${location.address ? `<small>${escapeHtml(location.address)}</small>` : ""}<small>${!supportsMethod ? `No ofrece ${fulfillment.method === "delivery" ? "entrega" : "retiro"}` : !hasStock ? "Sin stock suficiente para este carrito" : opening.label}</small></span>
         </label>`;
       }).join("")}
@@ -5876,7 +5782,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
     status.textContent = "";
     try {
       const quote = await quotePromoCode(slug, code);
-      appliedPromo = { storeId: store.storeId, ...quote };
+      state.appliedPromo = { storeId: store.storeId, ...quote };
       renderCartReviewDialog(dialog, slug, store);
       requestAnimationFrame(() => dialog.querySelector<HTMLButtonElement>(".promo-code-remove")?.focus());
     } catch (error) {
@@ -5888,17 +5794,17 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
     }
   });
   dialog.querySelector<HTMLButtonElement>(".promo-code-remove")?.addEventListener("click", () => {
-    appliedPromo = null;
+    state.appliedPromo = null;
     renderCartReviewDialog(dialog, slug, store);
     requestAnimationFrame(() => dialog.querySelector<HTMLInputElement>("#promo-code-input")?.focus());
   });
   dialog.querySelectorAll<HTMLInputElement>('input[name="fulfillmentMethod"]').forEach((input) => input.addEventListener("change", () => {
-    selectedFulfillmentMethod = input.value as "pickup" | "delivery";
-    selectedFulfillmentLocationId = null;
+    state.selectedFulfillmentMethod = input.value as "pickup" | "delivery";
+    state.selectedFulfillmentLocationId = null;
     renderCartReviewDialog(dialog, slug, store);
   }));
   dialog.querySelectorAll<HTMLInputElement>('input[name="fulfillmentLocation"]').forEach((input) => input.addEventListener("change", () => {
-    selectedFulfillmentLocationId = input.value;
+    state.selectedFulfillmentLocationId = input.value;
     renderCartReviewDialog(dialog, slug, store);
   }));
   dialog.querySelectorAll<HTMLElement>(".cart-review-line").forEach((row) => {
@@ -6033,11 +5939,11 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
       const selectedFulfillment = quotedFulfillment ? quotedFulfillment() : fulfillment.selectedLocation && fulfillment.method
         ? { locationId: fulfillment.selectedLocation.id, fulfillmentMethod: fulfillment.method }
         : undefined;
-      if (selectedFulfillment?.fulfillmentMethod) activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod);
-      const result = await checkoutCart(slug, items, activePromo?.code, selectedFulfillment, activeStoreFunnel?.token());
+      if (selectedFulfillment?.fulfillmentMethod) state.activeStoreFunnel?.track('delivery_selected', selectedFulfillment.fulfillmentMethod);
+      const result = await checkoutCart(slug, items, activePromo?.code, selectedFulfillment, state.activeStoreFunnel?.token());
       customerContact.deliveryRequested = result.fulfillmentMethod === "delivery";
-      activeOrderTrackingToken = result.trackingToken;
-      linkHeader = { storeName: result.storeName, description: result.cartDescription, contactPhone: result.contactPhone, contactEmail: result.contactEmail };
+      state.activeOrderTrackingToken = result.trackingToken;
+      state.linkHeader = { storeName: result.storeName, description: result.cartDescription, contactPhone: result.contactPhone, contactEmail: result.contactEmail };
       cart.clear();
       saveCart(store);
       dialog.close();
@@ -6054,7 +5960,7 @@ function renderCartReviewDialog(dialog: HTMLDialogElement, slug: string, store: 
 
 function openCartReview(slug: string, store: Store, options: { preview?: boolean; allowEmpty?: boolean } = {}): void {
   if (cartCount() === 0 && !options.allowEmpty) return;
-  if (!options.preview) activeStoreFunnel?.track('checkout_started');
+  if (!options.preview) state.activeStoreFunnel?.track('checkout_started');
   document.querySelector(".cart-review-dialog")?.remove();
   const dialog = document.createElement("dialog");
   dialog.className = "cart-review-dialog";
@@ -6107,15 +6013,15 @@ function bindCartCheckout(slug: string, store: Store): void {
 }
 
 function renderProductPage(slug: string, store: Store, productId: string): void {
-  if (store.items.some(item => item.id === productId)) activeStoreFunnel?.track('product_view');
-  activeHeroCleanup?.();
-  activeHeroCleanup = null;
-  activeStoreExperienceCleanup?.();
-  activeStoreExperienceCleanup = null;
-  activeAnnouncementCleanup?.();
-  activeAnnouncementCleanup = null;
-  activePromotionCleanup?.();
-  activePromotionCleanup = null;
+  if (store.items.some(item => item.id === productId)) state.activeStoreFunnel?.track('product_view');
+  state.activeHeroCleanup?.();
+  state.activeHeroCleanup = null;
+  state.activeStoreExperienceCleanup?.();
+  state.activeStoreExperienceCleanup = null;
+  state.activeAnnouncementCleanup?.();
+  state.activeAnnouncementCleanup = null;
+  state.activePromotionCleanup?.();
+  state.activePromotionCleanup = null;
   document.body.classList.remove("promotion-open");
   document.body.classList.remove("category-page");
   document.body.classList.add("product-detail-page");
@@ -6456,8 +6362,8 @@ function renderProductPage(slug: string, store: Store, productId: string): void 
   updateCartBar(store, item.currency);
   bindCartCheckout(slug, store);
   bindPreviewBlueprints(store);
-  if (storePreviewMode && !previewReadyAnnounced) {
-    previewReadyAnnounced = true;
+  if (storePreviewMode && !state.previewReadyAnnounced) {
+    state.previewReadyAnnounced = true;
     postToParent("CHECKOUT_READY", { mode: "store-preview" });
   }
 }
@@ -6484,10 +6390,10 @@ function bindStoreContactWidget(): void {
 }
 
 function renderStore(slug: string, store: Store, options: { focusPromotion?: boolean } = {}) {
-  activeHeroCleanup?.();
-  activeHeroCleanup = null;
-  activeStoreExperienceCleanup?.();
-  activeStoreExperienceCleanup = null;
+  state.activeHeroCleanup?.();
+  state.activeHeroCleanup = null;
+  state.activeStoreExperienceCleanup?.();
+  state.activeStoreExperienceCleanup = null;
   document.body.classList.remove("product-detail-page");
   applyStoreTheme(slug, store);
   const siteDocument = sanitizeSiteDocument(store.siteDocument);
@@ -6529,11 +6435,11 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const currency = store.items[0]?.currency ?? "BOB";
   const visibleStoreName = store.storeName.trim();
   const bannerUrl = assetUrl(store.bannerUrl);
-  if (activeCatalogStoreId !== store.storeId) {
-    activeCatalogStoreId = store.storeId;
-    searchQuery = "";
-    selectedCategoryId = categoryIdFromLocation() ?? "ALL";
-    sortMode = "featured";
+  if (state.activeCatalogStoreId !== store.storeId) {
+    state.activeCatalogStoreId = store.storeId;
+    state.searchQuery = "";
+    state.selectedCategoryId = categoryIdFromLocation() ?? "ALL";
+    state.sortMode = "featured";
   }
   const siteHeroSection = siteSection("hero");
   const siteHeroSlides = (siteHeroSection?.mediaUrls ?? []).map((imageUrl, index) => {
@@ -6560,7 +6466,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const catalogCollections = (siteDocument?.merchandising.collections ?? [])
     .map((collection) => ({ ...collection, productIds: collection.productIds.filter((id) => store.items.some((item) => item.id === id)) }))
     .filter((collection) => collection.productIds.length > 0);
-  if (activeCatalogProductIds !== null || (selectedCollectionId !== "ALL" && !catalogCollections.some((collection) => collection.id === selectedCollectionId))) selectedCollectionId = "ALL";
+  if (activeCatalogProductIds !== null || (state.selectedCollectionId !== "ALL" && !catalogCollections.some((collection) => collection.id === state.selectedCollectionId))) state.selectedCollectionId = "ALL";
   // The editorial-maker grammar is a shop-first journal: after the animated
   // campaign opening, shoppers should meet actual products rather than a
   // second navigation layer made of category cards. Category headings still
@@ -6568,10 +6474,10 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   // for every other composition grammar.
   const usesDirectEditorialCatalog = siteDocument?.designGenome.composition === "editorial-maker";
   const hasCatalogSectionPicker = !usesDirectEditorialCatalog && store.categories.length > 0 && catalogSections.length > 0;
-  if (hasCatalogSectionPicker && selectedCategoryId !== "ALL" && !catalogSections.some((section) => section.id === selectedCategoryId)) {
-    selectedCategoryId = "ALL";
+  if (hasCatalogSectionPicker && state.selectedCategoryId !== "ALL" && !catalogSections.some((section) => section.id === state.selectedCategoryId)) {
+    state.selectedCategoryId = "ALL";
   }
-  const selectedCatalogSection = catalogSections.find((section) => section.id === selectedCategoryId) ?? null;
+  const selectedCatalogSection = catalogSections.find((section) => section.id === state.selectedCategoryId) ?? null;
   document.body.classList.toggle("category-page", selectedCatalogSection !== null);
   // Categorized stores disclose their browsing tools after a shopper chooses
   // a section. Uncategorized stores keep the compact direct-catalog behavior.
@@ -6727,7 +6633,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         <div class="store-toolbar-row">
           <div class="store-search-field">
             <svg class="store-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" id="store-search" class="store-search" placeholder="Buscar productos..." aria-label="Buscar productos" value="${escapeHtml(searchQuery)}" />
+            <input type="search" id="store-search" class="store-search" placeholder="Buscar productos..." aria-label="Buscar productos" value="${escapeHtml(state.searchQuery)}" />
           </div>
           <div class="store-sort-field">
             <select id="store-sort" class="store-sort" aria-label="Ordenar productos">
@@ -6780,7 +6686,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const selectedSectionCover = selectedCatalogSection ? sectionCover(selectedCatalogSection) : null;
   const collectionMenuStyle = siteDocument?.merchandising.collectionMenuStyle === "editorial-sidebar" ? "editorial-sidebar" : "tabs";
   const collectionMenuHtml = activeCatalogProductIds === null && catalogCollections.length
-    ? `<nav class="store-collection-menu is-${collectionMenuStyle}" role="tablist" aria-label="Colecciones de productos"><button id="store-collection-tab-ALL" type="button" role="tab" data-store-collection="ALL" aria-selected="${selectedCollectionId === "ALL"}" aria-controls="store-grid" tabindex="${selectedCollectionId === "ALL" ? "0" : "-1"}">Todo</button>${catalogCollections.map((collection) => `<button id="store-collection-tab-${escapeHtml(collection.id)}" type="button" role="tab" data-store-collection="${escapeHtml(collection.id)}" aria-selected="${selectedCollectionId === collection.id}" aria-controls="store-grid" tabindex="${selectedCollectionId === collection.id ? "0" : "-1"}">${escapeHtml(collection.name)}</button>`).join("")}</nav>`
+    ? `<nav class="store-collection-menu is-${collectionMenuStyle}" role="tablist" aria-label="Colecciones de productos"><button id="store-collection-tab-ALL" type="button" role="tab" data-store-collection="ALL" aria-selected="${state.selectedCollectionId === "ALL"}" aria-controls="store-grid" tabindex="${state.selectedCollectionId === "ALL" ? "0" : "-1"}">Todo</button>${catalogCollections.map((collection) => `<button id="store-collection-tab-${escapeHtml(collection.id)}" type="button" role="tab" data-store-collection="${escapeHtml(collection.id)}" aria-selected="${state.selectedCollectionId === collection.id}" aria-controls="store-grid" tabindex="${state.selectedCollectionId === collection.id ? "0" : "-1"}">${escapeHtml(collection.name)}</button>`).join("")}</nav>`
     : "";
   const catalogBrowserHtml = !hasCatalogSectionPicker || selectedCatalogSection
     ? `<div class="store-catalog-browser${collectionMenuStyle === "editorial-sidebar" && catalogCollections.length ? " has-editorial-collection-menu" : ""}" id="store-catalog-browser" tabindex="-1">
@@ -6799,7 +6705,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         ${collectionMenuHtml}
         <div class="store-collection-content">
           ${toolbarHtml}
-          <div id="store-grid" role="tabpanel" aria-labelledby="store-collection-tab-${escapeHtml(selectedCollectionId)}"></div>
+          <div id="store-grid" role="tabpanel" aria-labelledby="store-collection-tab-${escapeHtml(state.selectedCollectionId)}"></div>
           <div class="cart-bar">
             <span class="cart-summary" aria-live="polite"></span>
             <button type="button" class="primary" id="cart-pay">Ver carrito</button>
@@ -6820,7 +6726,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   const aboutTitle = siteSection("story")?.title || store.aboutTitle?.trim() || "Conoce la marca";
   const aboutSubtitle = siteSection("story")?.body || store.aboutSubtitle?.trim() || store.tagline?.trim() || "Una mirada a la intención detrás de cada elección.";
   const aboutHtml = aboutParagraphs.length || aboutImageUrl || store.aboutTitle || store.aboutSubtitle
-    ? `<section class="store-about${aboutImageUrl ? " has-image" : ""}${hasStoreAnimatedIn ? "" : " story-intro"}" aria-labelledby="store-about-title"${aboutImageUrl ? ` style="--store-about-image:url(&quot;${escapeHtml(aboutImageUrl)}&quot;);--store-about-position:${storeImagePosition(store, store.aboutImageUrl)}"` : ""}>
+    ? `<section class="store-about${aboutImageUrl ? " has-image" : ""}${state.hasStoreAnimatedIn ? "" : " story-intro"}" aria-labelledby="store-about-title"${aboutImageUrl ? ` style="--store-about-image:url(&quot;${escapeHtml(aboutImageUrl)}&quot;);--store-about-position:${storeImagePosition(store, store.aboutImageUrl)}"` : ""}>
         <div class="store-about-heading">
           <h2 id="store-about-title"><span class="store-about-title-text">${escapeHtml(aboutTitle)}</span></h2>
           <p class="store-about-subtitle">${escapeHtml(aboutSubtitle)}</p>
@@ -7643,7 +7549,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   const dragScrollCleanups = Array.from(app.querySelectorAll<HTMLElement>("[data-store-drag-scroll]")).map(bindHorizontalDragScroll);
   if (dragScrollCleanups.length) {
-    activeStoreExperienceCleanup = () => {
+    state.activeStoreExperienceCleanup = () => {
       dragScrollCleanups.forEach((cleanup) => cleanup());
     };
   }
@@ -7818,8 +7724,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   bindStoreAnnouncementPlayback();
   bindTimedDiscountSchedule(slug, store);
 
-  activePromotionCleanup?.();
-  activePromotionCleanup = null;
+  state.activePromotionCleanup?.();
+  state.activePromotionCleanup = null;
   document.body.classList.toggle("promotion-open", showPromotion);
   if (showPromotion) {
     const backdrop = app.querySelector<HTMLElement>("[data-promotion-backdrop]")!;
@@ -7832,7 +7738,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       document.removeEventListener("keydown", onPromotionKeydown);
       backdrop.remove();
       document.body.classList.remove("promotion-open");
-      activePromotionCleanup = null;
+      state.activePromotionCleanup = null;
     };
     const onPromotionAnimationEnd = (event: AnimationEvent) => {
       if (event.target === backdrop && isDismissing) finishPromotionDismissal();
@@ -7870,7 +7776,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       if (event.target === backdrop) dismissPromotion();
     });
     document.addEventListener("keydown", onPromotionKeydown);
-    activePromotionCleanup = () => {
+    state.activePromotionCleanup = () => {
       window.clearTimeout(dismissalTimer);
       backdrop.removeEventListener("animationend", onPromotionAnimationEnd);
       document.removeEventListener("keydown", onPromotionKeydown);
@@ -7935,7 +7841,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     };
     const startAutoplay = () => {
       stopAutoplay();
-      if (slides.length > 1 && !prefersReducedMotion && !autoplayPausedByUser && !storePreviewEditorEnabled) {
+      if (slides.length > 1 && !prefersReducedMotion && !autoplayPausedByUser && !state.storePreviewEditorEnabled) {
         autoplayTimer = window.setInterval(() => showSlide(activeIndex + 1), 6000);
       }
     };
@@ -7969,7 +7875,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     document.addEventListener("visibilitychange", syncCarouselVisibility);
     showSlide(0);
     startAutoplay();
-    activeHeroCleanup = () => {
+    state.activeHeroCleanup = () => {
       stopAutoplay();
       document.removeEventListener("visibilitychange", syncCarouselVisibility);
       slides.forEach((slide) => slide.querySelector<HTMLVideoElement>("video")?.pause());
@@ -7977,14 +7883,14 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   }
 
   const editorSceneIndexFor = (container: HTMLElement, count: number) => {
-    if (!storePreviewEditorEnabled || !storePreviewEditorSelection?.animationId || !Number.isInteger(storePreviewEditorSelection.itemIndex)) return 0;
+    if (!state.storePreviewEditorEnabled || !state.storePreviewEditorSelection?.animationId || !Number.isInteger(state.storePreviewEditorSelection.itemIndex)) return 0;
     const section = container.closest<HTMLElement>(".store-motion-section[data-animation-id]");
-    if (section?.dataset.animationId !== storePreviewEditorSelection.animationId) return 0;
-    return Math.min(Math.max(storePreviewEditorSelection.itemIndex!, 0), Math.max(count - 1, 0));
+    if (section?.dataset.animationId !== state.storePreviewEditorSelection.animationId) return 0;
+    return Math.min(Math.max(state.storePreviewEditorSelection.itemIndex!, 0), Math.max(count - 1, 0));
   };
 
   const selectEditorAnimationScene = (container: HTMLElement, itemIndex: number) => {
-    if (!storePreviewEditorEnabled || !Number.isInteger(itemIndex)) return;
+    if (!state.storePreviewEditorEnabled || !Number.isInteger(itemIndex)) return;
     const section = container.closest<HTMLElement>(".store-motion-section[data-animation-id]");
     const animationId = section?.dataset.animationId;
     if (!animationId) return;
@@ -7995,7 +7901,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       animationId,
       itemIndex,
     };
-    storePreviewEditorSelection = selection;
+    state.storePreviewEditorSelection = selection;
     syncStorePreviewEditorSelection();
     postToParent("STORE_EDITOR_SELECT", { selection });
   };
@@ -8137,8 +8043,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       show(Number((event as CustomEvent<{ index?: number }>).detail?.index) || 0);
     });
     show(selected);
-    const priorCleanup = activeStoreExperienceCleanup as (() => void) | null;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup as (() => void) | null;
+    state.activeStoreExperienceCleanup = () => {
       priorCleanup?.();
       observer?.disconnect();
       panels.forEach((panel) => panel.querySelector<HTMLVideoElement>("video")?.pause());
@@ -8167,8 +8073,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       event.preventDefault();
       target.scrollIntoView({ behavior: interactivePointer ? "smooth" : "auto", block: "start" });
     });
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup;
+    state.activeStoreExperienceCleanup = () => {
       priorCleanup?.();
       magnetic.removeEventListener("pointermove", move);
       magnetic.removeEventListener("pointerleave", reset);
@@ -8180,7 +8086,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   app.querySelectorAll<HTMLElement>("[data-draggable-cards]").forEach((container) => {
-    if (storePreviewEditorEnabled) return;
+    if (state.storePreviewEditorEnabled) return;
     container.querySelectorAll<HTMLElement>("[data-draggable-card]").forEach((card) => {
       let pointerId: number | null = null;
       let originX = 0;
@@ -8277,7 +8183,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       const index = Number(button.dataset.galleryAccordionOpen);
       figures.forEach((figure, figureIndex) => figure.classList.toggle("active", figureIndex === index));
       selectEditorAnimationScene(gallery, index);
-      if (storePreviewEditorEnabled || !modal || !content || !Number.isInteger(index)) return;
+      if (state.storePreviewEditorEnabled || !modal || !content || !Number.isInteger(index)) return;
       const source = figures[index];
       const media = source?.querySelector<HTMLElement>(".store-fidelity-media, video");
       const copy = source?.querySelector<HTMLElement>("figcaption");
@@ -8340,8 +8246,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   }
 
   if (libraryMotionCleanups.length) {
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup;
+    state.activeStoreExperienceCleanup = () => {
       priorCleanup?.();
       libraryMotionCleanups.forEach((cleanup) => cleanup());
     };
@@ -8354,7 +8260,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   app.querySelectorAll<HTMLElement>("[data-text-rotate]").forEach((container) => {
     const current = container.querySelector<HTMLElement>("[data-text-rotate-current]");
     const values = (container.dataset.textRotateValues || "").split("\u001f").map((value) => value.trim()).filter(Boolean);
-    if (!current || values.length < 2 || reduceTextMotion || storePreviewEditorEnabled) return;
+    if (!current || values.length < 2 || reduceTextMotion || state.storePreviewEditorEnabled) return;
     let index = 0;
     let timer = 0;
     let visible = false;
@@ -8444,7 +8350,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   });
 
   app.querySelectorAll<HTMLElement>("[data-text-reveal]").forEach((container) => {
-    if (reduceTextMotion || storePreviewEditorEnabled || typeof IntersectionObserver !== "function") {
+    if (reduceTextMotion || state.storePreviewEditorEnabled || typeof IntersectionObserver !== "function") {
       container.classList.add("is-revealed");
       return;
     }
@@ -8459,8 +8365,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   app.querySelectorAll<SVGSVGElement>("[data-text-along-path] svg").forEach((svg) => {
     const pause = () => { try { svg.pauseAnimations(); } catch {} };
-    const play = () => { if (!reduceTextMotion && !storePreviewEditorEnabled && !document.hidden) try { svg.unpauseAnimations(); } catch {} };
-    if (reduceTextMotion || storePreviewEditorEnabled) { pause(); return; }
+    const play = () => { if (!reduceTextMotion && !state.storePreviewEditorEnabled && !document.hidden) try { svg.unpauseAnimations(); } catch {} };
+    if (reduceTextMotion || state.storePreviewEditorEnabled) { pause(); return; }
     const observer = typeof IntersectionObserver === "function"
       ? new IntersectionObserver(([entry]) => entry.isIntersecting ? play() : pause(), { threshold: .05 })
       : null;
@@ -8471,8 +8377,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   });
 
   if (textEffectCleanups.length) {
-    const priorCleanup = activeStoreExperienceCleanup as (() => void) | null;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup as (() => void) | null;
+    state.activeStoreExperienceCleanup = () => {
       priorCleanup?.();
       textEffectCleanups.forEach((cleanup) => cleanup());
     };
@@ -8519,9 +8425,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         const frames = Array.from(sequence.querySelectorAll<HTMLElement>("[data-frame]"));
         const progress = reduceMotion?.matches ? 0 : progressFor(sequence);
         const selectedEditorIndex = editorSceneIndexFor(sequence, frames.length);
-        const hasEditorScene = storePreviewEditorEnabled
-          && storePreviewEditorSelection?.animationId === sequence.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
-          && Number.isInteger(storePreviewEditorSelection?.itemIndex);
+        const hasEditorScene = state.storePreviewEditorEnabled
+          && state.storePreviewEditorSelection?.animationId === sequence.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
+          && Number.isInteger(state.storePreviewEditorSelection?.itemIndex);
         const index = hasEditorScene ? selectedEditorIndex : Math.min(frames.length - 1, Math.round(progress * (frames.length - 1)));
         frames.forEach((item, itemIndex) => {
           const active = itemIndex === index;
@@ -8549,9 +8455,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
         const copies = Array.from(chapters.querySelectorAll<HTMLElement>("[data-full-chapter-copy]"));
         const progress = reduceMotion?.matches ? 0 : progressFor(chapters);
         const selectedEditorIndex = editorSceneIndexFor(chapters, backgrounds.length);
-        const hasEditorScene = storePreviewEditorEnabled
-          && storePreviewEditorSelection?.animationId === chapters.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
-          && Number.isInteger(storePreviewEditorSelection?.itemIndex);
+        const hasEditorScene = state.storePreviewEditorEnabled
+          && state.storePreviewEditorSelection?.animationId === chapters.closest<HTMLElement>(".store-motion-section")?.dataset.animationId
+          && Number.isInteger(state.storePreviewEditorSelection?.itemIndex);
         const index = hasEditorScene ? selectedEditorIndex : Math.min(backgrounds.length - 1, Math.round(progress * (backgrounds.length - 1)));
         backgrounds.forEach((background, itemIndex) => {
           background.classList.toggle("active", itemIndex === index);
@@ -8574,8 +8480,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     window.addEventListener("resize", requestPaint);
     reduceMotion?.addEventListener("change", requestPaint);
     paint();
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup;
+    state.activeStoreExperienceCleanup = () => {
       (priorCleanup as (() => void) | null)?.();
       if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", requestPaint);
@@ -8613,8 +8519,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     window.addEventListener("resize", requestExpansionPaint);
     reduceMotion?.addEventListener("change", requestExpansionPaint);
     paintExpansion();
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup;
+    state.activeStoreExperienceCleanup = () => {
       (priorCleanup as (() => void) | null)?.();
       if (expansionFrame) window.cancelAnimationFrame(expansionFrame);
       window.removeEventListener("scroll", requestExpansionPaint);
@@ -8653,8 +8559,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     window.addEventListener("resize", requestGalleryPaint);
     reduceMotion?.addEventListener("change", requestGalleryPaint);
     paintGallery();
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup;
+    state.activeStoreExperienceCleanup = () => {
       (priorCleanup as (() => void) | null)?.();
       if (galleryFrame) window.cancelAnimationFrame(galleryFrame);
       window.removeEventListener("scroll", requestGalleryPaint);
@@ -8707,7 +8613,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       : null;
     storyObserver?.observe(storyScroller);
     showStory(0);
-    activeStoreExperienceCleanup = () => {
+    state.activeStoreExperienceCleanup = () => {
       storyObserver?.disconnect();
       panels.forEach((panel) => panel.querySelector<HTMLVideoElement>("video")?.pause());
     };
@@ -8773,8 +8679,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     window.addEventListener("resize", requestMotionPaint);
     motionQuery?.addEventListener("change", requestMotionPaint);
     paintMotionDuo();
-    const priorCleanup = activeStoreExperienceCleanup;
-    activeStoreExperienceCleanup = () => {
+    const priorCleanup = state.activeStoreExperienceCleanup;
+    state.activeStoreExperienceCleanup = () => {
       priorCleanup?.();
       if (frame) window.cancelAnimationFrame(frame);
       if (settleTimer) window.clearTimeout(settleTimer);
@@ -8787,7 +8693,7 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
 
   const searchInput = app.querySelector<HTMLInputElement>("#store-search");
   searchInput?.addEventListener("input", () => {
-    searchQuery = searchInput.value;
+    state.searchQuery = searchInput.value;
     renderStoreGrid(slug, store, currency, activeCatalogProductIds);
   });
 
@@ -8795,16 +8701,16 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
   if (sortSelect) {
     // Restore the previous choice — renderStore() fully re-renders the shell,
     // and the sort shouldn't silently reset when that happens.
-    sortSelect.value = sortMode;
+    sortSelect.value = state.sortMode;
     sortSelect.addEventListener("change", () => {
-      sortMode = sortSelect.value as typeof sortMode;
+      state.sortMode = sortSelect.value as typeof state.sortMode;
       renderStoreGrid(slug, store, currency, activeCatalogProductIds);
     });
   }
 
   const collectionTabs = Array.from(app.querySelectorAll<HTMLButtonElement>("[data-store-collection]"));
   const selectCollectionTab = (button: HTMLButtonElement, focus = false) => {
-    selectedCollectionId = button.dataset.storeCollection || "ALL";
+    state.selectedCollectionId = button.dataset.storeCollection || "ALL";
     collectionTabs.forEach((candidate) => {
       const active = candidate === button;
       candidate.setAttribute("aria-selected", String(active));
@@ -8813,9 +8719,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
     app.querySelector("#store-grid")?.setAttribute("aria-labelledby", button.id);
     if (!storePreviewMode) {
       window.history.pushState(
-        { pagosyaView: "collection", collectionId: selectedCollectionId },
+        { pagosyaView: "collection", collectionId: state.selectedCollectionId },
         "",
-        storeCollectionUrl(slug, selectedCollectionId),
+        storeCollectionUrl(slug, state.selectedCollectionId),
       );
     }
     renderStoreGrid(slug, store, currency, activeCatalogProductIds);
@@ -8840,8 +8746,8 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       "",
       destination,
     );
-    selectedCategoryId = nextCategoryId;
-    searchQuery = "";
+    state.selectedCategoryId = nextCategoryId;
+    state.searchQuery = "";
     renderStore(slug, store, { focusPromotion: false });
     window.requestAnimationFrame(() => {
       const target = app.querySelector<HTMLElement>(targetSelector);
@@ -8880,9 +8786,9 @@ function renderStore(slug: string, store: Store, options: { focusPromotion?: boo
       pageLabel: activeSitePage?.label ?? "Inicio",
     });
   }
-  hasStoreAnimatedIn = true;
-  if (storePreviewMode && !previewReadyAnnounced) {
-    previewReadyAnnounced = true;
+  state.hasStoreAnimatedIn = true;
+  if (storePreviewMode && !state.previewReadyAnnounced) {
+    state.previewReadyAnnounced = true;
     postToParent("CHECKOUT_READY", { mode: "store-preview" });
   }
 }
@@ -9013,7 +8919,7 @@ function updateStorePreviewAnimationStyle(animationId: string, key: string, valu
 // unrelated tabs/windows from driving the preview even when they know its URL.
 if (storeEditorMode) {
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || !activePreviewStore) return;
+    if (event.source !== window.parent || !state.activePreviewStore) return;
     if (!event.data || typeof event.data !== "object") return;
     try {
     if (event.data.type === "PAGOSYA_PREVIEW_BUILDER_RESULT") {
@@ -9039,13 +8945,13 @@ if (storeEditorMode) {
       return;
     }
     if (event.data.type === "PAGOSYA_STORE_EDITOR_TEXT_UPDATE") {
-      storePreviewEditorEnabled = event.data.editorMode !== false;
+      state.storePreviewEditorEnabled = event.data.editorMode !== false;
       const selection = sanitizeStorePreviewEditorSelection(event.data.selection);
       if (!selection || typeof event.data.value !== "string") return;
       const sceneChanged = selection.animationId
         && Number.isInteger(selection.itemIndex)
-        && (storePreviewEditorSelection?.animationId !== selection.animationId || storePreviewEditorSelection.itemIndex !== selection.itemIndex);
-      storePreviewEditorSelection = selection;
+        && (state.storePreviewEditorSelection?.animationId !== selection.animationId || state.storePreviewEditorSelection.itemIndex !== selection.itemIndex);
+      state.storePreviewEditorSelection = selection;
       syncStorePreviewEditorMode();
       if (sceneChanged) {
         const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
@@ -9053,16 +8959,16 @@ if (storeEditorMode) {
         section?.dispatchEvent(new CustomEvent("pagosya:editor-scene", { detail: { index: selection.itemIndex } }));
       }
       updateStorePreviewEditorText(selection, event.data.value);
-      if (storePreviewPendingInlineTextCommit
-        && sameStorePreviewEditorSelection(storePreviewPendingInlineTextCommit.selection, selection)
-        && storePreviewPendingInlineTextCommit.value === event.data.value.replace(/\u00a0/g, " ")) {
-        storePreviewPendingInlineTextCommit = null;
+      if (state.storePreviewPendingInlineTextCommit
+        && sameStorePreviewEditorSelection(state.storePreviewPendingInlineTextCommit.selection, selection)
+        && state.storePreviewPendingInlineTextCommit.value === event.data.value.replace(/\u00a0/g, " ")) {
+        state.storePreviewPendingInlineTextCommit = null;
       }
       syncStorePreviewEditorSelection();
       return;
     }
     if (event.data.type === "PAGOSYA_STORE_EDITOR_STYLE_UPDATE") {
-      storePreviewEditorEnabled = event.data.editorMode !== false;
+      state.storePreviewEditorEnabled = event.data.editorMode !== false;
       if (typeof event.data.animationId !== "string" || typeof event.data.key !== "string") return;
       syncStorePreviewEditorMode();
       const selection = sanitizeStorePreviewEditorSelection(event.data.selection);
@@ -9071,17 +8977,17 @@ if (storeEditorMode) {
       return;
     }
     if (event.data.type === "PAGOSYA_STORE_EDITOR_SELECTION") {
-      storePreviewEditorEnabled = event.data.editorMode !== false;
-      storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
+      state.storePreviewEditorEnabled = event.data.editorMode !== false;
+      state.storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
       syncStorePreviewEditorMode();
-      if (storePreviewEditorSelection?.animationId && Number.isInteger(storePreviewEditorSelection.itemIndex)) {
+      if (state.storePreviewEditorSelection?.animationId && Number.isInteger(state.storePreviewEditorSelection.itemIndex)) {
         const section = Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
-          .find((candidate) => candidate.dataset.animationId === storePreviewEditorSelection?.animationId);
-        section?.dispatchEvent(new CustomEvent("pagosya:editor-scene", { detail: { index: storePreviewEditorSelection.itemIndex } }));
+          .find((candidate) => candidate.dataset.animationId === state.storePreviewEditorSelection?.animationId);
+        section?.dispatchEvent(new CustomEvent("pagosya:editor-scene", { detail: { index: state.storePreviewEditorSelection.itemIndex } }));
       }
       syncStorePreviewEditorSelection();
-      if (event.data.reveal === true && storePreviewEditorSelection) {
-        const selection = storePreviewEditorSelection;
+      if (event.data.reveal === true && state.storePreviewEditorSelection) {
+        const selection = state.storePreviewEditorSelection;
         const animationSection = selection.animationId
           ? Array.from(app.querySelectorAll<HTMLElement>(".store-motion-section[data-animation-id]"))
               .find((candidate) => candidate.dataset.animationId === selection.animationId)
@@ -9104,10 +9010,10 @@ if (storeEditorMode) {
             : null;
       if (previewAction !== "cart") document.querySelector(".cart-review-dialog")?.remove();
       if (previewAction === "cart") {
-        const renderedStore = activePreviewRenderedStore ?? activePreviewStore.store;
+        const renderedStore = state.activePreviewRenderedStore ?? state.activePreviewStore.store;
         const existingCart = document.querySelector<HTMLDialogElement>(".cart-review-dialog.is-preview-open");
-        if (existingCart?.isConnected) renderCartReviewDialog(existingCart, activePreviewStore.slug, renderedStore);
-        else openCartReview(activePreviewStore.slug, renderedStore, { preview: true, allowEmpty: true });
+        if (existingCart?.isConnected) renderCartReviewDialog(existingCart, state.activePreviewStore.slug, renderedStore);
+        else openCartReview(state.activePreviewStore.slug, renderedStore, { preview: true, allowEmpty: true });
       } else if (previewAction === "motion") {
         if (previewSection?.startsWith("animation-")) scrollStorePreviewToSection(previewSection);
         else scrollStorePreviewToMotion();
@@ -9122,29 +9028,29 @@ if (storeEditorMode) {
     // A delayed preview patch must never replace the contenteditable node
     // while the merchant is typing. Commit the live text first and let the
     // parent send the next authoritative patch after it records that value.
-    if (storePreviewInlineEditorTarget) {
-      storePreviewInlineEditorFinish?.(true);
+    if (state.storePreviewInlineEditorTarget) {
+      state.storePreviewInlineEditorFinish?.(true);
       return;
     }
     const patch = sanitizeStorePreviewPatch(event.data.patch);
     if (!patch) return;
-    storePreviewLockedSectionIds = new Set(Array.isArray(event.data.lockedSectionIds)
+    state.storePreviewLockedSectionIds = new Set(Array.isArray(event.data.lockedSectionIds)
       ? event.data.lockedSectionIds.filter((id: unknown): id is string => typeof id === "string" && /^[a-z][a-z0-9-]{1,47}$/.test(id)).slice(0, 64)
       : []);
-    storePreviewEditorEnabled = event.data.editorMode !== false;
-    storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
-    const previousPreviewStore = activePreviewRenderedStore ?? activePreviewStore.store;
-    let previewStore = { ...activePreviewStore.store, ...patch };
+    state.storePreviewEditorEnabled = event.data.editorMode !== false;
+    state.storePreviewEditorSelection = sanitizeStorePreviewEditorSelection(event.data.editorSelection);
+    const previousPreviewStore = state.activePreviewRenderedStore ?? state.activePreviewStore.store;
+    let previewStore = { ...state.activePreviewStore.store, ...patch };
     // A generated section can now be edited as its own structured document in
     // the dashboard. Prefer that safe draft over the last persisted document;
     // legacy controls are projected onto the draft below so both editor paths
     // stay compatible without flattening scene copy, layout, or motion.
-    const currentDocument = sanitizeSiteDocument(patch.siteDocument) ?? sanitizeSiteDocument(activePreviewStore.store.siteDocument);
+    const currentDocument = sanitizeSiteDocument(patch.siteDocument) ?? sanitizeSiteDocument(state.activePreviewStore.store.siteDocument);
     if (currentDocument) {
       previewStore.siteDocument = synchronizeSiteDocument(currentDocument, changedLegacySiteTextPatch(patch, previousPreviewStore), {
-        banner: patch.bannerUrl !== undefined && patch.bannerUrl !== activePreviewStore.store.bannerUrl,
-        about: patch.aboutImageUrl !== undefined && patch.aboutImageUrl !== activePreviewStore.store.aboutImageUrl,
-        gallery: patch.editorialGallery !== undefined && JSON.stringify(patch.editorialGallery) !== JSON.stringify(activePreviewStore.store.editorialGallery),
+        banner: patch.bannerUrl !== undefined && patch.bannerUrl !== state.activePreviewStore.store.bannerUrl,
+        about: patch.aboutImageUrl !== undefined && patch.aboutImageUrl !== state.activePreviewStore.store.aboutImageUrl,
+        gallery: patch.editorialGallery !== undefined && JSON.stringify(patch.editorialGallery) !== JSON.stringify(state.activePreviewStore.store.editorialGallery),
       });
     }
     const previewProduct = sanitizeStorePreviewProduct(event.data.previewProduct, previewStore);
@@ -9169,11 +9075,11 @@ if (storeEditorMode) {
     if (previewAction !== "cart") document.querySelector(".cart-review-dialog")?.remove();
     if (previewAction === "product" && previewProduct) {
       const productView = `product:${previewProduct.id}`;
-      if (renderSignature !== activePreviewRenderSignature || activePreviewRenderedView !== productView) {
-        renderProductPage(activePreviewStore.slug, previewStore, previewProduct.id);
-        activePreviewRenderedStore = previewStore;
-        activePreviewRenderSignature = renderSignature;
-        activePreviewRenderedView = productView;
+      if (renderSignature !== state.activePreviewRenderSignature || state.activePreviewRenderedView !== productView) {
+        renderProductPage(state.activePreviewStore.slug, previewStore, previewProduct.id);
+        state.activePreviewRenderedStore = previewStore;
+        state.activePreviewRenderSignature = renderSignature;
+        state.activePreviewRenderedView = productView;
       }
       window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
       return;
@@ -9183,11 +9089,11 @@ if (storeEditorMode) {
     // identical store makes every section and image disappear and mount again,
     // producing the brief blank frame seen by merchants. Navigation and
     // selection still run below, but unchanged data keeps the existing DOM.
-    if (renderSignature !== activePreviewRenderSignature || activePreviewRenderedView !== "store") {
-      renderStoreRoute(activePreviewStore.slug, previewStore, { focusPromotion: false });
-      activePreviewRenderedStore = previewStore;
-      activePreviewRenderSignature = renderSignature;
-      activePreviewRenderedView = "store";
+    if (renderSignature !== state.activePreviewRenderSignature || state.activePreviewRenderedView !== "store") {
+      renderStoreRoute(state.activePreviewStore.slug, previewStore, { focusPromotion: false });
+      state.activePreviewRenderedStore = previewStore;
+      state.activePreviewRenderSignature = renderSignature;
+      state.activePreviewRenderedView = "store";
       // Replacing #app can briefly collapse the document and clamp an embedded
       // preview back to its beginning. Keep the merchant at the same place for
       // ordinary edits; explicit editor navigation below remains authoritative.
@@ -9199,12 +9105,12 @@ if (storeEditorMode) {
     // A stale generated snapshot may repaint immediately after contenteditable
     // blurs. Reapply the optimistic commit synchronously so the merchant never
     // sees their copy snap back while the dashboard processes the message.
-    if (storePreviewPendingInlineTextCommit) {
-      updateStorePreviewEditorText(storePreviewPendingInlineTextCommit.selection, storePreviewPendingInlineTextCommit.value);
+    if (state.storePreviewPendingInlineTextCommit) {
+      updateStorePreviewEditorText(state.storePreviewPendingInlineTextCommit.selection, state.storePreviewPendingInlineTextCommit.value);
     }
     if (previewAction === "cart") {
-      if (existingCart?.isConnected) renderCartReviewDialog(existingCart, activePreviewStore.slug, previewStore);
-      else openCartReview(activePreviewStore.slug, previewStore, { preview: true, allowEmpty: true });
+      if (existingCart?.isConnected) renderCartReviewDialog(existingCart, state.activePreviewStore.slug, previewStore);
+      else openCartReview(state.activePreviewStore.slug, previewStore, { preview: true, allowEmpty: true });
     } else if (previewAction === "motion") {
       if (previewSection?.startsWith("animation-")) scrollStorePreviewToSection(previewSection);
       else scrollStorePreviewToMotion();
@@ -9241,11 +9147,11 @@ function renderStoreGrid(slug: string, store: Store, currency: string, visiblePr
     byCategory.set(item.categoryId, list);
   }
 
-  const query = searchQuery.trim().toLowerCase();
+  const query = state.searchQuery.trim().toLowerCase();
   const siteDocument = sanitizeSiteDocument(store.siteDocument);
-  const selectedCollection = selectedCollectionId === "ALL"
+  const selectedCollection = state.selectedCollectionId === "ALL"
     ? null
-    : siteDocument?.merchandising.collections?.find((collection) => collection.id === selectedCollectionId) ?? null;
+    : siteDocument?.merchandising.collections?.find((collection) => collection.id === state.selectedCollectionId) ?? null;
   const collectionProductIds = selectedCollection ? new Set(selectedCollection.productIds) : null;
   const featuredProducts = new Set(siteDocument?.merchandising.featuredProductIds ?? []);
   const showDescriptions = siteDocument?.merchandising.showDescriptions !== false;
@@ -9257,7 +9163,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string, visiblePr
           ...(byCategory.get(null)?.length ? [{ id: "null", name: "Otros", items: byCategory.get(null)! }] : []),
         ]
   )
-    .filter((section) => selectedCategoryId === "ALL" || section.id === selectedCategoryId)
+    .filter((section) => state.selectedCategoryId === "ALL" || section.id === state.selectedCategoryId)
     .map((section) => ({ ...section, items: sortStoreItems(section.items.filter((item) => (!collectionProductIds || collectionProductIds.has(item.id)) && itemMatchesSearch(item, query))) }))
     .filter((section) => section.items.length > 0 || (storeEditorMode && !query));
 
@@ -9276,7 +9182,7 @@ function renderStoreGrid(slug: string, store: Store, currency: string, visiblePr
     grid.innerHTML = sections
       .map(
         (section) => `
-          ${section.name && selectedCategoryId === "ALL" ? `<div class="category-section-title">${escapeHtml(section.name)}</div>` : ""}
+          ${section.name && state.selectedCategoryId === "ALL" ? `<div class="category-section-title">${escapeHtml(section.name)}</div>` : ""}
           <div class="store-items">${section.items.map((item) => renderProductCard(slug, item, cardIndex++, store.showLowStockToCustomers === true, { featured: featuredProducts.has(item.id), showDescription: showDescriptions })).join("")}${storeEditorMode ? previewBlueprintButton("product", { label: section.items.length ? "Agregar otro producto" : "Primer producto", copy: section.name ? `Dentro de ${section.name}` : "Nombre + precio + foto", categoryId: section.id !== "ALL" && section.id !== "null" ? section.id : undefined }) : ""}</div>`,
       )
       .join("");
@@ -9388,21 +9294,19 @@ function updateCartBar(store: Store, currency: string): void {
     headerCount.hidden = count === 0;
   }
 }
-
-let fulfillmentSessionId = '';
 function renderForm(session: CheckoutSession, clientSecret: string) {
   const domainPurchase = session.metadata?.platformPurchase === "domain";
-  if (domainPurchase) selectedType = PaymentMethodType.QR;
+  if (domainPurchase) state.selectedType = PaymentMethodType.QR;
   const brand = applyCheckoutBranding(app, session.branding);
-  const tokens = TEST_TOKENS[selectedType];
+  const tokens = TEST_TOKENS[state.selectedType];
   const storeCheckout = isStoreCheckout(session);
   document.body.classList.toggle('store-payment-page', storeCheckout || sourcePaymentPreview);
   const recipient = checkoutRecipientDetails(session);
   const fulfillment = session.metadata?.fulfillment as { method?: string; address?: string; locationName?: string } | undefined;
   const shipping = session.metadata?.shipping as { address?: string } | undefined;
   const confirmedMethod = shipping ? 'delivery' : fulfillment?.method;
-  if (fulfillmentSessionId !== session.id) {
-    fulfillmentSessionId = session.id;
+  if (state.fulfillmentSessionId !== session.id) {
+    state.fulfillmentSessionId = session.id;
     if (confirmedMethod === 'delivery' || confirmedMethod === 'pickup') {
       customerContact.deliveryRequested = confirmedMethod === 'delivery';
       customerContact.deliveryAddress = shipping?.address || fulfillment?.address || '';
@@ -9413,12 +9317,12 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
       <div class="merchant-row">${brand.logoUrl ? `<img class="checkout-store-logo" src="${escapeHtml(brand.logoUrl)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="merchant-name">${escapeHtml(brand.name)}</div></div>
       <p class="checkout-summary-label">Tu pedido</p>
       <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-      <div class="description">${escapeHtml(session.description || linkHeader?.description || 'Pago a ' + brand.name)}</div>
-    ` : linkHeader
+      <div class="description">${escapeHtml(session.description || state.linkHeader?.description || 'Pago a ' + brand.name)}</div>
+    ` : state.linkHeader
     ? `
-      <div class="merchant-header">${escapeHtml(linkHeader.storeName)}</div>
+      <div class="merchant-header">${escapeHtml(state.linkHeader.storeName)}</div>
       <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-      <div class="description">${escapeHtml(linkHeader.description)}</div>
+      <div class="description">${escapeHtml(state.linkHeader.description)}</div>
     `
     : `
       <div class="merchant-row">
@@ -9476,7 +9380,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             ${recipient?.name ? `<div><span>Destinatario</span><strong>${escapeHtml(recipient.name)}</strong></div>` : ""}
             ${recipient?.document ? `<div><span>Carnet / CI</span><strong>${escapeHtml(recipient.document)}</strong></div>` : ""}
             <p>${recipient?.name ? "El comercio ya completó tus datos." : "El comercio ya preparó este cobro."} Solo elige cómo pagar.</p>
-            ${internationalMode && !recipient?.email ? `<div class="field">
+            ${state.internationalMode && !recipient?.email ? `<div class="field">
               <label for="customerEmail">Correo electrónico</label>
               <input id="customerEmail" type="email" autocomplete="email" placeholder="tu@gmail.com" value="${escapeHtml(customerContact.email)}" aria-describedby="customerEmailError"${invalid("customerEmail")} />
               ${fieldError("customerEmail")}
@@ -9484,23 +9388,23 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
           </div>`}
       ${session.international?.available && !domainPurchase && !sourcePaymentPreview ? `
         <div class="intl-entry">
-          <label class="intl-toggle"><input type="checkbox" id="intlToggle" ${internationalMode ? "checked" : ""}> ¿Pagas desde fuera de Bolivia?</label>
-          ${internationalMode ? `
+          <label class="intl-toggle"><input type="checkbox" id="intlToggle" ${state.internationalMode ? "checked" : ""}> ¿Pagas desde fuera de Bolivia?</label>
+          ${state.internationalMode ? `
             <div class="field">
               <label for="intlCountry">País desde el que pagas</label>
               <select id="intlCountry">
                 <option value="">Elige tu país</option>
-                ${INTERNATIONAL_COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === internationalCountry ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
+                ${INTERNATIONAL_COUNTRIES.map((c) => `<option value="${c.code}" ${c.code === state.internationalCountry ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
               </select>
             </div>
-            ${internationalError ? `<p class="intl-error" role="alert">${escapeHtml(internationalError)}</p>` : ""}
-            ${internationalMethods && internationalMethods.methods.length === 0 ? `<p class="intl-error" role="alert">No hay métodos de pago disponibles para este país.</p>` : ""}
-            ${internationalMethods && internationalMethods.methods.length > 0 ? `
-              <p class="intl-quote">${escapeHtml(formatDualAmount(internationalMethods.quote.originalAmount, internationalMethods.quote.originalCurrency, internationalMethods.quote.amount))}</p>
+            ${state.internationalError ? `<p class="intl-error" role="alert">${escapeHtml(state.internationalError)}</p>` : ""}
+            ${state.internationalMethods && state.internationalMethods.methods.length === 0 ? `<p class="intl-error" role="alert">No hay métodos de pago disponibles para este país.</p>` : ""}
+            ${state.internationalMethods && state.internationalMethods.methods.length > 0 ? `
+              <p class="intl-quote">${escapeHtml(formatDualAmount(state.internationalMethods.quote.originalAmount, state.internationalMethods.quote.originalCurrency, state.internationalMethods.quote.amount))}</p>
               <div class="intl-methods" role="radiogroup" aria-label="Método de pago internacional">
-                ${internationalMethods.methods.map((m) => `
+                ${state.internationalMethods.methods.map((m) => `
                   <label class="intl-method">
-                    <input type="radio" name="intlMethod" value="${escapeHtml(m.id)}" ${m.id === internationalMethodId ? "checked" : ""}>
+                    <input type="radio" name="intlMethod" value="${escapeHtml(m.id)}" ${m.id === state.internationalMethodId ? "checked" : ""}>
                     ${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="" width="32" height="20" loading="lazy">` : ""}
                     <span>${escapeHtml(m.name)}</span>
                   </label>`).join("")}
@@ -9508,17 +9412,17 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
               <p class="hint">Serás redirigido para completar el pago de forma segura. Allí verás el monto final en tu moneda.</p>` : ""}
           ` : ""}
         </div>` : ""}
-      ${internationalMode ? "" : `<div class="tabs">
+      ${state.internationalMode ? "" : `<div class="tabs">
         ${DOMESTIC_METHOD_TYPES
           .filter(type => !domainPurchase || type === PaymentMethodType.QR)
           .map(
             (type) =>
-              `<button type="button" class="tab ${type === selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,
+              `<button type="button" class="tab ${type === state.selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,
           )
           .join("")}
       </div>`}
       ${
-        internationalMode
+        state.internationalMode
           ? ""
           : import.meta.env.DEV && !sourcePaymentPreview
           ? `<div class="field">
@@ -9530,7 +9434,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
             </div>`
           : ""
       }
-      <button class="primary" type="submit" id="pay"${internationalMode && internationalMethods && internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${internationalMode && internationalMethods ? formatUsd(internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
+      <button class="primary" type="submit" id="pay"${state.internationalMode && state.internationalMethods && state.internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${state.internationalMode && state.internationalMethods ? formatUsd(state.internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
       <button class="secondary" type="button" id="cancel">Cancelar pago</button>
     </form></div>
     <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
@@ -9582,29 +9486,29 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
 
   app.querySelectorAll<HTMLElement>(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
-      selectedType = tab.dataset.type as DomesticMethodType;
+      state.selectedType = tab.dataset.type as DomesticMethodType;
       renderForm(session, clientSecret);
     });
   });
 
   app.querySelector<HTMLInputElement>("#intlToggle")?.addEventListener("change", (event) => {
-    internationalMode = (event.target as HTMLInputElement).checked;
-    internationalError = null;
+    state.internationalMode = (event.target as HTMLInputElement).checked;
+    state.internationalError = null;
     renderForm(session, clientSecret);
   });
   app.querySelector<HTMLSelectElement>("#intlCountry")?.addEventListener("change", async (event) => {
-    internationalCountry = (event.target as HTMLSelectElement).value;
-    internationalMethods = null;
-    internationalMethodId = "";
-    internationalError = null;
-    if (internationalCountry) {
+    state.internationalCountry = (event.target as HTMLSelectElement).value;
+    state.internationalMethods = null;
+    state.internationalMethodId = "";
+    state.internationalError = null;
+    if (state.internationalCountry) {
       try {
-        internationalMethods = await fetchInternationalMethods(clientSecret, internationalCountry);
-        internationalMethodId = internationalMethods.methods[0]?.id ?? "";
+        state.internationalMethods = await fetchInternationalMethods(clientSecret, state.internationalCountry);
+        state.internationalMethodId = state.internationalMethods.methods[0]?.id ?? "";
       } catch (err) {
         // A recoverable quote/availability failure shouldn't end the checkout —
         // show it inline next to the country picker so the shopper can retry.
-        internationalError = (err as Error).message === "intl_fx_rate_unavailable"
+        state.internationalError = (err as Error).message === "intl_fx_rate_unavailable"
           ? "Los pagos internacionales no están disponibles en este momento."
           : (err as Error).message;
       }
@@ -9613,7 +9517,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
   });
   app.querySelectorAll<HTMLInputElement>('input[name="intlMethod"]').forEach((input) =>
     input.addEventListener("change", () => {
-      internationalMethodId = input.value;
+      state.internationalMethodId = input.value;
     }),
   );
 
@@ -9633,7 +9537,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     if (storeCheckout && !phone) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto.";
     else if (storeCheckout && !PHONE_PATTERN.test(phone)) contactFieldErrors.customerPhone = "Ingresa un teléfono de contacto válido.";
     if (storeCheckout && customerContact.deliveryRequested && !(customerContact.deliveryAddress || "").trim()) contactFieldErrors.deliveryAddress = "Escribe la dirección o una referencia para la entrega.";
-    if (internationalMode && !storeCheckout && !email) contactFieldErrors.customerEmail = "Ingresa tu correo para pagar desde el exterior.";
+    if (state.internationalMode && !storeCheckout && !email) contactFieldErrors.customerEmail = "Ingresa tu correo para pagar desde el exterior.";
 
     if (contactFieldErrors.customerName || contactFieldErrors.customerEmail || contactFieldErrors.customerPhone || contactFieldErrors.deliveryAddress) {
       renderForm(session, clientSecret);
@@ -9641,7 +9545,7 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
     }
 
     const tokenEl = app.querySelector<HTMLSelectElement>("#token");
-    const token = tokenEl ? tokenEl.value : TEST_TOKENS[selectedType][0].value;
+    const token = tokenEl ? tokenEl.value : TEST_TOKENS[state.selectedType][0].value;
     await submitPayment(session, clientSecret, token, {
       name: storeCheckout ? name : recipient?.name ?? "",
       document: storeCheckout ? customerContact.document : recipient?.document ?? undefined,
@@ -9687,7 +9591,7 @@ async function cancelPayment(clientSecret: string) {
     // confirm that was in flight completed first) — re-fetch and show what
     // actually happened instead of a misleading "canceled" screen.
     try {
-      const session = await fetchSession(clientSecret, checkoutPublishableKey);
+      const session = await fetchSession(clientSecret, state.checkoutPublishableKey);
       if (session.status === "SUCCEEDED") renderSuccess(session);
       else renderFailed(session.id, (err as Error).message);
     } catch {
@@ -9702,12 +9606,12 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     return;
   }
 
-  const selectedIntl = internationalMode ? internationalMethods?.methods.find((m) => m.id === internationalMethodId) : undefined;
-  if (internationalMode && (!internationalCountry || !selectedIntl)) {
+  const selectedIntl = state.internationalMode ? state.internationalMethods?.methods.find((m) => m.id === state.internationalMethodId) : undefined;
+  if (state.internationalMode && (!state.internationalCountry || !selectedIntl)) {
     // Recoverable — the shopper just hasn't finished picking a country/method
     // yet (or the list came back empty). Show it inline instead of ending
     // the checkout, and do it before PAYMENT_PROCESSING fires.
-    internationalError = "Elige tu país y un método de pago.";
+    state.internationalError = "Elige tu país y un método de pago.";
     renderForm(session, clientSecret);
     return;
   }
@@ -9719,10 +9623,10 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
   // real redirect URL isn't known until confirmPaymentIntent resolves below,
   // so this opens a blank tab now and renderRequiresAction points it at the
   // real URL once the rail returns one.
-  if (internationalMode && window.top !== window.self) {
-    pendingIntlPopup = window.open("about:blank", "_blank");
+  if (state.internationalMode && window.top !== window.self) {
+    state.pendingIntlPopup = window.open("about:blank", "_blank");
     // Cut the popup's link back to the checkout before it navigates to a third party.
-    if (pendingIntlPopup) pendingIntlPopup.opener = null;
+    if (state.pendingIntlPopup) state.pendingIntlPopup.opener = null;
   }
 
   const payButton = app.querySelector<HTMLButtonElement>("#pay");
@@ -9736,9 +9640,9 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     const { paymentIntent, railResult } = await confirmPaymentIntent(
       session.id,
       clientSecret,
-      selectedIntl ? tokenForMethod(selectedIntl) : { type: selectedType, token },
+      selectedIntl ? tokenForMethod(selectedIntl) : { type: state.selectedType, token },
       customer,
-      selectedIntl ? { rail: "dlocal", country: internationalCountry } : undefined,
+      selectedIntl ? { rail: "dlocal", country: state.internationalCountry } : undefined,
     );
 
     if (paymentIntent.status === "SUCCEEDED") {
@@ -9811,22 +9715,22 @@ function whatsAppLink(phone: string): string {
 // customer who couldn't complete payment needs the same support path as one
 // who did, not less of one.
 function contactBlockHtml(prompt: string): string {
-  if (!linkHeader?.contactPhone && !linkHeader?.contactEmail) return "";
+  if (!state.linkHeader?.contactPhone && !state.linkHeader?.contactEmail) return "";
   return `<div class="receipt-contact">
       <span>${escapeHtml(prompt)}</span>
-      ${linkHeader.contactPhone ? `<a href="${escapeHtml(whatsAppLink(linkHeader.contactPhone))}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
-      ${linkHeader.contactEmail ? `<a href="mailto:${escapeHtml(linkHeader.contactEmail)}">${escapeHtml(linkHeader.contactEmail)}</a>` : ""}
+      ${state.linkHeader.contactPhone ? `<a href="${escapeHtml(whatsAppLink(state.linkHeader.contactPhone))}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+      ${state.linkHeader.contactEmail ? `<a href="mailto:${escapeHtml(state.linkHeader.contactEmail)}">${escapeHtml(state.linkHeader.contactEmail)}</a>` : ""}
     </div>`;
 }
 
 // The cart is already cleared by the time a customer reaches a payment
 // result, so this gives every outcome a fresh route back to the same store.
 function backToStoreHtml(): string {
-  if (currentDebtSlug) {
-    return `<a class="back-to-store" href="/?debt=${encodeURIComponent(currentDebtSlug)}">Volver al cobro</a>`;
+  if (state.currentDebtSlug) {
+    return `<a class="back-to-store" href="/?debt=${encodeURIComponent(state.currentDebtSlug)}">Volver al cobro</a>`;
   }
-  if (!currentStoreSlug) return "";
-  return `<a class="back-to-store" href="${escapeHtml(storeCatalogUrl(currentStoreSlug))}">Volver a la tienda</a>`;
+  if (!state.currentStoreSlug) return "";
+  return `<a class="back-to-store" href="${escapeHtml(storeCatalogUrl(state.currentStoreSlug))}">Volver a la tienda</a>`;
 }
 
 function renderSuccess(order: OrderSummary, preview = false) {
@@ -9852,7 +9756,7 @@ function renderSuccess(order: OrderSummary, preview = false) {
         .join("")
     : `
       <div class="receipt-line">
-        <span>${escapeHtml((order as CheckoutSession).description || linkHeader?.description || "Pago")}</span>
+        <span>${escapeHtml((order as CheckoutSession).description || state.linkHeader?.description || "Pago")}</span>
         <span>${formatAmount(order.amount, order.currency)}</span>
       </div>`;
 
@@ -9875,8 +9779,8 @@ function renderSuccess(order: OrderSummary, preview = false) {
     ${order.metadata?.storeCredit ? `<div class="receipt-row"><span>Saldo de tienda aplicado</span><strong>${formatAmount(Number((order.metadata.storeCredit as Record<string, unknown>).amount), order.currency)}</strong></div><div class="receipt-row"><span>Total del pedido</span><strong>${formatAmount(Number((order.metadata.storeCredit as Record<string, unknown>).orderTotal), order.currency)}</strong></div>` : ''}
     ${contactBlockHtml("¿Dudas o necesitas un reembolso?")}
   `;
-  const trackingActionHtml = activeOrderTrackingToken
-    ? `<a class="tracking-success-link receipt-action" href="/track/${encodeURIComponent(activeOrderTrackingToken)}">${ICON_CLOCK}<span><strong>Ver estado del pedido</strong><small>Preparación, envío o recojo</small></span>${ICON_ARROW_RIGHT}</a>`
+  const trackingActionHtml = state.activeOrderTrackingToken
+    ? `<a class="tracking-success-link receipt-action" href="/track/${encodeURIComponent(state.activeOrderTrackingToken)}">${ICON_CLOCK}<span><strong>Ver estado del pedido</strong><small>Preparación, envío o recojo</small></span>${ICON_ARROW_RIGHT}</a>`
     : "";
   const printActionHtml = `<button class="secondary receipt-download receipt-print receipt-action" type="button">${ICON_PRINTER}<span><strong>Imprimir comprobante</strong><small>Abrir vista de impresión</small></span>${ICON_ARROW_RIGHT}</button>`;
   const machineSummaryHtml = `
@@ -9885,7 +9789,7 @@ function renderSuccess(order: OrderSummary, preview = false) {
       <strong>${formatAmount(order.amount, order.currency)}</strong>
     </div>
     <div class="payment-printer-machine-meta">
-      <span>${escapeHtml((order as CheckoutSession).branding?.name || linkHeader?.storeName || "pagosYa")}</span>
+      <span>${escapeHtml((order as CheckoutSession).branding?.name || state.linkHeader?.storeName || "pagosYa")}</span>
       <code>${escapeHtml(order.id)}</code>
     </div>
   `;
@@ -9899,8 +9803,8 @@ function renderSuccess(order: OrderSummary, preview = false) {
     </div>
   `;
   app.querySelector('#preview-back')?.addEventListener('click', closeSourcePaymentPreview);
-  if (!preview && activeOrderTrackingToken) void mountDigitalDownloads(app.querySelector('.payment-success-panel')!, activeOrderTrackingToken);
-  if (!preview && activeOrderTrackingToken) void mountComebackCard(app.querySelector('.payment-success-panel')!, activeOrderTrackingToken, order.id);
+  if (!preview && state.activeOrderTrackingToken) void mountDigitalDownloads(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken);
+  if (!preview && state.activeOrderTrackingToken) void mountComebackCard(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken, order.id);
   app.querySelector<HTMLButtonElement>(".receipt-print")?.addEventListener("click", () => window.print());
   launchPaymentPrinter(order.id, {
     receiptContentHtml,
@@ -10123,9 +10027,9 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
     // real URL, then poll from inside the iframe, which keeps
     // sessionStorage/postToParent working normally.
     if (window.top !== window.self) {
-      if (pendingIntlPopup && !pendingIntlPopup.closed) {
-        const popup = pendingIntlPopup;
-        pendingIntlPopup = null;
+      if (state.pendingIntlPopup && !state.pendingIntlPopup.closed) {
+        const popup = state.pendingIntlPopup;
+        state.pendingIntlPopup = null;
         popup.location.href = redirectUrl;
         app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Completa el pago en la ventana de dLocal. Esta página se actualizará sola.</span></div></div>`;
         void pollInternationalOutcome(clientSecret, paymentIntentId, 10 * 60_000, popup);
@@ -10133,7 +10037,7 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
       }
       // No popup (blocked, closed early, or never opened): fall back to the
       // top-navigation path below.
-      pendingIntlPopup = null;
+      state.pendingIntlPopup = null;
     }
     rememberReturn(window.sessionStorage, paymentIntentId, clientSecret);
     app.innerHTML = `<div class="payment-outcome-panel payment-action-panel"><div class="status action">${ICON_CLOCK}<span>Te estamos llevando a la página de pago segura…</span></div></div>`;
@@ -10174,7 +10078,7 @@ function renderRequiresAction(paymentIntentId: string, clientSecret: string, rai
   if (import.meta.env.DEV) {
     app.querySelector<HTMLButtonElement>("#simulate")!.addEventListener("click", async () => {
       await simulateRailCallback(railId, paymentIntentId, "succeeded");
-      const updated = await fetchSession(clientSecret, checkoutPublishableKey);
+      const updated = await fetchSession(clientSecret, state.checkoutPublishableKey);
       renderSuccess(updated);
     });
   }
@@ -10197,7 +10101,7 @@ async function pollInternationalOutcome(clientSecret: string, paymentIntentId: s
   const deadline = Date.now() + deadlineMs;
   for (;;) {
     try {
-      const session = await fetchSession(clientSecret, checkoutPublishableKey);
+      const session = await fetchSession(clientSecret, state.checkoutPublishableKey);
       if (session.status === "SUCCEEDED") {
         popup?.close();
         return renderSuccess(session);
@@ -10232,14 +10136,14 @@ async function renderInternationalReturn(paymentIntentId: string) {
 
 if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
 window.onpopstate = (event) => {
-  if (!activeStoreRoute) return;
-  renderStoreRoute(activeStoreRoute.slug, activeStoreRoute.store);
+  if (!state.activeStoreRoute) return;
+  renderStoreRoute(state.activeStoreRoute.slug, state.activeStoreRoute.store);
   if (productIdFromLocation()) {
     restoreCatalogScroll(0);
     return;
   }
-  restoreCatalogPosition(activeStoreRoute.slug, {
-    scrollY: catalogScrollByStore.get(activeStoreRoute.slug) ?? event.state?.catalogScrollY,
+  restoreCatalogPosition(state.activeStoreRoute.slug, {
+    scrollY: catalogScrollByStore.get(state.activeStoreRoute.slug) ?? event.state?.catalogScrollY,
     productId: event.state?.catalogProductId,
     productViewportTop: event.state?.catalogProductViewportTop,
   });
