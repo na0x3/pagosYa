@@ -10,7 +10,7 @@ import {
   SITE_TYPE_SCALES,
 } from "@pagosya/shared-types";
 import type { StoreSiteDocument } from "./site-document";
-import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "../stores/dto/create-store.dto";
+import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "../stores/dto/store-options";
 
 export const STORE_AGENT_EDITOR_ENTITIES = [
   "art-direction",

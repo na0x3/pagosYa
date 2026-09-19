@@ -3,6 +3,9 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { GoogleCalendarService } from "./google-calendar.service";
 import { OperationsService } from "./operations.service";
+import { IntegrationsService } from "./integrations.service";
+import { AppointmentsService } from "./appointments.service";
+import { SubscriptionsService } from "./subscriptions.service";
 import {
   AdjustInventoryDto, AdjustLoyaltyDto, AssignDeliveryDto, ClosePosSessionDto,
   CreateAppointmentDto, CreateAppointmentOfferingDto, CreateAutomationDto,
@@ -20,7 +23,7 @@ type MerchantRequest = { merchant: { id: string } };
 @UseGuards(MerchantAuthGuard)
 @Controller("v1/stores/:storeId/operations")
 export class OperationsController {
-  constructor(private readonly operations: OperationsService, private readonly calendar: GoogleCalendarService) {}
+  constructor(private readonly operations: OperationsService, private readonly appointments: AppointmentsService, private readonly subscriptions: SubscriptionsService, private readonly integrations: IntegrationsService, private readonly calendar: GoogleCalendarService) {}
   private merchantId(req: MerchantRequest) { return req.merchant.id; }
 
   @Get()
@@ -62,23 +65,23 @@ export class OperationsController {
   @Post("pos/sales")
   createPosSale(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreatePosSaleDto) { return this.operations.createPosSale(this.merchantId(req), storeId, dto); }
   @Post("integrations")
-  createIntegration(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateIntegrationDto) { return this.operations.createIntegration(this.merchantId(req), storeId, dto); }
+  createIntegration(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateIntegrationDto) { return this.integrations.createIntegration(this.merchantId(req), storeId, dto); }
   @Get("integrations")
-  listIntegrations(@Req() req: MerchantRequest, @Param("storeId") storeId: string) { return this.operations.listIntegrations(this.merchantId(req), storeId); }
+  listIntegrations(@Req() req: MerchantRequest, @Param("storeId") storeId: string) { return this.integrations.listIntegrations(this.merchantId(req), storeId); }
   @Get("integrations/:id/mappings")
-  listProductMappings(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string) { return this.operations.listProductMappings(this.merchantId(req), storeId, id); }
+  listProductMappings(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string) { return this.integrations.listProductMappings(this.merchantId(req), storeId, id); }
   @Delete("integrations/:id/mappings/:mappingId")
-  deleteProductMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Param("mappingId") mappingId: string) { return this.operations.deleteProductMapping(this.merchantId(req), storeId, id, mappingId); }
+  deleteProductMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Param("mappingId") mappingId: string) { return this.integrations.deleteProductMapping(this.merchantId(req), storeId, id, mappingId); }
   @Post("integrations/:id/mappings")
-  createProductMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: CreateProductMappingDto) { return this.operations.createProductMapping(this.merchantId(req), storeId, id, dto); }
+  createProductMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: CreateProductMappingDto) { return this.integrations.createProductMapping(this.merchantId(req), storeId, id, dto); }
   @Post("integrations/:id/subscription-plan-mappings")
-  createSubscriptionPlanMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: CreateSubscriptionPlanMappingDto) { return this.operations.createSubscriptionPlanMapping(this.merchantId(req), storeId, id, dto); }
+  createSubscriptionPlanMapping(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: CreateSubscriptionPlanMappingDto) { return this.integrations.createSubscriptionPlanMapping(this.merchantId(req), storeId, id, dto); }
   @Post("appointment-services")
-  createAppointmentOffering(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateAppointmentOfferingDto) { return this.operations.createAppointmentOffering(this.merchantId(req), storeId, dto); }
+  createAppointmentOffering(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateAppointmentOfferingDto) { return this.appointments.createAppointmentOffering(this.merchantId(req), storeId, dto); }
   @Post("appointments")
-  createAppointment(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateAppointmentDto) { return this.operations.createAppointment(this.merchantId(req), storeId, dto); }
+  createAppointment(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateAppointmentDto) { return this.appointments.createAppointment(this.merchantId(req), storeId, dto); }
   @Patch("appointments/:id")
-  updateAppointment(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateAppointmentDto) { return this.operations.updateAppointment(this.merchantId(req), storeId, id, dto); }
+  updateAppointment(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateAppointmentDto) { return this.appointments.updateAppointment(this.merchantId(req), storeId, id, dto); }
   @Get("calendar/events")
   calendarEvents(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Query("timeMin") timeMin: string, @Query("timeMax") timeMax: string) {
     if (!timeMin || !timeMax || Number.isNaN(Date.parse(timeMin)) || Number.isNaN(Date.parse(timeMax))) throw new BadRequestException("timeMin and timeMax must be ISO dates");
@@ -95,15 +98,15 @@ export class OperationsController {
     return this.calendar.freeBusy(this.merchantId(req), storeId, new Date(timeMin), new Date(timeMax));
   }
   @Post("subscription-plans")
-  createSubscriptionPlan(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateSubscriptionPlanDto) { return this.operations.createSubscriptionPlan(this.merchantId(req), storeId, dto); }
+  createSubscriptionPlan(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateSubscriptionPlanDto) { return this.subscriptions.createSubscriptionPlan(this.merchantId(req), storeId, dto); }
   @Patch("subscription-plans/:id")
-  updateSubscriptionPlan(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateSubscriptionPlanDto) { return this.operations.updateSubscriptionPlan(this.merchantId(req), storeId, id, dto); }
+  updateSubscriptionPlan(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateSubscriptionPlanDto) { return this.subscriptions.updateSubscriptionPlan(this.merchantId(req), storeId, id, dto); }
   @Post("subscriptions")
-  createSubscription(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateSubscriptionDto) { return this.operations.createSubscription(this.merchantId(req), storeId, dto); }
+  createSubscription(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Body() dto: CreateSubscriptionDto) { return this.subscriptions.createSubscription(this.merchantId(req), storeId, dto); }
   @Patch("subscriptions/:id")
-  updateSubscriptionStatus(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateSubscriptionStatusDto) { return this.operations.updateSubscriptionStatus(this.merchantId(req), storeId, id, dto); }
+  updateSubscriptionStatus(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: UpdateSubscriptionStatusDto) { return this.subscriptions.updateSubscriptionStatus(this.merchantId(req), storeId, id, dto); }
   @Post("subscriptions/generate-invoices")
-  generateSubscriptionInvoices(@Req() req: MerchantRequest, @Param("storeId") storeId: string) { return this.operations.generateSubscriptionInvoices(this.merchantId(req), storeId); }
+  generateSubscriptionInvoices(@Req() req: MerchantRequest, @Param("storeId") storeId: string) { return this.subscriptions.generateSubscriptionInvoices(this.merchantId(req), storeId); }
   @Post("subscription-invoices/:id/remind")
-  remindSubscriptionInvoice(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: RetrySubscriptionInvoiceDto) { return this.operations.remindSubscriptionInvoice(this.merchantId(req), storeId, id, dto.regenerate === true); }
+  remindSubscriptionInvoice(@Req() req: MerchantRequest, @Param("storeId") storeId: string, @Param("id") id: string, @Body() dto: RetrySubscriptionInvoiceDto) { return this.subscriptions.remindSubscriptionInvoice(this.merchantId(req), storeId, id, dto.regenerate === true); }
 }

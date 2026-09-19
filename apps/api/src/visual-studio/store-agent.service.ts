@@ -8,11 +8,9 @@ import { requestsStoreRedesign } from "./store-agent-intent";
 import { catalogArrangementIntent } from "./catalog-arrangement-intent";
 import { CATALOG_LAYOUTS, CatalogLayout } from "../stores/catalog-layout";
 import {
-  storeAgentInstructionIsScoped,
-  storeAgentInstructionLooksLikeEditorCommand,
-  storeAgentInstructionLooksLikeProductCreation,
   VisualStudioService,
 } from "./visual-studio.service";
+import { storeAgentInstructionIsScoped, storeAgentInstructionLooksLikeEditorCommand, storeAgentInstructionLooksLikeProductCreation } from "./agent-revision";
 
 type StoreAgentClarificationOption = {
   id: string;

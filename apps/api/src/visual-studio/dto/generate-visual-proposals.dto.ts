@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, IsInt, Min } from "class-validator";
 import { MAX_UPLOADED_FILE_URL_LENGTH, UPLOADED_FILE_URL_PATTERN } from "../../uploads/uploaded-file-url.constants";
 import { IsSafeText } from "../../common/validation/safe-text.decorator";
-import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "../../stores/dto/create-store.dto";
+import { STORE_FONT_STYLES, STORE_MOTION_EXPERIENCES } from "../../stores/dto/store-options";
 import { SITE_ART_DIRECTIONS } from "@pagosya/shared-types";
 
 export class GenerateVisualProposalsDto {

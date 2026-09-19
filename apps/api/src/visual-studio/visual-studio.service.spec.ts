@@ -2,7 +2,7 @@ import { ConfigService } from "@nestjs/config";
 import { Logger, ServiceUnavailableException } from "@nestjs/common";
 import { VisualStudioService } from "./visual-studio.service";
 import { storefrontCreativeRecipe } from "./storefront-engine";
-import { STORE_MOTION_EXPERIENCES } from "../stores/dto/create-store.dto";
+import { STORE_MOTION_EXPERIENCES } from "../stores/dto/store-options";
 
 const store = {
   id: "store_1",

@@ -1,4 +1,7 @@
 import { OperationsService } from "./operations.service";
+import { SubscriptionsService } from "./subscriptions.service";
+import { IntegrationsService } from "./integrations.service";
+import { AppointmentsService } from "./appointments.service";
 import * as argon2 from "argon2";
 
 function makePrisma() {
@@ -39,13 +42,15 @@ function makeService(
   paymentIntents = { createInTransaction: jest.fn() },
   email = { send: jest.fn() },
 ) {
-  return new OperationsService(
-    prisma as any,
-    { createEvent: jest.fn(), updateEvent: jest.fn(), deleteEvent: jest.fn(), freeBusy: jest.fn().mockResolvedValue({ connected: false, busy: [] }) } as any,
-    email as any,
-    paymentIntents as any,
-    { get: jest.fn().mockReturnValue("http://localhost:5174") } as any,
-  );
+  const calendar = { createEvent: jest.fn(), updateEvent: jest.fn(), deleteEvent: jest.fn(), freeBusy: jest.fn().mockResolvedValue({ connected: false, busy: [] }) };
+  const config = { get: jest.fn().mockReturnValue("http://localhost:5174") };
+  const subscriptions = new SubscriptionsService(prisma as any, email as any, paymentIntents as any, config as any);
+  return {
+    operations: new OperationsService(prisma as any, email as any, config as any),
+    subscriptions,
+    integrations: new IntegrationsService(prisma as any, subscriptions),
+    appointments: new AppointmentsService(prisma as any, calendar as any, paymentIntents as any, config as any),
+  };
 }
 
 describe("OperationsService operational calendar", () => {
@@ -57,7 +62,7 @@ describe("OperationsService operational calendar", () => {
     const service = makeService(prisma);
 
     // Each connection carries how many SKUs are linked and the last sync report.
-    await expect(service.listIntegrations("merchant_1", "store_1")).resolves.toEqual([
+    await expect(service.integrations.listIntegrations("merchant_1", "store_1")).resolves.toEqual([
       { id: "integration_1", name: "Caja Café", status: "ACTIVE", mappingCount: 4, lastRun: expect.objectContaining({ itemCount: 3 }) },
     ]);
     expect(prisma.integrationConnection.findMany).toHaveBeenCalledWith(expect.objectContaining({
@@ -83,7 +88,7 @@ describe("OperationsService operational calendar", () => {
     }]);
     const service = makeService(prisma);
 
-    const result = await service.calendarEvents(
+    const result = await service.operations.calendarEvents(
       "merchant_1",
       "store_1",
       new Date("2099-08-01T00:00:00Z"),
@@ -108,7 +113,7 @@ describe("OperationsService operational calendar", () => {
     prisma.purchaseOrder.update.mockResolvedValue({ id: "po_1", status: "RECEIVED" });
     const service = makeService(prisma);
 
-    await expect(service.receivePurchaseOrder("merchant_1", "store_1", "po_1")).resolves.toMatchObject({
+    await expect(service.operations.receivePurchaseOrder("merchant_1", "store_1", "po_1")).resolves.toMatchObject({
       id: "po_1", status: "RECEIVED", receivedItems: 1, updatedProducts: 1,
     });
     expect(prisma.paymentLink.update).toHaveBeenCalledWith({ where: { id: "product_1" }, data: { stock: 13 } });
@@ -134,13 +139,13 @@ describe("OperationsService external subscriptions", () => {
       secretHash: await argon2.hash(secret),
     });
 
-    await expect(service.verifyIntegrationInbound("integration_1", secret)).resolves.toMatchObject({
+    await expect(service.integrations.verifyIntegrationInbound("integration_1", secret)).resolves.toMatchObject({
       connected: true,
       connectionId: "integration_1",
       name: "ERP central",
       capabilities: ["stock", "subscriptions"],
     });
-    await expect(service.verifyIntegrationInbound("integration_1", "sync_wrong_secret")).rejects.toThrow("Invalid integration secret");
+    await expect(service.integrations.verifyIntegrationInbound("integration_1", "sync_wrong_secret")).rejects.toThrow("Invalid integration secret");
   });
 
   it("upserts an external customer and subscription, then starts billing", async () => {
@@ -161,9 +166,9 @@ describe("OperationsService external subscriptions", () => {
     prisma.businessCustomer.create.mockResolvedValue({ id: "customer_1", name: "María López", email: "maria@example.com", phone: null });
     prisma.integrationSubscriptionMapping.findUnique.mockResolvedValue(null);
     prisma.customerSubscription.create.mockResolvedValue({ id: "subscription_1" });
-    jest.spyOn(service, "generateSubscriptionInvoices").mockResolvedValue({ created: 1, paymentLinksCreated: 1, emailsSent: 1, charges: [] });
+    jest.spyOn(service.subscriptions, "generateSubscriptionInvoices").mockResolvedValue({ created: 1, paymentLinksCreated: 1, emailsSent: 1, charges: [] });
 
-    const result = await service.syncSubscriptionsInbound("integration_1", secret, {
+    const result = await service.integrations.syncSubscriptionsInbound("integration_1", secret, {
       items: [{
         externalSubscriptionId: "SUB-1001",
         externalCustomerId: "CLI-001",
@@ -192,7 +197,7 @@ describe("OperationsService external subscriptions", () => {
     prisma.businessCustomer.findFirst.mockResolvedValue({ id: "customer_1", name: "María López", email: "maria@example.com", phone: null });
     prisma.customerSubscription.findUnique.mockResolvedValue({ id: "subscription_existing" });
 
-    await expect(service.createSubscription("merchant_1", "store_1", {
+    await expect(service.subscriptions.createSubscription("merchant_1", "store_1", {
       planId: "plan_1",
       customerId: "customer_1",
       customerName: "María López",
@@ -207,7 +212,7 @@ describe("OperationsService external subscriptions", () => {
     prisma.subscriptionPlan.findFirst.mockResolvedValue({ id: "plan_1", amount: 15000, isActive: true });
     prisma.customerSubscription.updateMany.mockResolvedValue({ count: 12 });
 
-    await expect(service.updateSubscriptionPlan("merchant_1", "store_1", "plan_1", { scope: "NEXT_ONLY", amount: 17500 })).resolves.toMatchObject({
+    await expect(service.subscriptions.updateSubscriptionPlan("merchant_1", "store_1", "plan_1", { scope: "NEXT_ONLY", amount: 17500 })).resolves.toMatchObject({
       scope: "NEXT_ONLY",
       affectedSubscriptions: 12,
       nextAmount: 17500,
@@ -224,7 +229,7 @@ describe("OperationsService external subscriptions", () => {
       .mockResolvedValueOnce(null);
     prisma.customerSubscription.update.mockResolvedValue({ id: "subscription_1", status: "PAUSED" });
 
-    await expect(service.updateSubscriptionStatus("merchant_1", "store_1", "subscription_1", { status: "PAUSED" })).resolves.toMatchObject({ status: "PAUSED" });
+    await expect(service.subscriptions.updateSubscriptionStatus("merchant_1", "store_1", "subscription_1", { status: "PAUSED" })).resolves.toMatchObject({ status: "PAUSED" });
     expect(prisma.customerSubscription.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "PAUSED", activeKey: expect.any(String) }) }));
   });
 
@@ -235,7 +240,7 @@ describe("OperationsService external subscriptions", () => {
       createEvent: jest.fn(), updateEvent: jest.fn(), deleteEvent: jest.fn(),
       freeBusy: jest.fn().mockResolvedValue({ connected: true, busy: [{ start: "2026-09-01T14:00:00.000Z", end: "2026-09-01T15:00:00.000Z" }] }),
     };
-    const service = new OperationsService(prisma as any, calendar as any, { send: jest.fn() } as any, { createInTransaction: jest.fn() } as any, { get: jest.fn() } as any);
+    const service = new AppointmentsService(prisma as any, calendar as any, { createInTransaction: jest.fn() } as any, { get: jest.fn() } as any);
     prisma.store.findFirst.mockResolvedValue({ id: "store_1", merchantId: "merchant_1", name: "Barbería Norte", status: "ACTIVE" });
     prisma.appointmentServiceOffering.findFirst.mockResolvedValue({ id: "cut_1", storeId: "store_1", name: "Corte", durationMinutes: 30, bufferMinutes: 0, price: 5000, currency: "BOB", isActive: true });
     prisma.appointment.findMany.mockResolvedValue([{ startsAt: new Date("2026-09-01T16:00:00.000Z"), endsAt: new Date("2026-09-01T16:30:00.000Z") }]);
@@ -252,7 +257,7 @@ describe("OperationsService external subscriptions", () => {
     const prisma = makePrisma();
     const paymentIntents = { createInTransaction: jest.fn().mockResolvedValue({ id: "pi_appointment", clientSecret: "pi_appointment_secret" }), cancelById: jest.fn() };
     const calendar = { createEvent: jest.fn().mockResolvedValue("google_event_1"), updateEvent: jest.fn(), deleteEvent: jest.fn(), freeBusy: jest.fn() };
-    const service = new OperationsService(prisma as any, calendar as any, { send: jest.fn() } as any, paymentIntents as any, { get: jest.fn().mockReturnValue("http://localhost:5174") } as any);
+    const service = new AppointmentsService(prisma as any, calendar as any, paymentIntents as any, { get: jest.fn().mockReturnValue("http://localhost:5174") } as any);
     prisma.store.findFirst.mockResolvedValue({ id: "store_1", merchantId: "merchant_1", name: "Barbería Norte", status: "ACTIVE", checkoutMode: "payment" });
     prisma.appointmentServiceOffering.findFirst.mockResolvedValue({ id: "cut_1", storeId: "store_1", name: "Corte clásico", durationMinutes: 45, bufferMinutes: 15, price: 5000, currency: "BOB", isActive: true });
     prisma.appointment.findFirst.mockResolvedValue(null);
@@ -293,7 +298,7 @@ describe("OperationsService external subscriptions", () => {
     prisma.$queryRaw.mockResolvedValue([{ paymentIntentId: null }]);
     prisma.customerSubscription.updateMany.mockResolvedValue({ count: 1 });
 
-    const result = await service.generateSubscriptionInvoices("merchant_1", "store_1");
+    const result = await service.subscriptions.generateSubscriptionInvoices("merchant_1", "store_1");
 
     expect(result).toMatchObject({ created: 1, paymentLinksCreated: 1, emailsSent: 1 });
     expect(result.charges[0]).toMatchObject({ invoiceId: "invoice_1", paymentIntentId: "pi_subscription", checkoutUrl: "http://localhost:5174/#client_secret=pi_subscription_secret" });
@@ -325,9 +330,9 @@ describe("OperationsService external subscriptions", () => {
     prisma.integrationSubscriptionMapping.findUnique.mockResolvedValue({ customerSubscriptionId: "subscription_1" });
     prisma.customerSubscription.findFirst.mockResolvedValue({ id: "subscription_1", nextBillingAt: currentNextBillingAt });
     prisma.customerSubscription.update.mockResolvedValue({ id: "subscription_1", nextBillingAt: currentNextBillingAt });
-    jest.spyOn(service, "generateSubscriptionInvoices").mockResolvedValue({ created: 0, paymentLinksCreated: 0, emailsSent: 0, charges: [] });
+    jest.spyOn(service.subscriptions, "generateSubscriptionInvoices").mockResolvedValue({ created: 0, paymentLinksCreated: 0, emailsSent: 0, charges: [] });
 
-    await service.syncSubscriptionsInbound("integration_1", secret, {
+    await service.integrations.syncSubscriptionsInbound("integration_1", secret, {
       items: [{
         externalSubscriptionId: "SUB-1001", externalCustomerId: "CLI-001", externalPlanCode: "CAFE-MENSUAL",
         customerName: "María López", status: "ACTIVE", nextBillingAt: "2026-08-22T12:00:00.000Z",
@@ -355,7 +360,7 @@ describe("OperationsService inbound stock merge", () => {
 
   it("writes a combination's stock, subtracts pagosYa sales after asOf and keeps the product total consistent", async () => {
     const { prisma, service } = await setup(lamp, [{ externalSku: "LAMP-NEGRO", paymentLinkId: "lamp", variantId: "negro" }]);
-    const result = await service.syncStockInbound("conn_1", "sync_secret", { items: [{ externalSku: "LAMP-NEGRO", stock: 7, asOf: "2026-09-15T10:00:00.000Z" }] } as any);
+    const result = await service.integrations.syncStockInbound("conn_1", "sync_secret", { items: [{ externalSku: "LAMP-NEGRO", stock: 7, asOf: "2026-09-15T10:00:00.000Z" }] } as any);
     expect(result).toMatchObject({ updated: 1, skipped: 0, results: [{ externalSku: "LAMP-NEGRO", variantId: "negro", stock: 5, soldAfterCount: 2 }] });
     expect(prisma.paymentLink.update).toHaveBeenCalledWith({ where: { id: "lamp" }, data: { variants: [{ ...lamp.variants[0], stock: 5 }, lamp.variants[1]], stock: 17 } });
     expect(prisma.inventoryMovement.aggregate).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ variantId: "negro", sourceType: { in: ["ORDER", "POS"] } }) }));
@@ -367,7 +372,7 @@ describe("OperationsService inbound stock merge", () => {
       { externalSku: "LAMP-MARFIL", paymentLinkId: "lamp", variantId: "marfil" },
       { externalSku: "LAMP-WHOLE", paymentLinkId: "lamp", variantId: null },
     ]);
-    const result = await service.syncStockInbound("conn_1", "sync_secret", { items: [
+    const result = await service.integrations.syncStockInbound("conn_1", "sync_secret", { items: [
       { externalSku: "LAMP-MARFIL", delta: -4 },
       { externalSku: "LAMP-WHOLE", stock: 3 },
       { externalSku: "NOPE", stock: 1 },
