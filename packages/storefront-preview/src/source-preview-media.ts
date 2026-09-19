@@ -79,3 +79,42 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
     return { ...snapshot, files: snapshot.files.map(entry => entry === file ? { ...entry, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};` } : entry) };
   };
 }
+
+/** Published stores: point catalog images at the platform's upload directory instead of embedding them,
+ * so the page renders immediately and the browser loads each photo lazily from cache/CDN. Anything that
+ * is not a platform upload is dropped, exactly as the embedding loader would. */
+export function hostedCatalogImages(apiBaseUrl: string) {
+  const base = `${apiBaseUrl.replace(/\/$/, '')}/uploads/`;
+  const image = (value: unknown): unknown => {
+    if (typeof value !== 'string') return value;
+    try {
+      const url = new URL(value, new URL(apiBaseUrl, location.href));
+      const filename = url.pathname.match(/^\/(?:api\/)?v1\/uploads\/([a-f0-9-]+\.(?:png|jpe?g|webp|avif|gif))$/i)?.[1];
+      return filename ? base + filename : '';
+    } catch { return ''; }
+  };
+  const rewrite = <T,>(data: T): T => {
+    const copy = structuredClone(data) as any;
+    for (const item of Array.isArray(copy?.items) ? copy.items : []) {
+      if (!item || typeof item !== 'object') continue;
+      if (Array.isArray(item.imageUrls)) item.imageUrls = item.imageUrls.map(image);
+      for (const variant of Array.isArray(item.variants) ? item.variants : []) if (variant && typeof variant.imageUrl === 'string') variant.imageUrl = image(variant.imageUrl);
+      for (const extra of Array.isArray(item.extras) ? item.extras : []) if (extra && typeof extra.imageUrl === 'string') extra.imageUrl = image(extra.imageUrl);
+    }
+    return copy;
+  };
+  return { imageSource: base, rewrite };
+}
+
+export function hostedImageUrls(apiBaseUrl: string) {
+  const { imageSource, rewrite } = hostedCatalogImages(apiBaseUrl);
+  return (snapshot: SourceSnapshot): { snapshot: SourceSnapshot; imageSource: string } => {
+    const file = snapshot.files.find(entry => entry.path === 'config.js');
+    const match = file?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
+    let config;
+    try { config = match && JSON.parse(match[1]); } catch { config = null; }
+    if (!file || !config || !Array.isArray(config.data?.items)) return { snapshot, imageSource };
+    config.data = rewrite(config.data);
+    return { snapshot: { ...snapshot, files: snapshot.files.map(entry => entry === file ? { ...entry, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};` } : entry) }, imageSource };
+  };
+}

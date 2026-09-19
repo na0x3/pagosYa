@@ -3,7 +3,7 @@ import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './sour
 import { createStoreFunnel } from './store-funnel';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
-import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
+import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, hostedImageUrls, hostedCatalogImages } from '@pagosya/storefront-preview';
 import { API_BASE_URL, type Store } from './api';
 import { sourceVisitorId, rememberSourceVisit } from './source-attribution';
 import { storePartnerCode } from './partner-referral';
@@ -88,7 +88,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const match = config.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
   const settings = match ? JSON.parse(match[1]) : {};
   config.content = `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...settings, demo: false, slug, data: store, apiBaseUrl: API_BASE_URL, checkoutOrigin: location.origin })};`;
-  const prepared = await createPreviewImageLoader(API_BASE_URL)(snapshot);
+  // Mount immediately: photos load lazily from the platform's upload directory, the one image source the sandbox allows.
+  const { snapshot: prepared, imageSource } = hostedImageUrls(API_BASE_URL)(snapshot);
   if (!document.querySelector('link[rel=canonical]')) document.title = store.storeName;
   const frame = document.createElement('iframe');
   frame.title = store.storeName; frame.setAttribute('sandbox', 'allow-scripts allow-forms'); frame.referrerPolicy = 'no-referrer';
@@ -108,7 +109,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource] }); };
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
   const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug === slug) funnel.track('visit'); };
@@ -183,7 +184,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     if (pending.has(data.action)) { reply(false, { message: 'Ya hay una solicitud en curso.' }); return; }
     pending.add(data.action);
     try {
-      if (data.action === 'catalog') { reply(true, store); return; }
+      if (data.action === 'catalog') { reply(true, hostedCatalogImages(API_BASE_URL).rewrite(store)); return; }
       const body = data.body && typeof data.body === 'object' ? data.body : {};
       if (data.action === 'retention') {
         const path = typeof body.path === 'string' ? body.path : '';

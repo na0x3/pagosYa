@@ -20,7 +20,19 @@ export function receivePreviewNavigation(event: MessageEvent, frame: HTMLIFrameE
   return { page: data.page, theme: data.theme === 'light' || data.theme === 'dark' ? data.theme : undefined, newTab: data.newTab === true, query: typeof data.query === 'string' && data.query.startsWith('?') ? data.query.slice(0, 2000) : '', fragment: typeof data.fragment === 'string' && data.fragment.startsWith('#') ? data.fragment.slice(0, 1000) : '',
     cart: Array.isArray(data.cart) ? data.cart.slice(0, 100).filter((item: any) => typeof item?.id === 'string' && item.id.length <= 200 && Number.isInteger(item.quantity) && item.quantity > 0 && item.quantity <= 99) : [] };
 }
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; hosted?: boolean } = {}): string {
+/** Only the platform's own upload directory may be allowed as an image source, and only over HTTPS
+ * (or a local development origin). Any request the design makes there reaches pagosYa, never a third party. */
+export function uploadImageSource(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const local = url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+    if ((url.protocol !== 'https:' && !local) || url.username || url.password || url.search || url.hash || !/\/uploads\/$/.test(url.pathname)) return null;
+    return url.href;
+  } catch { return null; }
+}
+
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; hosted?: boolean; imageSources?: string[] } = {}): string {
+  const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
   const files = new Map(snapshot.files.map((file) => [file.path, file]));
@@ -64,8 +76,9 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   doc.querySelectorAll("img,source,video").forEach((el) => {
     el.removeAttribute("srcset");
     const file = resolve(el.getAttribute("src") || "");
+    const src = el.getAttribute("src") || "";
     if (file) el.setAttribute("src", data(file));
-    else if (!el.getAttribute("src")?.startsWith("data:")) el.removeAttribute("src");
+    else if (!src.startsWith("data:") && !(el.tagName === "IMG" && imageSources.some(source => src.startsWith(source)))) el.removeAttribute("src");
   });
   doc.querySelectorAll('video[poster]').forEach(el => {
     const poster = resolve(el.getAttribute('poster') || '');
@@ -78,7 +91,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     if (!href.startsWith('#') && !resolve(href)?.path.endsWith('.html')) el.removeAttribute('href');
   });
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
-  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
+  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:; media-src data: blob:; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
   doc.head.prepend(policy);
   const flag = doc.createElement("script");
   const encoded = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');

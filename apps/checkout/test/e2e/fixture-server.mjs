@@ -10,6 +10,8 @@ const snapshot = {
     { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {};' },
     { path: 'index.html', content: `<!doctype html><html lang="es"><head><title>Tienda de prueba</title></head><body>
       <label>Dirección de entrega <input id="direccion"></label>
+      <img id="foto-plataforma" alt="Foto de producto" src="http://127.0.0.1:4518/v1/uploads/11111111-2222-4333-8444-555555555555.png">
+      <img id="foto-externa" alt="Foto externa" src="https://exfiltracion.example/pixel.png">
       <iframe title="Ubicación del negocio" src="https://www.openstreetmap.org/export/embed.html?bbox=-68.2,-16.6,-68.1,-16.5"></iframe>
       <script src="config.js"></script>
       <script>document.querySelector('#direccion').addEventListener('input', event => {
@@ -19,8 +21,15 @@ const snapshot = {
   ],
 };
 
+// 1×1 PNG served from the platform upload directory, the only image source hosted designs may use.
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a/1cAAAAASUVORK5CYII=', 'base64');
+
 const api = createServer((request, response) => {
   const url = new URL(request.url, 'http://127.0.0.1:4518');
+  if (url.pathname.startsWith('/v1/uploads/')) {
+    response.writeHead(200, { 'Content-Type': 'image/png', 'Cross-Origin-Resource-Policy': 'cross-origin' });
+    return response.end(PIXEL);
+  }
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Content-Type', 'application/json');
   const body = url.pathname === '/v1/stores/public/domain'
