@@ -67,3 +67,37 @@ test('the cart shows no suggestions when the owner turned them off', async ({ pa
   await page.locator('[data-cart-open]').first().click();
   await expect(page.locator('.order-recommendations')).toHaveCount(0);
 });
+
+test('a box on the store\'s own product page is filled cookie by cookie and goes to the cart with its picks', async ({ page }) => {
+  const pick = (id: string, name: string, extra: Record<string, unknown> = {}) => ({ id: `x_${id}`, name, amount: 0, required: false, groupName: 'Sabores', freeAllowance: 0, pickCount: 4, productId: id, available: true, ...extra });
+  const matcha = { id: 'matcha', name: 'Matcha', amount: 2200, currency: 'BOB', stock: 3, imageUrls: [] };
+  const pistacho = { id: 'pistacho', name: 'Pistacho', amount: 2200, currency: 'BOB', stock: 10, imageUrls: [] };
+  const box = { id: 'box4', name: 'Caja de 4', amount: 8000, currency: 'BOB', stock: null, imageUrls: [], extras: [pick('matcha', 'Matcha'), pick('pistacho', 'Pistacho'), pick('gone', 'Agotada', { available: false })] };
+  await open(page, 'box4', { items: [box, matcha, pistacho], cartRecommendationsEnabled: true, cartRecommendationProductIds: ['matcha'] });
+
+  const buy = page.getByRole('button', { name: /Añadir al pedido/ });
+  const plus = (name: string) => page.getByRole('button', { name: `Agregar ${name}` });
+  await expect(page.locator('[data-box-progress]')).toHaveText('0 de 4');
+  await expect(buy).toBeDisabled();
+  await expect(plus('Agotada')).toBeDisabled();
+  // Only 3 Matcha are in stock, so a fourth cannot go in the box.
+  for (let i = 0; i < 3; i++) await plus('Matcha').click();
+  await expect(plus('Matcha')).toBeDisabled();
+  await plus('Pistacho').click();
+  await expect(page.locator('[data-box-progress]')).toHaveText('4 de 4');
+  await expect(plus('Pistacho')).toBeDisabled();
+  await page.getByRole('button', { name: 'Quitar Matcha' }).click();
+  await expect(buy).toBeDisabled();
+  await plus('Pistacho').click();
+  await expect(buy).toBeEnabled();
+  await buy.click();
+  await expect(page.locator('[data-cart-count]').first()).toHaveText('1');
+
+  await page.locator('[data-cart-open]').first().click();
+  const cartPanel = page.locator('[data-pagosya-cart]').first();
+  await expect(cartPanel.locator('.order-item strong')).toHaveText('Caja de 4 · Matcha ×2 · Pistacho ×2');
+  const saved = await page.evaluate(() => { const detail = { items: [] as unknown[] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail })); return detail.items; });
+  expect(saved).toEqual([{ id: 'box4', extraIds: ['x_matcha', 'x_matcha', 'x_pistacho', 'x_pistacho'], quantity: 1 }]);
+  // The two Matcha in the box count against the suggestion's stock too.
+  await expect(cartPanel.locator('.order-recommendations li')).toHaveCount(1);
+});

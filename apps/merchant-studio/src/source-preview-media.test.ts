@@ -24,13 +24,14 @@ describe('preview variant photography', () => {
     const fetch = vi.fn().mockResolvedValue(new Response(new Blob(['photo'], { type:'image/jpeg' }), { headers: { 'content-type':'image/jpeg' } }));
     vi.stubGlobal('fetch', fetch);
     const url = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
-    const snapshot = { files: [{ path:'config.js', content:'window.PAGOSYA_CONFIG = ' + JSON.stringify({ data:{items:[{imageUrls:[url],variants:[{imageUrl:'http://localhost:3001'+url},{imageUrl:url}]},{variants:[{imageUrl:url}]}]} }) + ';' }] } as SourceSnapshot;
+    const snapshot = { files: [{ path:'config.js', content:'window.PAGOSYA_CONFIG = ' + JSON.stringify({ data:{items:[{imageUrls:[url],variants:[{imageUrl:'http://localhost:3001'+url},{imageUrl:url}]},{variants:[{imageUrl:url}],extras:[{id:'x',name:'Matcha',imageUrl:url}]}]} }) + ';' }] } as SourceSnapshot;
     const result = await createPreviewImageLoader('http://localhost:3001/v1')(snapshot);
     const config = JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, ''));
     const [first, second] = config.data.items;
     expect(first.imageUrls[0]).toMatch(/^data:image\/jpeg;base64,/);
     expect(first.variants.map((v: {imageUrl:string}) => v.imageUrl)).toEqual([first.imageUrls[0], first.imageUrls[0]]);
     expect(second.variants[0].imageUrl).toBe(first.imageUrls[0]);
+    expect(second.extras[0].imageUrl).toBe(first.imageUrls[0]);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(snapshot.files[0].content).not.toContain('data:image');
   });

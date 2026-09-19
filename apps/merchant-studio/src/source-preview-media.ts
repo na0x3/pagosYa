@@ -67,6 +67,10 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
       if (Array.isArray(item.variants)) for (const variant of item.variants) {
         if (variant && typeof variant.imageUrl === 'string') tasks.push(async () => { variant.imageUrl = await image(variant.imageUrl); });
       }
+      // Box choices show the photo of the product they stand for.
+      if (Array.isArray(item.extras)) for (const extra of item.extras) {
+        if (extra && typeof extra.imageUrl === 'string') tasks.push(async () => { extra.imageUrl = await image(extra.imageUrl); });
+      }
     }
     let next = 0;
     await Promise.all(Array.from({ length: Math.min(4, tasks.length) }, async () => {
