@@ -5,6 +5,7 @@ import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { WebsiteRevisionDto } from "../stores/dto/save-website-draft.dto";
 import { VisualStudioService } from "./visual-studio.service";
+import { VisualProposalsService } from "./visual-proposals.service";
 import { StoreAgentService } from "./store-agent.service";
 import { GenerateVisualProposalsDto } from "./dto/generate-visual-proposals.dto";
 import { SaveVisualTemplateDto } from "./dto/save-visual-template.dto";
@@ -19,6 +20,7 @@ import { SendStoreAgentMessageDto } from "./dto/send-store-agent-message.dto";
 export class VisualStudioController {
   constructor(
     private readonly visualStudio: VisualStudioService,
+    private readonly visualProposals: VisualProposalsService,
     private readonly storeAgent: StoreAgentService,
   ) {}
 
@@ -29,7 +31,7 @@ export class VisualStudioController {
 
   @Post(":id/visual-proposals")
   generateVisualProposals(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: GenerateVisualProposalsDto) {
-    return this.visualStudio.generate(merchant.id, id, dto);
+    return this.visualProposals.generate(merchant.id, id, dto);
   }
 
   @Get(":id/agent-conversation")

@@ -4,7 +4,8 @@
 const assert = require("node:assert/strict");
 const { PrismaClient } = require("@prisma/client");
 const { StoresService } = require("../dist/src/stores/stores.service.js");
-const { VisualStudioService } = require("../dist/src/stores/visual-studio.service.js");
+const { PublicStoresService } = require("../dist/src/stores/public-stores.service.js");
+const { VisualStudioService } = require("../dist/src/visual-studio/visual-studio.service.js");
 
 if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(process.env.DATABASE_URL).hostname)) {
   throw new Error("This check requires a local development database.");
@@ -19,6 +20,7 @@ const rollback = new Error("ROLLBACK_WEBSITE_DRAFT_CHECK");
       const store = await tx.store.create({ data: { merchantId: merchant.id, slug: `draft-check-${Date.now()}`, name: "Draft check", tagline: "Public title" } });
       const scoped = new Proxy(tx, { get: (target, property) => property === "$transaction" ? (work) => typeof work === "function" ? work(tx) : Promise.all(work) : target[property] });
       const service = new StoresService(scoped, {}, {});
+      const publicStores = new PublicStoresService(scoped);
       const visual = new VisualStudioService(scoped, {}, { get: () => undefined }, {});
       const races = await Promise.allSettled(["One", "Two"].map((tagline) => service.saveWebsiteDraft(merchant.id, store.id, { revision: 0, tagline, links: [{ label: tagline, url: "https://example.com" }] })));
       assert.equal(races.filter((result) => result.status === "fulfilled").length, 1);
@@ -26,16 +28,16 @@ const rollback = new Error("ROLLBACK_WEBSITE_DRAFT_CHECK");
       const saved = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
       assert.equal(saved.tagline, "Public title");
       assert.equal(saved.websiteRevision, 1);
-      const publicView = await service.getStorePublic(store.slug, { trackView: false });
+      const publicView = await publicStores.getStorePublic(store.slug, { trackView: false });
       assert.equal(publicView.tagline, "Public title");
       assert.equal(JSON.stringify(publicView).includes("websiteDraft"), false);
       await assert.rejects(service.publishWebsiteDraft(merchant.id, store.id, 0), (error) => error.getStatus() === 409);
       await service.publishWebsiteDraft(merchant.id, store.id, 1);
-      const published = await service.getStorePublic(store.slug, { trackView: false });
+      const published = await publicStores.getStorePublic(store.slug, { trackView: false });
       assert.equal(published.tagline, saved.websiteDraft.data.tagline);
       const version = await tx.storeVisualVersion.findFirstOrThrow({ where: { storeId: store.id } });
       await visual.restore(merchant.id, store.id, version.id, 2);
-      assert.equal((await service.getStorePublic(store.slug, { trackView: false })).tagline, published.tagline);
+      assert.equal((await publicStores.getStorePublic(store.slug, { trackView: false })).tagline, published.tagline);
       const restored = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
       assert.equal(restored.websiteDraft.data.tagline, "Public title");
       await service.discardWebsiteDraft(merchant.id, store.id, 3);

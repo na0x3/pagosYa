@@ -7,9 +7,9 @@ import { instructionUsesSelection } from "./store-agent-selection";
 import { requestsStoreRedesign } from "./store-agent-intent";
 import { catalogArrangementIntent } from "./catalog-arrangement-intent";
 import { CATALOG_LAYOUTS, CatalogLayout } from "../stores/catalog-layout";
-import {
-  VisualStudioService,
-} from "./visual-studio.service";
+import { VisualAiService } from "./visual-ai.service";
+import { VisualRevisionService } from "./visual-revision.service";
+import { VisualProposalsService } from "./visual-proposals.service";
 import { storeAgentInstructionIsScoped, storeAgentInstructionLooksLikeEditorCommand, storeAgentInstructionLooksLikeProductCreation } from "./agent-revision";
 
 type StoreAgentClarificationOption = {
@@ -188,7 +188,9 @@ export function storeAgentClarificationForInstruction(instruction: string): Stor
 export class StoreAgentService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly visualStudio: VisualStudioService,
+    private readonly visualAi: VisualAiService,
+    private readonly visualRevisions: VisualRevisionService,
+    private readonly visualProposals: VisualProposalsService,
   ) {}
 
   private async ownedStore(merchantId: string, storeId: string) {
@@ -461,7 +463,7 @@ export class StoreAgentService {
         && !Array.isArray(ownedStore.siteDocument)
         && Array.isArray((ownedStore.siteDocument as Prisma.JsonObject).sections),
       );
-      const richEditorCommand = this.visualStudio.canPlanStorefrontOperations()
+      const richEditorCommand = this.visualAi.canPlanStorefrontOperations()
         && storeAgentInstructionLooksLikeEditorCommand(instruction);
       const productCreation = storeAgentInstructionLooksLikeProductCreation(instruction);
       if (!redesign && (proposalId || selection || (hasStructuredStorefront && (answeringClarification || storeAgentInstructionIsScoped(instruction) || richEditorCommand || productCreation)))) {
@@ -484,7 +486,7 @@ export class StoreAgentService {
           ? selectedProposal.sourceAssetUrls.filter((url): url is string => typeof url === "string")
           : [];
         const revisionAssetUrls = [...new Set([...assetUrls, ...inheritedAssetUrls])];
-        const revision = await this.visualStudio.revise(merchantId, storeId, effectiveProposalId, instruction, context, revisionAssetUrls, { revision: dto.revision, selection: selection ?? undefined });
+        const revision = await this.visualRevisions.revise(merchantId, storeId, effectiveProposalId, instruction, context, revisionAssetUrls, { revision: dto.revision, selection: selection ?? undefined });
         const socialLinkNote = revision.plan.target === "footer" && revision.plan.socialHandle && revision.plan.socialPlatform === "unknown"
           ? ` Mostré ${revision.plan.socialHandle} como texto; dime la plataforma o el enlace si quieres que sea clicable.`
           : "";
@@ -511,7 +513,7 @@ export class StoreAgentService {
         return { userMessage, assistantMessage, proposal: revision.proposal, proposals: [revision.proposal], revision: revision.plan };
       }
 
-      const generated = await this.visualStudio.generate(merchantId, storeId, {
+      const generated = await this.visualProposals.generate(merchantId, storeId, {
         revision: dto.revision,
         creativeBrief: instruction,
         assetUrls: assetUrls.length ? assetUrls : undefined,

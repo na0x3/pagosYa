@@ -7,6 +7,9 @@ import { AiUsageModule } from "../ai-usage/ai-usage.module";
 import { BrandModule } from "../brand/brand.module";
 import { VisualStudioController } from "./visual-studio.controller";
 import { VisualStudioService } from "./visual-studio.service";
+import { VisualAiService } from "./visual-ai.service";
+import { VisualProposalsService } from "./visual-proposals.service";
+import { VisualRevisionService } from "./visual-revision.service";
 import { StoreAgentService } from "./store-agent.service";
 
 /** The dashboard's visual editor for settings-based stores: AI layout proposals,
@@ -14,6 +17,6 @@ import { StoreAgentService } from "./store-agent.service";
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, PaymentLinksModule, AiUsageModule, BrandModule],
   controllers: [VisualStudioController],
-  providers: [VisualStudioService, StoreAgentService],
+  providers: [VisualStudioService, VisualAiService, VisualProposalsService, VisualRevisionService, StoreAgentService],
 })
 export class VisualStudioModule {}

@@ -4,7 +4,7 @@ import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { ArticleDto, BundleDto, BundleStatusDto, ReviewDto, ReviewQueryDto, ReviewStatusDto } from './commerce-content.dto';
 import { CommerceContentService } from './commerce-content.service';
-import { StoresService } from '../stores/stores.service';
+import { PublicStoresService } from "../stores/public-stores.service";
 
 @UseGuards(MerchantAuthGuard)
 @Controller('v1/stores/:storeId/commerce-content')
@@ -19,8 +19,8 @@ export class CommerceContentController {
 }
 @Controller('v1/stores/public/:slug/content')
 export class CommerceContentPublicController {
-  constructor(private readonly content: CommerceContentService, private readonly stores: StoresService) {}
-  @Get() async list(@Param('slug') slug: string, @Query('locale') locale?: string) { const store = await this.stores.findActiveBySlugPublic(slug); return this.content.publicContent(store.id, locale); }
+  constructor(private readonly content: CommerceContentService, private readonly publicStores: PublicStoresService) {}
+  @Get() async list(@Param('slug') slug: string, @Query('locale') locale?: string) { const store = await this.publicStores.findActiveBySlugPublic(slug); return this.content.publicContent(store.id, locale); }
   @Post('reviews') @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async review(@Param('slug') slug: string, @Body() dto: ReviewDto) { const store = await this.stores.findActiveBySlugPublic(slug); return this.content.review(store.id, dto); }
+  async review(@Param('slug') slug: string, @Body() dto: ReviewDto) { const store = await this.publicStores.findActiveBySlugPublic(slug); return this.content.review(store.id, dto); }
 }

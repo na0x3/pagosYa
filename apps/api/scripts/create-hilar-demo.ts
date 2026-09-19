@@ -7,6 +7,7 @@ import { resolve, dirname } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StoresService } from '../src/stores/stores.service';
+import { PublicStoresService } from '../src/stores/public-stores.service';
 import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
 import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
 import { SourcePublishingService } from '../src/storefront-source/source-publishing.service';
@@ -74,7 +75,7 @@ async function main() {
       for (const path of ['build.mjs', 'server.mjs', 'commerce-pages.css']) files.push({ path, content: await readFile(kitPath(path), 'utf8') });
       files.push({ path: 'commerce.js', content: (await Promise.all(['privacy.js', 'commerce.js', 'retention.js'].map(path => readFile(kitPath(path), 'utf8')))).join('\n') });
       for (const name of Object.keys(manifest)) files.push({path: 'assets/' + name + '.jpg', encoding: 'base64', content: (await readFile(resolve(folder, 'assets', name + '.jpg'))).toString('base64')});
-      const data = await stores.getStorePublic(record.slug, { trackView: false, ownerMerchantId: record.merchantId });
+      const data = await app.get(PublicStoresService).getStorePublic(record.slug, { trackView: false, ownerMerchantId: record.merchantId });
       const storefrontConfig = { slug: record.slug, apiBaseUrl: 'http://localhost:3001/v1', checkoutOrigin: 'http://localhost:5175', productPage: 'product.html', checkoutPage: 'checkout.html', demo: false, motion: 'subtle', data: {...data, checkoutMode:'payment'} };
       files.push({ path: 'config.js', content: 'window.PAGOSYA_CONFIG = ' + JSON.stringify(storefrontConfig) + ';\n' });
       files.push({ path: 'package.json', content: JSON.stringify({ name: 'hilar-storefront', version:'1.0.0', private:true, type:'module', scripts:{ build:'node build.mjs', start:'node server.mjs'} }, null, 2) });

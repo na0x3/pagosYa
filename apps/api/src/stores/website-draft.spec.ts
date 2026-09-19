@@ -1,7 +1,7 @@
+import { makeVisualStudioServices } from "../visual-studio/testing-visual-studio-services";
+import { makeStoreServices } from "./testing-stores-services";
 import { ConflictException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { StoresService } from "./stores.service";
-import { VisualStudioService } from "../visual-studio/visual-studio.service";
 
 function setup() {
   let row: any = { id: "store-1", merchantId: "merchant-1", name: "Public name", tagline: "Public title", siteDocument: null,
@@ -31,8 +31,8 @@ function setup() {
     const before = structuredClone(row); const oldVersions = structuredClone(versions);
     try { return await work(prisma); } catch (error) { row = before; versions = oldVersions; throw error; }
   };
-  const stores = new StoresService(prisma, {} as never, {} as never);
-  const visual = new VisualStudioService(prisma, {} as never, { get: () => undefined } as never, {} as never);
+  const stores = makeStoreServices(prisma, {} as never, {} as never);
+  const visual = makeVisualStudioServices(prisma, {} as never, { get: () => undefined } as never, {} as never);
   return { prisma, stores, visual, read: () => structuredClone(row), versions: () => structuredClone(versions) };
 }
 

@@ -1,5 +1,7 @@
 /** Store fields the visual editor owns, and conversions between them and the site document. */
+import { NotFoundException } from "@nestjs/common";
 import { Store, Prisma } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 import { STORE_MOTION_EXPERIENCES, type StoreFontStyle, STORE_FONT_STYLES } from "../stores/dto/store-options";
 import { type AiSiteDocument, type StoreSiteDocument, siteDocumentJson } from "./site-document";
 
@@ -149,4 +151,11 @@ export function toStoreUpdate(config: unknown): Prisma.StoreUpdateInput {
     allowed.siteDocument = document;
   }
   return allowed as Prisma.StoreUpdateInput;
+}
+
+/** A store the merchant owns, or 404. */
+export async function ownedStore(prisma: PrismaService, merchantId: string, storeId: string): Promise<Store> {
+  const store = await prisma.store.findFirst({ where: { id: storeId, merchantId } });
+  if (!store) throw new NotFoundException("Store not found");
+  return store;
 }

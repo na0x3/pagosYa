@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { StoresService } from '../stores/stores.service';
+import { PublicStoresService } from "../stores/public-stores.service";
 import { publicImage, seoEscape as e, seoHead, seoPrice, sourcePageUrl, sourceSeoCopy } from './store-seo';
 @Injectable()
 export class StoreSeoService {
-  constructor(private readonly prisma: PrismaService, private readonly stores: StoresService, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly config: ConfigService) {}
   private apiBase() { return (process.env.PUBLIC_API_URL || `http://localhost:${this.config.get('app.port') || 3001}/v1`).replace(/\/$/, ''); }
   async context(slug: string) {
     const store = await this.prisma.store.findFirst({ where: { slug, status: 'ACTIVE', sourcePublicationPaused: false }, include: { customDomains: { where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' }, take: 1 } } });
@@ -23,7 +23,7 @@ export class StoreSeoService {
   }
   async document(slug: string, productId?: string, sourcePage?: string, collectionSlug?: string) {
     const c = await this.context(slug);
-    const data = await this.stores.getStorePublic(slug, { trackView: false });
+    const data = await this.publicStores.getStorePublic(slug, { trackView: false });
     const product = productId ? data.items.find(p => p.id === productId) : null;
     if (productId && !product) throw new NotFoundException('Producto no encontrado.');
     const isCollectionRoute = sourcePage === 'coleccion.html';

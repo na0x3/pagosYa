@@ -1,6 +1,6 @@
+import { makeVisualStudioServices } from "./testing-visual-studio-services";
 import { ConfigService } from "@nestjs/config";
 import { Logger, ServiceUnavailableException } from "@nestjs/common";
-import { VisualStudioService } from "./visual-studio.service";
 import { storefrontCreativeRecipe } from "./storefront-engine";
 import { STORE_MOTION_EXPERIENCES } from "../stores/dto/store-options";
 
@@ -141,7 +141,7 @@ describe("VisualStudioService", () => {
         ...dto,
       })),
     };
-    return { service: new VisualStudioService(prisma as never, uploads as never, config, paymentLinks as never), prisma, uploads, paymentLinks };
+    return { service: makeVisualStudioServices(prisma as never, uploads as never, config, paymentLinks as never), prisma, uploads, paymentLinks };
   }
 
   it("reports a truncated provider response as fallback and never consumes its partial JSON", async () => {

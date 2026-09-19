@@ -45,7 +45,7 @@ import { Script } from "node:vm";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
-import { StoresService } from "../stores/stores.service";
+import { PublicStoresService } from "../stores/public-stores.service";
 import { SourceProjectsService } from "./source-projects.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
@@ -116,7 +116,7 @@ export function merchantFacingSourceFailure(error: unknown) {
 
 @Injectable()
 export class SourceGenerationService {
-  constructor(private readonly prisma: PrismaService, private readonly stores: StoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner()) {}
+  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner()) {}
 
   protected exploreDesign() { return sourceDesignExploration(); }
 
@@ -153,7 +153,7 @@ export class SourceGenerationService {
   async catalog(merchantId: string, storeId: string) {
     const owner = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true } });
     if (!owner) throw new NotFoundException("Store not found");
-    const data = await this.stores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
+    const data = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
     const retention = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } });
     return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, bundlesEnabled: data.bundlesEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
@@ -190,7 +190,7 @@ export class SourceGenerationService {
     const provider = sourceProvider(this.config, plan.model, !!dto.assetUrls?.some(url => !sourceVideo(url)));
     const { apiKey } = provider;
     const brand = await this.brands?.get(merchantId, storeId);
-    const publicStore = await this.stores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
+    const publicStore = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
     const apiBaseUrl = process.env.PUBLIC_API_URL || `http://localhost:${this.config.get<number>("app.port") || 3001}/v1`;
     const apiUrl = new URL(apiBaseUrl);
     if (!/^https?:$/.test(apiUrl.protocol) || apiUrl.username || apiUrl.password) throw new ServiceUnavailableException("PUBLIC_API_URL no es una URL pública válida.");

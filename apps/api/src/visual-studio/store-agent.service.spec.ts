@@ -28,7 +28,7 @@ describe("StoreAgentService", () => {
       }),
       generate: jest.fn(),
     };
-    return { service: new StoreAgentService(prisma as never, visualStudio as never), prisma, visualStudio };
+    return { service: new StoreAgentService(prisma as never, visualStudio as never, visualStudio as never, visualStudio as never), prisma, visualStudio };
   }
 
   it("asks for confirmation instead of writing directly when a catalog arrangement request matches", async () => {

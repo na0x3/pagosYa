@@ -1,6 +1,6 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import { makeStoreServices } from "./testing-stores-services";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { MerchantStatus, PromoDiscountType, StoreStatus } from "@prisma/client";
-import { StoresService } from "./stores.service";
 
 function makeFakePrisma() {
   const prisma = {
@@ -48,7 +48,7 @@ describe("StoresService.create", () => {
     const prisma = makeFakePrisma();
     prisma.store.findFirst.mockResolvedValue({ ...store, status });
     prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_2", ...data }));
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await expect(service.create("m_1", { name: "Otra tienda" } as any)).resolves.toMatchObject({ id: "store_2", merchantId: "m_1", name: "Otra tienda" });
     expect(prisma.store.create).toHaveBeenCalledTimes(1);
     expect(prisma.store.delete).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe("StoresService.create", () => {
     const prisma = makeFakePrisma();
     prisma.store.create.mockRejectedValueOnce({ code: "P2002", meta: { target: ["slug"] } })
       .mockResolvedValueOnce({ ...store, name: "Mi tienda" });
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await expect(service.create("m_1", { name: "Mi tienda" } as any)).resolves.toMatchObject({ id: store.id });
     expect(prisma.store.create).toHaveBeenCalledTimes(2);
   });
@@ -66,7 +66,7 @@ describe("StoresService.create", () => {
   it("starts a new store with an editable opening animation and contact/location at the end", async () => {
     const prisma = makeFakePrisma();
     prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await service.create("m_1", { name: "Tienda nueva" } as any);
 
@@ -99,7 +99,7 @@ describe("StoresService.createQuickQrPayment", () => {
         },
       }),
     };
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     const result = await service.createQuickQrPayment("m_1", "store_1", { amount: 4550, description: "Mesa 4" });
 
@@ -123,7 +123,7 @@ describe("StoresService.createQuickQrPayment", () => {
       merchant: { status: MerchantStatus.PENDING },
     });
     const paymentIntents = { create: jest.fn(), confirm: jest.fn() };
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await expect(service.createQuickQrPayment("m_1", "store_1", { amount: 4550 })).rejects.toBeInstanceOf(BadRequestException);
     expect(paymentIntents.create).not.toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe("StoresService.listPublishedStores", () => {
     }]);
     prisma.paymentLink.groupBy.mockResolvedValue([{ storeId: "store_1", _min: { amount: 9900 } }]);
 
-    const result = await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any)
+    const result = await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any)
       .listPublishedStores("lámpara", "1", "24");
 
     expect(result.stores[0]).toMatchObject({
@@ -178,7 +178,7 @@ describe("StoresService.subscribeNewsletter", () => {
   it("normalizes the email and reactivates an existing subscriber without duplicates", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue(store);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(service.subscribeNewsletter("abc123", "  Cliente@Example.COM ")).resolves.toEqual({ subscribed: true });
 
@@ -209,7 +209,7 @@ describe("StoresService.submitLead", () => {
       extras: [],
     }]);
     const email = { send: jest.fn().mockResolvedValue(undefined) };
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
 
     await expect(service.submitLead("abc123", {
       name: "María Pérez",
@@ -247,7 +247,7 @@ describe("StoresService.submitLead", () => {
       id: "link_1", name: "Producto", amount: 100, currency: "BOB", variants: [], extras: [],
     }]);
     const email = { send: jest.fn() };
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
 
     await expect(service.submitLead("abc123", {
       name: "María Pérez",
@@ -267,7 +267,7 @@ describe("StoresService.submitLead", () => {
     }]);
     const email = { send: jest.fn().mockResolvedValue(undefined) };
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any, email as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any, email as any);
 
     await expect(service.submitLead("abc123", {
       name: "María Pérez", email: "maria@gmail.com", phone: "+591 71234567",
@@ -290,7 +290,7 @@ describe("StoresService.submitLead", () => {
       ],
     }]);
     const email = { send: jest.fn().mockResolvedValue(undefined) };
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
 
     await expect(service.submitLead("abc123", { email: "maria@gmail.com", items: [{ paymentLinkId: "box_4", extraIds: ["matcha", "matcha"], quantity: 1 }] }))
       .rejects.toThrow('Elige 4 en "Sabores" para "Caja de 4" (elegiste 2)');
@@ -307,7 +307,7 @@ describe("StoresService.submitLead", () => {
       id: "link_1", name: "Asesoría", amount: 15000, currency: "BOB", variants: [], extras: [],
     }]);
     const email = { send: jest.fn().mockResolvedValue(undefined) };
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
 
     await expect(service.submitLead("abc123", {
       email: "maria@gmail.com",
@@ -336,7 +336,7 @@ describe("StoresService.submitLead", () => {
     prisma.merchant.findUniqueOrThrow.mockResolvedValue({ ...merchant, email: "account@estudionorte.bo" });
     prisma.paymentLink.findMany.mockResolvedValue([]);
     const email = { send: jest.fn().mockResolvedValue(undefined) };
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any, email as any);
 
     await expect(service.submitLead("abc123", {
       name: "Ana",
@@ -359,7 +359,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     const prisma = makeFakePrisma();
     prisma.store.findUnique.mockResolvedValue({ ...store, checkoutMode: "external", leadCaptureUrl: "https://example.com/contacto" });
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 1 }] })).rejects.toThrow(
       "Esta tienda no tiene habilitados los pagos integrados",
@@ -375,7 +375,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       { id: "link_1", name: "Tinte de cabello", amount: 8000, currency: "BOB", stock: 2 },
     ]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 3 }] })).rejects.toThrow(
       BadRequestException,
@@ -399,7 +399,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       { id: "link_1", name: "Almuerzo", amount: 5000, currency: "BOB", stock: 3, locationStocks: { centro: 3, sur: 0 }, variants: [], extras: [] },
     ]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", {
       items: [{ paymentLinkId: "link_1", quantity: 1 }],
@@ -438,7 +438,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     ]);
     const paymentIntents = makeFakePaymentIntents();
 
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
     await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 2 }] });
 
     expect(paymentIntents.create).toHaveBeenCalled();
@@ -453,7 +453,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     ]);
     const paymentIntents = makeFakePaymentIntents();
 
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
     await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 999 }] });
 
     expect(paymentIntents.create).toHaveBeenCalled();
@@ -477,7 +477,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       },
     ]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await service.createCartCheckout("abc123", {
       items: [
@@ -520,7 +520,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       discountEndsAt: new Date("2100-01-01T00:00:00.000Z"),
     }]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_sale", quantity: 2 }] });
 
@@ -543,7 +543,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       resolveActiveForStore: jest.fn().mockResolvedValue({ code: "VIAJE20", discountType: PromoDiscountType.PERCENT, discountValue: 20 }),
       discountAmount: jest.fn().mockReturnValue(4000),
     };
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any, undefined, promoCodes as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any, undefined, promoCodes as any);
 
     await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 2 }], promoCode: "VIAJE20" });
 
@@ -571,7 +571,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
         ],
       },
     ]);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(
       service.createCartCheckout("abc123", {
@@ -600,7 +600,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
         ],
       },
     ]);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 1 }] })).rejects.toThrow(
       'Elige una opción para "Hamburguesa"',
@@ -615,7 +615,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       id: "link_1", name: "Pizza", amount: 8000, currency: "BOB", stock: null,
       extras: [{ id: "cheese", name: "Queso", amount: 500, required: true }],
     }]);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", quantity: 1 }] }))
       .rejects.toThrow('Elige "Queso" para "Pizza"');
@@ -635,7 +635,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       ],
     }]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await service.createCartCheckout("abc123", { items: [{ paymentLinkId: "link_1", extraIds: ["gift", "cheese"], quantity: 2 }] });
 
@@ -666,7 +666,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       ],
     }]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await service.createCartCheckout("abc123", {
       items: [{ paymentLinkId: "lunch_1", extraIds: ["rice", "salad", "fries"], quantity: 2 }],
@@ -687,7 +687,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       ],
     }]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [{ paymentLinkId: "box_4", extraIds: ["matcha", "pistacho", "matcha"], quantity: 1 }] }))
       .rejects.toThrow('Elige 4 en "Sabores" para "Caja de 4" (elegiste 3)');
@@ -718,7 +718,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
     ];
     prisma.paymentLink.findMany.mockImplementation(({ where }: any) => Promise.resolve(catalog.filter(item => where.id.in.includes(item.id))));
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [
       { paymentLinkId: "box_4", extraIds: ["x_matcha", "x_matcha", "x_pistacho", "x_pistacho"], quantity: 1 },
@@ -754,7 +754,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
       },
     ]);
     const paymentIntents = makeFakePaymentIntents();
-    const service = new StoresService(prisma as any, paymentIntents as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, paymentIntents as any, makeFakeUploads() as any);
 
     await expect(service.createCartCheckout("abc123", { items: [
       { paymentLinkId: "burger_1", extraIds: ["cottage_1"], quantity: 1 },
@@ -780,7 +780,7 @@ describe("StoresService.createCartCheckout — stock enforcement", () => {
         ],
       },
     ]);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(
       service.createCartCheckout("abc123", {
@@ -804,7 +804,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       { ...publicItem, id: "matcha", name: "Matcha verde", imageUrls: ["/v1/uploads/matcha.jpg"], stock: 5 },
       { ...publicItem, id: "pistacho", name: "Pistacho", imageUrls: [], stock: 0 },
     ]);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.items.find((item: any) => item.id === "box")!.extras).toEqual([
@@ -818,7 +818,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     prisma.store.findUnique.mockResolvedValue({ ...store, bundlesEnabled: true });
     prisma.paymentLink.findMany.mockResolvedValue([]);
     (prisma as any).storeBundle = { findMany: jest.fn().mockResolvedValue([{ id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "a", quantity: 1 }], minimumQuantity: 2, discountPercent: 10, active: true, storeId: "store_1", createdAt: new Date() }]) };
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     expect((await service.getStorePublic("abc123", { trackView: false })).bundles).toEqual([
       { id: "b1", name: "Dúo", kind: "FIXED", items: [{ productId: "a", quantity: 1 }], minimumQuantity: 2, discountPercent: 10 },
     ]);
@@ -837,7 +837,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     });
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result).toMatchObject({
@@ -858,7 +858,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     });
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.contentOrder).toEqual([
@@ -914,7 +914,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     });
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.animations).toEqual(animations);
@@ -945,7 +945,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     });
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const result = await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any)
+    const result = await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any)
       .getStorePublic("abc123", { trackView: false });
 
     expect(result.animations[0].media.map((entry: any) => entry.imageUrl)).toEqual([
@@ -967,7 +967,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       ],
     }]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.items[0].stock).toBeNull();
@@ -985,7 +985,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     prisma.store.findUnique.mockResolvedValue(store);
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.getStorePublic("abc123", { trackView: false });
 
     expect(prisma.store.update).not.toHaveBeenCalled();
@@ -996,7 +996,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     prisma.store.findUnique.mockResolvedValue(store);
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.getStorePublic("abc123");
     await service.flushPendingStoreViews();
 
@@ -1011,7 +1011,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     prisma.store.findUnique.mockResolvedValue(store);
     prisma.paymentLink.findMany.mockResolvedValue([]);
     prisma.store.update.mockResolvedValue(store);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await Promise.all(Array.from({ length: 25 }, () => service.getStorePublic("abc123")));
     expect(prisma.store.update).not.toHaveBeenCalled();
@@ -1037,7 +1037,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       { id: "link_1", name: "Pieza", imageUrls: [], tags: [], stock: null, color: null, amount: 5000, currency: "BOB", categoryId: null, description: null },
     ]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.editorialGallery).toEqual([
@@ -1059,7 +1059,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       { paymentLinkId: "link_2", quantity: 1 },
     ]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123");
 
     expect(result.items.map((i: any) => [i.id, i.soldCount])).toEqual([
@@ -1076,7 +1076,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       { id: "link_1", name: "Corte", imageUrls: [], tags: [], stock: null, color: null, amount: 5000, currency: "BOB", categoryId: null, description: null },
     ]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123");
 
     expect(result.items[0].soldCount).toBe(0);
@@ -1087,7 +1087,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
     prisma.store.findUnique.mockResolvedValue(store);
     prisma.paymentLink.findMany.mockResolvedValue([]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.catalogLayout).toBe("all");
@@ -1108,7 +1108,7 @@ describe("StoresService.getStorePublic — sold counts", () => {
       },
     ]);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     const result = await service.getStorePublic("abc123", { trackView: false });
 
     expect(result.catalogLayout).toBe("sections");
@@ -1124,7 +1124,7 @@ describe("StoresService.update — accentColor clearing", () => {
     prisma.store.findFirst.mockResolvedValue(store);
     prisma.store.update.mockResolvedValue({ ...store, accentColor: null });
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.update("m_1", "store_1", { accentColor: null } as any);
 
     expect(prisma.store.update).toHaveBeenCalledWith({
@@ -1138,7 +1138,7 @@ describe("StoresService.update — accentColor clearing", () => {
     prisma.store.findFirst.mockResolvedValue(store);
     prisma.store.update.mockResolvedValue(store);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.update("m_1", "store_1", { name: "Renamed" } as any);
 
     const call = prisma.store.update.mock.calls[0][0];
@@ -1153,7 +1153,7 @@ describe("StoresService.update — animation media roles", () => {
     prisma.store.update.mockResolvedValue(store);
     const media = Array.from({ length: 8 }, (_, index) => ({ imageUrl: `/v1/uploads/expand-${index + 1}.webp` }));
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.update("m_1", "store_1", {
       animations: [{ id: "expand", name: "Expansión", type: "scroll-expansion", media }],
     } as any);
@@ -1173,7 +1173,7 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
     prisma.store.update.mockResolvedValue(store);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       siteDeletedSectionIds: ["story"],
       siteSections: [{ ...section("shop", "catalog"), title: "Catálogo actualizado", heightPx: 720, mobileHeightPx: 480 }],
     } as any);
@@ -1199,7 +1199,7 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
     prisma.store.update.mockResolvedValue(store);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       siteNavigation: {
         layout: "centered",
         barStyle: "full",
@@ -1263,7 +1263,7 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
     prisma.store.update.mockResolvedValue(store);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       siteArtDirection: "cinematic-atelier",
     } as any);
 
@@ -1290,7 +1290,7 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.findFirst.mockResolvedValue({ ...store, bannerUrl: null, aboutImageUrl: null, editorialGallery: [], siteDocument });
     prisma.store.update.mockResolvedValue(store);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       tagline: "Una portada nueva",
       catalogTitle: "Compra la colección",
       contactSubtitle: "Cuéntanos qué necesitas",
@@ -1332,7 +1332,7 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.findFirst.mockResolvedValue({ ...store, bannerUrl: null, aboutImageUrl: null, editorialGallery: [], siteDocument });
     prisma.store.update.mockResolvedValue(store);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       siteSections: [{
         id: "brand-story", title: "Detrás de QUEMADO2", body: "Una historia editable", ctaLabel: "Conoce más",
         family: "cinematic",
@@ -1377,7 +1377,7 @@ describe("StoresService.update — authored AI site", () => {
     };
     prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
 
-    await expect(new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await expect(makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       siteSections: [{
         id: "brand-story", title: "Historia", body: "", ctaLabel: "", layout: "stacked", width: "full", align: "left", motion: "story-scroll",
         backgroundColor: "#f5f2ea", textColor: "#171717", mediaUrls: ["/v1/uploads/not-owned.webp"],
@@ -1397,7 +1397,7 @@ describe("StoresService.update — authored AI site", () => {
     prisma.store.findFirst.mockResolvedValue({ ...store, siteDocument });
     prisma.store.update.mockResolvedValue(store);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).update("m_1", "store_1", {
       siteSections: [{
         id: "story-new", kind: "story", title: "Nueva historia", body: "Un relato nuevo", ctaLabel: "",
         layout: "offset", width: "wide", align: "left", motion: "reveal", backgroundColor: "#fffaf2", textColor: "#171717",
@@ -1417,7 +1417,7 @@ describe("StoresService.update — board texture", () => {
     prisma.store.findFirst.mockResolvedValue(store);
     prisma.store.update.mockResolvedValue({ ...store, boardTexture: "kraft" });
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.update("m_1", "store_1", { boardTexture: "kraft" } as any);
 
     expect(prisma.store.update).toHaveBeenCalledWith({
@@ -1433,7 +1433,7 @@ describe("StoresService.update — catalog layout", () => {
     prisma.store.findFirst.mockResolvedValue(store);
     prisma.store.update.mockResolvedValue({ ...store, catalogLayout: "sections" });
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.update("m_1", "store_1", { catalogLayout: "sections" } as any);
 
     expect(prisma.store.update).toHaveBeenCalledWith({
@@ -1447,7 +1447,7 @@ describe("StoresService.create — catalog layout", () => {
   it("persists an explicitly chosen catalog layout on a new store", async () => {
     const prisma = makeFakePrisma();
     prisma.store.create.mockImplementation(({ data }) => Promise.resolve({ id: "store_new", ...data }));
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await service.create("m_1", { name: "Tienda nueva", catalogLayout: "tabs" } as any);
 
@@ -1461,7 +1461,7 @@ describe("StoresService.update — locations", () => {
   it("rejects branches that cannot fulfill an order", async () => {
     const prisma = makeFakePrisma();
     prisma.store.findFirst.mockResolvedValue(store);
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(service.update("m_1", "store_1", {
       locations: [{ id: "cerrada", name: "Sucursal", pickupEnabled: false, deliveryEnabled: false, openingHours: [] }],
@@ -1475,7 +1475,7 @@ describe("StoresService.update — locations", () => {
     prisma.store.update.mockResolvedValue(store);
     prisma.paymentLink.findMany.mockResolvedValue([{ id: "link_1", stock: 8 }]);
     prisma.paymentLink.update.mockResolvedValue({});
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await service.update("m_1", "store_1", {
       locations: [{ id: "centro", name: "Centro", pickupEnabled: true, deliveryEnabled: false, openingHours: [], inventory: [{ paymentLinkId: "link_1", stock: 8 }] }],
@@ -1493,7 +1493,7 @@ describe("StoresService.setLinks", () => {
     const prisma = makeFakePrisma();
     prisma.store.findFirst.mockResolvedValue(store);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
     await service.setLinks("m_1", "store_1", {
       links: [
         { label: "Instagram", url: "https://instagram.com/x" },
@@ -1514,7 +1514,7 @@ describe("StoresService.setLinks", () => {
     const prisma = makeFakePrisma();
     prisma.store.findFirst.mockResolvedValue(null);
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await expect(service.setLinks("other_merchant", "store_1", { links: [] })).rejects.toThrow(NotFoundException);
     expect(prisma.storeLink.deleteMany).not.toHaveBeenCalled();
@@ -1528,7 +1528,7 @@ describe("StoresService.saveSettings", () => {
     prisma.store.update.mockResolvedValue({ ...store, name: "Renamed" });
     prisma.storeLink.findMany.mockResolvedValue([{ label: "Instagram", url: "https://instagram.com/x", sortOrder: 0 }]);
 
-    await new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).saveSettings(
+    await makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any).saveSettings(
       "m_1",
       "store_1",
       { name: "Renamed", links: [{ label: "Instagram", url: "https://instagram.com/x" }] } as any,
@@ -1547,7 +1547,7 @@ describe("StoresService.saveSettings", () => {
     prisma.store.update.mockResolvedValue({ ...store, locations: [] });
     prisma.paymentLink.findMany.mockResolvedValue([{ id: "link_1", stock: 20 }]);
     prisma.paymentLink.update.mockResolvedValue({});
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await service.saveSettings("m_1", "store_1", {
       links: [],
@@ -1569,7 +1569,7 @@ describe("StoresService.saveSettings", () => {
     prisma.store.update.mockResolvedValue({ ...store, locations: [] });
     prisma.paymentLink.findMany.mockResolvedValue([{ id: "link_1", stock: 20 }]);
     prisma.paymentLink.update.mockResolvedValue({});
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, makeFakeUploads() as any);
 
     await service.saveSettings("m_1", "store_1", {
       links: [],
@@ -1606,7 +1606,7 @@ describe("StoresService.remove", () => {
     ]);
     const uploads = makeFakeUploads();
 
-    const service = new StoresService(prisma as any, makeFakePaymentIntents() as any, uploads as any);
+    const service = makeStoreServices(prisma as any, makeFakePaymentIntents() as any, uploads as any);
     const result = await service.remove("m_1", "store_1");
 
     expect(prisma.store.delete).toHaveBeenCalledWith({ where: { id: "store_1" } });

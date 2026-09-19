@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { StoresService } from "./stores.service";
+import { PublicStoresService } from "./public-stores.service";
+import { StoreCheckoutService } from "./store-checkout.service";
 import { StoresController } from "./stores.controller";
 import { StoresPublicController } from "./stores-public.controller";
 import { PaymentIntentsModule } from "../payment-intents/payment-intents.module";
@@ -17,7 +19,7 @@ import { PromoCodesModule } from "../promo-codes/promo-codes.module";
 @Module({
   imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule, RetentionModule, DomainsModule, PromoCodesModule],
   controllers: [StoresController, StoresPublicController],
-  providers: [StoresService],
-  exports: [StoresService],
+  providers: [StoresService, PublicStoresService, StoreCheckoutService],
+  exports: [StoresService, PublicStoresService, StoreCheckoutService],
 })
 export class StoresModule {}
