@@ -1,7 +1,9 @@
 import { inspectSourceWebsite, sourceReferenceDocument, sourceReferenceStyles, sourceWebsiteReferenceUrls } from './source-website-reference';
+import { captureSourceReference } from './source-reference-capture';
 import { readSourceWebsite } from './source-website-fetch';
 jest.mock('./source-website-fetch', () => ({ readSourceWebsite: jest.fn() }));
-beforeEach(() => jest.resetAllMocks());
+jest.mock('./source-reference-capture', () => ({ captureSourceReference: jest.fn() }));
+beforeEach(() => { jest.resetAllMocks(); jest.mocked(captureSourceReference).mockResolvedValue({ status: 'unavailable', captures: [], limitations: ['not available'] }); });
 
 it('recognizes English, Spanish, markdown, bare and www reference URLs, with a two-page limit', () => {
   for (const message of ['I want my website like this one: https://example.com.', 'quiero mi sitio como este https://example.com', 'Quiero mi sitio como https://example.com', '[Referencia](https://example.com)', 'https://example.com']) {

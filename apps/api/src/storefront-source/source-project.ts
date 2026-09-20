@@ -2,6 +2,7 @@ import { MAX_SOURCE_VIDEO_BYTES, MAX_SOURCE_VIDEO_BASE64, sourceVideo } from './
 import { BadRequestException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { SaveSourceProjectDto, SourceProjectBriefDto } from "./dto/save-source-project.dto";
+import { SOURCE_SITE_PURPOSES, sourceSitePurpose } from './source-site-purpose';
 
 export interface SourceProjectSnapshot {
   schemaVersion: 1;
@@ -32,7 +33,9 @@ function text(value: unknown, name: string, max: number): string {
 /** A source artifact is data here. No imports, build scripts, or HTML are run. */
 export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjectSnapshot {
   if (!input.brief || !Array.isArray(input.files) || !input.files.length || input.files.length > 100) reject("A brief and 1–100 source files are required");
+  if (input.brief.sitePurpose !== undefined && !SOURCE_SITE_PURPOSES.includes(input.brief.sitePurpose)) reject('Invalid site purpose');
   const brief = {
+    ...(input.brief.sitePurpose ? { sitePurpose: sourceSitePurpose(input.brief) } : {}),
     businessType: text(input.brief.businessType, "business type", 120),
     audience: text(input.brief.audience, "audience", 500),
     primaryAction: text(input.brief.primaryAction, "primary action", 500),
@@ -51,7 +54,7 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     if (key === RESERVED_PATH || paths.has(key)) reject("Duplicate or reserved source file path");
     paths.add(key);
     const encoding = file.encoding ?? "utf8";
-    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(home|product|checkout)\.js$/.test(file.path) ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
+    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
     if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image, MP4 and font assets are supported");
     if (encoding === "utf8" && (file.content.includes("\0") || SECRET.test(file.content))) reject("Source files cannot contain NUL characters or recognized private credentials");
     if (sourceVideo(file.path)) {

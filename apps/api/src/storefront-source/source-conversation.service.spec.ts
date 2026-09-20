@@ -48,6 +48,17 @@ describe('Source conversation interpretation', () => {
     expect(body.instructions).toContain(SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS);
     expect(JSON.parse(body.input[0].content[1].text).websiteReferences).toEqual(websiteReferences);
   });
+  it('sends rendered references as image inputs and never as base64 text or merchant artwork', async () => {
+    const { service } = setup();
+    const image = 'data:image/jpeg;base64,cGl4ZWxz';
+    const websiteReferences = [{ url: 'https://example.com', status: 'inspected' as const, evidence: 'HTML evidence', rendered: { status: 'captured' as const, limitations: ['Static states only'], captures: [{ url: 'https://example.com', viewport: 'desktop' as const, width: 1280, height: 844, y: 0, pageHeight: 844, missingImages: 0, image }] } }];
+    respond({ ...reply(), imageUses: [] });
+    await service.decide('merchant', { ...input(), assetUrls: [], draft: { ...newSourceSetup(), websiteReferences } });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.input[0].content).toContainEqual({ type: 'input_image', image_url: image, detail: 'auto' });
+    expect(body.input[0].content.filter((part: any) => part.type === 'input_text').map((part: any) => part.text).join('')).not.toContain('cGl4ZWxz');
+    expect(JSON.parse(body.input[0].content[1].text).availableImageUrls).toEqual([]);
+  });
   it('uses the selected DeepSeek model for chat with OpenAI disabled', async () => {
     const { service, config } = setup();
     config.get.mockImplementation((key: string) => key === 'app.deepSeek.apiKey' ? 'deepseek-test-key' : key === 'app.deepSeek.enabled');

@@ -2,7 +2,7 @@ import { sourceStyleTokens, SOURCE_STYLE_TOKEN_CONTRACT, type SourceStyleTokens 
 import { BadGatewayException } from '@nestjs/common';
 import { SOURCE_ICON_NAMES, type SourceAsset } from './source-asset-library';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
-import { SOURCE_PRODUCT_PAGE_STYLES, type SourceDesign, type SourceProductPageStyle } from './source-design';
+import { SOURCE_PRODUCT_PAGE_STYLES, type SourceDesign, type SourceMotionChoreography, type SourceProductPageStyle, type SourceStoryPlan } from './source-design';
 import type { SourceMotionMode } from './source-motion';
 import { normalizeSourceSceneContract, resolveSourceSceneContract, type SourceSceneContract } from './source-scene-contract';
 
@@ -16,7 +16,8 @@ export type SourceVisualSystem = {
   tokens?: SourceStyleTokens;
   typography: { display: string; rule: string };
   iconography: { family: 'lucide-local'; vocabulary: string[] };
-  motion: { mode: SourceMotionMode; reducedMotion: string };
+  motion: { mode: SourceMotionMode; reducedMotion: string; choreography?: SourceMotionChoreography };
+  story?: SourceStoryPlan;
   layout: { sectionOrder: string[]; catalogSection: string | null; mobileRule: string };
   productPage?: { style: SourceProductPageStyle };
   /** One photographic shoot per store; see source-scene-contract.ts. Absent on v2 snapshots and on
@@ -35,7 +36,8 @@ export function buildSourceVisualSystem(mode: SourceMotionMode, assets: SourceAs
       rule: 'Keep text legible, with natural wrapping and a clear hierarchy.',
     },
     iconography: { family: 'lucide-local', vocabulary: [...SOURCE_ICON_NAMES] },
-    motion: { mode, reducedMotion: 'Respect prefers-reduced-motion and provide a pause path for continuous movement.' },
+    motion: { mode, reducedMotion: 'Respect prefers-reduced-motion and provide a pause path for continuous movement.', ...(selected?.motion ? { choreography: selected.motion } : {}) },
+    ...(selected?.story ? { story: selected.story } : {}),
     layout: {
       sectionOrder: selected?.layout?.sections || [],
       catalogSection: selected?.layout?.catalogSection || null,

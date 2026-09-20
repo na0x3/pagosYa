@@ -1,3 +1,5 @@
+import { sourceSitePurpose } from './source-site-purpose';
+import { validateSourcePriceClaims } from './source-price-claims';
 import { isNextSource, nextSourceFile, nextPageMarkup, validateNextSources } from './source-next';
 import { BadRequestException } from '@nestjs/common';
 import type { SourceProjectSnapshot } from './source-project';
@@ -14,10 +16,13 @@ export function assertSourceCommerceContract(snapshot: SourceProjectSnapshot) {
   if (!files.has('commerce.js')) throw new BadRequestException('El sitio necesita el componente compartido commerce.js.');
   const clean = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '').replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, tag => tag.replace(/>[\s\S]*<\//, '></'));
   const next = isNextSource(snapshot.files);
-  if (next) validateNextSources(snapshot.files.filter(f => nextSourceFile(f.path)));
+  const purpose = sourceSitePurpose(snapshot.brief);
+  if (next) validateNextSources(snapshot.files.filter(f => nextSourceFile(f.path)), purpose);
+  else if (purpose === 'shop') validateSourcePriceClaims(snapshot.files);
   const home = clean(next ? nextPageMarkup(snapshot.files, 'home') : files.get('index.html') || '');
-  if (!/<[^>]+\bdata-pagosya-catalog(?:\s|=|>)/i.test(home)) throw new BadRequestException('La página inicial necesita el catálogo compartido.');
-  if (!/<(?:button|a)\b[^>]*(?:\bdata-cart-open(?:\s|=|>)|href\s*=\s*["']#(?:pedido|carrito|cart)["'])/i.test(home)) throw new BadRequestException('Añade un botón Pedido con data-cart-open para abrir el carrito.');
+  if (purpose === 'shop' && !/<[^>]+\bdata-pagosya-catalog(?:\s|=|>)/i.test(home)) throw new BadRequestException('La página inicial necesita el catálogo compartido.');
+  if (purpose === 'shop' && !/<(?:button|a)\b[^>]*(?:\bdata-cart-open(?:\s|=|>)|href\s*=\s*["']#(?:pedido|carrito|cart)["'])/i.test(home)) throw new BadRequestException('Añade un botón Pedido con data-cart-open para abrir el carrito.');
+  if (purpose !== 'shop' && !/<[^>]+\bdata-pagosya-contact(?:\s|=|>)/i.test(home)) throw new BadRequestException('La página inicial necesita el espacio de contacto compartido.');
   for (const [path, source] of files) {
     if (!path.endsWith('.html')) continue;
     const html = clean(source);

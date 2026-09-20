@@ -1,7 +1,7 @@
 import type { SourceCheck } from './source-checks';
 
 // This function is serialized and executes only inside an opaque preview frame.
-export function sourceShoppingProbe(design?: { sections: string[]; catalogSection: string; standaloneIntro: boolean; productsInOpening: boolean }) {
+export function sourceShoppingProbe(design?: { sections: string[]; catalogSection: string; standaloneIntro: boolean; productsInOpening: boolean }, commerce = true) {
   // Exercising the background frame must not take focus from the merchant.
   HTMLElement.prototype.focus = () => {};
   window.focus = () => {};
@@ -78,7 +78,7 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         if (small.length) warn('Controles pequeños para el dedo', `${small.length} control(es) miden menos de 32 px: ${small.slice(0, 3).map(el => describe(el)).join(', ')}. Dales al menos 44 px de alto o de ancho.`);
       }
       const titles = [...document.querySelectorAll('h1')].filter(el => shown(el as HTMLElement));
-      if (document.querySelector('[data-pagosya-catalog]') && titles.length !== 1) warn('Título principal', titles.length ? `La página tiene ${titles.length} títulos principales (h1). Deja uno solo.` : 'La página no tiene un título principal (h1).');
+      if ((!commerce || document.querySelector('[data-pagosya-catalog]')) && titles.length !== 1) warn('Título principal', titles.length ? `La página tiene ${titles.length} títulos principales (h1). Deja uno solo.` : 'La página no tiene un título principal (h1).');
       const croppedSlides = [...document.querySelectorAll<HTMLImageElement>('[aria-roledescription="carrusel"] img,[aria-roledescription="carousel"] img')].filter(img => {
         if (!img.naturalWidth || !img.naturalHeight || getComputedStyle(img).objectFit !== 'cover') return false;
         const box = img.getBoundingClientRect();
@@ -141,12 +141,13 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       }
       if (overlaps.size) warn('Ilustración sobre el producto', `La caja de una ilustración decorativa cruza texto o controles en: ${[...overlaps].slice(0, 3).join(' · ')}. Revisa el solapamiento; reserva espacio propio y adapta el dibujo al ancho real de su columna.`);
       if (separated.size) warn('Precio separado del producto', `El precio queda en otra columna y muy por debajo del nombre en: ${[...separated].slice(0, 3).join(' · ')}. Revisa las áreas de la cuadrícula y acerca nombre, precio y compra.`);
-      add('Controles de compra completos', !clipped.size, clipped.size ? `Hay controles recortados o fuera de pantalla en: ${[...clipped].slice(0, 3).join(' · ')}. Ajusta columnas y permite envolver las acciones.` : undefined);
+      if (commerce) add('Controles de compra completos', !clipped.size, clipped.size ? `Hay controles recortados o fuera de pantalla en: ${[...clipped].slice(0, 3).join(' · ')}. Ajusta columnas y permite envolver las acciones.` : undefined);
       if (design && Array.isArray(design.sections)) {
         const main = document.querySelector('main');
         const sections = main ? [...main.children].filter(el => !el.matches('script,style,template,[data-pagosya-contact],[data-pagosya-comeback],[data-pagosya-subscribe],[data-pagosya-status],[data-pagosya-cart]')) : [];
         const actual = sections.map(el => el.id);
         if (JSON.stringify(actual) !== JSON.stringify(design.sections)) warn('Composición elegida', `El orden previsto es ${design.sections.join(' → ')}; la página muestra ${actual.map(id => id || '(sin nombre)').join(' → ')}.`);
+        if (commerce) {
         const catalogSection = document.getElementById(design.catalogSection);
         const catalog = document.querySelector('[data-pagosya-catalog]');
         if (!catalogSection || !catalog || !catalogSection.contains(catalog) || (!design.standaloneIntro && sections[0] !== catalogSection)) warn('Apertura del catálogo', 'La composición elegida abre con el catálogo. Elimina la portada independiente y sitúa los productos en el bloque previsto.');
@@ -164,6 +165,7 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
           if (!product) warn('Productos en la primera pantalla', 'El diseño elegido promete un producto con nombre, precio y acción de compra sin desplazarse. Reduce la apertura y comprueba los tres elementos en esta pantalla.');
         }
         if (innerWidth < 650 && ![...document.querySelectorAll('header [data-cart-open]')].some(inOpening)) warn('Pedido visible en móvil', 'Mantén Mi pedido y su cantidad visibles en la cabecera, fuera del menú plegado.');
+        }
       }
       if (document.documentElement.dataset.productTemplateInvalid === 'true') warn('Composición de productos', 'La plantilla personalizada no pudo conectarse al catálogo; se mostró la presentación básica. Revisa sus campos de nombre, precio, detalle y compra.');
       const emptySections = [...document.querySelectorAll<HTMLElement>('section')].filter(section => {
@@ -191,6 +193,7 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       }
       const pause = () => new Promise(resolve => setTimeout(resolve, 80));
       const visible = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)].find(shown);
+      if (commerce) {
       let buy = visible('[data-pagosya-catalog] button[data-add]:not(:disabled),[data-pagosya-product] button[data-add]:not(:disabled)');
       // A product with options opens its configurator on the page; the first available combination is preselected.
       const chooser = !buy ? visible('[data-pagosya-catalog] button.menu-add[data-product]:not(:disabled)') : null;
@@ -275,6 +278,7 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         }
         options?.click(); await pause();
       } else if (document.querySelector('[data-pagosya-catalog]')) add('Compra de producto', false, 'Añade un producto simple disponible para comprobar el recorrido.');
+      }
       const form = document.querySelector<HTMLFormElement>('[data-pagosya-contact] form');
       if (form && !(window as any).PAGOSYA_HOSTED) {
         const values: Record<string, string> = { name: 'Prueba de sitio', email: 'prueba@example.com', message: 'Comprobación automática del formulario.' };
@@ -282,7 +286,7 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         form.querySelector<HTMLButtonElement>('button[type=submit]')?.click();
         add('Formulario en modo de prueba', Boolean(form.querySelector('[data-contact-status]')?.textContent?.includes('Prueba completada')));
       }
-    } catch (error) { add('Recorrido de compra', false, error instanceof Error ? error.message : 'Error inesperado'); }
+    } catch (error) { add(commerce ? 'Recorrido de compra' : 'Comprobación del sitio', false, error instanceof Error ? error.message : 'Error inesperado'); }
     parent.postMessage({ type: 'pagosya:source-check-result', results }, '*');
   }, 100));
 }

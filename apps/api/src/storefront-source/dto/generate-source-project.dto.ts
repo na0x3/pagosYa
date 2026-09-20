@@ -1,4 +1,4 @@
-import { SOURCE_MOTION_MODES, type SourceMotionMode } from '../source-motion';
+import { SOURCE_MOTION_MODES, SOURCE_SCROLL_FEELS, type SourceMotionMode, type SourceScrollFeel } from '../source-motion';
 import { IsInt, Min, Max, IsIn as IsModelIn } from 'class-validator';
 import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../source-generation-policy';
 import { Type } from "class-transformer";
@@ -11,6 +11,7 @@ export class GenerateSourceProjectDto extends SourceProjectRevisionDto {
   /** @deprecated Accepted only for older clients; never used for generation. */
   @IsOptional() @IsString() @MaxLength(80) themeId?: string;
   @IsOptional() @IsModelIn(SOURCE_MOTION_MODES) motion?: SourceMotionMode;
+  @IsOptional() @IsModelIn(SOURCE_SCROLL_FEELS) scrollFeel?: SourceScrollFeel;
   @IsOptional() @IsModelIn(SOURCE_MODEL_CHOICES) model?: SourceModelChoice;
   @IsOptional() @IsInt() @Min(1) @Max(500) maxCredits?: number;
   @IsDefined() @ValidateNested() @Type(() => SourceProjectBriefDto) brief!: SourceProjectBriefDto;

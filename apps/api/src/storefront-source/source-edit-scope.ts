@@ -136,7 +136,13 @@ export function validateSourceEditScope(previous: File[], next: File[], instruct
 export function sourceDesignAfterSectionEdit(design: SourceDesign | undefined, files: File[], scope?: SectionScope): SourceDesign | undefined {
   if (!design || !scope) return design;
   const copy = structuredClone(design);
-  const layout = copy.concepts[copy.selected].layout;
-  if (layout) layout.sections = sourceHomeRegions(files).map(r => r.id);
+  const selected = copy.concepts[copy.selected];
+  const layout = selected.layout;
+  if (layout) {
+    layout.sections = sourceHomeRegions(files).map(r => r.id);
+    const live = new Set(layout.sections);
+    if (selected.story) selected.story.beats = selected.story.beats.filter(beat => live.has(beat.section));
+    if (selected.motion) selected.motion.scenes = selected.motion.scenes.filter(scene => live.has(scene.section));
+  }
   return copy;
 }

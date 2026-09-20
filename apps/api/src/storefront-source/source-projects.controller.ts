@@ -13,6 +13,7 @@ import { EditSourceFileDto, SaveSourceProjectDto, SourceProjectRevisionDto } fro
 import { SourceProjectsService } from "./source-projects.service";
 import { SourceGenerationService } from "./source-generation.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
+import { SourceVisualEditDto } from './dto/source-visual-edit.dto';
 
 class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: boolean; }
 
@@ -30,7 +31,7 @@ export class SourceProjectsController {
 
   @Patch("motion")
   setMotion(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SourceMotionDto) {
-    return this.projects.setMotion(merchant.id, storeId, input.revision, input.motion);
+    return this.projects.setMotion(merchant.id, storeId, input.revision, input.motion, input.scrollFeel);
   }
 
   @Get("catalog")
@@ -86,6 +87,18 @@ export class SourceProjectsController {
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
   editFile(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: EditSourceFileDto) {
     return this.projects.editFile(merchant.id, storeId, input);
+  }
+
+  @Get('visual-fields')
+  @Header('Cache-Control', 'private, no-store')
+  visualFields(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Query('revision', ParseIntPipe) revision: number) {
+    return this.projects.visualFields(merchant.id, storeId, revision);
+  }
+
+  @Patch('visual-edit')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  visualEdit(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SourceVisualEditDto) {
+    return this.projects.visualEdit(merchant.id, storeId, input);
   }
 
   @Put()

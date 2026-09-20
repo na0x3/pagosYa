@@ -5,6 +5,8 @@
   window.PAGOSYA_VIDEO_LOOP = true;
   const initialized = new WeakSet();
   const start = video => {
+    // React sections own their poster, motion preference, data-saving and playback controls.
+    if (video.hasAttribute('data-pagosya-video-managed')) return;
     if (!video.loop) video.loop = true;
     if (initialized.has(video)) return;
     initialized.add(video);

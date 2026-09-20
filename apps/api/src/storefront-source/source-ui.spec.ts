@@ -43,13 +43,14 @@ describe('@pagosya/ui storefront framework', () => {
     expect(() => validateNextSources(files)).toThrow();
   });
 
-  it('teaches every React generation the framework and seeds varied starting combinations', () => {
+  it('teaches every React generation the framework and a brief-compatible starting direction', () => {
     expect(SOURCE_NEXT_INSTRUCTIONS).toContain(SOURCE_UI_TOOLS);
-    expect(SOURCE_UI_TOOLS.length).toBeLessThan(4600);
-    const first = sourceUiComposition(() => 0), last = sourceUiComposition(max => max - 1);
-    expect(first).not.toEqual(last);
+    // The story scenes and smooth-scroll contract add a small, bounded amount of
+    // guidance while keeping the stable prompt well below the next 1k boundary.
+    expect(SOURCE_UI_TOOLS.length).toBeLessThan(5600);
+    const first = sourceUiComposition({ brief: 'Café', seed: 'cafe', assets: [] });
+    expect(first.family).toBe('cafe-expressive');
     expect(sourceUiCompositionPrompt(first)).toContain('header classic');
-    const seen = new Set(Array.from({ length: 40 }, () => JSON.stringify(sourceUiComposition())));
-    expect(seen.size).toBeGreaterThan(30);
+    expect(sourceUiCompositionPrompt(first)).toContain('Merchant instructions');
   });
 });

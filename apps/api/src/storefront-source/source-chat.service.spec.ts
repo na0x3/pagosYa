@@ -14,6 +14,28 @@ function setup(messages: any[] = []) {
   return { service: new SourceChatService(prisma, projects, generation, dialogue), prisma, projects, generation, dialogue, messages };
 }
 const request = { revision: 1, instruction: 'Crea una carta para mi cafetería, clara y cálida', assetUrls: [] };
+it('retains the selected website purpose across discovery and sends it into the first generation', async () => {
+  const { service, projects, dialogue, generation } = setup();
+  projects.current.mockResolvedValue({ revision: 0 });
+  await service.send('m', 's', { ...request, revision: 0, sitePurpose: 'portfolio', instruction: 'Un portafolio de arquitectura' });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Para clientes de proyectos residenciales' });
+  await service.send('m', 's', { ...request, revision: 0, instruction: 'Usa las fotos y una composición cinematográfica' });
+  expect(dialogue.decide.mock.calls.every((call: any[]) => call[1].draft.sitePurpose === 'portfolio')).toBe(true);
+  expect(generation.generate.mock.calls[0][2].brief).toMatchObject({ sitePurpose: 'portfolio', primaryAction: 'Explorar proyectos y contactar' });
+});
+
+it('keeps the saved presentation purpose when an older client omits the selector', async () => {
+  const { service, projects, generation } = setup();
+  projects.version.mockResolvedValue({ snapshot: { brief: { businessType: 'Estudio', audience: 'Clientes', primaryAction: 'Consultar', visualDirection: 'Minimal', sitePurpose: 'service' } } });
+  await service.send('m', 's', { ...request, instruction: 'Cambia el título' });
+  expect(generation.generate.mock.calls[0][2].brief.sitePurpose).toBe('service');
+});
+it('cannot change an existing shop into a presentation site through a local edit selector', async () => {
+  const { service, dialogue, generation } = setup();
+  await expect(service.send('m', 's', { ...request, sitePurpose: 'portfolio', instruction: 'Cambia el título' })).rejects.toThrow('rediseño explícito');
+  expect(dialogue.decide).not.toHaveBeenCalled();
+  expect(generation.generate).not.toHaveBeenCalled();
+});
 it('retains accepted photo roles through an unrelated section edit', async () => {
   const photo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
   const { service, dialogue, generation, messages } = setup([{ role:'ASSISTANT', metadata:{sourceRevision:1,sourceSetup:{assetUrls:[],imageUses:[{url:photo,role:'business',description:'Portada aprobada'}]}} }]);

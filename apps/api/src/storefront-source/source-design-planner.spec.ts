@@ -2,7 +2,11 @@ import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design
 import { SourceRequestBudget } from './source-request-budget';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
 
-const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible', layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true } }));
+const concepts = ['Menu', 'Window', 'Counter'].map(name => ({ name, premise: `${name} premise`, opening: `${name} opening`, flow: `${name} flow`, typography: 'Instrument', imagery: 'No photos', mobile: 'Keep order visible',
+  layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true },
+  story: { promise: `${name} promise`, eyebrow: 'Hecho cerca', headline: `${name} para compartir hoy`, support: 'Una selección breve y clara para elegir con confianza.', primaryAction: 'Ver menú', beats: [{ section: 'menu', role: 'offer', headline: `${name} del día`, media: 'product' }] },
+  motion: { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [{ section: 'menu', kind: 'sequence', intensity: 1 }] },
+}));
 const input = () => ({ model: 'gpt-5.6-terra' as const, provider: { name: 'OpenAI', endpoint: 'https://api.openai.com/v1/responses' }, apiKey: 'test-key', selected: 2, context: 'Synthetic cafe', images: [], budget: new SourceRequestBudget(25), signal: new AbortController().signal, attempts: [] as DesignPlanningAttempt[] });
 afterEach(() => jest.restoreAllMocks());
 
@@ -41,6 +45,7 @@ it('repairs an inconsistent completed plan once with an actionable layout diagno
 it('accepts an intro planned before the catalog without spending a repair on the flag', async () => {
   const intro = structuredClone(concepts);
   intro[1].layout.sections.unshift('intro');
+  intro[1].story.beats.unshift({ section: 'intro', role: 'opening', headline: 'Una ventana al oficio', media: 'hero' });
   const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 1500, output_tokens: 1200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts: intro }) }] }] })));
   const request = input();
   const result = await new SourceDesignPlanner().explore(request);
@@ -83,4 +88,16 @@ it('drops malformed rationale without spending another provider call', async () 
   const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(planningResponse({ index: 1, rationale: 'x'.repeat(500) }));
   expect((await new SourceDesignPlanner().explore({ ...input(), selected: undefined })).selection?.rationale).toBeNull();
   expect(mock).toHaveBeenCalledTimes(1);
+});
+
+it('supports a layout-only control arm without exposing story or motion fields', async () => {
+  const layoutOnly = concepts.map(({ story: _story, motion: _motion, ...concept }) => concept);
+  const mock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ concepts: layoutOnly, selection: { index: 1, rationale: 'Fits the catalog.' } }) }] }] })));
+  const result = await new SourceDesignPlanner().explore({ ...input(), selected: undefined, narrative: false });
+  const schema = JSON.parse(mock.mock.calls[0][1]!.body as string).text.format.schema.properties.concepts.items;
+  expect(schema.required).toContain('layout');
+  expect(schema.required).not.toContain('story');
+  expect(schema.properties).not.toHaveProperty('motion');
+  expect(result.concepts[1]).not.toHaveProperty('story');
+  expect(result.selected).toBe(1);
 });

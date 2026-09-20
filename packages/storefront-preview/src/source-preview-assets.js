@@ -1,6 +1,12 @@
 /* Runs inside the preview sandbox before authored scripts. Resolve media at the
  * DOM boundary so computed URLs work just like literal asset paths. */
-(function (assets, page) {
+(function (assets, page, editing) {
+  // Only the embedding Studio can replay. Hosted sites never accept this command.
+  window.addEventListener('message', event => {
+    if (event.source !== parent || parent === window || window.PAGOSYA_HOSTED === true || event.data?.type !== 'pagosya:preview-replay-motion') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('pagosya:replay-motion')));
+  });
   const base = new URL(page, 'https://source.invalid/');
   const resolve = value => {
     if (typeof value !== 'string' || /^(?:[a-z]+:|\/\/|#)/i.test(value.trim())) return value;
@@ -25,6 +31,25 @@
     return name === 'srcset' ? srcset(value) : value;
   };
   const setAttribute = Element.prototype.setAttribute;
+  if (editing) {
+    const mediaPaths = new Map(Object.entries(assets).map(([path, value]) => [value, path]));
+    const selector = 'img,h1,h2,h3,h4,h5,h6,p,span,strong,em,a,button,blockquote';
+    const target = event => event.target instanceof Element ? event.target.closest(selector) : null;
+    let outlined;
+    const clear = () => { if (outlined) outlined.removeAttribute('data-preview-edit-hover'); outlined = null; };
+    const style = document.createElement('style');
+    style.textContent = '[data-preview-edit-hover]{outline:2px solid #735da5!important;outline-offset:4px!important;cursor:crosshair!important}';
+    document.head.append(style);
+    document.addEventListener('pointerover', event => { clear(); outlined = target(event); if (outlined) setAttribute.call(outlined, 'data-preview-edit-hover', ''); }, true);
+    document.addEventListener('pointerout', clear, true);
+    document.addEventListener('click', event => {
+      const element = target(event); if (!element) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      const image = element.tagName === 'IMG';
+      const value = image ? mediaPaths.get(element.getAttribute('src')) : element.textContent?.replace(/\s+/g, ' ').trim();
+      if (typeof value === 'string' && value.length <= 3000) parent.postMessage({ type: 'pagosya:visual-select', kind: image ? 'image' : 'text', value }, '*');
+    }, true);
+  }
   Element.prototype.setAttribute = function (name, value) {
     return setAttribute.call(this, name, mediaAttribute(this, String(name).toLowerCase(), value));
   };

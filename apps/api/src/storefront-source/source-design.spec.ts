@@ -38,6 +38,36 @@ it('requires executable layout commitments for new concepts while retaining lega
   expect(() => validateSourceDesign(value, 1, true)).toThrow('catalogSection');
 });
 
+it('persists a coherent story and bounded choreography for newly planned concepts', () => {
+  const value = proposal() as any;
+  for (const concept of value.concepts) {
+    concept.layout = { sections: ['opening', 'menu', 'visit'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };
+    concept.story = { promise: 'A clear reason to visit', eyebrow: 'Hecho cerca', headline: `${concept.name} para compartir hoy`, support: 'Una propuesta breve, clara y basada en los datos del negocio.', primaryAction: 'Ver menú', beats: [
+      { section: 'opening', role: 'opening', headline: 'Empieza por una pausa', media: 'hero' },
+      { section: 'menu', role: 'offer', headline: 'Elige algo rico', media: 'product' },
+      { section: 'visit', role: 'action', headline: 'Encuentra tu momento', media: 'none' },
+    ] };
+    concept.motion = { mode: 'expressive', scrollFeel: 'soft', entrance: 'stroke', scenes: [{ section: 'opening', kind: 'parallax-stack', intensity: 2 }, { section: 'visit', kind: 'text-fill', intensity: 1 }] };
+  }
+  const checked = validateSourceDesign(value, 1, true, true);
+  expect(checked.concepts[1]).toMatchObject({ story: { primaryAction: 'Ver menú' }, motion: { scrollFeel: 'soft', scenes: expect.any(Array) } });
+  expect(checked.concepts[1].motion).toMatchObject({ mode: 'expressive', entrance: 'wordmark', scenes: [{ intensity: 2 }, { intensity: 2 }] });
+  value.concepts[1].story.beats.reverse();
+  expect(() => validateSourceDesign(value, 1, true, true)).toThrow('story.beats');
+  value.concepts[1].story.beats.reverse(); value.concepts[1].motion.scenes.push({ section: 'menu', kind: 'sequence', intensity: 1 });
+  expect(() => validateSourceDesign(value, 1, true, true)).toThrow('motion');
+});
+
+it('does not count the trusted decorative entrance as a planned main content block', () => {
+  const value = proposal() as any;
+  for (const concept of value.concepts) concept.layout = { sections: ['opening', 'menu'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };
+  const design = validateSourceDesign(value, 1, true);
+  const valid = '<main><div className="ui-entrance" aria-hidden="true"></div><section id="opening"><h1>Inicio</h1></section><section id="menu"><div data-pagosya-catalog></div></section></main>';
+  expect(() => validateSourceDesignImplementation(design, [{ path: 'index.html', content: valid }])).not.toThrow();
+  const untrusted = valid.replace('className="ui-entrance"', 'className="custom-overlay"');
+  expect(() => validateSourceDesignImplementation(design, [{ path: 'index.html', content: untrusted }])).toThrow('(sin id)');
+});
+
 it('trims prose slightly past the limit at a sentence, and still rejects runaway text', () => {
   const value = proposal() as any;
   value.concepts[2].premise = 'Una apertura cálida con la caja naranja como protagonista. '.repeat(9) + 'Cierre.';
@@ -82,6 +112,10 @@ it('keeps the chosen product page style and rejects unknown styles', () => {
   const value = proposal() as any;
   for (const concept of value.concepts) concept.layout = { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true, productPage: 'dense' };
   expect(validateSourceDesign(value, 1, true).concepts[1].layout?.productPage).toBe('dense');
+  for (const style of ['image-led', 'story-led']) {
+    value.concepts[1].layout.productPage = style;
+    expect(validateSourceDesign(value, 1, true).concepts[1].layout?.productPage).toBe(style);
+  }
   delete value.concepts[1].layout.productPage;
   expect(validateSourceDesign(value, 1, true).concepts[1].layout).not.toHaveProperty('productPage');
   value.concepts[1].layout.productPage = 'luxury';
@@ -89,8 +123,7 @@ it('keeps the chosen product page style and rejects unknown styles', () => {
   expect(SOURCE_DESIGN_CONTRACT).toContain('layout.productPage');
 });
 
-// docs/STOREFRONT_DESIGN_LEVEL_UP.md §3-§4. These are the numbers the quality bar is made of; a
-// later prompt edit must not be able to widen a band, drop a role or grow the accent budget.
+// Baseline visual defaults remain available without restricting deliberate merchant compositions.
 import { SOURCE_ACCENT_SLOTS, SOURCE_BODY_MEASURE_CH, SOURCE_CARD_AND_MASTHEAD_DIRECTION, SOURCE_CREATIVE_DIRECTION, SOURCE_DISPLAY_BODY_RATIO, SOURCE_GAP_CONTRAST_MIN, SOURCE_HAIRLINES_PER_SCREEN_MAX, SOURCE_INK_LADDER, SOURCE_MEDIA_TO_CONTROL_RADIUS, SOURCE_RHYTHM_DIRECTION, SOURCE_SPACING_SCALE, SOURCE_SPACING_SCALE_FACTOR, SOURCE_TYPE_ROLE_DIRECTION, SOURCE_TYPE_ROLES } from './source-design';
 
 it('pins the five type roles, the display:body band and the ink opacity ladder', () => {
@@ -106,7 +139,10 @@ it('pins the five type roles, the display:body band and the ink opacity ladder',
   expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('italic');
   // Contrast is bought with size, measure and colour, never with weight.
   expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('at most two weights per family');
-  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('line-height 1.7-1.8');
+  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('line-height 1.5-1.8');
+  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('default display:body band is not a maximum');
+  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('Italic is optional');
+  expect(SOURCE_TYPE_ROLE_DIRECTION).toContain('empty 100vh');
 });
 
 it('pins one eight-step spacing scale with a real gap contrast and a five-slot accent budget', () => {
@@ -125,7 +161,8 @@ it('pins one eight-step spacing scale with a real gap contrast and a five-slot a
   expect(SOURCE_MEDIA_TO_CONTROL_RADIUS).toEqual({ min: 1.2, max: 2 });
   expect(SOURCE_RHYTHM_DIRECTION).toContain('4 / 8 / 12 / 20 / 32 / 48 / 72 / 112');
   expect(SOURCE_RHYTHM_DIRECTION).toContain('at least 6x the smallest');
-  expect(SOURCE_RHYTHM_DIRECTION).toContain('exactly one accent, in at most 5 places per page');
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('large colour fields');
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('all words and controls must remain visible');
   for (const slot of SOURCE_ACCENT_SLOTS) expect(SOURCE_RHYTHM_DIRECTION).toContain(slot);
   expect(SOURCE_RHYTHM_DIRECTION).toContain('color-mix(in srgb, var(--store-foreground) 14%, var(--store-background))');
   expect(SOURCE_RHYTHM_DIRECTION).toContain('text-wrap:balance');
@@ -134,9 +171,10 @@ it('pins one eight-step spacing scale with a real gap contrast and a five-slot a
   expect(SOURCE_RHYTHM_DIRECTION).toContain('leads with the scene');
 });
 
-it('derives the accent from the merchant’s own goods and never from a generic palette', () => {
+it('uses real colour evidence when available and honors a brief without photos', () => {
   expect(SOURCE_RHYTHM_DIRECTION).toContain("sample the accent from a colour physically present in this merchant's own product photography");
-  expect(SOURCE_RHYTHM_DIRECTION).toContain('never from a generic palette');
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('select a palette from the brief');
+  expect(SOURCE_RHYTHM_DIRECTION).toContain('Explicit merchant colours take priority');
 });
 
 it('carries the type, rhythm, card and masthead rules into the prompts that reach the model', () => {

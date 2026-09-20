@@ -108,6 +108,41 @@ describe('Inline storefront product options', () => {
   }
   afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
+  it.each(['', ' style="display:none!important;margin-top:7px"'])('reveals a generated CSS-hidden cart mount only while the platform drawer is open (%s)', async inline => {
+    // Reduced reproduction of beauty-auto-1's literal RuntimeSlots component and stylesheet.
+    const { w, query, click } = await shop({
+      items: [{ id: 'cream', name: 'Crema Bruma', amount: 6800, currency: 'BOB', stock: null }],
+      template: `<style>.runtime-cart-slot{display:none!important}</style><div class="runtime-cart-slot" data-pagosya-cart${inline}></div>`,
+    });
+    const slot = query('.runtime-cart-slot');
+    const before = { display: slot.style.getPropertyValue('display'), priority: slot.style.getPropertyPriority('display'), margin: slot.style.getPropertyValue('margin-top') };
+    expect(w.getComputedStyle(slot).display).toBe('none');
+    click('.menu-add'); click('[data-cart-open]');
+    expect(query('.cart-drawer').open).toBe(true);
+    expect(query('.cart-drawer__body [data-pagosya-cart]')).toBe(slot);
+    expect(slot.hidden).toBe(false);
+    expect(slot.style.getPropertyValue('display')).toBe('block');
+    expect(slot.style.getPropertyPriority('display')).toBe('important');
+    expect(w.getComputedStyle(slot).display).toBe('block');
+    expect(slot.textContent).toContain('Crema Bruma');
+    expect(slot.querySelector('[data-checkout]')).not.toBeNull();
+    click('[data-cart-close]');
+    expect(slot.hidden).toBe(true);
+    expect(w.getComputedStyle(slot).display).toBe('none');
+    expect(slot.style.getPropertyValue('display')).toBe(before.display);
+    expect(slot.style.getPropertyPriority('display')).toBe(before.priority);
+    expect(slot.style.getPropertyValue('margin-top')).toBe(before.margin);
+    if (!inline) expect(slot.hasAttribute('style')).toBe(false);
+    click('[data-cart-open]');
+    expect(w.getComputedStyle(slot).display).toBe('block');
+    click('.cart-drawer [data-checkout]');
+    expect(query('.cart-drawer').open).toBe(false);
+    expect(slot.hidden).toBe(true);
+    expect(slot.style.getPropertyValue('display')).toBe(before.display);
+    expect(slot.style.getPropertyPriority('display')).toBe(before.priority);
+    expect(query('[data-pagosya-checkout] [data-pay]')).not.toBeNull();
+  });
+
   it.each([false, true])('renders labeled groups in the modal/full page (%s), resolves sparse combinations and updates price/photo', async fullPage => {
     const { query, click, choose } = await shop({ fullPage });
     if (!fullPage) click('.menu-add');

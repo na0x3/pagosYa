@@ -347,11 +347,11 @@ test('motion changes save a revision without AI generation and persist after rel
     else if(pathname.endsWith('/source-project')) body={revision:versions[0].revision,versions,nextBefore:null};
     else if(/\/versions\/\d+$/.test(pathname)) body=versions.find(v=>v.revision===Number(pathname.split('/').at(-1)));
     else if(pathname.endsWith('/motion')) {
-      const input=route.request().postDataJSON(); expect(input).toEqual({revision:1,motion:'off'}); changes++;
+      const input=route.request().postDataJSON(); expect(input).toEqual({revision:1,motion:'off',scrollFeel:'soft'}); changes++;
       const next=structuredClone(versions[0]); next.revision++; next.label='Sin movimiento';
       const config=next.snapshot.files.find(f=>f.path==='config.js')!;
       const data=JSON.parse(config.content.slice(config.content.indexOf('=')+1).trim().replace(/;$/,''));
-      config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion})+';';
+      config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion,scrollFeel:input.scrollFeel})+';';
       versions.unshift(next); body=next;
     } else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
@@ -365,6 +365,8 @@ test('motion changes save a revision without AI generation and persist after rel
   await page.reload();
   await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toHaveValue('off');
   await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toBeEnabled();
+  await expect(page.getByRole('combobox',{name:'Desplazamiento',exact:true})).toHaveValue('soft');
+  await expect(page.getByRole('combobox',{name:'Desplazamiento',exact:true})).toBeDisabled();
   expect(changes).toBe(1);
 });
 

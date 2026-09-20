@@ -69,3 +69,14 @@ it('discards cancelled checks when another revision loads', async () => {
   await vi.waitFor(() => expect(publish().disabled).toBe(false));
   expect(record).toHaveBeenCalledTimes(1);
 });
+
+it('saves the scroll feel as a revision without starting generation', async () => {
+  const saveMotion = vi.spyOn(MerchantStudioApi.prototype, 'setSourceMotion').mockResolvedValue({ ...version, revision: 3 });
+  await mountSourceStudio(app);
+  const select = app.querySelector<HTMLSelectElement>('#source-scroll-feel')!;
+  expect(select.value).toBe('soft');
+  select.value = 'cinematic';
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+  await vi.waitFor(() => expect(saveMotion).toHaveBeenCalledWith('s1', 2, 'subtle', 'cinematic'));
+  expect(app.querySelector('#source-scroll-feel')).not.toBeNull();
+});

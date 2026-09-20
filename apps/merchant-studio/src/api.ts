@@ -1,4 +1,5 @@
 import type { SourceDesignJob } from './source-design-jobs';
+import type { VisualFields } from './source-direct-editor';
 import type { AssetLibrary, VisualReport } from './source-visual-tools';
 import type { BuildProgress } from './source-build-progress';
 import type { BrandState } from './brand-profile';
@@ -101,6 +102,7 @@ export interface Clarification {
 }
 
 export interface SourceSetup {
+  sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
   step: 'conversation' | 'logo' | 'brand' | 'audience' | 'business' | 'products' | 'delivery' | 'review';
   prompt: string;
   options: Array<{ label: string; value: string; action?: 'generate' | 'restart' }>;
@@ -343,19 +345,27 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project${before ? `?before=${before}` : ""}`);
   }
 
-  setSourceMotion(storeId: string, revision: number, motion: SourceMotionMode): Promise<SourceRevision> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/motion`, { method: 'PATCH', body: JSON.stringify({ revision, motion }) });
+  setSourceMotion(storeId: string, revision: number, motion: SourceMotionMode, scrollFeel?: SourceScrollFeel): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/motion`, { method: 'PATCH', body: JSON.stringify({ revision, motion, scrollFeel }) });
   }
 
   editSourceFile(storeId: string, revision: number, path: string, content: string): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/file`, { method: "PATCH", body: JSON.stringify({ revision, path, content }) });
   }
 
+  sourceVisualFields(storeId: string, revision: number): Promise<VisualFields> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-fields?revision=${revision}`);
+  }
+
+  editSourceVisual(storeId: string, input: { revision: number; fieldId: string; value: string }): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-edit`, { method: 'PATCH', body: JSON.stringify(input) });
+  }
+
   sourceVersion(storeId: string, revision: number): Promise<SourceVersion> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}`);
   }
 
-  generateSource(storeId: string, body: { revision: number; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode }): Promise<SourceRevision> {
+  generateSource(storeId: string, body: { revision: number; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/generate`, { method: "POST", body: JSON.stringify(body) });
   }
 
@@ -440,6 +450,7 @@ export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualPropos
 
 export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt-5.6-sol' | 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'deepseek-v4-flash-vision-exp';
 export type SourceMotionMode = 'auto' | 'off' | 'subtle' | 'expressive';
-export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode };
+export type SourceScrollFeel = 'native' | 'soft' | 'cinematic';
+export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial' };
 export type SourceGenerationEstimate = { model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
 export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };

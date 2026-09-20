@@ -18,7 +18,7 @@ describe('Next.js storefront compilation', () => {
   ])('rejects JSX images without alternative text: %s', markup => {
     const files = nextStoreFiles();
     files.push({ path: 'components/photo.tsx', content: `export const Photo = (props: any) => ${markup};` });
-    expect(() => validateNextSources(files)).toThrow('Añade texto alternativo (alt) a cada imagen en components/photo.tsx.');
+    expect(() => validateNextSources(files)).toThrow('Añade texto alternativo (alt) a cada imagen indicada: components/photo.tsx:1.');
   });
   it.each([
     '<img alt="Café" />', '<img alt={"Café"} />', '<img alt={props.name} />',
@@ -34,7 +34,35 @@ describe('Next.js storefront compilation', () => {
     files.push({ path: 'components/photo.tsx', content: 'import { ProductImage as Photo } from "@pagosya/ui"; export const Gallery = () => <Photo />;' });
     expect(() => validateNextSources(files)).not.toThrow();
     files.at(-1)!.content = files.at(-1)!.content.replace('<Photo />', '<Photo><img src="foto.png" /></Photo>');
-    expect(() => validateNextSources(files)).toThrow('Añade texto alternativo (alt) a cada imagen en components/photo.tsx.');
+    expect(() => validateNextSources(files)).toThrow('Añade texto alternativo (alt) a cada imagen indicada: components/photo.tsx:1.');
+  });
+  it.each(['Hero', 'VideoHero', 'FloatingMedia', 'ScrollScrubHero'])('recognizes the h1 supplied by the trusted %s component', component => {
+    const files = nextStoreFiles();
+    files[1].content = files[1].content
+      .replace("import Header from './Header';", `import Header from './Header'; import { ${component} } from '@pagosya/ui';`)
+      .replace('<h1 className="text-3xl font-bold">Nuestra carta</h1>', component === 'Hero'
+        ? '<Hero title="Café Norte" />'
+        : component === 'VideoHero'
+          ? '<VideoHero poster={{src:"/assets/sample.png",alt:"Café"}} title="Café Norte" />'
+          : component === 'FloatingMedia'
+            ? '<FloatingMedia images={[]} title="Café Norte" />'
+            : '<ScrollScrubHero poster={{src:"/assets/sample.png",alt:"Café"}} title="Café Norte" />');
+    expect(nextPageMarkup(files, 'home')).toContain('<h1>');
+    expect(() => validateNextSources(files)).not.toThrow();
+  });
+  it('reports a missing h1 during the bounded React repair instead of late preflight', () => {
+    const files = nextStoreFiles();
+    files[1].content = files[1].content.replace('<h1 className="text-3xl font-bold">Nuestra carta</h1>', '<p>Nuestra carta</p>');
+    expect(() => validateNextSources(files)).toThrow('home necesita un encabezado principal h1 visible');
+  });
+  it('keeps the trusted page entrance outside the committed content-section count', () => {
+    const files = nextStoreFiles();
+    files[1].content = files[1].content
+      .replace("import Header from './Header';", "import Header from './Header'; import { SignatureStrokeEntrance } from '@pagosya/ui';")
+      .replace('<main>', '<main><SignatureStrokeEntrance/>');
+    const design: any = { selected: 0, concepts: [{ layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true } }] };
+    expect(nextPageMarkup(files, 'home')).toContain('ui-entrance');
+    expect(() => validateNextDesign(files, design)).not.toThrow();
   });
   it('compiles Motion and Lottie and preserves animated semantic layout and portable assets', async () => {
     const source = creativeStoreFiles();
@@ -44,7 +72,7 @@ describe('Next.js storefront compilation', () => {
     const files = withCreativeAssets([...source, ...compiled, ...nextProjectScaffold('creative')]);
     const exported = nextProjectExport(files, 'creative');
     expect(exported.map(file => file.path)).toEqual(expect.arrayContaining(['lib/creative.tsx', 'creative.d.ts', 'public/assets/creative/fluent-flat/coffee.svg', 'public/assets/creative/fluent-3d/croissant.png', 'public/assets/creative/LICENSE-fluent.txt']));
-    expect(JSON.parse(exported.find(file => file.path === 'package.json')!.content).dependencies).toMatchObject({ motion: '13.1.1', 'lottie-web': '5.13.0' });
+    expect(JSON.parse(exported.find(file => file.path === 'package.json')!.content).dependencies).toMatchObject({ lenis: '1.3.26', motion: '13.1.1', 'lottie-web': '5.13.0' });
     expect(compiled.find(file => file.path === '_compiled/home.js')!.content.length).toBeLessThan(800000);
   });
   it('compiles three React pages and Tailwind without executing merchant modules', async () => {
@@ -90,6 +118,14 @@ describe('Next.js storefront compilation', () => {
     try { validateNextSources(files); } catch (error) { message = (error as Error).message; }
     expect(message).toContain('home necesita data-cart-open');
     expect(message).toContain('product necesita data-cart-open');
+  });
+  it('reports image alternatives and missing commerce hooks in the same bounded repair', () => {
+    const files = nextStoreFiles();
+    files[1].content = files[1].content.replace('<div data-pagosya-catalog />', '<img src="/assets/example.jpg" />');
+    let message = '';
+    try { validateNextSources(files); } catch (error) { message = (error as Error).message; }
+    expect(message).toContain('Añade texto alternativo');
+    expect(message).toContain('home necesita data-pagosya-catalog');
   });
   it('sees hooks forwarded through prop spreads and children of shared components', () => {
     const files = nextStoreFiles();

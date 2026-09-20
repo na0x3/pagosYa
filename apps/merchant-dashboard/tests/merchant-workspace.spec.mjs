@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 
 async function workspace(page, withSite = false) {
-  const version = { revision: 1, label: 'Sitio guardado', snapshot: { schemaVersion: 1, brief: {}, files: [
+  let version = { revision: 1, label: 'Sitio guardado', snapshot: { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<h1>Mi café</h1><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js"></script><script src="commerce.js"></script>' },
     { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"data":{"items":[],"categories":[]}};' },
     { path: 'commerce.js', content: readFileSync(kitPath('commerce.js'), 'utf8') },
   ] } };
+  const originalVersion = structuredClone(version);
   const stores = ['Café Aroma', 'Taller Norte'].map((name, i) => ({ id: `store_${i + 1}`, merchantId: 'm1', slug: `tienda-${i + 1}`, name, status: 'ACTIVE', websiteRevision: 0, heroSlides: [], contentOrder: ['hero', 'products'], editorialGallery: [], links: [], locations: [], animations: [], checkoutMode: 'payment', cartRecommendationProductIds: [] }));
   const products = [], requests = [], conversations = new Map();
   const steps = ['business', 'logo', 'products', 'colors', 'review'];
@@ -28,8 +29,16 @@ async function workspace(page, withSite = false) {
     if (!conversations.has(storeId)) conversations.set(storeId, { messages: [], step: 'business' });
     const conversation = conversations.get(storeId);
     if (path === '/stores') body = stores;
-    else if (path.endsWith('/source-project')) body = { revision: withSite ? 1 : 0, versions: withSite ? [version] : [], nextBefore: null };
-    else if (path.endsWith('/versions/1')) body = version;
+    else if (path.endsWith('/source-project')) body = { revision: withSite ? version.revision : 0, versions: withSite ? [version] : [], nextBefore: null };
+    else if (path.endsWith('/visual-fields')) body = { revision: version.revision, fields: [{ id: 'heading', path: 'src/main.tsx', label: 'Título principal', kind: 'text', value: version.snapshot.files[0].content.match(/<h1>(.*?)<\/h1>/)[1] }] };
+    else if (path.endsWith('/visual-edit')) {
+      const input = request.postDataJSON(); expect(input.revision).toBe(version.revision);
+      version = structuredClone(version); version.revision += 1;
+      version.snapshot.files[0].content = version.snapshot.files[0].content.replace(/<h1>.*?<\/h1>/, `<h1>${input.value}</h1>`);
+      body = { revision: version.revision, label: 'Cambio visual' };
+    }
+    else if (path.endsWith('/versions/1/restore')) { version = { ...structuredClone(originalVersion), revision: version.revision + 1 }; body = { revision: version.revision }; }
+    else if (/\/versions\/\d+$/.test(path)) body = version;
     else if (path.endsWith('/conversation')) body = { messages: conversation.messages, setup: withSite ? null : setup(conversation.step) };
     else if (path.endsWith('/source-project/catalog')) body = { storeName: stores.find(s => s.id === storeId)?.name, items: products, categories: [] };
     else if (path.endsWith('/source-project/messages')) {
@@ -76,14 +85,36 @@ async function createProductWithGuide(page, name, price) {
   await expect(guide.getByText(`${name} ya está en tu catálogo.`)).toBeVisible();
 }
 
+test('motion replay reaches the sandbox without reloading or saving a new revision', async ({ page }) => {
+  const { editor, requests } = await workspace(page, true);
+  const preview = editor.frameLocator('iframe[title="Vista previa del sitio"]');
+  await preview.locator('body').evaluate(body => {
+    window.__replayProbe = { retainedState: 'cart-and-form-state', count: 0 };
+    window.addEventListener('pagosya:replay-motion', () => { body.dataset.replayed = String(++window.__replayProbe.count); });
+  });
+  await editor.locator('#source-replay-motion').click();
+  await expect(preview.locator('body')).toHaveAttribute('data-replayed', '1');
+  expect(await preview.locator('body').evaluate(() => window.__replayProbe.retainedState)).toBe('cart-and-form-state');
+  await editor.locator('#source-replay-motion').click();
+  await expect(preview.locator('body')).toHaveAttribute('data-replayed', '2');
+  await preview.locator('body').evaluate(() => { window.PAGOSYA_HOSTED = true; });
+  await editor.locator('#source-replay-motion').click();
+  await page.waitForTimeout(80);
+  await expect(preview.locator('body')).toHaveAttribute('data-replayed', '2');
+  expect(requests.filter(request => request.path.includes('/source-project') && request.method !== 'GET' && !request.path.endsWith('/checks'))).toEqual([]);
+});
+
 test('retired sections are absent and old view selections fall back to the overview', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const loadedResources = []; page.on('request', request => loadedResources.push(new URL(request.url()).pathname));
   const { requests } = await workspace(page);
-  for (const view of ['operations', 'growth', 'events']) {
+  for (const view of ['operations', 'growth', 'events', 'settings', 'appearance']) {
     await expect(page.locator(`[data-dashboard-view="${view}"], [data-dashboard-page="${view}"]`)).toHaveCount(0);
     await page.evaluate(view => window.setDashboardView(view), view);
     await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'overview');
   }
+  await expect(page.locator('#storeSettingsPage, #storeSettingsRoot, #customDomainStudio')).toHaveCount(0);
+  expect(loadedResources.some(path => /\/(?:store-settings|domain-shop)\.(?:mjs|css)$/.test(path))).toBe(false);
   expect(requests.some(request => request.path.startsWith('/events') || request.path.endsWith('/operations/hub'))).toBe(false);
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
@@ -101,9 +132,9 @@ test('store opens the shared editor; setup and an unsent message survive product
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'workspace');
   await expect(page.locator('#onboardingDialog')).not.toBeVisible();
   await expect(page.locator('#merchantStoreTabs')).not.toBeVisible();
-  await expect(page.locator('.dashboard-sidebar')).not.toBeVisible();
+  await expect(page.locator('.dashboard-sidebar')).toBeVisible();
   const bounds = await page.locator('#merchantStudioFrame').boundingBox();
-  expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize() });
+  expect(bounds).toEqual({ x: 64, y: 0, width: page.viewportSize().width - 64, height: page.viewportSize().height });
   await expect(editor.locator('#source-store')).not.toBeVisible();
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Café de especialidad para el barrio'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
@@ -193,6 +224,7 @@ test('saved site previews refresh the real catalog after product creation withou
   await expect(preview.getByRole('dialog', { name: 'Café recién tostado' })).toBeVisible();
   await preview.getByRole('button', { name: 'Cerrar detalle del producto' }).click();
   await preview.getByRole('button', { name: 'Añadir Café recién tostado' }).click();
+  await editor.locator('#source-replay-motion').click();
   await preview.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
   await expect(preview.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
   await preview.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
@@ -278,4 +310,55 @@ test('integration logos load and provider details preserve the inventory draft',
   await expect(frame.locator('.integration-detail')).toHaveCount(0);
   await expect(frame.locator('[data-open-integration=tiktok-ads]')).toBeFocused();
   await page.screenshot({ path: '/tmp/pagosya-integrations.png', fullPage: true });
+});
+
+
+test('compact navigation stays at the edge and inspiration pauses without losing the draft', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  const { editor, requests } = await workspace(page);
+  const rail = await page.locator('.dashboard-sidebar').boundingBox();
+  expect(rail.x).toBe(0); expect(rail.width).toBe(64); expect(rail.height).toBe(960);
+  await expect(page.getByRole('link', { name: 'Diseñar sitio', exact: true })).toHaveAttribute('aria-current', 'page');
+  const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
+  await composer.fill('Una tienda con mi propia identidad');
+  const art = editor.locator('.source-inspiration');
+  await expect(art).toBeVisible();
+  await expect(art.locator('img').first()).toHaveJSProperty('naturalWidth', 736);
+  await editor.getByRole('button', { name: 'Pausar animación de inspiración' }).click();
+  await expect(art).toHaveClass(/is-paused/);
+  await expect(composer).toHaveValue('Una tienda con mi propia identidad');
+  expect(requests.some(r => r.method === 'POST' && /messages|generate/.test(r.path))).toBe(false);
+  await page.screenshot({ path: '.test-artifacts/yapi-inspiration-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(editor.locator('#agent-command')).toBeVisible();
+  await page.screenshot({ path: '.test-artifacts/yapi-inspiration-mobile.png' });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(art.locator('.inspiration-card').first()).toHaveCSS('animation-name', 'none');
+});
+
+
+test('direct canvas editing selects text, saves a revision and supports undo', async ({ page }) => {
+  const { editor, requests } = await workspace(page, true);
+  await editor.locator('#source-visual-edit').click();
+  await expect(editor.locator('[data-direct-value]')).toHaveValue('Mi café');
+  await editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Mi café' }).click();
+  await expect(editor.locator('[data-direct-value]')).toBeFocused();
+  await editor.locator('[data-direct-value]').fill('Nuestro café de altura');
+  await editor.getByRole('button', { name: 'Guardar cambio', exact: true }).click();
+  await expect(editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Nuestro café de altura' })).toBeVisible();
+  await expect(editor.locator('[data-direct-value]')).toHaveValue('Nuestro café de altura');
+  expect(requests.find(row => row.path.endsWith('/visual-edit')).body).toEqual({ revision: 1, fieldId: 'heading', value: 'Nuestro café de altura' });
+  await page.screenshot({ path: '.test-artifacts/yapi-direct-edit.png', fullPage: false });
+  await editor.getByRole('button', { name: 'Deshacer último cambio visual' }).click();
+  await expect(editor.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading', { name: 'Mi café' })).toBeVisible();
+  await expect(editor.locator('[data-direct-undo]')).toHaveCount(0);
+  expect(requests.filter(row => row.method === 'POST' && /messages|generate/.test(row.path))).toEqual([]);
+});
+
+test('new site purpose is included in the first conversation request', async ({ page }) => {
+  const { editor, requests } = await workspace(page);
+  await editor.locator('#source-site-purpose').selectOption('portfolio');
+  await editor.getByRole('textbox', { name: 'Indicación para YAPI' }).fill('Soy fotógrafa de arquitectura y quiero mostrar mis proyectos.');
+  await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
+  await expect.poll(() => requests.find(row => row.path.endsWith('/messages'))?.body.sitePurpose).toBe('portfolio');
 });

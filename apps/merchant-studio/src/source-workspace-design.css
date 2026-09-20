@@ -10,8 +10,8 @@
   color-scheme: dark; --paper: #171815; --warm-paper: #262722; --surface: #20211e;
   --ink: #f8f8f2; --muted: #c3c4b7; --line: #484a40; --line-firm: #85877a; --lavender: #463c55;
 }
-.studio-shell.source-mode .studio-workspace { display: grid; grid-template-columns: clamp(300px,28vw,390px) minmax(0,1fr); grid-template-rows: minmax(0,1fr); gap: 18px; min-height: 0; overflow: hidden; padding: 12px 18px 18px; }
-.source-mode .source-canvas { grid-column: 2; grid-row: 1; min-height: 0; height: 100%; border: 2px solid var(--line-firm); border-radius: 8px; box-shadow: 4px 4px 0 var(--line-firm); overflow: hidden; grid-template-rows: auto auto minmax(0,1fr) 26px; }
+.studio-shell.source-mode .studio-workspace { display: grid; grid-template-columns: clamp(280px,26vw,360px) minmax(0,1fr); grid-template-rows: minmax(0,1fr); gap: 14px; min-height: 0; overflow: hidden; padding: 10px 14px 12px; }
+.source-mode .source-canvas { grid-column: 2; grid-row: 1; min-height: 0; height: 100%; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 2px 8px #20211e05; overflow: hidden; grid-template-rows: auto auto minmax(0,1fr) 26px; }
 .source-mode .source-frame-wrap iframe { min-height: 0; }
 .source-mode .agent-panel { position: relative; grid-column: 1; grid-row: 1; width: 100%; min-height: 0; height: 100%; max-height: none; display: grid; grid-template-rows: auto minmax(0,1fr) auto; border: 0; border-radius: 0; box-shadow: none; background: var(--paper); overflow: hidden; }
 .source-mode .agent-header { min-height: 52px; height: auto; padding: 8px 2px; border: 0; border-radius: 0; background: var(--paper); flex-wrap: wrap; gap: 8px; }
@@ -20,10 +20,12 @@
 .source-mode .agent-header button { font: 12px Arial,sans-serif; min-height: 32px; height: 32px; width: auto; padding: 4px 8px; }
 .source-mode #source-chat-toggle { display: none; }
 .source-mode .agent-stream { display: block; position: static; padding: 18px 6px; min-height: 0; max-height: none; overflow: auto; background: transparent; border: 0; box-shadow: none; }
-.source-mode .conversation-welcome { display: flex; min-height: 100%; flex-direction: column; justify-content: center; align-items: flex-start; }
-.source-mode .source-compose-area { border: 2px solid var(--line-firm); border-radius: 10px; box-shadow: 3px 3px 0 var(--line-firm); background: var(--surface); margin: 4px 5px 5px 0; padding-top: 8px; }
+.source-mode .conversation-welcome { display: flex; min-height: 100%; flex-direction: column; justify-content: center; align-items: flex-start; padding:14px 8px; border:0; background:transparent; }
+.source-mode .source-compose-area { border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 2px 8px #20211e05; background: var(--surface); margin: 4px 0 0; padding-top: 8px; }
 .source-mode .source-generation-controls { gap: 8px; padding: 2px 12px; border: 0; font-size: 11px; }
 .source-mode .source-generation-fields { flex: none; }
+.source-purpose-choice { display:flex; align-items:center; gap:10px; padding:3px 12px 7px; font:11px Arial,sans-serif; }
+.source-purpose-choice select { flex:1; min-width:0; min-height:28px; padding:4px 6px; border:0; border-radius:4px; background:var(--paper); color:var(--ink); font:11px Arial,sans-serif; }
 .source-mode .source-generation-fields select { min-height: 28px; height: 28px; width: 165px; padding: 3px 6px; font: 11px Arial,sans-serif; border: 0; background: var(--paper); border-radius: 4px; }
 .source-mode .source-generation-controls .text-button { min-height: 28px; }
 .source-mode .source-credit-details > summary { min-height: 28px; }
@@ -58,4 +60,10 @@
   .source-mode .studio-workspace:has(.is-creating-product) { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
   .source-mode .agent-panel.is-creating-product { grid-column: 1; grid-row: 1; z-index: 20; height: 100%; }
   .source-mode .studio-workspace:has(.is-creating-product) .source-canvas { visibility: hidden; }
+  .source-mode .studio-workspace:has(.source-inspiration) .agent-panel:not(.is-creating-product) .agent-stream { display:block; position:static; max-height:125px; padding:8px 4px; border:0; border-radius:0; background:transparent; }
+  .source-mode .studio-workspace:has(.source-inspiration) .conversation-welcome { min-height:0; }
+  .source-mode .studio-workspace:has(.source-inspiration) .source-empty-copy p { display:none; }
+  .source-mode .studio-workspace:has(.source-inspiration) .source-empty-copy small { display:none; }
+  .source-mode .studio-workspace:has(.source-inspiration) .source-empty-copy h1 { font-size:23px; }
+  .source-mode .studio-workspace:has(.source-inspiration) .inspiration-eyebrow { margin-bottom:6px; }
 }

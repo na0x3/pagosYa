@@ -21,7 +21,7 @@
   document.head.append(style);
   if (mode === 'auto' || mode === 'off' || !('IntersectionObserver' in window) || !Element.prototype.animate) return;
   const animations = new Set();
-  const excluded = 'aside,dialog,[role=dialog],[data-cart-panel],form,button,a,input,select,textarea,[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-checkout],[data-pagosya-checkout-page],[data-checkout-review],[data-pagosya-contact],[data-motion=off]';
+  const excluded = '[data-ui-reveal],[data-ui-parallax],[data-ui-entrance-group],aside,dialog,[role=dialog],[data-cart-panel],form,button,a,input,select,textarea,[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-checkout],[data-pagosya-checkout-page],[data-checkout-review],[data-pagosya-contact],[data-motion=off]';
   let observer;
   let stopped = false;
   const cancel = () => { stopped = true; observer?.disconnect(); animations.forEach(a => a.cancel()); animations.clear(); };

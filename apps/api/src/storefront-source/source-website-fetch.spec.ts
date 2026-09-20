@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { lookup } from 'node:dns/promises';
 import { request } from 'node:https';
-import { readSourceWebsite } from './source-website-fetch';
+import { readSourceWebsite, readSourceReferenceResource } from './source-website-fetch';
 jest.mock('node:dns/promises', () => ({ lookup: jest.fn() }));
 jest.mock('node:https', () => ({ request: jest.fn() }));
 
@@ -68,4 +68,19 @@ it('shares the deadline with DNS resolution and never connects after it expires'
   controller.abort(); await expect(task).rejects.toThrow('timeout');
   resolve([{ address: '93.184.216.34', family: 4 }]); await Promise.resolve();
   expect(request).not.toHaveBeenCalled();
+});
+
+it('enforces resource MIME types, byte budgets and DNS pinning for rendered subrequests', async () => {
+  responses({ headers: { 'content-type': 'image/webp' }, content: 'binary image' });
+  const consume = jest.fn();
+  const image = await readSourceReferenceResource('https://cdn.example.com/photo.webp', 'image', AbortSignal.timeout(1000), consume);
+  expect(image.body.toString()).toBe('binary image'); expect(consume).toHaveBeenCalledWith(12);
+  responses({ headers: { 'content-type': 'text/html' } });
+  await expect(readSourceReferenceResource('https://cdn.example.com/photo', 'image', AbortSignal.timeout(1000))).rejects.toThrow('unavailable');
+  responses({ headers: { 'content-type': 'text/javascript' }, content: 'execute()' });
+  await expect(readSourceReferenceResource('https://cdn.example.com/app.js', 'script', AbortSignal.timeout(1000), () => { throw new Error('total budget'); })).rejects.toThrow('unavailable');
+  jest.mocked(lookup).mockResolvedValue([{ address: '169.254.169.254', family: 4 }] as any);
+  const calls = jest.mocked(request).mock.calls.length;
+  await expect(readSourceReferenceResource('https://internal.example.com/font', 'font', AbortSignal.timeout(1000))).rejects.toThrow('sitio público');
+  expect(request).toHaveBeenCalledTimes(calls);
 });

@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { sourceMotionMode, requestedSourceMotion, withSourceMotion } from './source-motion';
+import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion, withSourceMotion, withSourceMotionSettings } from './source-motion';
 
 describe('source motion revisions', () => {
   it('interprets explicit motion changes without taking unrelated negatives or history as motion instructions', () => {
@@ -29,11 +29,22 @@ describe('source motion revisions', () => {
     expect(sourceMotionMode(files)).toBe('subtle');
     expect(sourceMotionMode()).toBe('auto');
     expect(sourceMotionMode(await withSourceMotion(files, 'auto'))).toBe('auto');
+    expect(sourceScrollFeel(files)).toBe('soft');
     expect(files[2].content).not.toContain('motion');
+  });
+  it('persists scroll feel beside motion without duplicating the trusted runtime', async () => {
+    const cinematic = await withSourceMotionSettings(files, { motion: 'expressive', scrollFeel: 'cinematic' });
+    expect(sourceMotionMode(cinematic)).toBe('expressive');
+    expect(sourceScrollFeel(cinematic)).toBe('cinematic');
+    expect(cinematic.find(file => file.path === 'config.js')!.content).toContain('"scrollFeel":"cinematic"');
+    const native = await withSourceMotionSettings(cinematic, { motion: 'off', scrollFeel: 'native' });
+    expect(sourceScrollFeel(native)).toBe('native');
+    expect(native.find(file => file.path === 'commerce.js')!.content.match(/pagosya-motion:start/g)).toHaveLength(1);
   });
   it('rejects invalid modes and non-JSON configurations without evaluating scripts', async () => {
     await expect(withSourceMotion(files, 'invalid' as any)).rejects.toThrow(BadRequestException);
     await expect(withSourceMotion(files.map(f => f.path === 'config.js' ? { ...f, content: 'window.PAGOSYA_CONFIG = (() => { throw new Error("executed") })()' } : f), 'off')).rejects.toThrow(BadRequestException);
     await expect(withSourceMotion(files.filter(f => f.path !== 'commerce.js'), 'subtle')).rejects.toThrow(BadRequestException);
+    await expect(withSourceMotionSettings(files, { motion: 'auto', scrollFeel: 'elastic' as any })).rejects.toThrow(BadRequestException);
   });
 });

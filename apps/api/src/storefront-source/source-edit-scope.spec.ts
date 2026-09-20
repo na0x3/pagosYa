@@ -39,9 +39,12 @@ it('fails closed for an ambiguous section rather than broadening the edit', () =
   expect(() => sourceSectionScope(nextStoreFiles(), 'Mejora esta sección')).toThrow('identificar');
 });
 it('updates the chosen section order without mutating the previous design', () => {
-  const original: any = { selected: 0, concepts: [{ layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true } }] };
+  const original: any = { selected: 0, concepts: [{ layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true },
+    story: { beats: [{ section: 'menu', role: 'offer', headline: 'Elige', media: 'product' }] }, motion: { scenes: [{ section: 'menu', kind: 'sequence', intensity: 1 }] } }] };
   const result = sourceDesignAfterSectionEdit(original, candidate(), sourceSectionScope(nextStoreFiles(), request));
   expect(result?.concepts[0].layout?.sections).toEqual(['menu', 'preparacion']);
+  expect(result?.concepts[0].story?.beats.map(beat => beat.section)).toEqual(['menu']);
+  expect(result?.concepts[0].motion?.scenes.map(scene => scene.section)).toEqual(['menu']);
   expect(original.concepts[0].layout.sections).toEqual(['menu']);
 });
 it('ignores artwork instructions in model-generated history', () => {

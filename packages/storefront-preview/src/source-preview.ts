@@ -7,7 +7,7 @@ import retentionRuntime from '@pagosya/storefront-kit/kit/retention.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
 
 export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" }
-export interface SourceSnapshot { schemaVersion: number; brief: { businessType: string; audience: string; primaryAction: string; visualDirection: string }; files: SourceFile[] }
+export interface SourceSnapshot { schemaVersion: number; brief: { sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial'; businessType: string; audience: string; primaryAction: string; visualDirection: string }; files: SourceFile[] }
 
 const mediaTypes: Record<string, string> = { mp4: "video/mp4", svg: "image/svg+xml", html: "text/html", css: "text/css", js: "text/javascript", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", avif: "image/avif", gif: "image/gif", ttf: "font/ttf", woff: "font/woff", woff2: "font/woff2" };
 function base64(value: string): string { const bytes = new TextEncoder().encode(value); let binary = ""; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary); }
@@ -31,7 +31,7 @@ export function uploadImageSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; hosted?: boolean; imageSources?: string[] } = {}): string {
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[] } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
@@ -101,7 +101,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   const flag = doc.createElement("script");
   const encoded = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
   const mediaAssets = Object.fromEntries(snapshot.files.filter(file => /\.(png|jpe?g|webp|avif|gif|svg|mp4)$/i.test(file.path)).map(file => [file.path, data(file)]));
-  flag.textContent = `${previewAssetsRuntime}(${encoded(mediaAssets)},${encoded(page)});\nwindow.PAGOSYA_PREVIEW=true;window.PAGOSYA_HOSTED=${navigation.hosted === true};window.PAGOSYA_PREVIEW_PAGE=${encoded(page)};window.PAGOSYA_PREVIEW_QUERY=${encoded(navigation.query || "")};window.PAGOSYA_PREVIEW_CART=${encoded(navigation.cart || [])};
+  flag.textContent = `${previewAssetsRuntime}(${encoded(mediaAssets)},${encoded(page)},${navigation.editing === true && navigation.hosted !== true});\nwindow.PAGOSYA_PREVIEW=true;window.PAGOSYA_HOSTED=${navigation.hosted === true};window.PAGOSYA_PREVIEW_PAGE=${encoded(page)};window.PAGOSYA_PREVIEW_QUERY=${encoded(navigation.query || "")};window.PAGOSYA_PREVIEW_CART=${encoded(navigation.cart || [])};
     new MutationObserver(() => {
       const theme = document.documentElement.dataset.theme;
       if (theme === 'light' || theme === 'dark') parent.postMessage({type:'pagosya:source-theme', theme}, '*');

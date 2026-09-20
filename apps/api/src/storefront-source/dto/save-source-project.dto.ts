@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsDefined, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 
 export class SourceProjectBriefDto {
+  @IsOptional() @IsIn(['shop', 'service', 'portfolio', 'editorial']) sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
   @IsOptional() @IsString() @MaxLength(80000) businessInformation?: string;
   @IsString() @MinLength(1) @MaxLength(120) businessType!: string;
   @IsString() @MinLength(1) @MaxLength(500) audience!: string;

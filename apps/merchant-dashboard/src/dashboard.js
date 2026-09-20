@@ -1,5 +1,4 @@
-// Merchant dashboard behavior. A classic script; the store settings and domain
-// shop are ES modules it imports on demand.
+// Merchant dashboard behavior. The current website editor is mounted in Studio.
   (() => {
   const DASHBOARD_THEME_KEY = "pagosya_dashboard_theme";
   const dashboardThemeButtons = [...document.querySelectorAll("[data-dashboard-theme-value]")];
@@ -416,8 +415,6 @@
   let debtAppendTarget = null;
   let quickPaymentPollTimer = null;
   let quickPaymentPollGeneration = 0;
-  let currentKyc = null;
-  let currentInvoicingProfile = null;
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
@@ -507,15 +504,12 @@
   let paymentPage = 1;
   const PAYMENT_PAGE_SIZE = 20;
   let lastStores = [];
-  let currentStoreDomains = [];
   let lastCategories = [];
   const openCategoryEditorIds = new Set();
   let draggedCategoryId = null;
   let categoryOrderSaveTimer = null;
   let categoryOrderSaveVersion = 0;
   let dashboardRefreshVersion = 0;
-  let domainShop = null;
-  let storeSettings = null;
   let currentStoreId = sessionStorage.getItem("pagosya_current_store_id") || null;
   let debtLinkStatusTab = "ACTIVE";
   const DEFAULT_OPEN_SECTIONS = new Set(["storesSection", "paymentLinksSection"]);
@@ -638,6 +632,7 @@
     const storageKey = "pagosya_dashboard_sidebar_collapsed";
     document.querySelectorAll(".dashboard-nav-button").forEach((link) => {
       link.title = link.textContent.trim();
+      link.setAttribute("aria-label", link.title);
     });
     const setCollapsed = (collapsed, remember = true) => {
       shell.classList.toggle("is-sidebar-collapsed", collapsed);
@@ -648,44 +643,6 @@
     };
     setCollapsed(savedExpandedState(storageKey, false), false);
     toggle.addEventListener("click", () => setCollapsed(!shell.classList.contains("is-sidebar-collapsed")));
-  }
-
-  function initEditorSettingsGroups() {
-    document.querySelectorAll(".editor-settings-group").forEach((group) => {
-      const head = group.querySelector(":scope > .editor-settings-heading");
-      const title = head?.querySelector("h4")?.textContent?.trim();
-      if (!head || !title) return;
-
-      const body = document.createElement("div");
-      body.className = "editor-settings-group-body";
-      body.id = `${group.getAttribute("aria-labelledby") || `editorSettingsGroup${Date.now()}`}Body`;
-      while (head.nextSibling) body.appendChild(head.nextSibling);
-      group.appendChild(body);
-
-      const actions = document.createElement("div");
-      actions.className = "editor-settings-actions";
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "ghost settings-group-toggle";
-      toggle.setAttribute("aria-controls", body.id);
-      toggle.innerHTML = `<span>Mostrar</span>${COLLAPSE_CHEVRON}`;
-      actions.appendChild(toggle);
-      head.appendChild(actions);
-
-      const storageKey = `pagosya_editor_settings_${group.getAttribute("aria-labelledby") || title}`;
-      const setExpanded = (expanded, remember = true) => {
-        body.hidden = !expanded;
-        group.classList.toggle("is-collapsed", !expanded);
-        toggle.setAttribute("aria-expanded", String(expanded));
-        toggle.setAttribute("aria-label", `${expanded ? "Ocultar" : "Mostrar"} ${title}`);
-        toggle.title = `${expanded ? "Ocultar" : "Mostrar"} ${title}`;
-        toggle.querySelector("span").textContent = expanded ? "Ocultar" : "Mostrar";
-        if (remember) localStorage.setItem(storageKey, String(expanded));
-      };
-
-      setExpanded(savedExpandedState(storageKey, false), false);
-      toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
-    });
   }
 
   initDashboardSections();
@@ -702,7 +659,6 @@
     products: ["Productos", "Tu catálogo y YAPI: añade productos paso a paso."],
     media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
-    settings: ["Configuración", "Cobro, contacto, ubicaciones y dominio de la tienda seleccionada."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
@@ -830,7 +786,6 @@
 
   function setDashboardView(view, { remember = true } = {}) {
     if (view === "content") view = "workspace";
-    if (view === "appearance") view = "settings";
     if (view === "discounts") { view = "marketing"; document.getElementById("marketingTabs").dataset.tab = "promotions"; document.getElementById("marketingPromotions").hidden = false; document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed",String(tab.dataset.marketingTab === "promotions"))); }
     const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
     const viewChanged = document.body.dataset.dashboardView !== nextView;
@@ -993,7 +948,6 @@
 
   initDashboardSidebarToggle();
   initSidebarMenuHandle();
-  initInlineCollapsible("customDomainStudio", ".custom-domain-head", "customDomainToggle", "pagosya_custom_domain_expanded", "dominio propio", false);
   const inventoryToggle = document.createElement("button");
   inventoryToggle.type = "button";
   inventoryToggle.id = "inventoryImporterToggle";
@@ -1001,7 +955,6 @@
   document.querySelector(".inventory-import-head")?.appendChild(inventoryToggle);
   initInlineCollapsible("inventoryImporter", ".inventory-import-head", "inventoryImporterToggle", "pagosya_inventory_importer_expanded", "importador de inventario", false);
   initStoreEditorSections();
-  initEditorSettingsGroups();
   checkoutOriginEl.addEventListener("change", () => {
     sessionStorage.setItem("pagosya_checkout_origin", checkoutOriginEl.value);
     renderCurrentStoreBanner();
@@ -1342,7 +1295,6 @@
     history.pushState(null, "", "#dashboard-workspace");
     setDashboardView("workspace");
   });
-  let storeSettingsDirty = false;
 
   function dashboardAssetUrl(value) {
     const source = String(value || "").trim();
@@ -1350,11 +1302,6 @@
     if (/^(?:data:|blob:|https?:\/\/)/i.test(source)) return source;
     return apiRoot() + (source.startsWith("/") ? source : `/${source}`);
   }
-
-  window.addEventListener("beforeunload", (event) => {
-    if (!storeSettingsDirty) return;
-    event.preventDefault();
-  });
 
   document.getElementById("categoryForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1843,7 +1790,6 @@
   function selectStore(storeId) {
     const storeChanged = storeId !== currentStoreId;
     currentStoreId = storeId;
-    domainShop?.setStore(storeId);
     if (storeId) sessionStorage.setItem("pagosya_current_store_id", storeId);
     else sessionStorage.removeItem("pagosya_current_store_id");
     if (storeChanged) {
@@ -1852,8 +1798,6 @@
         queuedProgressLevels.delete(`${item.storeId}:${item.levelIndex}`);
         return false;
       });
-      currentStoreDomains = [];
-      renderCustomDomains([]);
       stopQuickPaymentPolling();
       resetPaymentLinkBrowseState();
       resetDebtCollectionEntry();
@@ -1863,95 +1807,6 @@
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
     }
-  }
-
-  // Switching a store to integrated payments needs KYC and a NIT before it can charge.
-  function openComplianceForPayments() {
-    history.pushState(null, "", "#dashboard-compliance");
-    setDashboardView("compliance");
-    setDashboardSectionExpanded("kycSection", true, false);
-    setDashboardSectionExpanded("invoicingSection", true, false);
-    infoEl.textContent = "Pagos activados. Completa KYC y registra tu NIT para empezar a cobrar.";
-    const firstRequiredField = currentKyc?.status === "APPROVED"
-      ? document.querySelector('#invoicingForm input[name="nit"]')
-      : document.querySelector('#kycForm input[name="legalName"]');
-    firstRequiredField?.scrollIntoView({ block: "center" });
-    firstRequiredField?.focus({ preventScroll: true });
-  }
-
-  import('/src/store-settings.mjs').then(({ mountStoreSettings }) => {
-    storeSettings = mountStoreSettings(document.getElementById("storeSettingsRoot"), {
-      api,
-      uploadFile,
-      assetUrl: dashboardAssetUrl,
-      hasInvoicing: () => Boolean(currentInvoicingProfile?.cuis),
-      onSaved: async (_store, { enabledPayments }) => {
-        await refresh();
-        if (enabledPayments && !currentInvoicingProfile?.cuis) openComplianceForPayments();
-        else infoEl.textContent = "Datos de la tienda guardados.";
-      },
-    });
-    storeSettings.setStore(lastStores.find((store) => store.id === currentStoreId) || null, lastPaymentLinks);
-  }).catch(() => { document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar la configuración de la tienda. Recarga la página para volver a intentar."; });
-
-  import('/src/domain-shop.mjs').then(({ mountDomainShop }) => {
-    domainShop = mountDomainShop(document.getElementById('domainShop'), { api,
-      onConnected: (id) => { if (id === currentStoreId) refreshCurrentStoreDomains().catch(() => {}); } });
-    domainShop.setStore(currentStoreId);
-  }).catch(() => { document.getElementById('domainShop').textContent = 'No pudimos cargar la compra de dominios. Recarga la página para volver a intentar.'; });
-
-  function setCustomDomainMessage(message, isError = false) {
-    const status = document.getElementById("customDomainStatus");
-    status.textContent = message;
-    status.classList.toggle("is-error", isError);
-  }
-
-  function renderCustomDomains(domains) {
-    currentStoreDomains = domains;
-    const list = document.getElementById("customDomainList");
-    const summary = document.getElementById("customDomainSummary");
-    const form = document.getElementById("customDomainForm");
-    const activeCount = domains.filter((domain) => domain.status === "ACTIVE").length;
-    const verifiedCount = domains.filter((domain) => domain.status === "VERIFIED").length;
-    summary.textContent = activeCount
-      ? `${activeCount} activo${activeCount === 1 ? "" : "s"}`
-      : verifiedCount
-        ? "Propiedad verificada"
-        : domains.length ? "Pendiente" : "Sin conectar";
-    summary.className = `badge ${activeCount ? "ACTIVE" : verifiedCount ? "VERIFIED" : "PENDING"}`;
-    form.querySelectorAll("input,button").forEach((control) => { control.disabled = !currentStoreId || domains.length >= 3; });
-
-    if (!currentStoreId) {
-      list.innerHTML = "";
-      return;
-    }
-    if (!domains.length) {
-      list.innerHTML = `<p class="custom-domain-empty">Aún no conectaste un dominio. Puedes seguir compartiendo el link de pagosYa sin cambiar nada.</p>`;
-      return;
-    }
-
-    list.innerHTML = domains.map((domain) => {
-      const active = domain.status === "ACTIVE";
-      const ownershipVerified = domain.status === "VERIFIED";
-      const verifiedLabel = active ? "Activo" : ownershipVerified ? "Propiedad verificada" : "Esperando DNS";
-      return `<article class="custom-domain-card" data-domain-id="${esc(domain.id)}">
-        <div class="custom-domain-card-head">
-          <strong>${esc(domain.hostname)}</strong>
-          <span class="badge ${active ? "ACTIVE" : ownershipVerified ? "VERIFIED" : "PENDING"}">${verifiedLabel}</span>
-        </div>
-        ${domain.managed ? `<p class="custom-domain-note">${active ? "Dominio conectado automáticamente con HTTPS." : "Estamos preparando este dominio. Consulta el progreso de tu compra arriba."}</p>` : active ? `<p class="custom-domain-note">El dominio ya abre esta tienda. El certificado HTTPS puede tardar unos minutos más en aparecer después de la primera activación.</p>` : `
-          <div class="custom-domain-records" aria-label="Registros DNS para ${esc(domain.hostname)}">
-            <div class="custom-domain-record-head" aria-hidden="true"><span>Tipo</span><span>Nombre / Host</span><span>Valor / Destino</span><span></span></div>
-            <div class="custom-domain-record"><span data-label="Tipo">TXT</span><code data-label="Nombre / Host">${esc(domain.dns.verification.name)}</code><code data-label="Valor / Destino">${esc(domain.dns.verification.value)}</code><button class="ghost domain-copy" type="button" data-copy="${esc(domain.dns.verification.value)}">Copiar valor</button></div>
-            <div class="custom-domain-record"><span data-label="Tipo">CNAME</span><code data-label="Nombre / Host">${esc(domain.dns.routing.name)}</code><code data-label="Valor / Destino">${esc(domain.dns.routing.value)}</code><button class="ghost domain-copy" type="button" data-copy="${esc(domain.dns.routing.value)}">Copiar destino</button></div>
-          </div>
-          <p class="custom-domain-note">${ownershipVerified ? "La propiedad ya está verificada. Falta que el registro de enrutamiento llegue al destino indicado." : "Si conectas el dominio raíz sin “www”, tu proveedor puede llamar al segundo registro ALIAS, ANAME o CNAME aplanado. Usa el mismo destino."}</p>`}
-        <div class="custom-domain-actions">
-          ${domain.managed ? "" : active ? `<a class="custom-domain-open" href="${esc(domain.url)}" target="_blank" rel="noopener noreferrer">Abrir dominio</a>` : `<button class="primary domain-verify" type="button">${ownershipVerified ? "Revisar enrutamiento" : "Ya agregué los registros"}</button>`}
-          ${domain.managed ? "" : `<button class="ghost domain-remove" type="button">Desconectar</button>`}
-        </div>
-      </article>`;
-    }).join("");
   }
 
   function updateSelectedStoreDomains(domains) {
@@ -1964,87 +1819,10 @@
         verifiedAt: domain.verifiedAt,
       }));
     }
-    renderCustomDomains(domains);
     renderCurrentStoreBanner();
     const openLink = document.querySelector(`.store-row[data-id="${CSS.escape(currentStoreId || "")}"] .store-row-open`);
     if (store && openLink) openLink.href = merchantStoreViewUrl(store);
   }
-
-  async function refreshCurrentStoreDomains() {
-    const storeId = currentStoreId;
-    if (!storeId) return renderCustomDomains([]);
-    const domains = await api(`/stores/${storeId}/domains`);
-    if (storeId === currentStoreId) updateSelectedStoreDomains(domains);
-  }
-
-  document.getElementById("customDomainForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!currentStoreId) return;
-    const button = document.getElementById("customDomainConnect");
-    const input = document.getElementById("customDomainHostname");
-    button.disabled = true;
-    button.textContent = "Preparando DNS…";
-    setCustomDomainMessage("Creando una verificación única para este dominio.");
-    try {
-      await api(`/stores/${currentStoreId}/domains`, { method: "POST", body: JSON.stringify({ hostname: input.value }) });
-      input.value = "";
-      await refreshCurrentStoreDomains();
-      setCustomDomainMessage("Registros listos. Agrégalos en tu proveedor de dominio y luego verifica la conexión.");
-    } catch (error) {
-      setCustomDomainMessage(error.message, true);
-    } finally {
-      button.textContent = "Conectar dominio";
-      button.disabled = !currentStoreId || currentStoreDomains.length >= 3;
-    }
-  });
-
-  document.getElementById("customDomainList").addEventListener("click", async (event) => {
-    const copyButton = event.target.closest(".domain-copy");
-    if (copyButton) {
-      try {
-        await navigator.clipboard.writeText(copyButton.dataset.copy);
-        setCustomDomainMessage("Valor DNS copiado.");
-      } catch {
-        setCustomDomainMessage("No pudimos copiarlo automáticamente. Selecciona el valor del registro y cópialo manualmente.", true);
-      }
-      return;
-    }
-
-    const card = event.target.closest(".custom-domain-card");
-    if (!card || !currentStoreId) return;
-    const domain = currentStoreDomains.find((candidate) => candidate.id === card.dataset.domainId);
-    if (!domain) return;
-
-    const verifyButton = event.target.closest(".domain-verify");
-    if (verifyButton) {
-      verifyButton.disabled = true;
-      verifyButton.textContent = "Buscando en DNS…";
-      setCustomDomainMessage(`Verificando ${domain.hostname}.`);
-      try {
-        const result = await api(`/stores/${currentStoreId}/domains/${domain.id}/verify`, { method: "POST" });
-        await refreshCurrentStoreDomains();
-        setCustomDomainMessage(result.status === "ACTIVE"
-          ? `${domain.hostname} está conectado y ya es el link principal de la tienda.`
-          : `La propiedad de ${domain.hostname} está verificada. El registro CNAME, ALIAS o ANAME todavía no apunta al destino indicado.`);
-      } catch (error) {
-        verifyButton.disabled = false;
-        verifyButton.textContent = "Volver a verificar";
-        setCustomDomainMessage(error.message, true);
-      }
-      return;
-    }
-
-    if (event.target.closest(".domain-remove")) {
-      if (!confirm(`¿Desconectar ${domain.hostname} de esta tienda?`)) return;
-      try {
-        await api(`/stores/${currentStoreId}/domains/${domain.id}`, { method: "DELETE" });
-        await refreshCurrentStoreDomains();
-        setCustomDomainMessage("Dominio desconectado. También puedes quitar sus registros DNS en tu proveedor.");
-      } catch (error) {
-        setCustomDomainMessage(error.message, true);
-      }
-    }
-  });
 
   function currentStoreUrl() {
     const store = lastStores.find((s) => s.id === currentStoreId);
@@ -2573,14 +2351,12 @@
     const hasStore = !!currentStoreId;
     document.getElementById("categoriesSection").style.display = hasStore ? "block" : "none";
     document.getElementById("paymentLinksSection").style.display = hasStore ? "block" : "none";
-    document.getElementById("storeSettingsPage").style.display = hasStore ? "block" : "none";
     document.getElementById("debtCollectionSection").style.display = hasStore ? "block" : "none";
     document.getElementById("quickPaymentSection").style.display = hasStore ? "block" : "none";
     document.getElementById("noStoreMessage").style.display = hasStore ? "none" : "block";
     if (hasStore && !document.getElementById("debtNotificationEmail").value) {
       document.getElementById("debtNotificationEmail").value = emailEl.value;
     }
-    storeSettings?.setStore(stores.find((store) => store.id === currentStoreId) || null, lastPaymentLinks);
     renderCurrentStoreBanner();
   }
 
@@ -3836,7 +3612,6 @@
   }
   function renderPaymentLinkRows(links) {
     lastPaymentLinks = links;
-    storeSettings?.setStore(lastStores.find((store) => store.id === currentStoreId) || null, links);
     bulkDiscountClearAllEl.disabled = !links.some((product) => product.discountPercent !== null && product.discountPercent !== undefined);
     if (!bulkDiscountStudioEl.hidden) renderBulkDiscountProducts();
     const rowsEl = document.getElementById("paymentLinkRows");
@@ -4733,7 +4508,6 @@
       document.getElementById("kycModeNotice").hidden = paymentStore;
       document.getElementById("kycForm").hidden = !paymentStore;
       document.getElementById("liveKeysSection").style.display = paymentStore ? "block" : "none";
-      currentKyc = kyc;
 
       const invBadge = document.getElementById("invoicingBadge");
       const invStatus = invoicing.status || (invoicing.cuis ? "CONFIGURED" : "NOT_CONFIGURED");
@@ -4742,7 +4516,6 @@
       document.getElementById("invoicingSection").style.display = !paymentStore || !invoicing.cuis ? "block" : "none";
       document.getElementById("invoicingModeNotice").hidden = paymentStore;
       document.getElementById("invoicingForm").hidden = !paymentStore;
-      currentInvoicingProfile = invoicing;
 
       renderTotalFinances(totalFinances);
       renderFinances(finances);

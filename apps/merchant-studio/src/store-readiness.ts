@@ -1,10 +1,16 @@
 import { escapeHtml as escape } from './studio-ui';
 import './store-readiness.css';
 export type ReadinessInput = {
+  sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
   catalog: Record<string, any> | null; branded: boolean; checked: boolean; checking: boolean;
   published: boolean; canPublish: boolean; locked: boolean;
 };
 export function readinessSteps(input: ReadinessInput) {
+  if (input.sitePurpose && input.sitePurpose !== 'shop') return [
+    { id: 'brand', title: 'Identidad', done: input.branded, detail: 'Revisa la tipografía, las imágenes y el contenido de tu sitio.', action: 'Revisar identidad' },
+    { id: 'test', title: 'Comprobar sitio', done: input.checked, detail: input.checking ? 'Comprobando las páginas en móvil y escritorio…' : 'Revisa enlaces, imágenes, adaptación a pantalla y formularios presentes. No envía consultas reales.', action: input.checking ? 'Comprobando…' : 'Comprobar sitio' },
+    { id: 'publish', title: 'Publicar', done: input.published, detail: 'Revisa las páginas y publica cuando estén comprobadas.', action: input.published ? 'Publicado' : 'Publicar sitio' },
+  ];
   const items = Array.isArray(input.catalog?.items) ? input.catalog.items : [];
   const digital = items.length > 0 && items.every((item: any) => item.fulfillmentType === 'DIGITAL');
   const locations = Array.isArray(input.catalog?.locations) ? input.catalog.locations : [];
@@ -20,5 +26,6 @@ export function readinessSteps(input: ReadinessInput) {
 }
 export function renderStoreReadiness(input: ReadinessInput) {
   const steps = readinessSteps(input);
-  return `<details class="store-readiness"><summary>Prepara tu primera venta · ${steps.filter(step => step.done).length} de 6 pasos</summary><p>Avanza en este orden. Puedes volver a cualquier paso; los pagos siguen pendientes.</p><ol>${steps.map(step => `<li data-readiness-step="${step.id}"><div><strong>${escape(step.title)} <span>${step.deferred ? 'Pendiente para el lanzamiento' : step.done ? 'Revisado' : 'Por revisar'}</span></strong><p>${escape(step.detail)}</p></div>${step.action ? `<button type="button" class="text-button" data-readiness-action="${step.id}" ${input.locked || step.id === 'test' && input.checking || step.id === 'publish' && (!input.canPublish || input.published) ? 'disabled' : ''}>${escape(step.action)}</button>` : ''}</li>`).join('')}</ol></details>`;
+  const commerce = !input.sitePurpose || input.sitePurpose === 'shop';
+  return `<details class="store-readiness"><summary>${commerce ? 'Prepara tu primera venta' : 'Prepara tu sitio'} · ${steps.filter(step => step.done).length} de ${steps.length} pasos</summary><p>${commerce ? 'Avanza en este orden. Puedes volver a cualquier paso; los pagos siguen pendientes.' : 'Revisa el contenido y comprueba cada página antes de publicar.'}</p><ol>${steps.map(step => `<li data-readiness-step="${step.id}"><div><strong>${escape(step.title)} <span>${step.deferred ? 'Pendiente para el lanzamiento' : step.done ? 'Revisado' : 'Por revisar'}</span></strong><p>${escape(step.detail)}</p></div>${step.action ? `<button type="button" class="text-button" data-readiness-action="${step.id}" ${input.locked || step.id === 'test' && input.checking || step.id === 'publish' && (!input.canPublish || input.published) ? 'disabled' : ''}>${escape(step.action)}</button>` : ''}</li>`).join('')}</ol></details>`;
 }

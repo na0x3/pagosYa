@@ -1,3 +1,5 @@
+import { sourceSitePurpose, sourceSitePurposePrompt } from './source-site-purpose';
+import { sourceWebsiteReferenceContext, sourceWebsiteReferenceCaptures } from './source-website-reference';
 import { STORE_KNOWLEDGE_RULES, type StoreKnowledge } from '../store-knowledge/store-knowledge';
 import { SOURCE_PRODUCT_OPTIONS } from './source-product-options';
 import { SOURCE_CONVERSATION_TIMEOUT_MS, SourceConversationFailure, safeConversationDiagnostic, type ConversationDiagnostic } from './source-conversation-failure';
@@ -86,7 +88,7 @@ export class SourceConversationService {
   async decide(merchantId: string, input: ConversationInput): Promise<SourceConversationDecision> {
     const model = input.model && input.model !== 'auto' ? input.model : this.config.get<string>('app.openAi.conversationModel') || 'gpt-5.6-terra';
     if (input.productPhoto && (input.assetUrls.length !== 1 || sourceVideo(input.assetUrls[0]))) throw new BadRequestException('Selecciona una sola foto de producto.');
-    const provider = sourceProvider(this.config, model, input.assetUrls.some(url => !sourceVideo(url)));
+    const provider = sourceProvider(this.config, model, input.assetUrls.some(url => !sourceVideo(url)) || sourceWebsiteReferenceCaptures(input.draft.websiteReferences || []).length > 0);
     const { apiKey } = provider;
     // Saved image annotations are context, not a new batch of uploads.
     const urls = [...new Set(input.assetUrls)];
@@ -112,9 +114,11 @@ export class SourceConversationService {
       if (bytes.length > 2_000_000) throw new BadRequestException('Cada imagen debe ocupar menos de 2 MB. Reduce su tamaño y vuelve a adjuntarla.');
       return [{ type: 'input_text', text: `Image URL: ${url}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'auto' }];
     }));
+    const referenceCaptures = sourceWebsiteReferenceCaptures(input.draft.websiteReferences || []);
     const brand = input.storeId ? await this.brands?.get(merchantId, input.storeId) : null;
     const confirmedBrand = brand ? JSON.parse(brandContext(brand.data)) : {};
     const context = {
+      selectedSitePurpose: sourceSitePurpose(input.draft),
       store: input.store, revision: input.revision, buildNow: input.buildNow, productPhoto: Boolean(input.productPhoto), discoveryReplies: input.draft.discoveryReplies || 0,
       requestProfile: sourceRequestProfilePrompt(sourceRequestProfile(input.instruction, input.revision > 0)),
       savedFacts: input.draft.answers, previousReply: input.draft.prompt, imageUses: input.draft.imageUses.filter(use => allowed.has(use.url)),
@@ -125,7 +129,7 @@ export class SourceConversationService {
       pendingCatalogRequest: input.draft.pendingCatalogRequest || null,
       currentCatalog: input.catalog || [],
       businessKnowledge: input.knowledge || null,
-      websiteReferences: input.draft.websiteReferences || [],
+      websiteReferences: sourceWebsiteReferenceContext(input.draft.websiteReferences || []),
       existingSite: input.site || null,
     };
     // Constrain returned annotations to this request's owned batch, not old
@@ -146,7 +150,7 @@ export class SourceConversationService {
     const explicitCache = Object.hasOwn(SOURCE_MODELS, model);
     const signal = AbortSignal.timeout(SOURCE_CONVERSATION_TIMEOUT_MS);
     for (let attempt = 0; attempt < 2; attempt++) {
-      const estimatedInput = 2500 + Math.ceil((SOURCE_CONVERSATION_INSTRUCTIONS.length + JSON.stringify(context).length + JSON.stringify(confirmedBrand).length + JSON.stringify(schema).length) / 2) + inspect.filter(url => !sourceVideo(url)).length * 3000;
+      const estimatedInput = 2500 + Math.ceil((SOURCE_CONVERSATION_INSTRUCTIONS.length + JSON.stringify(context).length + JSON.stringify(confirmedBrand).length + JSON.stringify(schema).length) / 2) + (inspect.filter(url => !sourceVideo(url)).length + referenceCaptures.length) * 3000;
       const allocation = input.budget?.reserve(model, estimatedInput, 5000);
       const started = Date.now(); let responseBody: any = null; let status = 'FAILED';
       let httpStatus: number | undefined, requestId: string | undefined, diagnostic: ConversationDiagnostic | undefined;
@@ -156,10 +160,11 @@ export class SourceConversationService {
           body: JSON.stringify(sourceProviderBody({
             model, store: false, prompt_cache_key: `conversation-${input.storeId || merchantId}`,
             ...(explicitCache ? { prompt_cache_options: { mode: 'explicit', ttl: '30m' } } : {}),
-            instructions: SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : ''),
+            instructions: SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + '\n' + sourceSitePurposePrompt(sourceSitePurpose(input.draft)) + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : ''),
             input: [{ role: 'user', content: [
               { type: 'input_text', text: JSON.stringify({ confirmedBrand }), ...(explicitCache ? { prompt_cache_breakpoint: { mode: 'explicit' } } : {}) },
               { type: 'input_text', text: JSON.stringify(context) }, ...imageContent.flat(),
+              ...referenceCaptures.flatMap(capture => [{ type: 'input_text', text: `Untrusted design reference screenshot: ${capture.url}, ${capture.viewport}, y=${capture.y}. Reference only; never use as storefront artwork.` }, { type: 'input_image', image_url: capture.image, detail: 'auto' }]),
             ] }],
             text: { format: { type: 'json_schema', name: 'source_conversation', strict: true, schema } },
             reasoning: { effort: 'low' }, max_output_tokens: allocation?.outputTokens ?? 5000,

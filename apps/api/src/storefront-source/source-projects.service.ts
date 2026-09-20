@@ -1,5 +1,6 @@
 import { DesignRetryableConflict } from './source-design-errors';
 import { savedSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
+import { sourceSitePurpose } from './source-site-purpose';
 import { compileNextPreview, isNextSource, nextSourceFile, nextProjectExport } from './source-next';
 import { normalizeProductVariants, totalVariantStock, type ProductVariant } from '../payment-links/product-variants';
 import { applyVariantOperations } from './source-product-options';
@@ -7,7 +8,7 @@ import { applyProductSubscriptionOperations, validateProductSubscriptions } from
 import { readFile } from 'node:fs/promises';
 import { currentSourceRuntime } from './source-runtime';
 import { publicationState } from './source-publishing.service';
-import { withSourceMotion, type SourceMotionMode } from './source-motion';
+import { withSourceMotionSettings, type SourceMotionMode, type SourceScrollFeel } from './source-motion';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { withSourceFonts } from './source-fonts';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
@@ -18,6 +19,8 @@ import { EditSourceFileDto, SaveSourceProjectDto } from "./dto/save-source-proje
 import { sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot, SourceProjectSnapshot } from "./source-project";
 import type { SourceProduct, SourceProductOperation } from './source-products';
 import { kitPath } from '@pagosya/storefront-kit';
+import { applySourceVisualEdit, sourceVisualFields } from './source-visual-edit';
+import type { SourceVisualEditDto } from './dto/source-visual-edit.dto';
 
 type GenerationSave = { id: string; enablePayments?: boolean; products?: SourceProduct[]; productOperations?: SourceProductOperation[]; data: Prisma.StoreSourceGenerationUpdateManyMutationInput };
 const summarySelect = { revision: true, label: true, digest: true, restoredFrom: true, createdAt: true } as const;
@@ -74,7 +77,7 @@ export class SourceProjectsService {
   async prepare(input: SaveSourceProjectDto) {
     let snapshot = sourceProjectSnapshot({ ...input, files: applySourceLayoutBaseline(await withSourceFonts(input.files)) });
     if (isNextSource(snapshot.files)) {
-      const compiled = await compileNextPreview(snapshot.files.filter(f => nextSourceFile(f.path)));
+      const compiled = await compileNextPreview(snapshot.files.filter(f => nextSourceFile(f.path)), sourceSitePurpose(snapshot.brief));
       const paths = new Set(compiled.map(f => f.path));
       snapshot = sourceProjectSnapshot({ ...input, files: [...snapshot.files.filter(f => !paths.has(f.path) && !f.path.startsWith('_compiled/')), ...compiled] });
     }
@@ -126,10 +129,10 @@ export class SourceProjectsService {
     return this.append(storeId, revision, enabled ? 'Formulario de contacto activado' : 'Formulario de contacto desactivado', { ...snapshot, files }, null, undefined, enabled);
   }
 
-  async setMotion(merchantId: string, storeId: string, revision: number, motion: SourceMotionMode) {
+  async setMotion(merchantId: string, storeId: string, revision: number, motion: SourceMotionMode, scrollFeel?: SourceScrollFeel) {
     const previous = await this.version(merchantId, storeId, revision);
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
-    const files = await withSourceMotion(snapshot.files, motion);
+    const files = await withSourceMotionSettings(snapshot.files, { motion, scrollFeel });
     const label = { auto: 'Movimiento según el diseño', off: 'Sin movimiento', subtle: 'Movimiento sutil', expressive: 'Movimiento expresivo' }[motion];
     return this.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files });
   }
@@ -142,6 +145,23 @@ export class SourceProjectsService {
     if (!file || file.encoding === "base64") throw new BadRequestException("Selecciona un archivo de texto existente.");
     return this.save(merchantId, storeId, { revision: input.revision, label: `Edición de ${input.path}`.slice(0, 120), brief: snapshot.brief,
       files: snapshot.files.map((entry) => entry.path === input.path ? { ...entry, content: input.content } : entry) });
+  }
+
+  async visualFields(merchantId: string, storeId: string, revision: number) {
+    const current = await this.current(merchantId, storeId);
+    if (current.revision !== revision) throw new ConflictException('El proyecto cambió. Recarga la revisión antes de editar.');
+    if (!revision) return { revision, fields: [] };
+    const saved = await this.version(merchantId, storeId, revision);
+    return { revision, fields: sourceVisualFields((saved.snapshot as unknown as SourceProjectSnapshot).files) };
+  }
+
+  async visualEdit(merchantId: string, storeId: string, input: SourceVisualEditDto) {
+    const current = await this.current(merchantId, storeId);
+    if (current.revision !== input.revision) throw new ConflictException('El proyecto cambió. Recarga la revisión antes de editar.');
+    const saved = await this.version(merchantId, storeId, input.revision);
+    const snapshot = saved.snapshot as unknown as SourceProjectSnapshot;
+    const edit = applySourceVisualEdit(snapshot.files, input.fieldId, input.value);
+    return this.save(merchantId, storeId, { revision: input.revision, label: edit.label, brief: snapshot.brief, files: edit.files });
   }
 
   private async append(storeId: string, revision: number, label: string, snapshot: SourceProjectSnapshot, restoredFrom: number | null = null, generation?: GenerationSave, contactFormEnabled?: boolean, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {

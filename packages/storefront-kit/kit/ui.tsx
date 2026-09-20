@@ -4,18 +4,19 @@
  * Generated storefronts compose these sections, tune them with store tokens, and write bespoke
  * components only where the brand needs a moment nobody else has. Everything here is shared
  * verbatim by the isolated preview compiler and the portable Next.js export, so it must stay
- * SSR-safe, dependency-free beyond React/Motion, and render every commerce hook literally
+ * SSR-safe, dependency-free beyond React/Motion/Lenis, and render every commerce hook literally
  * (the publish gate inspects JSX statically and only sees unconditional markup).
  *
  * Styling is self-contained (`ui-` classes + CSS custom properties), never Tailwind, because the
  * Tailwind pass only scans authored components.
  */
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
+import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 
 /* ------------------------------------------------------------------ tokens */
 
 export type CardAspect = '1/1' | '4/5' | '3/4' | '2/3' | '5/4' | '16/9';
+export type ScrollFeel = 'native' | 'soft' | 'cinematic';
 export type StoreTokens = {
   /** Page background. */ paper: string;
   /** Text colour; muted text is derived from it at fixed opacity rungs, never a second hue. */ ink: string;
@@ -72,6 +73,7 @@ export function themeCss(tokens: StoreTokens): string {
 const UI_CSS = `
 :root{--ui-line:color-mix(in srgb,var(--ui-ink) 14%,var(--ui-paper));--ui-ink-85:color-mix(in srgb,var(--ui-ink) 85%,var(--ui-paper));--ui-ink-70:color-mix(in srgb,var(--ui-ink) 70%,var(--ui-paper));--ui-ink-55:color-mix(in srgb,var(--ui-ink) 55%,var(--ui-paper));--ui-ink-40:color-mix(in srgb,var(--ui-ink) 40%,var(--ui-paper));--ui-body:clamp(15px,.35vw + 14px,17px);--ui-display:clamp(calc(var(--ui-body) * 1.9),calc(var(--ui-body) * var(--ui-ratio) * .42 + 3.2vw),calc(var(--ui-body) * var(--ui-ratio)));--ui-h2:clamp(calc(var(--ui-body) * 1.5),1.2vw + 1.2rem,calc(var(--ui-body) * var(--ui-ratio) * .62));--ui-ease:cubic-bezier(.22,1,.36,1);--ui-shadow:0 1px 2px color-mix(in srgb,var(--ui-ink) 8%,transparent),0 12px 32px -12px color-mix(in srgb,var(--ui-ink) 22%,transparent)}
 body{margin:0;background:var(--ui-paper)}
+html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!important}.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}.lenis.lenis-stopped{overflow:clip}
 .ui-root{background:var(--ui-paper);color:var(--ui-ink);font-family:var(--ui-body-font);font-size:var(--ui-body);line-height:1.7;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100dvh}
 .ui-root *,.ui-root *::before,.ui-root *::after{box-sizing:border-box}
 .ui-root img{max-width:100%;display:block}
@@ -127,6 +129,27 @@ body{margin:0;background:var(--ui-paper)}
 .ui-hero[data-variant=typographic]{padding-block:var(--ui-s8) var(--ui-s7);text-align:center}.ui-hero[data-variant=typographic] .ui-display{max-width:14ch;margin-inline:auto;font-size:calc(var(--ui-display) * 1.25)}.ui-hero[data-variant=typographic] .ui-lead{margin-inline:auto}.ui-hero[data-variant=typographic] .ui-row{justify-content:center}.ui-hero[data-variant=typographic] .ui-hero__media{margin:var(--ui-s6) auto 0;width:min(100%,980px);aspect-ratio:16/9;border-radius:var(--ui-radius-media);overflow:hidden}
 .ui-hero__actions{margin-top:var(--ui-s5)}
 .ui-hero .ui-display{font-size:calc(var(--ui-display) * 1.3)}
+.ui-video-hero{position:relative;isolation:isolate;display:grid;align-items:end;min-height:min(86dvh,900px);background:var(--ui-ink);color:#fff;overflow:clip}
+.ui-video-hero__media,.ui-video-hero__media::after,.ui-video-hero__media>img,.ui-video-hero__media>video{position:absolute;inset:0;width:100%;height:100%}
+.ui-video-hero__media>img,.ui-video-hero__media>video{object-fit:cover}.ui-video-hero__media>video{opacity:0;transition:opacity .2s var(--ui-ease)}.ui-video-hero__media>video[data-playing]{opacity:1}
+.ui-video-hero__media::after{content:"";background:linear-gradient(180deg,rgb(0 0 0/.08) 15%,rgb(0 0 0/.38) 55%,rgb(0 0 0/.78));pointer-events:none}
+.ui-video-hero__copy{position:relative;padding-block:var(--ui-s8) var(--ui-s7);padding-right:clamp(0px,8vw,100px)}.ui-video-hero .ui-display{font-size:calc(var(--ui-display) * 1.45);max-width:14ch}.ui-video-hero .ui-lead,.ui-video-hero .ui-eyebrow{color:inherit}
+.ui-video-hero__control{position:relative;justify-self:end;margin:calc(-1 * var(--ui-s6)) var(--ui-s4) var(--ui-s4);z-index:1;min-width:44px;min-height:44px;border:1px solid rgb(255 255 255/.65);border-radius:999px;padding:8px 16px;background:rgb(0 0 0/.65);color:#fff;font:inherit;font-size:12px;cursor:pointer}
+.ui-video-hero :focus-visible{outline-color:#fff}.ui-video-hero .ui-button[data-variant=solid]{background:var(--ui-paper);color:var(--ui-ink)}
+.ui-floating{position:relative;overflow:clip}.ui-floating__grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:var(--ui-s6);align-items:center;padding-block:var(--ui-s7);min-height:min(85dvh,850px)}.ui-floating__copy{position:relative;z-index:2}.ui-floating .ui-display{font-size:calc(var(--ui-display) * 1.35);max-width:12ch}.ui-floating__stage{position:relative;height:clamp(420px,45vw,650px)}
+.ui-floating__item{position:absolute;inset:12% 12% 8% 18%;margin:0;z-index:1}.ui-floating__frame{height:100%;margin:0;overflow:hidden;border-radius:var(--ui-radius-media);box-shadow:var(--ui-shadow);background:var(--ui-surface)}.ui-floating__frame img{width:100%;height:100%;object-fit:cover}
+.ui-floating__item:nth-child(2){inset:0 57% 55% -3%;z-index:2}.ui-floating__item:nth-child(2) .ui-floating__frame{transform:rotate(-8deg)}
+.ui-floating__item:nth-child(3){inset:57% -3% 0 61%;z-index:2}.ui-floating__item:nth-child(3) .ui-floating__frame{transform:rotate(7deg)}
+.ui-floating__item:nth-child(4){inset:-3% -1% 72% 76%}.ui-floating__item:nth-child(4) .ui-floating__frame{transform:rotate(5deg)}
+.ui-floating__item:nth-child(5){inset:76% 70% -2% 0}.ui-floating__item:nth-child(5) .ui-floating__frame{transform:rotate(-5deg)}
+.ui-parallax-stack{position:relative;height:clamp(420px,58vw,760px);isolation:isolate}.ui-parallax-stack>[data-ui-parallax]{position:absolute;inset:12% 18% 8% 12%}.ui-parallax-stack>[data-ui-parallax] figure{height:100%;margin:0;overflow:hidden;border-radius:var(--ui-radius-media);box-shadow:var(--ui-shadow);background:var(--ui-surface)}.ui-parallax-stack>[data-ui-parallax] img{width:100%;height:100%;object-fit:cover}.ui-parallax-stack>[data-ui-parallax]:nth-child(2){inset:0 60% 58% 0;z-index:2}.ui-parallax-stack>[data-ui-parallax]:nth-child(3){inset:58% 0 0 64%;z-index:3}
+.ui-scroll-hero{position:relative;height:220vh;color:#fff;background:var(--ui-ink)}.ui-scroll-hero__stage{position:sticky;top:0;height:100dvh;overflow:clip;display:grid;align-items:end}.ui-scroll-hero__media,.ui-scroll-hero__media::after,.ui-scroll-hero__media>img,.ui-scroll-hero__media>video{position:absolute;inset:0;width:100%;height:100%}.ui-scroll-hero__media>img,.ui-scroll-hero__media>video{object-fit:cover}.ui-scroll-hero__media>video{opacity:0}.ui-scroll-hero__media>video[data-ready]{opacity:1}.ui-scroll-hero__media::after{content:"";background:linear-gradient(to top,rgb(0 0 0/.72),rgb(0 0 0/.08) 62%);pointer-events:none}.ui-scroll-hero__copy{position:relative;z-index:1;padding-block:var(--ui-s8) var(--ui-s7)}.ui-scroll-hero .ui-display{font-size:calc(var(--ui-display) * 1.5);max-width:13ch}.ui-scroll-hero .ui-lead,.ui-scroll-hero .ui-eyebrow{color:inherit}.ui-scroll-hero[data-static]{height:auto}.ui-scroll-hero[data-static] .ui-scroll-hero__stage{position:relative;min-height:78dvh;height:auto}
+.ui-section-sequence{display:grid;gap:var(--ui-s7)}
+.ui-compare{margin:0;min-width:0}.ui-compare__stage{position:relative;aspect-ratio:var(--ui-compare-aspect,4/5);overflow:hidden;border-radius:var(--ui-radius-media);background:var(--ui-surface)}.ui-compare__stage>img{width:100%;height:100%;object-fit:cover}.ui-compare__before{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--ui-compare-position)) 0 0)}
+.ui-compare__divider{position:absolute;inset:0 auto 0 var(--ui-compare-position);width:2px;background:#fff;box-shadow:0 0 3px #000;pointer-events:none}.ui-compare__divider::after{content:"↔";position:absolute;left:50%;top:50%;display:grid;place-items:center;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:#fff;color:#111;font:600 22px/1 system-ui;box-shadow:0 2px 12px rgb(0 0 0/.2)}
+.ui-compare__caption{display:grid;gap:var(--ui-s2);padding-top:var(--ui-s3)}.ui-compare__labels{display:flex;justify-content:space-between;gap:var(--ui-s3);font-size:13px}.ui-compare__label{font-size:14px;font-weight:600}.ui-compare__range{display:block;width:100%;min-height:44px;margin:0;accent-color:var(--ui-accent);cursor:ew-resize}.ui-compare__hint{margin:0;font-size:12px;color:var(--ui-ink-70)}
+@media(max-width:820px){.ui-floating__grid{grid-template-columns:1fr;min-height:0;gap:var(--ui-s5);padding-block:var(--ui-s6)}.ui-floating__stage{height:clamp(300px,95vw,500px);margin-inline:var(--ui-s3)}.ui-floating__item{transform:none!important}.ui-floating .ui-display{max-width:15ch}.ui-video-hero{min-height:78dvh}.ui-video-hero__copy{padding-top:var(--ui-s8);padding-right:0}.ui-video-hero .ui-display{font-size:calc(var(--ui-display) * 1.2)}.ui-parallax-stack{height:clamp(340px,110vw,520px)}.ui-scroll-hero{height:auto}.ui-scroll-hero__stage{position:relative;min-height:78dvh;height:auto}.ui-scroll-hero__media{transform:none!important}.ui-scroll-hero .ui-display{font-size:calc(var(--ui-display) * 1.15)}}
+@media(prefers-reduced-motion:reduce){.ui-video-hero__media>video{transition:none}.ui-floating__item{transform:none!important}}
 @media (max-width:820px){.ui-hero[data-variant=split] .ui-hero__grid,.ui-hero[data-variant=editorial] .ui-hero__grid{grid-template-columns:1fr;min-height:0}.ui-hero[data-variant=editorial] .ui-hero__copy,.ui-hero[data-variant=editorial] .ui-hero__media{grid-column:1/-1;transform:none}.ui-hero[data-variant=split] .ui-hero__media{order:-1;aspect-ratio:4/5}}
 .ui-showcase{position:relative;height:230vh}.ui-showcase__stage{position:sticky;top:0;height:100dvh;display:grid;place-items:center;overflow:clip}.ui-showcase__media{height:min(62dvh,700px);width:auto;max-width:86vw;aspect-ratio:var(--ui-aspect);border-radius:var(--ui-radius-media);overflow:hidden;will-change:transform;background:var(--ui-surface);box-shadow:var(--ui-shadow)}.ui-showcase__media img{width:100%;height:100%;object-fit:cover}.ui-showcase__copy{position:absolute;inset:auto 0 var(--ui-s6);text-align:center;padding-inline:16px}.ui-showcase__copy>*{margin-inline:auto}.ui-showcase__copy .ui-text{color:inherit}
 .ui-showcase__veil{position:absolute;inset:0;background:linear-gradient(to top,color-mix(in srgb,var(--ui-paper) 92%,transparent),transparent 45%);pointer-events:none}
@@ -193,22 +216,268 @@ body{margin:0;background:var(--ui-paper)}
 @keyframes ui-reveal{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
 @keyframes ui-grow{from{transform:scale(.86);opacity:.35}to{transform:none;opacity:1}}
 @keyframes ui-grow-media{from{transform:scale(.8);border-radius:calc(var(--ui-radius-media) * 2.5)}to{transform:none}}
-@keyframes ui-word{from{opacity:.16}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.ui-marquee__track{animation:none}.ui-button,.ui-card__media img{transition:none}}
+@keyframes ui-word{from{opacity:.38}to{opacity:1}}
+.ui-header[data-menu=overlay] .ui-nav{display:none}
+.ui-header[data-menu=overlay] .ui-header__bar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto}
+.ui-header[data-menu=overlay] .ui-header__main{display:contents}
+.ui-header[data-menu=overlay] .ui-brand{grid-column:2;grid-row:1;justify-self:center;text-align:center;padding-top:0}
+.ui-header[data-menu=overlay] .ui-header__tools{grid-column:3;grid-row:1;justify-self:end}
+.ui-header[data-menu=overlay] :is(.ui-overlay-trigger,.ui-menu){grid-column:1;grid-row:1}
+.ui-header[data-menu=overlay] .ui-menu{display:block}
+.ui-overlay-trigger,.ui-overlay-menu__bar button{font:inherit;color:inherit;background:none;border:0;min-height:44px;min-width:44px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:12px}
+.ui-overlay-menu{position:fixed;inset:0;width:100%;max-width:none;height:100dvh;max-height:none;margin:0;border:0;padding:clamp(20px,4vw,64px);background:var(--ui-ink);color:var(--ui-paper);overflow:auto}
+.ui-overlay-menu::backdrop{background:transparent}
+.ui-overlay-menu__bar{display:flex;align-items:center;justify-content:space-between;gap:20px;font-family:var(--ui-body-font)}
+.ui-overlay-menu nav{display:flex;flex-direction:column;justify-content:center;min-height:70%;padding-block:40px;gap:16px}
+.ui-overlay-menu nav a{font-family:var(--ui-display-font);font-size:clamp(32px,8vw,128px);line-height:1.05;color:inherit;text-decoration:none;display:flex;align-items:baseline;justify-content:space-between;gap:20px;overflow-wrap:anywhere;border-bottom:1px solid color-mix(in srgb,currentColor 25%,transparent);padding-block:12px}
+.ui-overlay-menu nav a span{font-size:.55em;flex-shrink:0}
+.ui-overlay-menu :focus-visible,.ui-overlay-trigger:focus-visible{outline:2px solid currentColor;outline-offset:6px}
+.ui-entrance{position:fixed;inset:0;z-index:80;overflow:hidden;display:grid;place-items:center;pointer-events:none}
+.ui-entrance__veil{position:absolute;inset:0;background:var(--ui-ink)}
+.ui-entrance[data-variant=curtain] .ui-entrance__veil{background:var(--ui-accent)}
+.ui-entrance__mark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--ui-display-font);font-weight:var(--ui-display-weight);font-size:max(140vw,140vh);line-height:1;color:var(--ui-accent);text-transform:lowercase;user-select:none}
+.ui-entrance[data-variant=curtain] .ui-entrance__mark{color:var(--ui-on-accent)}
+.ui-entrance[data-variant=wordmark] .ui-entrance__veil{background:var(--ui-ink)}
+.ui-entrance[data-variant=wordmark] .ui-entrance__mark{position:relative;top:auto;left:auto;max-width:min(90vw,1200px);padding-inline:5vw;transform:none;color:var(--ui-accent);font-size:clamp(48px,12vw,180px);line-height:.88;text-align:center;text-transform:none;overflow-wrap:anywhere}
+.ui-entrance__signature{position:absolute;width:min(76vw,900px);height:auto;color:var(--ui-accent);overflow:visible}.ui-entrance__signature path{fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+@media (prefers-reduced-motion:reduce){.ui-marquee__track{animation:none}.ui-button,.ui-card__media img{transition:none}.ui-entrance{display:none}}
 :root[data-ui-motion=off] .ui-marquee__track{animation:none}
+:root[data-ui-motion=off] .ui-entrance{display:none}
 `;
 
 /* ------------------------------------------------------------------ motion */
 
 /** True only when the shopper allows motion and the merchant has not switched it off. */
 export function useUiMotion(): boolean {
-  const reduced = useReducedMotion();
   const [allowed, setAllowed] = useState(false);
   useEffect(() => {
-    const off = (window as unknown as { PAGOSYA_CONFIG?: { motion?: string } }).PAGOSYA_CONFIG?.motion === 'off';
-    setAllowed(!off);
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setAllowed(!preference.matches && (window as unknown as { PAGOSYA_CONFIG?: { motion?: string } }).PAGOSYA_CONFIG?.motion !== 'off');
+    update();
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
   }, []);
-  return allowed && !reduced;
+  return allowed;
+}
+
+function configuredScrollFeel(): ScrollFeel {
+  const value = (window as unknown as { PAGOSYA_CONFIG?: { scrollFeel?: string } }).PAGOSYA_CONFIG?.scrollFeel;
+  return value === 'native' || value === 'cinematic' ? value : 'soft';
+}
+
+/** Smooths wheel input while leaving touch, keyboard and programmatic navigation native. */
+function useSmoothScroll(enabled: boolean): void {
+  useEffect(() => {
+    const feel = configuredScrollFeel();
+    document.documentElement.dataset.uiScroll = enabled ? feel : 'native';
+    if (!enabled || feel === 'native') return;
+    if (document.querySelector('[data-pagosya-product-page],[data-pagosya-checkout-page]')) return;
+    const pointer = window.matchMedia('(hover:hover) and (pointer:fine)');
+    let cancelled = false;
+    let loading = false;
+    let lenis: { destroy(): void } | null = null;
+    const clear = () => {
+      lenis?.destroy(); lenis = null;
+      delete document.documentElement.dataset.pagosyaSmoothScroll;
+      document.documentElement.classList.remove('lenis', 'lenis-smooth', 'lenis-scrolling', 'lenis-stopped');
+    };
+    const shouldRun = () => pointer.matches && document.visibilityState === 'visible'
+      && !document.querySelector('dialog[open],[role="dialog"][aria-modal="true"]');
+    const sync = async () => {
+      if (!shouldRun()) { clear(); return; }
+      if (lenis || loading) return;
+      loading = true;
+      try {
+        const Lenis = (await import('lenis')).default;
+        loading = false;
+        if (cancelled || !shouldRun()) return;
+        lenis = new Lenis({
+          autoRaf: true,
+          smoothWheel: true,
+          syncTouch: false,
+          lerp: feel === 'cinematic' ? 0.075 : 0.12,
+          wheelMultiplier: feel === 'cinematic' ? 0.86 : 1,
+          prevent: node => Boolean(node.closest('[data-lenis-prevent],dialog,[role="dialog"],[data-cart-panel],aside,form,textarea,select,input[type="range"],[data-pagosya-cart],[data-pagosya-checkout]')),
+        });
+        document.documentElement.dataset.pagosyaSmoothScroll = 'on';
+      } catch {
+        loading = false;
+        clear();
+      }
+    };
+    const observer = new MutationObserver(() => { void sync(); });
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open', 'aria-modal'] });
+    pointer.addEventListener('change', sync);
+    document.addEventListener('visibilitychange', sync);
+    void sync();
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      pointer.removeEventListener('change', sync);
+      document.removeEventListener('visibilitychange', sync);
+      clear();
+    };
+  }, [enabled]);
+}
+
+const EASE_FALLBACK = 'cubic-bezier(.22,1,.36,1)';
+/** Resolves the theme's `--ui-ease` for WAAPI, which cannot read the cascade itself. */
+function readUiEase(): string {
+  if (typeof getComputedStyle !== 'function') return EASE_FALLBACK;
+  return getComputedStyle(document.documentElement).getPropertyValue('--ui-ease').trim() || EASE_FALLBACK;
+}
+
+const ENTRANCE_VEIL_KEYFRAMES: Keyframe[] = [{ opacity: 1 }, { opacity: 1, offset: 0.2 }, { opacity: 0, offset: 0.55 }, { opacity: 0 }];
+const ENTRANCE_LETTER_KEYFRAMES: Keyframe[] = [
+  { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1 },
+  { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1, offset: 0.2 },
+  { transform: 'translate(-20%,-15%) scale(1.1) rotate(14deg)', opacity: 1, offset: 0.65 },
+  { transform: 'translate(6%,55%) scale(1.2) rotate(26deg)', opacity: 0 },
+];
+const ENTRANCE_WORDMARK_KEYFRAMES: Keyframe[] = [
+  { transform: 'translateY(24px) scale(.96)', opacity: 0, letterSpacing: '.08em' },
+  { transform: 'translateY(0) scale(1)', opacity: 1, letterSpacing: '-.03em', offset: 0.28 },
+  { transform: 'translateY(0) scale(1)', opacity: 1, letterSpacing: '-.03em', offset: 0.58 },
+  { transform: 'translateY(-18px) scale(1.035)', opacity: 0, letterSpacing: '-.03em' },
+];
+
+
+function PageEntranceRun({ variant, mark, duration, onDone }: { variant: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark: string; duration: number; onDone: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const markRef = useRef<HTMLSpanElement>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+  const strokeRef = useRef<SVGPathElement>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let done = false;
+    const finish = () => { if (done) return; done = true; onDone(); };
+    const anims: Animation[] = [];
+    if (typeof root.animate === 'function') {
+      const easing = readUiEase();
+      if (veilRef.current) anims.push(veilRef.current.animate(variant === 'curtain' ? [{ transform: 'translateY(0%)' }, { transform: 'translateY(-100%)' }] : ENTRANCE_VEIL_KEYFRAMES, { duration, easing, fill: 'forwards' }));
+      const glyph = markRef.current;
+      if (variant === 'letter' && glyph && typeof glyph.animate === 'function') {
+        anims.push(glyph.animate(ENTRANCE_LETTER_KEYFRAMES, { duration, easing: 'ease-in-out', fill: 'forwards' }));
+      }
+      if (variant === 'wordmark' && glyph && typeof glyph.animate === 'function') {
+        anims.push(glyph.animate(ENTRANCE_WORDMARK_KEYFRAMES, { duration, easing, fill: 'forwards' }));
+      }
+      const stroke = strokeRef.current;
+      if (variant === 'stroke' && stroke && typeof stroke.animate === 'function') {
+        anims.push(stroke.animate([
+          { strokeDashoffset: 1, opacity: 1 },
+          { strokeDashoffset: 0, opacity: 1, offset: 0.72 },
+          { strokeDashoffset: 0, opacity: 0 },
+        ], { duration, easing, fill: 'forwards' }));
+      }
+      Promise.all(anims.map(a => a.finished.catch(() => {}))).then(finish);
+    } else {
+      finish();
+    }
+    const cancelNow = () => { anims.forEach(a => a.cancel()); finish(); };
+    window.addEventListener('keydown', cancelNow);
+    window.addEventListener('pointerdown', cancelNow);
+    window.addEventListener('wheel', cancelNow, { passive: true });
+    window.addEventListener('touchstart', cancelNow, { passive: true });
+    return () => {
+      done = true;
+      anims.forEach(a => a.cancel());
+      window.removeEventListener('keydown', cancelNow);
+      window.removeEventListener('pointerdown', cancelNow);
+      window.removeEventListener('wheel', cancelNow);
+      window.removeEventListener('touchstart', cancelNow);
+    };
+  }, [variant, duration, onDone]);
+  return <div ref={rootRef} className="ui-entrance" data-variant={variant} aria-hidden="true">
+    <div ref={veilRef} className="ui-entrance__veil" />
+    {variant === 'letter' || variant === 'wordmark' ? <span ref={markRef} className="ui-entrance__mark">{mark}</span> : null}
+    {variant === 'stroke' ? <svg className="ui-entrance__signature" viewBox="0 0 1000 360" aria-hidden="true"><path ref={strokeRef} pathLength="1" strokeDasharray="1" strokeDashoffset="1" d="M36 245 C142 58 272 65 338 186 C394 288 476 312 528 174 C575 49 702 57 728 169 C747 251 832 284 964 87" /></svg> : null}
+  </div>;
+}
+
+/**
+ * A once-per-visit marketing moment: a color veil gives way to an oversized letter sweeping out
+ * to reveal the real page underneath. Purely decorative — the page beneath is always real and
+ * interactive, since the overlay is `pointer-events:none` and never delays content.
+ */
+export function PageEntrance({ variant = 'letter', mark = 'a', duration = 900 }: { variant?: 'letter' | 'curtain' | 'stroke' | 'wordmark'; mark?: string; duration?: number }) {
+  const enabled = useUiMotion();
+  const [epoch, setEpoch] = useState(0);
+  const started = useRef(false);
+  const ms = clamp(duration, 400, 1400, 900);
+  const onDone = useCallback(() => setEpoch(0), []);
+  const glyph = (mark || 'a').trim().slice(0, variant === 'wordmark' ? 48 : 2) || 'a';
+
+  useEffect(() => {
+    if (!enabled) { setEpoch(0); return; }
+    if (started.current) return;
+    started.current = true;
+    if (window.scrollY <= 0 && typeof Element.prototype.animate === 'function') setEpoch(1);
+  }, [enabled]);
+
+  useEffect(() => {
+    const onReplay = () => { if (enabled && window.scrollY <= 0 && typeof Element.prototype.animate === 'function') setEpoch(e => e + 1); };
+    window.addEventListener('pagosya:replay-motion', onReplay);
+    return () => window.removeEventListener('pagosya:replay-motion', onReplay);
+  }, [enabled]);
+
+  if (!enabled || epoch === 0) return null;
+  return <PageEntranceRun key={epoch} variant={variant} mark={glyph} duration={ms} onDone={onDone} />;
+}
+
+/** A clear once-per-visit brand reveal using the merchant's actual wordmark. */
+export function BrandEntrance({ name, duration = 1000 }: { name: string; duration?: number }) {
+  return <PageEntrance variant="wordmark" mark={name} duration={duration} />;
+}
+
+/** A decorative brand stroke that reveals the page and cancels on the shopper's first input. */
+export function SignatureStrokeEntrance({ duration = 1000 }: { duration?: number }) {
+  return <PageEntrance variant="stroke" duration={duration} />;
+}
+
+/**
+ * Direct children (headline, copy, media — decorative only) lift and fade in one after another
+ * on mount. Progressive enhancement: without JS, reduced motion, or motion off, children are
+ * simply visible, since nothing here hides them by default.
+ */
+export function EntranceGroup({ children, delay = 0, stagger = 60, className }: { children: ReactNode; delay?: number; stagger?: number; className?: string }) {
+  const enabled = useUiMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const root = ref.current;
+    if (!root) return;
+    const items = Array.from(root.children) as HTMLElement[];
+    if (!items.length || typeof items[0].animate !== 'function') return;
+    const easing = readUiEase();
+    const itemDuration = 320;
+    const cap = 1000 - itemDuration - 1;
+    const step = clamp(stagger, 0, 120, 60);
+    const base = clamp(delay, 0, 600, 0);
+    let anims: Animation[] = [];
+    const play = () => {
+      anims.forEach(a => a.cancel());
+      anims = items.map((item, index) => item.animate(
+        [{ transform: 'translateY(20px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 }],
+        { duration: itemDuration, delay: Math.min(base + index * step, cap), easing, fill: 'both' },
+      ));
+    };
+    const scrolledPast = () => { const rect = root.getBoundingClientRect(); return window.scrollY > 0 && rect.top < window.innerHeight; };
+    if (!scrolledPast()) play();
+    const cancelAll = () => anims.forEach(a => a.cancel());
+    window.addEventListener('keydown', cancelAll);
+    window.addEventListener('pointerdown', cancelAll);
+    const onReplay = () => { if (!scrolledPast()) play(); };
+    window.addEventListener('pagosya:replay-motion', onReplay);
+    return () => {
+      cancelAll();
+      window.removeEventListener('keydown', cancelAll);
+      window.removeEventListener('pointerdown', cancelAll);
+      window.removeEventListener('pagosya:replay-motion', onReplay);
+    };
+  }, [enabled, delay, stagger]);
+  return <div ref={ref} className={className} data-ui-entrance-group="">{children}</div>;
 }
 
 /* ------------------------------------------------------------------ root */
@@ -219,6 +488,7 @@ export function useUiMotion(): boolean {
  */
 export function StoreTheme({ tokens, children }: { tokens: StoreTokens; children: ReactNode }) {
   const motionOn = useUiMotion();
+  useSmoothScroll(motionOn);
   useEffect(() => { document.documentElement.dataset.uiMotion = motionOn ? 'on' : 'off'; }, [motionOn]);
   return <div className="ui-root">
     <style data-pagosya-ui="" dangerouslySetInnerHTML={{ __html: UI_CSS + themeCss(tokens) }} />
@@ -262,7 +532,7 @@ export function Button({ href, children, variant = 'solid', size = 'md', onClick
 export type Img = { src: string; alt: string; position?: string };
 function Picture({ image, eager = false }: { image?: Img; eager?: boolean }) {
   if (!image?.src) return null;
-  return <img src={image.src} alt={image.alt} loading={eager ? 'eager' : 'lazy'} decoding="async" style={image.position ? { objectPosition: image.position } : undefined} />;
+  return <img src={image.src} alt={image.alt} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : undefined} decoding="async" style={image.position ? { objectPosition: image.position } : undefined} />;
 }
 
 /* ------------------------------------------------------------------ commerce chrome */
@@ -281,14 +551,50 @@ export function CommerceSlots() {
 export function AnnouncementBar({ children }: { children: ReactNode }) { return <div className="ui-announcement">{children}</div>; }
 
 export type NavLink = { label: string; href: string };
-export function SiteHeader({ name, tagline, logo, links = [], variant = 'classic', sticky = true, cartLabel = 'Pedido' }: {
-  name: string; tagline?: string; logo?: Img; links?: NavLink[]; variant?: 'classic' | 'centered' | 'split' | 'floating'; sticky?: boolean; cartLabel?: string;
+function OverlayMenu({ links, name }: { links: NavLink[]; name: string }) {
+  const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const animation = useRef<Animation | null>(null);
+  const enabled = useUiMotion();
+  const [ready, setReady] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setReady(typeof HTMLDialogElement !== 'undefined' && typeof HTMLDialogElement.prototype.showModal === 'function'); }, []);
+  useEffect(() => { if (!enabled) animation.current?.finish(); }, [enabled]);
+  useEffect(() => () => { animation.current?.cancel(); dialog.current?.close(); }, []);
+  const close = (animate: boolean) => {
+    const el = dialog.current;
+    if (!el?.open) return;
+    animation.current?.cancel();
+    const finish = () => { el.close(); setOpen(false); trigger.current?.focus({ preventScroll: true }); };
+    if (animate && enabled && typeof el.animate === 'function') {
+      const current = el.animate([{ transform: 'translateY(0%)' }, { transform: 'translateY(-100%)' }], { duration: 220, easing: readUiEase(), fill: 'forwards' });
+      animation.current = current;
+      current.finished.then(() => { finish(); current.cancel(); }).catch(() => {});
+    } else finish();
+  };
+  if (!ready) return <details className="ui-menu"><summary>Menú</summary><div className="ui-menu__panel">{links.map(link => <a key={link.href + link.label} href={link.href}>{link.label}</a>)}</div></details>;
+  return <>
+    <button ref={trigger} type="button" className="ui-overlay-trigger" aria-haspopup="dialog" aria-controls={id} aria-expanded={open} onClick={event => {
+      const el = dialog.current;
+      if (!el || el.open) return;
+      animation.current?.cancel(); el.showModal(); setOpen(true);
+      if (enabled && event.detail > 0 && typeof el.animate === 'function') animation.current = el.animate([{ transform: 'translateY(-100%)' }, { transform: 'translateY(0%)' }], { duration: 240, easing: readUiEase() });
+    }}>Menú <span aria-hidden="true">☰</span></button>
+    <dialog ref={dialog} id={id} className="ui-overlay-menu" aria-label={`Menú de ${name}`} onCancel={event => { event.preventDefault(); close(false); }} onClose={() => setOpen(false)} onKeyDown={() => animation.current?.finish()}>
+      <div className="ui-overlay-menu__bar"><span>{name}</span><button type="button" autoFocus onClick={event => close(event.detail > 0)}>Cerrar <span aria-hidden="true">×</span></button></div>
+      <nav aria-label="Principal">{links.map(link => <a key={link.href + link.label} href={link.href} onClick={() => close(false)}>{link.label}<span aria-hidden="true">↗</span></a>)}</nav>
+    </dialog>
+  </>;
+}
+export function SiteHeader({ name, tagline, logo, links = [], variant = 'classic', sticky = true, cartLabel = 'Pedido', menu = 'panel' }: {
+  name: string; tagline?: string; logo?: Img; links?: NavLink[]; variant?: 'classic' | 'centered' | 'split' | 'floating'; sticky?: boolean; cartLabel?: string; menu?: 'panel' | 'overlay';
 }) {
   const brand = <a className="ui-brand" href="index.html">{logo?.src ? <img src={logo.src} alt={logo.alt || name} /> : <span className="ui-brand__name">{name}</span>}{tagline ? <span className="ui-brand__tag">{tagline}</span> : null}</a>;
   const nav = <nav className="ui-nav" aria-label="Principal">{links.map(link => <a key={link.href + link.label} href={link.href}>{link.label}</a>)}</nav>;
-  return <header className="ui-header" data-variant={variant === 'classic' ? undefined : variant} data-sticky={sticky && variant !== 'floating' ? '' : undefined}>
+  return <header className="ui-header" data-menu={menu} data-variant={variant === 'classic' ? undefined : variant} data-sticky={sticky && variant !== 'floating' ? '' : undefined}>
     <div className="ui-container ui-header__bar">
-      <details className="ui-menu"><summary aria-label="Menú"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></summary><div className="ui-menu__panel">{links.map(link => <a key={link.href + link.label} href={link.href}>{link.label}</a>)}</div></details>
+      {menu === 'overlay' ? <OverlayMenu links={links} name={name} /> : <details className="ui-menu"><summary aria-label="Menú"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></summary><div className="ui-menu__panel">{links.map(link => <a key={link.href + link.label} href={link.href}>{link.label}</a>)}</div></details>}
       {variant === 'classic' || variant === 'floating' ? <div className="ui-header__main">{brand}{nav}</div> : <>{brand}{nav}</>}
       <div className="ui-header__tools"><CartButton label={cartLabel} /></div>
     </div>
@@ -297,20 +603,166 @@ export function SiteHeader({ name, tagline, logo, links = [], variant = 'classic
 
 /* ------------------------------------------------------------------ sections */
 
-export function Hero({ variant = 'split', eyebrow, title, lead, image, actions, scrollGrow = false }: {
+export function Hero({ variant = 'split', eyebrow, title, lead, image, actions, scrollGrow = false, entrance = false }: {
   variant?: 'split' | 'fullbleed' | 'editorial' | 'typographic'; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; image?: Img; actions?: ReactNode;
-  /** The image grows into place as it scrolls into view. */ scrollGrow?: boolean;
+  /** The image grows into place as it scrolls into view. */ scrollGrow?: boolean; entrance?: boolean;
 }) {
   const media = image?.src ? <div className={['ui-hero__media', scrollGrow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} eager /></div> : null;
-  const copy = <div className="ui-hero__copy">
+  const Copy = entrance ? EntranceGroup : 'div';
+  const copy = <Copy className="ui-hero__copy">
     {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
     <Display>{title}</Display>
     {lead ? <Lead>{lead}</Lead> : null}
     {actions ? <div className="ui-row ui-hero__actions">{actions}</div> : null}
-  </div>;
+  </Copy>;
   if (variant === 'fullbleed') return <section className="ui-hero" data-variant="fullbleed">{media}<div className="ui-container">{copy}</div></section>;
   if (variant === 'typographic') return <section className="ui-hero" data-variant="typographic"><div className="ui-container">{copy}{media}</div></section>;
   return <section className="ui-hero" data-variant={variant}><div className="ui-container ui-hero__grid">{copy}{media}</div></section>;
+}
+
+/** A real optional video, always backed by a real poster. Decorative footage only; narration belongs in an accessible player. */
+export function VideoHero({ poster, src, eyebrow, title, lead, actions, entrance = false }: {
+  poster: Img; src?: string; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; actions?: ReactNode; entrance?: boolean;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const enabled = useUiMotion();
+  const [saveData, setSaveData] = useState(true);
+  const [intent, setIntent] = useState<'auto' | 'play' | 'pause'>('auto');
+  const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    setSaveData(Boolean(connection?.saveData));
+  }, []);
+  useEffect(() => { setFailed(false); setIntent('auto'); setPlaying(false); }, [src]);
+  const shouldPlay = Boolean(src && !failed && (intent === 'play' || (intent === 'auto' && enabled && !saveData)));
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    if (!shouldPlay) { video.pause(); return; }
+    let current = true;
+    video.play().catch(() => { if (current) { setPlaying(false); setIntent('pause'); } });
+    return () => { current = false; video.pause(); };
+  }, [shouldPlay, src]);
+  const Copy = entrance ? EntranceGroup : 'div';
+  return <section className="ui-video-hero">
+    <div className="ui-video-hero__media">
+      <Picture image={poster} eager />
+      {shouldPlay || playing ? <video ref={ref} key={src} src={src} poster={poster.src} muted loop playsInline preload="none"
+        data-pagosya-video-managed="" aria-hidden="true" tabIndex={-1} data-playing={playing ? '' : undefined}
+        style={poster.position ? { objectPosition: poster.position } : undefined}
+        onPlaying={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => { setFailed(true); setPlaying(false); }} /> : null}
+    </div>
+    <div className="ui-container"><Copy className="ui-video-hero__copy">
+      {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Display>{title}</Display>
+      {lead ? <Lead>{lead}</Lead> : null}{actions ? <div className="ui-row ui-hero__actions">{actions}</div> : null}
+    </Copy></div>
+    {src && !failed ? <button type="button" className="ui-video-hero__control" onClick={() => setIntent(shouldPlay ? 'pause' : 'play')}>
+      {shouldPlay ? 'Pausar video' : 'Reproducir video'}
+    </button> : null}
+  </section>;
+}
+
+function FloatingImage({ image, index, progress, enabled }: { image: Img; index: number; progress: ReturnType<typeof useScroll>['scrollYProgress']; enabled: boolean }) {
+  const distance = index === 0 ? 18 : index % 2 ? -28 : 32;
+  const transform = useTransform(progress, [0, 1], [`translateY(${distance}px)`, `translateY(${-distance}px)`]);
+  return <motion.div className="ui-floating__item" style={{ transform: enabled ? transform : 'none' }}>
+    <figure className="ui-floating__frame"><Picture image={image} eager={index === 0} /></figure>
+  </motion.div>;
+}
+
+/** A coordinated photograph composition; copy stays still and every image remains visible on mobile. */
+export function FloatingMedia({ images, eyebrow, title, lead, actions, motion: animate = true, entrance = false }: {
+  images: Img[]; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; actions?: ReactNode; motion?: boolean; entrance?: boolean;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const enabled = useUiMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const available = images.filter(image => image?.src).slice(0, 5);
+  const Copy = entrance ? EntranceGroup : 'div';
+  return <section ref={ref} className="ui-floating"><div className="ui-container ui-floating__grid">
+    <Copy className="ui-floating__copy">{eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Display>{title}</Display>
+      {lead ? <Lead>{lead}</Lead> : null}{actions ? <div className="ui-row ui-hero__actions">{actions}</div> : null}
+    </Copy>
+    {available.length ? <div className="ui-floating__stage">{available.map((image, index) =>
+      <FloatingImage key={image.src + index} image={image} index={index} progress={scrollYProgress} enabled={enabled && animate} />)}</div> : null}
+  </div></section>;
+}
+
+/** Two or three approved photographs move at bounded opposing depths around a stable stage. */
+export function ParallaxStack({ images, strength = 54, className }: { images: Img[]; strength?: number; className?: string }) {
+  const available = images.filter(image => image?.src).slice(0, 3);
+  const limit = clamp(strength, 20, 100, 54);
+  return <div className={['ui-parallax-stack', className].filter(Boolean).join(' ')}>
+    {available.map((image, index) => <Parallax key={image.src + index} strength={index === 0 ? limit : index === 1 ? -limit * .72 : limit * .55}>
+      <figure><Picture image={image} eager={index === 0} /></figure>
+    </Parallax>)}
+  </div>;
+}
+
+/** A sticky native-media scene. Video seeks with scroll on desktop; poster and copy remain complete everywhere. */
+export function ScrollScrubHero({ poster, src, eyebrow, title, lead, actions }: {
+  poster: Img; src?: string; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; actions?: ReactNode;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const enabled = useUiMotion();
+  const [desktop, setDesktop] = useState(false);
+  const [ready, setReady] = useState(false);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+  const mediaY = useTransform(scrollYProgress, [0, 1], ['0%', '10%']);
+  const mediaScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width:821px)');
+    const update = () => setDesktop(mq.matches);
+    update(); mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const active = enabled && desktop;
+  useEffect(() => {
+    if (!active || !src) return;
+    let frame = 0;
+    const unsubscribe = scrollYProgress.on('change', progress => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const video = videoRef.current;
+        if (video && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.min(video.duration - .04, Math.max(0, progress * video.duration));
+      });
+    });
+    return () => { cancelAnimationFrame(frame); unsubscribe(); };
+  }, [active, src, scrollYProgress]);
+  return <section ref={ref} className="ui-scroll-hero" data-static={active ? undefined : ''}>
+    <div className="ui-scroll-hero__stage">
+      <motion.div className="ui-scroll-hero__media" style={{ y: active ? mediaY : 0, scale: active ? mediaScale : 1 }}>
+        <Picture image={poster} eager />
+        {active && src ? <video ref={videoRef} src={src} poster={poster.src} muted playsInline preload="metadata" aria-hidden="true" tabIndex={-1} data-ready={ready ? '' : undefined} onLoadedData={() => setReady(true)} onError={() => setReady(false)} /> : null}
+      </motion.div>
+      <div className="ui-container ui-scroll-hero__copy"><EntranceGroup>
+        {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}<Display>{title}</Display>
+        {lead ? <Lead>{lead}</Lead> : null}{actions ? <div className="ui-row ui-hero__actions">{actions}</div> : null}
+      </EntranceGroup></div>
+    </div>
+  </section>;
+}
+
+/** Compare two supplied images without invented results. Native range supports touch and keyboard without custom drag traps. */
+export function BeforeAfter({ before, after, label, beforeLabel = 'Antes', afterLabel = 'Después', initial = 50, aspect = '4/5' }: {
+  before: Img; after: Img; label: string; beforeLabel?: string; afterLabel?: string; initial?: number; aspect?: CardAspect;
+}) {
+  const [position, setPosition] = useState(() => clamp(initial, 0, 100, 50));
+  return <figure className="ui-compare" style={{ '--ui-compare-position': `${position}%`, '--ui-compare-aspect': ASPECTS.includes(aspect) ? aspect : '4/5' } as CSSProperties}>
+    <div className="ui-compare__stage">
+      <Picture image={after} />
+      <img className="ui-compare__before" src={before.src} alt={before.alt} loading="lazy" decoding="async" style={before.position ? { objectPosition: before.position } : undefined} />
+      <span className="ui-compare__divider" aria-hidden="true" />
+    </div>
+    <figcaption className="ui-compare__caption"><span className="ui-compare__label">{label}</span>
+      <div className="ui-compare__labels" aria-hidden="true"><span>{beforeLabel}</span><span>{afterLabel}</span></div>
+      <input className="ui-compare__range" type="range" min="0" max="100" step="1" value={position} aria-label={label}
+        aria-valuetext={`${position}% ${beforeLabel}, ${100 - position}% ${afterLabel}`} onChange={event => setPosition(Number(event.currentTarget.value))} />
+      <p className="ui-compare__hint">Desliza para comparar. También puedes usar las flechas del teclado.</p>
+    </figcaption>
+  </figure>;
 }
 
 /**
@@ -337,9 +789,9 @@ export function ProductShowcase({ image, eyebrow, title, body, action, from = 0.
   </>;
   return <section ref={ref} className="ui-showcase" data-static={enabled ? undefined : ''} data-copy={hasCopy ? '' : undefined} aria-label={typeof title === 'string' ? title : undefined}>
     <div className="ui-showcase__stage">
-      <motion.div className="ui-showcase__media" style={enabled ? { scale, borderRadius: radius } : undefined}><Picture image={image} /></motion.div>
+      <motion.div className="ui-showcase__media" style={{ scale: enabled ? scale : 1, borderRadius: enabled ? radius : 'var(--ui-radius-media)' }}><Picture image={image} /></motion.div>
       {hasCopy && enabled ? <motion.div className="ui-showcase__veil" style={{ opacity: copyOpacity }} /> : null}
-      {hasCopy ? <motion.div className="ui-showcase__copy" style={enabled ? { opacity: copyOpacity, y: copyY } : undefined}>{copy}</motion.div> : null}
+      {hasCopy ? <motion.div className="ui-showcase__copy" style={{ opacity: enabled ? copyOpacity : 1, y: enabled ? copyY : 0 }}>{copy}</motion.div> : null}
     </div>
   </section>;
 }
@@ -350,20 +802,61 @@ export function ScrollScale({ children, from = 0.82, className }: { children: Re
   const enabled = useUiMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'center center'] });
   const scale = useTransform(scrollYProgress, [0, 1], [Math.min(1, Math.max(0.5, from)), 1]);
-  return <motion.div ref={ref} className={className} style={enabled ? { scale } : undefined}>{children}</motion.div>;
+  return <motion.div ref={ref} className={className} style={{ scale: enabled ? scale : 1 }}>{children}</motion.div>;
 }
-/** Content drifts against the scroll by up to `strength` px. Decoration only. */
-export function Parallax({ children, strength = 60, className }: { children: ReactNode; strength?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+/** Content drifts against the scroll by up to `strength` px (or `mobileStrength` at <=759px). Decoration only. */
+export function Parallax({ children, strength = 60, mobileStrength = 0, className }: {
+  children: ReactNode; strength?: number; mobileStrength?: number; className?: string;
+}) {
+  const outerRef = useRef<HTMLDivElement>(null);
   const enabled = useUiMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
-  const limit = Math.min(160, Math.max(0, strength));
-  const y = useTransform(scrollYProgress, [0, 1], [limit, -limit]);
-  return <motion.div ref={ref} className={className} style={enabled ? { y } : undefined}>{children}</motion.div>;
+  const { scrollYProgress } = useScroll({ target: outerRef, offset: ['start end', 'end start'] });
+  const [mobile, setMobile] = useState(true);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(max-width:759px)');
+    setMobile(mq.matches);
+    const onChange = (event: MediaQueryListEvent) => setMobile(event.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  const limit = mobile ? clamp(mobileStrength, -20, 20, 0) : clamp(strength, -160, 160, 60);
+  const transform = useTransform(scrollYProgress, [0, 1], [`translateY(${limit}px)`, `translateY(${-limit}px)`]);
+  // The scroll target (outer) stays untransformed so its own measured position can't feed back into the transform it drives.
+  return <div ref={outerRef} className={className} data-ui-parallax="">
+    <motion.div style={{ transform: enabled && limit ? transform : 'none' }}>{children}</motion.div>
+  </div>;
 }
-/** Fades and lifts into view with the scroll (CSS only). */
-export function Reveal({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={['ui-reveal', className].filter(Boolean).join(' ')}>{children}</div>;
+/** Once-only scroll entrance, visible without JavaScript and immediately visible on focus. */
+export function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const enabled = useUiMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const el = ref.current;
+    if (!el || typeof el.animate !== 'function' || typeof IntersectionObserver !== 'function') return;
+    let anim: Animation | undefined;
+    const start = () => {
+      if (!anim) anim = el.animate(
+        [{ transform: 'translateY(28px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 }],
+        { duration: 500, delay: clamp(delay, 0, 300, 0), easing: readUiEase(), fill: 'both' },
+      );
+      return anim;
+    };
+    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { start(); observer.disconnect(); } }, { threshold: 0.2 });
+    if (el.getBoundingClientRect().top < 0 || el.contains(document.activeElement)) return;
+    observer.observe(el);
+    const onFocusIn = () => { start().finish(); observer.disconnect(); };
+    el.addEventListener('focusin', onFocusIn);
+    return () => { observer.disconnect(); anim?.cancel(); el.removeEventListener('focusin', onFocusIn); };
+  }, [enabled, delay]);
+  return <div ref={ref} className={className} data-ui-reveal="">{children}</div>;
+}
+/** Gives a small group of narrative beats one reading rhythm without changing their content order. */
+export function SectionSequence({ children, className, label }: { children: ReactNode; className?: string; label?: string }) {
+  return <div className={['ui-section-sequence', className].filter(Boolean).join(' ')} aria-label={label}>
+    {Children.map(children, (child, index) => <Reveal delay={Math.min(index * 50, 150)}>{child}</Reveal>)}
+  </div>;
 }
 /** A statement whose words light up as it is read. */
 export function Statement({ children, align = 'start' }: { children: string; align?: 'start' | 'center' }) {
@@ -372,6 +865,7 @@ export function Statement({ children, align = 'start' }: { children: string; ali
     {words.map((word, index) => <span key={index}>{word}{index < words.length - 1 ? ' ' : ''}</span>)}
   </p>;
 }
+export function TextFillStatement(props: { children: string; align?: 'start' | 'center' }) { return <Statement {...props} />; }
 export function Marquee({ items, speed = 38 }: { items: string[]; speed?: number }) {
   const list = items.filter(Boolean).slice(0, 12);
   const run = (hidden: boolean) => <div className="ui-marquee__item" aria-hidden={hidden || undefined}>{list.map((item, i) => <span key={i}>{item}</span>)}</div>;
@@ -417,6 +911,11 @@ export function Catalog({ id = 'productos', eyebrow, title, body, layout = 'grid
       </template>
     </div>
   </section>;
+}
+
+/** The platform-owned live catalog in a touch-friendly horizontal rail. */
+export function ProductRail(props: Omit<Parameters<typeof Catalog>[0], 'layout'>) {
+  return <Catalog {...props} layout="rail" />;
 }
 
 export function FeatureSplit({ image, eyebrow, title, children, action, reverse = false, grow = false }: {
