@@ -156,7 +156,7 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     await request(app.getHttpServer()).get(`${route}/conversation`).set(auth(foreignToken)).expect(404);
     await request(app.getHttpServer()).post(`${route}/messages`).set(auth(foreignToken)).send({revision:4,instruction:"Crea una carta editorial"}).expect(404);
     const decide = jest.spyOn(app.get(SourceConversationService), 'decide').mockResolvedValue({action:'generate',reply:'',summary:'Café editorial.',generationInstruction:'Crea una carta editorial para mi café',imageUses:[]});
-    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation(async (merchantId, id, input) => ({ ...await app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")), generation: { id: "test-run", requestedModel: "auto", model: "gpt-5.6-terra", credits: 0, maxCredits: 50, attempts: [], durationMs: 0, status: "COMPLETED" } }));
+    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation(async (merchantId, id, input) => ({ ...await app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")), generation: { id: "test-run", requestedModel: "auto", model: "gpt-5.6-terra", credits: 0, maxCredits: 50, attempts: [], durationMs: 0, status: "COMPLETED", autoRepairs: [], unusedImagePaths: [] } }));
     const sent = await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:4,instruction:"Crea una carta editorial para mi café"}).expect(201);
     expect(sent.body.revision.revision).toBe(5);
     expect(sent.body.assistantMessage.metadata.sourceRevision).toBe(5);

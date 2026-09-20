@@ -15,12 +15,36 @@ import { SourceRequestBudget } from './source-request-budget';
 import { samplePhotoColours } from './source-photo-sampler';
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
-const design = () => ({ selected: 0, concepts: ['Menu', 'Poster', 'Counter'].map(name => ({ name, premise: name, opening: name + ' opening', flow: name + ' sequence', typography: 'System sans', imagery: 'No photos supplied', mobile: 'Reflow around the menu', layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true } })) });
+const design = (): designModule.SourceDesign => ({ selected: 0, concepts: ['Menu', 'Poster', 'Counter'].map(name => ({
+  name,
+  premise: name,
+  opening: name + ' opening',
+  flow: name + ' sequence',
+  typography: 'System sans',
+  imagery: 'No photos supplied',
+  mobile: 'Reflow around the menu',
+  layout: { sections: ['menu'], catalogSection: 'menu', standaloneIntro: false, productsInOpening: true, productPage: 'editorial' },
+  story: {
+    promise: `${name} hecho para el barrio`,
+    eyebrow: 'Hecho cerca',
+    headline: `${name} para compartir hoy`,
+    support: 'Una selección breve, clara y preparada con atención.',
+    primaryAction: 'Ver menú',
+    beats: [{ section: 'menu', role: 'offer', headline: `${name} del día`, media: 'product' }],
+  },
+  motion: { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [{ section: 'menu', kind: 'sequence', intensity: 1 }] },
+})) });
 const files = () => [
   {path:'index.html',content:'<!doctype html><main><section id="menu"><h1>Menú</h1><div data-pagosya-catalog></div></section></main><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script>'},
   {path:'styles.css',content:'body { color: #222; }'}, {path:'site.js',content:'globalThis.__generatedSourceExecuted = true;'},
 ];
 const input = {revision:0,brief:{businessType:'Café',audience:'Neighbors',primaryAction:'Order',visualDirection:'Menu first'},instruction:'Use a menu-led layout',assetUrls:[]};
+
+it('permits static service pricing while rejecting authored commerce prices', () => {
+  const source = files().map(file => ({ ...file, content: file.path === 'index.html' ? file.content.replace('<h1>Menú</h1>', '<h1>Servicios</h1><p class="price">Bs 50</p><div data-pagosya-contact hidden></div>') : file.content }));
+  expect(() => validateGeneratedSource(source, 'service')).not.toThrow();
+  expect(() => validateGeneratedSource(source, 'shop')).toThrow('Precios estáticos');
+});
 
 describe('targeted visual edit scope', () => {
   it('keeps the rendered home surface in scope for a new marquee', () => {
@@ -43,6 +67,22 @@ function setup(framework = 'static') {
 describe('Independent source generation',()=>{
   beforeEach(() => { jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(design()); const exploration = designModule.sourceDesignExploration(0); jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(exploration); });
   afterEach(()=>jest.restoreAllMocks());
+  it('generates a presentation site without silently adding product or checkout pages', async () => {
+    const { service, projects } = setup('next');
+    const source = nextStoreFiles().filter(file => !['components/product.tsx', 'components/checkout.tsx'].includes(file.path)).map(file => ({ ...file,
+      content: file.content.replace('<div data-pagosya-catalog />', '<p>Servicios de diseño.</p>').replace('<button data-cart-open>Mi pedido <span data-cart-count /></button>', ''),
+    }));
+    const fetcher = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Estudio', files: source, products: [] }) }] }] })));
+    await service.generate('m', 's', { ...input, brief: { ...input.brief, sitePurpose: 'service' }, instruction: 'Crea un sitio para mis servicios de diseño' });
+    const saved = projects.save.mock.calls[0][2];
+    expect(saved.brief.sitePurpose).toBe('service');
+    expect(saved.files.some((file: any) => ['product.html', 'checkout.html', 'productos.html', 'coleccion.html'].includes(file.path))).toBe(false);
+    const planning = (SourceDesignPlanner.prototype.explore as jest.Mock).mock.calls[0][0];
+    expect(planning.sitePurpose).toBe('service');
+    expect(JSON.parse(planning.context).compositionCandidates).toBeUndefined();
+    expect(String(fetcher.mock.calls[0][1]?.body)).toContain('SITE PURPOSE OVERRIDE: service');
+    expect(saved.files.find((file: any) => file.path === 'config.js').content).toContain('"sitePurpose":"service"');
+  });
   it('keeps visual repair private, pins runtime/catalog, and treats findings as untrusted data', async () => {
     const { service, projects, prisma } = setup('next');
     const original = sourceProjectSnapshot({ ...input, revision: 1, label: 'Base', files: [
@@ -148,6 +188,7 @@ describe('Independent source generation',()=>{
     expect(snapshot.files.map((file: any) => file.path)).toEqual(expect.arrayContaining(['assets/creative/fluent-flat/coffee.svg', 'assets/creative/fluent-3d/croissant.png', 'assets/creative/LICENSE-fluent.txt', 'assets/creative/catalog.json', 'lib/creative.tsx']));
     expect(snapshot.files.some((file: any) => file.path === 'assets/creative/fluent-3d/coffee.png')).toBe(false);
     expect(snapshot.files.find((file: any) => file.path === 'config.js').content).toContain('"motion":"auto"');
+    expect(snapshot.files.find((file: any) => file.path === 'config.js').content).toContain('"scrollFeel":"soft"');
   });
   it('creates Next projects, then edits React source without losing shared components', async () => {
     const { service, projects } = setup('next');
@@ -156,6 +197,13 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(respond({ label: 'React shop', files: source, products: [] }));
     await service.generate('m', 's', input);
     const saved = projects.save.mock.calls[0][2];
+    const planning = JSON.parse((SourceDesignPlanner.prototype.explore as jest.Mock).mock.calls[0][0].context);
+    expect(planning.compositionCandidates).toHaveLength(3);
+    expect(planning.compositionCandidates[0]).toMatchObject({ family: 'cafe-expressive', direction: 'Counter poster' });
+    expect(planning.suggestedUiComposition).toBeUndefined();
+    expect(String(fetchMock.mock.calls[0][1]!.body)).not.toContain('Suggested @pagosya/ui direction');
+    expect(String(fetchMock.mock.calls[0][1]!.body)).toContain('OWNED COMPOSITION RECIPE');
+    expect(String(fetchMock.mock.calls[0][1]!.body)).toContain('import {StoreTheme,SiteHeader');
     expect(saved.files.some((f: any) => f.path === 'storefront-framework.json')).toBe(true);
     expect(JSON.parse(saved.files.find((f: any) => f.path === 'package.json').content).dependencies.next).toBeTruthy();
     projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
@@ -164,6 +212,9 @@ describe('Independent source generation',()=>{
     const edited = projects.save.mock.calls[1][2].files;
     expect(edited.find((f: any) => f.path === 'components/Header.tsx').content).toBe(source[0].content);
     expect(edited.find((f: any) => f.path === '_compiled/home.js').content).toContain('Carta del día');
+    expect(SourceDesignPlanner.prototype.explore).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[1][1]!.body)).not.toContain('compositionCandidates');
+    expect(String(fetchMock.mock.calls[1][1]!.body)).not.toContain('OWNED COMPOSITION RECIPE');
   });
   it('repairs a complete image-led React draft with a small patch inside the original 50-credit budget', async () => {
     const { service, prisma, uploads, projects } = setup('next');
@@ -229,7 +280,7 @@ describe('Independent source generation',()=>{
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response(broken)).mockResolvedValueOnce(response(fixed));
     await service.generate('m', 's', input);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.stringify(fetchMock.mock.calls[1][1]!.body)).toContain('preflight automático');
+    expect(JSON.stringify(fetchMock.mock.calls[1][1]!.body)).toContain('Preflight failed');
     expect(projects.save).toHaveBeenCalledTimes(1);
     expect(projects.save.mock.calls[0][2].files.some((file: any) => file.path === 'assets/icons/menu.svg')).toBe(true);
   });
@@ -318,7 +369,8 @@ describe('Independent source generation',()=>{
     expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('Selected concept:');
     expect(result.generation.attempts.map(attempt => attempt.phase)).toEqual(['design', 'source']);
     expect(result.generation.credits).toBe(3);
-    expect(JSON.parse(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'design-direction.json').content)).toMatchObject(design());
+    expect(JSON.parse(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'design-direction.json').content))
+      .toMatchObject(designModule.validateSourceDesign(design(), 0, true, true));
   });
   it('repairs a disguised extra hero against the same committed concept before saving', async () => {
     const { service, projects } = setup();

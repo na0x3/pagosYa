@@ -1,7 +1,8 @@
 import { posix } from 'node:path';
-import { BadGatewayException } from '@nestjs/common';
 import postcss from 'postcss';
+import { SourceValidationError } from './source-validation-error';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { nextPageMarkup } from './source-next';
 
 const htmlFiles = (files: SourceProjectFileDto[]) => files.filter(file => /\.html$/i.test(file.path));
 const cleanReference = (value: string) => value.trim().replace(/^['"]|['"]$/g, '').split(/[?#]/, 1)[0];
@@ -65,8 +66,18 @@ const masksPageWideOverflow = (content: string) => {
  * Provider-free safety gate for a generated storefront. It intentionally checks
  * contracts that can be proven from source before the revision is persisted.
  * Browser-only geometry and commerce behavior remain covered by the Chromium benchmark.
+ *
+ * Run repairSourceContracts first: the mechanical failures below are repairable
+ * in place, so anything still reported here genuinely needs another attempt.
+ *
+ * Photos the design left out do not fail the revision. Placement is a design
+ * decision, and discarding a finished draft over it costs the merchant the whole
+ * generation; the unused paths are returned so the draft can say so plainly.
  */
-export function validateSourcePreflight(files: SourceProjectFileDto[], imageUse: { requiredImagePaths?: string[]; catalogImagePaths?: string[] } = {}): void {
+export function validateSourcePreflight(
+  files: SourceProjectFileDto[],
+  imageUse: { requiredImagePaths?: string[]; catalogImagePaths?: string[] } = {},
+): { unusedImagePaths: string[] } {
   const paths = new Set(files.map(file => file.path));
   const pages = htmlFiles(files);
   const findPath = (from: string, raw: string) => {
@@ -77,8 +88,7 @@ export function validateSourcePreflight(files: SourceProjectFileDto[], imageUse:
   };
   const missing: string[] = [];
   const authored = files.filter(file => /\.(?:html|css|tsx|jsx|js)$/.test(file.path) && !file.path.startsWith('_compiled/') && !['commerce.js', 'config.js'].includes(file.path)).map(file => file.content).join('\n');
-  const omittedImages = (imageUse.requiredImagePaths || []).filter(path => !authored.includes(path) && !imageUse.catalogImagePaths?.includes(path));
-  if (omittedImages.length) missing.push(`requested images are absent from the design: ${omittedImages.join(', ')}. Display these actual local images; do not replace them with illustrations or treat them as reference-only`);
+  const unusedImagePaths = (imageUse.requiredImagePaths || []).filter(path => !authored.includes(path) && !imageUse.catalogImagePaths?.includes(path));
 
   for (const page of pages) {
     const html = page.content;
@@ -106,7 +116,16 @@ export function validateSourcePreflight(files: SourceProjectFileDto[], imageUse:
     }
   }
 
-  const headingSources = files.filter(file => file.path === 'index.html' || /(?:^|\/)components\/home\.(?:tsx|jsx)$/i.test(file.path));
-  if (headingSources.length && !headingSources.some(file => /<h1\b/i.test(file.content))) missing.push('homepage: missing a primary h1');
-  if (missing.length) throw new BadGatewayException(`La revisión no pasó el preflight automático: ${missing.slice(0, 8).join('; ')}${missing.length > 8 ? `; y ${missing.length - 8} más` : ''}`);
+  const homeComponent = files.some(file => file.path === 'components/home.tsx');
+  const homepageMarkup = homeComponent
+    ? nextPageMarkup(files, 'home')
+    : files.find(file => file.path === 'index.html')?.content || '';
+  if (homepageMarkup && !/<h1\b/i.test(homepageMarkup)) missing.push('homepage: missing a primary h1');
+  if (missing.length) {
+    throw new SourceValidationError(
+      `Preflight failed: ${missing.slice(0, 8).join('; ')}${missing.length > 8 ? `; and ${missing.length - 8} more` : ''}`,
+      'YAPI armó un borrador con enlaces o imágenes que no resuelven, así que no lo guardé. Tu revisión anterior sigue intacta.',
+    );
+  }
+  return { unusedImagePaths };
 }
