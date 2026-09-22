@@ -41,6 +41,7 @@ import { DebtCollectionsModule } from "./debt-collections/debt-collections.modul
 import { ConsumerModule } from "./consumer/consumer.module";
 // Store-level CRM, inventory, appointments, delivery, POS, and integrations.
 import { OperationsModule } from "./operations/operations.module";
+import { InboxModule } from "./inbox/inbox.module";
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { OperationsModule } from "./operations/operations.module";
     ConsumerModule,
     OperationsModule,
     CommercePlatformModule,
+    InboxModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

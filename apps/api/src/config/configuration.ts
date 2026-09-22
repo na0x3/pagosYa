@@ -57,6 +57,7 @@ export interface EmailConfig {
   resendApiKey: string;
   fromAddress: string;
   webOrigin: string;
+  inboundSigningSecret: string;
 }
 
 export interface SiatConfig {
@@ -344,6 +345,7 @@ export default (): { app: AppConfig } => {
       // Where verification/reset links point — the marketing site (apps.checkout
       // is the payment iframe, not a page a human browses to). Not CHECKOUT_ORIGIN.
       webOrigin: process.env.PAGOSYA_WEB_ORIGIN ?? "http://localhost:3001",
+      inboundSigningSecret: process.env.RESEND_INBOUND_SIGNING_SECRET ?? "",
     },
     siat: {
       enabled: process.env.SIAT_ENABLED === "true",

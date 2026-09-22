@@ -12,12 +12,13 @@ import { UploadsModule } from "../uploads/uploads.module";
 import { RetentionModule } from "../retention/retention.module";
 import { DomainsModule } from "../domains/domains.module";
 import { PromoCodesModule } from "../promo-codes/promo-codes.module";
+import { InboxModule } from "../inbox/inbox.module";
 
 /** Store core: creating and configuring stores, the public store API, and store checkout.
  * Features built on a store (source projects, brand, retention, domains, SEO, …) are
  * separate modules; see docs/ARCHITECTURE.md. */
 @Module({
-  imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule, RetentionModule, DomainsModule, PromoCodesModule],
+  imports: [PaymentIntentsModule, PaymentLinksModule, DashboardModule, AuthModule, UploadsModule, RetentionModule, DomainsModule, PromoCodesModule, InboxModule],
   controllers: [StoresController, StoresPublicController],
   providers: [StoresService, PublicStoresService, StoreCheckoutService],
   exports: [StoresService, PublicStoresService, StoreCheckoutService],
