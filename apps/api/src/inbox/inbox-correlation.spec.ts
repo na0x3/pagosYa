@@ -74,3 +74,38 @@ describe("htmlToText", () => {
     expect(chainResult).not.toContain(">");
   });
 });
+
+describe("htmlToText — code points Postgres cannot store", () => {
+  it("strips a NUL entity instead of producing \\u0000, which Postgres text rejects (22021)", () => {
+    // String.fromCodePoint(0) does not throw, so the old try/catch never saw
+    // this. The INSERT did: one "&#0;" in a mail turned into a 500 and a Svix
+    // retry storm on the same payload.
+    const out = htmlToText("hola&#0;mundo");
+    expect(out).not.toContain("\u0000");
+    expect(out).toBe("holamundo");
+  });
+
+  it("strips the hex spelling of NUL too", () => {
+    expect(htmlToText("a&#x0;b")).toBe("ab");
+  });
+
+  it("strips the C0 controls below tab", () => {
+    const out = htmlToText("a&#1;&#8;b");
+    expect(out).toBe("ab");
+    expect(/[\u0000-\u0008]/.test(out)).toBe(false);
+  });
+
+  it("strips a lone surrogate, which is invalid UTF-16", () => {
+    const out = htmlToText("a&#xD800;b");
+    expect(out).toBe("ab");
+    expect(/[\uD800-\uDFFF]/.test(out)).toBe(false);
+  });
+
+  it("keeps tab, newline and every ordinary character", () => {
+    expect(htmlToText("Caf&eacute;&#9;y t&#233;")).toBe("Café\ty té");
+  });
+
+  it("still preserves the original text for a code point outside Unicode", () => {
+    expect(htmlToText("x&#99999999;y")).toBe("x&#99999999;y");
+  });
+});

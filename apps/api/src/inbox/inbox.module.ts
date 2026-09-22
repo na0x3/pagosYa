@@ -4,6 +4,7 @@ import { DashboardModule } from "../dashboard/dashboard.module";
 import { InboxService } from "./inbox.service";
 import { InboxStoreResolver } from "./inbox-store-resolver";
 import { InboundSignatureVerifier } from "./inbound-signature.verifier";
+import { InboundMailFetcher } from "./inbound-mail.fetcher";
 import { InboxWebhookController } from "./inbox-webhook.controller";
 import { InboxController } from "./inbox.controller";
 
@@ -21,7 +22,7 @@ import { InboxController } from "./inbox.controller";
  */
 @Module({
   imports: [DashboardModule, AuthModule],
-  providers: [InboxService, InboxStoreResolver, InboundSignatureVerifier],
+  providers: [InboxService, InboxStoreResolver, InboundSignatureVerifier, InboundMailFetcher],
   controllers: [InboxWebhookController, InboxController],
   exports: [InboxService],
 })

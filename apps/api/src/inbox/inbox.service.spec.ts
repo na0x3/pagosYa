@@ -21,13 +21,13 @@ describe("InboxService.resolveInboundThread", () => {
   it("follows In-Reply-To to the thread that sent that message", async () => {
     const db = fakeDb();
     db.storeInboxMessage.findFirst.mockResolvedValue({ threadId: "thread-1" });
-    db.storeInboxThread.findUnique.mockResolvedValue({ id: "thread-1", storeId: "store-1" });
+    db.storeInboxThread.findUnique.mockResolvedValue({ id: "thread-1", storeId: "store-1", customerEmail: "ana@gmail.test" });
 
     const thread = await new InboxService(db as any).resolveInboundThread(
       "store-1", { inReplyTo: "<sent-1@pagosya>", references: null }, "ana@gmail.test",
     );
 
-    expect(thread).toEqual({ id: "thread-1", storeId: "store-1" });
+    expect(thread).toEqual({ id: "thread-1", storeId: "store-1", customerEmail: "ana@gmail.test" });
     expect(db.storeInboxMessage.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { messageId: { in: ["sent-1@pagosya"] } } }),
     );
@@ -47,6 +47,35 @@ describe("InboxService.resolveInboundThread", () => {
       where: { storeId: "store-1", customerEmail: "ana@gmail.test", status: "OPEN" },
       orderBy: { lastMessageAt: "desc" },
     }));
+  });
+
+  it("refuses a header match from someone who is not the thread's customer (forwarded reply)", async () => {
+    const db = fakeDb();
+    // The forwarded mail carries our Message-ID, so the header path finds the
+    // thread — but the sender is a third party, not the shopper. Accepting it
+    // would file a stranger's words into the shopper's conversation and aim
+    // the merchant's next reply at the shopper instead of the sender.
+    db.storeInboxMessage.findFirst.mockResolvedValue({ threadId: "thread-1" });
+    db.storeInboxThread.findUnique.mockResolvedValue({ id: "thread-1", storeId: "store-1", customerEmail: "ana@gmail.test" });
+    db.storeInboxThread.findFirst.mockResolvedValue(null);
+
+    const thread = await new InboxService(db as any).resolveInboundThread(
+      "store-1", { inReplyTo: "<sent-1@pagosya>", references: null }, "carlos@otra.test",
+    );
+
+    expect(thread).toBeNull();
+  });
+
+  it("accepts a header match when the sender is the thread's customer, case aside", async () => {
+    const db = fakeDb();
+    db.storeInboxMessage.findFirst.mockResolvedValue({ threadId: "thread-1" });
+    db.storeInboxThread.findUnique.mockResolvedValue({ id: "thread-1", storeId: "store-1", customerEmail: "ana@gmail.test" });
+
+    const thread = await new InboxService(db as any).resolveInboundThread(
+      "store-1", { inReplyTo: "<sent-1@pagosya>", references: null }, "  ANA@Gmail.test ",
+    );
+
+    expect(thread).toEqual({ id: "thread-1", storeId: "store-1", customerEmail: "ana@gmail.test" });
   });
 
   it("returns null for a sender with no thread, so the message is dropped", async () => {
@@ -78,6 +107,32 @@ describe("InboxService.recordInbound", () => {
       where: { id: "thread-1" },
       data: expect.objectContaining({ unreadForMerchant: true }),
     }));
+  });
+
+  it("swallows a redelivery of the same Message-ID instead of throwing (P2002)", async () => {
+    const db = fakeDb();
+    // Svix redelivers on any slow or lost 200, so this is routine traffic. An
+    // escaping P2002 would be a 500, which Svix reads as "retry" — one mail
+    // then loops for its entire retry schedule.
+    db.storeInboxMessage.create.mockRejectedValue({ code: "P2002" });
+
+    await expect(new InboxService(db as any).recordInbound({
+      threadId: "thread-1", fromEmail: "ana@gmail.test", toEmail: "hola@inbound.tienda.test",
+      html: null, text: "otra vez", messageId: "in-1", inReplyTo: null, hadAttachments: false,
+    })).resolves.toBeUndefined();
+
+    // The delivery that won already marked it unread; the repeat touches nothing.
+    expect(db.storeInboxThread.update).not.toHaveBeenCalled();
+  });
+
+  it("still surfaces a failure that is not a duplicate", async () => {
+    const db = fakeDb();
+    db.storeInboxMessage.create.mockRejectedValue({ code: "P2003" });
+
+    await expect(new InboxService(db as any).recordInbound({
+      threadId: "thread-1", fromEmail: "ana@gmail.test", toEmail: "hola@inbound.tienda.test",
+      html: null, text: "hola", messageId: "in-2", inReplyTo: null, hadAttachments: false,
+    })).rejects.toEqual({ code: "P2003" });
   });
 
   it("prefers the plain-text part when the message carries both", async () => {

@@ -32,6 +32,39 @@ describe("InboxService.reply", () => {
     }));
   });
 
+  it("routes the shopper's Reply to our own inbound address, not the merchant's mailbox", async () => {
+    const prisma = db();
+    await new InboxService(prisma as any).reply("m-1", "thread-1", "store-1", "Sí, llega en 3 días.");
+
+    // Without this the delivery worker falls back to store.contactEmail, the
+    // answer lands in the merchant's personal Gmail and the inbound webhook is
+    // never called at all — the entire receiving half is dead.
+    const queued = prisma.storeEmailDelivery.upsert.mock.calls[0][0].create;
+    expect(queued.replyTo).toBe("hola@inbound.tienda.test");
+  });
+
+  it("queues its own Message-ID so the reply can be correlated back to this thread", async () => {
+    const prisma = db();
+    await new InboxService(prisma as any).reply("m-1", "thread-1", "store-1", "Sí, llega en 3 días.");
+
+    const queued = prisma.storeEmailDelivery.upsert.mock.calls[0][0].create;
+    const recorded = prisma.storeInboxMessage.create.mock.calls[0][0].data;
+    expect(queued.messageIdHeader).toBeTruthy();
+    // The shopper's client quotes this value back in In-Reply-To, and
+    // resolveInboundThread matches it against StoreInboxMessage.messageId, so
+    // the two must be the same string.
+    expect(queued.messageIdHeader).toBe(recorded.messageId);
+  });
+
+  it("records the address the message was really sent from, not the reply-to", async () => {
+    const prisma = db();
+    await new InboxService(prisma as any).reply("m-1", "thread-1", "store-1", "Sí, llega en 3 días.");
+
+    const recorded = prisma.storeInboxMessage.create.mock.calls[0][0].data;
+    expect(recorded.fromEmail).toBe("notificaciones@tienda.test");
+    expect(recorded.fromEmail).not.toBe("hola@inbound.tienda.test");
+  });
+
   it("refuses a thread that belongs to another merchant", async () => {
     const prisma = db();
     await expect(new InboxService(prisma as any).reply("otro-merchant", "thread-1", "store-1", "hola"))
