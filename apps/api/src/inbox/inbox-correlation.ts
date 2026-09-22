@@ -18,16 +18,23 @@ const ENTITIES: Record<string, string> = {
 
 /**
  * Inbound HTML is never rendered as HTML anywhere, so it is flattened to text
- * on the way in rather than sanitised on the way out.
+ * on the way in rather than sanitised on the way out. Entities are decoded first
+ * to prevent encoded markup from bypassing tag removal.
  */
 export function htmlToText(html: string): string {
   return html
+    // 1. Decode numeric entities first
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    // 2. Decode named entities
+    .replace(/&([a-zA-Z]+);/g, (whole, name) => ENTITIES[name] ?? whole)
+    // 3. Remove script and style blocks with their contents
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
+    // 4. Convert <br> and closing block tags to newlines
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+    // 5. Strip all remaining tags
     .replace(/<[^>]+>/g, "")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&([a-zA-Z]+);/g, (whole, name) => ENTITIES[name] ?? whole)
+    // 6. Collapse whitespace and trim
     .split("\n")
     .map((line) => line.trim())
     .filter((line, index, lines) => line !== "" || (index > 0 && lines[index - 1] !== ""))
