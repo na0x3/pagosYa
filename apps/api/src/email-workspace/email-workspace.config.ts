@@ -41,22 +41,59 @@ export function workspaceMail(settings: any): WorkspaceMail {
 }
 export function renderEmailText(text: string, values: Record<string, string>) { return text.replace(/\{\{(store|order|customer|amount)\}\}/g, (_, key) => values[key] || ''); }
 export function workspaceSender(settings: any) { const domain = workspaceMail(settings).domain; return domain?.status === 'verified' ? `${domain.senderName.replace(/[<>\r\n]/g, '')} <notificaciones@${domain.name}>` : undefined; }
+/** The outbox dedupe key for a workspace mail. Exported because the inbox has to
+ * find the receipt row again after the payment transaction commits, and two
+ * hand-built copies of this string would drift the first time it changed. */
+export function workspaceDedupeKey(storeId: string, kind: string, sourceId: string, recipient: string) {
+    return `workspace:${storeId}:${kind}:${sourceId}:${recipient.toLowerCase()}`;
+}
+/**
+ * The RFC 5322 Message-ID the order receipt is sent with, without angle brackets.
+ *
+ * A PURE FUNCTION of values both sides already hold, on purpose. The receipt is
+ * queued inside the payment's $transaction; the inbox thread is opened after
+ * that transaction commits (see payment-intents.service.ts, which explains at
+ * length why it must not move back inside). So the two halves cannot pass a
+ * generated id to each other without plumbing a value across that boundary.
+ * Deriving it from (storeId, sourceId) instead means each side computes the
+ * same string independently, and a retried confirm() recomputes the very same
+ * one — which is exactly what the unique index on StoreInboxMessage.messageId
+ * and the outbox dedupe key both want.
+ */
+export function receiptMessageId(storeId: string, sourceId: string) {
+    return `receipt.${storeId}.${sourceId}@pagosya`;
+}
 /** Transaction-local outbox insertion. An unrelated storefront's settings are never used. */
-export async function queueStoreEmail(db: any, storeId: string, key: string, sourceId: string, email: string | null, values: Record<string, string>) {
+export async function queueStoreEmail(db: any, storeId: string, key: string, sourceId: string, email: string | null, values: Record<string, string>, buyer?: { email?: string | null; name?: string | null }) {
     if (!storeId || !db.storeRetention?.findUnique)
         return false;
     const row = await db.storeRetention.findUnique({ where: { storeId } }), mail = workspaceMail(row?.settings), template = mail.templates[key];
     const store = db.store?.findUnique ? await db.store.findUnique({ where: { id: storeId }, select: { name: true } }) : null;
     values = { ...values, store: store?.name || values.store };
-    const enqueue = async (recipient: string, kind: string, subject: string, body: string) => db.storeEmailDelivery.upsert({ where: { dedupeKey: `workspace:${storeId}:${kind}:${sourceId}:${recipient.toLowerCase()}` }, create: { storeId, email: recipient.toLowerCase(), kind, sourceId, subject, body, dedupeKey: `workspace:${storeId}:${kind}:${sourceId}:${recipient.toLowerCase()}` }, update: {} });
+    const enqueue = async (recipient: string, kind: string, subject: string, body: string, replyTo?: string, messageIdHeader?: string) => db.storeEmailDelivery.upsert({ where: { dedupeKey: workspaceDedupeKey(storeId, kind, sourceId, recipient) }, create: { storeId, email: recipient.toLowerCase(), kind, sourceId, subject, body, replyTo: replyTo || null, messageIdHeader: messageIdHeader || null, dedupeKey: workspaceDedupeKey(storeId, kind, sourceId, recipient) }, update: {} });
     let queued = false;
     if (email && template?.enabled) {
-        await enqueue(email, `WORKSPACE_${key}`, renderEmailText(template.subject, values), renderEmailText(template.body, values) + (values.details ? '\n\n' + values.details : ''));
+        // The buyer's receipt is the ONLY thing most order threads ever contain,
+        // so it is the message their reply answers. Sent with Reply-To on the
+        // store's inbound address it comes back to us and lands in that thread;
+        // sent without, it goes to the merchant's personal mailbox and the
+        // thread this order opened stays empty forever. Same two fields the
+        // dashboard's own reply sets — one path, not two.
+        //
+        // Only when the domain is verified. Without it there is no inbound
+        // address to name and no inbox to receive anything, so the receipt must
+        // keep behaving exactly as it did before.
+        const inbound = mail.domain?.status === 'verified'
+            ? { replyTo: `hola@inbound.${mail.domain.name}`, messageIdHeader: receiptMessageId(storeId, sourceId) }
+            : { replyTo: undefined, messageIdHeader: undefined };
+        await enqueue(email, `WORKSPACE_${key}`, renderEmailText(template.subject, values), renderEmailText(template.body, values) + (values.details ? '\n\n' + values.details : ''), key === 'ORDER_CONFIRMATION' ? inbound.replyTo : undefined, key === 'ORDER_CONFIRMATION' ? inbound.messageIdHeader : undefined);
         queued = true;
     }
     const staffEvent = key === 'ORDER_CONFIRMATION' ? 'NEW_ORDER' : key === 'REFUND' ? 'REFUND' : null;
     if (staffEvent && mail.staff.enabled)
         for (const recipient of mail.staff.recipients.filter(item => item.events.includes(staffEvent)))
-            await enqueue(recipient.email, `STAFF_${staffEvent}`, `${staffEvent === 'NEW_ORDER' ? 'Nuevo pedido' : 'Reembolso'} · ${values.store}`, `Pedido: ${values.order}\nImporte: ${values.amount}\nRevisa los detalles en el panel de tu tienda.`);
+            // Reply on this notification must reach the buyer, not the void:
+            // that is the whole answer-from-your-inbox flow.
+            await enqueue(recipient.email, `STAFF_${staffEvent}`, `${staffEvent === 'NEW_ORDER' ? 'Nuevo pedido' : 'Reembolso'} · ${values.store}`, `Pedido: ${values.order}\nImporte: ${values.amount}${buyer?.name ? `\nComprador: ${buyer.name}` : ''}${buyer?.email ? `\nCorreo: ${buyer.email}\n\nResponde a este mensaje para escribirle directamente.` : ''}\n\nRevisa los detalles en el panel de tu tienda.`, buyer?.email || undefined);
     return queued;
 }

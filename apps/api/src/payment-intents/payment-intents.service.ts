@@ -564,7 +564,7 @@ export class PaymentIntentsService {
       let receiptQueued = false;
       // Collected here, acted on after the transaction commits — see the call
       // site below for why it must not happen inside this callback.
-      let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null } | null = null;
+      let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receiptSourceId: string } | null = null;
       if (result.status === "succeeded") {
         const lines = this.ledger.buildCaptureJournal({
           merchantId,
@@ -599,7 +599,10 @@ export class PaymentIntentsService {
           const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
           const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
           receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`},{email:updated.customerEmail,name:updated.customerName});
-          if (updated.customerEmail) inboxOrder = { id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName };
+          // receiptSourceId is the sourceId queueStoreEmail was just called with,
+          // which is what lets the thread find that receipt row again once this
+          // transaction has committed and file it into the conversation.
+          if (updated.customerEmail) inboxOrder = { id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName, receiptSourceId: updated.id };
         }
         if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
           await tx.storeOrder.update({
