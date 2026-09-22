@@ -41,4 +41,22 @@ describe("htmlToText", () => {
     // Double-encoded: &amp;lt; should become &lt; (literal text, not markup)
     expect(htmlToText("&amp;lt;script&amp;gt;")).toBe("&lt;script&gt;");
   });
+  it("prevents hex-encoded markup from escaping (lowercase x)", () => {
+    // Hex entity encoding: &#x3C; and &#x3E; must not decode to executable markup
+    const hexResult = htmlToText("&#x3C;script&#x3E;alert(1)&#x3C;/script&#x3E;");
+    expect(hexResult).not.toContain("<");
+    expect(hexResult).not.toContain(">");
+  });
+  it("prevents hex-encoded markup from escaping (uppercase X)", () => {
+    // Hex entity encoding with uppercase X: &#X3C; and &#X3E;
+    const hexUpperResult = htmlToText("&#X3C;script&#X3E;alert(1)&#X3C;/script&#X3E;");
+    expect(hexUpperResult).not.toContain("<");
+    expect(hexUpperResult).not.toContain(">");
+  });
+  it("handles malformed code points without throwing", () => {
+    // Invalid code point (above 0x10FFFF) must not throw
+    expect(() => htmlToText("&#999999999;")).not.toThrow();
+    const result = htmlToText("&#999999999;");
+    expect(result).toBeDefined();
+  });
 });
