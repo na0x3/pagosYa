@@ -139,10 +139,16 @@ export class InboxService {
   /**
    * Opening a thread is what marks it read: a merchant who never opens it
    * keeps seeing it as unread, which is the whole point of the flag.
+   *
+   * merchantId is the real security gate (checked first, on its own).
+   * storeId is checked second, only so the URL's store scope is not
+   * decorative — a mismatch reuses the same "not found" message as the
+   * wrong-merchant case so it never reveals the thread exists elsewhere.
    */
-  async readThread(merchantId: string, threadId: string) {
+  async readThread(merchantId: string, threadId: string, storeId: string) {
     const thread = await this.prisma.storeInboxThread.findUnique({ where: { id: threadId } });
     if (!thread || thread.merchantId !== merchantId) throw new NotFoundException("Conversación no encontrada");
+    if (thread.storeId !== storeId) throw new NotFoundException("Conversación no encontrada");
     const messages = await this.prisma.storeInboxMessage.findMany({
       where: { threadId },
       orderBy: { createdAt: "asc" },
@@ -155,10 +161,16 @@ export class InboxService {
    * The outbound half rides the existing delivery queue, so retries, dedupe and
    * the verified sending domain are already solved. The inbox only records that
    * the message belongs to this conversation.
+   *
+   * merchantId is checked first (the real gate); storeId is checked second so
+   * the URL's store scope is enforced, not decorative — same "not found"
+   * message either way, so a mismatch never reveals the thread exists
+   * elsewhere.
    */
-  async reply(merchantId: string, threadId: string, body: string) {
+  async reply(merchantId: string, threadId: string, storeId: string, body: string) {
     const thread = await this.prisma.storeInboxThread.findUnique({ where: { id: threadId } });
     if (!thread || thread.merchantId !== merchantId) throw new NotFoundException("Conversación no encontrada");
+    if (thread.storeId !== storeId) throw new NotFoundException("Conversación no encontrada");
 
     const messageId = `${threadId}.${Date.now()}@pagosya`;
     const retention = await this.prisma.storeRetention.findUnique({ where: { storeId: thread.storeId } });

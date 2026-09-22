@@ -22,16 +22,21 @@ export class InboxController {
 
   @Get(":threadId")
   @Header("Cache-Control", "private, no-store")
-  read(@CurrentMerchant() m: { id: string }, @Param("threadId") threadId: string) {
-    return this.inbox.readThread(m.id, threadId);
+  read(
+    @CurrentMerchant() m: { id: string },
+    @Param("storeId") storeId: string,
+    @Param("threadId") threadId: string,
+  ) {
+    return this.inbox.readThread(m.id, threadId, storeId);
   }
 
   @Post(":threadId/reply")
   reply(
     @CurrentMerchant() m: { id: string },
+    @Param("storeId") storeId: string,
     @Param("threadId") threadId: string,
     @Body() dto: InboxReplyDto,
   ) {
-    return this.inbox.reply(m.id, threadId, dto.body);
+    return this.inbox.reply(m.id, threadId, storeId, dto.body);
   }
 }

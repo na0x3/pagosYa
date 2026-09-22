@@ -18,7 +18,7 @@ describe("InboxService.reply", () => {
 
   it("queues the reply from the store's verified domain and files it in the thread", async () => {
     const prisma = db();
-    await new InboxService(prisma as any).reply("m-1", "thread-1", "Sí, llega en 3 días.");
+    await new InboxService(prisma as any).reply("m-1", "thread-1", "store-1", "Sí, llega en 3 días.");
 
     const queued = prisma.storeEmailDelivery.upsert.mock.calls[0][0].create;
     expect(queued.email).toBe("ana@gmail.test");
@@ -34,7 +34,7 @@ describe("InboxService.reply", () => {
 
   it("refuses a thread that belongs to another merchant", async () => {
     const prisma = db();
-    await expect(new InboxService(prisma as any).reply("otro-merchant", "thread-1", "hola"))
+    await expect(new InboxService(prisma as any).reply("otro-merchant", "thread-1", "store-1", "hola"))
       .rejects.toThrow();
     expect(prisma.storeEmailDelivery.upsert).not.toHaveBeenCalled();
   });
@@ -45,8 +45,17 @@ describe("InboxService.reply", () => {
       domain: { name: "tienda.test", senderName: "Tienda", status: "pending" },
     } } });
 
-    await expect(new InboxService(prisma as any).reply("m-1", "thread-1", "hola"))
+    await expect(new InboxService(prisma as any).reply("m-1", "thread-1", "store-1", "hola"))
       .rejects.toThrow("Verifica el dominio de correo de la tienda para responder desde aquí.");
+    expect(prisma.storeEmailDelivery.upsert).not.toHaveBeenCalled();
+    expect(prisma.storeInboxMessage.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a thread that belongs to a different store of the same merchant", async () => {
+    const prisma = db();
+
+    await expect(new InboxService(prisma as any).reply("m-1", "thread-1", "store-ajena", "hola"))
+      .rejects.toThrow("Conversación no encontrada");
     expect(prisma.storeEmailDelivery.upsert).not.toHaveBeenCalled();
     expect(prisma.storeInboxMessage.create).not.toHaveBeenCalled();
   });

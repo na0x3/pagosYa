@@ -45,7 +45,7 @@ describe("InboxService.readThread", () => {
     const messages = [{ id: "msg-1", createdAt: new Date("2026-09-19") }, { id: "msg-2", createdAt: new Date("2026-09-20") }];
     prisma.storeInboxMessage.findMany.mockResolvedValue(messages);
 
-    const result = await new InboxService(prisma as any).readThread("m-1", "thread-1");
+    const result = await new InboxService(prisma as any).readThread("m-1", "thread-1", "store-1");
 
     expect(prisma.storeInboxMessage.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { threadId: "thread-1" },
@@ -65,7 +65,7 @@ describe("InboxService.readThread", () => {
       id: "thread-1", storeId: "store-1", merchantId: "otro-merchant", unreadForMerchant: true,
     });
 
-    await expect(new InboxService(prisma as any).readThread("m-1", "thread-1")).rejects.toThrow();
+    await expect(new InboxService(prisma as any).readThread("m-1", "thread-1", "store-1")).rejects.toThrow();
     expect(prisma.storeInboxMessage.findMany).not.toHaveBeenCalled();
     expect(prisma.storeInboxThread.update).not.toHaveBeenCalled();
   });
@@ -74,7 +74,20 @@ describe("InboxService.readThread", () => {
     const prisma = db();
     prisma.storeInboxThread.findUnique.mockResolvedValue(null);
 
-    await expect(new InboxService(prisma as any).readThread("m-1", "thread-inexistente")).rejects.toThrow();
+    await expect(new InboxService(prisma as any).readThread("m-1", "thread-inexistente", "store-1")).rejects.toThrow();
     expect(prisma.storeInboxMessage.findMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses a thread that belongs to a different store of the same merchant", async () => {
+    const prisma = db();
+    prisma.storeInboxThread.findUnique.mockResolvedValue({
+      id: "thread-1", storeId: "store-ajena", merchantId: "m-1", unreadForMerchant: true,
+    });
+
+    await expect(new InboxService(prisma as any).readThread("m-1", "thread-1", "store-1")).rejects.toThrow(
+      "Conversación no encontrada",
+    );
+    expect(prisma.storeInboxMessage.findMany).not.toHaveBeenCalled();
+    expect(prisma.storeInboxThread.update).not.toHaveBeenCalled();
   });
 });
