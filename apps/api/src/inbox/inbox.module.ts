@@ -1,22 +1,28 @@
 import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module";
+import { DashboardModule } from "../dashboard/dashboard.module";
 import { InboxService } from "./inbox.service";
 import { InboxStoreResolver } from "./inbox-store-resolver";
 import { InboundSignatureVerifier } from "./inbound-signature.verifier";
 import { InboxWebhookController } from "./inbox-webhook.controller";
+import { InboxController } from "./inbox.controller";
 
 /**
- * The merchant-facing InboxController (listing/replying to threads) does not
- * exist yet — it lands in Task 5. Declaring it here before then would fail
- * Nest's boot-time provider resolution, so this module only wires what Task 4
- * needs: the public inbound webhook and the service both StoreCheckoutService
- * and PaymentIntentsService optionally depend on.
+ * InboxController (listing/reading/replying to threads from the dashboard)
+ * lands in Task 5 alongside the public inbound webhook wired in Task 4.
+ * DashboardModule and AuthModule are imported so MerchantAuthGuard on
+ * InboxController can resolve its own dependencies (ApiKeyService,
+ * MerchantSessionService) — the same pair EmailWorkspaceModule imports for
+ * the identical guard on EmailWorkspaceController.
  *
- * InboxService is exported so importing modules can actually satisfy that
- * optional dependency via DI, instead of leaving it undefined at runtime.
+ * InboxService is exported so importing modules can actually satisfy the
+ * optional dependency StoreCheckoutService and PaymentIntentsService declare
+ * on it via DI, instead of leaving it undefined at runtime.
  */
 @Module({
+  imports: [DashboardModule, AuthModule],
   providers: [InboxService, InboxStoreResolver, InboundSignatureVerifier],
-  controllers: [InboxWebhookController],
+  controllers: [InboxWebhookController, InboxController],
   exports: [InboxService],
 })
 export class InboxModule {}

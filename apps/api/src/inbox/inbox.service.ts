@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { htmlToText, parseReferences } from "./inbox-correlation";
+import { workspaceMail } from "../email-workspace/email-workspace.config";
 
 export interface InboundHeaders { inReplyTo: string | null; references: string | null }
 
@@ -116,5 +117,72 @@ export class InboxService {
         customerEmail, customerName: order.customerName, orderId: order.id, unreadForMerchant: false,
       },
     );
+  }
+
+  /**
+   * The store-ownership check happens here rather than in the controller so
+   * the same guarantee holds for any future caller, not just the HTTP route.
+   */
+  async listThreads(merchantId: string, storeId: string) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
+    if (!store) throw new NotFoundException("Tienda no encontrada");
+    return this.prisma.storeInboxThread.findMany({
+      where: { storeId },
+      orderBy: { lastMessageAt: "desc" },
+      select: {
+        id: true, subject: true, customerName: true, customerEmail: true,
+        unreadForMerchant: true, lastMessageAt: true, leadId: true, orderId: true,
+      },
+    });
+  }
+
+  /**
+   * Opening a thread is what marks it read: a merchant who never opens it
+   * keeps seeing it as unread, which is the whole point of the flag.
+   */
+  async readThread(merchantId: string, threadId: string) {
+    const thread = await this.prisma.storeInboxThread.findUnique({ where: { id: threadId } });
+    if (!thread || thread.merchantId !== merchantId) throw new NotFoundException("Conversación no encontrada");
+    const messages = await this.prisma.storeInboxMessage.findMany({
+      where: { threadId },
+      orderBy: { createdAt: "asc" },
+    });
+    await this.prisma.storeInboxThread.update({ where: { id: threadId }, data: { unreadForMerchant: false } });
+    return { thread: { ...thread, unreadForMerchant: false }, messages };
+  }
+
+  /**
+   * The outbound half rides the existing delivery queue, so retries, dedupe and
+   * the verified sending domain are already solved. The inbox only records that
+   * the message belongs to this conversation.
+   */
+  async reply(merchantId: string, threadId: string, body: string) {
+    const thread = await this.prisma.storeInboxThread.findUnique({ where: { id: threadId } });
+    if (!thread || thread.merchantId !== merchantId) throw new NotFoundException("Conversación no encontrada");
+
+    const messageId = `${threadId}.${Date.now()}@pagosya`;
+    const retention = await this.prisma.storeRetention.findUnique({ where: { storeId: thread.storeId } });
+    const domain = workspaceMail(retention?.settings).domain;
+    if (domain?.status !== "verified") throw new BadRequestException("Verifica el dominio de correo de la tienda para responder desde aquí.");
+    await this.prisma.storeEmailDelivery.upsert({
+      where: { dedupeKey: `inbox:${messageId}` },
+      create: {
+        storeId: thread.storeId, email: thread.customerEmail, kind: "INBOX_REPLY",
+        sourceId: threadId, subject: `Re: ${thread.subject}`, body,
+        replyTo: null, dedupeKey: `inbox:${messageId}`,
+      },
+      update: {},
+    });
+    await this.prisma.storeInboxMessage.create({
+      data: {
+        threadId, direction: "OUTBOUND",
+        fromEmail: `hola@inbound.${domain.name}`, toEmail: thread.customerEmail,
+        body, messageId, inReplyTo: null, hadAttachments: false,
+      },
+    });
+    await this.prisma.storeInboxThread.update({
+      where: { id: threadId },
+      data: { unreadForMerchant: false, lastMessageAt: new Date() },
+    });
   }
 }
