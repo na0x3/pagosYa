@@ -81,7 +81,7 @@ async function bootstrap() {
     reviver: safeJsonReviver,
     // Signed webhooks are verified over the exact bytes received, not a re-serialization.
     verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
-      if (req.url?.startsWith("/v1/webhooks/dlocal/")) req.rawBody = Buffer.from(buf);
+      if (req.url?.startsWith("/v1/webhooks/dlocal/") || req.url?.startsWith("/v1/email/inbound")) req.rawBody = Buffer.from(buf);
     },
   }));
   app.use((req: Request, res: Response, next: NextFunction) => {

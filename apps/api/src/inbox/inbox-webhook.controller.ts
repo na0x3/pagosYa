@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, HttpCode, Post } from "@nestjs/common";
+import { Body, Controller, Headers, HttpCode, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { InboxService } from "./inbox.service";
@@ -22,15 +22,19 @@ export class InboxWebhookController {
   @Post("inbound")
   @HttpCode(200)
   @Throttle({ default: { limit: 120, ttl: 60_000 } })
-  async receive(@Headers() headers: Record<string, string>, @Body() payload: {
-    type: string;
-    data: {
-      to: string[]; from: string; subject: string;
-      message_id: string | null; in_reply_to: string | null; references: string | null;
-      text: string | null; html: string | null; attachments?: unknown[];
-    };
-  }) {
-    this.verifier.verify(headers, payload);
+  async receive(
+    @Req() req: { rawBody?: Buffer },
+    @Headers() headers: Record<string, string>,
+    @Body() payload: {
+      type: string;
+      data: {
+        to: string[]; from: string; subject: string;
+        message_id: string | null; in_reply_to: string | null; references: string | null;
+        text: string | null; html: string | null; attachments?: unknown[];
+      };
+    },
+  ) {
+    this.verifier.verify(headers, req.rawBody);
     if (payload.type !== "email.received") return { received: true };
 
     const recipient = payload.data.to[0] ?? "";

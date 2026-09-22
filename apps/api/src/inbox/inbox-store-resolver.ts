@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { workspaceMail } from "../email-workspace/email-workspace.config";
 
-/** Maps hola@inbound.<dominio> back to the store that verified that domain. */
+/** Maps any address at inbound.<dominio> (the local part is not checked) back to
+ * the store that verified that domain. */
 @Injectable()
 export class InboxStoreResolver {
   constructor(private readonly prisma: PrismaService) {}

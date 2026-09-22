@@ -9,6 +9,8 @@ const payload = {
     references: null, text: "¿Llega a Santa Cruz?", html: null, attachments: [],
   },
 };
+const rawBody = Buffer.from(JSON.stringify(payload));
+const req = { rawBody } as { rawBody?: Buffer };
 
 function controller(overrides: Record<string, unknown> = {}) {
   const inbox = { resolveInboundThread: jest.fn().mockResolvedValue({ id: "thread-1" }), recordInbound: jest.fn() };
@@ -22,7 +24,7 @@ describe("InboxWebhookController", () => {
     const { subject, verifier, inbox } = controller();
     verifier.verify.mockImplementation(() => { throw new UnauthorizedException(); });
 
-    await expect(subject.receive({}, payload as any)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(subject.receive(req, {}, payload as any)).rejects.toBeInstanceOf(UnauthorizedException);
     expect(inbox.recordInbound).not.toHaveBeenCalled();
   });
 
@@ -30,17 +32,34 @@ describe("InboxWebhookController", () => {
     const { subject, inbox } = controller();
     inbox.resolveInboundThread.mockResolvedValue(null);
 
-    await expect(subject.receive({}, payload as any)).resolves.toEqual({ received: true });
+    await expect(subject.receive(req, {}, payload as any)).resolves.toEqual({ received: true });
     expect(inbox.recordInbound).not.toHaveBeenCalled();
   });
 
   it("records a reply that belongs to a known thread", async () => {
     const { subject, inbox } = controller();
 
-    await subject.receive({}, payload as any);
+    await subject.receive(req, {}, payload as any);
 
     expect(inbox.recordInbound).toHaveBeenCalledWith(expect.objectContaining({
       threadId: "thread-1", fromEmail: "ana@gmail.test", text: "¿Llega a Santa Cruz?",
     }));
+  });
+
+  it("passes the request's raw body straight through to the verifier, not the parsed payload", async () => {
+    const { subject, verifier } = controller();
+
+    await subject.receive(req, { "svix-id": "id-1" }, payload as any);
+
+    expect(verifier.verify).toHaveBeenCalledWith({ "svix-id": "id-1" }, rawBody);
+  });
+
+  it("rejects when the request carries no raw body", async () => {
+    const { subject, verifier, inbox } = controller();
+    verifier.verify.mockImplementation(() => { throw new UnauthorizedException("Missing raw body"); });
+
+    await expect(subject.receive({}, {}, payload as any)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(verifier.verify).toHaveBeenCalledWith({}, undefined);
+    expect(inbox.recordInbound).not.toHaveBeenCalled();
   });
 });
