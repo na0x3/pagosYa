@@ -504,15 +504,13 @@
   let paymentPage = 1;
   const PAYMENT_PAGE_SIZE = 20;
   let lastStores = [];
+  let storeSettings = null;
+  let lastInvoicingProfile = null;
+  let lastKyc = null;
   let lastCategories = [];
-  const openCategoryEditorIds = new Set();
-  let draggedCategoryId = null;
-  let categoryOrderSaveTimer = null;
-  let categoryOrderSaveVersion = 0;
   let dashboardRefreshVersion = 0;
   let currentStoreId = sessionStorage.getItem("pagosya_current_store_id") || null;
   let debtLinkStatusTab = "ACTIVE";
-  const DEFAULT_OPEN_SECTIONS = new Set(["storesSection", "paymentLinksSection"]);
   const dashboardSections = new Map();
 
   function setDashboardSectionExpanded(sectionId, expanded, remember = true) {
@@ -527,7 +525,16 @@
     if (remember) localStorage.setItem(`pagosya_dashboard_section_${sectionId}`, String(expanded));
   }
 
+  // A page whose only block starts collapsed reads as a broken page: the
+  // merchant gets the heading and toolbar with nothing under them and no sign
+  // the content is one click away. Pages that stack several blocks (compliance)
+  // still start collapsed — there the overview of what needs attention is the point.
   function initDashboardSections() {
+    const blocksPerPage = new Map();
+    document.querySelectorAll("section.block[id][data-dashboard-page]").forEach((section) => {
+      const page = section.dataset.dashboardPage;
+      blocksPerPage.set(page, (blocksPerPage.get(page) ?? 0) + 1);
+    });
     document.querySelectorAll("section.block[id] > .panel").forEach((panel) => {
       const section = panel.parentElement;
       const head = panel.querySelector(":scope > .section-head");
@@ -550,7 +557,7 @@
       dashboardSections.set(section.id, { body, panel, toggle, title });
 
       const saved = localStorage.getItem(`pagosya_dashboard_section_${section.id}`);
-      const expanded = saved === null ? DEFAULT_OPEN_SECTIONS.has(section.id) : saved === "true";
+      const expanded = saved === null ? blocksPerPage.get(section.dataset.dashboardPage) === 1 : saved === "true";
       setDashboardSectionExpanded(section.id, expanded, false);
       toggle.addEventListener("click", () => setDashboardSectionExpanded(section.id, toggle.getAttribute("aria-expanded") !== "true"));
     });
@@ -645,13 +652,32 @@
     toggle.addEventListener("click", () => setCollapsed(!shell.classList.contains("is-sidebar-collapsed")));
   }
 
+  /* Solo un grupo abierto: el que contiene la vista actual. */
+  function syncNavGroups(view) {
+    for (const group of document.querySelectorAll(".dashboard-nav-group")) {
+      group.open = !!group.querySelector(`[data-dashboard-view="${view}"]`);
+    }
+  }
+  for (const group of document.querySelectorAll(".dashboard-nav-group")) {
+    group.querySelector("summary")?.addEventListener("click", (event) => {
+      const shell = document.querySelector(".dashboard-shell");
+      // En modo iconos la lista del grupo está oculta: abrirla no serviría de nada.
+      if (shell?.classList.contains("is-sidebar-collapsed")) {
+        event.preventDefault();
+        document.getElementById("dashboardSidebarToggle")?.click();
+        group.open = true;
+        return;
+      }
+      if (!group.open) for (const other of document.querySelectorAll(".dashboard-nav-group")) if (other !== group) other.open = false;
+    });
+  }
+
   initDashboardSections();
   const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
   const DASHBOARD_VIEW_COPY = {
     overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
     progress: ["Progreso", "Convierte la actividad real de tu tienda en niveles, estrellas y nuevos compañeros."],
     stores: ["Mi tienda", "Tus tiendas, sus diseños y sus catálogos. Todo desde un mismo perfil."],
-    categories: ["Categorías", "Organiza el catálogo en el orden que verán tus clientes."],
     discounts: ["Correos y marketing", "Cuida a tus clientes y haz que vuelvan."],
     marketing: ["Correos y marketing", "Mensajes, Comeback y promociones para la tienda seleccionada."],
     experiments: ["Pruebas A/B", "Compara dos diseños y descubre cuál convierte más visitas en compras."],
@@ -660,8 +686,11 @@
     media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
+    inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
+    "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
     payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
+    account: ["Cuenta", "Tu perfil, tus accesos y el estado de tu negocio en pagosYa."],
     compliance: ["Cumplimiento y credenciales", "Completa KYC, facturación electrónica y credenciales de producción."],
   };
 
@@ -737,7 +766,7 @@
   function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
     syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
-    const views = ["workspace", "products", "categories", "charge-links", "payments", "compliance"];
+    const views = ["workspace", "products", "charge-links", "payments", "compliance"];
     document.getElementById("merchantStoreTabs").hidden = !store || !views.includes(view);
     document.getElementById("merchantWorkspaceStoreName").textContent = store?.name || "Mi tienda";
     const frame = document.getElementById("merchantStudioFrame");
@@ -771,7 +800,7 @@
       pendingStudioAction = null; return;
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
-    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "categories", "charge-links", "marketing", "integrations", "experiments"].includes(event.data.view)) {
+    if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments"].includes(event.data.view)) {
       if (event.data.view === "marketing" && event.data.tab === "program") {
         document.getElementById("marketingTabs").dataset.tab = "program";
         document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab.dataset.marketingTab === "program")));
@@ -806,6 +835,7 @@
       if (button.dataset.dashboardView === nextView && !button.dataset.studioTool) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
+    syncNavGroups(nextView);
     const [title, description] = DASHBOARD_VIEW_COPY[nextView];
     document.getElementById("workspaceTitle").textContent = title;
     document.getElementById("workspaceDescription").textContent = description;
@@ -1303,257 +1333,54 @@
     return apiRoot() + (source.startsWith("/") ? source : `/${source}`);
   }
 
-  document.getElementById("categoryForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    errorEl.textContent = "";
-    infoEl.textContent = "";
-    if (!currentStoreId) return;
-    const data = Object.fromEntries(new FormData(e.target));
-    try {
-      await api(`/stores/${currentStoreId}/categories`, { method: "POST", body: JSON.stringify({ name: data.name }) });
-      e.target.reset();
-      await refresh();
-      infoEl.textContent = `Categoría "${data.name}" agregada.`;
-    } catch (err) {
-      errorEl.textContent = "Error: " + err.message;
+
+  const KYC_LABELS = { APPROVED: "Verificado", PENDING: "En revisión", REJECTED: "Rechazado", NOT_SUBMITTED: "Sin enviar", NOT_CONFIGURED: "Sin configurar" };
+
+  /**
+   * The account page reads what the dashboard already loaded; it deliberately
+   * states no plan, because pagosYa has no subscription model to report.
+   */
+  function renderAccount({ kyc, invoicing }) {
+    const emailEl2 = document.getElementById("accountEmail");
+    if (!emailEl2) return;
+    const email = (emailEl.value || sessionStorage.getItem("pagosya_merchant_email") || "").trim();
+    emailEl2.textContent = email || "Sin correo registrado";
+    const nameEl = document.getElementById("accountName");
+    const profileName = document.getElementById("profileDisplayName")?.textContent?.trim();
+    nameEl.textContent = profileName && profileName !== "Mi perfil" ? profileName : email.split("@")[0] || "Mi perfil";
+    const avatar = document.getElementById("accountAvatar");
+    const menuAvatar = document.getElementById("profileMenuAvatar");
+    if (avatar && menuAvatar) avatar.innerHTML = menuAvatar.innerHTML;
+
+    document.getElementById("accountKycValue").textContent = KYC_LABELS[kyc?.status] || kyc?.status || "—";
+    document.getElementById("accountInvoicingValue").textContent = invoicing?.cuis ? "Activa" : "Sin configurar";
+
+    const count = document.getElementById("accountStoreCount");
+    const list = document.getElementById("accountStoreList");
+    count.textContent = String(lastStores.length);
+    list.innerHTML = lastStores.slice(0, 5).map((store) => `<li><strong>${esc(store.name)}</strong><span>${esc(store.slug || "")}</span></li>`).join("")
+      || '<li class="account-store-empty">Todavía no creaste ninguna tienda.</li>';
+
+    // Sessions are only fetched when the profile popover opens, so the page asks
+    // for them itself the first time it is shown.
+    const countEl = document.getElementById("accountSessionCount");
+    const paint = (payload) => { countEl.textContent = payload ? `${payload.active} / ${payload.limit}` : "No disponible"; };
+    if (lastProfileSessionsPayload) paint(lastProfileSessionsPayload);
+    else {
+      countEl.textContent = "…";
+      loadProfileSessions(false).then(paint).catch(() => paint(null));
     }
+  }
+
+  document.getElementById("openAccountPage")?.addEventListener("click", () => {
+    profileMenuEl.hidePopover();
+    history.pushState(null, "", "#dashboard-account");
+    setDashboardView("account");
+    document.getElementById("dashboardWorkspace")?.scrollIntoView({ block: "start" });
   });
-
-  function queueCategoryOrderSave() {
-    clearTimeout(categoryOrderSaveTimer);
-    const version = ++categoryOrderSaveVersion;
-    const orderedIds = lastCategories.map((category) => category.id);
-    const status = document.getElementById("categoryOrderStatus");
-    status.textContent = "Guardando orden…";
-    categoryOrderSaveTimer = setTimeout(async () => {
-      try {
-        const saved = await api(`/stores/${currentStoreId}/categories/order`, {
-          method: "PUT",
-          body: JSON.stringify({ categoryIds: orderedIds }),
-        });
-        if (version !== categoryOrderSaveVersion) return;
-        lastCategories = saved;
-        renderCategoryRows(saved);
-        status.textContent = "Orden guardado";
-      } catch (err) {
-        if (version !== categoryOrderSaveVersion) return;
-        status.textContent = "No se pudo guardar";
-        errorEl.textContent = "Error guardando el orden de categorías: " + err.message;
-      }
-    }, 180);
-  }
-
-  function moveCategory(categoryId, targetIndex) {
-    const fromIndex = lastCategories.findIndex((category) => category.id === categoryId);
-    const boundedTarget = Math.max(0, Math.min(targetIndex, lastCategories.length - 1));
-    if (fromIndex < 0 || fromIndex === boundedTarget) return;
-    const next = [...lastCategories];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(boundedTarget, 0, moved);
-    lastCategories = next;
-    renderCategoryRows(next);
-    queueCategoryOrderSave();
-  }
-
-  function renderCategoryRows(categories) {
-    lastCategories = categories;
-    const categoryRowsEl = document.getElementById("categoryRows");
-    categoryRowsEl.innerHTML =
-      categories
-        .map(
-          (category, index) => `<article class="category-order-row" data-id="${esc(category.id)}" draggable="true">
-            <span class="category-grip" title="Arrastrar para ordenar" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>
-            </span>
-            <button class="category-name-button" type="button" data-action="rename" data-id="${esc(category.id)}" data-name="${esc(category.name)}" title="Cambiar nombre">${index + 1}. ${esc(category.name)}</button>
-            <span class="category-order-actions">
-              <button class="ghost" type="button" data-action="up" data-id="${esc(category.id)}" ${index === 0 ? "disabled" : ""} aria-label="Subir ${esc(category.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></button>
-              <button class="ghost" type="button" data-action="down" data-id="${esc(category.id)}" ${index === categories.length - 1 ? "disabled" : ""} aria-label="Bajar ${esc(category.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-              <button class="ghost category-delete" type="button" data-action="delete" data-id="${esc(category.id)}" data-name="${esc(category.name)}">Eliminar</button>
-            </span>
-            <details class="category-customization" data-category-details="${esc(category.id)}" ${openCategoryEditorIds.has(category.id) ? "open" : ""}>
-              <summary>Portada y mensajes de confianza</summary>
-              <div class="category-customization-body">
-                <div class="category-banner-editor">
-                  <figure class="category-banner-preview">
-                    ${category.bannerUrl ? `<img src="${esc(dashboardAssetUrl(category.bannerUrl))}" alt="Portada actual de ${esc(category.name)}">` : `<span>Se usará la primera foto disponible de esta categoría.</span>`}
-                  </figure>
-                  <div class="category-banner-copy">
-                    <strong>Imagen del banner</strong>
-                    <p class="faint">Aparece al entrar a esta sección. Usa PNG, JPEG o WEBP de hasta 8 MB.</p>
-                    <div class="category-banner-actions">
-                      <input type="file" accept="image/png,image/jpeg,image/webp" data-category-banner-input="${esc(category.id)}">
-                      <button class="ghost" type="button" data-action="choose-banner" data-id="${esc(category.id)}">${category.bannerUrl ? "Cambiar imagen" : "Subir imagen"}</button>
-                      ${category.bannerUrl ? `<button class="ghost category-delete" type="button" data-action="remove-banner" data-id="${esc(category.id)}">Quitar imagen</button>` : ""}
-                    </div>
-                  </div>
-                </div>
-                <div class="category-highlights-editor">
-                  <strong>Mensajes informativos</strong>
-                  <p class="faint">Agrega hasta cuatro promesas reales de tu negocio, por ejemplo “Envío rápido” o “Compra segura”.</p>
-                  <div class="category-highlight-fields">
-                    ${Array.from({ length: 4 }, (_, highlightIndex) => `<label>Mensaje ${highlightIndex + 1}<input class="category-highlight-input" type="text" maxlength="40" value="${esc(category.highlights?.[highlightIndex] || "")}" placeholder="${highlightIndex === 0 ? "Envío rápido" : highlightIndex === 1 ? "Compra segura" : "Opcional"}"></label>`).join("")}
-                  </div>
-                  <button class="primary category-highlight-save" type="button" data-action="save-highlights" data-id="${esc(category.id)}">Guardar mensajes</button>
-                </div>
-              </div>
-            </details>
-          </article>`,
-        )
-        .join("") || `<p class="muted" style="margin:0">Todavía no tienes categorías. Cuando agregues una, podrás ordenar cómo aparece en la tienda.</p>`;
-
-    categoryRowsEl.querySelectorAll("[data-category-details]").forEach((details) => {
-      details.addEventListener("toggle", () => {
-        if (details.open) openCategoryEditorIds.add(details.dataset.categoryDetails);
-        else openCategoryEditorIds.delete(details.dataset.categoryDetails);
-      });
-    });
-
-    categoryRowsEl.querySelectorAll("[data-category-banner-input]").forEach((input) => {
-      input.addEventListener("change", async () => {
-        const file = input.files?.[0];
-        if (!file) return;
-        const categoryId = input.dataset.categoryBannerInput;
-        const allowed = ["image/png", "image/jpeg", "image/webp"].includes(file.type);
-        if (!allowed || file.size > MAX_IMAGE_BYTES) {
-          errorEl.textContent = file.size > MAX_IMAGE_BYTES
-            ? "La imagen de la categoría supera el máximo de 8 MB."
-            : "Usa una imagen PNG, JPEG o WEBP para la categoría.";
-          input.value = "";
-          return;
-        }
-        const row = input.closest(".category-order-row");
-        const uploadButton = row?.querySelector('[data-action="choose-banner"]');
-        if (uploadButton) {
-          uploadButton.disabled = true;
-          uploadButton.textContent = "Subiendo…";
-        }
-        errorEl.textContent = "";
-        try {
-          const bannerUrl = await uploadFile(file);
-          const updated = await api(`/stores/${currentStoreId}/categories/${categoryId}`, {
-            method: "PATCH",
-            body: JSON.stringify({ bannerUrl }),
-          });
-          openCategoryEditorIds.add(categoryId);
-          renderCategoryRows(lastCategories.map((category) => (category.id === updated.id ? updated : category)));
-          infoEl.textContent = `Portada de “${updated.name}” actualizada.`;
-        } catch (err) {
-          errorEl.textContent = "No se pudo guardar la portada de la categoría: " + err.message;
-        } finally {
-          input.value = "";
-          if (uploadButton?.isConnected) {
-            uploadButton.disabled = false;
-            uploadButton.textContent = "Subir imagen";
-          }
-        }
-      });
-    });
-
-    categoryRowsEl.querySelectorAll("button[data-action]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const index = lastCategories.findIndex((category) => category.id === button.dataset.id);
-        if (button.dataset.action === "up") return moveCategory(button.dataset.id, index - 1);
-        if (button.dataset.action === "down") return moveCategory(button.dataset.id, index + 1);
-        if (button.dataset.action === "choose-banner") {
-          categoryRowsEl.querySelector(`[data-category-banner-input="${CSS.escape(button.dataset.id)}"]`)?.click();
-          return;
-        }
-        if (button.dataset.action === "remove-banner") {
-          errorEl.textContent = "";
-          try {
-            button.disabled = true;
-            const updated = await api(`/stores/${currentStoreId}/categories/${button.dataset.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ bannerUrl: null }),
-            });
-            openCategoryEditorIds.add(button.dataset.id);
-            renderCategoryRows(lastCategories.map((category) => (category.id === updated.id ? updated : category)));
-            infoEl.textContent = `Portada personalizada de “${updated.name}” eliminada.`;
-          } catch (err) {
-            button.disabled = false;
-            errorEl.textContent = "No se pudo quitar la portada de la categoría: " + err.message;
-          }
-          return;
-        }
-        if (button.dataset.action === "save-highlights") {
-          const row = button.closest(".category-order-row");
-          const highlights = [...row.querySelectorAll(".category-highlight-input")]
-            .map((input) => input.value.trim())
-            .filter(Boolean)
-            .filter((highlight, highlightIndex, values) => values.indexOf(highlight) === highlightIndex);
-          errorEl.textContent = "";
-          try {
-            button.disabled = true;
-            button.textContent = "Guardando…";
-            const updated = await api(`/stores/${currentStoreId}/categories/${button.dataset.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ highlights }),
-            });
-            openCategoryEditorIds.add(button.dataset.id);
-            renderCategoryRows(lastCategories.map((category) => (category.id === updated.id ? updated : category)));
-            infoEl.textContent = `Mensajes de “${updated.name}” guardados.`;
-          } catch (err) {
-            button.disabled = false;
-            button.textContent = "Guardar mensajes";
-            errorEl.textContent = "No se pudieron guardar los mensajes de la categoría: " + err.message;
-          }
-          return;
-        }
-        if (button.dataset.action === "rename") {
-          const name = prompt("Nuevo nombre de la categoría:", button.dataset.name)?.trim();
-          if (!name || name === button.dataset.name) return;
-          try {
-            const updated = await api(`/stores/${currentStoreId}/categories/${button.dataset.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ name }),
-            });
-            renderCategoryRows(lastCategories.map((category) => (category.id === updated.id ? updated : category)));
-            infoEl.textContent = `Categoría renombrada como "${updated.name}".`;
-          } catch (err) {
-            errorEl.textContent = "Error: " + err.message;
-          }
-          return;
-        }
-        if (!confirm(`¿Eliminar la categoría "${button.dataset.name}"? Sus productos quedarán sin categoría, no se eliminan.`)) return;
-        try {
-          await api(`/stores/${currentStoreId}/categories/${button.dataset.id}`, { method: "DELETE" });
-          await refresh();
-        } catch (err) {
-          errorEl.textContent = "Error: " + err.message;
-        }
-      });
-    });
-
-    categoryRowsEl.querySelectorAll(".category-order-row").forEach((row) => {
-      row.addEventListener("dragstart", (event) => {
-        if (!event.target.closest(".category-grip")) {
-          event.preventDefault();
-          return;
-        }
-        draggedCategoryId = row.dataset.id;
-        row.classList.add("is-dragging");
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", row.dataset.id);
-      });
-      row.addEventListener("dragover", (event) => {
-        event.preventDefault();
-        if (draggedCategoryId && draggedCategoryId !== row.dataset.id) row.classList.add("is-drop-target");
-      });
-      row.addEventListener("dragleave", () => row.classList.remove("is-drop-target"));
-      row.addEventListener("drop", (event) => {
-        event.preventDefault();
-        const droppedId = draggedCategoryId || event.dataTransfer.getData("text/plain");
-        const targetIndex = lastCategories.findIndex((category) => category.id === row.dataset.id);
-        row.classList.remove("is-drop-target");
-        moveCategory(droppedId, targetIndex);
-      });
-      row.addEventListener("dragend", () => {
-        draggedCategoryId = null;
-        categoryRowsEl.querySelectorAll(".category-order-row").forEach((candidate) => candidate.classList.remove("is-dragging", "is-drop-target"));
-      });
-    });
-  }
+  document.getElementById("accountEditProfile")?.addEventListener("click", () => profileMenuEl.showPopover());
+  document.getElementById("accountManageSessions")?.addEventListener("click", () => profileMenuEl.showPopover());
+  document.getElementById("accountLogoutProxy")?.addEventListener("click", () => document.getElementById("logout")?.click());
 
   function openCreateStore() {
     document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
@@ -2349,7 +2176,6 @@
 
     syncMerchantStoreWorkspace();
     const hasStore = !!currentStoreId;
-    document.getElementById("categoriesSection").style.display = hasStore ? "block" : "none";
     document.getElementById("paymentLinksSection").style.display = hasStore ? "block" : "none";
     document.getElementById("debtCollectionSection").style.display = hasStore ? "block" : "none";
     document.getElementById("quickPaymentSection").style.display = hasStore ? "block" : "none";
@@ -3323,7 +3149,9 @@
   function filteredPayments() {
     const normalizedSearch = orderSearch.trim().toLocaleLowerCase("es");
     const matchingSearch = normalizedSearch
-      ? lastPayments.filter((p) => [p.id, p.customerName, p.customerEmail, p.customerPhone, p.description]
+      // p.orderId is the id the buyer has: it is what the confirmation email
+      // and the tracking link show, not the pi_ id.
+      ? lastPayments.filter((p) => [p.id, p.orderId, p.customerName, p.customerEmail, p.customerPhone, p.description]
           .some((value) => String(value || "").toLocaleLowerCase("es").includes(normalizedSearch)))
       : lastPayments;
     if (paymentStatusFilter === "all") return matchingSearch;
@@ -3367,6 +3195,16 @@
     }).join(" · ");
   }
 
+  function emptyPaymentRowHtml() {
+    if (lastPayments.length === 0) return `<tr><td colspan="6" class="muted">Todavía no hay pedidos ni interesados.</td></tr>`;
+    const incomplete = paymentStatusFilter === "active"
+      ? lastPayments.filter((payment) => payment.status === "REQUIRES_PAYMENT_METHOD").length
+      : 0;
+    if (!incomplete) return `<tr><td colspan="6" class="muted">No encontramos pedidos con estos filtros.</td></tr>`;
+    const count = incomplete === 1 ? "1 pedido quedó" : `${incomplete} pedidos quedaron`;
+    return `<tr><td colspan="6" class="muted">Ningún pago completado todavía. ${count} sin llegar a elegir método de pago. <button type="button" class="ghost" id="showAllPayments">Ver todos</button></td></tr>`;
+  }
+
   function renderPaymentRows() {
     const selectedStore = lastStores.find((store) => store.id === currentStoreId);
     document.getElementById("paymentScopeLabel").textContent = selectedStore?.name || "Toda la cuenta";
@@ -3390,8 +3228,16 @@
           <td><details class="order-detail"><summary>Ver datos</summary><div class="order-detail-card"><strong>${esc(orderItemsLabel(p))}</strong>${p.description ? `<span>${esc(p.description)}</span>` : ""}${p.fulfillmentStatus ? `<span>Entrega: <b>${esc(ORDER_STATUS_LABELS[p.fulfillmentStatus] || p.fulfillmentStatus)}</b></span>` : ""}${p.deliveryRequested ? `<span><b>Entrega solicitada</b>${p.deliveryAddress ? ` · ${esc(p.deliveryAddress)}` : ""}</span>` : ""}<div class="order-contact-links">${p.customerEmail ? `<a href="mailto:${encodeURIComponent(p.customerEmail)}">Enviar correo</a>` : ""}${p.customerPhone ? `<a href="tel:${esc(String(p.customerPhone).replace(/[^+\d]/g, ""))}">Llamar</a>` : ""}${Number.isFinite(p.customerLatitude) && Number.isFinite(p.customerLongitude) ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(`${p.customerLatitude},${p.customerLongitude}`)}" target="_blank" rel="noopener noreferrer">Abrir ubicación</a>` : ""}</div>${p.orderId && (FULFILLMENT_NEXT[p.fulfillmentStatus] || []).length ? `<label class="faint">Actualizar entrega<select class="fulfillment-select" data-order-id="${esc(p.orderId)}" style="margin-top:6px"><option value="">Selecciona…</option>${FULFILLMENT_NEXT[p.fulfillmentStatus].map((status) => `<option value="${status}">${esc(ORDER_STATUS_LABELS[status] || status)}</option>`).join("")}</select></label>` : ""}<code>ID: ${esc(p.id)}</code></div></details></td>
         </tr>`,
       )
-      .join("") ||
-      `<tr><td colspan="6" class="muted">${lastPayments.length === 0 ? "Todavía no hay pedidos ni interesados." : "No encontramos pedidos con estos filtros."}</td></tr>`;
+      .join("") || emptyPaymentRowHtml();
+
+    // "Con actividad" hides checkouts that never reached a payment method. With
+    // no completed payment yet that leaves a blank table, which reads as "nothing
+    // ever arrived" rather than "your buyers are dropping off before paying".
+    document.getElementById("showAllPayments")?.addEventListener("click", () => {
+      const select = document.getElementById("paymentStatusFilter");
+      select.value = "all";
+      select.dispatchEvent(new Event("change"));
+    });
 
     document.getElementById("paymentPager").innerHTML =
       filtered.length === 0
@@ -3436,6 +3282,60 @@
     orderSearch = e.target.value;
     paymentPage = 1;
     renderPaymentRows();
+  });
+
+  let inboxThreadId = null;
+  let inboxDomainVerified = false;
+
+  // A store can accumulate threads before it ever verifies an email domain:
+  // reading is fine, but a reply would be rejected server-side. Disable the
+  // form instead of letting the merchant type a reply and hit a Spanish error.
+  function setInboxReplyEnabled(enabled) {
+    document.getElementById("inboxDomainNotice").hidden = enabled;
+    document.getElementById("inboxReplyBody").disabled = !enabled;
+    document.getElementById("inboxReplySubmit").disabled = !enabled;
+  }
+
+  async function refreshInbox() {
+    if (!currentStoreId) return;
+    const storeId = currentStoreId;
+    const [threads, workspace] = await Promise.all([
+      api(`/stores/${storeId}/inbox`),
+      api(`/stores/${storeId}/email-workspace`),
+    ]);
+    if (storeId !== currentStoreId) return;
+    document.getElementById("inboxScopeLabel").textContent =
+      lastStores.find((store) => store.id === currentStoreId)?.name || "Sin tienda seleccionada";
+    inboxDomainVerified = workspace?.domain?.status === "verified";
+    setInboxReplyEnabled(inboxDomainVerified);
+    document.getElementById("inboxThreads").innerHTML = threads.length
+      ? threads.map((thread) => `<li><button type="button" data-thread-id="${esc(thread.id)}" class="${thread.unreadForMerchant ? "is-unread" : ""}"><strong>${esc(thread.customerName || thread.customerEmail)}</strong><span>${esc(thread.subject)}</span></button></li>`).join("")
+      : `<li class="muted">Todavía no hay conversaciones.</li>`;
+  }
+
+  async function openInboxThread(threadId) {
+    inboxThreadId = threadId;
+    const { messages } = await api(`/stores/${currentStoreId}/inbox/${threadId}`);
+    // Inbound bodies are already plain text; esc() keeps them that way on screen.
+    document.getElementById("inboxMessages").innerHTML = messages
+      .map((message) => `<article class="inbox-message ${message.direction === "INBOUND" ? "is-from-customer" : "is-from-store"}"><p>${esc(message.body)}</p><time>${esc(new Date(message.createdAt).toLocaleString())}</time></article>`)
+      .join("");
+  }
+
+  document.getElementById("inboxThreads").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-thread-id]");
+    if (button) void openInboxThread(button.dataset.threadId);
+  });
+
+  document.getElementById("inboxReplyForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!inboxDomainVerified || !inboxThreadId) return;
+    const field = document.getElementById("inboxReplyBody");
+    await api(`/stores/${currentStoreId}/inbox/${inboxThreadId}/reply`, {
+      method: "POST", body: JSON.stringify({ body: field.value }),
+    });
+    field.value = "";
+    await openInboxThread(inboxThreadId);
   });
 
   function csvCell(value) {
@@ -3906,6 +3806,42 @@
     return apiBaseEl.value.replace(/\/v1\/?$/, "");
   }
 
+  // Turning on integrated payments is pointless until KYC and the NIT exist, so
+  // land the merchant on the first field they actually have to fill.
+  function openComplianceForPayments() {
+    history.pushState(null, "", "#dashboard-compliance");
+    setDashboardView("compliance");
+    setDashboardSectionExpanded("kycSection", true, false);
+    setDashboardSectionExpanded("invoicingSection", true, false);
+    infoEl.textContent = "Pagos activados. Completa KYC y registra tu NIT para empezar a cobrar.";
+    const firstRequiredField = lastKyc?.status === "APPROVED"
+      ? document.querySelector('#invoicingForm input[name="nit"]')
+      : document.querySelector('#kycForm input[name="legalName"]');
+    firstRequiredField?.scrollIntoView({ block: "center" });
+    firstRequiredField?.focus({ preventScroll: true });
+  }
+
+  // The settings page lives under "Tu tienda" rather than a top-level entry of
+  // its own: everything it edits is scoped to the selected store.
+  import("/src/store-settings.mjs").then(({ mountStoreSettings }) => {
+    storeSettings = mountStoreSettings(document.getElementById("storeSettingsRoot"), {
+      api,
+      uploadFile,
+      assetUrl: dashboardAssetUrl,
+      hasInvoicing: () => Boolean(lastInvoicingProfile?.cuis),
+      onSaved: async (_store, { enabledPayments }) => {
+        await refresh();
+        // Turning on integrated payments is pointless until invoicing exists,
+        // so send them straight there instead of leaving a silent dead end.
+        if (enabledPayments && !lastInvoicingProfile?.cuis) openComplianceForPayments();
+        else infoEl.textContent = "Datos de la tienda guardados.";
+      },
+    });
+    storeSettings.setStore(lastStores.find((store) => store.id === currentStoreId) || null, lastPaymentLinks);
+  }).catch(() => {
+    document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
+  });
+
   async function uploadFile(file) {
     const form = new FormData();
     form.append("file", file);
@@ -4336,7 +4272,7 @@
         infoEl.textContent = `${importedProducts.length} ${importedProducts.length === 1 ? "producto importado" : "productos importados"}${categoriesCreated.length ? ` y ${categoriesCreated.length} categorías nuevas` : ""}${mappingsCreated ? `; ${mappingsCreated} SKU ${mappingsCreated === 1 ? "conectado" : "conectados"}` : ""}.`;
         try {
           resetPaymentLinkBrowseState();
-          renderCategoryRows([...lastCategories, ...categoriesCreated]);
+          lastCategories = [...lastCategories, ...categoriesCreated];
           renderPaymentLinkRows([...importedProducts, ...lastPaymentLinks]);
         } catch (renderError) {
           console.error("La importación terminó, pero el catálogo no se pudo actualizar en pantalla.", renderError);
@@ -4517,10 +4453,16 @@
       document.getElementById("invoicingModeNotice").hidden = paymentStore;
       document.getElementById("invoicingForm").hidden = !paymentStore;
 
+      renderAccount({ kyc, invoicing });
+      lastInvoicingProfile = invoicing;
+      lastKyc = kyc;
+      document.getElementById("storeSettingsScopeLabel").textContent = selectedStore?.name || "Sin tienda seleccionada";
+      storeSettings?.setStore(selectedStore, paymentLinks);
+
       renderTotalFinances(totalFinances);
       renderFinances(finances);
 
-      renderCategoryRows(categories);
+      lastCategories = categories;
       renderPaymentLinkRows(paymentLinks);
       renderPromoCodes(promoCodes);
       renderDebtCollectionLinks(debtCollectionLinks);
@@ -4529,6 +4471,7 @@
       lastPayments = payments;
       paymentPage = 1;
       renderPaymentRows();
+      void refreshInbox();
 
       renderPayoutRows(payouts);
     } catch (err) {

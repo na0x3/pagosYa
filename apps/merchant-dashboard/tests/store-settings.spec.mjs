@@ -73,8 +73,10 @@ async function openDashboard(
     }
     await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });
-  await page.goto("/#dashboard-settings");
-  await expect(page.locator("#storeNameInput")).toHaveValue(stores[0].name);
+  // The #dashboard-settings view no longer exists (see 3b66e2f); the sidebar
+  // picker is the dashboard's own signal that the store list has loaded.
+  await page.goto("/#dashboard-stores");
+  await expect(page.locator("#sidebarStorePicker")).toContainText(stores[0].name);
   await expect(page.locator("#onboardingDialog")).toHaveCount(0);
   return requests;
 }
@@ -87,7 +89,10 @@ async function navigateDashboard(page, view) {
   if (await handle.isVisible() && !(await sidebar.evaluate((element) => element.classList.contains("is-store-nav-pinned")))) {
     await handle.click();
   }
-  await page.locator(`.dashboard-nav-button[data-dashboard-view="${view}"]`).click();
+  const link = page.locator(`.dashboard-nav-button[data-dashboard-view="${view}"]`);
+  // Every view but "overview" sits inside a <details> group that starts closed.
+  await link.evaluate((element) => element.closest("details.dashboard-nav-group")?.setAttribute("open", ""));
+  await link.click();
 }
 
 async function prepareInventoryImport(page, responseForRequest) {
@@ -556,12 +561,149 @@ test("orders show buyer support details and can be searched by name", async ({ p
   });
 
   await navigateDashboard(page, "payments");
+  // toContainText reads textContent, which a collapsed section still carries —
+  // assert the merchant can actually see the row, not just that it exists.
+  await expect(page.locator("#paymentRows")).toBeVisible();
   await expect(page.locator("#paymentRows")).toContainText("María Pérez");
   await expect(page.locator("#paymentRows")).toContainText("maria@gmail.com");
   await page.locator("#orderSearch").fill("otra persona");
   await expect(page.locator("#paymentRows")).toContainText("No encontramos pedidos");
   await page.locator("#orderSearch").fill("maría");
   await expect(page.locator("#paymentRows")).toContainText("María Pérez");
+});
+
+test("a buyer's order id finds the payment, not just the pi_ id", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Primera")], ({ path }) => {
+    if (path === "/merchants/orders") return [{
+      id: "pi_zp4r56omk6kh4fy0421s7h52",
+      kind: "PAYMENT",
+      storeId: "store_1",
+      storeName: "Primera",
+      amount: 28090,
+      currency: "BOB",
+      status: "SUCCEEDED",
+      paymentMethodType: "CARD",
+      customerName: "Ana",
+      customerEmail: "ana@gmail.com",
+      customerPhone: "+591 71234567",
+      orderId: "cmubz31eo000grs0hmlie0haz",
+      fulfillmentStatus: "PAID",
+      items: [{ name: "Ramo", quantity: 1 }],
+      createdAt: "2026-09-21T12:00:00.000Z",
+    }];
+    return undefined;
+  });
+
+  await navigateDashboard(page, "payments");
+  // The id the buyer reads off their confirmation email is the StoreOrder id.
+  await page.locator("#orderSearch").fill("cmubz31eo000grs0hmlie0haz");
+  await expect(page.locator("#paymentRows")).toContainText("pi_zp4r56omk6kh4fy0421s7h52");
+  await page.locator("#orderSearch").fill("un id que no existe");
+  await expect(page.locator("#paymentRows")).toContainText("No encontramos pedidos");
+});
+
+test("an abandoned checkout is named in the empty state instead of vanishing", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Primera")], ({ path }) => {
+    if (path === "/merchants/orders") return [{
+      id: "pi_abandoned",
+      kind: "PAYMENT",
+      storeId: "store_1",
+      storeName: "Primera",
+      amount: 28090,
+      currency: "BOB",
+      status: "REQUIRES_PAYMENT_METHOD",
+      paymentMethodType: null,
+      customerName: null,
+      customerEmail: null,
+      customerPhone: null,
+      items: [{ name: "Ramo", quantity: 1 }],
+      createdAt: "2026-09-21T12:00:00.000Z",
+    }];
+    return undefined;
+  });
+
+  await navigateDashboard(page, "payments");
+  // The default "Con actividad" filter hides this row, so the table is empty —
+  // it must say why rather than look like no order ever arrived.
+  await expect(page.locator("#paymentRows")).toContainText("Ningún pago completado todavía");
+  await expect(page.locator("#paymentRows")).toContainText("1 pedido quedó sin llegar a elegir método de pago");
+
+  await page.locator("#showAllPayments").click();
+  await expect(page.locator("#paymentStatusFilter")).toHaveValue("all");
+  await expect(page.locator("#paymentRows")).toContainText("pi_abandoned");
+});
+
+test("a page whose only block is the content opens that block without a click", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Primera")]);
+
+  // Payments, payouts and the overview each own their page: a collapsed block
+  // there renders as a blank page with a heading and nothing under it.
+  for (const [view, body] of [["payments", "#paymentsSectionBody"], ["payouts", "#payoutsSectionBody"], ["overview", "#financesSectionBody"]]) {
+    await navigateDashboard(page, view);
+    await expect(page.locator(body)).toBeVisible();
+  }
+
+  // Compliance stacks three blocks, so it still starts collapsed — there the
+  // list of what needs attention is the point, not any one block's contents.
+  await navigateDashboard(page, "compliance");
+  await expect(page.locator("#invoicingSectionBody")).toBeHidden();
+  await page.locator("#invoicingSection .section-toggle").click();
+  await expect(page.locator("#invoicingSectionBody")).toBeVisible();
+});
+
+test("the inbox lists threads and sends a reply", async ({ page }) => {
+  const requests = await openDashboard(page, [store("store_1", "Primera")], ({ path }) => {
+    if (path === "/stores/store_1/email-workspace") return { domain: { status: "verified" } };
+    if (path === "/stores/store_1/inbox") return [{
+      id: "thread-1", subject: "¿Llega a Santa Cruz?", customerName: "Ana",
+      customerEmail: "ana@gmail.test", unreadForMerchant: true,
+      lastMessageAt: "2026-09-21T12:00:00.000Z",
+    }];
+    if (path === "/stores/store_1/inbox/thread-1") return {
+      thread: { id: "thread-1", subject: "¿Llega a Santa Cruz?", customerName: "Ana" },
+      messages: [{ id: "m1", direction: "INBOUND", body: "¿Llega a Santa Cruz?", createdAt: "2026-09-21T12:00:00.000Z" }],
+    };
+    return undefined;
+  });
+
+  await navigateDashboard(page, "inbox");
+  await expect(page.locator("#inboxSectionBody")).toBeVisible();
+  await expect(page.locator("#inboxThreads")).toContainText("Ana");
+  await page.locator('#inboxThreads [data-thread-id="thread-1"]').click();
+  await expect(page.locator("#inboxMessages")).toContainText("¿Llega a Santa Cruz?");
+
+  await expect(page.locator("#inboxDomainNotice")).toBeHidden();
+  await page.locator("#inboxReplyBody").fill("Sí, llega en 3 días.");
+  await page.getByRole("button", { name: "Enviar respuesta" }).click();
+
+  const sent = requests.find((entry) => entry.path === "/stores/store_1/inbox/thread-1/reply");
+  expect(sent.body).toEqual({ body: "Sí, llega en 3 días." });
+});
+
+test("the inbox disables replying until the store has a verified email domain", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Primera")], ({ path }) => {
+    if (path === "/stores/store_1/email-workspace") return { domain: null };
+    if (path === "/stores/store_1/inbox") return [{
+      id: "thread-1", subject: "¿Llega a Santa Cruz?", customerName: "Ana",
+      customerEmail: "ana@gmail.test", unreadForMerchant: true,
+      lastMessageAt: "2026-09-21T12:00:00.000Z",
+    }];
+    if (path === "/stores/store_1/inbox/thread-1") return {
+      thread: { id: "thread-1", subject: "¿Llega a Santa Cruz?", customerName: "Ana" },
+      messages: [{ id: "m1", direction: "INBOUND", body: "¿Llega a Santa Cruz?", createdAt: "2026-09-21T12:00:00.000Z" }],
+    };
+    return undefined;
+  });
+
+  await navigateDashboard(page, "inbox");
+  await page.locator('#inboxThreads [data-thread-id="thread-1"]').click();
+  await expect(page.locator("#inboxMessages")).toContainText("¿Llega a Santa Cruz?");
+
+  // No verified domain yet: the store can read but the API would reject a
+  // reply, so the form must say why and stay disabled rather than fail on submit.
+  await expect(page.locator("#inboxDomainNotice")).toBeVisible();
+  await expect(page.locator("#inboxReplyBody")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Enviar respuesta" })).toBeDisabled();
 });
 
 test("buyer support controls remain usable on a phone viewport", async ({ page }) => {
@@ -987,6 +1129,7 @@ function settingsResponder(stores, products = []) {
 test("store settings save straight to the store and its links", async ({ page }) => {
   const stores = [store("store_1", "Primera")];
   const requests = await openDashboard(page, stores, settingsResponder(stores));
+  await navigateDashboard(page, "store-settings");
   await page.locator("#storeNameInput").fill("Café Norte");
   await page.locator("#storeTaglineInput").fill("Tostado en La Paz");
   await page.locator("#storeContactEmailInput").fill("hola@cafenorte.bo");
@@ -1014,6 +1157,7 @@ test("store settings save straight to the store and its links", async ({ page })
 test("WhatsApp orders need a destination number before the store is saved", async ({ page }) => {
   const stores = [store("store_1", "Primera")];
   const requests = await openDashboard(page, stores, settingsResponder(stores));
+  await navigateDashboard(page, "store-settings");
   await page.getByRole("radio", { name: /Recibir por WhatsApp/ }).check();
   await expect(page.locator("#storeContactPhoneInput")).toBeVisible();
   await page.getByRole("button", { name: "Guardar cambios" }).click();
@@ -1031,6 +1175,7 @@ test("a location map must be an embeddable Google Maps or OpenStreetMap URL", as
   const stores = [store("store_1", "Primera")];
   const products = [{ id: "product_1", storeId: "store_1", name: "Pan brioche", amount: 2800, currency: "BOB", status: "ACTIVE", stock: 7, imageUrls: [], tags: [], variants: [], extras: [] }];
   const requests = await openDashboard(page, stores, settingsResponder(stores, products));
+  await navigateDashboard(page, "store-settings");
   await page.getByRole("button", { name: "Agregar ubicación" }).click();
   const map = page.getByLabel("Mapa para insertar (opcional)");
   await map.fill("https://evil.example/maps/embed");
@@ -1052,6 +1197,7 @@ test("a location map must be an embeddable Google Maps or OpenStreetMap URL", as
 test("a lead-only store hides NIT features until integrated payments are enabled", async ({ page }) => {
   const leadStore = { ...store("store_1", "Estudio de interiores"), checkoutMode: "external", leadCaptureUrl: "https://estudio.example/agenda" };
   const requests = await openDashboard(page, [leadStore], settingsResponder([leadStore]));
+  await navigateDashboard(page, "store-settings");
   await expect(page.getByRole("radio", { name: /Captar interesados/ })).toBeChecked();
   await navigateDashboard(page, "compliance");
   await page.locator("#kycSection .section-toggle").click();
@@ -1061,7 +1207,7 @@ test("a lead-only store hides NIT features until integrated payments are enabled
   await expect(page.locator("#kycForm")).toBeHidden();
   await expect(page.locator("#invoicingForm")).toBeHidden();
 
-  await navigateDashboard(page, "settings");
+  await navigateDashboard(page, "store-settings");
   await page.getByRole("radio", { name: /Cobrar con pagosYa/ }).check();
   await expect(page.locator(".store-conversion-note")).toHaveText("Al guardar, abriremos Facturación para pedir KYC y NIT antes de aceptar pagos.");
   await page.getByRole("button", { name: "Guardar cambios" }).click();

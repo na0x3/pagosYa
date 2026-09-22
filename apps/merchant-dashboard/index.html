@@ -23,13 +23,9 @@
 <body>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
   <div class="topbar">
-    <div class="brand">
-      <div class="brand-mark"><img src="/assets/pagosya-mark.png" alt=""></div>
-      <div>
-        <h1 class="brand-wordmark"><span class="sr-only">pagosYa</span><img class="brand-wordmark-light" src="/assets/pagosya-wordmark.png" alt=""><img class="brand-wordmark-dark" src="/assets/pagosya-wordmark-on-dark.png" alt=""></h1>
-        <p class="subtitle">Panel de Comercio</p>
-      </div>
-    </div>
+    <!-- The bird now sits at the top of the sidebar; the topbar carries no
+         second brand lockup. Kept as the page's only h1 for the outline. -->
+    <h1 class="sr-only">pagosYa · Panel de Comercio</h1>
     <div class="topbar-actions">
       <div class="theme-control">
         <span class="theme-control-label" id="dashboardThemeLabel">Tema</span>
@@ -80,6 +76,10 @@
           <p class="profile-session-note">Máximo 3 sesiones. Al ingresar en una cuarta, se cierra automáticamente la más antigua.</p>
         </section>
         <div class="profile-menu-actions">
+        <button class="ghost" id="openAccountPage" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          Mi cuenta
+        </button>
         <button class="ghost visibility-toggle" id="moneyVisibilityToggle" type="button" aria-pressed="false" aria-label="Ocultar valores monetarios">
           <svg class="visibility-on-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="visibility-off-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.2A11.5 11.5 0 0 1 12 6c6.5 0 10 6 10 6a17.4 17.4 0 0 1-2.1 2.8M6.6 6.6C3.6 8.4 2 12 2 12s3.5 6 10 6c1.4 0 2.6-.3 3.7-.7"/><path d="M10.1 10.1a3 3 0 0 0 3.8 3.8"/></svg>
@@ -98,28 +98,21 @@
     </div>
   </div>
 
-  <form class="panel login-panel" id="loginForm">
-    <div class="login-blocks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-    <section class="login-intro" aria-labelledby="loginTitle">
-      <span class="login-kicker">Panel de comercio</span>
-      <h2 id="loginTitle">Tu negocio, en orden.</h2>
-      <p>Ventas, cobros, deudas y enlaces de pago reunidos en un solo lugar.</p>
-    </section>
-    <div class="login-fields">
-      <div class="panel-row">
-        <div>
-          <label for="apiBase">URL base de la API</label>
-          <input id="apiBase" value="http://localhost:3001/v1">
-        </div>
+  <form class="login-split" id="loginForm">
+    <div class="login-pane">
+      <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-mark.png" alt="" width="36" height="36"><span>pagosYa</span></a>
+      <div class="login-card">
+        <h2 id="loginTitle">Bienvenido de vuelta</h2>
+        <p class="login-sub">Entra a tu panel de comercio para continuar.</p>
         <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
           <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
-          <div class="merchant-login-divider"><span>o usa tu contraseña</span></div>
+          <div class="merchant-login-divider"><span>o</span></div>
         </div>
-        <div>
-          <label for="email">Correo electrónico</label>
+        <div class="login-field">
+          <label for="email">Correo</label>
           <input id="email" type="email" placeholder="dueno@tienda-ejemplo.bo" autocomplete="email" required>
         </div>
-        <div>
+        <div class="login-field">
           <label for="password">Contraseña</label>
           <div class="password-input-wrap">
             <input id="password" type="password" autocomplete="current-password" required>
@@ -129,11 +122,24 @@
             </button>
           </div>
         </div>
-        <button class="primary" id="login" type="submit">Iniciar sesión</button>
-        <button class="ghost" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
+        <button class="primary login-submit" id="login" type="submit">Continuar</button>
+        <button class="login-forgot" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
+        <details class="login-dev">
+          <summary>Opciones de desarrollo</summary>
+          <label for="apiBase">URL base de la API</label>
+          <input id="apiBase" value="http://localhost:3001/v1">
+        </details>
       </div>
-      <p class="faint login-help">¿Todavía no tienes acceso? Pide a tu integración que llame una vez a <code>POST /v1/dashboard/signup</code> con tu llave secreta para crear tu acceso. Nunca desde esta página.</p>
+      <p class="login-foot">El acceso se crea desde tu integración con <code>POST /v1/dashboard/signup</code>, nunca desde esta página.</p>
     </div>
+    <aside class="login-scene" aria-hidden="true">
+      <div class="login-scene-sky"></div>
+      <img class="login-scene-mark" src="/assets/pagosya-mark.png" alt="" width="128" height="128">
+      <div class="login-scene-prompt">
+        <span>Cuéntale a YAPI qué quieres vender</span>
+        <i aria-hidden="true">↑</i>
+      </div>
+    </aside>
   </form>
 
   <div class="panel forgot-panel" id="forgotForm" style="display:none">
@@ -171,26 +177,33 @@
         </div>
         <label class="sidebar-store-picker" for="sidebarStorePicker">Tienda activa<select id="sidebarStorePicker" aria-label="Tienda activa"><option value="">Selecciona una tienda</option></select></label>
         <nav class="dashboard-nav" id="dashboardNav" aria-label="Secciones del panel">
-          <span class="dashboard-nav-label">Principal</span>
           <a class="dashboard-nav-button" href="#dashboard-overview" data-dashboard-view="overview" aria-current="page"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Resumen</a>
-          <a class="dashboard-nav-button" href="#dashboard-progress" data-dashboard-view="progress"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Progreso</a>
-          <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Mi tienda</a>
-
-          <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
-          <a class="dashboard-nav-button" href="#dashboard-categories" data-dashboard-view="categories"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>Categorías</a>
-          <a class="dashboard-nav-button" href="#dashboard-workspace" data-dashboard-view="workspace"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Diseñar sitio</a>
-          <a class="dashboard-nav-button" href="#dashboard-media" data-dashboard-view="media"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span>Medios</a>
-          <a class="dashboard-nav-button" href="#dashboard-marketing" data-dashboard-view="marketing"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></svg></span>Correos y marketing</a>
-          <a class="dashboard-nav-button" href="#dashboard-experiments" data-dashboard-view="experiments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-6 10a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2L14 9V3M7 15h10"/></svg></span>Pruebas A/B</a>
-          <a class="dashboard-nav-button" href="#dashboard-integrations" data-dashboard-view="integrations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v9h9"/></svg></span>Integraciones</a>
-          <span class="dashboard-nav-label" style="padding-top:12px">Operaciones</span>
-
-
-
-          <a class="dashboard-nav-button" href="#dashboard-charge-links" data-dashboard-view="charge-links"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg></span>Link de cobro</a>
-          <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
-          <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
-          <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
+          <details class="dashboard-nav-group" data-nav-group="tienda">
+            <summary class="dashboard-nav-button dashboard-nav-summary" title="Tu tienda"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/></svg></span>Tu tienda<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
+            <a class="dashboard-nav-button" href="#dashboard-stores" data-dashboard-view="stores"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 13v7h14v-7"/><path d="M9 20v-5h6v5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg></span>Mi tienda</a>
+            <a class="dashboard-nav-button" href="#dashboard-workspace" data-dashboard-view="workspace"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12z"/><circle cx="7.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="9.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="14.5" cy="6.5" r=".5" fill="currentColor"/></svg></span>Diseñar sitio</a>
+            <a class="dashboard-nav-button" href="#dashboard-products" data-dashboard-view="products"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 13 20a2 2 0 0 1-3 0l-6-6a2 2 0 0 1 0-3l7-7h7a2 2 0 0 1 2 2z"/><circle cx="16" cy="8" r="1"/></svg></span>Productos</a>
+            <a class="dashboard-nav-button" href="#dashboard-store-settings" data-dashboard-view="store-settings"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Ajustes</a>
+            <a class="dashboard-nav-button" href="#dashboard-media" data-dashboard-view="media"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span>Medios</a>
+          </details>
+          <details class="dashboard-nav-group" data-nav-group="cobrar">
+            <summary class="dashboard-nav-button dashboard-nav-summary" title="Cobrar"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>Cobrar<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
+            <a class="dashboard-nav-button" href="#dashboard-charge-links" data-dashboard-view="charge-links"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg></span>Link de cobro</a>
+            <a class="dashboard-nav-button" href="#dashboard-inbox" data-dashboard-view="inbox"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Inbox</a>
+            <a class="dashboard-nav-button" href="#dashboard-payments" data-dashboard-view="payments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg></span>Pagos</a>
+            <a class="dashboard-nav-button" href="#dashboard-payouts" data-dashboard-view="payouts"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M6 11h12v8H6zM8 4h8l2 3H6z"/><path d="M9 15h6"/></svg></span>Desembolsos</a>
+          </details>
+          <details class="dashboard-nav-group" data-nav-group="crecer">
+            <summary class="dashboard-nav-button dashboard-nav-summary" title="Crecer"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg></span>Crecer<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
+            <a class="dashboard-nav-button" href="#dashboard-progress" data-dashboard-view="progress"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Progreso</a>
+            <a class="dashboard-nav-button" href="#dashboard-marketing" data-dashboard-view="marketing"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></svg></span>Correos y marketing</a>
+            <a class="dashboard-nav-button" href="#dashboard-experiments" data-dashboard-view="experiments"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-6 10a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2L14 9V3M7 15h10"/></svg></span>Pruebas A/B</a>
+            <a class="dashboard-nav-button" href="#dashboard-integrations" data-dashboard-view="integrations"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v9h9"/></svg></span>Integraciones</a>
+          </details>
+          <details class="dashboard-nav-group" data-nav-group="negocio">
+            <summary class="dashboard-nav-button dashboard-nav-summary" title="Negocio"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/></svg></span>Negocio<i class="dashboard-nav-caret" aria-hidden="true"></i></summary>
+            <a class="dashboard-nav-button" href="#dashboard-compliance" data-dashboard-view="compliance"><span class="dashboard-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 7.6 7 10 4.2-2.4 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Cumplimiento</a>
+          </details>
         </nav>
         <span class="mobile-nav-hint" aria-hidden="true">Desliza para ver más →</span>
         <button class="ai-setup-launch" type="button" id="aiSetupLaunch" aria-label="Diseñar con YAPI" title="Diseñar con YAPI">
@@ -220,7 +233,6 @@
           <div class="merchant-store-tab-links">
             <a href="#dashboard-workspace" data-dashboard-view="workspace">Sitio · YAPI</a>
             <a href="#dashboard-products" data-dashboard-view="products">Productos</a>
-            <a href="#dashboard-categories" data-dashboard-view="categories">Categorías</a>
 
 
             <a href="#dashboard-charge-links" data-dashboard-view="charge-links">Cobrar</a>
@@ -518,13 +530,14 @@
 
     <section class="block charge-links-workspace" id="chargeLinksSection" data-dashboard-page="charge-links">
       <header class="charge-links-banner" aria-labelledby="chargeLinksBannerTitle">
-        <div>
+        <div class="charge-links-banner-copy">
+          <p class="charge-links-eyebrow">Cobrar</p>
           <h2 id="chargeLinksBannerTitle">Un link para cada forma de cobrar</h2>
           <p>Genera un QR para una venta en caja o publica un portal por carnet para cobrar muchas deudas. Ambos quedan asociados a la tienda seleccionada.</p>
         </div>
         <ul class="charge-links-routes" aria-label="Formas de cobro disponibles">
-          <li><span class="charge-links-route-mark" aria-hidden="true">QR</span><span><strong>Cobro inmediato</strong><span>Monto único para mostrar en caja.</span></span></li>
-          <li><span class="charge-links-route-mark" aria-hidden="true">CI</span><span><strong>Portal por carnet</strong><span>Un enlace para muchas personas y montos.</span></span></li>
+          <li><a href="#quickPaymentSection"><span class="charge-links-route-mark" aria-hidden="true">QR</span><span class="charge-links-route-copy"><strong>Cobro inmediato</strong><span>Monto único para mostrar en caja.</span></span><span class="charge-links-route-go" aria-hidden="true">↓</span></a></li>
+          <li><a href="#debtCollectionSection"><span class="charge-links-route-mark" aria-hidden="true">CI</span><span class="charge-links-route-copy"><strong>Portal por carnet</strong><span>Un enlace para muchas personas y montos.</span></span><span class="charge-links-route-go" aria-hidden="true">↓</span></a></li>
         </ul>
       </header>
       <div class="charge-links-layout">
@@ -610,24 +623,6 @@
           </form>
           <div class="debt-collection-list" id="debtCollectionList"></div>
         </section>
-      </div>
-    </section>
-
-    <section class="block" id="categoriesSection" data-dashboard-page="categories">
-      <div class="panel">
-        <div class="section-head">
-          <h2>Categorías</h2>
-          <p class="muted" style="margin:4px 0 0">Agrupa y ordena lo que ven tus clientes.</p>
-        </div>
-        <form class="inline" id="categoryForm">
-          <div><label>Nombre de categoría</label><input name="name" placeholder="Bebidas" required maxlength="60"></div>
-          <button class="primary" type="submit">Agregar categoría</button>
-        </form>
-        <div class="category-order-head">
-          <strong>Orden en la tienda</strong>
-          <span class="faint" id="categoryOrderStatus" aria-live="polite">Arrastra o usa las flechas</span>
-        </div>
-        <div class="category-order-list" id="categoryRows"></div>
       </div>
     </section>
 
@@ -814,6 +809,51 @@
 
     <p class="muted" id="noStoreMessage" data-dashboard-page="products" style="display:none">Crea tu primera tienda arriba para empezar a agregar productos.</p>
 
+    <section class="account-workspace" id="accountSection" data-dashboard-page="account">
+      <header class="account-identity">
+        <span class="account-identity-avatar" id="accountAvatar" aria-hidden="true"></span>
+        <div class="account-identity-copy">
+          <p class="account-eyebrow">Tu cuenta</p>
+          <h2 id="accountName">Mi perfil</h2>
+          <p class="account-email" id="accountEmail">—</p>
+        </div>
+        <div class="account-identity-actions">
+          <button class="ghost" type="button" id="accountEditProfile">Nombre y avatar</button>
+          <button class="ghost" type="button" id="accountLogoutProxy">Cerrar sesión</button>
+        </div>
+      </header>
+      <div class="account-grid">
+        <article class="account-card" aria-labelledby="accountPlanTitle">
+          <h3 id="accountPlanTitle">Plan</h3>
+          <p class="account-figure" id="accountPlanValue">Sin suscripción</p>
+          <p class="account-note">Tu cuenta no tiene un plan mensual: no hay cobros de plataforma asociados a ella.</p>
+          <p class="account-note">Lo único que se mide hoy es el consumo de créditos de IA cuando YAPI genera o edita tu sitio. Los ves al lanzar cada diseño.</p>
+          <a class="account-link" href="#dashboard-workspace" data-dashboard-view="workspace">Ir a Diseñar sitio →</a>
+        </article>
+        <article class="account-card" aria-labelledby="accountAccessTitle">
+          <h3 id="accountAccessTitle">Acceso</h3>
+          <p class="account-figure"><span id="accountSessionCount">—</span> <small>sesiones activas</small></p>
+          <p class="account-note" id="accountSessionNote">Cada sesión es un perfil con su propio nombre y avatar. Puedes renombrarlas o cerrarlas a distancia.</p>
+          <button class="account-link" type="button" id="accountManageSessions">Administrar sesiones →</button>
+        </article>
+        <article class="account-card" aria-labelledby="accountBusinessTitle">
+          <h3 id="accountBusinessTitle">Negocio</h3>
+          <ul class="account-facts">
+            <li><span>Verificación</span><strong id="accountKycValue">—</strong></li>
+            <li><span>Facturación electrónica</span><strong id="accountInvoicingValue">—</strong></li>
+          </ul>
+          <p class="account-note">La verificación habilita los cobros reales; la facturación electrónica emite las facturas del SIN por cada venta.</p>
+          <a class="account-link" href="#dashboard-compliance" data-dashboard-view="compliance">Ir a Cumplimiento →</a>
+        </article>
+        <article class="account-card" aria-labelledby="accountStoresTitle">
+          <h3 id="accountStoresTitle">Tus tiendas</h3>
+          <p class="account-figure"><span id="accountStoreCount">—</span> <small>en esta cuenta</small></p>
+          <ul class="account-store-list" id="accountStoreList"></ul>
+          <a class="account-link" href="#dashboard-stores" data-dashboard-view="stores">Ver todas →</a>
+        </article>
+      </div>
+    </section>
+
     <section class="block" id="kycSection" data-dashboard-page="compliance">
       <div class="panel">
         <div class="section-head"><h2>Verificación (KYC)</h2></div>
@@ -860,6 +900,41 @@
 
 
 
+
+    <section class="block" id="storeSettingsSection" data-dashboard-page="store-settings">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Ajustes de la tienda</h2>
+            <p class="finance-scope-chip" id="storeSettingsScopeLabel">Tienda seleccionada</p>
+          </div>
+        </div>
+        <div id="storeSettingsRoot"></div>
+      </div>
+    </section>
+
+    <section class="block" id="inboxSection" data-dashboard-page="inbox">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Inbox</h2>
+            <p class="finance-scope-chip" id="inboxScopeLabel">Tienda seleccionada</p>
+          </div>
+        </div>
+        <div class="inbox-layout">
+          <ul id="inboxThreads" class="inbox-threads"></ul>
+          <div class="inbox-conversation">
+            <div id="inboxMessages" class="inbox-messages"></div>
+            <p class="compliance-mode-notice" id="inboxDomainNotice"><strong>Verifica un dominio de correo antes de responder</strong>Tus compradores ya pueden escribirte, pero para responder necesitas un dominio de correo verificado. <a href="#dashboard-workspace" data-dashboard-view="workspace">Ir a Diseñar sitio →</a> para conectarlo y verificarlo.</p>
+            <form id="inboxReplyForm">
+              <label for="inboxReplyBody">Tu respuesta</label>
+              <textarea id="inboxReplyBody" maxlength="4000" required disabled></textarea>
+              <button class="primary" type="submit" id="inboxReplySubmit" disabled>Enviar respuesta</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section class="block" id="paymentsSection" data-dashboard-page="payments">
       <div class="panel">
