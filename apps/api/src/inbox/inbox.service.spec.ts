@@ -109,6 +109,41 @@ describe("InboxService.recordInbound", () => {
     }));
   });
 
+  it("strips a literal NUL out of the TEXT part, which never passes through htmlToText", async () => {
+    const db = fakeDb();
+    // recordInbound prefers the text part and skips the HTML path entirely, so
+    // the entity guard in decodeCodePoint never sees this one. A raw \u0000
+    // reaching Postgres is a 22021, a 500, and a Svix retry loop.
+    await new InboxService(db as any).recordInbound({
+      threadId: "thread-1", fromEmail: "ana@gmail.test", toEmail: "hola@inbound.tienda.test",
+      html: null, text: "hola\u0000mundo", messageId: "nul-1", inReplyTo: null, hadAttachments: false,
+    });
+
+    const body = db.storeInboxMessage.create.mock.calls[0][0].data.body;
+    expect(body).toBe("holamundo");
+    expect(body).not.toContain("\u0000");
+  });
+
+  it("strips a literal NUL out of the HTML part too", async () => {
+    const db = fakeDb();
+    await new InboxService(db as any).recordInbound({
+      threadId: "thread-1", fromEmail: "ana@gmail.test", toEmail: "hola@inbound.tienda.test",
+      html: "<p>hola\u0000mundo</p>", text: null, messageId: "nul-2", inReplyTo: null, hadAttachments: false,
+    });
+
+    expect(db.storeInboxMessage.create.mock.calls[0][0].data.body).toBe("holamundo");
+  });
+
+  it("strips a lone surrogate from the text part", async () => {
+    const db = fakeDb();
+    await new InboxService(db as any).recordInbound({
+      threadId: "thread-1", fromEmail: "ana@gmail.test", toEmail: "hola@inbound.tienda.test",
+      html: null, text: "a\uD800b", messageId: "sur-1", inReplyTo: null, hadAttachments: false,
+    });
+
+    expect(db.storeInboxMessage.create.mock.calls[0][0].data.body).toBe("ab");
+  });
+
   it("swallows a redelivery of the same Message-ID instead of throwing (P2002)", async () => {
     const db = fakeDb();
     // Svix redelivers on any slow or lost 200, so this is routine traffic. An
@@ -200,6 +235,55 @@ describe("InboxService.threadForLead", () => {
     expect(thread).toEqual({ id: "thread-1" });
     expect(db.storeInboxThread.findFirst).toHaveBeenCalledTimes(2);
     assertNeverUsesCompoundKey(db);
+  });
+
+  it("does NOT rewrite the opening message when the thread already exists", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst.mockResolvedValue({ id: "thread-1" });
+
+    // A non-null message is the whole point: with message:null the `created`
+    // guard could be deleted and every other test here would still pass. The
+    // opening message's messageId is derived from the lead id and the column is
+    // @unique, so writing it again raises P2002 — and it would post the
+    // shopper's text into the conversation a second time.
+    await new InboxService(db as any).threadForLead({
+      id: "lead-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana", message: "¿Llega a Santa Cruz?",
+    } as any);
+
+    expect(db.storeInboxMessage.create).not.toHaveBeenCalled();
+  });
+
+  it("writes the opening message exactly once, on the call that created the thread", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst.mockResolvedValueOnce(null).mockResolvedValue({ id: "thread-1" });
+    db.storeInboxThread.create.mockResolvedValue({ id: "thread-1" });
+    const service = new InboxService(db as any);
+    const lead = {
+      id: "lead-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana", message: "¿Llega a Santa Cruz?",
+    } as any;
+
+    await service.threadForLead(lead);
+    await service.threadForLead(lead);
+
+    expect(db.storeInboxMessage.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let the race loser rewrite the opening message either", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "thread-1" });
+    db.storeInboxThread.create.mockRejectedValue({ code: "P2002" });
+
+    await new InboxService(db as any).threadForLead({
+      id: "lead-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana", message: "¿Llega a Santa Cruz?",
+    } as any);
+
+    // The winner already wrote it; the loser must not try.
+    expect(db.storeInboxMessage.create).not.toHaveBeenCalled();
   });
 });
 

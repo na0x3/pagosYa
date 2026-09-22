@@ -10,6 +10,23 @@ export function parseReferences(header: string | null | undefined): string[] {
   return [...header.matchAll(/<([^<>]+)>/g)].map((match) => match[1].trim()).filter(Boolean);
 }
 
+/**
+ * Removes the code points Postgres `text` cannot store (NUL and the C0 controls
+ * below tab, rejected with SQLSTATE 22021) and the lone surrogates that are not
+ * valid UTF-16.
+ *
+ * decodeCodePoint already refuses to PRODUCE these from an entity, but that
+ * only guards one door. A raw NUL byte sitting in the text/plain part of an
+ * inbound mail never passes through htmlToText at all — recordInbound prefers
+ * the text part and skips the HTML path entirely — so it reached the INSERT
+ * untouched and still turned the webhook into a 500 and a Svix retry loop.
+ * Everything that becomes a StoreInboxMessage.body goes through here, whatever
+ * part of the message it came from.
+ */
+export function stripUnstorable(text: string): string {
+  return text.replace(/[\u0000-\u0008\uD800-\uDFFF]/g, "");
+}
+
 const ENTITIES: Record<string, string> = {
   amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
   eacute: "é", aacute: "á", iacute: "í", oacute: "ó", uacute: "ú", ntilde: "ñ",
