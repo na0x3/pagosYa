@@ -36,24 +36,21 @@ function decodeCodePoint(code: number, original: string): string {
  */
 export function htmlToText(html: string): string {
   return html
-    // 1. Decode hex numeric entities (&#x...;) with case-insensitive x and hex digits
-    .replace(/&#[xX]([0-9a-fA-F]+);/g, (whole, hexCode) =>
-      decodeCodePoint(parseInt(hexCode, 16), whole)
-    )
-    // 2. Decode decimal numeric entities (&#...;)
-    .replace(/&#(\d+);/g, (whole, code) =>
-      decodeCodePoint(Number(code), whole)
-    )
-    // 3. Decode named entities
-    .replace(/&([a-zA-Z]+);/g, (whole, name) => ENTITIES[name] ?? whole)
-    // 4. Remove script and style blocks with their contents
+    // 1. Decode all entity types in a single non-rescanning pass
+    // This prevents output from one match becoming input to the next match.
+    .replace(/&(?:#[xX]([0-9a-fA-F]+)|#(\d+)|([a-zA-Z]+));/g, (whole, hex, dec, name) => {
+      if (hex !== undefined) return decodeCodePoint(parseInt(hex, 16), whole);
+      if (dec !== undefined) return decodeCodePoint(Number(dec), whole);
+      return ENTITIES[name] ?? whole;
+    })
+    // 2. Remove script and style blocks with their contents
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
-    // 5. Convert <br> and closing block tags to newlines
+    // 3. Convert <br> and closing block tags to newlines
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
-    // 6. Strip all remaining tags
+    // 4. Strip all remaining tags
     .replace(/<[^>]+>/g, "")
-    // 7. Collapse whitespace and trim
+    // 5. Collapse whitespace and trim
     .split("\n")
     .map((line) => line.trim())
     .filter((line, index, lines) => line !== "" || (index > 0 && lines[index - 1] !== ""))

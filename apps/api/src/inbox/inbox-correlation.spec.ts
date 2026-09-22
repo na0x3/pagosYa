@@ -59,4 +59,18 @@ describe("htmlToText", () => {
     const result = htmlToText("&#999999999;");
     expect(result).toBeDefined();
   });
+  it("prevents hex entity chaining attacks", () => {
+    // Hex entity decoding output cannot chain with adjacent text to form new entities
+    // &#x26; (hex ampersand) followed by #60; must not form &#60; (which decodes to <)
+    const chainResult = htmlToText("&#x26;#60;b onclick=alert(1)");
+    expect(chainResult).not.toContain("<");
+    expect(chainResult).not.toContain(">");
+  });
+  it("prevents named entity chaining attacks", () => {
+    // Named entity decoding output cannot chain with adjacent text to form new entities
+    // &amp; (ampersand) followed by #60; must not form &#60; (which decodes to <)
+    const chainResult = htmlToText("&amp;#60;b onclick=alert(1)");
+    expect(chainResult).not.toContain("<");
+    expect(chainResult).not.toContain(">");
+  });
 });
