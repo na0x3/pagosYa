@@ -795,6 +795,14 @@ model Store {
   visualSignatures             StoreVisualSignature[]
   publicVisibility             Boolean                          @default(false)
   sourcePublicationPaused      Boolean                          @default(false)
+  // Measurement IDs the merchant pastes from each provider's own console. Public by
+  // nature (they ship to every shopper's browser), so they are not secrets — but they
+  // are interpolated into a <script>, so only values matching ANALYTICS_ID_PATTERNS in
+  // store-analytics.ts are ever stored or injected.
+  analyticsGa4Id               String?
+  analyticsGtmId               String?
+  analyticsMetaPixelId         String?
+  analyticsTiktokPixelId       String?
   publishedRuntimeDigest       String?
   publishedRuntime             SourceRuntimeBundle? @relation(fields: [publishedRuntimeDigest], references: [digest], onDelete: Restrict)
   runtimePublications          StoreRuntimePublication[]
@@ -814,6 +822,7 @@ model Store {
   savedCarts StoreSavedCart[]
   emailCampaigns StoreEmailCampaign[]
   emailDeliveries StoreEmailDelivery[]
+  inboxThreads StoreInboxThread[]
   newsletterSubscribers        StoreNewsletterSubscriber[]
   debtCollectionLinks          DebtCollectionLink[]
   consumerAffiliations         ConsumerInstitutionAffiliation[]
@@ -2340,6 +2349,10 @@ model StoreEmailDelivery {
   sourceId String?
   subject String
   body String
+  // Who the recipient reaches by hitting Reply. A staff notification about an
+  // order points at the buyer so the merchant can answer from their own inbox;
+  // everything else falls back to the store's contact address.
+  replyTo String?
   dedupeKey String @unique
   status String @default("PENDING")
   attempts Int @default(0)
@@ -2350,6 +2363,41 @@ model StoreEmailDelivery {
   createdAt DateTime @default(now())
   @@index([status, dueAt])
   @@index([storeId, createdAt])
+}
+
+model StoreInboxThread {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  merchantId String
+  subject String
+  customerEmail String
+  customerName String?
+  leadId String?
+  orderId String?
+  status String @default("OPEN")
+  unreadForMerchant Boolean @default(true)
+  lastMessageAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  messages StoreInboxMessage[]
+  @@unique([storeId, customerEmail, leadId, orderId])
+  @@index([storeId, status, lastMessageAt])
+}
+
+model StoreInboxMessage {
+  id String @id @default(cuid())
+  threadId String
+  thread StoreInboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  direction String
+  fromEmail String
+  toEmail String
+  body String
+  messageId String? @unique
+  inReplyTo String?
+  hadAttachments Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([threadId, createdAt])
+  @@index([inReplyTo])
 }
 
 // Consent-based anonymous sessions; no address, contact details, or payment data.
