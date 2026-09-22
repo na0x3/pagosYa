@@ -332,7 +332,12 @@ export class RetentionService {
         const configured = ['RECOVERY','REVIEW_REQUEST'].includes(row.kind) ? mail.templates[row.kind] : undefined;
         const subject = configured ? renderEmailText(configured.subject, {store:row.store.name}) : row.subject;
         const body = configured ? renderEmailText(configured.body, {store:row.store.name}) + '\n\n' + row.body : row.body;
-        await this.email.send({ from: workspaceSender(settings), to: row.email, subject, body: body + unsubscribe, replyTo: row.store.contactEmail || undefined, failLoudly: true, idempotencyKey: `retention/${row.id}` });
+        // A row that named its own Message-ID is sent with it, wrapped in the
+        // angle brackets RFC 5322 requires (the column stores the bare value).
+        // Inbox replies rely on this: the shopper's answer comes back with
+        // In-Reply-To pointing at it, which is how it lands in its own thread.
+        const headers = row.messageIdHeader ? { 'Message-ID': `<${row.messageIdHeader}>` } : undefined;
+        await this.email.send({ from: workspaceSender(settings), to: row.email, subject, body: body + unsubscribe, replyTo: row.replyTo || row.store.contactEmail || undefined, headers, failLoudly: true, idempotencyKey: `retention/${row.id}` });
         await this.prisma.$transaction(async tx => {
           await tx.storeEmailDelivery.update({ where: { id: row.id }, data: { status: 'SENT', sentAt: new Date(), lastError: null } });
           if (row.kind === 'RECOVERY') await tx.storeSavedCart.update({ where: { id: row.sourceId! }, data: { sentAt: new Date() } });

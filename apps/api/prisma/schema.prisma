@@ -2353,6 +2353,12 @@ model StoreEmailDelivery {
   // order points at the buyer so the merchant can answer from their own inbox;
   // everything else falls back to the store's contact address.
   replyTo String?
+  // The RFC 5322 Message-ID value this delivery must be sent with, WITHOUT the
+  // angle brackets (the sender adds them). Inbox replies set it so the
+  // shopper's answer carries In-Reply-To/References pointing back at the
+  // StoreInboxMessage row with the same id, which is the spec's primary thread
+  // correlation. Null for every other kind, which needs no correlation.
+  messageIdHeader String?
   dedupeKey String @unique
   status String @default("PENDING")
   attempts Int @default(0)
@@ -2365,12 +2371,27 @@ model StoreEmailDelivery {
   @@index([storeId, createdAt])
 }
 
-// Uniqueness (one thread per lead, one per order) and the one-origin rule
-// (exactly one of leadId/orderId is set) live in migration 20260922040000 as
-// partial unique indexes and a CHECK constraint: Prisma cannot express
-// either a partial index or a CHECK constraint in this schema syntax, and a
-// plain @@unique across all four columns would not dedupe anyway since
-// Postgres treats NULL as distinct from NULL.
+// !! DRIFT WARNING — READ BEFORE ACCEPTING ANY GENERATED MIGRATION FOR THIS MODEL !!
+//
+// Three constraints that this model DOES NOT DECLARE are live in the database,
+// created by hand in migration 20260922040000_store_inbox_origin:
+//
+//   1. CHECK "StoreInboxThread_one_origin" — exactly one of leadId/orderId set
+//   2. UNIQUE INDEX "StoreInboxThread_lead_key"  (storeId, customerEmail, leadId)  WHERE orderId IS NULL
+//   3. UNIQUE INDEX "StoreInboxThread_order_key" (storeId, customerEmail, orderId) WHERE leadId  IS NULL
+//
+// Prisma's schema language cannot express a CHECK constraint or a partial
+// index, so `prisma migrate dev` DOES NOT KNOW THEY ARE INTENTIONAL. It will
+// diff them as drift and offer a migration that DROPs all three. Accepting
+// that migration silently restores two bugs this feature already paid for:
+// duplicate threads per lead/order (a plain @@unique over all four columns
+// cannot dedupe them, because Postgres treats NULL as distinct from NULL) and
+// origin-less thread rows that belong to neither a lead nor an order.
+//
+// If a generated migration contains DROP CONSTRAINT "StoreInboxThread_one_origin"
+// or DROP INDEX "StoreInboxThread_lead_key"/"StoreInboxThread_order_key",
+// delete those statements before applying it. The integration test
+// inbox-persistence.integration.spec.ts fails if they ever go missing.
 model StoreInboxThread {
   id String @id @default(cuid())
   storeId String
