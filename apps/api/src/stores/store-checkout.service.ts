@@ -18,6 +18,7 @@ import { pickedProductQuantities, resolveSelectedExtras, selectedExtrasLabel } f
 import type { CartItemDto } from '../payment-links/dto/cart-checkout.dto';
 import { readStoreLocations, readLocationStocks, nextStoreLocationOpenAt } from "./store-locations";
 import { readProductExtras, readProductVariants, type ProductExtra, discountedProductAmount, selectedExtrasAmount } from "./product-pricing";
+import { InboxService } from "../inbox/inbox.service";
 
 const MAX_DESCRIPTION_LENGTH = 480;
 const DEVELOPMENT_ORDER_TRACKING_SECRET = "development-only-order-tracking-secret-change-me";
@@ -33,6 +34,7 @@ export class StoreCheckoutService {
     @Optional() @Inject(EMAIL_PROVIDER) private readonly emailProvider?: EmailProvider,
     @Optional() private readonly promoCodes?: PromoCodesService,
     @Optional() private readonly config?: ConfigService,
+    @Optional() private readonly inbox?: InboxService,
   ) {}
 
   /** Box picks consume their linked product's stock: load the linked products that are not
@@ -465,5 +467,6 @@ export class StoreCheckoutService {
       replyTo: customerEmail,
       failLoudly: true,
     }).catch(() => this.logger.warn("Lead saved; email notification failed"));
+    await this.inbox?.threadForLead({ ...lead, storeId: store.id, merchantId: store.merchantId, customerEmail, customerName, message: dto.message ?? null }).catch(() => undefined);
     return { submitted: true, leadId: lead.id };
   }}
