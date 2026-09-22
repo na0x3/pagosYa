@@ -85,18 +85,35 @@ function statements(sql: string): string[] {
 
 const ADMIN_URL = adminUrl();
 const AVAILABLE = Boolean(ADMIN_URL) && reachable(ADMIN_URL!);
-const describeDb = AVAILABLE ? describe : describe.skip;
+const IN_CI = Boolean(process.env.CI);
+const UNAVAILABLE_MESSAGE =
+  "No reachable Postgres for the inbox integration test. Set INBOX_IT_ADMIN_URL " +
+  "(or DATABASE_URL) to a server where this test may CREATE and DROP a throwaway database.";
 
-if (!AVAILABLE) {
+/**
+ * On a developer laptop with no database this skips, so a missing Postgres does
+ * not turn every local run red. In CI it must NOT skip: a skipped suite exits 0,
+ * and a build box without a database would then report success for the one test
+ * that exists specifically because the mocked ones cannot catch these failures.
+ * So CI gets a failing test instead of a quiet green.
+ */
+const describeDb = AVAILABLE || IN_CI ? describe : describe.skip;
+
+if (!AVAILABLE && !IN_CI) {
   // Visible in the runner's output; not a silent omission.
   // eslint-disable-next-line no-console
-  console.warn(
-    "[inbox integration] SKIPPED — no reachable Postgres. Set INBOX_IT_ADMIN_URL " +
-    "(or DATABASE_URL) to a server where this test may CREATE and DROP a throwaway database.",
-  );
+  console.warn(`[inbox integration] SKIPPED — ${UNAVAILABLE_MESSAGE}`);
 }
 
 describeDb("inbox persistence (real Postgres, real migrations)", () => {
+  if (!AVAILABLE) {
+    // Only reachable when CI is set, because otherwise the suite is skipped.
+    it("requires a database in CI", () => {
+      throw new Error(`${UNAVAILABLE_MESSAGE} Refusing to report success in CI (CI=${process.env.CI}).`);
+    });
+    return;
+  }
+
   const testUrl = (() => {
     if (!ADMIN_URL) return "";
     const url = new URL(ADMIN_URL);
