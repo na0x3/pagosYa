@@ -2,9 +2,19 @@ import { InboxService } from "./inbox.service";
 
 function fakeDb() {
   return {
-    storeInboxThread: { findFirst: jest.fn(), findUnique: jest.fn(), upsert: jest.fn(), update: jest.fn() },
+    storeInboxThread: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     storeInboxMessage: { create: jest.fn(), findFirst: jest.fn(), findMany: jest.fn() },
   };
+}
+
+/** The compound-unique-key shape that throws PrismaClientValidationError in production
+ * (Prisma's runtime validator rejects null in a compound unique key even though the
+ * columns are nullable). No call to Prisma may use this shape ever again. */
+function assertNeverUsesCompoundKey(db: ReturnType<typeof fakeDb>) {
+  const allCalls = [...db.storeInboxThread.findFirst.mock.calls, ...db.storeInboxThread.create.mock.calls];
+  for (const call of allCalls) {
+    expect(JSON.stringify(call)).not.toContain("storeId_customerEmail_leadId_orderId");
+  }
 }
 
 describe("InboxService.resolveInboundThread", () => {
@@ -85,9 +95,10 @@ describe("InboxService.recordInbound", () => {
 });
 
 describe("InboxService.threadForLead", () => {
-  it("opens one thread per lead and reuses it on a repeat call", async () => {
+  it("creates a thread when the lead has none yet", async () => {
     const db = fakeDb();
-    db.storeInboxThread.upsert.mockResolvedValue({ id: "thread-1" });
+    db.storeInboxThread.findFirst.mockResolvedValue(null);
+    db.storeInboxThread.create.mockResolvedValue({ id: "thread-1" });
 
     const thread = await new InboxService(db as any).threadForLead({
       id: "lead-1", storeId: "store-1", merchantId: "m-1",
@@ -95,28 +106,97 @@ describe("InboxService.threadForLead", () => {
     } as any);
 
     expect(thread).toEqual({ id: "thread-1" });
-    const call = db.storeInboxThread.upsert.mock.calls[0][0];
-    expect(call.where).toEqual({ storeId_customerEmail_leadId_orderId: {
-      storeId: "store-1", customerEmail: "ana@gmail.test", leadId: "lead-1", orderId: null,
-    } });
-    expect(call.create.subject).toBe("Consulta desde la tienda");
-    expect(call.update).toEqual({});
+    expect(db.storeInboxThread.findFirst).toHaveBeenCalledWith({
+      where: { storeId: "store-1", customerEmail: "ana@gmail.test", leadId: "lead-1" },
+    });
+    const created = db.storeInboxThread.create.mock.calls[0][0].data;
+    expect(created.subject).toBe("Consulta desde la tienda");
+    expect(created.leadId).toBe("lead-1");
+    expect(created.orderId).toBeUndefined();
+    assertNeverUsesCompoundKey(db);
+  });
+
+  it("reuses the existing thread and never calls create", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst.mockResolvedValue({ id: "thread-1" });
+
+    const thread = await new InboxService(db as any).threadForLead({
+      id: "lead-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana", message: null,
+    } as any);
+
+    expect(thread).toEqual({ id: "thread-1" });
+    expect(db.storeInboxThread.create).not.toHaveBeenCalled();
+    assertNeverUsesCompoundKey(db);
+  });
+
+  it("re-reads and returns the winning thread when create loses a race (P2002)", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "thread-1" });
+    db.storeInboxThread.create.mockRejectedValue({ code: "P2002" });
+
+    const thread = await new InboxService(db as any).threadForLead({
+      id: "lead-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana", message: null,
+    } as any);
+
+    expect(thread).toEqual({ id: "thread-1" });
+    expect(db.storeInboxThread.findFirst).toHaveBeenCalledTimes(2);
+    assertNeverUsesCompoundKey(db);
   });
 });
 
 describe("InboxService.threadForOrder", () => {
-  it("opens one thread per order, titled with the order id", async () => {
+  it("creates a thread titled with the order id when the order has none yet", async () => {
     const db = fakeDb();
-    db.storeInboxThread.upsert.mockResolvedValue({ id: "thread-2" });
+    db.storeInboxThread.findFirst.mockResolvedValue(null);
+    db.storeInboxThread.create.mockResolvedValue({ id: "thread-2" });
 
     await new InboxService(db as any).threadForOrder({
       id: "order-1", storeId: "store-1", merchantId: "m-1",
       customerEmail: "ana@gmail.test", customerName: "Ana",
     } as any);
 
-    const call = db.storeInboxThread.upsert.mock.calls[0][0];
-    expect(call.create.orderId).toBe("order-1");
-    expect(call.create.subject).toBe("Pedido order-1");
-    expect(call.create.unreadForMerchant).toBe(false);
+    expect(db.storeInboxThread.findFirst).toHaveBeenCalledWith({
+      where: { storeId: "store-1", customerEmail: "ana@gmail.test", orderId: "order-1" },
+    });
+    const created = db.storeInboxThread.create.mock.calls[0][0].data;
+    expect(created.orderId).toBe("order-1");
+    expect(created.subject).toBe("Pedido order-1");
+    expect(created.unreadForMerchant).toBe(false);
+    assertNeverUsesCompoundKey(db);
+  });
+
+  it("reuses the existing thread and never calls create", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst.mockResolvedValue({ id: "thread-2" });
+
+    const thread = await new InboxService(db as any).threadForOrder({
+      id: "order-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana",
+    } as any);
+
+    expect(thread).toEqual({ id: "thread-2" });
+    expect(db.storeInboxThread.create).not.toHaveBeenCalled();
+    assertNeverUsesCompoundKey(db);
+  });
+
+  it("re-reads and returns the winning thread when create loses a race (P2002)", async () => {
+    const db = fakeDb();
+    db.storeInboxThread.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "thread-2" });
+    db.storeInboxThread.create.mockRejectedValue({ code: "P2002" });
+
+    const thread = await new InboxService(db as any).threadForOrder({
+      id: "order-1", storeId: "store-1", merchantId: "m-1",
+      customerEmail: "ana@gmail.test", customerName: "Ana",
+    } as any);
+
+    expect(thread).toEqual({ id: "thread-2" });
+    expect(db.storeInboxThread.findFirst).toHaveBeenCalledTimes(2);
+    assertNeverUsesCompoundKey(db);
   });
 });

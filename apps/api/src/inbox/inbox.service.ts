@@ -53,21 +53,44 @@ export class InboxService {
   }
 
   /**
+   * The database has no single-column key to upsert on for either origin: the
+   * real uniqueness lives in two partial indexes (see migration 20260922040000),
+   * one scoped to leadId where orderId is null and one scoped to orderId where
+   * leadId is null, because Prisma's compound-unique-key input rejects null
+   * outright at runtime ("PrismaClientValidationError") even though the column
+   * is nullable. So thread lookup is a plain findFirst on the natural key, and
+   * creation is a create guarded against the race where two requests for the
+   * same lead/order both miss the findFirst: the loser's create hits the
+   * partial unique index and fails with P2002, at which point it re-reads
+   * instead of throwing, so both callers end up with the one thread that won.
+   */
+  private async findOrCreateThread(where: Prisma.StoreInboxThreadWhereInput, data: Prisma.StoreInboxThreadUncheckedCreateInput) {
+    const existing = await this.prisma.storeInboxThread.findFirst({ where });
+    if (existing) return existing;
+    try {
+      return await this.prisma.storeInboxThread.create({ data });
+    } catch (error) {
+      if ((error as { code?: string } | null)?.code === "P2002") {
+        const afterRace = await this.prisma.storeInboxThread.findFirst({ where });
+        if (afterRace) return afterRace;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * The form inquiry is the first message of its own thread: the shopper already
    * wrote something, so the thread starts unread and with their text in it.
    */
   async threadForLead(lead: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; message: string | null }) {
     const customerEmail = lead.customerEmail.trim().toLowerCase();
-    const thread = await this.prisma.storeInboxThread.upsert({
-      // leadId/orderId are nullable columns; Prisma's generated compound-key type does not
-      // model that, so the null half of the key needs a cast even though it is a valid value.
-      where: { storeId_customerEmail_leadId_orderId: { storeId: lead.storeId, customerEmail, leadId: lead.id, orderId: null } } as unknown as Prisma.StoreInboxThreadWhereUniqueInput,
-      create: {
+    const thread = await this.findOrCreateThread(
+      { storeId: lead.storeId, customerEmail, leadId: lead.id },
+      {
         storeId: lead.storeId, merchantId: lead.merchantId, subject: "Consulta desde la tienda",
         customerEmail, customerName: lead.customerName, leadId: lead.id, unreadForMerchant: true,
       },
-      update: {},
-    });
+    );
     if (lead.message?.trim()) {
       await this.prisma.storeInboxMessage.create({
         data: {
@@ -86,13 +109,12 @@ export class InboxService {
    */
   async threadForOrder(order: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null }) {
     const customerEmail = order.customerEmail.trim().toLowerCase();
-    return this.prisma.storeInboxThread.upsert({
-      where: { storeId_customerEmail_leadId_orderId: { storeId: order.storeId, customerEmail, leadId: null, orderId: order.id } } as unknown as Prisma.StoreInboxThreadWhereUniqueInput,
-      create: {
+    return this.findOrCreateThread(
+      { storeId: order.storeId, customerEmail, orderId: order.id },
+      {
         storeId: order.storeId, merchantId: order.merchantId, subject: `Pedido ${order.id}`,
         customerEmail, customerName: order.customerName, orderId: order.id, unreadForMerchant: false,
       },
-      update: {},
-    });
+    );
   }
 }

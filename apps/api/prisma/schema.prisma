@@ -2365,6 +2365,12 @@ model StoreEmailDelivery {
   @@index([storeId, createdAt])
 }
 
+// Uniqueness (one thread per lead, one per order) and the one-origin rule
+// (exactly one of leadId/orderId is set) live in migration 20260922040000 as
+// partial unique indexes and a CHECK constraint: Prisma cannot express
+// either a partial index or a CHECK constraint in this schema syntax, and a
+// plain @@unique across all four columns would not dedupe anyway since
+// Postgres treats NULL as distinct from NULL.
 model StoreInboxThread {
   id String @id @default(cuid())
   storeId String
@@ -2380,7 +2386,6 @@ model StoreInboxThread {
   lastMessageAt DateTime @default(now())
   createdAt DateTime @default(now())
   messages StoreInboxMessage[]
-  @@unique([storeId, customerEmail, leadId, orderId])
   @@index([storeId, status, lastMessageAt])
 }
 
