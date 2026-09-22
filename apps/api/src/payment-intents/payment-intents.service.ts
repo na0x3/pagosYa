@@ -562,6 +562,9 @@ export class PaymentIntentsService {
       });
 
       let receiptQueued = false;
+      // Collected here, acted on after the transaction commits — see the call
+      // site below for why it must not happen inside this callback.
+      let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null } | null = null;
       if (result.status === "succeeded") {
         const lines = this.ledger.buildCaptureJournal({
           merchantId,
@@ -596,7 +599,7 @@ export class PaymentIntentsService {
           const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
           const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
           receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`},{email:updated.customerEmail,name:updated.customerName});
-          if (updated.customerEmail) await this.inbox?.threadForOrder({ id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName }).catch(() => undefined);
+          if (updated.customerEmail) inboxOrder = { id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName };
         }
         if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
           await tx.storeOrder.update({
@@ -642,7 +645,7 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
@@ -652,6 +655,27 @@ export class PaymentIntentsService {
       if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
+
+    // DELIBERATELY OUTSIDE THE TRANSACTION. DO NOT MOVE THIS BACK IN.
+    //
+    // threadForOrder writes through InboxService's own PrismaService, not
+    // through `tx`. Calling it from inside the $transaction callback therefore
+    // checks a SECOND connection out of the pool while the transaction still
+    // holds the first. On a busy pool that second checkout waits, the wait
+    // counts against Prisma's 5-second interactive-transaction timeout, and
+    // the transaction is rolled back — rolling back a payment the rail has
+    // already captured. Opening a conversation is not worth that risk.
+    //
+    // Passing `tx` instead is not the fix either: findOrCreateThread survives
+    // the create race by catching P2002 and re-reading, and inside an aborted
+    // transaction that re-read cannot run. It would trade a cosmetic problem
+    // for a broken dedupe.
+    //
+    // Out here the thread is only opened for a payment that really committed,
+    // so there are no orphan threads for reverted payments, and the pool is
+    // touched with nothing held. Best-effort by design: a failure here must
+    // never turn a captured payment into a failed confirm() response.
+    if (outcome.inboxOrder) await this.inbox?.threadForOrder(outcome.inboxOrder).catch(() => undefined);
 
     return { paymentIntent: outcome.paymentIntent, railResult: outcome.railResult };
   }
