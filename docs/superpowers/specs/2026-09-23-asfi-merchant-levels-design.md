@@ -25,7 +25,7 @@ Let informal merchants (no NIT) go live with verified identity and a low monthly
 - At the limit: **warn at 80%, refuse new live payments at 100%**. Money already collected is never touched.
 - Limit window: **calendar month in America/La_Paz**, counting live payments; **refunds do not free room**. Each level also has a **per-payment maximum**.
 - Level 1 is **reviewed by ops by hand** (CI photos + selfie), like today's KYC.
-- Existing merchants with an approved KYC become **level 2**; everyone else level 0.
+- Existing merchants with an approved KYC, or already ACTIVE, become **level 2**; everyone else level 0.
 - Enforcement uses a **per-merchant monthly counter with an atomic conditional reservation** at confirm (approach A; rejected: summing payments per confirm — racy; checking after the bank answers — too late).
 - TEST mode is never limited.
 
@@ -83,16 +83,27 @@ model MerchantKycSubmission {
   taxId              String? // was required; optional for level 1
   legalRepName       String?
   legalRepDocumentId String? // holds the CI number for level 1
-  ciFrontKey         String? // private storage keys, never public upload URLs
-  ciBackKey          String?
-  selfieKey          String?
+  ciFrontDocId       String? // MerchantKycDocument ids; files live in private storage, never public upload URLs
+  ciBackDocId        String?
+  selfieDocId        String?
+}
+
+// Binds each private upload to the merchant who made it, so a submission can't reference someone else's photo.
+model MerchantKycDocument {
+  id         String          @id @default(cuid())
+  merchantId String
+  slot       KycDocumentSlot // CI_FRONT | CI_BACK | SELFIE
+  storageKey String          @unique
+  mimeType   String
+  byteSize   Int
+  createdAt  DateTime        @default(now())
 }
 ```
 
 Migration:
 - Adds the columns (all nullable or defaulted) and tables.
 - Inserts the four `MerchantLevelPolicy` rows and the `LimitSettings` row with the placeholders.
-- Sets `level = 2` for merchants with an APPROVED KYC submission; existing submissions keep `targetLevel = 2`. These merchants keep level 2 without CI photos (their approved NIT submission stands); new level 2 submissions require the photos.
+- Sets `level = 2` for merchants with an APPROVED KYC submission or `status = ACTIVE` (so nobody already live is locked out); existing submissions keep `targetLevel = 2`. These merchants keep level 2 without CI photos (their approved NIT submission stands); new level 2 submissions require the photos.
 - `taxId`, `legalRepName`, `legalRepDocumentId` become nullable in the database; the DTO still requires them when `targetLevel >= 2`.
 
 ## Effective limits
@@ -139,7 +150,8 @@ Migration:
 ## Private identity documents
 
 - New `IdentityDocumentsService`, separate from `UploadsService`: the same MIME and size checks (images only), but it writes to a private `kyc/` prefix in S3, or a private folder outside the public upload directory locally, under random keys.
-- The merchant uploads through `POST /dashboard/kyc/documents`, which returns a key to use in the KYC submission. A key is accepted only if it belongs to that merchant.
+- Storage reuses the existing `PrivateFilesService` (separate private bucket, `PRIVATE_DOWNLOAD_BUCKET`; refuses the public bucket).
+- The merchant uploads through `POST /v1/merchants/kyc/documents`, which returns a document id to use in the KYC submission. An id is accepted only if it belongs to that merchant and matches its slot.
 - Viewing: `GET /internal/kyc/:submissionId/documents/:slot` — ops only, streams the file, records `kyc.document_viewed` in the audit log.
 - Files are never reachable via `/v1/uploads` and are kept after a rejection as evidence.
 
