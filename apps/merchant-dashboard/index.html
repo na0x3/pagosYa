@@ -1041,6 +1041,9 @@
   .store-recommendation-empty { margin: 0; color: var(--pg-text-faint); font-size: .72rem; line-height: 1.5; }
   .compliance-mode-notice { margin: 0; padding: 14px 16px; border-radius: 10px; background: var(--pg-accent-soft); color: var(--pg-text-muted); font-size: .78rem; line-height: 1.55; }
   .compliance-mode-notice strong { display: block; margin-bottom: 4px; color: var(--pg-text); }
+  .terms-prompt { margin: 0 0 14px; padding: 14px 16px; border: 1px solid var(--pg-border, rgba(15, 23, 42, .12)); border-radius: 10px; background: var(--pg-accent-soft); }
+  .terms-prompt p { margin: 0 0 8px; line-height: 1.5; }
+  .terms-prompt a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   .inline[hidden] { display: none !important; }
   .visual-ai-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .visual-ai-preview { position: relative; width: 84px; min-height: 94px; overflow: hidden; border: 2px solid var(--bento-keyline); border-radius: 2px; background: var(--pg-bg); }
@@ -5158,6 +5161,11 @@
       <div class="panel">
         <div class="section-head"><h2>Verificación (KYC)</h2></div>
         <p class="compliance-mode-notice" id="kycModeNotice" hidden><strong>No se requiere para esta tienda</strong>Esta tienda no cobra con pagosYa. Activa “Cobrar con pagosYa” en Apariencia cuando quieras habilitar pagos; entonces te pediremos KYC y NIT.</p>
+        <div class="terms-prompt" id="termsPrompt" hidden>
+          <p><strong id="termsPromptTitle"></strong> <span id="termsPromptWhen"></span></p>
+          <p class="muted">Para enviar tu verificación y recibir tus pagos, acepta los Términos y Condiciones de pagosYa. <a id="termsPromptLink" target="_blank" rel="noopener">Leer el texto completo</a></p>
+          <button class="primary" type="button" id="termsAcceptButton">Aceptar</button>
+        </div>
         <form class="inline" id="kycForm">
           <div><label>Razón social</label><input name="legalName" required></div>
           <div><label>NIT</label><input name="taxId" required></div>
@@ -19540,6 +19548,7 @@
         api("/merchants/payouts"),
         api("/merchants/finances"),
         api("/merchants/international_payments").catch(() => null),
+        api("/dashboard/terms").catch(() => null),
       ]);
       const stores = await api("/stores");
       if (refreshVersion !== dashboardRefreshVersion) {
@@ -19553,7 +19562,7 @@
 
       const selectedStoreId = currentStoreId;
       const storeQuery = selectedStoreId ? `?storeId=${encodeURIComponent(selectedStoreId)}` : "";
-      const [[balance, kyc, invoicing, payouts, totalFinances, international], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
+      const [[balance, kyc, invoicing, payouts, totalFinances, international, terms], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
         overviewPromise,
         api(`/merchants/orders${storeQuery}`),
         selectedStoreId ? api(`/merchants/finances${storeQuery}`) : api("/merchants/finances"),
@@ -19583,6 +19592,7 @@
       document.getElementById("kycForm").hidden = !paymentStore;
       document.getElementById("liveKeysSection").style.display = paymentStore ? "block" : "none";
       currentKyc = kyc;
+      renderTermsPrompt(terms);
 
       const invBadge = document.getElementById("invoicingBadge");
       const invStatus = invoicing.status || (invoicing.cuis ? "CONFIGURED" : "NOT_CONFIGURED");
@@ -19769,6 +19779,41 @@
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
       setButtonBusy(button, false, button.textContent);
+    }
+  });
+
+  // pagosYa's own terms (ASFI): the version in force must be accepted before KYC
+  // and payouts; an announced next version is shown early but blocks nothing.
+  function renderTermsPrompt(terms) {
+    const prompt = document.getElementById("termsPrompt");
+    const target = terms?.needsAcceptance
+      ? terms.current
+      : terms?.upcoming && terms.acceptedVersion !== terms.upcoming.version ? terms.upcoming : null;
+    prompt.hidden = !target;
+    document.querySelector("#kycForm button[type=submit]").disabled = Boolean(terms?.needsAcceptance);
+    if (!target) return;
+    const effectiveAt = new Date(target.effectiveAt);
+    document.getElementById("termsPromptTitle").textContent = target.title;
+    document.getElementById("termsPromptWhen").textContent = effectiveAt > new Date()
+      ? `(vigente desde el ${effectiveAt.toLocaleDateString("es-BO")})`
+      : "";
+    document.getElementById("termsPromptLink").href = `https://pagosya.bo/terminos/comercios?version=${encodeURIComponent(target.version)}`;
+    document.getElementById("termsAcceptButton").dataset.version = target.version;
+  }
+
+  document.getElementById("termsAcceptButton").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    errorEl.textContent = "";
+    infoEl.textContent = "";
+    button.disabled = true;
+    try {
+      const status = await api("/dashboard/terms/accept", { method: "POST", body: JSON.stringify({ version: button.dataset.version }) });
+      renderTermsPrompt(status);
+      infoEl.textContent = "Registramos tu aceptación de los Términos y Condiciones.";
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    } finally {
+      button.disabled = false;
     }
   });
 
