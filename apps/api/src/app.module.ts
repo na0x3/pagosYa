@@ -19,6 +19,7 @@ import { IdempotencyModule } from "./idempotency/idempotency.module";
 import { InvoicingModule } from "./invoicing/invoicing.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { OpsModule } from "./ops/ops.module";
+import { LimitsModule } from "./limits/limits.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HealthModule } from "./health/health.module";
 import { PaymentLinksModule } from "./payment-links/payment-links.module";
@@ -71,6 +72,7 @@ import { ShippingModule } from "./shipping/shipping.module";
     InvoicingModule,
     PayoutsModule,
     OpsModule,
+    LimitsModule,
     DashboardModule,
     HealthModule,
     StoresModule,
