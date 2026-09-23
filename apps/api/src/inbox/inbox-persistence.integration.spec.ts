@@ -1,7 +1,5 @@
-import { execSync } from "node:child_process";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { integrationDatabase } from "../common/testing/integration-database";
 import { InboxService } from "./inbox.service";
 
 /**
@@ -34,93 +32,13 @@ import { InboxService } from "./inbox.service";
  * silently passes: a skip is visible in the runner's output.
  */
 
-const MIGRATIONS_DIR = join(__dirname, "..", "..", "prisma", "migrations");
-const DB_NAME = `pagosya_inbox_it_${process.pid}_${Date.now().toString(36)}`;
+const harness = integrationDatabase("inbox");
 
-function adminUrl(): string | null {
-  if (process.env.INBOX_IT_ADMIN_URL) return process.env.INBOX_IT_ADMIN_URL;
-  let raw = process.env.DATABASE_URL;
-  if (!raw) {
-    // The app reads .env through ConfigModule, which jest does not load.
-    const envFile = join(__dirname, "..", "..", ".env");
-    if (!existsSync(envFile)) return null;
-    raw = readFileSync(envFile, "utf8").split("\n")
-      .find((line) => line.startsWith("DATABASE_URL="))
-      ?.slice("DATABASE_URL=".length).trim().replace(/^["']|["']$/g, "");
-  }
-  if (!raw) return null;
-  try {
-    const url = new URL(raw);
-    // Same server, maintenance database — never the application's own.
-    url.pathname = "/postgres";
-    url.search = "";
-    return url.href;
-  } catch {
-    return null;
-  }
-}
-
-function reachable(url: string): boolean {
-  try {
-    const { host, port } = new URL(url);
-    execSync(
-      `node -e "const n=require('net'),s=n.connect(${port || 5432},'${host.split(":")[0]}');s.setTimeout(2000);s.on('connect',()=>{s.destroy();process.exit(0)});s.on('timeout',()=>process.exit(1));s.on('error',()=>process.exit(1))"`,
-      { stdio: "ignore" },
-    );
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Applies the real migration files in order. Splitting on ";" is safe for this
- * repo specifically: no migration uses dollar-quoting, a DO block, or a
- * semicolon inside a string literal. If one ever does, this is the line to fix.
- */
-function statements(sql: string): string[] {
-  return sql.split("\n").filter((line) => !line.trim().startsWith("--")).join("\n")
-    .split(";").map((s) => s.trim()).filter(Boolean);
-}
-
-const ADMIN_URL = adminUrl();
-const AVAILABLE = Boolean(ADMIN_URL) && reachable(ADMIN_URL!);
-const IN_CI = Boolean(process.env.CI);
-const UNAVAILABLE_MESSAGE =
-  "No reachable Postgres for the inbox integration test. Set INBOX_IT_ADMIN_URL " +
-  "(or DATABASE_URL) to a server where this test may CREATE and DROP a throwaway database.";
-
-/**
- * On a developer laptop with no database this skips, so a missing Postgres does
- * not turn every local run red. In CI it must NOT skip: a skipped suite exits 0,
- * and a build box without a database would then report success for the one test
- * that exists specifically because the mocked ones cannot catch these failures.
- * So CI gets a failing test instead of a quiet green.
- */
-const describeDb = AVAILABLE || IN_CI ? describe : describe.skip;
-
-if (!AVAILABLE && !IN_CI) {
-  // Visible in the runner's output; not a silent omission.
-  // eslint-disable-next-line no-console
-  console.warn(`[inbox integration] SKIPPED — ${UNAVAILABLE_MESSAGE}`);
-}
-
-describeDb("inbox persistence (real Postgres, real migrations)", () => {
-  if (!AVAILABLE) {
-    // Only reachable when CI is set, because otherwise the suite is skipped.
-    it("requires a database in CI", () => {
-      throw new Error(`${UNAVAILABLE_MESSAGE} Refusing to report success in CI (CI=${process.env.CI}).`);
-    });
+harness.describeDb("inbox persistence (real Postgres, real migrations)", () => {
+  if (!harness.available) {
+    harness.failIfUnavailable();
     return;
   }
-
-  const testUrl = (() => {
-    if (!ADMIN_URL) return "";
-    const url = new URL(ADMIN_URL);
-    url.pathname = `/${DB_NAME}`;
-    url.search = "?schema=public";
-    return url.href;
-  })();
 
   let db: PrismaClient;
   let inbox: InboxService;
@@ -132,41 +50,23 @@ describeDb("inbox persistence (real Postgres, real migrations)", () => {
   jest.setTimeout(120_000);
 
   beforeAll(async () => {
-    const admin = new PrismaClient({ datasources: { db: { url: ADMIN_URL! } } });
-    await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${DB_NAME}"`);
-    await admin.$executeRawUnsafe(`CREATE DATABASE "${DB_NAME}"`);
-    await admin.$disconnect();
-
-    db = new PrismaClient({ datasources: { db: { url: testUrl } } });
-    const names = readdirSync(MIGRATIONS_DIR)
-      .filter((name) => existsSync(join(MIGRATIONS_DIR, name, "migration.sql")))
-      .sort();
-    for (const name of names) {
-      for (const statement of statements(readFileSync(join(MIGRATIONS_DIR, name, "migration.sql"), "utf8"))) {
-        await db.$executeRawUnsafe(statement);
-      }
-    }
-
+    db = await harness.create();
     inbox = new InboxService(db as never);
 
-    const merchant = await db.merchant.create({ data: { name: "Comercio", email: `m-${DB_NAME}@test.test` } });
+    const merchant = await db.merchant.create({ data: { name: "Comercio", email: `m-${harness.databaseName}@test.test` } });
     merchantId = merchant.id;
-    const store = await db.store.create({ data: { merchantId, name: "Tienda", slug: `tienda-${DB_NAME}` } });
+    const store = await db.store.create({ data: { merchantId, name: "Tienda", slug: `tienda-${harness.databaseName}` } });
     storeId = store.id;
     // storeId is the only foreign key on StoreInboxThread; leadId and orderId
     // are plain nullable columns (see migration 20260922030000), so plain ids
     // exercise the constraints under test without dragging in the whole
     // lead/order/payment-intent fixture chain.
-    leadId = `lead-${DB_NAME}`;
-    orderId = `order-${DB_NAME}`;
+    leadId = `lead-${harness.databaseName}`;
+    orderId = `order-${harness.databaseName}`;
   });
 
   afterAll(async () => {
-    if (db) await db.$disconnect();
-    if (!ADMIN_URL) return;
-    const admin = new PrismaClient({ datasources: { db: { url: ADMIN_URL } } });
-    await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${DB_NAME}"`);
-    await admin.$disconnect();
+    await harness.drop();
   });
 
   /**
