@@ -704,6 +704,28 @@ test("the inbox disables replying until the store has a verified email domain", 
   await expect(page.locator("#inboxDomainNotice")).toBeVisible();
   await expect(page.locator("#inboxReplyBody")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Enviar respuesta" })).toBeDisabled();
+
+  // The notice must land on the screen that actually verifies the sender
+  // domain, not on the generic site editor.
+  await expect(page.locator("#inboxDomainLink")).toHaveText("Conectar mi dominio de correo →");
+  await page.locator("#inboxDomainLink").click();
+  await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "marketing");
+  await expect(page.locator("#marketingTabs")).toHaveAttribute("data-tab", "domain");
+  await expect(page.locator('[data-marketing-tab="domain"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#storeMarketingFrame")).toHaveAttribute("src", /library=marketing&tab=domain/);
+});
+
+test("the inbox notice points at DNS verification once a domain is connected", async ({ page }) => {
+  await openDashboard(page, [store("store_1", "Primera")], ({ path }) => {
+    if (path === "/stores/store_1/email-workspace") return { domain: { name: "tutienda.com", status: "pending" } };
+    if (path === "/stores/store_1/inbox") return [];
+    return undefined;
+  });
+
+  await navigateDashboard(page, "inbox");
+  await expect(page.locator("#inboxDomainNotice")).toBeVisible();
+  await expect(page.locator("#inboxDomainStep")).toContainText("tutienda.com");
+  await expect(page.locator("#inboxDomainLink")).toHaveText("Verificar los registros de tutienda.com →");
 });
 
 test("buyer support controls remain usable on a phone viewport", async ({ page }) => {
@@ -1089,7 +1111,11 @@ test("active and archived payment links paginate independently in colored groups
 
 test("a local catalog render problem does not relabel a committed import as failed", async ({ page }) => {
   await prepareInventoryImport(page, successfulInventoryResponse);
-  await page.locator("#categoryRows").evaluate((element) => element.remove());
+  // Remove the element renderPaymentLinkRows writes into, so refreshing the
+  // catalog throws after the API has already confirmed the import. #categoryRows
+  // used to serve this purpose and no longer exists, which quietly turned this
+  // into a test of nothing.
+  await page.locator("#paymentLinkRows").evaluate((element) => element.remove());
   await page.locator("#inventoryCommit").click();
 
   await expect(page.locator("#inventoryImportStatus")).toHaveText("Importación completada.");
