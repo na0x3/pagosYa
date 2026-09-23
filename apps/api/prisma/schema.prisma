@@ -109,6 +109,18 @@ enum KycStatus {
   REJECTED
 }
 
+enum LimitReservationStatus {
+  RESERVED
+  SETTLED
+  RELEASED
+}
+
+enum KycDocumentSlot {
+  CI_FRONT
+  CI_BACK
+  SELFIE
+}
+
 enum InvoiceStatus {
   PENDING
   EMITTED
@@ -249,6 +261,15 @@ model Merchant {
   internationalPaymentsStatus InternationalPaymentsStatus @default(OFF)
   internationalPaymentsNote   String?
   termsAcceptances            MerchantTermsAcceptance[]
+  // ASFI verification level (0-3). Gates whether live payments are accepted
+  // and which MerchantLevelPolicy limits apply — see LimitsService.
+  level                       Int                         @default(0)
+  // Ops-set overrides for level 3 merchants, whose policy limits are null and
+  // must come from a per-merchant decision instead.
+  monthlyLimitOverride        Int?
+  perPaymentLimitOverride     Int?
+  monthlyVolumes              MerchantMonthlyVolume[]
+  kycDocuments                MerchantKycDocument[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -498,9 +519,9 @@ model MerchantKycSubmission {
   merchantId           String
   merchant             Merchant  @relation(fields: [merchantId], references: [id])
   legalName            String
-  taxId                String
-  legalRepName         String
-  legalRepDocumentId   String
+  taxId                String?
+  legalRepName         String?
+  legalRepDocumentId   String?
   payoutBankAccount    String
   payoutUsdBankAccount String?
   status               KycStatus @default(PENDING_REVIEW)
@@ -512,6 +533,53 @@ model MerchantKycSubmission {
   // shouldn't change retroactively if the OpsUser is later renamed/revoked.
   reviewedByLabel      String?
   createdAt            DateTime  @default(now())
+  // Verification level this submission requests (see Merchant.level).
+  targetLevel          Int       @default(2)
+  ciFrontDocId         String?
+  ciBackDocId          String?
+  selfieDocId          String?
+
+  @@index([merchantId, createdAt])
+}
+
+// Ops-editable limits per verification level (ASFI afiliación). Amounts in centavos BOB.
+model MerchantLevelPolicy {
+  level           Int      @id
+  name            String
+  liveEnabled     Boolean
+  monthlyLimit    Int?
+  perPaymentLimit Int?
+  updatedAt       DateTime @updatedAt
+}
+
+model LimitSettings {
+  id           String   @id @default("singleton")
+  usdToBobRate Decimal  @db.Decimal(10, 4)
+  updatedAt    DateTime @updatedAt
+}
+
+// Running live volume per merchant per America/La_Paz calendar month.
+model MerchantMonthlyVolume {
+  merchantId String
+  merchant   Merchant  @relation(fields: [merchantId], references: [id])
+  month      String
+  reserved   Int       @default(0)
+  settled    Int       @default(0)
+  warnedAt   DateTime?
+
+  @@id([merchantId, month])
+}
+
+// A private identity image uploaded by a merchant for KYC; the key lives in PrivateFilesService.
+model MerchantKycDocument {
+  id         String          @id @default(cuid())
+  merchantId String
+  merchant   Merchant        @relation(fields: [merchantId], references: [id])
+  slot       KycDocumentSlot
+  storageKey String          @unique
+  mimeType   String
+  byteSize   Int
+  createdAt  DateTime        @default(now())
 
   @@index([merchantId, createdAt])
 }
@@ -535,23 +603,23 @@ model ApiKey {
 }
 
 model PaymentIntent {
-  id                   String                @id @default(cuid())
+  id                   String                  @id @default(cuid())
   merchantId           String
-  merchant             Merchant              @relation(fields: [merchantId], references: [id])
+  merchant             Merchant                @relation(fields: [merchantId], references: [id])
   consumerUserId       String?
-  consumerUser         ConsumerUser?         @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
+  consumerUser         ConsumerUser?           @relation(fields: [consumerUserId], references: [id], onDelete: SetNull)
   amount               Int
-  currency             String                @default("BOB")
-  status               PaymentIntentStatus   @default(REQUIRES_PAYMENT_METHOD)
+  currency             String                  @default("BOB")
+  status               PaymentIntentStatus     @default(REQUIRES_PAYMENT_METHOD)
   paymentMethodType    PaymentMethodType?
   paymentMethodId      String?
-  paymentMethod        PaymentMethod?        @relation(fields: [paymentMethodId], references: [id])
-  clientSecret         String                @unique
-  livemode             Boolean               @default(false)
+  paymentMethod        PaymentMethod?          @relation(fields: [paymentMethodId], references: [id])
+  clientSecret         String                  @unique
+  livemode             Boolean                 @default(false)
   description          String?
   metadata             Json?
   railId               String?
-  confirmationAttempts Int                   @default(0)
+  confirmationAttempts Int                     @default(0)
   lastError            Json?
   customerName         String?
   customerDocument     String?
@@ -559,14 +627,20 @@ model PaymentIntent {
   // about this order — separate from customerDocument (tax ID, for invoicing).
   customerEmail        String?
   customerPhone        String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   transactions         Transaction[]
   invoice              Invoice?
   debtRecords          DebtRecord[]
   storeOrder           StoreOrder?
   domainOrder          DomainOrder?
   buyerTermsAcceptance BuyerTermsAcceptance?
+  // Set when a live payment reserves against the merchant's monthly limit —
+  // see LimitsService. Always null for TEST-mode intents.
+  limitMonth           String?
+  limitAmountBob       Int?
+  limitFxRate          Decimal?                @db.Decimal(10, 4)
+  limitStatus          LimitReservationStatus?
 
   @@index([merchantId, createdAt])
   @@index([consumerUserId, createdAt])

@@ -115,6 +115,10 @@ async function main() {
       );
       console.log(`  kyc:             ${reviewed.status} (reviewed by ${reviewed.reviewedByLabel} at ${reviewed.reviewedAt?.toISOString()})`);
 
+      // Approved KYC implies verification level 2 ("Negocio") — same rule the
+      // migration backfill applies to existing approved/active merchants.
+      await prisma.merchant.update({ where: { id: merchant.id }, data: { level: 2 } });
+
       const { liveKeys } = await merchantsService.issueLiveKeys(merchant.id);
       console.log(`  live secret key: ${liveKeys.secretKey}`);
       console.log(`  live pub key:    ${liveKeys.publishableKey}`);
