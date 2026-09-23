@@ -44,5 +44,31 @@ Phases 3–5 are the large ones; each should be split into several PRs.
 - **Phase 4 — done (2026-09-19).** `checkout/src/main.ts` 10.2k → 0.2k. First its 47 module-level variables moved onto `state` in `state.ts`, then declarations moved into `storefront/`, `cart/`, `checkout/`, `orders/`, `preview-editor/`, `ui/` (see `docs/ARCHITECTURE.md`). No import cycles were added. Remaining large module: `storefront/store-page.ts` (3.5k) — `renderStore`, `renderProductPage`, the cart review dialog and in-store navigation call each other; separating them needs a small render/navigation registry. Checkout suite 237/237 and `vite build` pass after each step.
 - **Follow-up round (2026-09-19).** `StoresService` split into `StoresService` (management), `PublicStoresService` (public reads, view counting) and `StoreCheckoutService` (cart checkout, leads); `VisualStudioService` split into `VisualStudioService` (saved editor state), `VisualAiService`, `VisualProposalsService` and `VisualRevisionService`. Specs build them through `testing-*-services.ts` helpers that forward spies to the owning service. Checkout's storefront loop is broken with a `storefrontPages` registry in `storefront/navigation.ts` (filled by `main.ts`), so the product page, cart review dialog and cart bar are separate modules; `storefront/store-page.ts` is now 2.6k lines, nearly all of it the single `renderStore` function. Verified: API 1396 unit + 96 e2e, checkout 237, Studio CI browser suite 31/31, dashboard CI browser suite 12/15 with only the three known failures below.
 - **Phase 5 — started.** The dashboard's inline CSS (3.6k lines) and inline script (14.5k lines) moved verbatim to `src/dashboard.css` and `src/dashboard.js`; `index.html` is now 1.8k lines of markup. Converting `dashboard.js` into Vite-built modules is the remaining work and is not mechanical: the whole script runs inside one `PagosYaStoreEditorReady.then(...)` callback, so every function shares that closure's variables, and 50 inline `on…=` attributes depend on globals it sets. It needs the closure's variables hoisted onto a state object first (as done for checkout in phase 4), and more reliable browser coverage before it is safe: the full dashboard Playwright suite (not only the CI subset) currently has 39 failing tests — identical before and after the extraction — mostly in `store-settings.spec.mjs`, which CI does not run.
+- **Phase 0 tooling, finished (2026-09-22).** ESLint was the half of phase 0 that never landed
+  (finding #8): `depcruise` enforced layering, but nothing caught the mistakes `tsc` cannot see.
+  `eslint.config.mjs` at the root is type-aware and deliberately *not* a style config — no
+  Prettier pass, so blame history stays readable. Async-correctness rules
+  (`no-floating-promises`, `await-thenable`, `no-misused-promises`) are errors; the pre-existing
+  backlog is warnings so it stays visible and countable. `pnpm lint`.
+
+  It paid for itself on the first run: `no-misused-promises` found a live defect in
+  `idempotency/idempotency.interceptor.ts` (a Prisma write handed to RxJS `tap`, so the response
+  was sent before the key was marked COMPLETED) — in a file that had no tests at all.
+
+  Baseline at adoption, to burn down (promote each rule to "error" as it reaches zero):
+
+  | Count | Rule | Note |
+  |------:|------|------|
+  | 30 | `no-misused-promises` | 2 were the idempotency defect, now fixed |
+  | 27 | `no-unused-vars` | mechanical |
+  | 4 | `no-floating-promises` | all in checkout browser bootstrap |
+  | 4 | `prefer-const` | `--fix` handles these |
+  | 3 | `no-unused-expressions` | |
+  | 1 each | `await-thenable`, `no-implied-eval`, `no-unsafe-finally` | reviewed, none live defects |
+  | 867 | warnings | 324 `no-explicit-any`, 241 `no-unnecessary-type-assertion`, 150 `require-await` |
+
+  Not yet in CI: it would fail on the 72 standing errors. Turn on `pnpm lint` in `ci.yml` once
+  they reach zero — the config is already a ratchet, so a *new* floating promise fails today.
+
 - **Phase 6 — done.** `no-circular` is now an error; the five cycles that predate it stay listed in `.dependency-cruiser-known-violations.json`, and a new cycle fails `pnpm check:boundaries` in CI.
 - **Known pre-existing browser failures** (identical on `3b9d5aa`, before any refactor): in `merchant-dashboard/tests/merchant-workspace.spec.mjs`, "store opens the shared editor…" and "saved site previews refresh…" time out waiting for `#productCreateDisclosure > summary` to become visible, and "integration logos load…" finds 0 of 17 `.integration-card`s. The other 12 CI dashboard browser tests pass. `merchant-studio/tests/source-checks.spec.ts` "exported contact form…" failed once under a full run and passed 1/1 alone and 18/18 in a 3× repeat — timing flake.
