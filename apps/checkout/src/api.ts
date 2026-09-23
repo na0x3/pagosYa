@@ -510,6 +510,7 @@ export async function confirmPaymentIntent(
   paymentMethod: { type: PaymentMethodType; token: string; metadata?: Record<string, unknown> },
   customer: CustomerContact,
   international?: { rail: "dlocal"; country: string },
+  legal?: { buyerTermsVersion?: string; buyerPrivacyVersion?: string },
 ): Promise<{ paymentIntent: PaymentIntent; railResult: { status: string; actionRequired?: unknown; failureReason?: string } }> {
   const customerName = customer.name.trim();
   const customerDocument = customer.document?.trim();
@@ -530,6 +531,7 @@ export async function confirmPaymentIntent(
       customerLongitude: customer.customerLongitude,
       customerLocationAccuracy: customer.customerLocationAccuracy,
       ...(international ?? {}),
+      ...(legal ?? {}),
     }),
   });
   return parseOrThrow(response);

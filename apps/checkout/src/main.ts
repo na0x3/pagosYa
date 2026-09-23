@@ -4,6 +4,23 @@ import { applyCheckoutBranding } from "./checkout-branding";
 import { createStoreFunnel } from './store-funnel';
 let activeStoreFunnel: ReturnType<typeof createStoreFunnel> | null = null;
 let funnelCartCount = 0;
+
+// pagosYa's buyer terms shown under Pay; loaded once, only when a payment form renders.
+let buyerLegal: BuyerLegal | null = null;
+let buyerLegalLoaded = false;
+let buyerLegalRequest: Promise<BuyerLegal | null> | null = null;
+function loadBuyerLegal(): Promise<BuyerLegal | null> {
+  // The notice must never be able to break the payment form, whatever fails.
+  buyerLegalRequest ??= Promise.resolve()
+    .then(() => fetchBuyerLegal(API_BASE_URL))
+    .catch(() => null)
+    .then((legal) => {
+      buyerLegal = legal;
+      buyerLegalLoaded = true;
+      return legal;
+    });
+  return buyerLegalRequest;
+}
 import { cartItemKey, parseCartItemKey, restoreCart, persistCart, pickedExtras, pickGroups, pickedExtrasLabel } from "./cart-state";
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
@@ -48,6 +65,7 @@ import {
 } from "./api";
 import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, isNavigableRedirect, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
+import { fetchBuyerLegal, legalConfirmFields, legalNoticeHtml, type BuyerLegal } from "./legal-notice";
 import { readSourcePaymentPreview, closeSourcePaymentPreview, bindPreviewBranding } from './source-payment-preview';
 import { storePreviewExternalDestination } from "./preview-navigation";
 import {
@@ -9559,10 +9577,18 @@ function renderForm(session: CheckoutSession, clientSecret: string) {
           : ""
       }
       <button class="primary" type="submit" id="pay"${internationalMode && internationalMethods && internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${internationalMode && internationalMethods ? formatUsd(internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
+      <div id="legalNoticeSlot">${legalNoticeHtml(buyerLegal)}</div>
       <button class="secondary" type="button" id="cancel">Cancelar pago</button>
     </form></div>
     <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
   `;
+  // A store-editor payment preview is a simulation and must not reach the API.
+  if (!buyerLegalLoaded && !sourcePaymentPreview) {
+    void loadBuyerLegal().then((legal) => {
+      const slot = app.querySelector<HTMLDivElement>("#legalNoticeSlot");
+      if (slot) slot.innerHTML = legalNoticeHtml(legal);
+    });
+  }
 
   const nameInput = app.querySelector<HTMLInputElement>("#customerName");
   const emailInput = app.querySelector<HTMLInputElement>("#customerEmail");
@@ -9761,12 +9787,16 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
   postToParent("PAYMENT_PROCESSING", { paymentIntentId: session.id });
 
   try {
+    // Send exactly the versions the notice under Pay is showing. Never wait for the
+    // legal fetch here: if it hasn't landed, no notice was shown and nothing is sent.
+    const shownLegal = buyerLegalLoaded ? buyerLegal : null;
     const { paymentIntent, railResult } = await confirmPaymentIntent(
       session.id,
       clientSecret,
       selectedIntl ? tokenForMethod(selectedIntl) : { type: selectedType, token },
       customer,
       selectedIntl ? { rail: "dlocal", country: internationalCountry } : undefined,
+      legalConfirmFields(shownLegal),
     );
 
     if (paymentIntent.status === "SUCCEEDED") {

@@ -752,6 +752,8 @@ body.payment-page #app {
   color: var(--debt-ink);
 }
 .payment-page .payment-secure-note svg { color: var(--debt-ink); }
+.payment-page .legal-notice { margin: 10px 0 12px; font-size: 12px; line-height: 1.45; text-align: center; color: var(--debt-ink); opacity: .78; }
+.payment-page .legal-notice a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .delivery-request { margin: 4px 0 20px; border: 2px solid var(--debt-ink); background: #fffdf5; }
 .delivery-request-toggle { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 70px; padding: 12px 14px; cursor: pointer; }
 .delivery-request-icon { display: grid; width: 40px; height: 40px; place-items: center; border: 2px solid var(--debt-ink); background: var(--debt-green); }

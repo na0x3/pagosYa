@@ -87,6 +87,39 @@ describe("payment outcome rendering", () => {
     expect(document.getElementById("app")?.hasAttribute("inert")).toBe(false);
   });
 
+  it("shows pagosYa's buyer terms under Pay and sends the exact versions shown", async () => {
+    const confirmPaymentIntent = vi.fn().mockResolvedValue({
+      paymentIntent: { id: "pi_1", status: "SUCCEEDED", railId: "mock_card", amount: 5000, currency: "BOB", metadata: session.metadata },
+      railResult: { status: "succeeded" },
+    });
+    vi.doMock("../src/api", () => ({
+      API_BASE_URL: "http://api.test/v1",
+      fetchSession: vi.fn().mockResolvedValue(session),
+      confirmPaymentIntent,
+      assetUrl: (p: string | null) => p,
+    }));
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({
+      ok: true,
+      json: async () => ({ version: url.endsWith("/legal/buyer-terms") ? "2026-10-01" : "p-2026-10-01" }),
+    })));
+
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    await vi.waitFor(() => {
+      if (!document.querySelector(".legal-notice")) throw new Error("notice not shown yet");
+    });
+    expect(document.querySelector(".legal-notice")?.textContent).toContain("Al pagar aceptas los Términos");
+    expect(document.querySelector<HTMLAnchorElement>(".legal-notice a")?.href).toContain("/terminos/compradores?version=2026-10-01");
+
+    fillContactFields();
+    document.querySelector<HTMLButtonElement>("#pay")!.click();
+    await vi.waitFor(() => {
+      if (!confirmPaymentIntent.mock.calls.length) throw new Error("not confirmed yet");
+    });
+
+    expect(confirmPaymentIntent.mock.calls[0][5]).toEqual({ buyerTermsVersion: "2026-10-01", buyerPrivacyVersion: "p-2026-10-01" });
+    vi.unstubAllGlobals();
+  });
+
   it("puts shipment tracking and print actions on the printed receipt", async () => {
     vi.doMock("../src/api", () => ({
       fetchSession: vi.fn().mockResolvedValue({ ...session, trackingToken: "track_secret_1" }),
