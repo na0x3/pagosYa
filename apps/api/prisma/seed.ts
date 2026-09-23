@@ -1,21 +1,42 @@
 import "reflect-metadata";
 import * as argon2 from "argon2";
-import { ApiKeyMode, ApiKeyType, KycStatus, PrismaClient, SettlementMode } from "@prisma/client";
+import { ApiKeyMode, ApiKeyType, KycStatus, LegalDocumentKind, PrismaClient, SettlementMode, TermsAcceptanceSource } from "@prisma/client";
 import { ApiKeyService } from "../src/auth/api-key.service";
 import { KycService } from "../src/merchants/kyc.service";
 import { MerchantsService } from "../src/merchants/merchants.service";
 import { OpsUserService } from "../src/ops/ops-user.service";
 import { AuditLogService } from "../src/ops/audit-log.service";
 import { PrismaService } from "../src/prisma/prisma.service";
+import { LegalDocumentsService, sha256Hex } from "../src/legal/legal-documents.service";
+import { TermsAcceptanceService } from "../src/legal/terms-acceptance.service";
+
+// Placeholder texts so the terms prompt, signup checkbox and checkout notice can
+// be exercised locally. Production texts come from the lawyer via an ops publish.
+const DRAFT_LEGAL_DOCUMENTS = [
+  { kind: LegalDocumentKind.MERCHANT_TERMS, title: "Términos y Condiciones para comercios (BORRADOR — pendiente de revisión legal)" },
+  { kind: LegalDocumentKind.BUYER_TERMS, title: "Términos y Condiciones para compradores (BORRADOR — pendiente de revisión legal)" },
+  { kind: LegalDocumentKind.PRIVACY_POLICY, title: "Política de privacidad (BORRADOR — pendiente de revisión legal)" },
+];
 
 async function main() {
   if (process.env.NODE_ENV === "production") throw new Error("The development seed must never run in production");
   const prisma = new PrismaClient();
   const apiKeys = new ApiKeyService(prisma as unknown as PrismaService);
   const auditLog = new AuditLogService(prisma as unknown as PrismaService);
-  const kyc = new KycService(prisma as unknown as PrismaService, auditLog);
+  const legal = new LegalDocumentsService(prisma as unknown as PrismaService, auditLog);
+  const terms = new TermsAcceptanceService(prisma as unknown as PrismaService, legal);
+  const kyc = new KycService(prisma as unknown as PrismaService, auditLog, terms);
   const merchantsService = new MerchantsService(prisma as unknown as PrismaService, apiKeys);
   const opsUsers = new OpsUserService(prisma as unknown as PrismaService);
+
+  for (const draft of DRAFT_LEGAL_DOCUMENTS) {
+    const body = `# ${draft.title}\n\nTexto provisional para desarrollo. El texto definitivo lo redacta el asesor legal y se publica desde operaciones.`;
+    await prisma.legalDocument.upsert({
+      where: { kind_version: { kind: draft.kind, version: "draft-0" } },
+      update: {},
+      create: { ...draft, version: "draft-0", body, sha256: sha256Hex(body), effectiveAt: new Date(0), publishedByLabel: "seed" },
+    });
+  }
 
   const opsUserEmail = "ana@pagosya.bo";
   let opsUser = await prisma.opsUser.findUnique({ where: { email: opsUserEmail } });
@@ -72,7 +93,14 @@ async function main() {
 
     // Demonstrate the full KYC -> ACTIVE -> LIVE keys path for one merchant;
     // leave the other PENDING to show what an unreviewed merchant looks like.
+    // The Facilitator demo is left without an acceptance so the dashboard terms prompt is visible there.
     if (m.settlementMode === SettlementMode.AGGREGATOR) {
+      await terms.acceptMerchantTerms({
+        merchantId: merchant.id,
+        version: "draft-0",
+        source: TermsAcceptanceSource.DASHBOARD,
+        context: { ipAddress: null, userAgent: "seed" },
+      });
       const submission = await kyc.submit(merchant.id, {
         legalName: m.name,
         taxId: "1023456028",
