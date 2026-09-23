@@ -8,11 +8,16 @@ import { PaymentIntentsService } from "./payment-intents.service";
 import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
 import { ConfirmPaymentIntentDto } from "./dto/confirm-payment-intent.dto";
 import { ApiKeyMode } from "@prisma/client";
+import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
+import { RequestWithContext, requestContext } from "../legal/request-context";
 
 @ApiTags("payment_intents")
 @Controller("v1/payment_intents")
 export class PaymentIntentsController {
-  constructor(private readonly paymentIntents: PaymentIntentsService) {}
+  constructor(
+    private readonly paymentIntents: PaymentIntentsService,
+    private readonly terms: TermsAcceptanceService,
+  ) {}
 
   @Post()
   @ApiBearerAuth()
@@ -42,8 +47,14 @@ export class PaymentIntentsController {
   @Post(":id/confirm")
   @ApiBearerAuth()
   @UseGuards(ClientSecretGuard)
-  confirm(@Param("id") id: string, @Body() dto: ConfirmPaymentIntentDto) {
-    return this.paymentIntents.confirm(id, dto);
+  async confirm(@Param("id") id: string, @Body() dto: ConfirmPaymentIntentDto, @Req() req: RequestWithContext) {
+    const documents = await this.terms.resolveBuyerDocuments({ terms: dto.buyerTermsVersion, privacy: dto.buyerPrivacyVersion });
+    const context = requestContext(req);
+    return this.paymentIntents.confirm(
+      id,
+      dto,
+      documents ? { ...documents, ipAddress: context.ipAddress ?? null, userAgent: context.userAgent ?? null } : undefined,
+    );
   }
 
   @Post(":id/cancel")

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsBoolean, IsEmail, IsEnum, IsIn, IsNumber, IsObject, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from "class-validator";
 import { PaymentMethodType } from "@prisma/client";
+import { LEGAL_VERSION_PATTERN } from "../../legal/dto/accept-terms.dto";
 
 export class PaymentMethodInputDto {
   @ApiProperty({ enum: PaymentMethodType })
@@ -27,6 +28,16 @@ export class ConfirmPaymentIntentDto {
   @ValidateNested()
   @Type(() => PaymentMethodInputDto)
   paymentMethod!: PaymentMethodInputDto;
+
+  @ApiPropertyOptional({ description: "Version of pagosYa's buyer terms shown beside the Pay button (GET /v1/legal/buyer-terms).", example: "2026-10-01" })
+  @IsOptional()
+  @Matches(LEGAL_VERSION_PATTERN)
+  buyerTermsVersion?: string;
+
+  @ApiPropertyOptional({ description: "Version of pagosYa's privacy policy shown beside the Pay button (GET /v1/legal/privacy-policy).", example: "2026-10-01" })
+  @IsOptional()
+  @Matches(LEGAL_VERSION_PATTERN)
+  buyerPrivacyVersion?: string;
 
   @ApiPropertyOptional({ enum: ["dlocal"], description: "Route this payment through an international rail instead of the domestic one for the method type." })
   @IsOptional()

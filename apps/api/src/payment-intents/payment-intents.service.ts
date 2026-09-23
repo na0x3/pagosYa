@@ -90,6 +90,14 @@ function readLocationStocks(value: Prisma.JsonValue): Record<string, number | nu
   return Object.fromEntries(Object.entries(value).filter(([, stock]) => stock === null || (Number.isInteger(stock) && (stock as number) >= 0))) as Record<string, number | null>;
 }
 
+/** The pagosYa buyer terms the checkout showed beside the Pay button, already resolved to exact documents. */
+export interface BuyerTermsRecord {
+  termsDocumentId: string;
+  privacyDocumentId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+}
+
 @Injectable()
 export class PaymentIntentsService {
   private readonly logger = new Logger(PaymentIntentsService.name);
@@ -295,7 +303,7 @@ export class PaymentIntentsService {
    * then finalize the outcome transactionally (status + ledger + webhook
    * outbox all commit together).
    */
-  async confirm(paymentIntentId: string, dto: ConfirmPaymentIntentDto) {
+  async confirm(paymentIntentId: string, dto: ConfirmPaymentIntentDto, buyerTerms?: BuyerTermsRecord) {
     const { intentId, railId, amount, currency, merchantId, country, payer } = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
         { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue; amount: number; currency: string }[]
@@ -304,6 +312,15 @@ export class PaymentIntentsService {
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
+      // Inside the confirm transaction and before any rail call: a payment that
+      // sent a terms version never exists without its acceptance record.
+      if (buyerTerms) {
+        await tx.buyerTermsAcceptance.upsert({
+          where: { paymentIntentId },
+          create: { paymentIntentId, ...buyerTerms },
+          update: {},
+        });
+      }
 
       if ((current.metadata as Prisma.JsonObject)?.platformPurchase === "domain" && dto.paymentMethod.type !== "QR") {
         throw new BadRequestException("La compra de dominios se paga con QR bancario.");

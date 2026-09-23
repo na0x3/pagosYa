@@ -414,6 +414,7 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
       merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m_1", settlementMode: "AGGREGATOR", internationalPaymentsStatus: "ENABLED", ...merchant }) },
       consumerUser: { findFirst: jest.fn().mockResolvedValue(null) },
       storeOrder: { updateMany: jest.fn() },
+      buyerTermsAcceptance: { upsert: jest.fn().mockResolvedValue({}) },
     };
     const prisma = { $transaction: jest.fn((cb) => cb(tx)) };
     const dlocal = { railId: "dlocal", supportedMethodTypes: ["CARD", "LOCAL_METHOD"], authorize: jest.fn().mockResolvedValue({ status: "requires_action", railReference: "D-1", raw: {} }) };
@@ -429,8 +430,34 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     jest.spyOn(service as any, "assertCartStillAvailable").mockResolvedValue(undefined);
     jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
     jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: {}, railResult: {} });
-    return { service, update, dlocal, domestic, railRegistry, paymentMethods };
+    return { service, update, dlocal, domestic, railRegistry, paymentMethods, tx };
   }
+
+  it("records the buyer's terms acceptance inside the confirm transaction, before the rail is called", async () => {
+    const test = setup({});
+    test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    const buyerTerms = { termsDocumentId: "t1", privacyDocumentId: "p1", ipAddress: "1.1.1.1", userAgent: "UA" };
+
+    await test.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any, buyerTerms);
+
+    expect(test.tx.buyerTermsAcceptance.upsert).toHaveBeenCalledWith({
+      where: { paymentIntentId: "pi_1" },
+      create: { paymentIntentId: "pi_1", ...buyerTerms },
+      update: {},
+    });
+    expect(test.tx.buyerTermsAcceptance.upsert.mock.invocationCallOrder[0])
+      .toBeLessThan(test.domestic.authorize.mock.invocationCallOrder[0]);
+  });
+
+  it("writes no acceptance when the checkout sent no terms version", async () => {
+    const test = setup({});
+    test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+
+    await test.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any);
+
+    expect(test.tx.buyerTermsAcceptance.upsert).not.toHaveBeenCalled();
+    expect(test.domestic.authorize).toHaveBeenCalled();
+  });
 
   const dto = {
     rail: "dlocal" as const, country: "BR", customerName: "Ana", customerEmail: "ana@example.com", customerDocument: "12345678909",

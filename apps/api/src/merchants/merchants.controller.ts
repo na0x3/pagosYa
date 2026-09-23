@@ -1,4 +1,8 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { LegalDocumentKind, TermsAcceptanceSource } from "@prisma/client";
+import { LegalDocumentsService } from "../legal/legal-documents.service";
+import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
+import { RequestWithContext, requestContext } from "../legal/request-context";
 import { Throttle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantsService } from "./merchants.service";
@@ -19,13 +23,28 @@ export class MerchantsController {
   constructor(
     private readonly merchants: MerchantsService,
     private readonly kyc: KycService,
+    private readonly legal: LegalDocumentsService,
+    private readonly terms: TermsAcceptanceService,
   ) {}
 
   /** Public self-serve signup — tighter limit than the global default since it's the free entry point to everything else (instant TEST keys, dashboard signup). */
   @Post()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  create(@Body() dto: CreateMerchantDto) {
-    return this.merchants.create(dto);
+  async create(@Body() dto: CreateMerchantDto, @Req() req: RequestWithContext) {
+    // Validated before creating anything, so a stale version never leaves a half-signed-up merchant behind.
+    const document = dto.termsVersion
+      ? await this.legal.resolveAcceptable(LegalDocumentKind.MERCHANT_TERMS, dto.termsVersion)
+      : null;
+    const result = await this.merchants.create(dto);
+    if (document) {
+      await this.terms.recordMerchantAcceptance({
+        merchantId: result.merchant.id,
+        document,
+        source: TermsAcceptanceSource.WEB_SIGNUP,
+        context: requestContext(req),
+      });
+    }
+    return result;
   }
 
   @Post("kyc")
