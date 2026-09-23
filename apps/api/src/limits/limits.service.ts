@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { LimitReservationStatus, Prisma, SupportCaseCategory } from "@prisma/client";
+import { LimitReservationStatus, PaymentIntentStatus, Prisma, SupportCaseCategory } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { openOpsCaseOnce } from "../ops/ops-escalation";
 import { limitExceeded, perPaymentLimitExceeded } from "./limit-errors";
@@ -9,6 +9,10 @@ export type ReservableIntent = { id: string; merchantId: string; amount: number;
 export type LimitUsage = EffectiveLimits & { month: string; used: number; resetsAt: string };
 
 const LA_PAZ = new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz", year: "numeric", month: "2-digit" });
+
+/** How long a RESERVED live intent may sit in PROCESSING/REQUIRES_ACTION with
+ * no callback before releaseStale() gives its limit room back. */
+export const STALE_RESERVATION_MS = 24 * 60 * 60_000;
 
 /** Month key the limit counts in: the calendar month in La Paz (UTC-4, no DST). */
 export function laPazMonth(at: Date): string {
@@ -128,21 +132,61 @@ export class LimitsService {
     return this.finish(tx, paymentIntentId, LimitReservationStatus.RELEASED);
   }
 
-  /** Moves a reservation exactly once: the conditional status flip is the guard. */
+  /**
+   * Moves a reservation exactly once: the conditional status flip is the
+   * guard. Settling accepts either RESERVED (the ordinary case) or RELEASED
+   * — a late success can arrive after releaseStale() already gave the room
+   * back for a stale, unpaid QR reservation. In that RELEASED case the
+   * volume's `reserved` column was already decremented by the release, so
+   * settling only adds to `settled` and never touches `reserved` again
+   * (otherwise it would go negative). Releasing a RELEASED/SETTLED intent
+   * stays a no-op either way.
+   */
   private async finish(tx: Prisma.TransactionClient, paymentIntentId: string, to: LimitReservationStatus) {
     const intent = await tx.paymentIntent.findUnique({
       where: { id: paymentIntentId },
       select: { merchantId: true, limitMonth: true, limitAmountBob: true, limitStatus: true },
     });
-    if (!intent || intent.limitStatus !== LimitReservationStatus.RESERVED || !intent.limitMonth || intent.limitAmountBob === null) return;
-    const flipped = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, limitStatus: LimitReservationStatus.RESERVED }, data: { limitStatus: to } });
+    if (!intent || !intent.limitMonth || intent.limitAmountBob === null) return;
+    const from = to === LimitReservationStatus.SETTLED && intent.limitStatus === LimitReservationStatus.RELEASED
+      ? LimitReservationStatus.RELEASED
+      : LimitReservationStatus.RESERVED;
+    if (intent.limitStatus !== from) return;
+    const flipped = await tx.paymentIntent.updateMany({ where: { id: paymentIntentId, limitStatus: from }, data: { limitStatus: to } });
     if (flipped.count === 0) return;
     const amount = intent.limitAmountBob;
-    if (to === LimitReservationStatus.SETTLED) {
+    if (to === LimitReservationStatus.SETTLED && from === LimitReservationStatus.RELEASED) {
+      await tx.$executeRaw`UPDATE "MerchantMonthlyVolume" SET settled = settled + ${amount} WHERE "merchantId" = ${intent.merchantId} AND month = ${intent.limitMonth}`;
+    } else if (to === LimitReservationStatus.SETTLED) {
       await tx.$executeRaw`UPDATE "MerchantMonthlyVolume" SET reserved = reserved - ${amount}, settled = settled + ${amount} WHERE "merchantId" = ${intent.merchantId} AND month = ${intent.limitMonth}`;
     } else {
       await tx.$executeRaw`UPDATE "MerchantMonthlyVolume" SET reserved = reserved - ${amount} WHERE "merchantId" = ${intent.merchantId} AND month = ${intent.limitMonth}`;
     }
+  }
+
+  /**
+   * Safety net for the case a live QR/bank-QR intent never gets its
+   * requires_action -> succeeded/failed callback (a Baneco QR shown once and
+   * never scanned, say): its RESERVED reservation would otherwise hold limit
+   * room for the rest of the month. After 24h with no update, give the room
+   * back — the payment itself is left exactly as it is (still
+   * PROCESSING/REQUIRES_ACTION); a late bank confirmation must never land on
+   * a CANCELED intent, so this never touches PaymentIntent.status.
+   */
+  async releaseStale(now = new Date()): Promise<number> {
+    const stale = await this.prisma.paymentIntent.findMany({
+      where: {
+        livemode: true,
+        limitStatus: LimitReservationStatus.RESERVED,
+        status: { in: [PaymentIntentStatus.PROCESSING, PaymentIntentStatus.REQUIRES_ACTION] },
+        updatedAt: { lt: new Date(now.getTime() - STALE_RESERVATION_MS) },
+      },
+      select: { id: true },
+    });
+    for (const intent of stale) {
+      await this.prisma.$transaction((tx) => this.release(tx, intent.id));
+    }
+    return stale.length;
   }
 
   async usage(merchantId: string, now = new Date()): Promise<LimitUsage> {

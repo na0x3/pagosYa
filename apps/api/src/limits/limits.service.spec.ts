@@ -1,6 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { LimitsService, laPazMonth } from "./limits.service";
+import { LimitsService, laPazMonth, STALE_RESERVATION_MS } from "./limits.service";
 
 const policies = [
   { level: 0, name: "Sin verificar", liveEnabled: false, monthlyLimit: null, perPaymentLimit: null },
@@ -18,12 +18,14 @@ function setup(merchant: Record<string, unknown> = { id: "m_1", level: 1, monthl
     $executeRaw: jest.fn().mockResolvedValue(updated),
     paymentIntent: { update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findUnique: jest.fn() },
   };
-  const prisma = {
+  const prisma: any = {
     merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue(merchant) },
     merchantLevelPolicy: { findUnique: jest.fn(({ where }) => Promise.resolve(policies.find((p) => p.level === where.level) ?? null)) },
     limitSettings: { findUnique: jest.fn().mockResolvedValue({ usdToBobRate: new Prisma.Decimal("6.96") }) },
     merchantMonthlyVolume: { findUnique: jest.fn().mockResolvedValue(null) },
     supportCase: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: "c1" }) },
+    paymentIntent: { findMany: jest.fn().mockResolvedValue([]) },
+    $transaction: jest.fn((callback: any) => callback(tx)),
   };
   return { tx, prisma, service: new LimitsService(prisma as any) };
 }
@@ -159,5 +161,64 @@ describe("LimitsService.settle/release", () => {
     tx.paymentIntent.findUnique.mockResolvedValue({ merchantId: "m_1", limitMonth: null, limitAmountBob: null, limitStatus: null });
     await service.release(tx as any, "pi_1");
     expect(tx.paymentIntent.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("settling a RELEASED reservation (a late success after releaseStale) flips to SETTLED and only adds to settled", async () => {
+    const { service, tx } = setup();
+    tx.paymentIntent.findUnique.mockResolvedValue({ merchantId: "m_1", limitMonth: "2026-09", limitAmountBob: 100_000, limitStatus: "RELEASED" });
+    await service.settle(tx as any, "pi_1");
+    expect(tx.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_1", limitStatus: "RELEASED" }, data: { limitStatus: "SETTLED" } });
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+    const sql = (tx.$executeRaw as jest.Mock).mock.calls[0][0].join("");
+    expect(sql).toContain("settled = settled +");
+    expect(sql).not.toContain("reserved = reserved -");
+  });
+
+  it("releasing an already-RELEASED reservation is still a no-op", async () => {
+    const { service, tx } = setup();
+    tx.paymentIntent.findUnique.mockResolvedValue({ merchantId: "m_1", limitMonth: "2026-09", limitAmountBob: 100_000, limitStatus: "RELEASED" });
+    await service.release(tx as any, "pi_1");
+    expect(tx.paymentIntent.updateMany).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it("releasing an already-SETTLED reservation is still a no-op", async () => {
+    const { service, tx } = setup();
+    tx.paymentIntent.findUnique.mockResolvedValue({ merchantId: "m_1", limitMonth: "2026-09", limitAmountBob: 100_000, limitStatus: "SETTLED" });
+    await service.release(tx as any, "pi_1");
+    expect(tx.paymentIntent.updateMany).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
+  });
+});
+
+describe("LimitsService.releaseStale", () => {
+  it("queries live RESERVED intents stuck in PROCESSING/REQUIRES_ACTION past the stale window and releases each one", async () => {
+    const { service, prisma, tx } = setup();
+    const now = new Date("2026-09-20T12:00:00Z");
+    prisma.paymentIntent.findMany.mockResolvedValue([{ id: "pi_stale_1" }, { id: "pi_stale_2" }]);
+    tx.paymentIntent.findUnique.mockResolvedValue({ merchantId: "m_1", limitMonth: "2026-09", limitAmountBob: 50_000, limitStatus: "RESERVED" });
+
+    const released = await service.releaseStale(now);
+
+    expect(prisma.paymentIntent.findMany).toHaveBeenCalledWith({
+      where: {
+        livemode: true,
+        limitStatus: "RESERVED",
+        status: { in: ["PROCESSING", "REQUIRES_ACTION"] },
+        updatedAt: { lt: new Date(now.getTime() - STALE_RESERVATION_MS) },
+      },
+      select: { id: true },
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(tx.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_stale_1", limitStatus: "RESERVED" }, data: { limitStatus: "RELEASED" } });
+    expect(tx.paymentIntent.updateMany).toHaveBeenCalledWith({ where: { id: "pi_stale_2", limitStatus: "RESERVED" }, data: { limitStatus: "RELEASED" } });
+    expect(released).toBe(2);
+  });
+
+  it("releases nothing when no reservation is stale", async () => {
+    const { service, prisma } = setup();
+    prisma.paymentIntent.findMany.mockResolvedValue([]);
+    await expect(service.releaseStale(new Date())).resolves.toBe(0);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

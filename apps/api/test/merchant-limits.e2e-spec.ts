@@ -5,10 +5,17 @@ import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MerchantsService } from '../src/merchants/merchants.service';
+import { LimitsService } from '../src/limits/limits.service';
 
 // Mock card rail: apps/api/src/rails/adapters/mock-card.adapter.ts declines
 // synchronously whenever the token includes "decline".
 const DECLINE_TOKEN = 'tok_visa_decline';
+// Mock QR rail (apps/api/src/rails/adapters/mock-qr.adapter.ts): any token
+// that isn't "decline" or "instant_success" comes back requires_action, i.e.
+// pending a scan that may never happen.
+const QR_PENDING_TOKEN = 'tok_qr_pending';
+// test/setup-env.cjs sets this for the e2e run.
+const INTERNAL_RAIL_CALLBACK_SECRET = 'e2e-internal-rail-secret';
 
 describe('Merchant levels and limits', () => {
   let app: INestApplication, prisma: PrismaService, merchantId: string, liveKey: string, testKey: string;
@@ -93,6 +100,35 @@ describe('Merchant levels and limits', () => {
     const product = (await http().post(`/v1/stores/${store.id}/payment_links`).set({ Authorization: `Bearer ${liveKey}` }).send({ name: 'Caro', amount: 10_000, currency: 'BOB' }).expect(201)).body;
     const res = await http().post(`/v1/stores/public/${store.slug}/cart-checkout`).send({ items: [{ paymentLinkId: product.id, quantity: 1 }], fulfillmentMethod: 'pickup' }).expect(403);
     expect(res.body.message).toBe('Este comercio no puede recibir pagos en este momento.');
+  });
+
+  it('gives back limit room held by a stale unpaid QR reservation, and still counts a late success', async () => {
+    const pi = (await createIntent(60_000).expect(201)).body;
+    const confirmed = await http()
+      .post(`/v1/payment_intents/${pi.id}/confirm`)
+      .set({ Authorization: `Bearer ${pi.clientSecret}` })
+      .send({ paymentMethod: { type: 'QR', token: QR_PENDING_TOKEN } })
+      .expect(201);
+    expect(confirmed.body.paymentIntent.status).toBe('REQUIRES_ACTION');
+    expect(await volume()).toMatchObject({ reserved: 60_000, settled: 0 });
+
+    // Backdate as if the QR was shown and never scanned for 25 hours.
+    await prisma.paymentIntent.update({ where: { id: pi.id }, data: { updatedAt: new Date(Date.now() - 25 * 60 * 60_000) } });
+
+    const released = await app.get(LimitsService).releaseStale();
+    expect(released).toBe(1);
+    expect(await volume()).toMatchObject({ reserved: 0, settled: 0 });
+    expect(await prisma.paymentIntent.findUniqueOrThrow({ where: { id: pi.id } })).toMatchObject({ status: 'REQUIRES_ACTION', limitStatus: 'RELEASED' });
+
+    // The bank confirms late, through the same rail-callback path a real QR
+    // scan would use. It must still be counted, and never touch status via cancel.
+    await http()
+      .post('/internal/rails/mock_qr/callback')
+      .set({ Authorization: `Bearer ${INTERNAL_RAIL_CALLBACK_SECRET}` })
+      .send({ paymentIntentId: pi.id, status: 'succeeded', railReference: 'qr_late_success' })
+      .expect(201);
+    expect(await volume()).toMatchObject({ reserved: 0, settled: 60_000 });
+    expect(await prisma.paymentIntent.findUniqueOrThrow({ where: { id: pi.id } })).toMatchObject({ status: 'SUCCEEDED', limitStatus: 'SETTLED' });
   });
 
   it('never checks, reserves or counts TEST-mode payments', async () => {
