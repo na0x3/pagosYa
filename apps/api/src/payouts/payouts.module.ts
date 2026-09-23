@@ -7,9 +7,10 @@ import { PAYOUT_PROVIDER } from "./tokens";
 import { AuthModule } from "../auth/auth.module";
 import { LedgerModule } from "../ledger/ledger.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
+import { LegalModule } from "../legal/legal.module";
 
 @Module({
-  imports: [AuthModule, LedgerModule, DashboardModule],
+  imports: [AuthModule, LedgerModule, DashboardModule, LegalModule],
   controllers: [PayoutsController],
   providers: [
     PayoutsService,

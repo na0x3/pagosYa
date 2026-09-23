@@ -36,6 +36,10 @@ function makeFakeAuditLog() {
   return { record: jest.fn().mockResolvedValue(undefined) };
 }
 
+function termsAccepted() {
+  return { needsMerchantAcceptance: jest.fn().mockResolvedValue(false) };
+}
+
 describe("KycService.submit", () => {
   it("creates a PENDING_REVIEW submission for a non-active merchant", async () => {
     const prisma = makeFakePrisma();
@@ -43,7 +47,7 @@ describe("KycService.submit", () => {
     prisma.merchantKycSubmission.findFirst.mockResolvedValue(null);
     prisma.merchantKycSubmission.create.mockResolvedValue({ id: "kyc_1", ...submitDto, status: KycStatus.PENDING_REVIEW });
 
-    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any);
     const result = await service.submit("m_1", submitDto);
 
     expect(result.status).toBe(KycStatus.PENDING_REVIEW);
@@ -52,11 +56,24 @@ describe("KycService.submit", () => {
     });
   });
 
+  it("blocks submission until the merchant accepts the terms in force", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.PENDING });
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue(null);
+    const terms = { needsMerchantAcceptance: jest.fn().mockResolvedValue(true) };
+
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, terms as any);
+
+    await expect(service.submit("m_1", submitDto)).rejects.toThrow("Términos y Condiciones");
+    expect(terms.needsMerchantAcceptance).toHaveBeenCalledWith("m_1");
+    expect(prisma.merchantKycSubmission.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a new submission when the merchant is already active", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.ACTIVE });
 
-    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any);
     await expect(service.submit("m_1", submitDto)).rejects.toThrow(BadRequestException);
   });
 
@@ -65,7 +82,7 @@ describe("KycService.submit", () => {
     prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", status: MerchantStatus.PENDING });
     prisma.merchantKycSubmission.findFirst.mockResolvedValue({ id: "kyc_0", status: KycStatus.PENDING_REVIEW });
 
-    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any);
     await expect(service.submit("m_1", submitDto)).rejects.toThrow(BadRequestException);
   });
 });
@@ -81,7 +98,7 @@ describe("KycService.review", () => {
     prisma.merchantKycSubmission.update.mockResolvedValue({ id: "kyc_1", status: KycStatus.APPROVED });
     const auditLog = makeFakeAuditLog();
 
-    const service = new KycService(prisma as any, auditLog as any);
+    const service = new KycService(prisma as any, auditLog as any, termsAccepted() as any);
     await service.review("kyc_1", { decision: KycStatus.APPROVED }, actor);
 
     expect(prisma.merchant.update).toHaveBeenCalledWith({
@@ -118,7 +135,7 @@ describe("KycService.review", () => {
     prisma.merchantKycSubmission.update.mockResolvedValue({ id: "kyc_1", status: KycStatus.REJECTED });
     const auditLog = makeFakeAuditLog();
 
-    const service = new KycService(prisma as any, auditLog as any);
+    const service = new KycService(prisma as any, auditLog as any, termsAccepted() as any);
     await service.review("kyc_1", { decision: KycStatus.REJECTED, note: "Missing NIT" }, actor);
 
     expect(prisma.merchant.update).not.toHaveBeenCalled();
@@ -132,7 +149,7 @@ describe("KycService.review", () => {
     const prisma = makeFakePrisma();
     prisma.merchantKycSubmission.findUnique.mockResolvedValue(null);
 
-    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any);
     await expect(service.review("missing", { decision: KycStatus.APPROVED }, actor)).rejects.toThrow(NotFoundException);
   });
 
@@ -144,7 +161,7 @@ describe("KycService.review", () => {
       status: KycStatus.APPROVED,
     });
 
-    const service = new KycService(prisma as any, makeFakeAuditLog() as any);
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any);
     await expect(service.review("kyc_1", { decision: KycStatus.APPROVED }, actor)).rejects.toThrow(BadRequestException);
   });
 });

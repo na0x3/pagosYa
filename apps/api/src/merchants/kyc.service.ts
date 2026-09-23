@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AuditLogService } from "../ops/audit-log.service";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
+import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
 
 export interface OpsActor {
   id: string;
@@ -22,12 +23,16 @@ export class KycService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly terms: TermsAcceptanceService,
   ) {}
 
   async submit(merchantId: string, dto: SubmitKycDto) {
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
     if (merchant.status === MerchantStatus.ACTIVE) {
       throw new BadRequestException("Merchant is already active");
+    }
+    if (await this.terms.needsMerchantAcceptance(merchantId)) {
+      throw new BadRequestException("Debes aceptar los Términos y Condiciones vigentes antes de enviar tu verificación");
     }
 
     const pending = await this.prisma.merchantKycSubmission.findFirst({

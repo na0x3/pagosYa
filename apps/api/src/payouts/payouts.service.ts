@@ -1,11 +1,17 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { KycStatus, LedgerAccount, LedgerDirection, MerchantStatus, PayoutStatus, SettlementMode } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { createPayoutsPdf } from "../reports/finance-pdfs";
+import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
 
 @Injectable()
 export class PayoutsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PayoutsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly terms: TermsAcceptanceService,
+  ) {}
 
   /**
    * Sum of MERCHANT_PAYABLE ledger entries for this merchant in one currency.
@@ -53,6 +59,11 @@ export class PayoutsService {
     for (const merchant of merchants) {
       const balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
       if (!balances.length) continue;
+      // Held, not failed: the balance stays in MERCHANT_PAYABLE and goes out on the first run after they accept.
+      if (await this.terms.needsMerchantAcceptance(merchant.id)) {
+        this.logger.warn(`Payout held: merchant ${merchant.id} has not accepted the terms in force`);
+        continue;
+      }
 
       const approvedKyc = await this.prisma.merchantKycSubmission.findFirst({
         where: { merchantId: merchant.id, status: KycStatus.APPROVED },

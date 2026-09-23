@@ -6,9 +6,10 @@ import { AuthModule } from "../auth/auth.module";
 import { OpsModule } from "../ops/ops.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
 import { ApiKeysController } from "../auth/api-keys.controller";
+import { LegalModule } from "../legal/legal.module";
 
 @Module({
-  imports: [AuthModule, OpsModule, DashboardModule],
+  imports: [AuthModule, OpsModule, DashboardModule, LegalModule],
   controllers: [MerchantsController, ApiKeysController],
   providers: [MerchantsService, KycService],
   exports: [MerchantsService, KycService],

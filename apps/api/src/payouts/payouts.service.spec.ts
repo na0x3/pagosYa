@@ -10,6 +10,10 @@ function makeFakePrisma() {
   };
 }
 
+function termsAccepted() {
+  return { needsMerchantAcceptance: jest.fn().mockResolvedValue(false) };
+}
+
 describe("PayoutsService.getPayableBalance", () => {
   it("nets credits minus debits on MERCHANT_PAYABLE", async () => {
     const prisma = makeFakePrisma();
@@ -17,7 +21,7 @@ describe("PayoutsService.getPayableBalance", () => {
       { direction: LedgerDirection.CREDIT, _sum: { amount: 10000 } },
       { direction: LedgerDirection.DEBIT, _sum: { amount: 3000 } },
     ]);
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await expect(service.getPayableBalance("m_1")).resolves.toBe(7000);
   });
@@ -25,7 +29,7 @@ describe("PayoutsService.getPayableBalance", () => {
   it("treats a missing direction bucket as zero", async () => {
     const prisma = makeFakePrisma();
     prisma.ledgerEntry.groupBy.mockResolvedValue([{ direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await expect(service.getPayableBalance("m_1")).resolves.toBe(5000);
   });
@@ -34,6 +38,20 @@ describe("PayoutsService.getPayableBalance", () => {
 describe("PayoutsService.createDuePayouts", () => {
   const aggregatorMerchant = { id: "m_1", settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE };
 
+  it("holds the payout of a merchant who has not accepted the terms in force", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+    const terms = { needsMerchantAcceptance: jest.fn().mockResolvedValue(true) };
+
+    await new PayoutsService(prisma as any, terms as any).createDuePayouts();
+
+    expect(terms.needsMerchantAcceptance).toHaveBeenCalledWith("m_1");
+    expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+
   it("creates a payout for an eligible merchant using their approved KYC bank account", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
@@ -41,7 +59,7 @@ describe("PayoutsService.createDuePayouts", () => {
     prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
     prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
 
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
     await service.createDuePayouts();
 
     expect(prisma.payout.create).toHaveBeenCalledWith({
@@ -56,7 +74,7 @@ describe("PayoutsService.createDuePayouts", () => {
     prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
     prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
 
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
     await service.createDuePayouts();
 
     expect(prisma.payout.create).not.toHaveBeenCalled();
@@ -68,7 +86,7 @@ describe("PayoutsService.createDuePayouts", () => {
     prisma.payout.findFirst.mockResolvedValue(null);
     prisma.ledgerEntry.groupBy.mockResolvedValue([]);
 
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
     await service.createDuePayouts();
 
     expect(prisma.payout.create).not.toHaveBeenCalled();
@@ -77,7 +95,7 @@ describe("PayoutsService.createDuePayouts", () => {
   it("never pays out a FACILITATOR merchant, even with a positive ledger balance", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findMany.mockResolvedValue([]); // the findMany where-clause itself excludes FACILITATOR; simulate that here
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await service.createDuePayouts();
 
@@ -94,7 +112,7 @@ describe("PayoutsService.createDuePayouts", () => {
     prisma.ledgerEntry.groupBy.mockResolvedValue([{ direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
     prisma.merchantKycSubmission.findFirst.mockResolvedValue(null);
 
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
     await service.createDuePayouts();
 
     expect(prisma.payout.create).not.toHaveBeenCalled();
@@ -107,7 +125,7 @@ describe("PayoutsService multi-currency", () => {
   it("filters the single-currency balance by currency, defaulting to BOB", async () => {
     const prisma = makeFakePrisma();
     prisma.ledgerEntry.groupBy.mockResolvedValue([]);
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await service.getPayableBalance("m_1");
     expect(prisma.ledgerEntry.groupBy).toHaveBeenCalledWith(expect.objectContaining({
@@ -122,7 +140,7 @@ describe("PayoutsService multi-currency", () => {
       { currency: "USD", direction: LedgerDirection.CREDIT, _sum: { amount: 9500 } },
       { currency: "USD", direction: LedgerDirection.DEBIT, _sum: { amount: 500 } },
     ]);
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await expect(service.getPayableBalances("m_1")).resolves.toEqual([
       { currency: "BOB", payableBalance: 70000 },
@@ -139,7 +157,7 @@ describe("PayoutsService multi-currency", () => {
       { currency: "USD", direction: LedgerDirection.CREDIT, _sum: { amount: 900 } },
     ]);
     prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123", payoutUsdBankAccount: "US 987" });
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await service.createDuePayouts();
 
@@ -154,7 +172,7 @@ describe("PayoutsService multi-currency", () => {
     prisma.payout.findFirst.mockResolvedValue(null);
     prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "USD", direction: LedgerDirection.CREDIT, _sum: { amount: 900 } }]);
     prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123", payoutUsdBankAccount: null });
-    const service = new PayoutsService(prisma as any);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
 
     await service.createDuePayouts();
 
