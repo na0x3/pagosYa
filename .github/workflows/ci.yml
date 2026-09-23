@@ -12,6 +12,27 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # The API's *.integration.spec.ts suites deliberately refuse to report
+    # success in CI without a database — a skipped suite exits 0, and they exist
+    # precisely because the mocked suites cannot catch what they catch. Each one
+    # CREATEs a throwaway database of its own and DROPs it, so this service is
+    # all they need.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pagosya
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      INTEGRATION_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
 
