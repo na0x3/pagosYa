@@ -63,17 +63,27 @@ export class LimitsService {
 
   async amountInBob(intent: { amount: number; currency: string; metadata: unknown }): Promise<{ amountBob: number; fxRate: Prisma.Decimal | null }> {
     const fx = (intent.metadata as { fx?: { originalAmount?: number; originalCurrency?: string } } | null)?.fx;
-    if (fx?.originalCurrency === "BOB" && typeof fx.originalAmount === "number") return { amountBob: fx.originalAmount, fxRate: null };
-    if (intent.currency === "BOB") return { amountBob: intent.amount, fxRate: null };
-    if (intent.currency === "USD") {
+    let amountBob: number;
+    let fxRate: Prisma.Decimal | null = null;
+    if (fx?.originalCurrency === "BOB" && typeof fx.originalAmount === "number") {
+      amountBob = fx.originalAmount;
+    } else if (intent.currency === "BOB") {
+      amountBob = intent.amount;
+    } else if (intent.currency === "USD") {
       const settings = await this.prisma.limitSettings.findUnique({ where: { id: "singleton" } });
       if (!settings) throw limitExceeded();
       // Decimal, not float: Math.ceil(amount * Number(rate)) can over-count by
       // one centavo due to binary floating point rounding of the rate.
-      const amountBob = new Prisma.Decimal(intent.amount).mul(settings.usdToBobRate).ceil().toNumber();
-      return { amountBob, fxRate: settings.usdToBobRate };
+      amountBob = new Prisma.Decimal(intent.amount).mul(settings.usdToBobRate).ceil().toNumber();
+      fxRate = settings.usdToBobRate;
+    } else {
+      throw limitExceeded();
     }
-    throw limitExceeded();
+    // fx.originalAmount comes from merchant-controlled metadata; refuse
+    // anything that isn't a positive integer centavo count so a negative or
+    // fractional value can't shrink the monthly reservation while counted.
+    if (!Number.isSafeInteger(amountBob) || amountBob <= 0) throw limitExceeded();
+    return { amountBob, fxRate };
   }
 
   async assertPerPayment(merchantId: string, intent: { amount: number; currency: string; metadata: unknown }, audience: "merchant" | "buyer") {

@@ -68,6 +68,20 @@ describe("LimitsService.amountInBob", () => {
     const { service } = setup();
     await expect(service.amountInBob(intent({ currency: "EUR" }))).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it("refuses a negative fx.originalAmount", async () => {
+    const { service } = setup();
+    await expect(
+      service.amountInBob(intent({ amount: 1_437, currency: "USD", metadata: { fx: { originalAmount: -10_000, originalCurrency: "BOB", rate: 6.96 } } })),
+    ).rejects.toMatchObject({ response: { code: "limit_exceeded" } });
+  });
+
+  it("refuses a fractional fx.originalAmount", async () => {
+    const { service } = setup();
+    await expect(
+      service.amountInBob(intent({ amount: 1_437, currency: "USD", metadata: { fx: { originalAmount: 10_000.5, originalCurrency: "BOB", rate: 6.96 } } })),
+    ).rejects.toMatchObject({ response: { code: "limit_exceeded" } });
+  });
 });
 
 describe("LimitsService.assertPerPayment", () => {
@@ -91,6 +105,12 @@ describe("LimitsService.reserve", () => {
   it("never touches TEST payments", async () => {
     const { service, tx } = setup();
     await service.reserve(tx as any, intent({ livemode: false }), now);
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it("makes no $executeRaw call for a zero-amount intent", async () => {
+    const { service, tx } = setup();
+    await service.reserve(tx as any, intent({ amount: 0 }), now);
     expect(tx.$executeRaw).not.toHaveBeenCalled();
   });
 
