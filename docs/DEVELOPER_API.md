@@ -70,9 +70,17 @@ The `pagosya-signature` header is `t=<milliseconds>,v1=<hex hmac>`. The HMAC-SHA
 
 Return a 2xx response quickly. pagosYa retries failed deliveries with exponential backoff up to eight attempts; duplicate delivery must therefore be safe.
 
+## pagosYa terms
+
+pagosYa publishes its own versioned texts at `GET /v1/legal/merchant-terms`, `GET /v1/legal/buyer-terms` and `GET /v1/legal/privacy-policy` (a past version: `GET /v1/legal/:kind/:version`). Each response carries `version`, `title`, `body` (markdown), `sha256` and `effectiveAt`; a 404 means nothing is in force yet.
+
+- **Merchant signup.** `POST /v1/merchants` accepts an optional `termsVersion`. Send the `version` your signup screen showed with a required "I accept" checkbox; an unknown or superseded version is rejected with 400 before the merchant is created. Once merchant terms are in force, KYC submission and payouts wait until the merchant has accepted them (the dashboard asks).
+- **Custom checkouts.** Hosted checkout and the widget already do this. If you build your own payment form, show "Al pagar aceptas los Términos y la Política de privacidad de pagosYa" beside the pay button, linking to `https://pagosya.bo/terminos/compradores` and `https://pagosya.bo/privacidad`, and send the displayed versions as `buyerTermsVersion` and `buyerPrivacyVersion` on `POST /v1/payment_intents/:id/confirm`. A stale or unknown version is rejected with 400; omit both fields when no buyer terms are published.
+
 ## Production checklist
 
 - Complete KYC and use matching `pk_live_...` and `sk_live_...` credentials.
+- If you run your own payment form, show pagosYa's buyer terms notice and send `buyerTermsVersion` on confirm.
 - Keep API credentials in a secrets manager and rotate them periodically.
 - Use a unique `Idempotency-Key` for every logical mutating operation.
 - Refunds require an `Idempotency-Key` and reject any amount above the remaining unrefunded balance, including refunds currently in flight.
