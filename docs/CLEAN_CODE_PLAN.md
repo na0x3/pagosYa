@@ -71,4 +71,38 @@ Phases 3–5 are the large ones; each should be split into several PRs.
   they reach zero — the config is already a ratchet, so a *new* floating promise fails today.
 
 - **Phase 6 — done.** `no-circular` is now an error; the five cycles that predate it stay listed in `.dependency-cruiser-known-violations.json`, and a new cycle fails `pnpm check:boundaries` in CI.
+- **Browser suite, measured 2026-09-22.** The figure recorded below — "39 failing tests" in the
+  full dashboard suite — is stale by a wide margin. Actual state, run at a clean checkout of
+  HEAD in a throwaway worktree (so none of it is working-tree drift):
+
+  | Suite | Result |
+  |---|---|
+  | merchant-studio, all 37 spec files | **177 passed, 1 failed** (the failure is `source-face.spec.ts`, still untracked WIP) |
+  | merchant-dashboard, all 8 spec files | **48 passed, 9 failed** |
+
+  So the browser suites were in far better shape than the plan assumed, and CI was running 8 of
+  45 spec files for no reason. The full Studio suite and three more dashboard specs
+  (`store-settings`, `domain-shop`, `international-payments`) are now in `ci.yml`.
+
+  Of the dashboard's 9: one was a dead assertion (`#categoryRows`, an element that no longer
+  exists — fixed to use `#paymentLinkRows`), one covers retired custom-domain UI (skipped, with
+  the evidence in a comment), and **six are in `merchant-workspace.spec.mjs`, which CI already
+  runs — so `browser-tests` is red at HEAD and has been for some time.**
+
+  All six describe the dashboard's *previous* layout, not a product defect. They need a decision
+  about intent, not a repair:
+
+  | Test | What it asserts | What is true now |
+  |---|---|---|
+  | `:316` compact navigation stays at the edge | a 64px rail at `x: 0` | `workspace-design.css` makes it a 240px sidebar |
+  | `:107` retired sections are absent | `#storeSettingsRoot` absent | it is live, mounted by `mountStoreSettings`, with 34 passing tests of its own |
+  | `:88`, `:209` motion replay | `#source-replay-motion` in the Studio frame | that control no longer exists |
+  | `:292` integration logos | the detail panel reads "Sin conectar a esta tienda" | a different integration is selected first |
+  | `:129` shared editor | old sidebar bounds | same redesign as `:316` |
+
+  `:107` is the interesting one: it asserts store settings is retired, while `store-settings.spec.mjs`
+  tests it as a live feature. Those two cannot both be right. There is a `cleanup/retire-legacy-dashboard`
+  branch, which suggests the retirement was planned, started, and reversed — decide which, then
+  delete one of the two specs.
+
 - **Known pre-existing browser failures** (identical on `3b9d5aa`, before any refactor): in `merchant-dashboard/tests/merchant-workspace.spec.mjs`, "store opens the shared editor…" and "saved site previews refresh…" time out waiting for `#productCreateDisclosure > summary` to become visible, and "integration logos load…" finds 0 of 17 `.integration-card`s. The other 12 CI dashboard browser tests pass. `merchant-studio/tests/source-checks.spec.ts` "exported contact form…" failed once under a full run and passed 1/1 alone and 18/18 in a 3× repeat — timing flake.

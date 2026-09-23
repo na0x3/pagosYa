@@ -183,7 +183,20 @@ const successfulInventoryResponse = ({ path }) => {
   return undefined;
 };
 
-test("merchant connects and verifies a custom storefront domain", async ({ page }) => {
+/**
+ * SKIPPED 2026-09-22 — this covers UI the dashboard no longer has.
+ *
+ * `#customDomainHostname`, `#customDomainConnect`, `#customDomainList` and
+ * `#customDomainSummary` now appear nowhere outside this file, and no frontend
+ * calls POST /stores/:id/domains or /domains/:id/verify any more; dashboard.js
+ * keeps only a GET, to find the ACTIVE domain for the store link. The buying
+ * flow in domain-shop.mjs ("compra un dominio y lo conectamos por ti")
+ * replaced it, and merchant-workspace.spec.mjs asserts this UI is retired.
+ *
+ * Delete it, or reinstate it against wherever connect/verify lives now — but
+ * it should not sit red in CI meanwhile.
+ */
+test.skip("merchant connects and verifies a custom storefront domain", async ({ page }) => {
   const merchantStore = store("store_1", "Tienda propia");
   let domains = [];
   let verificationAttempts = 0;
