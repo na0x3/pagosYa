@@ -23,7 +23,8 @@ function harness(livemode = true) {
     const email = { send: jest.fn() };
     const ledger = { buildCaptureJournal: jest.fn(), generateGroupId: jest.fn(), postJournalEntry: jest.fn() };
     const config = { get: jest.fn((key: string) => (key === 'app.dlocal' ? { bobPerUsd: 0, intlFeeBps: 590, costBps: 0 } : undefined)) };
-    const payment = new PaymentIntentsService(db, {} as any, {} as any, ledger as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, email as any, config as any);
+    const inertLimits = { assertPerPayment: jest.fn(), reserve: jest.fn().mockResolvedValue({ crossedWarning: false }), settle: jest.fn(), release: jest.fn() };
+    const payment = new PaymentIntentsService(db, {} as any, {} as any, ledger as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, email as any, config as any, inertLimits as any);
     jest.spyOn(payment as any, 'decrementStockForCart').mockResolvedValue(undefined);
     jest.spyOn(payment as any, 'recordProductStats').mockResolvedValue(undefined);
     return { db, payment, email };

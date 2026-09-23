@@ -16,9 +16,10 @@ import { DashboardModule } from "../dashboard/dashboard.module";
 import { InternationalModule } from "../international/international.module";
 import { RefundsModule } from "../refunds/refunds.module";
 import { LegalModule } from "../legal/legal.module";
+import { LimitsModule } from "../limits/limits.module";
 
 @Module({
-  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule, RefundsModule, LegalModule],
+  imports: [RailsModule, PaymentMethodsModule, LedgerModule, WebhooksModule, InvoicingModule, AuthModule, DashboardModule, InternationalModule, RefundsModule, LegalModule, LimitsModule],
   controllers: [PaymentIntentsController, CheckoutSessionController, RailCallbackController, BanecoQrWebhookController, DlocalWebhookController],
   providers: [PaymentIntentsService, DlocalReconciliationWorker],
   exports: [PaymentIntentsService],

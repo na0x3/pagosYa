@@ -6,8 +6,10 @@ function noopConfig() {
   return { get: jest.fn().mockReturnValue({ bobPerUsd: 0, intlFeeBps: 590, costBps: 0 }) } as any;
 }
 
+const inertLimits = () => ({ assertPerPayment: jest.fn(), reserve: jest.fn().mockResolvedValue({ crossedWarning: false }), settle: jest.fn(), release: jest.fn() });
+
 function makeService() {
-  return new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+  return new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 }
 
 describe("PaymentIntentsService cart option inventory", () => {
@@ -27,7 +29,7 @@ describe("PaymentIntentsService cart option inventory", () => {
       appointment: { updateMany: jest.fn() },
     };
     const prisma = { $transaction: jest.fn((callback) => callback(tx)) };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 
     await service.cancelById("pi_1");
 
@@ -259,7 +261,7 @@ describe("PaymentIntentsService cart option inventory", () => {
 describe("PaymentIntentsService merchant transaction list", () => {
   it("filters transactions by the selected store when requested", async () => {
     const prisma = { paymentIntent: { findMany: jest.fn().mockResolvedValue([]) } };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 
     await service.listForMerchant("merchant_1", "store_1");
 
@@ -277,7 +279,7 @@ describe("PaymentIntentsService merchant transaction list", () => {
 describe("PaymentIntentsService directed charge recipients", () => {
   it("persists a merchant-supplied recipient when creating a direct charge", async () => {
     const prisma = { paymentIntent: { create: jest.fn().mockImplementation(({ data }) => data) } };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 
     await service.createInTransaction(prisma as any, "merchant_1", false, {
       amount: 3500,
@@ -306,7 +308,7 @@ describe("PaymentIntentsService directed charge recipients", () => {
         }),
       },
     };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 
     await expect(service.checkoutRecipient({
       customerName: null,
@@ -326,7 +328,7 @@ describe("PaymentIntentsService directed charge recipients", () => {
 describe("PaymentIntentsService callback admission", () => {
   function callbackHarness(intent: Record<string, unknown>) {
     const prisma = { paymentIntent: { findUnique: jest.fn().mockResolvedValue(intent) } };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
     const applyRailResult = jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: intent });
     return { service, applyRailResult };
   }
@@ -426,7 +428,7 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     const paymentMethods = { findOrCreate: jest.fn().mockResolvedValue({ id: "pm_1", type: "LOCAL_METHOD" }) };
     const config = { get: jest.fn((key: string) => (key === "app.environment" ? env.environment ?? "development" : { ...dlocalCfg, enabled: env.enabled ?? false })) };
     // Reorder to the real constructor signature; config is always last.
-    const service = new PaymentIntentsService(prisma as any, railRegistry as any, paymentMethods as any, {} as any, {} as any, {} as any, {} as any, config as any);
+    const service = new PaymentIntentsService(prisma as any, railRegistry as any, paymentMethods as any, {} as any, {} as any, {} as any, {} as any, config as any, inertLimits() as any);
     jest.spyOn(service as any, "assertCartStillAvailable").mockResolvedValue(undefined);
     jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
     jest.spyOn(service as any, "applyRailResult").mockResolvedValue({ paymentIntent: {}, railResult: {} });
@@ -538,7 +540,7 @@ describe("PaymentIntentsService.latestAuthorization", () => {
       .mockResolvedValueOnce({ merchantId: "m_1", transactions: [{ railReference: "D-2", status: "PENDING" }] })
       .mockResolvedValueOnce({ merchantId: "m_1", transactions: [] })
       .mockResolvedValueOnce(null);
-    const service = new PaymentIntentsService({ paymentIntent: { findUnique } } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService({ paymentIntent: { findUnique } } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 
     await expect(service.latestAuthorization("pi_1")).resolves.toEqual({ merchantId: "m_1", railReference: "D-2", status: "PENDING" });
     await expect(service.latestAuthorization("pi_1")).resolves.toEqual({ merchantId: "m_1", railReference: null, status: null });
@@ -554,7 +556,7 @@ describe("PaymentIntentsService receipts", () => {
   it("labels a converted intent's cart lines in BOB and appends the original BOB total next to the charged USD total", async () => {
     const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
     const email = { send: jest.fn() };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any);
 
     await (service as any).sendReceiptEmail(
       {
@@ -583,7 +585,7 @@ describe("PaymentIntentsService receipts", () => {
   it("leaves a domestic receipt byte-identical (no original-total suffix, line currency unchanged)", async () => {
     const prisma = { storeOrder: { findUnique: jest.fn().mockResolvedValue(null) } };
     const email = { send: jest.fn() };
-    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig());
+    const service = new PaymentIntentsService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, email as any, noopConfig(), inertLimits() as any);
 
     await (service as any).sendReceiptEmail(
       {
@@ -615,7 +617,7 @@ describe("PaymentIntentsService carrier shipments", () => {
       storeOrder: { findUnique: jest.fn().mockResolvedValue({ id: "order_1", amount: 12500 }), update: jest.fn() },
       shipment: { updateMany: jest.fn(async () => ({ count: 1 })) },
     };
-    const service = new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService({} as any, {} as any, {} as any, {} as any, { enqueueEvent: jest.fn() } as any, { enqueueInvoice: jest.fn() } as any, {} as any, noopConfig(), inertLimits() as any);
     for (const method of ["assertCartStillAvailable", "decrementStockForCart", "recordCartSales", "recordProductStats"]) jest.spyOn(service as any, method).mockResolvedValue(undefined);
     jest.spyOn(service as any, "reserveLocationStockForCart").mockResolvedValue(false);
 
@@ -633,7 +635,7 @@ describe("PaymentIntentsService carrier shipments", () => {
       shipment: { updateMany: jest.fn(async () => ({ count: 1 })) },
       appointment: { updateMany: jest.fn() },
     };
-    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig());
+    const service = new PaymentIntentsService({ $transaction: jest.fn((callback) => callback(tx)) } as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, noopConfig(), inertLimits() as any);
 
     await service.cancelById("pi_1");
 

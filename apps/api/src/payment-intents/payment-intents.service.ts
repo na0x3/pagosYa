@@ -4,7 +4,7 @@ import { finishCredit, ensureCreditReservation } from '../commerce-platform/cred
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
-import { DebtRecordStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { DebtRecordStatus, LimitReservationStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RailRegistry } from "../rails/rail-registry.service";
 import { PaymentMethodsService } from "../payment-methods/payment-methods.service";
@@ -21,6 +21,7 @@ import { createOrderTrackingToken } from "../consumer/order-tracking-token";
 import { selectedExtrasLabel } from "../payment-links/product-extras";
 import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration";
 import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "../international/fx";
+import { LimitsService } from "../limits/limits.service";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -129,10 +130,11 @@ export class PaymentIntentsService {
     private readonly invoicing: InvoicingService,
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
     private readonly config: ConfigService,
+    private readonly limits: LimitsService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
-    return this.createInTransaction(this.prisma, merchantId, livemode, dto);
+    return this.createInTransaction(this.prisma, merchantId, livemode, dto, "merchant");
   }
 
   async createInTransaction(
@@ -140,7 +142,11 @@ export class PaymentIntentsService {
     merchantId: string,
     livemode: boolean,
     dto: CreatePaymentIntentDto,
+    limitAudience: "merchant" | "buyer" = "buyer",
   ) {
+    if (livemode && dto.amount > 0) {
+      await this.limits.assertPerPayment(merchantId, { amount: dto.amount, currency: dto.currency ?? "BOB", metadata: dto.metadata ?? null }, limitAudience);
+    }
     const id = `pi_${idPart()}`;
     const clientSecret = `${id}_secret_${secretPart()}`;
 
@@ -281,6 +287,7 @@ export class PaymentIntentsService {
         where: { id },
         data: { status: nextStatus, ...(hadReservation ? { metadata: { ...metadata, locationStockReserved: false } as Prisma.InputJsonValue } : {}) },
       });
+      await this.limits.release(tx, id);
       const order = await tx.storeOrder.findUnique({ where: { paymentIntentId: id }, select: { id: true, status: true } });
       if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
         await tx.storeOrder.update({
@@ -304,11 +311,11 @@ export class PaymentIntentsService {
    * outbox all commit together).
    */
   async confirm(paymentIntentId: string, dto: ConfirmPaymentIntentDto, buyerTerms?: BuyerTermsRecord) {
-    const { intentId, railId, amount, currency, merchantId, country, payer } = await this.prisma.$transaction(async (tx) => {
+    const { intentId, railId, amount, currency, merchantId, country, payer, crossedWarning } = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
-        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue; amount: number; currency: string }[]
+        { id: string; status: PaymentIntentStatus; confirmationAttempts: number; merchantId: string; consumerUserId: string | null; metadata: Prisma.JsonValue; amount: number; currency: string; livemode: boolean; limitStatus: LimitReservationStatus | null }[]
       >`
-        SELECT id, status, "confirmationAttempts", "merchantId", "consumerUserId", metadata, amount, currency FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
+        SELECT id, status, "confirmationAttempts", "merchantId", "consumerUserId", metadata, amount, currency, livemode, "limitStatus" FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE
       `;
       const current = rows[0];
       if (!current) throw new NotFoundException("PaymentIntent not found");
@@ -326,6 +333,16 @@ export class PaymentIntentsService {
         throw new BadRequestException("La compra de dominios se paga con QR bancario.");
       }
       const confirmedStatus = transition(current.status, PaymentIntentEvent.CONFIRM);
+
+      const reservation = await this.limits.reserve(tx, {
+        id: paymentIntentId,
+        merchantId: current.merchantId,
+        amount: current.amount,
+        currency: current.currency,
+        metadata: current.metadata,
+        livemode: current.livemode,
+        limitStatus: current.limitStatus,
+      });
 
       if ((current.metadata as Prisma.JsonObject)?.storeCredit) await ensureCreditReservation(tx, paymentIntentId);
       await this.assertCartStillAvailable(tx, current.metadata);
@@ -432,6 +449,8 @@ export class PaymentIntentsService {
         payer: international
           ? { name: updated.customerName ?? "", email: updated.customerEmail ?? "", document: updated.customerDocument ?? undefined }
           : undefined,
+        // crossedWarning: consumed by Task 4 (the 80%-of-monthly-limit merchant email).
+        crossedWarning: reservation.crossedWarning,
       };
     });
 
@@ -577,6 +596,9 @@ export class PaymentIntentsService {
               : undefined,
         },
       });
+
+      if (nextStatus === PaymentIntentStatus.SUCCEEDED) await this.limits.settle(tx, paymentIntentId);
+      if (nextStatus === PaymentIntentStatus.FAILED) await this.limits.release(tx, paymentIntentId);
 
       let receiptQueued = false;
       if (result.status === "succeeded") {
