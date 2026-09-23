@@ -31,3 +31,20 @@ apps/merchant-dashboard/public/studio/
 # Generated launch videos
 brag-output*/
 videos/
+
+# Design-review screenshots from the impeccable/visual-qa skills. Regenerated on
+# demand; 32MB of PNGs that churn on every review round.
+.impeccable/
+"visor (1).pdf"
+
+# Premium design benchmark RUNS. Every one of these directories is script output
+# (captures, evidence.json, receipt.json and the generated site) — regenerate with
+# `pnpm benchmark:source` / the premium-design-benchmark-* scripts rather than
+# committing 63MB of it. The benchmark INPUTS are still tracked: the scene-*.jpg
+# photos each run consumes, and examples/premium-benchmark-photos/fixtures/.
+examples/premium-benchmark/
+examples/premium-benchmark-photos/*
+!examples/premium-benchmark-photos/fixtures/
+!examples/premium-benchmark-photos/*/
+examples/premium-benchmark-photos/*/*
+!examples/premium-benchmark-photos/*/scene-*.jpg
