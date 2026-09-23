@@ -9,6 +9,7 @@ import configuration from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { MerchantsModule } from "./merchants/merchants.module";
+import { LegalModule } from "./legal/legal.module";
 import { PaymentIntentsModule } from "./payment-intents/payment-intents.module";
 import { InternationalModule } from "./international/international.module";
 import { RefundsModule } from "./refunds/refunds.module";
@@ -60,6 +61,7 @@ import { ShippingModule } from "./shipping/shipping.module";
     PrismaModule,
     AuthModule,
     MerchantsModule,
+    LegalModule,
     RailsModule,
     PaymentIntentsModule,
     InternationalModule,
