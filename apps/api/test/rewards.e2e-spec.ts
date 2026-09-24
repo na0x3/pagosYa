@@ -36,6 +36,7 @@ describe('Rewards: daily wheel and Horizonte board', () => {
   afterAll(async () => { await app?.close(); });
   beforeEach(async () => {
     draws.length = 0;
+    await prisma.storeSourceGeneration.deleteMany({ where: { storeId } });
     await prisma.aiCreditRedemption.deleteMany({ where: { merchantId } });
     await prisma.dailyWheelSpin.deleteMany({ where: { merchantUserId } });
     await prisma.rewardGrant.deleteMany({ where: { merchantId } });
@@ -151,5 +152,26 @@ describe('Rewards: daily wheel and Horizonte board', () => {
     expect(await level()).toBe(0);
     await prisma.rewardGrant.create({ data: { merchantId, storeId, merchantUserId, source: 'WHEEL', kind: 'XP', amount: 200 } });
     expect(await level()).toBe(1); // 200 XP ≥ 100 (Capi) and < 250
+  });
+
+  const generation = (credits: number) => prisma.storeSourceGeneration.create({ data: { storeId, baseRevision: 0, requestedModel: 'auto', model: 'auto', maxCredits: 50, credits, status: 'COMPLETED' } });
+
+  it('covers a finished generation from the reward balance exactly once', async () => {
+    const service = app.get(RewardsService);
+    await prisma.rewardGrant.create({ data: { merchantId, storeId, merchantUserId, source: 'WHEEL', kind: 'AI_CREDITS', amount: 25 } });
+    const small = await generation(8);
+    expect(await service.redeemForGeneration(merchantId, small.id, 8)).toBe(8);
+    expect(await service.redeemForGeneration(merchantId, small.id, 8)).toBe(0);
+    const big = await generation(40);
+    expect(await service.redeemForGeneration(merchantId, big.id, 40)).toBe(17);
+    expect((await http().get(`/v1/dashboard/rewards?storeId=${storeId}`).set(auth()).expect(200)).body.aiCreditBalance).toBe(0);
+  });
+
+  it('records nothing when there is no balance or the run used no credits', async () => {
+    const service = app.get(RewardsService);
+    const run = await generation(5);
+    expect(await service.redeemForGeneration(merchantId, run.id, 5)).toBe(0);
+    expect(await service.redeemForGeneration(merchantId, run.id, 0)).toBe(0);
+    expect(await prisma.aiCreditRedemption.count({ where: { merchantId } })).toBe(0);
   });
 });

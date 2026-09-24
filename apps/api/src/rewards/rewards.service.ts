@@ -96,6 +96,19 @@ export class RewardsService {
     return { ...result, board };
   }
 
+  /** Applies reward credits to a finished YAPI generation. Idempotent per generation; returns 0 when there is nothing to cover. */
+  async redeemForGeneration(merchantId: string, generationId: string, credits: number): Promise<number> {
+    if (!(credits > 0)) return 0;
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockMerchant(tx, merchantId);
+      if (await tx.aiCreditRedemption.findUnique({ where: { generationId } })) return 0;
+      const covered = Math.min(await aiCreditBalance(tx, merchantId), credits);
+      if (covered <= 0) return 0;
+      await tx.aiCreditRedemption.create({ data: { merchantId, generationId, credits: covered } });
+      return covered;
+    });
+  }
+
   protected wheelView(day: string, spins: { used: number; allowed: number }) {
     return { available: spins.used < spins.allowed, day, spinsUsed: spins.used, spinsAllowed: spins.allowed, segments: WHEEL_SEGMENTS.map((segment) => segment.key) };
   }
