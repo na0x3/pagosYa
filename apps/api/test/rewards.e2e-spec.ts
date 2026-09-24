@@ -6,6 +6,7 @@ import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { REWARD_RANDOM } from '../src/rewards/reward-random';
+import { RewardsService } from '../src/rewards/rewards.service';
 
 // Scripted randomness: each test pushes the exact values the service will draw, in order.
 const draws: number[] = [];
@@ -50,5 +51,60 @@ describe('Rewards: daily wheel and Horizonte board', () => {
     expect(state.stickers).toHaveLength(9);
     await http().get(`/v1/dashboard/rewards?storeId=${foreignStoreId}`).set(auth()).expect(404);
     await http().get(`/v1/dashboard/rewards?storeId=${storeId}`).expect(401);
+  });
+
+  // pickWeighted draws int(1000). Ranges by segment: STICKER_COMMON 0-269, XP_25 270-519, AI_CREDITS_5 520-554,
+  // TIP 555-684, XP_50 685-824, RESPIN 825-874, STICKER_RARE 875-944, XP_200 945-994, AI_CREDITS_25 995-999.
+  const WHEEL_DRAW = { STICKER_COMMON: 0, XP_25: 270, AI_CREDITS_5: 520, TIP: 555, XP_50: 685, RESPIN: 825, STICKER_RARE: 875, XP_200: 945, AI_CREDITS_25: 995 } as const;
+  const spin = () => http().post('/v1/dashboard/rewards/wheel/spin').set(auth()).send({ storeId });
+
+  it('grants one free spin per Bolivia day and rejects the second', async () => {
+    draws.push(WHEEL_DRAW.XP_50);
+    const first = (await spin().expect(201)).body;
+    expect(first).toMatchObject({ segmentIndex: 4, grant: { prize: 'XP_50', kind: 'XP', amount: 50 }, wheel: { available: false, spinsUsed: 1 } });
+    await spin().expect(409);
+    expect((await http().get(`/v1/dashboard/rewards?storeId=${storeId}`).set(auth()).expect(200)).body.bonusXp).toBe(50);
+  });
+
+  it('lets a RESPIN prize unlock exactly one more spin the same day', async () => {
+    draws.push(WHEEL_DRAW.RESPIN);
+    expect((await spin().expect(201)).body.wheel).toMatchObject({ available: true, spinsUsed: 1, spinsAllowed: 2 });
+    draws.push(WHEEL_DRAW.XP_25);
+    expect((await spin().expect(201)).body.wheel).toMatchObject({ available: false, spinsUsed: 2 });
+    await spin().expect(409);
+  });
+
+  it('gives exactly one prize when two tabs spin at once', async () => {
+    draws.push(WHEEL_DRAW.XP_25, WHEEL_DRAW.XP_25);
+    const statuses = (await Promise.all([spin(), spin()])).map((r) => r.status).sort();
+    expect(statuses).toEqual([201, 409]);
+    expect(await prisma.rewardGrant.count({ where: { merchantId } })).toBe(1);
+  });
+
+  it('hands out a sticker the merchant does not own before repeating one', async () => {
+    await prisma.rewardGrant.createMany({ data: ['parrot', 'llama', 'cactus', 'pineapple', 'rainbow', 'trumpet'].map((stickerId) => ({ merchantId, storeId, merchantUserId, source: 'WHEEL' as const, kind: 'STICKER' as const, stickerId })) });
+    draws.push(WHEEL_DRAW.STICKER_COMMON, 0);
+    expect((await spin().expect(201)).body.grant.sticker).toMatchObject({ id: 'coffee', isNew: true });
+  });
+
+  it('converts AI credits to 200 XP once the monthly cap is reached', async () => {
+    await prisma.rewardGrant.create({ data: { merchantId, storeId, merchantUserId, source: 'BOARD', kind: 'AI_CREDITS', amount: 48 } });
+    draws.push(WHEEL_DRAW.AI_CREDITS_5);
+    expect((await spin().expect(201)).body.grant).toMatchObject({ prize: 'AI_CREDITS_5', kind: 'XP', amount: 200, convertedFrom: 'AI_CREDITS' });
+  });
+
+  it('tells the dashboard whether to open the wheel after the daily login', async () => {
+    expect((await http().post('/v1/dashboard/daily-login-reward').set(auth()).expect(201)).body.wheelAvailable).toBe(true);
+    draws.push(WHEEL_DRAW.XP_25);
+    await spin().expect(201);
+    expect((await http().post('/v1/dashboard/daily-login-reward').set(auth()).expect(201)).body.wheelAvailable).toBe(false);
+  });
+
+  it('re-opens the free spin at 00:00 Bolivia, not 00:00 UTC', async () => {
+    const service = app.get(RewardsService);
+    draws.push(WHEEL_DRAW.XP_25);
+    await service.spinWheel(merchantId, merchantUserId, storeId, new Date('2026-09-25T03:59:00Z'));
+    expect((await service.state(merchantId, merchantUserId, storeId, new Date('2026-09-25T03:59:30Z'))).wheel.available).toBe(false);
+    expect((await service.state(merchantId, merchantUserId, storeId, new Date('2026-09-25T04:00:30Z'))).wheel.available).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, RewardKind, RewardSource } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { AI_CREDIT_MONTHLY_CAP, BOARD_LAYOUT, BOARD_SALES_PER_ROLL, CAP_FALLBACK_XP, PRIZES, STICKERS, TIPS, WHEEL_SEGMENTS, boliviaDayKey, boliviaMonthStart, type PrizeKey, type RandomSource } from "./reward-policy";
+import { AI_CREDIT_MONTHLY_CAP, BOARD_LAYOUT, BOARD_SALES_PER_ROLL, CAP_FALLBACK_XP, PRIZES, STICKERS, TIPS, WHEEL_SEGMENTS, boliviaDayKey, boliviaMonthStart, pickWeighted, type PrizeKey, type RandomSource } from "./reward-policy";
 import { aiCreditBalance, aiCreditsGrantedSince, countStoreSales, gameXpForStore, wheelSpinsToday, type Db } from "./reward-queries";
 import { REWARD_RANDOM } from "./reward-random";
 
@@ -50,6 +50,26 @@ export class RewardsService {
       aiCreditsThisMonth: thisMonth,
       aiCreditMonthlyCap: AI_CREDIT_MONTHLY_CAP,
     };
+  }
+
+  async spinWheel(merchantId: string, merchantUserId: string, storeId: string, now = new Date()) {
+    await this.assertStore(merchantId, storeId);
+    const day = boliviaDayKey(now);
+    const alreadySpun = () => new ConflictException("Ya usaste tu giro de hoy.");
+    const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockMerchant(tx, merchantId);
+      const spins = await wheelSpinsToday(tx, merchantUserId, day);
+      if (spins.used >= spins.allowed) throw alreadySpun();
+      const segmentIndex = pickWeighted(this.random);
+      const grant = await this.grant(tx, { merchantId, merchantUserId, storeId }, WHEEL_SEGMENTS[segmentIndex].key, RewardSource.WHEEL, now);
+      await tx.dailyWheelSpin.create({ data: { merchantUserId, day, attempt: spins.used, grantId: grant.id } });
+      return { segmentIndex, grant };
+    }).catch((error: unknown) => {
+      // The (merchantUserId, day, attempt) key is the last line of defence behind the merchant lock.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw alreadySpun();
+      throw error;
+    });
+    return { ...result, wheel: this.wheelView(day, await wheelSpinsToday(this.prisma, merchantUserId, day)) };
   }
 
   protected wheelView(day: string, spins: { used: number; allowed: number }) {

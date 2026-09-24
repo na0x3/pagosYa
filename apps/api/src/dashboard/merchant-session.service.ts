@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import { customAlphabet } from "nanoid";
 import { GoogleIdentityService } from "../auth/google-identity.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { countStoreSales } from "../rewards/reward-queries";
+import { boliviaDayKey } from "../rewards/reward-policy";
+import { countStoreSales, wheelSpinsToday } from "../rewards/reward-queries";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
@@ -175,12 +176,14 @@ export class MerchantSessionService {
         where: { id: merchantUserId },
         select: { dailyLoginStars: true, lastDailyStarAt: true },
       });
+      const spins = await wheelSpinsToday(tx, merchantUserId, boliviaDayKey(now));
 
       return {
         awarded: update.count === 1,
         totalStars: user.dailyLoginStars,
         awardedAt: user.lastDailyStarAt,
         nextRewardAt,
+        wheelAvailable: spins.used < spins.allowed,
       };
     });
   }
