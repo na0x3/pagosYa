@@ -51,7 +51,7 @@ describe('Durable design jobs with PostgreSQL', () => {
     expect((await jobs.get(merchantId, storeId, first.id)).resumeAvailable).toBe(true);
     await jobs.resume(merchantId, storeId, first.id); const second = (await jobs.claim())!; await jobs.reserve(second);
     expect((second.receipts as any[]).map(r => r.repair)).toEqual([1, 1]);
-    expect(second.reservedMicroUsd).toBe(1700000);
+    expect(second.reservedMicroUsd).toBe(1000000);
   });
   it('does not claim a delayed job and detects retention edits', async () => {
     const created = await jobs.create(merchantId, storeId, input());

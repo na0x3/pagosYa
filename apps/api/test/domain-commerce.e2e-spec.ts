@@ -37,7 +37,8 @@ describe('Domain shop (HTTP + PostgreSQL, mocked external providers)', () => {
     ops = app.get(DomainOrdersService);
     const account = await request(app.getHttpServer()).post('/v1/merchants').send({ name: 'Domain buyer', email: 'domain-buyer@example.test' }).expect(201);
     merchant = account.body.merchant.id; token = account.body.testKeys.secretKey;
-    platform = (await db.merchant.create({ data: { name: 'Platform', email: 'domains-platform@example.test', status: 'ACTIVE' } })).id;
+    // pagosYa's own collecting account still needs a live ASFI level, like any merchant taking live payments.
+    platform = (await db.merchant.create({ data: { name: 'Platform', email: 'domains-platform@example.test', status: 'ACTIVE', level: 2 } })).id;
     const outsider = await db.merchant.create({ data: { name: 'Other', email: 'domains-other@example.test' } });
     store = (await db.store.create({ data: { merchantId: merchant, name: 'Shop', slug: 'domain-shop' } })).id;
     otherStore = (await db.store.create({ data: { merchantId: outsider.id, name: 'Other', slug: 'domain-other' } })).id;

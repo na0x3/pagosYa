@@ -117,6 +117,7 @@ describe('Merchant levels and limits', () => {
   it('shows the buyer the neutral message when a store product is over the per-payment max', async () => {
     await prisma.merchant.update({ where: { id: merchantId }, data: { perPaymentLimitOverride: 5_000 } });
     const store = (await http().post('/v1/stores').set({ Authorization: `Bearer ${liveKey}` }).send({ name: 'Tienda Límite' }).expect(201)).body;
+    await prisma.store.update({ where: { id: store.id }, data: { publicVisibility: true } });
     const product = (await http().post(`/v1/stores/${store.id}/payment_links`).set({ Authorization: `Bearer ${liveKey}` }).send({ name: 'Caro', amount: 10_000, currency: 'BOB' }).expect(201)).body;
     const res = await http().post(`/v1/stores/public/${store.slug}/cart-checkout`).send({ items: [{ paymentLinkId: product.id, quantity: 1 }], fulfillmentMethod: 'pickup' }).expect(403);
     expect(res.body.message).toBe('Este comercio no puede recibir pagos en este momento.');

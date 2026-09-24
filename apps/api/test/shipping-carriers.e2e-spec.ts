@@ -18,6 +18,8 @@ describe('Carrier shipping checkout', () => {
     token = (await request(app.getHttpServer()).post('/v1/merchants').send({ name: 'CarrierOwner', email: 'carrier-owner@test.example', settlementMode: 'AGGREGATOR' }).expect(201)).body.testKeys.secretKey;
     const store = (await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Tienda Courier' }).expect(201)).body;
     storeId = store.id; slug = store.slug;
+    // New stores start private; the public quote and checkout endpoints only serve visible ones.
+    await prisma.store.update({ where: { id: storeId }, data: { publicVisibility: true } });
     productId = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/payment_links`).set(auth()).send({ name: 'Café', amount: 10000, currency: 'BOB', shippingWeightGrams: 500 }).expect(201)).body.id;
     await request(app.getHttpServer()).post(`/v1/stores/${storeId}/shipping`).set(auth()).send({ enabled: true, pickupEnabled: false, carriersEnabled: true, prepMinutes: 45 }).expect(201);
     merchantId = (await prisma.store.findUniqueOrThrow({ where: { id: storeId } })).merchantId;
