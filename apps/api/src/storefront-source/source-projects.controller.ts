@@ -14,12 +14,14 @@ import { SourceProjectsService } from "./source-projects.service";
 import { SourceGenerationService } from "./source-generation.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import { SourceVisualEditDto } from './dto/source-visual-edit.dto';
+import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
 
 class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: boolean; }
 
 @ApiTags("storefront-source-projects")
 @ApiBearerAuth()
-@UseGuards(MerchantAuthGuard)
+// The throttler runs after the auth guard so it can charge the merchant, not the address.
+@UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller("v1/stores/:storeId/source-project")
 export class SourceProjectsController {
   constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService) {}
@@ -29,7 +31,10 @@ export class SourceProjectsController {
     return this.projects.setContactForm(merchant.id, storeId, input.revision, input.enabled);
   }
 
+  // A four-value toggle that recompiles the whole project; it had no route limit.
   @Patch("motion")
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   setMotion(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SourceMotionDto) {
     return this.projects.setMotion(merchant.id, storeId, input.revision, input.motion, input.scrollFeel);
   }
@@ -71,6 +76,7 @@ export class SourceProjectsController {
 
   @Post("generate")
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @CompileBudget()
   async generate(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: GenerateSourceProjectDto) {
     const current = await this.projects.current(merchant.id, storeId);
     if (!current.revision) throw new BadRequestException('Antes de crear tu primer sitio, responde las preguntas de YAPI en el chat.');
@@ -85,6 +91,7 @@ export class SourceProjectsController {
 
   @Patch("file")
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   editFile(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: EditSourceFileDto) {
     return this.projects.editFile(merchant.id, storeId, input);
   }
@@ -97,12 +104,14 @@ export class SourceProjectsController {
 
   @Patch('visual-edit')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @CompileBudget()
   visualEdit(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SourceVisualEditDto) {
     return this.projects.visualEdit(merchant.id, storeId, input);
   }
 
   @Put()
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @CompileBudget()
   save(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SaveSourceProjectDto) {
     return this.projects.save(merchant.id, storeId, input);
   }

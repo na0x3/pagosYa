@@ -2,7 +2,7 @@ import { DesignRetryableConflict } from './source-design-errors';
 import { BadRequestException, ConflictException, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { Prisma, type StoreSourceDesignJob } from '@prisma/client';
-import { SourceDesignJobsService, DESIGN_JOB_CAPS, DesignBudgetError, designDigest } from './source-design-jobs.service';
+import { SourceDesignJobsService, DESIGN_JOB_CAPS, DESIGN_JOB_REPAIR_MODEL, DesignBudgetError, designDigest } from './source-design-jobs.service';
 import { SourceDesignEvaluator, designCaptureFailures, type DesignAssessment } from './source-design-evaluator';
 import { SourceProjectsService } from './source-projects.service';
 import { SourceGenerationService } from './source-generation.service';
@@ -90,7 +90,7 @@ export class SourceDesignJobWorker implements OnModuleDestroy {
       if (job.stage === 'REPAIR') {
         actual = 0;
         const baseline = await this.jobs.artifact<SourceProjectSnapshot>(job.id, 'baseline');
-        const generated = await this.generator.generate(store.merchantId, job.storeId, { revision: job.revision, brief: baseline.brief, instruction: 'Corrige los hallazgos visuales adjuntos.', maxCredits: DESIGN_JOB_CAPS.REPAIR, model: 'gpt-5.6-sol', motion: sourceMotionMode(baseline.files) }, undefined, [], undefined, { candidate: true, snapshot: baseline, findings: cp.findings, referenceCaptures: (await this.jobs.artifact<VisualCapture[]>(job.id, 'baseline-captures')).filter(c => c.y === 0 || c.viewport === 'mobile'), signal, onDispatch: () => { actual = null; }, onAttempts: attempts => { actual = attempts.length ? knownDesignSpend(attempts) : actual; } });
+        const generated = await this.generator.generate(store.merchantId, job.storeId, { revision: job.revision, brief: baseline.brief, instruction: 'Corrige los hallazgos visuales adjuntos.', maxCredits: DESIGN_JOB_CAPS.REPAIR, model: DESIGN_JOB_REPAIR_MODEL, motion: sourceMotionMode(baseline.files) }, undefined, [], undefined, { candidate: true, snapshot: baseline, findings: cp.findings, referenceCaptures: (await this.jobs.artifact<VisualCapture[]>(job.id, 'baseline-captures')).filter(c => c.y === 0 || c.viewport === 'mobile'), signal, onDispatch: () => { actual = null; }, onAttempts: attempts => { actual = attempts.length ? knownDesignSpend(attempts) : actual; } });
         actual = knownDesignSpend(generated.generation.attempts);
         if (!generated.candidate) throw new Error('No se recibió una propuesta privada.');
         cp.candidateDigest = sourceProjectDigest(generated.candidate); cp.generation = generated.generation;

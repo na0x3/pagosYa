@@ -5,6 +5,8 @@ import { nextStoreFiles, nextBrief, nextStoreConfig } from './fixtures/next-stor
 import { nextProjectScaffold } from './source-next';
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { SourceProjectsService } from "./source-projects.service";
+import { sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
+import { validateLegacySources } from "./source-legacy";
 
 const input = () => ({ revision: 0, label: "First", brief: { businessType: "Café", audience: "Neighbors", primaryAction: "Pickup", visualDirection: "Menu" }, files: [
   { path: "package.json", content: '{"name":"cafe","scripts":{"build":"node build.mjs"}}' },
@@ -98,6 +100,44 @@ describe("Private source project revisions", () => {
     expect((saved.snapshot as any).files).toEqual(expect.arrayContaining([binary]));
     await expect(service.editFile("m1", "s1", { revision: 1, path: "README.md", content: "stale" })).rejects.toBeInstanceOf(ConflictException);
     await expect(service.editFile("m1", "s1", { revision: 2, path: binary.path, content: "bad" })).rejects.toThrow("texto");
+  });
+
+  // The Código tab writes straight into these files, so the classic projects get the
+  // same refusals the React ones already get from validateNextSources.
+  it("refuses hostile classic source on save and on a hand edit, without stranding the revision", async () => {
+    const { service } = setup();
+    const site = { path: "site.js", content: 'document.title = "Café";' };
+    const page = { path: "index.html", content: "<h1>Café</h1>" };
+    await service.save("m1", "s1", { ...input(), files: [...input().files, page, site] });
+
+    await expect(service.editFile("m1", "s1", { revision: 1, path: "site.js", content: 'eval(location.hash.slice(1))' }))
+      .rejects.toThrow("site.js: no uses eval().");
+    await expect(service.save("m1", "s1", { ...input(), revision: 1, files: [...input().files, { path: "index.html", content: '<h1>Café</h1><script src="https://cdn.example.com/a.js"></script>' }] }))
+      .rejects.toThrow("cdn.example.com");
+
+    // The refusal is not a dead end: the revision is untouched and the next honest edit lands.
+    expect((await service.state("m1", "s1")).revision).toBe(1);
+    await service.editFile("m1", "s1", { revision: 1, path: "site.js", content: 'document.title = "Pan";' });
+    expect((await service.version("m1", "s1", 2)).snapshot).toEqual(expect.objectContaining({ files: expect.arrayContaining([expect.objectContaining({ path: "site.js", content: 'document.title = "Pan";' })]) }));
+  });
+
+  // Old revisions predate this contract. Restoring one appends the stored bytes
+  // unchanged, so a merchant is never locked out of their own history by a rule
+  // written after it was saved.
+  it("restores a revision that today's validator would refuse", async () => {
+    const { service, prisma } = setup();
+    await service.save("m1", "s1", { ...input(), files: [...input().files, { path: "index.html", content: "<h1>Café</h1>" }] });
+    // Stand the stored revision in for one saved before this rule existed.
+    const legacy = sourceProjectSnapshot({ ...input(), files: [...input().files, { path: "index.html", content: '<h1>Café</h1><base href="/">' }] });
+    expect(() => validateLegacySources(legacy.files)).toThrow();
+    const stored: any = await prisma.storeSourceVersion.findUnique({ where: { storeId_revision: { storeId: "s1", revision: 1 } } });
+    stored.snapshot = legacy;
+    stored.digest = sourceProjectDigest(legacy);
+
+    await service.restore("m1", "s1", 1, 1);
+    expect((await service.version("m1", "s1", 2)).snapshot).toEqual(expect.objectContaining({
+      files: expect.arrayContaining([expect.objectContaining({ path: "index.html", content: '<h1>Café</h1><base href="/">' })]),
+    }));
   });
 
   it("paginates history without dropping or repeating the boundary revision", async () => {

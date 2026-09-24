@@ -1,4 +1,4 @@
-import { sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourceUsage } from './source-generation-policy';
+import { sourceConversationModel, sourceGenerationPlan, sourceGenerationEstimate, sourceImageMicroUsd, sourceOutputBudget, sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
@@ -46,5 +46,39 @@ describe('Source model routing and credit budgets', () => {
     for (const invalid of [{ model: 'unpriced-model' }, { maxCredits: 0 }, { maxCredits: 501 }, { maxCredits: 1.2 }, { maxCredits: '50' }]) {
       expect(await validate(plainToInstance(SendSourceMessageDto, { revision: 0, instruction: 'Crea una tienda', ...invalid }))).not.toHaveLength(0);
     }
+  });
+});
+
+describe('cost controls', () => {
+  it('shares one cache key and prefix across merchants, and changes it when the prompt changes', () => {
+    const prefix = 'the global contracts every store sends';
+    expect(sourcePromptCacheKey('source', prefix, 'store-a')).toBe(sourcePromptCacheKey('source', prefix, 'store-b'));
+    expect(sourcePromptCacheKey('source', prefix, 'store-a')).not.toContain('store-a');
+    // A reworded prompt must not be served the previous prefix's cache entry.
+    expect(sourcePromptCacheKey('source', prefix + ' v2', 'store-a')).not.toBe(sourcePromptCacheKey('source', prefix, 'store-a'));
+    expect(sourcePromptCacheKey('conversation', prefix, '')).not.toBe(sourcePromptCacheKey('source', prefix, ''));
+  });
+
+  it('keeps chat off code-generation models whatever the merchant picked for building', () => {
+    expect(sourceConversationModel('gpt-5.6-sol', undefined)).toBe('gpt-5.6-luna');
+    expect(sourceConversationModel('gpt-5.6-terra', undefined)).toBe('gpt-5.6-luna');
+    expect(sourceConversationModel('deepseek-v4-pro', undefined)).toBe('deepseek-v4-flash');
+    // The provider the merchant chose is preserved: an operator may hold one key.
+    expect(sourceConversationModel('deepseek-v4-flash-vision-exp', undefined)).toBe('deepseek-v4-flash-vision-exp');
+    expect(sourceConversationModel('auto', 'gpt-5.6-sol')).toBe('gpt-5.6-luna');
+    expect(sourceConversationModel(undefined, undefined)).toBe('gpt-5.6-luna');
+    // An operator-configured model outside the priced table is left untouched.
+    expect(sourceConversationModel('auto', 'gpt-5.5')).toBe('gpt-5.5');
+  });
+
+  it('prices images per image so they stop recording as free', () => {
+    expect(sourceImageMicroUsd('1024x1024')).toBe(42_000);
+    expect(sourceImageMicroUsd('1024x1536')).toBe(63_000);
+    expect(sourceImageMicroUsd('1536x1024')).toBe(63_000);
+    expect(sourceImageMicroUsd('1024x1024', 2)).toBe(84_000);
+    expect(sourceImageMicroUsd('1024x1024', 1, { square: 0.01 })).toBe(10_000);
+    // Unknown shapes stay unknown rather than being counted as nothing.
+    expect(sourceImageMicroUsd('not-a-size')).toBeNull();
+    expect(sourceImageMicroUsd('1024x1024', 0)).toBeNull();
   });
 });

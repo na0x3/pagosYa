@@ -1,6 +1,7 @@
 import { SourceConversationFailure } from './source-conversation-failure';
 import { SourceChatService, referenceOnlyNotice } from './source-chat.service';
 import { SourceProviderQuotaException } from './source-provider-error';
+import { BadGatewayException } from '@nestjs/common';
 import * as websiteReference from './source-website-reference';
 function setup(messages: any[] = []) {
   const prisma: any = {
@@ -370,6 +371,23 @@ it('keeps timeout cause and attachments in one saved failure message', async () 
   expect(failure.content).not.toContain('interpretar');
   expect(failure.content.match(/quedaron guardados/g)).toHaveLength(1);
   expect(failure.metadata).toMatchObject({ failed: true, failure: { code: 'timeout', stage: 'conversation' }, sourceSetup: { assetUrls } });
+});
+
+it('never saves or throws a validator diagnostic, whichever stage produced it', async () => {
+  // A 502 from outside generate(): the gate used to run only inside the attempt
+  // loop, so the conversation and save paths reached merchants verbatim.
+  const messages: any[] = []; const { service, dialogue } = setup(messages);
+  dialogue.decide.mockRejectedValue(new BadGatewayException(
+    'requested images are absent from the design: assets/image-9eb40d2cb55e.jpg. Display these actual local images',
+  ));
+  await expect(service.send('m', 's', { revision: 1, instruction: 'Usa mis fotos' })).rejects.toMatchObject({
+    message: expect.not.stringMatching(/assets\/|absent|Display these/i),
+  });
+  const failure = messages.at(-1);
+  expect(failure.content).not.toMatch(/assets\/|absent|Display these|image-9eb40d2cb55e/i);
+  expect(failure.content).toContain('comprobaciones automáticas');
+  expect(failure.content).toContain('quedaron guardados');
+  expect(failure.metadata).toMatchObject({ failed: true });
 });
 
 

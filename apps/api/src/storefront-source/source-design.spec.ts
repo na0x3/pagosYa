@@ -58,6 +58,39 @@ it('persists a coherent story and bounded choreography for newly planned concept
   expect(() => validateSourceDesign(value, 1, true, true)).toThrow('motion');
 });
 
+it('corrects a mislabelled catalog beat instead of discarding three finished concepts', () => {
+  // Observed in production telemetry: one concept labelled its catalog beat
+  // 'difference', the whole plan was rejected, and the bounded repair returned the
+  // identical slip — 66 seconds of waiting for no draft.
+  const value = proposal() as any;
+  for (const concept of value.concepts) {
+    concept.layout = { sections: ['opening', 'menu', 'visit'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };
+    concept.story = { promise: 'A clear reason to visit', eyebrow: 'Hecho cerca', headline: `${concept.name} para compartir hoy`, support: 'Una propuesta breve, clara y basada en los datos del negocio.', primaryAction: 'Ver menú', beats: [
+      { section: 'opening', role: 'opening', headline: 'Empieza por una pausa', media: 'hero' },
+      { section: 'menu', role: 'offer', headline: 'Elige algo rico', media: 'product' },
+      { section: 'visit', role: 'action', headline: 'Encuentra tu momento', media: 'none' },
+    ] };
+    concept.motion = { mode: 'expressive', scrollFeel: 'soft', entrance: 'stroke', scenes: [{ section: 'opening', kind: 'parallax-stack', intensity: 2 }] };
+  }
+  value.concepts[1].story.beats[1].role = 'difference';
+  const checked = validateSourceDesign(value, 1, true, true);
+  expect(checked.concepts[1].story?.beats[1]).toMatchObject({ section: 'menu', role: 'offer' });
+  // Only the catalog beat is corrected; the rest of the narrative is left as planned.
+  expect(checked.concepts[1].story?.beats.map(beat => beat.role)).toEqual(['opening', 'offer', 'action']);
+  // 'proof' is already a valid way to present the catalog and must survive untouched.
+  value.concepts[1].story.beats[1].role = 'proof';
+  expect(validateSourceDesign(value, 1, true, true).concepts[1].story?.beats[1].role).toBe('proof');
+  // A story that never reaches the catalog is still a real failure. A new plan
+  // cannot express that (its beats must match the layout exactly, which the rule
+  // above already enforces), so this is the saved-direction path, where beats may
+  // be a subset of the sections.
+  for (const concept of value.concepts) concept.story.beats = [
+    { section: 'opening', role: 'opening', headline: 'Empieza por una pausa', media: 'hero' },
+    { section: 'visit', role: 'action', headline: 'Encuentra tu momento', media: 'none' },
+  ];
+  expect(() => validateSourceDesign(value, 1, true)).toThrow('catálogo');
+});
+
 it('does not count the trusted decorative entrance as a planned main content block', () => {
   const value = proposal() as any;
   for (const concept of value.concepts) concept.layout = { sections: ['opening', 'menu'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };

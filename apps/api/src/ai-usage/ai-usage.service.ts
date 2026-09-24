@@ -8,8 +8,10 @@ import { SOURCE_MODELS, sourceUsage, type SourceModel } from '../storefront-sour
 export class AiUsageService {
   private readonly logger = new Logger(AiUsageService.name);
   constructor(private readonly prisma: PrismaService) {}
-  async record(storeId: string, stage: string, model: string, body: any, durationMs: number, status: string, diagnostic?: ConversationDiagnostic) {
-    const usage = model in SOURCE_MODELS ? sourceUsage(model as SourceModel, body?.usage) : null;
+  async record(storeId: string, stage: string, model: string, body: any, durationMs: number, status: string, diagnostic?: ConversationDiagnostic, priceMicroUsd?: number | null) {
+    // Image models bill per image; only token-billed models can be priced from usage.
+    const usage = model in SOURCE_MODELS ? sourceUsage(model as SourceModel, body?.usage)
+      : typeof priceMicroUsd === 'number' && status === 'COMPLETED' ? { providerMicroUsd: priceMicroUsd } : null;
     const providerUsage = numericUsage(body?.usage);
     const totals = usage ? { ...usage, providerUsage } : providerUsage ? { providerMicroUsd: null, providerUsage } : null;
     const savedUsage = diagnostic ? { ...(totals || { providerMicroUsd: null }), diagnostic: safeConversationDiagnostic(diagnostic) } : totals;

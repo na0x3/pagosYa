@@ -9,7 +9,15 @@ import { sourceVisualState } from './source-visual-state';
 import { CREDIT_MICRO_USD } from './source-generation-policy';
 
 export const DESIGN_JOB_LEASE_MS = 60000;
-export const DESIGN_JOB_CAPS: Record<string, number> = { REVIEW_BASELINE: 15, REPAIR: 85, COMPARE: 25 };
+export const DESIGN_JOB_CAPS: Record<string, number> = { REVIEW_BASELINE: 15, REPAIR: 50, COMPARE: 25 };
+/**
+ * The repair stage rewrites source from visual findings. It ran on the priciest
+ * model while the first full-site build -- strictly harder work -- runs on Terra,
+ * and repairs are the stage most likely to be thrown away: most of the design-job
+ * spend observed so far ended in RETAINED_BASELINE. The credit caps above are
+ * guardrails, not budgets: the per-attempt output ceiling binds first either way.
+ */
+export const DESIGN_JOB_REPAIR_MODEL = 'gpt-5.6-terra' as const;
 // PostgreSQL JSONB changes object-key order; hashes must survive persistence.
 export const designDigest = (value: unknown) => {
   const stable = (v: any): any => Array.isArray(v) ? v.map(stable) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, stable(v[k])])) : v;

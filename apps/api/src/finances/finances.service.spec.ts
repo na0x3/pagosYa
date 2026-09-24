@@ -223,3 +223,23 @@ describe("FinancesService.summary", () => {
     expect(result.salesByWeekday).toHaveLength(7);
   });
 });
+
+describe("FinancesService.orders search", () => {
+  // The id a buyer quotes comes from their confirmation email and tracking
+  // link, both of which carry the StoreOrder id — never the pi_ id.
+  it("matches the StoreOrder id, and does not ask StoreLead for a relation it lacks", async () => {
+    const prisma = makeFakePrisma();
+    prisma.store.findFirst.mockResolvedValue({ id: "store_1", name: "Tienda Centro" });
+    prisma.storeLead.findMany.mockResolvedValue([]);
+
+    await new FinancesService(prisma as any).orders("m_1", "store_1", "cmubz31eo000grs0hmlie0haz");
+
+    const paymentOr = prisma.paymentIntent.findMany.mock.calls[0][0].where.OR;
+    expect(paymentOr).toContainEqual({
+      storeOrder: { id: { contains: "cmubz31eo000grs0hmlie0haz", mode: "insensitive" } },
+    });
+
+    const leadOr = prisma.storeLead.findMany.mock.calls[0][0].where.OR;
+    expect(leadOr.some((clause: Record<string, unknown>) => "storeOrder" in clause)).toBe(false);
+  });
+});

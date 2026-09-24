@@ -100,13 +100,18 @@ export function validateSourceDesign(value: any, selected?: number, requireLayou
       const savedSubset = beatSections.every((section: string, beatIndex: number) => result.layout!.sections.indexOf(section) > (beatIndex ? result.layout!.sections.indexOf(beatSections[beatIndex - 1]) : -1));
       if (story.beats.some((beat: any) => !result.layout!.sections.includes(beat?.section) || !SOURCE_STORY_ROLES.includes(beat?.role) || !SOURCE_STORY_MEDIA.includes(beat?.media) || !short(beat?.headline, 100))
         || (requireNarrative ? !exactStory : !savedSubset)) return fail(`concepts[${index}].story.beats: usa cada section en el orden del layout con roles, titulares y medios válidos.`);
-      const offer = story.beats.find((beat: any) => beat.section === result.layout!.catalogSection);
-      if (!offer || !['offer', 'proof'].includes(offer.role)) return fail(`concepts[${index}].story: catalogSection debe demostrar o presentar la oferta.`);
+      const offerBeat = story.beats.find((beat: any) => beat.section === result.layout!.catalogSection);
+      if (!offerBeat) return fail(`concepts[${index}].story: incluye un beat para la sección del catálogo.`);
+      // The catalog section presents the offer by definition, so any other role on
+      // it is a labelling slip rather than a design failure. Correct it in place:
+      // rejecting the plan discards three finished concepts, and the bounded repair
+      // reproduces the same slip, so the merchant pays the full wait for nothing.
+      const offerRole = (beat: any) => beat === offerBeat && !['offer', 'proof'].includes(beat.role) ? 'offer' : beat.role;
       const scenes = choreography.scenes;
       if (!['subtle', 'expressive'].includes(choreography.mode) || !SOURCE_SCROLL_FEELS.includes(choreography.scrollFeel) || !SOURCE_ENTRANCE_KINDS.includes(choreography.entrance)
         || !Array.isArray(scenes) || scenes.length > 2 || scenes.some((scene: any) => !result.layout!.sections.includes(scene?.section) || !SOURCE_SCENE_KINDS.includes(scene?.kind) || ![1, 2, 3].includes(scene?.intensity))
         || new Set(scenes.map((scene: any) => scene.section)).size !== scenes.length) return fail(`concepts[${index}].motion: usa entrada válida y hasta dos escenas en sections distintas.`);
-      result.story = { promise: story.promise.trim(), eyebrow: story.eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: beat.role, headline: beat.headline.trim(), media: beat.media })) };
+      result.story = { promise: story.promise.trim(), eyebrow: story.eyebrow.trim(), headline: story.headline.trim(), support: story.support.trim(), primaryAction: story.primaryAction.trim(), beats: story.beats.map((beat: any) => ({ section: beat.section, role: offerRole(beat), headline: beat.headline.trim(), media: beat.media })) };
       result.motion = { mode: choreography.mode, scrollFeel: choreography.scrollFeel, entrance: choreography.entrance, scenes: scenes.map((scene: any) => ({ section: scene.section, kind: scene.kind, intensity: scene.intensity })) };
     }
     return result;

@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import { SourceRequestBudget } from './source-request-budget';
 import { sourceSiteContext } from './source-context';
 import { SourceProviderQuotaException } from './source-provider-error';
+import { merchantFacingSourceFailure } from './source-validation-error';
 import { sourceRequestExecutionPrompt } from './source-request-profile';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { sourceSitePurpose } from './source-site-purpose';
@@ -222,11 +223,18 @@ export class SourceChatService {
       return { userMessage, assistantMessage, revision };
     } catch (error) {
       await workflow.finish('failed');
-      const failureReason = error instanceof SourceConversationFailure || error instanceof SourceProviderQuotaException || error instanceof HttpException && (error.getStatus() < 500 || error.getStatus() === 502) ? error.message : 'No pude completar tu pedido.';
+      // The same default-deny gate the generation path uses. Chat also wraps the
+      // conversation step, the catalog request and the save path, whose validators
+      // never had their diagnostics rewritten for a merchant.
+      const shown = merchantFacingSourceFailure(error);
+      const failureReason = shown instanceof SourceConversationFailure || shown instanceof SourceProviderQuotaException || shown instanceof HttpException && (shown.getStatus() < 500 || shown.getStatus() === 502) ? shown.message : 'No pude completar tu pedido.';
       await this.prisma.storeAgentMessage.create({ data: {
         threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${failureReason} Tu mensaje y los archivos quedaron guardados; no necesitas volver a adjuntarlos. Un nuevo intento puede consumir créditos de IA.`, metadata: { failed: true, progress: workflow.value, ...(error instanceof SourceConversationFailure ? { failure: { stage: 'conversation', ...safeConversationDiagnostic(error.diagnostic) } } : {}), ...(retryDecision ? { sourceRetry: { fingerprint: retryFingerprint, decision: retryDecision } } : {}), sourceSetup: { ...setupDraft, assetUrls: error instanceof BadRequestException ? setupDraft.assetUrls : allAssets } },
       } });
-      throw error;
+      // Throw what the merchant may read, not the original diagnostic. The gate
+      // returns aborts, timeouts and Prisma faults unchanged, so callers that
+      // catch them by type still work.
+      throw shown;
     }
   }
 }

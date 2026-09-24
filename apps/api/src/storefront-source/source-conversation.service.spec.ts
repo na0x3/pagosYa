@@ -37,7 +37,7 @@ describe('Source conversation interpretation', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.input[0].content.some((part: any) => part.type === 'input_image')).toBe(false);
     expect(JSON.stringify(body)).toContain('frames and audio have not been inspected');
-    expect(JSON.parse(body.input[0].content[1].text).availableVideoUrls).toEqual([url]);
+    expect(JSON.parse(body.input[0].content[2].text).availableVideoUrls).toEqual([url]);
   });
   it('includes inspected website evidence and its limitations in the actual model request', async () => {
     const { service } = setup();
@@ -46,7 +46,7 @@ describe('Source conversation interpretation', () => {
     await service.decide('merchant', { ...input(), assetUrls: [], instruction: 'I want my website like https://example.com', draft: { ...newSourceSetup(), websiteReferences } });
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.instructions).toContain(SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS);
-    expect(JSON.parse(body.input[0].content[1].text).websiteReferences).toEqual(websiteReferences);
+    expect(JSON.parse(body.input[0].content[2].text).websiteReferences).toEqual(websiteReferences);
   });
   it('sends rendered references as image inputs and never as base64 text or merchant artwork', async () => {
     const { service } = setup();
@@ -57,7 +57,7 @@ describe('Source conversation interpretation', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.input[0].content).toContainEqual({ type: 'input_image', image_url: image, detail: 'auto' });
     expect(body.input[0].content.filter((part: any) => part.type === 'input_text').map((part: any) => part.text).join('')).not.toContain('cGl4ZWxz');
-    expect(JSON.parse(body.input[0].content[1].text).availableImageUrls).toEqual([]);
+    expect(JSON.parse(body.input[0].content[2].text).availableImageUrls).toEqual([]);
   });
   it('uses the selected DeepSeek model for chat with OpenAI disabled', async () => {
     const { service, config } = setup();
@@ -92,14 +92,18 @@ describe('Source conversation interpretation', () => {
     respond({ ...reply(), imageUses: [] });
     const site = { pages: [{ path: 'index.html', title: 'QUEMADO', headings: ['Tortas'] }], bundledAssets: [{ path: 'assets/cake.webp', references: ['index.html'] }], visualAssets: [], motion: 'subtle' as const };
     await service.decide('merchant', { ...input(), assetUrls: [], site });
-    const context = JSON.parse(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content[1].text);
+    const context = JSON.parse(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content[2].text);
     expect(context.existingSite).toEqual(site);
     expect(context.availableImageUrls).toEqual([]);
     expect(context.requestProfile).toContain('ordinary language');
   });
   it('checks the shared budget before making a conversation call', async () => {
     const { service } = setup();
-    await expect(service.decide('merchant', { ...input(), budget: new SourceRequestBudget(1) })).rejects.toThrow('límite restante');
+    // Conversation runs on the cheap model now, so a whole credit comfortably
+    // covers one turn. Spend the allowance first to reach the guard.
+    const budget = new SourceRequestBudget(1);
+    budget.reserve('gpt-5.6-luna', 1000, 8000);
+    await expect(service.decide('merchant', { ...input(), budget })).rejects.toThrow('límite restante');
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it.each(['credit_balance_exhausted', 'insufficient_quota'])('reports %s without retrying or treating it as an interpretation failure', async code => {
@@ -126,7 +130,7 @@ describe('Source conversation interpretation', () => {
       {type:'input_text',text:`Image URL: ${photo}`},
       {type:'input_image',image_url:`data:image/png;base64,${Buffer.from('image-pixels').toString('base64')}`,detail:'auto'},
     ]));
-    expect(JSON.parse(body.input[0].content[1].text)).toMatchObject({currentRequest:input().instruction,buildNow:false,revision:0});
+    expect(JSON.parse(body.input[0].content[2].text)).toMatchObject({currentRequest:input().instruction,buildNow:false,revision:0});
   });
   it('keeps confirmed brand values cacheable while messages and store details change', async () => {
     const { prisma, uploads, config } = setup();
@@ -143,14 +147,27 @@ describe('Source conversation interpretation', () => {
     await service.decide('merchant', { ...input(), storeId: 's1' });
     const requests = fetchMock.mock.calls.map(call => JSON.parse(call[1].body));
     expect(requests[0].instructions).toBe(requests[1].instructions);
+    // The cached prefix is the static instructions, so it survives brand edits,
+    // a new message and a different store. Brand and context sit after it.
     expect(requests[0].input[0].content[0]).toEqual(requests[1].input[0].content[0]);
-    expect(requests[0].input[0].content[0]).toEqual({ type: 'input_text', text: JSON.stringify({ confirmedBrand: { voice: 'Warm and direct', accent: '#135724' } }), prompt_cache_breakpoint: { mode: 'explicit' } });
-    expect(requests[1].input[0].content[1].text).toContain('Make the product page clearer');
+    expect(requests[0].input[0].content[0]).toEqual(requests[2].input[0].content[0]);
+    expect(requests[0].input[0].content[0]).toEqual({ type: 'input_text', text: expect.any(String), prompt_cache_breakpoint: { mode: 'explicit' } });
+    expect(requests[0].input[0].content[0].text).not.toContain('Warm and direct');
+    expect(JSON.parse(requests[0].input[0].content[1].text)).toEqual({ confirmedBrand: { voice: 'Warm and direct', accent: '#135724' } });
     expect(requests[1].input[0].content[1]).not.toHaveProperty('prompt_cache_breakpoint');
-    expect(JSON.parse(requests[1].input[0].content[1].text)).not.toHaveProperty('confirmedBrand');
-    expect(requests[2].input[0].content[0].text).toContain('Calm and precise');
+    expect(requests[1].input[0].content[2].text).toContain('Make the product page clearer');
+    expect(JSON.parse(requests[1].input[0].content[2].text)).not.toHaveProperty('confirmedBrand');
+    expect(requests[2].input[0].content[1].text).toContain('Calm and precise');
     expect(requests[0].prompt_cache_options).toEqual({ mode: 'explicit', ttl: '30m' });
-    expect(requests[0].prompt_cache_key).toBe('conversation-s1');
+
+    // A different merchant reuses the same cached prefix and the same routing key.
+    // Keying per store threw the cache away: most stores never generate twice
+    // inside the 30-minute window, so their first call could never hit.
+    respond(reply());
+    await service.decide('other-merchant', { ...input(), storeId: 's1' });
+    const other = JSON.parse(fetchMock.mock.calls.at(-1)![1].body);
+    expect(other.input[0].content[0]).toEqual(requests[0].input[0].content[0]);
+    expect(other.prompt_cache_key).toBe(requests[0].prompt_cache_key);
   });
   it('does not send unsupported explicit-cache options to an older configured conversation model', async () => {
     const { service, config } = setup();
@@ -159,8 +176,8 @@ describe('Source conversation interpretation', () => {
     const request = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(request.prompt_cache_options).toBeUndefined();
     expect(request.input[0].content.every((block: any) => !block.prompt_cache_breakpoint)).toBe(true);
-    expect(JSON.parse(request.input[0].content[0].text)).toEqual({ confirmedBrand: {} });
-    expect(JSON.parse(request.input[0].content[1].text).currentRequest).toBe(input().instruction);
+    expect(JSON.parse(request.input[0].content[1].text)).toEqual({ confirmedBrand: {} });
+    expect(JSON.parse(request.input[0].content[2].text).currentRequest).toBe(input().instruction);
   });
   it('retains confirmed roles when the next response omits an already understood image', async () => {
     const {service,uploads} = setup();
@@ -184,7 +201,7 @@ describe('Source conversation interpretation', () => {
     expect(uploads.getBuffer).toHaveBeenCalledTimes(3);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.input[0].content.filter((item: any) => item.type === 'input_image')).toHaveLength(3);
-    expect(JSON.parse(body.input[0].content[1].text).availableImageUrls).toEqual(selected);
+    expect(JSON.parse(body.input[0].content[2].text).availableImageUrls).toEqual(selected);
   });
   it('filters obsolete image context and ignores only known historical annotations', async () => {
     const {service} = setup(); const request = input();
@@ -194,7 +211,7 @@ describe('Source conversation interpretation', () => {
     respond({...reply(),imageUses:[old,...reply().imageUses]});
     expect((await service.decide('merchant',request)).imageUses).toEqual(reply().imageUses);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    const context = JSON.parse(body.input[0].content[1].text);
+    const context = JSON.parse(body.input[0].content[2].text);
     expect(context.imageUses).toEqual([]);
     expect(context.recentConversation[0].assetUrls).toEqual([]);
     expect(body.text.format.schema.properties.imageUses.items.properties.url.enum).toEqual([photo]);
@@ -289,7 +306,7 @@ it('inspects the owned photo and explicitly delegates a draft without fabricated
   const result = await service.decide('merchant',{...input(),productPhoto:true});
   expect(result.action).toBe('generate'); expect(uploads.getBuffer).toHaveBeenCalledWith('abc.png');
   const body=JSON.parse(fetchMock.mock.calls[0][1].body);
-  expect(JSON.parse(body.input[0].content[1].text).productPhoto).toBe(true);
+  expect(JSON.parse(body.input[0].content[2].text).productPhoto).toBe(true);
   expect(body.input[0].content.some((part:any)=>part.type==='input_image')).toBe(true);
   expect(body.instructions).toContain('Do not ask the two discovery questions');
   expect(body.instructions).toContain('No invented prices, stock');

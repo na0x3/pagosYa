@@ -15,7 +15,7 @@ export type KnowledgeProduct = {
 export type StoreKnowledge = {
   version: 1;
   generatedAt: string;
-  identity: { name: string; tagline?: string; about?: string; announcement?: string; checkout: string };
+  identity: { name: string; tagline?: string; about?: string; announcement?: string; checkout: string; logo: boolean };
   trust: { verifiedBusiness: boolean; electronicInvoicing: boolean; liveStore: boolean; publishedDesign: boolean; reviews: { count: number; average: number } };
   contact: { phone: boolean; email: boolean; contactForm: boolean };
   policies: { returns: boolean; delivery: boolean; privacy: boolean; terms: boolean };
@@ -32,7 +32,7 @@ type RawProduct = {
 };
 export type StoreKnowledgeInput = {
   store: {
-    name: string; tagline: string | null; aboutText: string | null; announcement: string | null; checkoutMode: string; contactPhone: string | null; contactEmail: string | null;
+    name: string; tagline: string | null; aboutText: string | null; announcement: string | null; checkoutMode: string; logoUrl: string | null; contactPhone: string | null; contactEmail: string | null;
     contactFormEnabled: boolean; shippingEnabled: boolean; shippingPickupEnabled: boolean; locations: unknown; status: string; sourcePublicationPaused: boolean;
     publicVisibility: boolean; publishedSourceRevision: number | null; websitePublishedRevision: number; merchant: { status: string };
     policies?: unknown;
@@ -109,6 +109,7 @@ export function buildStoreKnowledge(input: StoreKnowledgeInput): StoreKnowledge 
   const noDescription = input.products.filter(p => !p.description?.trim() || p.description.trim() === p.name.trim());
   const soldOut = input.products.filter(p => p.stock === 0);
   const list = (items: RawProduct[]) => items.slice(0, 5).map(p => `«${p.name}»`).join(', ') + (items.length > 5 ? ` y ${items.length - 5} más` : '');
+  if (!store.logoUrl) gaps.push('La tienda no tiene logo cargado.');
   if (!input.products.length) gaps.push('La tienda no tiene productos activos.');
   if (noPhoto.length) gaps.push(`Sin foto: ${list(noPhoto)}.`);
   if (input.products.length && input.products.every(p => p.imageUrls.length === 1)) gaps.push('Todos los productos tienen una sola foto.');
@@ -128,7 +129,7 @@ export function buildStoreKnowledge(input: StoreKnowledgeInput): StoreKnowledge 
   return {
     version: 1,
     generatedAt: input.now.toISOString().slice(0, 10),
-    identity: { name: store.name, tagline: clip(store.tagline, 140), about: clip(store.aboutText, 400), announcement: clip(store.announcement, 140), checkout },
+    identity: { name: store.name, tagline: clip(store.tagline, 140), about: clip(store.aboutText, 400), announcement: clip(store.announcement, 140), checkout, logo: Boolean(store.logoUrl) },
     trust: {
       verifiedBusiness: store.merchant.status === 'ACTIVE', electronicInvoicing: input.invoicingActive,
       liveStore: isPublicStore(store as Parameters<typeof isPublicStore>[0]), publishedDesign: Boolean(store.publishedSourceRevision || store.websitePublishedRevision),
@@ -150,7 +151,7 @@ const PAID_STATUSES = ['PAID', 'PREPARING', 'READY_FOR_PICKUP', 'SHIPPED', 'DELI
 
 export async function loadStoreKnowledge(prisma: PrismaService, merchantId: string, storeId: string, now = new Date()): Promise<StoreKnowledge | null> {
   const store = await prisma.store.findFirst({ where: { id: storeId, merchantId }, select: {
-    name: true, tagline: true, aboutText: true, announcement: true, checkoutMode: true, contactPhone: true, contactEmail: true, contactFormEnabled: true,
+    name: true, tagline: true, aboutText: true, announcement: true, checkoutMode: true, logoUrl: true, contactPhone: true, contactEmail: true, contactFormEnabled: true,
     shippingEnabled: true, shippingPickupEnabled: true, locations: true, status: true, sourcePublicationPaused: true, publicVisibility: true,
     publishedSourceRevision: true, websitePublishedRevision: true, policies: true, merchant: { select: { status: true } },
   } });
@@ -188,4 +189,4 @@ export function storeKnowledgeForGeneration(knowledge: StoreKnowledge) {
     bestSellers: catalog.products.filter(p => p.sold30d > 0).slice(0, 5).map(p => ({ id: p.id, name: p.name, sold30d: p.sold30d })) } };
 }
 
-export const STORE_KNOWLEDGE_RULES = 'businessKnowledge is the Store Brain: verified facts from the database about this business (identity, trust status, contact, fulfillment and hours, the full catalog with 30-day sales and reviews, and known gaps). Use it to understand the business before asking; never ask for something it already answers. Never state a business fact in a reply or on the site (hours, delivery, prices, stock, materials, invoicing, verification, reviews) unless it appears in businessKnowledge or the merchant said it in this conversation. When the merchant asks how the store is doing or what to improve, answer with at most three concrete findings from performance30d, catalog and gaps, each with the number behind it, and offer — never apply without asking — one specific change per finding.';
+export const STORE_KNOWLEDGE_RULES = 'businessKnowledge is the Store Brain: verified facts from the database about this business (identity, trust status, contact, fulfillment and hours, the full catalog with 30-day sales and reviews, and known gaps). Use it to understand the business before asking; never ask for something it already answers. Never state a business fact in a reply or on the site (hours, delivery, prices, stock, materials, invoicing, verification, reviews) unless it appears in businessKnowledge or the merchant said it in this conversation. identity.logo says whether the merchant has uploaded a brand mark. When it is false, ask for it once — early, in one sentence, naming where it would go (cabecera, pestaña del navegador, pie, correos y comprobantes) — and offer a text wordmark built from the store name as the alternative; never invent, draw or promise to generate a logo, and never ask again in the same conversation if they decline or ignore it. When it is true, place it deliberately rather than decoratively: the header at a legible size, the favicon, and at most one more considered appearance; never stretch it, never repeat it as a background pattern, and never use a product photo in its place. When the merchant asks how the store is doing or what to improve, answer with at most three concrete findings from performance30d, catalog and gaps, each with the number behind it, and offer — never apply without asking — one specific change per finding.';
