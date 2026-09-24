@@ -25,6 +25,12 @@ export interface CheckoutSession {
   international?: { available: boolean };
 }
 
+// Callers that need to branch on the API's error code (e.g. to show a
+// message verbatim instead of wrapping it) can check `(err as ApiError).code`.
+export interface ApiError extends Error {
+  code?: string;
+}
+
 async function parseOrThrow<T>(response: Response): Promise<T> {
   const text = await response.text();
   let body: unknown;
@@ -37,7 +43,10 @@ async function parseOrThrow<T>(response: Response): Promise<T> {
   }
   if (!response.ok) {
     const message = typeof body === "string" ? body : (body as { message?: string })?.message;
-    throw new Error(message || `Request failed (${response.status})`);
+    const code = typeof body === "object" && body !== null ? (body as { code?: unknown }).code : undefined;
+    throw Object.assign(new Error(message || `Request failed (${response.status})`), {
+      code: typeof code === "string" ? code : undefined,
+    }) satisfies ApiError;
   }
   return (body ?? text) as T;
 }

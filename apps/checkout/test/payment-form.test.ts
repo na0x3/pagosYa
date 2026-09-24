@@ -208,4 +208,57 @@ describe("confirm refusal (merchant over its payment limit)", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("keeps the normal failure prefix for a non-limit confirm error", async () => {
+    // Locks in the pre-existing behavior: only the merchant-limit codes
+    // (limit_exceeded / per_payment_limit_exceeded) get the unwrapped,
+    // verbatim message. Any other confirm failure — here a plain 500 —
+    // must still show the "Pago fallido: " prefix exactly as before.
+    vi.doMock("../src/api", async () => {
+      const actual = await vi.importActual<typeof import("../src/api")>("../src/api");
+      return {
+        ...actual,
+        fetchSession: vi.fn().mockResolvedValue({
+          id: "pi_1",
+          amount: 5000,
+          currency: "BOB",
+          status: "REQUIRES_PAYMENT_METHOD",
+          description: "Corte de cabello",
+          merchantName: "pagosYa Demo Store",
+          metadata: { cart: [{ paymentLinkId: "item_1", name: "Corte de cabello", quantity: 1, unitAmount: 5000 }] },
+          recipient: null,
+          trackingToken: null,
+        } satisfies CheckoutSession),
+        assetUrl: (p: string | null) => p,
+      };
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ statusCode: 500, message: "network down" }), { status: 500 }),
+        ),
+      ),
+    );
+
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    const setValue = (id: string, value: string) => {
+      const input = document.querySelector<HTMLInputElement>(id)!;
+      input.value = value;
+      input.dispatchEvent(new Event("input"));
+    };
+    setValue("#customerName", "Cliente de Prueba");
+    setValue("#customerEmail", "cliente@example.com");
+    setValue("#customerPhone", "+591 70000000");
+    document.querySelector<HTMLButtonElement>("#pay")!.click();
+
+    await vi.waitFor(() => {
+      if (!document.querySelector(".status")) throw new Error("not resolved yet");
+    });
+
+    const status = document.querySelector(".status")!;
+    expect(status.textContent).toBe("Pago fallido: network down");
+
+    vi.unstubAllGlobals();
+  });
 });

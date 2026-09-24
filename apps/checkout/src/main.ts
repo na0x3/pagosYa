@@ -62,6 +62,7 @@ import {
   DebtCollectionInfo,
   TrackedOrder,
   TrackedShipment,
+  type ApiError,
 } from "./api";
 import { INTERNATIONAL_COUNTRIES, formatDualAmount, formatUsd, isNavigableRedirect, parseReturnParams, recallReturn, rememberReturn, tokenForMethod } from "./international";
 import { configureParentOrigin, observeResize, postToParent } from "./postmessage";
@@ -9810,9 +9811,13 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     }
   } catch (err) {
     closePendingIntlPopup();
-    // Show the API's own message verbatim — e.g. the merchant-limit refusal
-    // is deliberately neutral and must not be wrapped in extra copy.
-    renderFailed(session.id, (err as Error).message, false);
+    // Show the API's own message verbatim only for the merchant-limit
+    // refusal — that copy is deliberately neutral and must not be wrapped
+    // in extra text. Every other confirm-time error (network failures,
+    // other 4xx/5xx) keeps the normal "Pago fallido: " prefix.
+    const code = (err as ApiError).code;
+    const isLimitRefusal = code === "limit_exceeded" || code === "per_payment_limit_exceeded";
+    renderFailed(session.id, (err as Error).message, !isLimitRefusal);
   }
 }
 
