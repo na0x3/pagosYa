@@ -4,6 +4,12 @@ import { PrismaService } from "../prisma/prisma.service";
 import { openOpsCaseOnce } from "../ops/ops-escalation";
 import { limitExceeded, perPaymentLimitExceeded } from "./limit-errors";
 
+/** Any client effectiveLimits/amountInBob can read through: the pooled
+ * PrismaService, or the Prisma.TransactionClient of a transaction already in
+ * progress (reserve/assertPerPayment often run inside one and must not open
+ * a second pooled connection while it's held). */
+export type LimitsDb = PrismaService | Prisma.TransactionClient;
+
 export type EffectiveLimits = { level: number; levelName: string; liveEnabled: boolean; monthlyLimit: number | null; perPaymentLimit: number | null; misconfigured: boolean };
 export type ReservableIntent = { id: string; merchantId: string; amount: number; currency: string; metadata: unknown; livemode: boolean; limitStatus: LimitReservationStatus | null };
 export type LimitUsage = EffectiveLimits & { month: string; used: number; resetsAt: string };
@@ -37,17 +43,19 @@ export class LimitsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async effectiveLimits(merchantId: string): Promise<EffectiveLimits> {
-    const merchant = await this.prisma.merchant.findUniqueOrThrow({
+  async effectiveLimits(merchantId: string, db: LimitsDb = this.prisma): Promise<EffectiveLimits> {
+    const merchant = await db.merchant.findUniqueOrThrow({
       where: { id: merchantId },
       select: { id: true, level: true, monthlyLimitOverride: true, perPaymentLimitOverride: true },
     });
-    const policy = await this.prisma.merchantLevelPolicy.findUnique({ where: { level: merchant.level } });
+    const policy = await db.merchantLevelPolicy.findUnique({ where: { level: merchant.level } });
     const monthlyLimit = merchant.monthlyLimitOverride ?? policy?.monthlyLimit ?? null;
     const perPaymentLimit = merchant.perPaymentLimitOverride ?? policy?.perPaymentLimit ?? null;
     const misconfigured = !policy || (policy.liveEnabled && (monthlyLimit === null || perPaymentLimit === null));
     if (misconfigured) {
       this.logger.error(`Merchant ${merchantId} has no usable limits at level ${merchant.level}; live payments refused`);
+      // Always through the pooled client, never the caller's tx: this case
+      // must survive if that transaction rolls back.
       await openOpsCaseOnce(this.prisma, {
         merchantId,
         dedupeKey: `limits-misconfigured:${merchantId}`,
@@ -65,7 +73,7 @@ export class LimitsService {
     };
   }
 
-  async amountInBob(intent: { amount: number; currency: string; metadata: unknown }): Promise<{ amountBob: number; fxRate: Prisma.Decimal | null }> {
+  async amountInBob(intent: { amount: number; currency: string; metadata: unknown }, db: LimitsDb = this.prisma): Promise<{ amountBob: number; fxRate: Prisma.Decimal | null }> {
     const fx = (intent.metadata as { fx?: { originalAmount?: number; originalCurrency?: string } } | null)?.fx;
     let amountBob: number;
     let fxRate: Prisma.Decimal | null = null;
@@ -74,7 +82,7 @@ export class LimitsService {
     } else if (intent.currency === "BOB") {
       amountBob = intent.amount;
     } else if (intent.currency === "USD") {
-      const settings = await this.prisma.limitSettings.findUnique({ where: { id: "singleton" } });
+      const settings = await db.limitSettings.findUnique({ where: { id: "singleton" } });
       if (!settings) throw limitExceeded();
       // Decimal, not float: Math.ceil(amount * Number(rate)) can over-count by
       // one centavo due to binary floating point rounding of the rate.
@@ -90,19 +98,21 @@ export class LimitsService {
     return { amountBob, fxRate };
   }
 
-  async assertPerPayment(merchantId: string, intent: { amount: number; currency: string; metadata: unknown }, audience: "merchant" | "buyer") {
-    const limits = await this.effectiveLimits(merchantId);
+  async assertPerPayment(merchantId: string, intent: { amount: number; currency: string; metadata: unknown }, audience: "merchant" | "buyer", db: LimitsDb = this.prisma) {
+    const limits = await this.effectiveLimits(merchantId, db);
     if (!limits.liveEnabled) throw audience === "merchant" ? perPaymentLimitExceeded("merchant") : limitExceeded();
-    const { amountBob } = await this.amountInBob(intent);
+    const { amountBob } = await this.amountInBob(intent, db);
     if (amountBob > limits.perPaymentLimit!) throw perPaymentLimitExceeded(audience);
   }
 
   async reserve(tx: Prisma.TransactionClient, intent: ReservableIntent, now = new Date()): Promise<{ crossedWarning: boolean }> {
     if (!intent.livemode || intent.amount === 0) return { crossedWarning: false };
     if (intent.limitStatus === LimitReservationStatus.RESERVED || intent.limitStatus === LimitReservationStatus.SETTLED) return { crossedWarning: false };
-    const limits = await this.effectiveLimits(intent.merchantId);
+    // Read the merchant/policy/FX-rate rows through the same connection this
+    // confirm's transaction already holds, not a second pooled one.
+    const limits = await this.effectiveLimits(intent.merchantId, tx);
     if (!limits.liveEnabled) throw limitExceeded();
-    const { amountBob, fxRate } = await this.amountInBob(intent);
+    const { amountBob, fxRate } = await this.amountInBob(intent, tx);
     if (amountBob > limits.perPaymentLimit!) throw limitExceeded();
     const month = laPazMonth(now);
     const key = { merchantId_month: { merchantId: intent.merchantId, month } };

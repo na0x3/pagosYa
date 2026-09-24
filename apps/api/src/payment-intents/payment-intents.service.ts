@@ -140,14 +140,16 @@ export class PaymentIntentsService {
   }
 
   async createInTransaction(
-    tx: Pick<Prisma.TransactionClient, "paymentIntent">,
+    tx: Prisma.TransactionClient | PrismaService,
     merchantId: string,
     livemode: boolean,
     dto: CreatePaymentIntentDto,
     limitAudience: "merchant" | "buyer" = "buyer",
   ) {
     if (livemode && dto.amount > 0) {
-      await this.limits.assertPerPayment(merchantId, { amount: dto.amount, currency: dto.currency ?? "BOB", metadata: dto.metadata ?? null }, limitAudience);
+      // Read the merchant/policy/FX rows through the caller's own tx when it
+      // has one open, instead of borrowing a second pooled connection.
+      await this.limits.assertPerPayment(merchantId, { amount: dto.amount, currency: dto.currency ?? "BOB", metadata: dto.metadata ?? null }, limitAudience, tx);
     }
     const id = `pi_${idPart()}`;
     const clientSecret = `${id}_secret_${secretPart()}`;

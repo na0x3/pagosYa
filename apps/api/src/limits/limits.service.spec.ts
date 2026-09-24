@@ -9,12 +9,19 @@ const policies = [
 ];
 
 function setup(merchant: Record<string, unknown> = { id: "m_1", level: 1, monthlyLimitOverride: null, perPaymentLimitOverride: null }, updated = 1) {
+  // tx carries its own merchant/policy/limitSettings mocks — separate from
+  // prisma's — so a test can assert reserve() reads through the open
+  // transaction and never opens a second pooled connection via this.prisma.
   const tx = {
+    merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue(merchant) },
+    merchantLevelPolicy: { findUnique: jest.fn(({ where }: any) => Promise.resolve(policies.find((p) => p.level === where.level) ?? null)) },
+    limitSettings: { findUnique: jest.fn().mockResolvedValue({ usdToBobRate: new Prisma.Decimal("6.96") }) },
     merchantMonthlyVolume: {
       upsert: jest.fn().mockResolvedValue({}),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ reserved: 850_000, settled: 0, warnedAt: null }),
       update: jest.fn(),
     },
+    supportCase: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: "c1" }) },
     $executeRaw: jest.fn().mockResolvedValue(updated),
     paymentIntent: { update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findUnique: jest.fn() },
   };
@@ -140,6 +147,15 @@ describe("LimitsService.reserve", () => {
     await expect(service.reserve(tx as any, intent(), now)).resolves.toEqual({ crossedWarning: true });
     expect(tx.paymentIntent.update).toHaveBeenCalledWith({ where: { id: "pi_1" }, data: { limitMonth: "2026-09", limitAmountBob: 100_000, limitFxRate: null, limitStatus: "RESERVED" } });
     expect(tx.merchantMonthlyVolume.update).toHaveBeenCalledWith({ where: { merchantId_month: { merchantId: "m_1", month: "2026-09" } }, data: { warnedAt: now } });
+  });
+
+  it("reads the merchant and level policy through the open transaction, not a second pooled connection", async () => {
+    const { service, tx, prisma } = setup();
+    await service.reserve(tx as any, intent(), now);
+    expect(tx.merchant.findUniqueOrThrow).toHaveBeenCalledWith({ where: { id: "m_1" }, select: expect.any(Object) });
+    expect(tx.merchantLevelPolicy.findUnique).toHaveBeenCalledWith({ where: { level: 1 } });
+    expect(prisma.merchant.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(prisma.merchantLevelPolicy.findUnique).not.toHaveBeenCalled();
   });
 });
 
