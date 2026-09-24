@@ -128,8 +128,8 @@ let destinationDraft: Record<string, string> = {};
 
 /** Courier rates need a structured Bolivian address and a door pin, collected here instead of in the design. */
 function courierDestinationSection(department: unknown): TrustedSection {
-  const draft = { ...destinationDraft };
-  if (!draft.destDepartment && typeof department === 'string') draft.destDepartment = department;
+  // The department the rates were quoted for wins over an older draft.
+  const draft = { ...destinationDraft, ...(typeof department === 'string' && department ? { destDepartment: department } : {}) };
   return {
     html: destinationMarkup(draft),
     mount: form => void mountDestinationMap(form),

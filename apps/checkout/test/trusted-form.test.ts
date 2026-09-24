@@ -69,8 +69,9 @@ it('collects the courier address and door pin in pagosYa\'s dialog, starting fro
     shippingDestination: { department: 'SANTA_CRUZ', city: 'Santa Cruz', street: 'Av. Busch 55', references: undefined, lat: -17.78, lng: -63.18, recipientName: 'Ana Quispe', recipientPhone: '+59171234567' },
   });
   // A rejected checkout reopens the dialog with what the shopper already typed.
-  const again = collectPersonalFields('checkout', { fulfillmentMethod: 'delivery' }, { storeName: 'Pliegue', carrierRate: true }, { error: 'Tarifa no disponible.' });
+  const again = collectPersonalFields('checkout', { fulfillmentMethod: 'delivery', shippingDepartment: 'LA_PAZ' }, { storeName: 'Pliegue', carrierRate: true }, { error: 'Tarifa no disponible.' });
   expect((dialog().querySelector('[name=destStreet]') as HTMLInputElement).value).toBe('Av. Busch 55');
+  expect((dialog().querySelector('[name=destDepartment]') as HTMLSelectElement).value).toBe('LA_PAZ');
   (dialog().querySelector('[data-cancel]') as HTMLButtonElement).click();
   expect(await again).toBeNull();
 });
