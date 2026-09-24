@@ -2748,7 +2748,9 @@
     root.innerHTML = `<div class="journey-shell">
       <header class="journey-topbar"><div class="journey-title"><small>Ruta de crecimiento</small><h2 id="adventureMapTitle">Horizonte pagosYa</h2></div><div class="journey-progress-card" aria-live="polite"><div class="journey-progress-heading"><span id="adventureCurrentLevel">Nivel 1 · Pipa</span><strong id="adventureXpValue">0 / 100 XP</strong></div><div class="journey-xp-track" id="adventureXpTrack" role="progressbar" aria-label="Progreso de la etapa actual" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="adventureXpFill"></span></div><div class="journey-progress-meta"><span id="adventureXpRemaining">100 XP para Capi</span><span id="adventureOverallProgress">0% de la ruta</span></div></div><div class="journey-actions"><button class="journey-icon-button" id="journeySoundToggle" type="button" aria-pressed="false" aria-label="Reproducir música de la ruta" title="Música de la ruta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></button><button class="journey-icon-button" type="button" data-journey-scroll="-1" aria-label="Explorar hacia atrás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><button class="journey-icon-button" type="button" data-journey-scroll="1" aria-label="Explorar hacia adelante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></header>
       <div class="journey-viewport" id="journeyViewport" tabindex="0" aria-label="Mundo de progreso. Desliza horizontalmente para explorar."><div class="journey-world" id="journeyWorld"><span class="journey-sun" aria-hidden="true"></span><span class="journey-cloud cloud-a" aria-hidden="true"></span><span class="journey-cloud cloud-b" aria-hidden="true"></span><span class="journey-cloud cloud-c" aria-hidden="true"></span><span class="journey-biome-label biome-a">Valle inicial</span><span class="journey-biome-label biome-b">Bosque de impulso</span><span class="journey-biome-label biome-c">Cumbre brillante</span><svg class="journey-route" viewBox="0 0 3860 500" preserveAspectRatio="none" aria-hidden="true"><path class="journey-route-shadow" id="journeyRouteShadow"/><path class="journey-route-base" id="journeyRouteBase" pathLength="100"/><path class="journey-route-progress-shadow" id="journeyRouteProgressShadow" pathLength="100"/><path class="journey-route-progress" id="journeyRouteProgress" pathLength="100"/></svg><div class="journey-nodes" id="adventureLevelNodes"></div><div class="journey-player" id="adventurePlayer"><span class="journey-player-face" id="adventurePlayerFace"></span><span class="journey-player-flag">Tú</span></div></div></div>
+      <section class="rewards-board-panel" aria-labelledby="rewardsBoardTitle"><div class="rewards-board" id="rewardsBoard" role="list" aria-label="Tablero de premios"><span class="rewards-board-token" id="rewardsBoardToken" data-tile="0" aria-hidden="true"></span><div class="rewards-board-center"><h3 id="rewardsBoardTitle">Tablero de la suerte</h3><span class="rewards-board-die" id="rewardsBoardDie" aria-live="polite">🎲</span><button class="luck-wheel-spin" id="rewardsBoardRoll" type="button">Tirar dado</button><p class="rewards-board-hint" id="rewardsBoardHint"></p><div class="luck-wheel-result" id="rewardsBoardResult" aria-live="polite" hidden></div></div></div></section>
       <footer class="journey-footer"><div class="journey-stage-detail" id="adventureLevelDetail" aria-live="polite"></div><div class="journey-companion-control"><span>Tu compañero</span><div class="journey-companion-picker" id="gamificationRunnerPicker" role="group" aria-label="Personajes desbloqueados"></div></div><div class="journey-help">Desliza para explorar. En escritorio también puedes arrastrar o usar las flechas.</div><div id="adventureDebugControls" hidden></div></footer><div class="journey-xp-toast" id="adventureXpToast" hidden aria-live="polite"></div><div class="journey-level-up" id="adventureLevelUp" hidden aria-live="assertive"><span>Nueva etapa</span><strong id="adventureLevelUpTitle"></strong></div></div>`;
+    renderRewardsBoard();
     const viewport = document.getElementById("journeyViewport");
     root.addEventListener("click", (event) => {
       const scrollButton = event.target.closest("[data-journey-scroll]"); if (scrollButton) viewport.scrollBy({ left: Number(scrollButton.dataset.journeyScroll) * viewport.clientWidth * .72, behavior: "smooth" });
@@ -3239,7 +3241,78 @@
   document.getElementById("luckWheelSpin")?.addEventListener("click", spinLuckWheel);
   document.getElementById("luckWheelHub")?.addEventListener("click", spinLuckWheel);
 
-  function renderRewardsBoard() {}
+  let rewardsBoardRolling = false;
+
+  function placeBoardToken(token, index, boardTileCoords) {
+    const { row, col } = boardTileCoords(index);
+    token.style.gridRow = String(row); token.style.gridColumn = String(col); token.dataset.tile = String(index);
+  }
+
+  async function renderRewardsBoard() {
+    const board = document.getElementById("rewardsBoard");
+    if (!board) return;
+    const state = rewardsState?.board;
+    const button = document.getElementById("rewardsBoardRoll"); const hint = document.getElementById("rewardsBoardHint");
+    if (!state) { button.disabled = true; hint.textContent = "No pudimos cargar el tablero."; return; }
+    const { WHEEL_VISUALS, boardTileCoords } = await loadRewardsModule();
+    if (board.dataset.tiles !== state.tiles.join(",")) {
+      board.querySelectorAll(".board-tile").forEach((tile) => tile.remove());
+      board.dataset.tiles = state.tiles.join(",");
+      state.tiles.forEach((key, index) => {
+        const { row, col } = boardTileCoords(index); const visual = WHEEL_VISUALS[key];
+        const tile = document.createElement("span");
+        tile.className = `board-tile board-tile-${key.toLowerCase()}`;
+        tile.dataset.tile = String(index); tile.setAttribute("role", "listitem");
+        tile.style.gridRow = String(row); tile.style.gridColumn = String(col); tile.style.setProperty("--tile-color", visual.color);
+        tile.setAttribute("aria-label", `Casilla ${index + 1}: ${visual.label}`);
+        tile.textContent = visual.icon;
+        board.appendChild(tile);
+      });
+    }
+    const token = document.getElementById("rewardsBoardToken");
+    const companion = ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)];
+    token.style.backgroundImage = `url(${companion.asset})`;
+    if (rewardsBoardRolling) return;
+    placeBoardToken(token, state.position, boardTileCoords);
+    button.disabled = state.rollsAvailable <= 0;
+    button.textContent = state.rollsAvailable > 0 ? `Tirar dado (${state.rollsAvailable.toLocaleString("es-BO")})` : "Sin tiros";
+    hint.textContent = `Te faltan ${state.salesUntilNextRoll.toLocaleString("es-BO")} ${state.salesUntilNextRoll === 1 ? "venta" : "ventas"} para el próximo tiro · Vueltas completadas: ${state.lapsCompleted.toLocaleString("es-BO")}`;
+  }
+
+  async function rollRewardsBoard() {
+    if (rewardsBoardRolling || !(rewardsState?.board.rollsAvailable > 0)) return;
+    const button = document.getElementById("rewardsBoardRoll"); const die = document.getElementById("rewardsBoardDie");
+    const resultBox = document.getElementById("rewardsBoardResult");
+    rewardsBoardRolling = true; button.disabled = true; button.textContent = "Tirando…"; resultBox.hidden = true;
+    const previousXp = currentTotalXp();
+    let result;
+    try {
+      result = await api("/dashboard/rewards/board/roll", { method: "POST", body: JSON.stringify({ storeId: currentStoreId }) });
+    } catch (error) {
+      rewardsBoardRolling = false;
+      await loadRewards();
+      document.getElementById("rewardsBoardHint").textContent = error?.message || "No pudimos tirar el dado. Vuelve a intentarlo.";
+      return;
+    }
+    const { boardHopPath, boardTileCoords, rewardCopy } = await loadRewardsModule();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    die.textContent = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][result.die - 1];
+    die.classList.remove("is-rolling"); void die.offsetWidth; if (!reduceMotion) die.classList.add("is-rolling");
+    const token = document.getElementById("rewardsBoardToken");
+    for (const tile of reduceMotion ? [result.to] : boardHopPath(result.from, result.die)) {
+      placeBoardToken(token, tile, boardTileCoords);
+      token.classList.remove("is-hopping"); void token.offsetWidth; if (!reduceMotion) token.classList.add("is-hopping");
+      playLuckWheelTick();
+      await new Promise((resolve) => window.setTimeout(resolve, reduceMotion ? 0 : 180));
+    }
+    const copy = rewardCopy(result.grant);
+    resultBox.hidden = false; resultBox.dataset.kind = result.grant.kind;
+    resultBox.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${copy.icon}</span><span><strong>${esc(copy.title)}</strong>${esc(copy.message)}${result.lapCompleted ? " ¡Completaste una vuelta!" : ""}</span>`;
+    rewardsBoardRolling = false;
+    await announceRewardGrant(result.grant, previousXp, document.getElementById("rewardsBoard"), { showCard: false });
+  }
+  // Delegated: the Horizonte markup is built lazily, after this listener is attached.
+  document.addEventListener("click", (event) => { if (event.target.closest?.("#rewardsBoardRoll")) rollRewardsBoard(); });
 
   function renderGamification(finances, { announce = true } = {}) {
     const state = gamificationState(finances);

@@ -131,3 +131,21 @@ test("a malformed rewards response degrades to an explanation instead of breakin
   await expect(page.locator("#luckWheelModal")).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test("the companion hops along the Horizonte board and the prize is shown", async ({ page }) => {
+  const tiles = Array(24).fill("STICKER_COMMON"); tiles[3] = "AI_CREDITS_5";
+  const usedWheel = { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments };
+  await openDashboard(page, {
+    wheelAvailable: false,
+    currentRewards: rewards({ wheel: usedWheel, board: { position: 0, rollsUsed: 0, rollsAvailable: 1, salesUntilNextRoll: 4, lapsCompleted: 0, tiles } }),
+    rollResponse: { json: { die: 3, from: 0, to: 3, lapCompleted: false, grant: { id: "g2", prize: "AI_CREDITS_5", kind: "AI_CREDITS", amount: 5, convertedFrom: null, sticker: null, tip: null }, board: { position: 3, rollsUsed: 1, rollsAvailable: 0, salesUntilNextRoll: 4, lapsCompleted: 0, tiles } } },
+  });
+  await page.evaluate(() => window.setDashboardView("progress"));
+  await expect(page.locator("#rewardsBoard .board-tile")).toHaveCount(24);
+  await expect(page.locator("#rewardsBoardRoll")).toHaveText(/Tirar dado \(1\)/);
+  await page.locator("#rewardsBoardRoll").click();
+  await expect(page.locator("#rewardsBoardToken")).toHaveAttribute("data-tile", "3", { timeout: 4000 });
+  await expect(page.locator("#rewardsBoardResult")).toContainText("5 créditos de IA");
+  await expect(page.locator("#rewardsBoardRoll")).toBeDisabled();
+  await expect(page.locator("#rewardsBoardHint")).toContainText("4 ventas");
+});
