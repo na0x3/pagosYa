@@ -393,7 +393,11 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@22.19.19)(jsdom@25.0.1(supports-color@10.2.2))(lightningcss@1.33.0)(supports-color@10.2.2)(terser@5.49.0)
 
-  apps/ops: {}
+  apps/ops:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.55.0
+        version: 1.62.1
 
   packages/sdk-node:
     dependencies:
