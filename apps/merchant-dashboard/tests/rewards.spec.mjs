@@ -149,3 +149,19 @@ test("the companion hops along the Horizonte board and the prize is shown", asyn
   await expect(page.locator("#rewardsBoardRoll")).toBeDisabled();
   await expect(page.locator("#rewardsBoardHint")).toContainText("4 ventas");
 });
+
+test("on a phone the wheel modal sits above the sidebar and the YAPI dock", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await openDashboard(page, { wheelAvailable: true, currentRewards: rewards() });
+  await expect(page.locator("#luckWheelModal")).toBeVisible();
+  const covered = await page.evaluate(() => {
+    const card = document.querySelector(".luck-wheel-modal-card");
+    const box = card.getBoundingClientRect();
+    const bottom = Math.min(box.bottom, window.innerHeight) - 12;
+    const probes = { leftEdge: [box.left + 8, box.top + box.height / 2], bottomCenter: [box.left + box.width / 2, bottom], topLeft: [box.left + 8, box.top + 8] };
+    // Transient layers (achievement toast, confetti) are meant to sit above the modal; persistent chrome is not.
+    const transient = (element) => !!element?.closest(".gamification-toast, .confetti-layer, [id^='gamificationToast']");
+    return Object.entries(probes).filter(([, [x, y]]) => { const hit = document.elementFromPoint(x, y); return !card.contains(hit) && !transient(hit); }).map(([name]) => name);
+  });
+  expect(covered).toEqual([]);
+});
