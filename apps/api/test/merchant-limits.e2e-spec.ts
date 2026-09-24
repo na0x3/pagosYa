@@ -173,6 +173,10 @@ describe('Merchant levels and limits', () => {
     await http().patch('/internal/limits/policies/1').set({ Authorization: `Bearer ${opsAdminToken}` }).send({ monthlyLimit: 1_000_000 }).expect(200);
   });
 
+  it('404s editing a policy level that does not exist', async () => {
+    await http().patch('/internal/limits/policies/99').set({ Authorization: `Bearer ${opsAdminToken}` }).send({ monthlyLimit: 1_000_000 }).expect(404);
+  });
+
   it("shows the dashboard the merchant's own usage, matching settled volume", async () => {
     await confirm((await createIntent(40_000).expect(201)).body).expect(201);
     const res = await http().get('/v1/dashboard/limits').set({ Authorization: `Bearer ${dashboardSessionToken}` }).expect(200);

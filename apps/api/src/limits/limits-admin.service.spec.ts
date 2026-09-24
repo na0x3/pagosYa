@@ -1,4 +1,4 @@
-import { ForbiddenException } from "@nestjs/common";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { LimitsAdminService } from "./limits-admin.service";
 
 const admin = { id: "ops_1", name: "Ana", email: "ana@pagosya.bo", role: "SUPPORT_ADMIN" };
@@ -7,19 +7,21 @@ const agent = { ...admin, role: "SUPPORT_AGENT" };
 function setup() {
   const tx = {
     merchantLevelPolicy: {
-      findUniqueOrThrow: jest.fn().mockResolvedValue({ level: 1, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, liveEnabled: true }),
+      findUnique: jest.fn().mockResolvedValue({ level: 1, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, liveEnabled: true }),
       update: jest.fn().mockResolvedValue({ level: 1, monthlyLimit: 2_000_000, perPaymentLimit: 200_000, liveEnabled: true }),
     },
     merchant: {
-      findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "m_1", level: 1, monthlyLimitOverride: null, perPaymentLimitOverride: null }),
-      update: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn().mockResolvedValue({ id: "m_1", level: 1, monthlyLimitOverride: null, perPaymentLimitOverride: null }),
+      update: jest.fn().mockResolvedValue({ id: "m_1", level: 3, monthlyLimitOverride: 50_000_000, perPaymentLimitOverride: 5_000_000 }),
     },
-    limitSettings: { findUniqueOrThrow: jest.fn().mockResolvedValue({ usdToBobRate: "6.96" }), update: jest.fn().mockResolvedValue({ usdToBobRate: "6.97" }) },
+    limitSettings: { findUnique: jest.fn().mockResolvedValue({ usdToBobRate: "6.96" }), update: jest.fn().mockResolvedValue({ usdToBobRate: "6.97" }) },
   };
   const prisma = { $transaction: jest.fn((fn) => fn(tx)), $queryRaw: jest.fn().mockResolvedValue([]) };
   const audit = { record: jest.fn() };
   return { tx, audit, service: new LimitsAdminService(prisma as any, audit as any) };
 }
+
+const MERCHANT_SELECT = { id: true, level: true, monthlyLimitOverride: true, perPaymentLimitOverride: true };
 
 it("only admins change policies, and the change is audited with before and after", async () => {
   const { service, audit } = setup();
@@ -32,10 +34,41 @@ it("only admins change policies, and the change is audited with before and after
   }));
 });
 
+it("404s when the policy level doesn't exist", async () => {
+  const { service, tx } = setup();
+  tx.merchantLevelPolicy.findUnique.mockResolvedValue(null);
+  await expect(service.updatePolicy(99, { monthlyLimit: 1_000_000 }, admin as any)).rejects.toBeInstanceOf(NotFoundException);
+});
+
 it("sets a merchant to level 3 with custom limits", async () => {
   const { service, tx } = setup();
   await service.updateMerchant("m_1", { level: 3, monthlyLimitOverride: 50_000_000, perPaymentLimitOverride: 5_000_000 }, admin as any);
-  expect(tx.merchant.update).toHaveBeenCalledWith({ where: { id: "m_1" }, data: { level: 3, monthlyLimitOverride: 50_000_000, perPaymentLimitOverride: 5_000_000 } });
+  expect(tx.merchant.update).toHaveBeenCalledWith({
+    where: { id: "m_1" },
+    data: { level: 3, monthlyLimitOverride: 50_000_000, perPaymentLimitOverride: 5_000_000 },
+    select: MERCHANT_SELECT,
+  });
+});
+
+it("keeps the untouched fields in the audit trail on a partial merchant update", async () => {
+  const { service, tx, audit } = setup();
+  tx.merchant.findUnique.mockResolvedValue({ id: "m_2", level: 1, monthlyLimitOverride: 5_000_000, perPaymentLimitOverride: null });
+  // The DB row Prisma would actually return: level changed, monthlyLimitOverride untouched by this partial update.
+  tx.merchant.update.mockResolvedValue({ id: "m_2", level: 3, monthlyLimitOverride: 5_000_000, perPaymentLimitOverride: null });
+  await service.updateMerchant("m_2", { level: 3 }, admin as any);
+  expect(audit.record).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    action: "limits.merchant_updated",
+    metadata: {
+      before: expect.objectContaining({ monthlyLimitOverride: 5_000_000 }),
+      after: expect.objectContaining({ level: 3, monthlyLimitOverride: 5_000_000 }),
+    },
+  }));
+});
+
+it("404s when the merchant doesn't exist", async () => {
+  const { service, tx } = setup();
+  tx.merchant.findUnique.mockResolvedValue(null);
+  await expect(service.updateMerchant("missing", { level: 1 }, admin as any)).rejects.toBeInstanceOf(NotFoundException);
 });
 
 it("only admins change the USD rate", async () => {
@@ -43,4 +76,10 @@ it("only admins change the USD rate", async () => {
   await expect(service.updateSettings(6.97, agent as any)).rejects.toBeInstanceOf(ForbiddenException);
   await service.updateSettings(6.97, admin as any);
   expect(audit.record).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ action: "limits.settings_updated" }));
+});
+
+it("404s when the settings row doesn't exist", async () => {
+  const { service, tx } = setup();
+  tx.limitSettings.findUnique.mockResolvedValue(null);
+  await expect(service.updateSettings(6.97, admin as any)).rejects.toBeInstanceOf(NotFoundException);
 });
