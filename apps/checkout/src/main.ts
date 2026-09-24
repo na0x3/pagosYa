@@ -9810,7 +9810,9 @@ async function submitPayment(session: CheckoutSession, clientSecret: string, tok
     }
   } catch (err) {
     closePendingIntlPopup();
-    renderFailed(session.id, (err as Error).message);
+    // Show the API's own message verbatim — e.g. the merchant-limit refusal
+    // is deliberately neutral and must not be wrapped in extra copy.
+    renderFailed(session.id, (err as Error).message, false);
   }
 }
 
@@ -10156,10 +10158,14 @@ function launchPaymentPrinter(
   stageTimer = window.setTimeout(showReceipt, 2520);
 }
 
-function renderFailed(paymentIntentId: string, message: string) {
+// `prefixed = false` shows the message verbatim, with no "Pago fallido: "
+// lead-in — used only for the API's own refusal message (e.g. a merchant
+// over its payment limit), which must reach the buyer exactly as sent.
+function renderFailed(paymentIntentId: string, message: string, prefixed = true) {
+  const statusText = prefixed ? `Pago fallido: ${escapeHtml(message)}` : escapeHtml(message);
   app.innerHTML = `
     <div class="payment-outcome-panel">
-      <div class="status failed">${ICON_X}<span>Pago fallido: ${escapeHtml(message)}</span></div>
+      <div class="status failed">${ICON_X}<span>${statusText}</span></div>
       ${contactBlockHtml("¿Necesitas ayuda?")}
       ${backToStoreHtml()}
     </div>
