@@ -1,10 +1,10 @@
-import '../../apps/merchant-dashboard/src/product-options.js';
-import '../../apps/merchant-dashboard/src/product-options.css';
+import '@pagosya/variant-editor';
+import '@pagosya/variant-editor/style.css';
 import { createProductForm } from '../../apps/merchant-studio/src/source-create-product';
 import { sourcePreviewDocument } from '../../apps/merchant-studio/src/source-preview';
-import commerce from '../../apps/api/src/stores/source-kit/commerce.js?raw';
-import commerceCss from '../../apps/api/src/stores/source-kit/commerce-pages.css?raw';
-import type { VariantDraft } from '../../apps/merchant-dashboard/src/product-options';
+import commerce from '../../packages/storefront-kit/kit/commerce.js?raw';
+import commerceCss from '../../packages/storefront-kit/kit/commerce-pages.css?raw';
+import type { VariantDraft } from '@pagosya/variant-editor';
 
 const initial = PagosYaProductOptions.combinations([{ name: 'Color', values: ['Azul', 'Blanco', 'Negro'] }, { name: 'Talla', values: ['S', 'M', 'L'] }], [], '120');
 initial.forEach((row, i) => { row.stock = String([0, 3, 2, 5, 0, 4, 1, 2, 0][i]); });

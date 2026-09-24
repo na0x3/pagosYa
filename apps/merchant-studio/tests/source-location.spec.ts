@@ -10,7 +10,7 @@ test('legacy Google Maps embeds can navigate to the canonical provider', async (
   await page.route('https://www.google.com/maps?**', route => route.fulfill({ contentType: 'text/html', body: '<h1>La Paz</h1>' }));
   await page.goto('/');
   await page.evaluate(async () => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const frame = document.createElement('iframe'); frame.title = 'Redirect'; frame.sandbox.add('allow-scripts'); frame.style.height = '500px';
     frame.srcdoc = sourcePreviewDocument({ schemaVersion: 1, brief: {} as any, files: [{ path: 'index.html', content: '<iframe src="https://maps.google.com/maps?q=La%20Paz&amp;output=embed"></iframe>' }] });
     document.body.replaceChildren(frame);
@@ -26,7 +26,7 @@ for (const hosted of [false, true]) test(`location embeds load with sandbox isol
   });
   await page.goto('/');
   await page.evaluate(async ({ google, osm, hosted }) => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const frame = document.createElement('iframe');
     frame.title = 'Location test'; frame.sandbox.add('allow-scripts');
     frame.style.cssText = 'display:block;width:100%;height:900px;border:0';
@@ -66,8 +66,8 @@ test('only map embed endpoints pass validation and documents without maps retain
   const rejected = ['https://maps.app.goo.gl/place', 'https://www.google.com/maps/place/Cafe', 'https://www.google.com/maps?output=html', 'https://evil.test/maps/embed', 'https://www.google.com.evil.test/maps/embed', 'https://www.google.com@evil.test/maps/embed', 'https://user:pass@www.google.com/maps/embed', 'http://www.google.com/maps/embed', 'https://www.google.com:8443/maps/embed', 'javascript:alert(1)', 'data:text/html,test', '//www.google.com/maps/embed', 'https://www.openstreetmap.org/user/test'];
   const accepted = [google, osm, 'https://maps.google.com/maps?q=La%20Paz&output=embed', 'https://www.google.com/maps?output=embed&q=La%20Paz', 'https://www.google.com/maps/d/u/0/embed?mid=provided-id', 'https://www.google.com/maps/embed/v1/place?key=provided-key&q=La%20Paz'];
   const result = await page.evaluate(async ({ rejected, accepted }) => {
-    const { sourceLocationUrl } = await import('/src/source-location.ts');
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourceLocationUrl } = await import('/src/storefront-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     return { rejected: rejected.map(sourceLocationUrl), accepted: accepted.map(sourceLocationUrl), empty: sourcePreviewDocument({ schemaVersion: 1, brief: {} as any, files: [{ path: 'index.html', content: '<h1>Store</h1><iframe src="https://evil.test"></iframe>' }] }) };
   }, { rejected, accepted });
   expect(result.rejected).toEqual(rejected.map(() => null));

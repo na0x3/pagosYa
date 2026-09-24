@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { kitPath } from '@pagosya/storefront-kit';
 const settings = { revision: 0, comebackEnabled: false, visitsRequired: 5, rewardLabel: 'Un café gratis', timezone: 'America/La_Paz', signupEnabled: false, signupTitle: 'Club del café', signupBody: 'Beneficios para quienes vuelven.', signupButton: 'Unirme al club', recoveryEnabled: false, recoveryHours: 24, welcomeEnabled: false, welcomeSubject: 'Bienvenido a {{store}}', welcomeBody: 'Gracias por unirte.' };
 
 test('subscription popup matches the photo/form reference, remembers dismissal and saves chosen interests', async ({ page }) => {
-  const runtime = readFileSync(new URL('../../api/src/stores/source-kit/retention.js', import.meta.url), 'utf8');
+  const runtime = readFileSync(kitPath('retention.js'), 'utf8');
   const body = { ...settings, comebackEnabled: true, signupEnabled: true, signupTitle: 'Un lugar para tus favoritos', signupBody: 'Súmate a la comunidad de PEANU y recibe nuevas selecciones y novedades de nuestra tienda, directo a tu correo.', signupButton: 'Quiero ser parte', signupVisual: { brand: { name: 'PEANU', background: '#f3eddf', foreground: '#26221c', fontStyle: 'editorial' }, imageUrl: 'https://commerce.example/product.webp', interests: ['Mantequillas de nueces', 'Mantequillas de maní', 'Snacks'] } };
   let payload: any; let submissions = 0;
   await page.route('https://commerce.example/product.webp', route => route.fulfill({ body: readFileSync(new URL('./fixtures/retention-product.webp', import.meta.url)), contentType: 'image/webp' }));
@@ -44,7 +45,7 @@ test('subscription popup matches the photo/form reference, remembers dismissal a
 });
 
 test('preview renders Comunidad inline without a fixed control covering storefront copy', async ({ page }) => {
-  const runtime = readFileSync(new URL('../../api/src/stores/source-kit/retention.js', import.meta.url), 'utf8');
+  const runtime = readFileSync(kitPath('retention.js'), 'utf8');
   const retention = { ...settings, signupEnabled: true, signupTitle: 'Un lugar para tus favoritos', signupBody: 'Súmate a la comunidad y recibe novedades de la tienda.', signupButton: 'Quiero ser parte', signupVisual: { brand: { name: 'PEANU', background: '#f3eddf', foreground: '#26221c', fontStyle: 'editorial' }, imageUrl: 'https://commerce.example/product.webp' } };
   await page.route('https://commerce.example/product.webp', route => route.fulfill({ body: readFileSync(new URL('./fixtures/retention-product.webp', import.meta.url)), contentType: 'image/webp' }));
   await page.goto('/?demo=1');
@@ -62,7 +63,7 @@ test('preview renders Comunidad inline without a fixed control covering storefro
 });
 
 test('personal loyalty card uses the reference layout, real QR and accurate available rewards', async ({ page }) => {
-  const runtime = readFileSync(new URL('../../api/src/stores/source-kit/retention.js', import.meta.url), 'utf8');
+  const runtime = readFileSync(kitPath('retention.js'), 'utf8');
   const require = createRequire(new URL('../../api/package.json', import.meta.url));
   const qr = await require('qrcode').toDataURL('CB-test-1234567890123456', { width: 240, margin: 4 });
   await page.goto('/?demo=1');
@@ -108,8 +109,8 @@ test('merchant configures retention and reviews a campaign before explicit sendi
 });
 
 test('storefront inherits brand, captures consent, preserves recovery token through cart changes, and shows a digital reward', async ({ page }) => {
-  const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
-  const retention = readFileSync(new URL('../../api/src/stores/source-kit/retention.js', import.meta.url), 'utf8');
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
+  const retention = readFileSync(kitPath('retention.js'), 'utf8');
   const store = { storeName: 'Café Pausa', checkoutMode: 'payment', items: [{ id: 'p1', name: 'Café de origen', amount: 1800, stock: 10, imageUrls: [], currency: 'BOB' }], locations: [], categories: [] };
   const payloads: any[] = [];
   await page.goto('/?comeback=' + 'a'.repeat(64));
@@ -145,7 +146,7 @@ test('storefront inherits brand, captures consent, preserves recovery token thro
 });
 
 test('hosted storefront subscribes and preserves saved-cart identity across page navigation', async ({ page }) => {
-  const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8') + '\n' + readFileSync(new URL('../../api/src/stores/source-kit/retention.js', import.meta.url), 'utf8');
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8') + '\n' + readFileSync(kitPath('retention.js'), 'utf8');
   const store = { storeName: 'Club', checkoutMode: 'payment', items: [{ id: 'p1', name: 'Café', amount: 1800, currency: 'BOB', stock: 10 }], categories: [], locations: [] };
   const snapshot = { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<main><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p></main><script src="config.js"></script><script src="commerce.js"></script>' },
@@ -160,17 +161,23 @@ test('hosted storefront subscribes and preserves saved-cart identity across page
     if (path.endsWith('/subscribe')) { subscribed = route.request().postDataJSON().consent; return route.fulfill({ json: { subscribed: true } }); }
     if (path.endsWith('/carts')) return route.fulfill({ json: { saved: true, token: 'c'.repeat(64) } });
     if (path.endsWith('/cart-checkout')) { checkout = route.request().postDataJSON(); return route.fulfill({ json: { clientSecret: 'test-only-secret' } }); }
+    if (path.endsWith('/verification')) return route.fulfill({ status: 404, json: { message: 'Tienda no encontrada' } });
     throw new Error(path);
   });
   await page.goto('/?demo=1');
   const path = '/@fs' + new URL('../../checkout/src/source-storefront.ts', import.meta.url).pathname;
   await page.evaluate(async ({ path, store }) => { const { mountPublishedSource } = await import(path); document.body.innerHTML = '<main id="shop"></main>'; await mountPublishedSource(document.querySelector('#shop'), 'retention-test', store, async () => { document.querySelector('#shop')!.textContent = 'Pago listo'; }); }, { path, store });
   const frame = page.frameLocator('iframe'); const signup = frame.locator('[data-pagosya-subscribe]');
-  await signup.getByLabel('Tu correo', { exact: true }).fill('cliente@example.com'); await signup.getByRole('checkbox').check(); await signup.getByRole('button', { name: 'Unirme al club' }).click();
+  await expect(signup.getByLabel('Tu correo', { exact: true })).toHaveCount(0); await signup.getByRole('button', { name: 'Unirme al club' }).click();
+  const secureSignup = page.getByRole('dialog', { name: /Novedades de/ });
+  await secureSignup.getByLabel('Tu correo').fill('cliente@example.com'); await secureSignup.getByRole('checkbox').check(); await secureSignup.getByRole('button', { name: 'Suscribirme' }).click();
   await expect(signup.getByRole('status')).toContainText('comunidad'); expect(subscribed).toBe(true);
   await signup.getByRole('button', { name: 'Cerrar suscripción' }).click();
   await frame.getByRole('button', { name: 'Añadir Café', exact: true }).click(); const recovery = frame.locator('[data-retention-recovery]');
-  await recovery.getByLabel('Tu correo', { exact: true }).fill('cliente@example.com'); await recovery.getByRole('checkbox').check(); await recovery.getByRole('button').click(); await expect(recovery.getByRole('status')).toContainText('Carrito guardado');
+  await recovery.getByRole('button').click();
+  const secureCart = page.getByRole('dialog', { name: 'Guardar tu pedido para después' });
+  await secureCart.getByLabel('Tu correo').fill('cliente@example.com'); await secureCart.getByRole('checkbox').check(); await secureCart.getByRole('button', { name: 'Enviar' }).click();
+  await expect(recovery.getByRole('status')).toContainText('Carrito guardado');
   await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
   await frame.getByRole('button', { name: 'Pagar con pagosYa' }).click(); await expect(page.getByText('Pago listo')).toBeVisible(); expect(checkout.recoveryToken).toBe('c'.repeat(64));
 });

@@ -6,11 +6,11 @@ export function markPrivateStorePage() {
   if (!robots) { robots = document.createElement('meta'); robots.name = 'robots'; document.head.append(robots); }
   robots.content = 'noindex, nofollow';
 }
-export async function refreshStoreSeo(slug: string, productId?: string, page?: string) {
-  const route = `${slug}|${productId || ''}|${page || ''}`;
+export async function refreshStoreSeo(slug: string, productId?: string, page?: string, collection?: string) {
+  const route = `${slug}|${productId || ''}|${page || ''}|${collection || ''}`;
   if (route === lastRoute) return;
   lastRoute = route; const current = ++sequence;
-  const query = new URLSearchParams(); if (productId) query.set('productId', productId); if (page && page !== 'index.html') query.set('page', page);
+  const query = new URLSearchParams(); if (productId) query.set('productId', productId); if (page && page !== 'index.html') query.set('page', page); if (collection && !productId) { query.set('page', 'coleccion.html'); query.set('collection', collection); }
   try {
     const response = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/seo?${query}`, { credentials: 'omit', signal: AbortSignal.timeout(6000) });
     if (current !== sequence) return;

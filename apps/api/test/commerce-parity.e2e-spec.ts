@@ -5,7 +5,7 @@ import request = require('supertest');
 import { createHmac, randomUUID } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { StoresService } from '../src/stores/stores.service';
+import { StoreCheckoutService } from '../src/stores/store-checkout.service';
 import { PaymentIntentsService } from '../src/payment-intents/payment-intents.service';
 import { CreditExpiryService } from '../src/commerce-platform/credit-expiry.service';
 import { PrivateFilesService } from '../src/commerce-platform/private-files.service';
@@ -26,6 +26,8 @@ describe('Credit ledger and digital delivery', () => {
       if (name.endsWith('Owner')) token = m.testKeys.secretKey; else other = m.testKeys.secretKey;
     }
     store = (await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Digital' }).expect(201)).body;
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await db.store.update({ where: { id: store.id }, data: { publicVisibility: true } });
     product = (await request(app.getHttpServer()).post(`/v1/stores/${store.id}/payment_links`).set(auth()).send({ name: 'Guía', amount: 10000, currency: 'BOB' }).expect(201)).body;
   });
   afterAll(async () => {
@@ -141,7 +143,7 @@ describe('Credit ledger and digital delivery', () => {
     await db.paymentLink.update({ where: { id: physical.id }, data: { stock: 2, locationStocks: { branch: 2 } } });
     const credit = await issue(30000);
     const cart = { creditCode: credit.code, locationId: 'branch', fulfillmentMethod: 'pickup' as const, items: [{ paymentLinkId: physical.id, quantity: 1 }, { paymentLinkId: product.id, quantity: 1 }] };
-    const paid = await app.get(StoresService).createCartCheckout(store.slug, cart);
+    const paid = await app.get(StoreCheckoutService).createCartCheckout(store.slug, cart);
     expect(paid).toMatchObject({ amount: 0, status: 'SUCCEEDED' });
     expect(await db.paymentLink.findUnique({ where: { id: physical.id } })).toMatchObject({ stock: 1, locationStocks: { branch: 1 } });
     expect(await db.storeCredit.findUnique({ where: { id: credit.id } })).toMatchObject({ balance: 10000 });

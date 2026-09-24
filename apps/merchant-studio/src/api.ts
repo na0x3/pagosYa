@@ -1,4 +1,5 @@
 import type { SourceDesignJob } from './source-design-jobs';
+import type { VisualFields } from './source-direct-editor';
 import type { AssetLibrary, VisualReport } from './source-visual-tools';
 import type { BuildProgress } from './source-build-progress';
 import type { BrandState } from './brand-profile';
@@ -32,7 +33,12 @@ export interface MerchantStore {
   catalogLayout?: CatalogLayout;
   cartRecommendationsEnabled?: boolean;
   cartRecommendationProductIds?: string[];
+  checkoutMode?: string;
 }
+
+/** SIN classification of a product, needed on electronic invoices. */
+export interface ProductFiscalMapping { codigoProducto?: string; actividadEconomica?: string; codigoProductoSin?: string; unidadMedida?: number }
+export interface SiatCatalog<T> { total: number; entries: T[] }
 
 export type RecommendableProduct = { id: string; name: string; status: string; recommendedProductIds?: string[] };
 
@@ -96,6 +102,7 @@ export interface Clarification {
 }
 
 export interface SourceSetup {
+  sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
   step: 'conversation' | 'logo' | 'brand' | 'audience' | 'business' | 'products' | 'delivery' | 'review';
   prompt: string;
   options: Array<{ label: string; value: string; action?: 'generate' | 'restart' }>;
@@ -256,6 +263,27 @@ export class MerchantStudioApi {
   resumeSourceDesignJob(storeId: string, id: string): Promise<SourceDesignJob> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/design-jobs/${encodeURIComponent(id)}/resume`, { method: 'POST', body: '{}' });
   }
+  /** SIN classification applies only to stores that charge with pagosYa and already have a CUIS. */
+  async productFiscalReady(storeId: string): Promise<boolean> {
+    const [stores, profile] = await Promise.all([this.listStores(), this.request<{ cuis?: string | null } | null>("/merchants/invoicing_profile")]);
+    const store = stores.find((candidate) => candidate.id === storeId);
+    return Boolean(store && (store.checkoutMode || "payment") === "payment" && profile?.cuis);
+  }
+
+  siatActivities(): Promise<SiatCatalog<{ codigoCaeb: string; descripcion: string }>> {
+    return this.request("/siat/catalogs/activities?limit=500");
+  }
+
+  siatUnits(): Promise<SiatCatalog<{ codigoClasificador: number; descripcion: string }>> {
+    return this.request("/siat/catalogs/units?limit=500");
+  }
+
+  siatProducts(activityCode: string, query = ""): Promise<SiatCatalog<{ codigoProducto: number | string; descripcionProducto: string }>> {
+    const params = new URLSearchParams({ activityCode, limit: "300" });
+    if (query) params.set("q", query);
+    return this.request(`/siat/catalogs/products?${params}`);
+  }
+
   sourceCatalog(storeId: string): Promise<JsonRecord> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/catalog`);
   }
@@ -264,7 +292,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-highlights/suggestions`, { method: 'POST', body: JSON.stringify(input) });
   }
 
-  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> }): Promise<{ id: string; name: string }> {
+  createProduct(storeId: string, input: { name: string; description: string | null; specifications?: Array<{ label: string; value: string }>; highlights?: Array<{ icon: string; label: string; detail?: string }>; amount: number; currency: string; stock: number | null; imageUrls: string[]; variants?: Array<{name: string; amount: number; stock?: number | null; options?: Array<{name: string; value: string}>; imageUrl?: string | null}>; extras?: Array<{ id?: string; name: string; amount: number; groupName?: string; freeAllowance?: number; pickCount?: number; productId?: string }> } & ProductFiscalMapping): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`, { method: 'POST', body: JSON.stringify(input) });
   }
 
@@ -302,6 +330,9 @@ export class MerchantStudioApi {
   setSourceContactForm(storeId: string, revision: number, enabled: boolean): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/contact-form`, { method: 'PATCH', body: JSON.stringify({ revision, enabled }) });
   }
+  recordSourceChecks(storeId: string, revision: number, result: { passed: boolean; findings: import('./source-checks').SourceCheck[] }, signal?: AbortSignal): Promise<JsonRecord> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}/checks`, { method: 'POST', body: JSON.stringify(result), signal });
+  }
   publishSource(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/publish`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
   }
@@ -318,19 +349,27 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project${before ? `?before=${before}` : ""}`);
   }
 
-  setSourceMotion(storeId: string, revision: number, motion: SourceMotionMode): Promise<SourceRevision> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/motion`, { method: 'PATCH', body: JSON.stringify({ revision, motion }) });
+  setSourceMotion(storeId: string, revision: number, motion: SourceMotionMode, scrollFeel?: SourceScrollFeel): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/motion`, { method: 'PATCH', body: JSON.stringify({ revision, motion, scrollFeel }) });
   }
 
   editSourceFile(storeId: string, revision: number, path: string, content: string): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/file`, { method: "PATCH", body: JSON.stringify({ revision, path, content }) });
   }
 
+  sourceVisualFields(storeId: string, revision: number): Promise<VisualFields> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-fields?revision=${revision}`);
+  }
+
+  editSourceVisual(storeId: string, input: { revision: number; fieldId: string; value: string }): Promise<SourceRevision> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/visual-edit`, { method: 'PATCH', body: JSON.stringify(input) });
+  }
+
   sourceVersion(storeId: string, revision: number): Promise<SourceVersion> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${revision}`);
   }
 
-  generateSource(storeId: string, body: { revision: number; brief: import("./source-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode }): Promise<SourceRevision> {
+  generateSource(storeId: string, body: { revision: number; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; instruction: string; assetUrls: string[]; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/generate`, { method: "POST", body: JSON.stringify(body) });
   }
 
@@ -338,7 +377,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/versions/${target}/restore`, { method: "POST", body: JSON.stringify({ revision }) });
   }
 
-  saveSource(storeId: string, body: { revision: number; label: string; brief: import("./source-preview").SourceSnapshot["brief"]; files: import("./source-preview").SourceFile[] }): Promise<SourceRevision> {
+  saveSource(storeId: string, body: { revision: number; label: string; brief: import("@pagosya/storefront-preview").SourceSnapshot["brief"]; files: import("@pagosya/storefront-preview").SourceFile[] }): Promise<SourceRevision> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project`, { method: "PUT", body: JSON.stringify(body) });
   }
 
@@ -393,7 +432,7 @@ export interface SourcePublication {
   experiment: null | { id: string; status: string; startedAt: string; controlRevision: number; variantRevision: number; winner: string | null; evidence: { winner: string | null; reason: string }; variants: Array<{ variant: string; revision: number; visitors: number; buyers: number; paidOrders: number; conversionRate: number; revenue: Array<{ currency: string; amount: number }> }> };
 }
 export interface SourceState { publication?: SourcePublication; revision: number; versions: SourceRevision[]; nextBefore: number | null }
-export interface SourceVersion extends SourceRevision { snapshot: import("./source-preview").SourceSnapshot }
+export interface SourceVersion extends SourceRevision { snapshot: import("@pagosya/storefront-preview").SourceSnapshot }
 
 export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualProposal | null): string {
   const url = new URL(`/s/${encodeURIComponent(store.slug)}`, CHECKOUT_ORIGIN);
@@ -415,6 +454,7 @@ export function proposalPreviewUrl(store: MerchantStore, proposal?: VisualPropos
 
 export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt-5.6-sol' | 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'deepseek-v4-flash-vision-exp';
 export type SourceMotionMode = 'auto' | 'off' | 'subtle' | 'expressive';
-export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode };
+export type SourceScrollFeel = 'native' | 'soft' | 'cinematic';
+export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial' };
 export type SourceGenerationEstimate = { model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
 export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };

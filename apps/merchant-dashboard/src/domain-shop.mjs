@@ -8,7 +8,7 @@ const fields = [
   ['country', 'País (código de dos letras, p. ej. BO)', 'country'],
 ];
 
-export function mountDomainShop(root, { api, onConnected, onSupport }) {
+export function mountDomainShop(root, { api, onConnected }) {
   let storeId = null, sequence = 0, timer, busy = false;
   const drafts = new Map();
   const state = () => drafts.get(storeId);
@@ -43,7 +43,7 @@ export function mountDomainShop(root, { api, onConnected, onSupport }) {
       ${row.expiresAt && !row.sandbox && !row.contactVerified ? '<p>Revisa el correo del titular y completa la verificación para mantener el dominio disponible.</p>' : ''}
       <div class="domain-shop-actions">${row.checkoutUrl ? `<a class="primary domain-shop-link" href="${escapeHtml(row.checkoutUrl)}" target="_blank" rel="noopener noreferrer">Pagar ${price(row)}</a><button type="button" class="ghost" data-cancel="${escapeHtml(row.id)}">Cancelar compra pendiente</button>` : ''}
       ${row.url ? `<a class="domain-shop-link" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">Abrir tienda ↗</a>` : ''}
-      ${row.status === 'REVIEW_REQUIRED' || row.expiresAt ? '<button type="button" class="ghost" data-support>Contactar a soporte</button>' : ''}</div></article>`).join('')}` : '';
+      </div>${row.status === 'REVIEW_REQUIRED' ? '<p>Soporte ya recibió este caso y te escribirá al correo de tu cuenta.</p>' : ''}</article>`).join('')}` : '';
   }
   async function refresh() {
     const id = storeId, version = sequence;
@@ -75,7 +75,6 @@ export function mountDomainShop(root, { api, onConnected, onSupport }) {
   root.addEventListener('click', async event => {
     const button = event.target.closest('button');
     if (!button || !storeId || busy) return;
-    if (button.hasAttribute('data-support')) { onSupport(); return; }
     if (button.hasAttribute('data-back')) { saveDraft(); state().quote = null; renderReview(); return; }
     if (!button.dataset.buy && !button.dataset.cancel) return;
     const id = storeId, version = sequence;

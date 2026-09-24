@@ -1,0 +1,247 @@
+[
+  {
+    "type": "dependency",
+    "from": "apps/merchant-studio/tests/source-creative.spec.ts",
+    "to": "apps/api/src/storefront-source/fixtures/creative-store.ts",
+    "unresolvedTo": "../../api/src/storefront-source/fixtures/creative-store",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-app-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/merchant-studio/tests/source-creative.spec.ts",
+    "to": "apps/api/src/storefront-source/fixtures/next-store.ts",
+    "unresolvedTo": "../../api/src/storefront-source/fixtures/next-store",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-app-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/merchant-studio/tests/source-creative.spec.ts",
+    "to": "apps/api/src/storefront-source/source-creative-assets.ts",
+    "unresolvedTo": "../../api/src/storefront-source/source-creative-assets",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-app-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/merchant-studio/tests/source-creative.spec.ts",
+    "to": "apps/api/src/storefront-source/source-next.ts",
+    "unresolvedTo": "../../api/src/storefront-source/source-next",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-app-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/merchant-studio/tests/source-next.spec.ts",
+    "to": "apps/api/src/storefront-source/fixtures/next-store.ts",
+    "unresolvedTo": "../../api/src/storefront-source/fixtures/next-store",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-app-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/merchant-studio/tests/source-next.spec.ts",
+    "to": "apps/api/src/storefront-source/source-next.ts",
+    "unresolvedTo": "../../api/src/storefront-source/source-next",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-app-imports"
+    }
+  },
+  {
+    "type": "cycle",
+    "from": "apps/merchant-studio/src/api.ts",
+    "to": "apps/merchant-studio/src/brand-profile.ts",
+    "unresolvedTo": "./brand-profile",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "apps/merchant-studio/src/brand-profile.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "apps/merchant-studio/src/api.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "apps/merchant-studio/src/api.ts",
+    "to": "apps/merchant-studio/src/source-design-jobs.ts",
+    "unresolvedTo": "./source-design-jobs",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "apps/merchant-studio/src/source-design-jobs.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "apps/merchant-studio/src/api.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "apps/merchant-studio/src/api.ts",
+    "to": "apps/merchant-studio/src/source-visual-tools.ts",
+    "unresolvedTo": "./source-visual-tools",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "apps/merchant-studio/src/source-visual-tools.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "apps/merchant-studio/src/api.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "apps/merchant-studio/src/source-checks.ts",
+    "to": "apps/merchant-studio/src/source-shopping-probe.ts",
+    "unresolvedTo": "./source-shopping-probe",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "apps/merchant-studio/src/source-shopping-probe.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "apps/merchant-studio/src/source-checks.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/storefront-preview/src/source-preview-media.ts",
+    "to": "packages/storefront-preview/src/source-preview.ts",
+    "unresolvedTo": "./source-preview",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/storefront-preview/src/source-preview.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/storefront-preview/src/source-preview-media.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  }
+]

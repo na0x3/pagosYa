@@ -14,6 +14,15 @@ export interface SendEmailRequest {
   body: string;
   /** Address that should receive a human reply to the delivered message. */
   replyTo?: string;
+  /**
+   * Extra RFC 5322 headers to set on the outgoing message, e.g.
+   * `{ "Message-ID": "<abc@pagosya>" }`. The inbox needs this: without a
+   * Message-ID of our own, the shopper's reply carries no In-Reply-To we can
+   * recognise and the conversation cannot be correlated back to its thread.
+   * Values are passed through verbatim, so only trusted, internally built
+   * strings belong here — never anything a customer typed.
+   */
+  headers?: Record<string, string>;
   /** Interactive flows (such as lead capture) must not report success when delivery was rejected. */
   failLoudly?: boolean;
 }

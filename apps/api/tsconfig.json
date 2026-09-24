@@ -1,5 +1,5 @@
 {
-  "exclude": ["node_modules", "dist", "src/stores/source-kit"],
+  "exclude": ["node_modules", "dist"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",

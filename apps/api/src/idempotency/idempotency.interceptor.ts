@@ -4,10 +4,11 @@ import {
   ConflictException,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
 } from "@nestjs/common";
-import { Observable, of } from "rxjs";
-import { tap } from "rxjs/operators";
+import { Observable, from, of, throwError } from "rxjs";
+import { catchError, concatMap } from "rxjs/operators";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -33,6 +34,8 @@ function pathWithoutQuery(request: { originalUrl?: string; url?: string }): stri
  */
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(IdempotencyInterceptor.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
@@ -74,24 +77,50 @@ export class IdempotencyInterceptor implements NestInterceptor {
       throw new ConflictException("A request with this Idempotency-Key is already in progress");
     }
 
+    // Both writes below are sequenced INTO the stream, not run beside it.
+    // `tap` discards the promise an async callback returns, so the response
+    // used to reach the caller while the row was still IN_PROGRESS — and a
+    // caller whose retry arrives in that window is told, wrongly and forever,
+    // that their completed request is still in progress.
     return next.handle().pipe(
-      tap({
-        next: async (body) => {
-          await this.prisma.idempotencyKey.update({
-            where: { merchantId_key: { merchantId, key } },
-            data: {
-              status: "COMPLETED",
-              responseStatus: response.statusCode,
-              responseBody: body as object,
-              completedAt: new Date(),
-            },
-          });
-        },
-        error: async () => {
-          // Let the caller retry with the same key on failure.
-          await this.prisma.idempotencyKey.delete({ where: { merchantId_key: { merchantId, key } } });
-        },
-      }),
+      concatMap((body) =>
+        from(
+          this.prisma.idempotencyKey
+            .update({
+              where: { merchantId_key: { merchantId, key } },
+              data: {
+                status: "COMPLETED",
+                responseStatus: response.statusCode,
+                responseBody: body as object,
+                completedAt: new Date(),
+              },
+            })
+            .then(() => body)
+            .catch((error: unknown) => {
+              // The handler already did the work — it may have moved money —
+              // so the caller still gets their response. The row stays
+              // IN_PROGRESS, which refuses a retry rather than permitting a
+              // second charge: the safe direction to fail in, but never a
+              // silent one.
+              this.logger.error(
+                `Could not mark Idempotency-Key ${key} for merchant ${merchantId} as COMPLETED; ` +
+                  "retries with this key will be refused until the row is cleared",
+                error instanceof Error ? error.stack : String(error),
+              );
+              return body;
+            }),
+        ),
+      ),
+      catchError((error: unknown) =>
+        // Let the caller retry with the same key on failure — and finish
+        // releasing it before the error reaches them, so an immediate retry
+        // cannot collide with a row this request is still holding.
+        from(
+          this.prisma.idempotencyKey
+            .delete({ where: { merchantId_key: { merchantId, key } } })
+            .catch(() => undefined),
+        ).pipe(concatMap(() => throwError(() => error))),
+      ),
     );
   }
 }

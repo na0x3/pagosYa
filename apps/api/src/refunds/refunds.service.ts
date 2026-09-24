@@ -1,4 +1,4 @@
-import { queueStoreEmail } from '../stores/email-workspace.config';
+import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PaymentIntentStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";

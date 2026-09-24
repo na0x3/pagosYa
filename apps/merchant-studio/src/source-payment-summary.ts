@@ -1,4 +1,4 @@
-import type { SourceSnapshot } from './source-preview';
+import type { SourceSnapshot } from '@pagosya/storefront-preview';
 
 /** Calculate display-only totals from the catalog, never amounts supplied by authored JS. */
 export function sourcePaymentSummary(snapshot: SourceSnapshot, cart: unknown) {

@@ -91,3 +91,133 @@ test('renders the same server-side SEO for the whole-catalog and collection page
     assert.match(seoRequests.at(-1), /[?&]page=coleccion\.html/); assert.match(seoRequests.at(-1), /[?&]collection=verano/);
   } finally { frontend.closeAllConnections(); backend.closeAllConnections(); await Promise.all([new Promise(r => frontend.close(r)), new Promise(r => backend.close(r))]); }
 });
+
+// Exercise the middleware directly so TTL boundaries need no real-time sleeps.
+function seoHarness(t) {
+  let now = 0;
+  const calls = [];
+  let upstream = async url => new Response(JSON.stringify(
+    url.includes('/domain?') ? { slug: 'cafe' } : {
+      head: '<title>Café</title><meta name="robots" content="index, follow, max-image-preview:large">',
+      body: `<h1>${url}</h1>`,
+    },
+  ));
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    calls.push({ url, options });
+    return upstream(url);
+  });
+  const middleware = createStorefrontSeo({
+    apiBase: 'https://api.example/v1', checkoutOrigin: 'https://shop.example',
+    template: async () => '<head></head><div id="app"></div>',
+  });
+  return {
+    calls,
+    advance: ms => { now += ms; },
+    respond: fn => { upstream = fn; },
+    async render(url = '/s/cafe', host = 'shop.example', headers = {}) {
+      const result = {};
+      await middleware({ method: 'GET', url, headers: { host, ...headers } }, {
+        writeHead(status, headers) { Object.assign(result, { status, headers }); },
+        end(body) { result.body = body; },
+      }, () => { result.next = true; });
+      return result;
+    },
+  };
+}
+
+test('coalesces identical requests including body consumption and retries after failure', async t => {
+  const h = seoHarness(t);
+  const finishes = [];
+  h.respond(() => new Response(new ReadableStream({
+    start(controller) { finishes.push(() => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ head: '<title>Café</title>', body: '<h1>Café</h1>' }))); controller.close(); }); },
+  })));
+  const first = h.render();
+  const second = h.render();
+  await new Promise(resolve => setImmediate(resolve));
+  const callsBeforeFinish = h.calls.length;
+  finishes.forEach(finish => finish());
+  const results = await Promise.all([first, second]);
+  assert.equal(callsBeforeFinish, 1);
+  assert.equal(results[0].body, results[1].body);
+  assert.equal(results[0].status, 200);
+
+  h.respond(async () => { throw new Error('offline'); });
+  assert.equal((await h.render('/s/failed')).status, 503);
+  h.respond(async () => new Response(JSON.stringify({ head: '', body: 'Recuperada' })));
+  assert.equal((await h.render('/s/failed')).status, 200);
+});
+
+test('caches store/product payloads for 30 seconds and keeps page variants separate', async t => {
+  const h = seoHarness(t);
+  for (const path of ['/s/cafe', '/s/cafe/p/one', '/s/cafe/p/two', '/s/cafe/productos', '/s/cafe/c/verano']) {
+    await h.render(path);
+  }
+  assert.equal(h.calls.length, 5);
+  h.advance(29_999);
+  await h.render('/s/cafe'); await h.render('/s/cafe/p/one');
+  assert.equal(h.calls.length, 5);
+  h.advance(1);
+  await h.render('/s/cafe'); await h.render('/s/cafe/p/one');
+  assert.equal(h.calls.length, 7);
+});
+
+test('caches and coalesces domain resolution for five minutes', async t => {
+  const h = seoHarness(t);
+  await Promise.all([h.render('/', 'cafe.example'), h.render('/', 'cafe.example')]);
+  assert.equal(h.calls.filter(call => call.url.includes('/domain?')).length, 1);
+  h.advance(299_999);
+  await h.render('/', 'cafe.example');
+  assert.equal(h.calls.filter(call => call.url.includes('/domain?')).length, 1);
+  h.advance(1);
+  await h.render('/', 'cafe.example');
+  assert.equal(h.calls.filter(call => call.url.includes('/domain?')).length, 2);
+});
+
+test('serves stale SEO and domain payloads on 429 but keeps other failures visible', async t => {
+  const h = seoHarness(t);
+  const original = await h.render('/', 'cafe.example');
+  h.advance(300_000);
+  h.respond(async () => new Response('', { status: 429 }));
+  const stale = await h.render('/', 'cafe.example');
+  assert.equal(stale.status, 200);
+  assert.equal(stale.body, original.body);
+  assert.equal(h.calls.length, 4);
+  assert.equal((await h.render('/s/uncached')).status, 503);
+  h.respond(async () => new Response('', { status: 404 }));
+  assert.equal((await h.render('/', 'cafe.example')).status, 404);
+  h.respond(async () => new Response('', { status: 429 }));
+  assert.equal((await h.render('/', 'cafe.example')).status, 503);
+});
+
+test('evicts the least recently used payload beyond 500 entries', async t => {
+  const h = seoHarness(t);
+  for (let i = 0; i < 500; i++) await h.render(`/s/store-${i}`);
+  await h.render('/s/store-0');
+  assert.equal(h.calls.length, 500);
+  await h.render('/s/store-500');
+  await h.render('/s/store-0');
+  assert.equal(h.calls.length, 501);
+  await h.render('/s/store-1');
+  assert.equal(h.calls.length, 502);
+});
+
+test('does not forward client identity headers or cache personalized HTML', async t => {
+  const h = seoHarness(t);
+  const privatePage = await h.render('/s/cafe?comeback=secret', 'shop.example', { 'x-forwarded-for': '1.2.3.4' });
+  const publicPage = await h.render();
+  assert.equal(privatePage.headers['X-Robots-Tag'], 'noindex, nofollow');
+  assert.equal(publicPage.headers['X-Robots-Tag'], 'index, follow');
+  assert.equal(h.calls.length, 1);
+  assert.deepEqual(h.calls[0].options.headers, { Accept: 'application/json' });
+  assert.ok(!h.calls[0].url.includes('secret'));
+});
+
+test('coalesces crawler text payloads as reusable bodies', async t => {
+  const h = seoHarness(t);
+  h.respond(async () => new Response('<urlset/>'));
+  const results = await Promise.all([h.render('/s/cafe/sitemap.xml'), h.render('/s/cafe/sitemap.xml')]);
+  assert.equal(h.calls.length, 1);
+  assert.equal(results[0].body, '<urlset/>');
+  assert.equal(results[1].body, '<urlset/>');
+});

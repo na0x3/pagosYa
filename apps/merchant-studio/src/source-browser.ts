@@ -1,6 +1,5 @@
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
-import { sourcePreviewDocument, receivePreviewNavigation } from './source-preview';
-import { createPreviewImageLoader } from './source-preview-media';
+import { sourcePreviewDocument, receivePreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml } from './studio-ui';
 import './source-browser.css';
 import { bindSourcePaymentPreview } from './source-payment-preview';

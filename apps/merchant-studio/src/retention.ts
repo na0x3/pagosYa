@@ -2,7 +2,7 @@ import { MerchantStudioApi } from './api';
 import { escapeHtml as esc } from './studio-ui';
 import { preserveDialogForms } from './dialog-form-state';
 import { renderComebackPreview } from './comeback-preview';
-import type { SourceSnapshot } from './source-preview';
+import type { SourceSnapshot } from '@pagosya/storefront-preview';
 import './brand-profile.css';
 import './retention.css';
 

@@ -1,0 +1,228 @@
+{
+  "date": "2026-09-20",
+  "claude": {
+    "completed": true,
+    "reportedCostUsd": 1.387304,
+    "models": [
+      "claude-haiku-4-5-20251001",
+      "claude-sonnet-5"
+    ],
+    "scope": "Isolated motion component draft; reviewed and amended before integration"
+  },
+  "motion": [
+    {
+      "width": 1440,
+      "frames": [
+        [
+          {
+            "opacity": "1",
+            "transform": "none"
+          },
+          {
+            "opacity": "1",
+            "transform": "matrix(1, 0, 0, 1, -537.438, -1008)"
+          }
+        ],
+        [
+          {
+            "opacity": "0",
+            "transform": "none"
+          },
+          {
+            "opacity": "1",
+            "transform": "matrix(1.02342, 0.0635955, -0.0635955, 1.02342, -455.537, -828.789)"
+          }
+        ],
+        [
+          {
+            "opacity": "0",
+            "transform": "none"
+          },
+          {
+            "opacity": "0.160374",
+            "transform": "matrix(1.08097, 0.482986, -0.482986, 1.08097, 19.6732, 882.48)"
+          }
+        ]
+      ],
+      "parallax": [
+        {
+          "outer": "none",
+          "inner": "matrix(1, 0, 0, 1, 0, 0.32468)"
+        },
+        {
+          "outer": "none",
+          "inner": "matrix(1, 0, 0, 1, 0, 35.3896)"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "width": 390,
+      "frames": [
+        [
+          {
+            "opacity": "1",
+            "transform": "none"
+          },
+          {
+            "opacity": "1",
+            "transform": "matrix(1, 0, 0, 1, -335.898, -630)"
+          }
+        ],
+        [
+          {
+            "opacity": "0",
+            "transform": "none"
+          },
+          {
+            "opacity": "1",
+            "transform": "matrix(1.02342, 0.0635955, -0.0635955, 1.02342, -284.711, -517.993)"
+          }
+        ],
+        [
+          {
+            "opacity": "0",
+            "transform": "none"
+          },
+          {
+            "opacity": "0.160374",
+            "transform": "matrix(1.08097, 0.482986, -0.482986, 1.08097, 12.2958, 551.55)"
+          }
+        ]
+      ],
+      "parallax": [
+        {
+          "outer": "none",
+          "inner": "none"
+        },
+        {
+          "outer": "none",
+          "inner": "none"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "width": 320,
+      "frames": [
+        [
+          {
+            "opacity": "1",
+            "transform": "none"
+          },
+          {
+            "opacity": "1",
+            "transform": "matrix(1, 0, 0, 1, -335.898, -630)"
+          }
+        ],
+        [
+          {
+            "opacity": "0",
+            "transform": "none"
+          },
+          {
+            "opacity": "1",
+            "transform": "matrix(1.02342, 0.0635955, -0.0635955, 1.02342, -284.711, -517.993)"
+          }
+        ],
+        [
+          {
+            "opacity": "0",
+            "transform": "none"
+          },
+          {
+            "opacity": "0.160374",
+            "transform": "matrix(1.08097, 0.482986, -0.482986, 1.08097, 12.2958, 551.55)"
+          }
+        ]
+      ],
+      "parallax": [
+        {
+          "outer": "none",
+          "inner": "none"
+        },
+        {
+          "outer": "none",
+          "inner": "none"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "curtain": "matrix(1, 0, 0, 1, 0, -846.41)",
+      "serverRenderedNoJavaScript": true,
+      "scrolledReplay": "skipped"
+    }
+  ],
+  "performance": {
+    "measuredAt": "2026-09-20T15:59:52.653Z",
+    "profile": {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "latencyMs": 150,
+      "downloadBytesPerSecond": 200000,
+      "uploadBytesPerSecond": 93750,
+      "cpuSlowdown": 4,
+      "cache": "disabled",
+      "reducedMotion": "no-preference"
+    },
+    "limitations": [
+      "One cold navigation per owned example; not field data or a before/after comparison.",
+      "Optimized local server uses Brotli for JS, CSS, HTML and fonts; the preserved baseline used uncompressed responses. Attribution includes transport, asset optimization and preload changes. Metrics cover the first screen through initial media/font readiness, not a whole shopping session.",
+      "Thresholds require calibration against production hosting and human review; this report does not enable automatic rollout."
+    ],
+    "results": [
+      {
+        "family": "cafe-expressive",
+        "cls": 0.0012918928410836372,
+        "lcpMs": 2556,
+        "fcpMs": 2492,
+        "observedAtMs": 4454,
+        "encodedBytes": 802110,
+        "requests": 11,
+        "horizontalOverflow": false,
+        "missingVisibleImages": 0,
+        "errors": []
+      },
+      {
+        "family": "beauty-editorial",
+        "cls": 0.0011766271059638234,
+        "lcpMs": 1636,
+        "fcpMs": 1636,
+        "observedAtMs": 2581.5,
+        "encodedBytes": 417043,
+        "requests": 11,
+        "horizontalOverflow": false,
+        "missingVisibleImages": 0,
+        "errors": []
+      },
+      {
+        "family": "product-cinematic",
+        "cls": 0.0011247933127495583,
+        "lcpMs": 2336,
+        "fcpMs": 2336,
+        "observedAtMs": 3974.9000000003725,
+        "encodedBytes": 672989,
+        "requests": 11,
+        "horizontalOverflow": false,
+        "missingVisibleImages": 0,
+        "errors": []
+      }
+    ]
+  },
+  "checks": {
+    "apiFocusedTests": 76,
+    "studioUnitTests": 74,
+    "previewUnitTests": 6,
+    "workspaceTests": 11,
+    "exampleShoppingFlows": 12
+  },
+  "limitations": [
+    "Local implementation, not deployed.",
+    "Browser motion coverage is Chromium; Safari/Firefox animation behavior not independently exercised.",
+    "Curated examples and mocked generation tests do not establish generated-design parity.",
+    "36-site controlled comparison remains planned."
+  ]
+}

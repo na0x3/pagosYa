@@ -1,3 +1,5 @@
+import { createDirectEditor } from './source-direct-editor';
+import { renderInspiration } from './source-inspiration';
 import { createSourceDesignJobs } from './source-design-jobs';
 import { createSourceVisualTools } from './source-visual-tools';
 import { createProductForm } from './source-create-product';
@@ -13,11 +15,10 @@ import { openCatalogArrangement } from './catalog-arrangement';
 import { openRecommendations } from './recommendations';
 import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
-import { checkSourceWebsite, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
+import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
 import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
-import { sourcePreviewDocument, receivePreviewNavigation, type PreviewNavigation } from './source-preview';
-import { createPreviewImageLoader } from './source-preview-media';
+import { sourcePreviewDocument, receivePreviewNavigation, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
 import './source-studio.css';
 import './source-browser.css';
@@ -36,7 +37,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let checks: SourceCheck[] | null = null, checksKey = '', checking = false;
   let checkAbort: AbortController | null = null;
   let setup: SourceSetup | null = null;
-  let generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto' };
+  let generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
   try {
     const saved = localStorage.getItem(SOURCE_MODEL_STORAGE);
     if (SOURCE_MODEL_OPTIONS.some(([id]) => id === saved)) generationSettings.model = saved as SourceGenerationSettings['model'];
@@ -48,6 +49,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let testsExpanded = false, publicationOpen = false, creditsOpen = false;
   let productPhoto = false;
   let chatExpanded = false;
+  let inspirationPaused = false;
+  let visualEditing = false, visualEditPending = false;
   let workspaceTheme = 'light';
   try { workspaceTheme = localStorage.getItem('pagosya_dashboard_theme') === 'dark' ? 'dark' : 'light'; } catch { /* Use the default palette. */ }
   let productForm: ReturnType<typeof createProductForm> | null = null;
@@ -69,13 +72,16 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let liveCatalog: JsonRecord | null = null;
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
   const mountVisualTools = createSourceVisualTools(api);
+  const directEditor = createDirectEditor(api);
   const mountDesignJobs = createSourceDesignJobs(api);
   const loadPreviewImages = createPreviewImageLoader(API_BASE_URL);
   let previewRender = 0;
   let previewNavigation: Partial<PreviewNavigation> = {};
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
   window.addEventListener('message', event => {
-    const next = receivePreviewNavigation(event, app.querySelector('iframe'), version?.snapshot);
+    const previewFrame = app.querySelector('iframe');
+    if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
+    const next = receivePreviewNavigation(event, previewFrame, version?.snapshot);
     if (!next) return;
     if (next.newTab && version) {
       const url = new URL(location.href);
@@ -92,7 +98,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true });
+      if (frame.isConnected && request === previewRender) frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, editing: visualEditing });
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -182,12 +188,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     liveCatalog = catalog;
     state = project; messages = conversation.messages; setup = conversation.setup || null;
     version = state.revision ? await api.sourceVersion(storeId, state.revision) : null;
+    generationSettings.sitePurpose = version?.snapshot.brief.sitePurpose || setup?.sitePurpose || 'shop';
     if (version) {
       try {
         const match = version.snapshot.files.find(f => f.path === 'config.js')?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
-        const savedMotion = match ? JSON.parse(match[1]).motion : 'subtle';
+        const config = match ? JSON.parse(match[1]) : {};
+        const savedMotion = config.motion || 'subtle';
         generationSettings.motion = ['auto', 'off', 'subtle', 'expressive'].includes(savedMotion) ? savedMotion : 'subtle';
-      } catch { generationSettings.motion = 'subtle'; }
+        generationSettings.scrollFeel = ['native', 'soft', 'cinematic'].includes(config.scrollFeel) ? config.scrollFeel : 'soft';
+      } catch { generationSettings.motion = 'subtle'; generationSettings.scrollFeel = 'soft'; }
     }
     draft = null; page = 'index.html'; filePath = 'index.html'; previewNavigation = {}; scheduleEstimate();
     if (version) { if (waitForChecks) await runChecks(); else void runChecks(); }
@@ -299,14 +308,22 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function checksPassed() { return !dirty() && !checking && checksKey === checkKey() && Boolean(checks?.length) && !sourceChecksBlockPublishing(checks!); }
   async function runChecks(force = false) {
     if (!version || dirty()) return;
-    const key = checkKey();
+    const key = checkKey(), checkedStoreId = storeId, checkedRevision = version.revision;
     if (!force && key === checksKey) return;
     checkAbort?.abort(); const controller = new AbortController(); checkAbort = controller;
     checksKey = key; checks = null; checking = true; updateChecks();
     try {
-      const snapshot = await loadPreviewImages(previewSnapshot());
+      let rows: SourceCheck[];
+      try {
+        const snapshot = await loadPreviewImages(previewSnapshot());
+        if (controller.signal.aborted) return;
+        rows = await checkSourceWebsite(snapshot, controller.signal);
+      } catch (error) {
+        rows = [{ label: 'Comprobación', status: 'failed', detail: error instanceof Error ? error.message : 'No se pudo comprobar.' }];
+      }
       if (controller.signal.aborted) return;
-      const rows = await checkSourceWebsite(snapshot, controller.signal); if (!controller.signal.aborted) checks = rows;
+      await api.recordSourceChecks(checkedStoreId, checkedRevision, sourceCheckResult(rows), controller.signal);
+      if (!controller.signal.aborted) checks = rows;
     }
     catch (error) { if (!controller.signal.aborted) checks = [{ label: 'Comprobación', status: 'failed', detail: error instanceof Error ? error.message : 'No se pudo comprobar.' }]; }
     finally { if (!controller.signal.aborted) { checking = false; updateChecks(); } }
@@ -314,7 +331,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function updateReadiness() {
     const mount = app.querySelector('[data-source-readiness]'); if (!mount) return;
     const open = mount.querySelector('details')?.open;
-    mount.innerHTML = renderStoreReadiness({ catalog: liveCatalog, branded: Boolean(version?.snapshot.files.some(file => file.path === 'brand.css')), checked: checksPassed() && !checks?.some(row => row.status === 'skipped'), checking, published: Boolean(state.publication?.revision && state.publication.active), canPublish: Boolean(version && checksPassed() && state.publication?.experiment?.status !== 'RUNNING'), locked: busy || dirty() });
+    mount.innerHTML = renderStoreReadiness({ sitePurpose: version?.snapshot.brief.sitePurpose || generationSettings.sitePurpose, catalog: liveCatalog, branded: Boolean(version?.snapshot.files.some(file => file.path === 'brand.css')), checked: checksPassed() && !checks?.some(row => row.status === 'skipped'), checking, published: Boolean(state.publication?.revision && state.publication.active), canPublish: Boolean(version && checksPassed() && state.publication?.experiment?.status !== 'RUNNING'), locked: busy || dirty() });
     if (open) mount.querySelector('details')!.open = true;
   }
   function updateChecks() {
@@ -428,7 +445,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const oldStream = app.querySelector<HTMLElement>('[data-agent-stream]');
     const oldScroll = oldStream?.scrollTop || 0;
     const nearBottom = !oldStream || oldStream.scrollHeight - oldScroll - oldStream.clientHeight < 70;
-    const locked = busy || dirty() || Boolean(productForm);
+    const locked = busy || visualEditPending || dirty() || Boolean(productForm);
     if (!sessionStorage.getItem(SESSION_STORAGE_KEY)) {
       if (embedded) { notifyParent({ type: 'pagosya:session-expired' }); app.innerHTML = '<p>Tu sesión terminó. Vuelve a entrar desde el panel.</p>'; return; }
       app.innerHTML = renderStudioLogin({ busy, error });
@@ -461,7 +478,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
             ${error ? `<p class="auth-error" role="alert">${escape(error)}</p>${retrySubmission ? `<button type="button" class="button button--secondary" id="source-retry-message" ${disabled(locked || historical() || Boolean(instruction.trim()) || assets.length > 0)}>Reintentar mensaje</button>` : ''}` : ''}
             ${!storeId ? '<section class="remote-empty-state"><strong>No hay una tienda todavía.</strong><p>Crea una tienda en el dashboard para comenzar.</p></section>' : ''}
           </div>
-          <div class="source-compose-area">${generationControls(locked)}
+          <div class="source-compose-area">${!version ? `<label class="source-purpose-choice">Quiero crear<select id="source-site-purpose" ${disabled(locked)}>${[['shop','Una tienda'],['service','Un sitio de servicios'],['portfolio','Un portafolio'],['editorial','Un sitio editorial']].map(([value,label]) => `<option value="${value}" ${generationSettings.sitePurpose === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>` : ''}${generationControls(locked)}
           ${renderStudioComposer({ busy: locked || historical() || !storeId, source: true, instruction, attachments: productPhoto ? '' : attachmentBatch(), suggestions: setup || productPhoto ? [] : version ? [
             { label: 'Crear producto', action: 'create-product' },
             { label: 'Rediseñar sitio', instruction: 'Rediseña todo mi sitio con una dirección visual nueva basada en mi negocio, mis fotos y mis referencias. Conserva los productos y los datos confirmados.' },
@@ -472,18 +489,28 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           ] })}</div>
         </aside>
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
-          <header class="canvas-toolbar">${storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
+          <header class="canvas-toolbar">${storeTools(locked)}${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">Vista previa</button><button id="source-visual-edit" aria-pressed="${visualEditing}" ${disabled(locked || !version || historical())}>Editar diseño</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version)}>Código</button></div>${embedded ? `<button class="button" id="source-export" ${disabled(locked || !version)}>Descargar ZIP</button>` : ''}<button class="button" id="source-open-browser" title="Abrir la vista previa en una pestaña nueva" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}</div></header>
           <div class="source-revision-bar">${renderSourcePublication(state, version, { locked, checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen })}
             ${version && mode === 'preview' ? `<label>Página<select id="source-page">${version.snapshot.files.filter(f => f.path.endsWith('.html')).map(f => `<option ${f.path === page ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label>` : ''}
+            ${version && mode === 'preview' ? `<button id="source-replay-motion" title="Volver al inicio y repetir la entrada sin recargar" ${disabled(locked || visualEditing || generationSettings.motion === 'off')}>Repetir entrada</button>` : ''}
             <label>Movimiento<select id="source-motion" aria-describedby="source-motion-help" ${disabled(locked || historical())}>${[['auto','Según el diseño'],['off','Sin movimiento'],['subtle','Sutil'],['expressive','Expresivo']].map(([value,label]) => `<option value="${value}" ${generationSettings.motion === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><small class="source-sr-only" id="source-motion-help">${version ? 'Se guarda sin generar de nuevo.' : 'El diseño decide el movimiento de forma predeterminada.'}</small>
+            <label>Desplazamiento<select id="source-scroll-feel" aria-describedby="source-scroll-feel-help" ${disabled(locked || historical() || generationSettings.motion === 'off')}>${[['native','Nativo'],['soft','Suave'],['cinematic','Cinemático']].map(([value,label]) => `<option value="${value}" ${generationSettings.scrollFeel === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><small class="source-sr-only" id="source-scroll-feel-help">Suaviza la rueda del mouse. El teclado y el movimiento reducido siguen siendo inmediatos.</small>
             ${version ? '<div data-source-visual-tools></div><div data-source-design-jobs></div><div data-source-checks></div>' : ''}
           </div>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : `<section class="source-empty-preview" aria-label="Tu sitio a medida"><div class="source-empty-copy"><h1>Tu negocio, tu sitio.</h1><p>Cuéntale a YAPI qué quieres crear. Tu idea, tus fotos y tu marca darán forma al diseño.</p><div class="source-empty-actions"><button type="button" class="button" data-start-photo ${disabled(locked || !storeId || assets.length > 0)}>Crear tienda desde una foto</button></div></div></section>`}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : version ? mode === 'preview' ? `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : `<section class="source-editor"><label>Archivo<select id="source-file" ${disabled(dirty())}>${version.snapshot.files.filter(f => f.encoding !== 'base64' && (!version!.snapshot.files.some(v => v.path === 'storefront-framework.json') || f.path.startsWith('components/') && f.path.endsWith('.tsx') || f.path === 'styles/globals.css')).map(f => `<option ${f.path === filePath ? 'selected' : ''}>${escape(f.path)}</option>`).join('')}</select></label><textarea id="source-code" aria-label="Código del archivo" spellcheck="false" maxlength="180000" ${disabled(busy)}></textarea><div><button id="source-save" class="button button--publish" ${disabled(busy || !dirty())}>Guardar cambios</button><button id="source-discard" class="button" ${disabled(busy || !dirty())}>Descartar edición</button></div></section>` : renderInspiration({ busy: generating, disabled: locked || !storeId || assets.length > 0, paused: inspirationPaused, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>
-      </div>${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
+      </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}
     </div>`;
     bind(); updateChecks();
+    const directHost = app.querySelector<HTMLElement>('[data-source-direct-edit]');
+    if (directHost && version) directEditor.mount(directHost, {
+      storeId, version, locked: busy || dirty() || historical(),
+      close: () => { visualEditing = false; render(); app.querySelector<HTMLElement>('#source-visual-edit')?.focus(); },
+      pending: value => { visualEditPending = value; render(); },
+      saved: async () => { await load(); toast = 'Cambio visual guardado.'; render(); },
+      prepare: text => { visualEditing = false; instruction = text; render(); focusComposer(); scheduleEstimate(); },
+    });
     const designHost = app.querySelector<HTMLElement>('[data-source-design-jobs]');
     if (designHost && version) mountDesignJobs(designHost, { storeId, version, page, locked: busy || dirty(), historical: historical(), saved: () => action(async () => { await load(); toast = 'Mejora guardada. Revisa el resultado antes de publicarlo.'; }) });
     const visualHost = app.querySelector<HTMLElement>('[data-source-visual-tools]');
@@ -502,6 +529,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
+    app.querySelector('#source-visual-edit')?.addEventListener('click', () => { if (!busy && !dirty() && !visualEditPending) { visualEditing = !visualEditing; mode = 'preview'; render(); } });
+    app.querySelector<HTMLButtonElement>('[data-inspiration-pause]')?.addEventListener('click', event => {
+      inspirationPaused = !inspirationPaused;
+      app.querySelector('.source-inspiration')?.classList.toggle('is-paused', inspirationPaused);
+      const button = event.currentTarget as HTMLButtonElement;
+      button.setAttribute('aria-pressed', String(inspirationPaused));
+      button.setAttribute('aria-label', inspirationPaused ? 'Reanudar animación de inspiración' : 'Pausar animación de inspiración');
+      button.innerHTML = `${inspirationPaused ? 'Reanudar' : 'Pausar'}<span aria-hidden="true">${inspirationPaused ? '▷' : 'Ⅱ'}</span>`;
+    });
     app.querySelector('#source-back-stores')?.addEventListener('click', () => notifyParent({ type: 'pagosya:workspace', view: 'stores' }));
     app.querySelector('#source-chat-toggle')?.addEventListener('click', () => { chatExpanded = !chatExpanded; render(); app.querySelector<HTMLElement>('#source-chat-toggle')?.focus(); });
     app.querySelector('[data-composer-action="create-product"]')?.addEventListener('click', () => {
@@ -596,16 +632,31 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       if (retrySubmission && !instruction.trim() && !assets.length) void send(retrySubmission.text, retrySubmission.setupAction, retrySubmission.assetUrls);
     });
     on('source-usage', () => void action(async () => { if (usage) { usage = null; aiUsage = []; } else { const result = await api.sourceUsage(storeId); usage = result.runs; aiUsage = result.aiUsage || []; } }));
+    on('source-replay-motion', () => {
+      if (!version || busy || dirty() || visualEditing) return;
+      app.querySelector<HTMLIFrameElement>('iframe')?.contentWindow?.postMessage({ type: 'pagosya:preview-replay-motion' }, '*');
+    });
     app.querySelector('#source-motion')?.addEventListener('change', event => {
       if (busy || dirty() || historical()) return;
       const motion = (event.target as HTMLSelectElement).value as NonNullable<SourceGenerationSettings['motion']>;
       if (!version) { generationSettings.motion = motion; return; }
       void action(async () => {
-        const saved = await api.setSourceMotion(storeId, state.revision, motion);
+        const saved = await api.setSourceMotion(storeId, state.revision, motion, generationSettings.scrollFeel);
         await load(saved.revision);
         toast = 'Movimiento guardado. Tu diseño se conserva.';
       });
     });
+    app.querySelector('#source-scroll-feel')?.addEventListener('change', event => {
+      if (busy || dirty() || historical()) return;
+      const scrollFeel = (event.target as HTMLSelectElement).value as NonNullable<SourceGenerationSettings['scrollFeel']>;
+      if (!version) { generationSettings.scrollFeel = scrollFeel; return; }
+      void action(async () => {
+        const saved = await api.setSourceMotion(storeId, state.revision, generationSettings.motion || 'auto', scrollFeel);
+        await load(saved.revision);
+        toast = 'Desplazamiento guardado. Tu diseño se conserva.';
+      });
+    });
+    app.querySelector('#source-site-purpose')?.addEventListener('change', event => { generationSettings.sitePurpose = (event.target as HTMLSelectElement).value as SourceGenerationSettings['sitePurpose']; scheduleEstimate(); render(); });
     app.querySelector('#source-model')?.addEventListener('change', event => { generationSettings.model = (event.target as HTMLSelectElement).value as SourceGenerationSettings['model']; try { localStorage.setItem(SOURCE_MODEL_STORAGE, generationSettings.model); } catch {} scheduleEstimate(); });
     app.querySelector('#source-credit-limit')?.addEventListener('change', event => { const input = event.target as HTMLInputElement; if (!input.checkValidity()) { input.reportValidity(); input.value = String(generationSettings.maxCredits); return; } generationSettings.maxCredits = Number(input.value); scheduleEstimate(); });
     on('source-logout', () => void action(async () => { await api.logout().catch(() => {}); sessionStorage.removeItem(SESSION_STORAGE_KEY); api.setToken(''); clearAssets(); }));

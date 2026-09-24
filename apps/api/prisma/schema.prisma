@@ -855,6 +855,8 @@ model Store {
   cartRecommendationProductIds Json                             @default("[]")
   // Inventory quantities stay private unless the merchant explicitly opts in.
   // Sold-out state is still public so customers cannot add unavailable items.
+  /// Merchant-authored shopper policies: { returns?, delivery?, privacy?, terms? } plain text.
+  policies Json @default("{}")
   showLowStockToCustomers      Boolean                          @default(false)
   // Optional merchant-authored sales target shown and tracked by Yapi.
   salesGoalLabel               String?
@@ -874,7 +876,19 @@ model Store {
   visualProposals              StoreVisualProposal[]
   visualVersions               StoreVisualVersion[]
   visualSignatures             StoreVisualSignature[]
+  publicVisibility             Boolean                          @default(false)
   sourcePublicationPaused      Boolean                          @default(false)
+  // Measurement IDs the merchant pastes from each provider's own console. Public by
+  // nature (they ship to every shopper's browser), so they are not secrets — but they
+  // are interpolated into a <script>, so only values matching ANALYTICS_ID_PATTERNS in
+  // store-analytics.ts are ever stored or injected.
+  analyticsGa4Id               String?
+  analyticsGtmId               String?
+  analyticsMetaPixelId         String?
+  analyticsTiktokPixelId       String?
+  publishedRuntimeDigest       String?
+  publishedRuntime             SourceRuntimeBundle? @relation(fields: [publishedRuntimeDigest], references: [digest], onDelete: Restrict)
+  runtimePublications          StoreRuntimePublication[]
   publishedSourceRevision      Int?
   sourcePublicationVersion     Int                              @default(0)
   sourcePublishedAt            DateTime?
@@ -891,6 +905,7 @@ model Store {
   savedCarts                   StoreSavedCart[]
   emailCampaigns               StoreEmailCampaign[]
   emailDeliveries              StoreEmailDelivery[]
+  inboxThreads                 StoreInboxThread[]
   newsletterSubscribers        StoreNewsletterSubscriber[]
   debtCollectionLinks          DebtCollectionLink[]
   consumerAffiliations         ConsumerInstitutionAffiliation[]
@@ -1299,7 +1314,42 @@ model StoreSourceVersion {
   restoredFrom Int?
   createdAt    DateTime           @default(now())
 
+  checkResults SourceCheckResult[]
+
   @@id([storeId, revision])
+}
+
+model SourceRuntimeBundle {
+  digest       String @id
+  files        Json
+  createdAt    DateTime @default(now())
+  stores       Store[]
+  publications StoreRuntimePublication[]
+}
+
+model StoreRuntimePublication {
+  id          String @id @default(cuid())
+  storeId     String
+  store       Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  digest      String
+  runtime     SourceRuntimeBundle @relation(fields: [digest], references: [digest], onDelete: Restrict)
+  publishedAt DateTime @default(now())
+
+  @@index([storeId, digest, publishedAt])
+}
+
+model SourceCheckResult {
+  id             String             @id @default(cuid())
+  storeId        String
+  revision       Int
+  version        StoreSourceVersion @relation(fields: [storeId, revision], references: [storeId, revision], onDelete: Cascade)
+  snapshotDigest String
+  runtimeDigest  String
+  passed         Boolean
+  findings       Json
+  createdAt      DateTime           @default(now())
+
+  @@index([storeId, revision])
 }
 
 // Snapshots are created before applying an AI proposal or restoring an older
@@ -2421,23 +2471,88 @@ model StoreEmailDelivery {
   storeId    String
   store      Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   campaignId String?
-  campaign   StoreEmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  email      String
-  kind       String
-  sourceId   String?
-  subject    String
-  body       String
-  dedupeKey  String              @unique
-  status     String              @default("PENDING")
-  attempts   Int                 @default(0)
-  dueAt      DateTime            @default(now())
-  lockedAt   DateTime?
-  sentAt     DateTime?
-  lastError  String?
-  createdAt  DateTime            @default(now())
+  campaign StoreEmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email String
+  kind String
+  sourceId String?
+  subject String
+  body String
+  // Who the recipient reaches by hitting Reply. A staff notification about an
+  // order points at the buyer so the merchant can answer from their own inbox;
+  // everything else falls back to the store's contact address.
+  replyTo String?
+  // The RFC 5322 Message-ID value this delivery must be sent with, WITHOUT the
+  // angle brackets (the sender adds them). Inbox replies set it so the
+  // shopper's answer carries In-Reply-To/References pointing back at the
+  // StoreInboxMessage row with the same id, which is the spec's primary thread
+  // correlation. Null for every other kind, which needs no correlation.
+  messageIdHeader String?
+  dedupeKey String @unique
+  status String @default("PENDING")
+  attempts Int @default(0)
+  dueAt DateTime @default(now())
+  lockedAt DateTime?
+  sentAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
 
   @@index([status, dueAt])
   @@index([storeId, createdAt])
+}
+
+// !! DRIFT WARNING — READ BEFORE ACCEPTING ANY GENERATED MIGRATION FOR THIS MODEL !!
+//
+// Three constraints that this model DOES NOT DECLARE are live in the database,
+// created by hand in migration 20260922040000_store_inbox_origin:
+//
+//   1. CHECK "StoreInboxThread_one_origin" — exactly one of leadId/orderId set
+//   2. UNIQUE INDEX "StoreInboxThread_lead_key"  (storeId, customerEmail, leadId)  WHERE orderId IS NULL
+//   3. UNIQUE INDEX "StoreInboxThread_order_key" (storeId, customerEmail, orderId) WHERE leadId  IS NULL
+//
+// Prisma's schema language cannot express a CHECK constraint or a partial
+// index, so `prisma migrate dev` DOES NOT KNOW THEY ARE INTENTIONAL. It will
+// diff them as drift and offer a migration that DROPs all three. Accepting
+// that migration silently restores two bugs this feature already paid for:
+// duplicate threads per lead/order (a plain @@unique over all four columns
+// cannot dedupe them, because Postgres treats NULL as distinct from NULL) and
+// origin-less thread rows that belong to neither a lead nor an order.
+//
+// If a generated migration contains DROP CONSTRAINT "StoreInboxThread_one_origin"
+// or DROP INDEX "StoreInboxThread_lead_key"/"StoreInboxThread_order_key",
+// delete those statements before applying it. The integration test
+// inbox-persistence.integration.spec.ts fails if they ever go missing.
+model StoreInboxThread {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  merchantId String
+  subject String
+  customerEmail String
+  customerName String?
+  leadId String?
+  orderId String?
+  status String @default("OPEN")
+  unreadForMerchant Boolean @default(true)
+  lastMessageAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  messages StoreInboxMessage[]
+  @@index([storeId, status, lastMessageAt])
+}
+
+model StoreInboxMessage {
+  id String @id @default(cuid())
+  threadId String
+  thread StoreInboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  direction String
+  fromEmail String
+  toEmail String
+  body String
+  messageId String? @unique
+  inReplyTo String?
+  hadAttachments Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([threadId, createdAt])
+  @@index([inReplyTo])
 }
 
 // Consent-based anonymous sessions; no address, contact details, or payment data.

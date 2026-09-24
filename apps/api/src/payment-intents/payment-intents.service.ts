@@ -1,7 +1,7 @@
-import { queueStoreEmail } from '../stores/email-workspace.config';
+import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { sourceCheckoutBranding } from "@pagosya/shared-types";
 import { finishCredit, ensureCreditReservation } from '../commerce-platform/credit-ledger';
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { customAlphabet } from "nanoid";
 import { DebtRecordStatus, LimitReservationStatus, OrderFulfillmentStatus, PaymentIntentStatus, PaymentLinkStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
@@ -23,6 +23,7 @@ import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration
 import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "../international/fx";
 import { LimitsService } from "../limits/limits.service";
 import { LimitsWarningService } from "../limits/limits-warning.service";
+import { InboxService } from "../inbox/inbox.service";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -133,6 +134,7 @@ export class PaymentIntentsService {
     private readonly config: ConfigService,
     private readonly limits: LimitsService,
     private readonly limitsWarning: LimitsWarningService,
+    @Optional() private readonly inbox?: InboxService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -607,6 +609,9 @@ export class PaymentIntentsService {
       if (nextStatus === PaymentIntentStatus.FAILED) await this.limits.release(tx, paymentIntentId);
 
       let receiptQueued = false;
+      // Collected here, acted on after the transaction commits — see the call
+      // site below for why it must not happen inside this callback.
+      let inboxOrder: { id: string; storeId: string; merchantId: string; customerEmail: string; customerName: string | null; receiptSourceId: string } | null = null;
       if (result.status === "succeeded") {
         const lines = this.ledger.buildCaptureJournal({
           merchantId,
@@ -640,7 +645,11 @@ export class PaymentIntentsService {
           const originalTotal = invoiceAmount.currency !== updated.currency ? ` (${formatAmount(invoiceAmount.amount, invoiceAmount.currency)})` : '';
           const lines = (cart || []).map(line => `- ${line.name}${line.variantName ? ` (${line.variantName})` : ''} x${line.quantity}: ${formatAmount(line.unitAmount * line.quantity, lineCurrency)}`).join('\n');
           const tracking = `${(this.config?.get<string>('app.checkoutOrigin') ?? 'http://localhost:5174').replace(/\/$/, '')}/track/${createOrderTrackingToken(order.id, this.config?.get<string>('app.orderTrackingSecret') ?? DEVELOPMENT_ORDER_TRACKING_SECRET)}`;
-          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`});
+          receiptQueued = await queueStoreEmail(tx,order.storeId,'ORDER_CONFIRMATION',updated.id,updated.customerEmail,{store:merchant.name,order:order.id,customer:updated.customerName || 'cliente',amount:formatAmount(updated.amount,updated.currency),details:`Pedido: ${order.id}\n${lines}\nTotal pagado: ${formatAmount(updated.amount, updated.currency)}${originalTotal}\nSigue tu pedido: ${tracking}`},{email:updated.customerEmail,name:updated.customerName});
+          // receiptSourceId is the sourceId queueStoreEmail was just called with,
+          // which is what lets the thread find that receipt row again once this
+          // transaction has committed and file it into the conversation.
+          if (updated.customerEmail) inboxOrder = { id: order.id, storeId: order.storeId, merchantId, customerEmail: updated.customerEmail, customerName: updated.customerName, receiptSourceId: updated.id };
         }
         if (order?.status === OrderFulfillmentStatus.AWAITING_PAYMENT) {
           await tx.storeOrder.update({
@@ -687,7 +696,7 @@ export class PaymentIntentsService {
         });
       }
 
-      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued };
+      return { paymentIntent: updated, railResult: result, merchantName: merchant.name, receiptQueued, inboxOrder };
     });
 
     // Sent outside the transaction — it's a real network call (unlike the
@@ -697,6 +706,27 @@ export class PaymentIntentsService {
       if (!('receiptQueued' in outcome && outcome.receiptQueued)) await this.sendReceiptEmail(outcome.paymentIntent, outcome.merchantName);
       await this.sendDebtPaymentNotification(outcome.paymentIntent);
     }
+
+    // DELIBERATELY OUTSIDE THE TRANSACTION. DO NOT MOVE THIS BACK IN.
+    //
+    // threadForOrder writes through InboxService's own PrismaService, not
+    // through `tx`. Calling it from inside the $transaction callback therefore
+    // checks a SECOND connection out of the pool while the transaction still
+    // holds the first. On a busy pool that second checkout waits, the wait
+    // counts against Prisma's 5-second interactive-transaction timeout, and
+    // the transaction is rolled back — rolling back a payment the rail has
+    // already captured. Opening a conversation is not worth that risk.
+    //
+    // Passing `tx` instead is not the fix either: findOrCreateThread survives
+    // the create race by catching P2002 and re-reading, and inside an aborted
+    // transaction that re-read cannot run. It would trade a cosmetic problem
+    // for a broken dedupe.
+    //
+    // Out here the thread is only opened for a payment that really committed,
+    // so there are no orphan threads for reverted payments, and the pool is
+    // touched with nothing held. Best-effort by design: a failure here must
+    // never turn a captured payment into a failed confirm() response.
+    if (outcome.inboxOrder) await this.inbox?.threadForOrder(outcome.inboxOrder).catch(() => undefined);
 
     return { paymentIntent: outcome.paymentIntent, railResult: outcome.railResult };
   }

@@ -34,6 +34,10 @@ export class ResendEmailProvider implements EmailProvider {
       subject: req.subject,
       text: req.body,
       ...(req.replyTo ? { replyTo: req.replyTo } : {}),
+      // Resend passes these through as real headers on the sent message. This
+      // is how the inbox's own Message-ID reaches the wire, so a reply comes
+      // back with an In-Reply-To we can correlate.
+      ...(req.headers && Object.keys(req.headers).length ? { headers: req.headers } : {}),
     }, req.idempotencyKey ? { idempotencyKey: req.idempotencyKey } : undefined);
     if (error) {
       // Matches the rest of the app's outbox/worker pattern: log and let the

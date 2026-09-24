@@ -23,7 +23,7 @@ describe('Public storefront discovery', () => {
       { path: 'checkout.html', content: '<h1>Checkout</h1>' },
     ] });
     await db.storeSourceProject.create({ data: { storeId: store.id, revision: 2, versions: { create: [1, 2].map(revision => ({ revision, label: 'SEO test', digest: `seo-${revision}`, snapshot: snapshot(revision === 1 ? 'Publicado' : 'PRIVATE DRAFT') })) } } });
-    await db.store.update({ where: { id: store.id }, data: { publishedSourceRevision: 1 } });
+    await db.store.update({ where: { id: store.id }, data: { publishedSourceRevision: 1, publicVisibility: true } });
   });
   afterAll(async () => { await app?.close(); });
   it('renders only published copy and current prices, with no private brief or invented ratings', async () => {

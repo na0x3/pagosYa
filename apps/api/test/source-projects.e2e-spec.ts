@@ -1,9 +1,10 @@
-import { StoresService } from '../src/stores/stores.service';
-import { requestedSourceProducts, requestedSourceProductOperations } from '../src/stores/source-products';
-import { SourceConversationService } from '../src/stores/source-conversation.service';
-import { SourceGenerationService } from "../src/stores/source-generation.service";
-import { SourceProjectsService } from "../src/stores/source-projects.service";
-import { StoreAgentService } from "../src/stores/store-agent.service";
+import { PublicStoresService } from '../src/stores/public-stores.service';
+import { StoreCheckoutService } from '../src/stores/store-checkout.service';
+import { requestedSourceProducts, requestedSourceProductOperations } from '../src/storefront-source/source-products';
+import { SourceConversationService } from '../src/storefront-source/source-conversation.service';
+import { SourceGenerationService } from "../src/storefront-source/source-generation.service";
+import { SourceProjectsService } from "../src/storefront-source/source-projects.service";
+import { StoreAgentService } from "../src/visual-studio/store-agent.service";
 import "reflect-metadata";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -46,6 +47,8 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
       else foreignToken = result.body.testKeys.secretKey;
     }
     const store = await request(app.getHttpServer()).post("/v1/stores").set(auth()).send({ name: "Original public store" }).expect(201);
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await prisma.store.update({ where: { id: store.body.id }, data: { publicVisibility: true } });
     storeId = store.body.id; slug = store.body.slug;
     route = `/v1/stores/${storeId}/source-project`;
   });
@@ -153,7 +156,7 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     await request(app.getHttpServer()).get(`${route}/conversation`).set(auth(foreignToken)).expect(404);
     await request(app.getHttpServer()).post(`${route}/messages`).set(auth(foreignToken)).send({revision:4,instruction:"Crea una carta editorial"}).expect(404);
     const decide = jest.spyOn(app.get(SourceConversationService), 'decide').mockResolvedValue({action:'generate',reply:'',summary:'Café editorial.',generationInstruction:'Crea una carta editorial para mi café',imageUses:[]});
-    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation(async (merchantId, id, input) => ({ ...await app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")), generation: { id: "test-run", requestedModel: "auto", model: "gpt-5.6-terra", credits: 0, maxCredits: 50, attempts: [], durationMs: 0, status: "COMPLETED" } }));
+    const generator = jest.spyOn(app.get(SourceGenerationService), "generate").mockImplementation(async (merchantId, id, input) => ({ ...await app.get(SourceProjectsService).save(merchantId, id, source(input.revision, "Carta editorial")), generation: { id: "test-run", requestedModel: "auto", model: "gpt-5.6-terra", credits: 0, maxCredits: 50, attempts: [], durationMs: 0, status: "COMPLETED", autoRepairs: [], unusedImagePaths: [] } }));
     const sent = await request(app.getHttpServer()).post(`${route}/messages`).set(auth()).send({revision:4,instruction:"Crea una carta editorial para mi café"}).expect(201);
     expect(sent.body.revision.revision).toBe(5);
     expect(sent.body.assistantMessage.metadata.sourceRevision).toBe(5);
@@ -259,8 +262,8 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     const owner = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
     await prisma.merchant.update({ where: { id: owner.merchantId }, data: { status: 'ACTIVE' } });
     await prisma.store.update({ where: { id: storeId }, data: { status: 'ACTIVE', sourcePublicationPaused: false } });
-    const service = app.get(StoresService);
-    const publicStore = await service.getStorePublic(slug, { trackView: false, ownerMerchantId: owner.merchantId });
+    const service = app.get(StoreCheckoutService);
+    const publicStore = await app.get(PublicStoresService).getStorePublic(slug, { trackView: false, ownerMerchantId: owner.merchantId });
     expect(publicStore.items.find(p => p.id === product.id)?.variants[1]).toMatchObject({ options: saved[1].options, purchaseLimit: 5 });
     const quote = (variantId: string, quantity = 1) => service.createCartCheckout(slug, { items: [{ paymentLinkId: product.id, variantId, quantity }] }, true);
     await expect(quote(saved[0].id)).rejects.toThrow();
@@ -288,7 +291,7 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     const variants=product.variants as any[];
     expect(product).toMatchObject({amount:12000,stock:10});
     expect(variants.map(v=>[v.name,v.amount,v.stock])).toEqual([['Negro / M',12000,5],['Blanco / L',14000,5]]);
-    const publicStore=await app.get(StoresService).getStorePublic(slug,{trackView:false,ownerMerchantId:owner.merchantId});
+    const publicStore=await app.get(PublicStoresService).getStorePublic(slug,{trackView:false,ownerMerchantId:owner.merchantId});
     expect(publicStore.items.find(item=>item.id===product.id)?.variants[0]).toMatchObject({id:variants[0].id,options:variant.options,purchaseLimit:5});
     const updates=requestedSourceProductOperations([{action:'update',productId:product.id,variantOperations:[{action:'update',variantId:variants[1].id,name:null,options:null,amount:null,priceText:null,stock:0,stockText:'agotado',imageUrl:null}]}], 'Marca la talla L como agotado',[{...product,variants} as any],new Set());
     // A purchase changed a different combination after the model received context.
@@ -299,7 +302,7 @@ describe("Independent source projects (HTTP + disposable PostgreSQL)", () => {
     expect(updated.variants).toEqual([{...variants[0],stock:4},{...variants[1],stock:0}]);expect(updated.stock).toBe(4);
     await prisma.merchant.update({where:{id:owner.merchantId},data:{status:'ACTIVE'}});
     await prisma.store.update({where:{id:storeId},data:{status:'ACTIVE',sourcePublicationPaused:false}});
-    const checkout=app.get(StoresService);
+    const checkout=app.get(StoreCheckoutService);
     await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,quantity:1}]},true)).rejects.toThrow(/opción/);
     await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,variantId:'foreign',quantity:1}]},true)).rejects.toThrow();
     await expect(checkout.createCartCheckout(slug,{items:[{paymentLinkId:product.id,variantId:variants[1].id,quantity:1}]},true)).rejects.toThrow();

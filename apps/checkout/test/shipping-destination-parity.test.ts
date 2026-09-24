@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { DEPARTMENTS, DEPARTMENT_CENTERS, LEAFLET_CSS_SRI, LEAFLET_JS_SRI, destinationMarkup, insideBolivia, mountDestinationMap } from '../src/shipping-destination';
 
 // The storefront kit ships standalone with its own copy of these helpers; keep both in step.
-const kit = readFileSync(resolve(__dirname, '../../api/src/stores/source-kit/commerce.js'), 'utf8');
+const kit = readFileSync(resolve(__dirname, '../../../packages/storefront-kit/kit/commerce.js'), 'utf8');
 const kitValue = (name: string) => {
   const match = kit.match(new RegExp(`const ${name} = (.+);\\n`));
   if (!match) throw new Error(`${name} not found in commerce.js`);

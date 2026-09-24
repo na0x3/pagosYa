@@ -34,6 +34,14 @@ describe('Carrier shipping checkout', () => {
     expect(lp.shippingOptions).toEqual([]);
   });
 
+  it('quotes carrier rates by department alone, but still needs the full destination to check out', async () => {
+    const byDepartment = { ...cart(), shippingDestination: undefined, shippingZoneId: undefined, shippingDepartment: 'SANTA_CRUZ' };
+    const quote = (await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send(byDepartment).expect(201)).body;
+    expect(quote.shippingOptions).toEqual([expect.objectContaining({ id: rateId, carrierId: 'car_servientrega' })]);
+    await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/shipping/quote`).send({ ...byDepartment, shippingDepartment: 'LIMA' }).expect(400);
+    await request(app.getHttpServer()).post(`/v1/stores/public/${slug}/cart-checkout`).send({ ...byDepartment, shippingZoneId: rateId }).expect(400);
+  });
+
   it('hides carrier rates and refuses them at checkout while carriers are turned off', async () => {
     await prisma.store.update({ where: { id: storeId }, data: { shippingCarriersEnabled: false } });
     try {

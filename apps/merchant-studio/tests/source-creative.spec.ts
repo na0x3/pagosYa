@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { compileNextPreview, nextProjectScaffold } from '../../api/src/stores/source-next';
-import { withCreativeAssets } from '../../api/src/stores/source-creative-assets';
-import { creativeStoreFiles } from '../../api/src/stores/fixtures/creative-store';
-import { nextBrief, nextStoreConfig } from '../../api/src/stores/fixtures/next-store';
+import { compileNextPreview, nextProjectScaffold } from '../../api/src/storefront-source/source-next';
+import { withCreativeAssets } from '../../api/src/storefront-source/source-creative-assets';
+import { creativeStoreFiles } from '../../api/src/storefront-source/fixtures/creative-store';
+import { nextBrief, nextStoreConfig } from '../../api/src/storefront-source/fixtures/next-store';
+import { kitPath } from '@pagosya/storefront-kit';
 
 let files: Awaited<ReturnType<typeof compileNextPreview>>;
 test.beforeAll(async () => {
   const authored = creativeStoreFiles();
   files = withCreativeAssets([...authored, ...await compileNextPreview(authored), ...nextProjectScaffold('creative'),
     { path: 'brand.css', content: '/* fixture */' },
-    ...['commerce.js', 'commerce-pages.css', 'motion.js'].map(path => ({ path: path === 'motion.js' ? 'site.js' : path, content: readFileSync(new URL(`../../api/src/stores/source-kit/${path}`, import.meta.url), 'utf8') })),
+    ...['commerce.js', 'commerce-pages.css', 'motion.js'].map(path => ({ path: path === 'motion.js' ? 'site.js' : path, content: readFileSync(kitPath(`${path}`), 'utf8') })),
   ]).filter((file, index, all) => all.findLastIndex(candidate => candidate.path === file.path) === index);
 });
 
@@ -22,7 +23,7 @@ for (const mode of ['auto', 'off', 'reduced', 'hosted']) test(`creative tools re
   await page.setViewportSize({ width: mode === 'hosted' ? 390 : 1280, height: 900 });
   await page.goto('/?demo=1');
   await page.evaluate(async ({ snapshot, hosted }) => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     document.body.innerHTML = ''; document.body.style.margin = '0';
     const frame = document.createElement('iframe'); frame.title = 'Creative preview'; frame.sandbox.add('allow-scripts');
     frame.style.cssText = 'width:100%;height:100vh;border:0';

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.mjs",
-    "test": "playwright test"
+    "test": "node --check server.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

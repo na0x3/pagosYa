@@ -7,14 +7,19 @@
     "dev": "pnpm run build:studio && node --watch --watch-preserve-output server.mjs",
     "start": "node server.mjs",
     "build": "pnpm run build:studio && tsc -p tsconfig.json && vite build",
-    "test": "pnpm run test:unit && playwright test",
+    "test": "pnpm run test:unit",
     "test:unit": "node --test unit/*.test.mjs src/*.test.mjs",
-    "build:studio": "pnpm --filter @pagosya/merchant-studio exec vite build --mode embedded"
+    "build:studio": "pnpm --filter @pagosya/merchant-studio exec vite build --mode embedded",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@pagosya/storefront-kit": "workspace:*",
     "@playwright/test": "^1.55.0",
     "jsdom": "^25.0.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.8"
+  },
+  "dependencies": {
+    "@pagosya/variant-editor": "workspace:*"
   }
 }

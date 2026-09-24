@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+import { kitPath } from '@pagosya/storefront-kit';
+const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 const store = { storeName: 'Taller Alba', checkoutMode: 'payment', categories: [], items: [{ id: 'p1', name: 'Bolso de algodón', amount: 15000, currency: 'BOB', stock: 5, imageUrls: [] }], locations: [{ id: 'central', name: 'Taller central', address: 'Calle 10, La Paz', pickupEnabled: true, deliveryEnabled: true }, { id: 'closed', name: 'Sucursal sin entregas', pickupEnabled: false, deliveryEnabled: false }] };
 
 for (const width of [1280, 390]) test(`cart drawer and full-page fulfillment at ${width}px`, async ({ page }) => {

@@ -1,10 +1,22 @@
 import { CHECKOUT_ORIGIN } from './api';
 import { sourceShoppingProbe } from './source-shopping-probe';
-import { sourcePreviewDocument, type SourceSnapshot } from './source-preview';
+import { sourcePreviewDocument, type SourceSnapshot } from '@pagosya/storefront-preview';
 export type SourceCheck = { label: string; status: 'passed' | 'failed' | 'skipped' | 'warning'; detail?: string; blocking?: boolean };
 
 export function sourceChecksBlockPublishing(rows: SourceCheck[]) {
   return rows.some(row => row.status === 'failed' || row.blocking);
+}
+
+/** Keep the stored report bounded; the verdict always covers the complete run. */
+export function sourceCheckResult(rows: SourceCheck[]): { passed: boolean; findings: SourceCheck[] } {
+  const findings: SourceCheck[] = [];
+  let bytes = 2; // JSON array brackets.
+  for (const row of rows) {
+    const size = new TextEncoder().encode(JSON.stringify(row)).length + (findings.length ? 1 : 0);
+    if (bytes + size > 65536 || findings.length === 1000) break;
+    findings.push(row); bytes += size;
+  }
+  return { passed: rows.length > 0 && !sourceChecksBlockPublishing(rows), findings };
 }
 
 /** Inspect links before the preview removes unsupported external resources. */
@@ -23,7 +35,7 @@ export function sourceLinkChecks(snapshot: SourceSnapshot): SourceCheck[] {
       const destination = pages.get(target);
       if (!destination) { failures.push(`${path}: ${href}`); continue; }
       const id = decodeURIComponent(url.hash.slice(1));
-      if (id && !['pedido', 'carrito', 'cart', 'checkout', 'pago-de-prueba'].includes(id) && !destination.getElementById(id) && !destination.getElementsByName(id).length) failures.push(`${path}: ${href}`);
+      if (id && !(!['service', 'portfolio', 'editorial'].includes(snapshot.brief?.sitePurpose || 'shop') && ['pedido', 'carrito', 'cart', 'checkout', 'pago-de-prueba'].includes(id)) && !destination.getElementById(id) && !destination.getElementsByName(id).length) failures.push(`${path}: ${href}`);
     } catch { failures.push(`${path}: ${href}`); }
   }
   const brand = snapshot.files.find(f => f.path === 'brand.css');
@@ -34,6 +46,7 @@ export function sourceLinkChecks(snapshot: SourceSnapshot): SourceCheck[] {
 /** Functional diagnostics, never a security attestation or a live payment test. */
 export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: AbortSignal): Promise<SourceCheck[]> {
   const results = sourceLinkChecks(snapshot);
+  const commerce = !['service', 'portfolio', 'editorial'].includes(snapshot.brief?.sitePurpose || 'shop');
   let designLayout: unknown;
   try {
     const design = JSON.parse(snapshot.files.find(f => f.path === 'design-direction.json')?.content || 'null');
@@ -47,7 +60,7 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
     const config = snapshot.files.find(f => f.path === 'config.js')?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
     const parsed = config ? JSON.parse(config[1]) : {};
     configuredCheckout = typeof parsed.checkoutPage === 'string' ? parsed.checkoutPage : '';
-    const items = parsed.data?.items || [];
+    const items = commerce ? parsed.data?.items || [] : [];
     // Variants are chosen on the storefront itself, so they follow the normal purchase path; only extras still hand off to the platform page.
     const available = (p: any) => p.stock !== 0 && p.purchaseLimit !== 0;
     productId = items?.find((p: any) => available(p) && !p.variants?.length && !p.extras?.length)?.id
@@ -61,19 +74,19 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
         checkedSnapshot = { ...snapshot, files: snapshot.files.map(file => file.path === 'config.js' ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...parsed, demo: false, checkoutOrigin })};` } : file) };
       }
     }
-  } catch { results.push({ label: 'Catálogo de prueba', status: 'failed', detail: 'Configuración no válida' }); }
-  if (!productId && !optionsId) results.push({ label: 'Catálogo pendiente', status: 'skipped', blocking: true, detail: 'Añade un producto disponible con nombre y precio para comprobar la compra y el pago. Las imágenes del diseño no crean productos en el catálogo.' });
+  } catch { results.push({ label: commerce ? 'Catálogo de prueba' : 'Configuración del sitio', status: 'failed', detail: 'Configuración no válida' }); }
+  if (commerce && !productId && !optionsId) results.push({ label: 'Catálogo pendiente', status: 'skipped', blocking: true, detail: 'Añade un producto disponible con nombre y precio para comprobar la compra y el pago. Las imágenes del diseño no crean productos en el catálogo.' });
   for (const width of [1280, 768, 390, 320]) {
     const viewportLabel = width === 320 ? 'Móvil pequeño' : width === 390 ? 'Móvil' : width === 768 ? 'Tablet' : 'Escritorio';
     let paymentOpened = false, optionsOpened = false;
     let checkoutCart: Array<{ id: string; quantity: number }> | undefined;
     for (const file of htmlPages) {
-      if (signal?.aborted) return results;
+      if (signal?.aborted) return [...results, { label: 'Comprobación interrumpida', status: 'skipped', blocking: true }];
       const pageResults = await new Promise<SourceCheck[]>(resolve => {
         const previousFocus = document.activeElement as HTMLElement | null;
         const frame = document.createElement('iframe');
         frame.inert = true; frame.title = 'Comprobación automática del sitio'; frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
-        frame.sandbox.add('allow-scripts'); frame.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;height:844px;border:0;pointer-events:none;`;
+        frame.setAttribute('sandbox', 'allow-scripts'); frame.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;height:844px;border:0;pointer-events:none;`;
         let settled = false, pagePaymentOpened = false, checkoutNavigation = false;
         // `inert` does not stop the checked page from taking focus (its cart dialog's showModal() focuses a
         // button inside the frame), so hand focus straight back to whatever the merchant last focused;
@@ -86,7 +99,7 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
         });
         document.addEventListener('focusin', trackFocus); document.addEventListener('focusout', reclaimFocus);
         const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); signal?.removeEventListener('abort', abort); document.removeEventListener('focusin', trackFocus); document.removeEventListener('focusout', reclaimFocus); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true }); resolve(rows); };
-        const abort = () => finish([]);
+        const abort = () => finish([{ label: 'Comprobación interrumpida', status: 'failed', detail: 'Vuelve a comprobar el sitio antes de publicarlo.' }]);
         const timeout = window.setTimeout(() => finish([{ label: 'Carga del sitio', status: 'failed', detail: 'La página no respondió en 8 segundos.' }]), 8000);
         const receive = (event: MessageEvent) => {
           if (event.source !== frame.contentWindow || event.origin !== 'null') return;
@@ -106,8 +119,8 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
         };
         window.addEventListener('message', receive); signal?.addEventListener('abort', abort, { once: true });
         const isHome = file.path === 'index.html';
-        const doc = new DOMParser().parseFromString(sourcePreviewDocument(checkedSnapshot, file.path, { paymentForm: true, hosted: Boolean(optionsId), query: productId || optionsId ? `?id=${encodeURIComponent(productId || optionsId)}` : '', cart: !isHome && productId ? checkoutCart || [{ id: productId, quantity: 1, ...(productVariantId ? { variantId: productVariantId } : {}) }] : [] }), 'text/html');
-        const script = doc.createElement('script'); script.textContent = `(${sourceShoppingProbe.toString()})(${JSON.stringify(isHome ? designLayout : null)?.replace(/</g, '\\u003c') || 'null'})`;
+        const doc = new DOMParser().parseFromString(sourcePreviewDocument(checkedSnapshot, file.path, { paymentForm: commerce, hosted: Boolean(optionsId), query: productId || optionsId ? `?id=${encodeURIComponent(productId || optionsId)}` : '', cart: !isHome && productId ? checkoutCart || [{ id: productId, quantity: 1, ...(productVariantId ? { variantId: productVariantId } : {}) }] : [] }), 'text/html');
+        const script = doc.createElement('script'); script.textContent = `(${sourceShoppingProbe.toString()})(${JSON.stringify(isHome ? designLayout : null)?.replace(/</g, '\\u003c') || 'null'},${commerce})`;
         doc.head.querySelector('meta[http-equiv]')!.after(script);
         frame.srcdoc = '<!doctype html>' + doc.documentElement.outerHTML;
         document.body.append(frame);

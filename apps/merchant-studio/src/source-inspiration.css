@@ -1,0 +1,47 @@
+.source-mode .source-inspiration { position:relative; isolation:isolate; overflow:hidden; min-height:0; background:#e8eeeb; color:#18281e; }
+.inspiration-stage { position:absolute; inset:0; overflow:hidden; perspective:1400px; background:radial-gradient(ellipse at 70% 30%,#f4f7f3 0%,#d5e1dd 65%,#c6d5ce 100%); }
+.inspiration-stage::after { content:""; position:absolute; inset:0; z-index:7; pointer-events:none; background:linear-gradient(0deg,rgba(237,242,235,.98),rgba(237,242,235,.88) 22%,transparent 62%); }
+.inspiration-card { position:absolute; top:41%; left:52%; width:62%; max-width:680px; height:78%; min-height:300px; max-height:740px; overflow:hidden; border-radius:22px; background:#6e8170; box-shadow:0 22px 65px -20px #1c392b55; transform-origin:center; animation:inspiration-travel 25s linear infinite; animation-delay:calc(var(--card-index) * -5s); will-change:transform,opacity; }
+.inspiration-card img { width:100%; height:100%; object-fit:cover; display:block; }
+.inspiration-card--1 img { object-position:24% 38%; transform:scale(1.3); }
+.inspiration-card--3 img { object-position:78% 75%; transform:scale(1.65); }
+.inspiration-site { position:absolute; inset:0; padding:32px; color:white; display:flex; flex-direction:column; align-items:flex-start; background:linear-gradient(180deg,#081b1320,transparent 25%,#0e211b66); }
+.inspiration-site>span { width:100%; display:flex; justify-content:space-between; font:600 11px/1.3 Arial,sans-serif; letter-spacing:2px; }
+.inspiration-site>span span { letter-spacing:0; font-weight:400; }
+.inspiration-site strong { margin-top:auto; font:500 clamp(28px,3.8vw,68px)/1.04 Arial,sans-serif; letter-spacing:-.045em; }
+.inspiration-site small { margin:18px 0 30%; font:12px/1.5 Arial,sans-serif; }
+.inspiration-topline { position:absolute; z-index:9; inset:18px 20px auto; display:flex; justify-content:space-between; gap:12px; align-items:center; color:#304a3a; font:11px/1.5 Arial,sans-serif; }
+.inspiration-topline button { display:flex; align-items:center; gap:10px; min-height:36px; padding:7px 12px; border:1px solid #234a3526; border-radius:20px; background:#f3f7f0e8; color:#304a3a; font:11px Arial,sans-serif; cursor:pointer; }
+.source-mode .source-inspiration .source-empty-copy { position:absolute; inset:auto 0 0; z-index:8; padding:28px clamp(24px,4vw,56px) 32px; }
+.source-inspiration .inspiration-eyebrow { font:600 10px/1.4 Arial,sans-serif; letter-spacing:1.6px; color:#4b6455; margin-bottom:12px; }
+.source-inspiration .source-empty-copy h1 { max-width:none; font:500 clamp(26px,3vw,42px)/1.1 Arial,sans-serif; letter-spacing:-1.3px; margin:0 0 10px; }
+.source-inspiration .source-empty-copy p { max-width:45ch; color:#3e5145; font:13px/1.6 Arial,sans-serif; margin:0 0 16px; }
+.source-mode .source-inspiration .source-empty-actions .button { min-height:40px; padding:10px 16px; background:#223c2d; color:#fff; border:0; border-radius:7px; box-shadow:none; font:12px Arial,sans-serif; }
+.source-inspiration .source-empty-actions .button span { margin-left:16px; }
+.source-inspiration .source-empty-copy small { margin-top:12px; font:10px/1.4 Arial,sans-serif; color:#5a6b60; }
+.source-inspiration button:focus-visible { outline:2px solid #223c2d; outline-offset:4px; }
+.source-inspiration.is-paused .inspiration-card { animation-play-state:paused; }
+@keyframes inspiration-travel {
+  0% { transform:translate(-108%,-91%) rotate(-5deg) scale(.34); opacity:0; z-index:1; }
+  8% { opacity:1; }
+  35% { transform:translate(-79%,-70%) rotate(-3deg) scale(.62); opacity:1; z-index:2; }
+  58% { transform:translate(-50%,-50%) rotate(0) scale(1); opacity:1; z-index:4; }
+  73% { transform:translate(-45%,-47%) rotate(0) scale(1.02); opacity:1; z-index:5; }
+  94%,100% { transform:translate(40%,39%) rotate(4deg) scale(1.1); opacity:0; z-index:6; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .source-inspiration .inspiration-card { animation:none; will-change:auto; }
+  .source-inspiration .inspiration-card:not(:first-child) { display:none; }
+  .source-inspiration .inspiration-card:first-child { transform:translate(-50%,-50%); }
+  .inspiration-topline button { display:none; }
+}
+@media (max-width:759px) {
+  .inspiration-card { width:77%; top:40%; min-height:210px; border-radius:14px; }
+  .inspiration-site { padding:20px; }
+  .inspiration-site strong { font-size:34px; }
+  .source-mode .source-inspiration .source-empty-copy { padding:16px 20px 20px; }
+  .source-inspiration .source-empty-copy h1 { font-size:25px; margin-bottom:8px; }
+  .source-inspiration .source-empty-copy p { font-size:12px; margin-bottom:10px; }
+  .source-inspiration .source-empty-copy small { margin-top:8px; }
+  .inspiration-topline { inset:10px 12px auto; }
+}

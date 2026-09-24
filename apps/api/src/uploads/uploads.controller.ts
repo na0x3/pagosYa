@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Headers,
   NotFoundException,
   Param,
   Post,
+  Query,
   Res,
   StreamableFile,
   UploadedFile,
@@ -13,12 +15,12 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { SkipThrottle } from "@nestjs/throttler";
+import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { PrismaService } from "../prisma/prisma.service";
-import { maxUploadBytesForMime, UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
+import { maxUploadBytesForMime, RESPONSIVE_WIDTHS, UploadsService, UPLOAD_FILENAME_PATTERN } from "./uploads.service";
 import { UploadResponseDto } from "./dto/upload-response.dto";
 
 /**
@@ -64,21 +66,43 @@ export class UploadsController {
 
   /** Public — buyers on a checkout/storefront page must be able to load product photos and the merchant logo without any credential. */
   @Get(":filename")
-  @SkipThrottle()
-  async getFile(@Param("filename") filename: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
-    if (!UPLOAD_FILENAME_PATTERN.test(filename)) throw new NotFoundException("Not found");
-    const body = await this.uploads.getBuffer(filename);
-    if (!body) throw new NotFoundException("Not found");
-
-    res.set({
-      "Content-Type": this.uploads.contentTypeFor(filename),
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  async getFile(
+    @Param("filename") filename: string,
+    @Res({ passthrough: true }) res: Response,
+    @Headers("if-none-match") ifNoneMatch?: string,
+    @Query("w") widthParam?: string,
+  ): Promise<StreamableFile | undefined> {
+    if (!UPLOAD_FILENAME_PATTERN.test(filename)) throw new NotFoundException("Archivo no encontrado");
+    // Storefronts request width-limited WebP copies for srcset; only the fixed widths are served.
+    const width = widthParam === undefined ? undefined : Number(widthParam);
+    if (width !== undefined && !(RESPONSIVE_WIDTHS as readonly number[]).includes(width)) throw new BadRequestException(`Ancho no disponible. Usa ${RESPONSIVE_WIDTHS.join(", ")}.`);
+    const etag = width ? `"${filename}-w${width}"` : `"${filename}"`;
+    const headers = {
+      "Content-Type": width ? "image/webp" : this.uploads.contentTypeFor(filename),
       "X-Content-Type-Options": "nosniff",
       "Cross-Origin-Resource-Policy": "cross-origin",
       "Content-Disposition": `inline; filename="${filename}"`,
       // Filenames are random UUIDs and never reused/overwritten, so a long-lived
       // immutable cache is always safe.
       "Cache-Control": "public, max-age=31536000, immutable",
+      ETag: etag,
+    };
+    // GET uses weak comparison, including validators in a comma-separated list.
+    const matches = ifNoneMatch?.split(",").some(value => {
+      const tag = value.trim();
+      return tag === "*" || tag.replace(/^W\//, "") === etag;
     });
-    return new StreamableFile(body);
+    if (matches) {
+      if (!await this.uploads.exists(filename)) throw new NotFoundException("Archivo no encontrado");
+      res.set(headers);
+      res.status(304);
+      return;
+    }
+
+    const file = width ? await this.uploads.getResized(filename, width) : await this.uploads.getStream(filename);
+    if (!file) throw new NotFoundException(width ? "Esta imagen no tiene versiones de tamaño." : "Archivo no encontrado");
+    res.set({ ...headers, "Content-Length": file.byteSize });
+    return new StreamableFile(file.stream);
   }
 }

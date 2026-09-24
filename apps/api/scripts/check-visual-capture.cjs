@@ -1,7 +1,7 @@
 // Exercises the actual isolated renderer without sending screenshots to an AI provider.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
-const { captureSourceVisuals } = require('../dist/src/stores/source-visual-capture');
+const { captureSourceVisuals } = require('../dist/src/storefront-source/source-visual-capture');
 (async () => {
   const captures = await captureSourceVisuals({ schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', encoding: 'utf8', content: '<html><head><link rel="stylesheet" href="styles.css"></head><body><h1>Screenshot capture</h1><img src="assets/icon.svg" alt="icon"><script>fetch("https://example.com/private").catch(()=>{});document.body.dataset.preview=String(window.PAGOSYA_PREVIEW)</script><section>Middle</section><footer>End</footer></body></html>' },

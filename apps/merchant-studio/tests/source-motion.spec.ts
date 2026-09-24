@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
-const runtime = readFileSync(new URL('../../api/src/stores/source-kit/motion.js', import.meta.url), 'utf8');
+const runtime = readFileSync(kitPath('motion.js'), 'utf8');
 async function fixture(page: Page, mode = 'subtle') {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.setContent(`<style>body{margin:0}header{height:900px}section{min-height:400px}.decoration{height:20px}#authored{animation:pulse 8s infinite}@keyframes pulse{to{opacity:.5}}</style>

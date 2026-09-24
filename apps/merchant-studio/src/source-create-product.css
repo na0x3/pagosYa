@@ -62,3 +62,8 @@
 .product-create-panel .product-box-choice:has(input:checked) { border-color: currentColor; }
 .product-create-panel .product-box-choice img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex: none; }
 .product-create-panel .product-box-choice input { width: 18px; height: 18px; min-height: 18px; flex: none; }
+.product-create-panel .product-fiscal { margin-top: 18px; padding: 12px 14px; border: 1px solid #dedede; border-radius: 10px; background: #fff; }
+.product-create-panel .product-fiscal[open] { display: grid; gap: 12px; }
+.product-create-panel .product-fiscal summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.product-create-panel .product-fiscal select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #dedede; border-radius: 10px; background: white; font: inherit; }
+.product-create-panel .product-fiscal [data-fiscal-status]:empty { display: none; }

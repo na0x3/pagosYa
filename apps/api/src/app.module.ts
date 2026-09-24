@@ -24,6 +24,17 @@ import { DashboardModule } from "./dashboard/dashboard.module";
 import { HealthModule } from "./health/health.module";
 import { PaymentLinksModule } from "./payment-links/payment-links.module";
 import { StoresModule } from "./stores/stores.module";
+import { StorefrontSourceModule } from "./storefront-source/storefront-source.module";
+import { VisualStudioModule } from "./visual-studio/visual-studio.module";
+import { BrandModule } from "./brand/brand.module";
+import { ProductContentModule } from "./product-content/product-content.module";
+import { StoreGrowthModule } from "./store-growth/store-growth.module";
+import { StoreSeoModule } from "./store-seo/store-seo.module";
+import { RetentionModule } from "./retention/retention.module";
+import { EmailWorkspaceModule } from "./email-workspace/email-workspace.module";
+import { DomainsModule } from "./domains/domains.module";
+import { ShippingModule } from "./shipping/shipping.module";
+import { PromoCodesModule } from "./promo-codes/promo-codes.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { CollectionsModule } from "./collections/collections.module";
 import { FinancesModule } from "./finances/finances.module";
@@ -32,7 +43,7 @@ import { DebtCollectionsModule } from "./debt-collections/debt-collections.modul
 import { ConsumerModule } from "./consumer/consumer.module";
 // Store-level CRM, inventory, appointments, delivery, POS, and integrations.
 import { OperationsModule } from "./operations/operations.module";
-import { ShippingModule } from "./shipping/shipping.module";
+import { InboxModule } from "./inbox/inbox.module";
 
 @Module({
   imports: [
@@ -76,6 +87,17 @@ import { ShippingModule } from "./shipping/shipping.module";
     DashboardModule,
     HealthModule,
     StoresModule,
+    StorefrontSourceModule,
+    VisualStudioModule,
+    BrandModule,
+    ProductContentModule,
+    StoreGrowthModule,
+    StoreSeoModule,
+    RetentionModule,
+    EmailWorkspaceModule,
+    DomainsModule,
+    ShippingModule,
+    PromoCodesModule,
     PaymentLinksModule,
     CategoriesModule,
     CollectionsModule,
@@ -85,7 +107,7 @@ import { ShippingModule } from "./shipping/shipping.module";
     ConsumerModule,
     OperationsModule,
     CommercePlatformModule,
-    ShippingModule,
+    InboxModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

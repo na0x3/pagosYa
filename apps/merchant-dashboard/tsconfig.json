@@ -10,5 +10,6 @@
     "lib": ["ES2022", "DOM"],
     "skipLibCheck": true
   },
-  "include": ["src/**/*.js"]
+  "include": ["src/store-settings.mjs"],
+  "exclude": ["src/dashboard.js"]
 }

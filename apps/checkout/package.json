@@ -10,9 +10,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@pagosya/shared-types": "workspace:*"
+    "@pagosya/shared-types": "workspace:*",
+    "@pagosya/storefront-kit": "workspace:*",
+    "@pagosya/storefront-preview": "workspace:*"
   },
   "devDependencies": {
+    "@pagosya/variant-editor": "workspace:*",
     "jsdom": "^25.0.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.8",

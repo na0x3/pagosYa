@@ -22,7 +22,7 @@ allowBuilds:
   '@nestjs/core': true
   '@prisma/client': true
   '@prisma/engines': true
-  # Telemetry-only postinstall (pulled in by swagger-ui-dist); nothing needs it to build.
+  # Telemetry postinstall; declined deliberately (see the dev-only rail commit).
   '@scarf/scarf': false
   argon2: true
   esbuild: true

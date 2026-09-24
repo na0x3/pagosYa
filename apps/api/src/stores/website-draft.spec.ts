@@ -1,10 +1,10 @@
+import { makeVisualStudioServices } from "../visual-studio/testing-visual-studio-services";
+import { makeStoreServices } from "./testing-stores-services";
 import { ConflictException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { StoresService } from "./stores.service";
-import { VisualStudioService } from "./visual-studio.service";
 
 function setup() {
-  let row: any = { id: "store-1", merchantId: "merchant-1", name: "Public name", tagline: "Public title", siteDocument: null,
+  let row: any = { id: "store-1", merchantId: "merchant-1", name: "Public name", tagline: "Public title", siteDocument: null, publicVisibility: false,
     websiteRevision: 0, websitePublishedRevision: 0, websiteDraft: null, links: [{ label: "Public", url: "https://example.com" }] };
   let versions: any[] = [];
   const prisma: any = {
@@ -31,8 +31,8 @@ function setup() {
     const before = structuredClone(row); const oldVersions = structuredClone(versions);
     try { return await work(prisma); } catch (error) { row = before; versions = oldVersions; throw error; }
   };
-  const stores = new StoresService(prisma, {} as never, {} as never);
-  const visual = new VisualStudioService(prisma, {} as never, { get: () => undefined } as never, {} as never);
+  const stores = makeStoreServices(prisma, {} as never, {} as never);
+  const visual = makeVisualStudioServices(prisma, {} as never, { get: () => undefined } as never, {} as never);
   return { prisma, stores, visual, read: () => structuredClone(row), versions: () => structuredClone(versions) };
 }
 
@@ -42,9 +42,12 @@ describe("Private website drafts", () => {
     const saved = await stores.saveWebsiteDraft("merchant-1", "store-1", { revision: 0, name: "Private name", tagline: "Private title", links: [{ label: "New", url: "https://example.com/new" }] });
     expect(saved.name).toBe("Private name");
     expect(saved.websiteRevision).toBe(1);
+    expect(read().publicVisibility).toBe(false);
     expect(read()).toMatchObject({ name: "Public name", tagline: "Public title", links: [{ label: "Public" }], websiteDraft: { data: { name: "Private name" } } });
     await expect(stores.publishWebsiteDraft("merchant-1", "store-1", 0)).rejects.toBeInstanceOf(ConflictException);
+    expect(read().publicVisibility).toBe(false);
     const published = await stores.publishWebsiteDraft("merchant-1", "store-1", 1);
+    expect(published).toMatchObject({ publicVisibility: true });
     expect(published).toMatchObject({ name: "Private name", tagline: "Private title", websiteDraft: null, websiteRevision: 2, websitePublishedRevision: 1, links: [{ label: "New" }] });
     expect(versions()[0].snapshot).toMatchObject({ name: "Public name", tagline: "Public title", links: [{ label: "Public" }] });
   });
@@ -90,6 +93,7 @@ describe("Private website drafts", () => {
     await expect(stores.publishWebsiteDraft("merchant-1", "store-1", 1)).rejects.toThrow("connection lost");
     expect(read()).toMatchObject({ tagline: "Public title", websiteRevision: 1, websiteDraft: { data: { tagline: "Private" } } });
     expect(versions()).toEqual([]);
+    expect(read().publicVisibility).toBe(false);
   });
 
   it("does not interpret stock values in an appearance form as stock edits", async () => {

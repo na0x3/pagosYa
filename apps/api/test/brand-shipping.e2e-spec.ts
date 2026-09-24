@@ -17,6 +17,8 @@ describe('Brand memory and shipping checkout', () => {
       if (name.endsWith('Owner')) token = result.body.testKeys.secretKey; else other = result.body.testKeys.secretKey;
     }
     const store = (await request(app.getHttpServer()).post('/v1/stores').set(auth()).send({ name: 'Tienda de prueba' }).expect(201)).body;
+    // New stores stay private until their first publication; these tests exercise a store that is already live.
+    await prisma.store.update({ where: { id: store.id }, data: { publicVisibility: true } });
     storeId = store.id; slug = store.slug;
     productId = (await request(app.getHttpServer()).post(`/v1/stores/${storeId}/payment_links`).set(auth()).send({ name: 'Café', amount: 10000, currency: 'BOB', shippingWeightGrams: 500 }).expect(201)).body.id;
   });

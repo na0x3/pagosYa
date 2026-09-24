@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
 test('merchant reviews imported brand evidence, saves rules, and configures shipping on desktop and mobile', async ({ page }) => {
   let brand: any = { revision: 0, data: { confirmed: [], suggested: [] } };
@@ -51,7 +52,7 @@ test('merchant reviews imported brand evidence, saves rules, and configures ship
 });
 
 test('published runtime quotes shipping and submits only selected service and address', async ({ page }) => {
-  const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
   let payload: any;
   const store = { storeName: 'Café', checkoutMode: 'payment', shippingEnabled: true, shippingPickupEnabled: false, locations: [], items: [{ id: 'p1', name: 'Café', amount: 10000, currency: 'BOB', stock: 10, imageUrls: [] }], categories: [] };
   await page.goto('/?demo=1');
@@ -101,7 +102,7 @@ test('standard checkout shows server totals and requires delivery details', asyn
 });
 
 test('hosted source passes shipping through its confined parent bridge', async ({ page }) => {
-  const commerce = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
   const store = { storeName: 'Café', checkoutMode: 'payment', shippingEnabled: true, shippingPickupEnabled: false, locations: [], items: [{ id: 'p1', name: 'Café', amount: 10000, currency: 'BOB', stock: 10 }], categories: [] };
   const snapshot = { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<main><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p></main><script src="config.js"></script><script src="commerce.js"></script>' },
@@ -114,6 +115,7 @@ test('hosted source passes shipping through its confined parent bridge', async (
     if (path.endsWith('/shipping/quote')) return route.fulfill({ json: { subtotal: 10000, shippingAmount: 1500, amount: 11500, currency: 'BOB', shippingOptions: [{ id: 'r1', name: 'La Paz', amount: 1500, currency: 'BOB' }] } });
     if (path.endsWith('/cart-checkout')) { checkout = route.request().postDataJSON(); return route.fulfill({ json: { clientSecret: 'test-only-secret' } }); }
     if (path.endsWith('/retention')) return route.fulfill({ json: {} });
+    if (path.endsWith('/verification')) return route.fulfill({ status: 404, json: { message: 'Tienda no encontrada' } });
     throw new Error(path);
   });
   await page.goto('/?demo=1');
@@ -124,9 +126,14 @@ test('hosted source passes shipping through its confined parent bridge', async (
   }, { path, store });
   const frame = page.frameLocator('iframe');
   await frame.getByRole('button', { name: 'Añadir Café', exact: true }).click(); await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
-  const review = frame.locator('[data-checkout-review]'); await review.getByLabel('Dirección').fill('Calle de prueba 123');
+  const review = frame.locator('[data-checkout-review]');
+  // The address is typed in pagosYa's trusted form, never inside the generated design.
+  await expect(review.getByLabel('Dirección')).toHaveCount(0);
   await review.getByRole('button', { name: 'Calcular envío' }).click(); await review.getByLabel('Opción de envío').selectOption('r1');
   await expect(review.locator('[data-shipping-status]')).toContainText('115'); await review.getByRole('button', { name: 'Pagar con pagosYa' }).click();
+  const secure = page.getByRole('dialog', { name: 'Datos para tu pedido' });
+  await expect(secure).toContainText('Formulario seguro de pagosYa');
+  await secure.getByLabel('Dirección y referencia').fill('Calle de prueba 123'); await secure.getByRole('button', { name: 'Continuar al pago' }).click();
   await expect(page.getByText('Pago listo', { exact: true })).toBeVisible();
   expect(checkout).toMatchObject({ shippingZoneId: 'r1', shippingAddress: 'Calle de prueba 123', fulfillmentMethod: 'delivery' });
 });

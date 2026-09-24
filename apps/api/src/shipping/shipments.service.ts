@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { OrderFulfillmentStatus, Prisma, ShipmentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrivateFilesService } from '../commerce-platform/private-files.service';
-import { queueStoreEmail } from '../stores/email-workspace.config';
+import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { createOrderTrackingToken } from '../consumer/order-tracking-token';
 import { CarrierRegistry } from './carriers/carrier-registry';
 import type { BookInput, ShipmentParty } from './carriers/carrier';

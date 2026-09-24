@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import '../../merchant-dashboard/src/product-options.js';
+import '@pagosya/variant-editor';
 import { productOptionGroups, matchingOptionVariant, optionValueAvailable } from '../src/product-options';
 
 const editor = PagosYaProductOptions;

@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { kitPath } from '@pagosya/storefront-kit';
 const root = path.resolve(import.meta.dirname,'../../../examples/independent-cafe');
 const files: Array<{path:string;content:string;encoding:'utf8'|'base64'}> = [];
 function scan(dir:string,prefix='') { for(const e of readdirSync(dir,{withFileTypes:true})) { if(e.name==='dist'||e.name.startsWith('.'))continue;const p=path.join(dir,e.name),name=prefix+e.name;if(e.isDirectory())scan(p,name+'/');else files.push({path:name,content:readFileSync(p).toString(/\.(webp|ttf)$/.test(name)?'base64':'utf8'),encoding:/\.(webp|ttf)$/.test(name)?'base64':'utf8'}); } }
 scan(root);
-files.find(file => file.path === 'commerce.js')!.content = readFileSync(new URL('../../api/src/stores/source-kit/commerce.js', import.meta.url), 'utf8');
+files.find(file => file.path === 'commerce.js')!.content = readFileSync(kitPath('commerce.js'), 'utf8');
 const snapshotCatalog = JSON.parse(files.find(f => f.path === 'config.js')!.content.split('=').slice(1).join('=').trim().replace(/;$/, '')).data;
 const snapshot={schemaVersion:1,brief:{businessType:'Cafetería',audience:'Vecinos',primaryAction:'Hacer un pedido',visualDirection:'Menú editorial'},files};
 
@@ -16,6 +17,7 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   const version = { revision: 1, label: 'Diseño por revisar', snapshot: copy };
   const paid: string[] = [];
   let submitted: any;
+  let recorded: any;
   await page.route('**/api/v1/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
     let body: any = {};
@@ -24,6 +26,7 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
     else if (pathname.endsWith('/conversation')) body = { messages: [] };
     else if (pathname.endsWith('/catalog')) body = structuredClone(snapshotCatalog);
     else if (pathname.endsWith('/estimate')) body = { model: 'gpt-5.6-terra', reason: 'Ajuste de diseño', maxCredits: 25, estimate: { minCredits: 4, maxCredits: 10 } };
+    else if (pathname.endsWith('/versions/1/checks')) recorded = route.request().postDataJSON();
     else if (pathname.endsWith('/versions/1')) body = version;
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [version], nextBefore: null };
     else if (/\/(messages|generate)$/.test(pathname)) {
@@ -40,6 +43,9 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   const prepare = page.getByRole('button', { name: clipped ? 'Preparar correcciones' : 'Preparar ajustes de diseño' });
   await expect(prepare).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole('status', { name: 'Comprobación del navegador' })).toContainText(clipped ? 'correcciones pendientes' : 'detalles visuales');
+  await expect.poll(() => recorded?.passed).toBe(!clipped);
+  expect(recorded.findings.length).toBeGreaterThan(0);
+  expect(Object.keys(recorded).sort()).toEqual(['findings', 'passed']);
   await prepare.click();
   const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
   await expect(composer).toHaveValue(clipped ? /Controles de compra completos/ : /Sección incompleta para revisar/);
@@ -96,6 +102,7 @@ test('source studio generates, previews commerce, edits a file, restores and dow
     else if(/\/versions\/\d+$/.test(pathname))body=versions.find(v=>v.revision===Number(pathname.split('/').at(-1)));
     else if(pathname.endsWith('/catalog'))body=structuredClone(snapshotCatalog);
     else if(pathname.endsWith('/source-project'))body={revision,versions,nextBefore:null};
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${method} ${pathname}`);
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
@@ -123,7 +130,7 @@ test('source studio generates, previews commerce, edits a file, restores and dow
 test('preview blocks access to parent session and network requests',async({page})=>{
   await page.goto('/?demo=1');
   const result=await page.evaluate(async()=>{
-    const {sourcePreviewDocument}=await import('/src/source-preview.ts' as string);
+    const {sourcePreviewDocument}=await import('/src/storefront-preview.ts' as string);
     sessionStorage.setItem('preview-test-secret','private');
     const html='<div id="result">pending</div><script>let parentBlocked=false;try{parent.sessionStorage.getItem("preview-test-secret")}catch{parentBlocked=true}fetch("https://example.invalid/exfil").then(()=>document.getElementById("result").textContent="network allowed").catch(()=>document.getElementById("result").textContent=parentBlocked?"isolated":"parent allowed")</script>';
     const frame=document.createElement('iframe');frame.sandbox.add('allow-scripts');frame.title='Isolation check';frame.srcdoc=sourcePreviewDocument({schemaVersion:1,brief:{},files:[{path:'index.html',content:html}]});document.body.append(frame);return true;
@@ -166,7 +173,8 @@ test('failed chat generation preserves the request and permits retry', async ({ 
       revision = 1;
       body = { revision: saved, userMessage: { id: 'u', role: 'USER', content: route.request().postDataJSON().instruction }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'Tu revisión está lista.', metadata: { sourceRevision: 1 } } };
       messages.push(body.userMessage, body.assistantMessage);
-    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected route ${pathname}`);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -199,6 +207,7 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [saved], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = saved;
     else if (pathname.endsWith('/catalog')) body = catalog;
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
@@ -251,7 +260,8 @@ test('free conversation is the default and model plus credit cap reach generatio
     else if (pathname.endsWith('/messages')) {
       sent = route.request().postDataJSON();
       await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ message: 'No consumió créditos. Vuelve a intentarlo.' }) }); return;
-    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(`Unexpected request ${pathname}`);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -297,6 +307,7 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
     else if (pathname.endsWith('/source-project')) body = { revision: 1, versions: [{ revision: 1, label: 'Catalog' }], nextBefore: null };
     else if (pathname.endsWith('/versions/1')) body = { revision: 1, label: 'Catalog', snapshot: sample };
     else if (pathname.endsWith('/estimate')) body = { model: 'gpt-5.6-terra', reason: 'Diseño', maxCredits: 50, estimate: { minCredits: 4, maxCredits: 16 } };
+    else if (pathname.endsWith('/checks')) body = { id: 'check' };
     else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error(pathname);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
@@ -336,13 +347,14 @@ test('motion changes save a revision without AI generation and persist after rel
     else if(pathname.endsWith('/source-project')) body={revision:versions[0].revision,versions,nextBefore:null};
     else if(/\/versions\/\d+$/.test(pathname)) body=versions.find(v=>v.revision===Number(pathname.split('/').at(-1)));
     else if(pathname.endsWith('/motion')) {
-      const input=route.request().postDataJSON(); expect(input).toEqual({revision:1,motion:'off'}); changes++;
+      const input=route.request().postDataJSON(); expect(input).toEqual({revision:1,motion:'off',scrollFeel:'soft'}); changes++;
       const next=structuredClone(versions[0]); next.revision++; next.label='Sin movimiento';
       const config=next.snapshot.files.find(f=>f.path==='config.js')!;
       const data=JSON.parse(config.content.slice(config.content.indexOf('=')+1).trim().replace(/;$/,''));
-      config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion})+';';
+      config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion,scrollFeel:input.scrollFeel})+';';
       versions.unshift(next); body=next;
-    } else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
+    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
+    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
     else throw new Error('Unexpected request '+pathname);
     await route.fulfill({json:body});
   });
@@ -353,6 +365,8 @@ test('motion changes save a revision without AI generation and persist after rel
   await page.reload();
   await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toHaveValue('off');
   await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toBeEnabled();
+  await expect(page.getByRole('combobox',{name:'Desplazamiento',exact:true})).toHaveValue('soft');
+  await expect(page.getByRole('combobox',{name:'Desplazamiento',exact:true})).toBeDisabled();
   expect(changes).toBe(1);
 });
 

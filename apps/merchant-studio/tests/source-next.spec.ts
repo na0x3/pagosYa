@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { compileNextPreview, nextProjectScaffold } from '../../api/src/stores/source-next';
-import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from '../../api/src/stores/fixtures/next-store';
+import { compileNextPreview, nextProjectScaffold } from '../../api/src/storefront-source/source-next';
+import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from '../../api/src/storefront-source/fixtures/next-store';
+import { kitPath } from '@pagosya/storefront-kit';
 
 for (const hosted of [false, true]) test(`computed photo paths load in ${hosted ? 'hosted storefront' : 'Studio preview'}`, async ({ page }) => {
   const authored = nextStoreFiles();
@@ -20,7 +21,7 @@ for (const hosted of [false, true]) test(`computed photo paths load in ${hosted 
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/?demo=1');
   await page.evaluate(async ({ files, brief, hosted }) => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     document.body.innerHTML = '';
     const frame = document.createElement('iframe'); frame.title = 'Computed photos'; frame.sandbox.add('allow-scripts');
     frame.srcdoc = sourcePreviewDocument({ schemaVersion: 1, brief, files }, 'index.html', { hosted }); document.body.append(frame);
@@ -44,7 +45,7 @@ test('React location maps retain the restricted preview policy', async ({ page }
   await page.route('https://www.google.com/maps/embed?pb=test-location', route => route.fulfill({ contentType: 'text/html', body: '<p>Mapa de prueba</p>' }));
   await page.goto('/?demo=1');
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     document.body.innerHTML = '';
     const frame = document.createElement('iframe'); frame.title = 'React location'; frame.sandbox.add('allow-scripts'); frame.style.cssText = 'width:100%;height:900px';
     frame.srcdoc = sourcePreviewDocument(snapshot); document.body.append(frame);
@@ -62,12 +63,12 @@ for (const width of [1280, 390]) test(`React storefront supports state, assets a
   const files = [...authored, ...await compileNextPreview(authored), ...nextProjectScaffold('test'), nextStoreImage,
     { path: 'brand.css', content: '/* fixture */' },
     { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` },
-    ...['commerce.js', 'commerce-pages.css'].map(path => ({ path, content: readFileSync(new URL(`../../api/src/stores/source-kit/${path}`, import.meta.url), 'utf8') })),
+    ...['commerce.js', 'commerce-pages.css'].map(path => ({ path, content: readFileSync(kitPath(`${path}`), 'utf8') })),
   ];
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({ width, height: 900 }); await page.goto('/?demo=1');
   await page.evaluate(async snapshot => {
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts' as string);
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts' as string);
     document.body.innerHTML = ''; document.body.style.margin = '0';
     const frame = document.createElement('iframe'); frame.sandbox.add('allow-scripts'); frame.title = 'React preview'; frame.style.cssText = 'width:100%;height:100vh;border:0'; document.body.append(frame);
     const navigate = (name: string, navigation = {}) => { frame.srcdoc = sourcePreviewDocument(snapshot, name, navigation); };

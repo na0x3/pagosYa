@@ -1,6 +1,6 @@
 import { inheritResourceTheme } from './source-resource-theme';
 import { API_BASE_URL, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
-import type { SourceSnapshot } from './source-preview';
+import type { SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml as escape } from './studio-ui';
 import { openCommerceContent } from './commerce-content';
 import './source-library.css';

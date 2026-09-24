@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const commerce=readFileSync(new URL('../../api/src/stores/source-kit/commerce.js',import.meta.url),'utf8');
+import { kitPath } from '@pagosya/storefront-kit';
+const commerce=readFileSync(kitPath('commerce.js'),'utf8');
 const store={storeName:'Prueba',checkoutMode:'payment',contactFormEnabled:true,items:[{id:'p1',name:'Café',amount:10000,currency:'BOB',stock:4}],categories:[],locations:[]};
 const snapshot={schemaVersion:1,brief:{businessType:'Café',audience:'Vecinos',primaryAction:'Comprar',visualDirection:'Editorial'},files:[
   {path:'index.html',content:'<meta charset="utf-8"><main><h1>Mi tienda</h1><a href="checkout.html">Checkout</a><section data-pagosya-catalog></section><button type="button" data-cart-open>Pedido <span data-cart-count>0</span></button><section data-pagosya-cart hidden></section><p data-pagosya-status></p></main><script src="config.js"></script><script src="commerce.js"></script>'},
@@ -28,6 +29,7 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
     else if(p.endsWith('/alternative')){const v=structuredClone(versions[0]);v.revision=2;v.label='Beneficios claros';v.snapshot.files[0].content=v.snapshot.files[0].content.replace('Mi tienda','Beneficios claros');versions.unshift(v);body=v;}
     else if(p.endsWith('/experiments')){expect(route.request().postDataJSON()).toEqual({revision:2,publicationVersion:1});publication={...publication,version:2,experiment:{id:'e1',controlRevision:1,variantRevision:2,status:'RUNNING',startedAt:new Date().toISOString(),evidence:{winner:null,reason:'Recopilando datos'},variants:['A','B'].map((variant,i)=>({variant,revision:i+1,visitors:0,buyers:0,conversionRate:0,revenue:[]}))}};body=publication;}
     else if(p.endsWith('/experiments/finish')){expect(route.request().postDataJSON()).toEqual({experimentId:'e1',publicationVersion:2,apply:false});publication={...publication,version:3,experiment:{...publication.experiment,status:'STOPPED'}};body=publication;}
+    else if(p.endsWith('/checks'))body={id:'check'};
     else if(p.endsWith('/design-jobs'))body={enabled:false,job:null};
     else throw new Error(p);
     await route.fulfill({json:body});
@@ -98,6 +100,7 @@ test('published source navigates in isolation, submits real forms and hands chec
     if(p.endsWith('/leads')){lead=route.request().postDataJSON();return route.fulfill({json:{submitted:true}});}
     if(p.endsWith('/cart-checkout')){checkout=route.request().postDataJSON();return route.fulfill({json:{clientSecret:'test-checkout-secret'}});}
     if(p.endsWith('/retention')) return route.fulfill({json:{}});
+    if(p.endsWith('/verification')) return route.fulfill({json:{storeName:'Test',slug:'test',verifiedBusiness:true,verifiedSince:'2026-08-02',electronicInvoicing:false,securePayments:true,onPlatformSince:'2026-07-01',reviews:{count:0,average:null},officialDomain:null}});
     throw new Error(p);
   });
   await page.addInitScript(() => localStorage.setItem('pagosya:privacy:test', JSON.stringify({version:1,analytics:true,expires:Date.now()+86400000})));
@@ -118,7 +121,8 @@ test('published source navigates in isolation, submits real forms and hands chec
   const frame=page.frameLocator('iframe');await expect(frame.getByRole('heading',{name:'Mi tienda'})).toBeVisible();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox','allow-scripts allow-forms');
   await frame.getByRole('button',{name:'Abrir formulario de contacto'}).click();
-  await frame.getByLabel('Nombre',{exact:true}).fill('Cliente');await frame.getByLabel('Correo',{exact:true}).fill('cliente@example.com');await frame.getByLabel('Tu mensaje').fill('Consulta real');await frame.getByRole('button',{name:'Enviar consulta'}).click();
+  await expect(frame.getByLabel('Correo',{exact:true})).toHaveCount(0);await frame.getByRole('button',{name:'Enviar consulta'}).click();
+  const secure=page.getByRole('dialog',{name:/Escribe a/});await secure.getByLabel('Nombre',{exact:true}).fill('Cliente');await secure.getByLabel('Correo',{exact:true}).fill('cliente@example.com');await secure.getByLabel('Tu mensaje').fill('Consulta real');await secure.getByRole('button',{name:'Enviar consulta'}).click();
   await expect(frame.locator('[data-contact-status]')).toContainText('Consulta recibida');expect(lead).toMatchObject({name:'Cliente',message:'Consulta real'});
   // The floating contact panel stays open after sending; close it before shopping.
   await frame.getByRole('button',{name:'Cerrar formulario de contacto'}).click();

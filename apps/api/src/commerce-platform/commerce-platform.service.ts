@@ -1,4 +1,4 @@
-import { queueStoreEmail } from '../stores/email-workspace.config';
+import { queueStoreEmail } from '../email-workspace/email-workspace.config';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';

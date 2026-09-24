@@ -12,6 +12,27 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # The API's *.integration.spec.ts suites deliberately refuse to report
+    # success in CI without a database — a skipped suite exits 0, and they exist
+    # precisely because the mocked suites cannot catch what they catch. Each one
+    # CREATEs a throwaway database of its own and DROPs it, so this service is
+    # all they need.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pagosya
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      INTEGRATION_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +45,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Check architecture boundaries
+        run: pnpm check:boundaries
 
       - name: Generate Prisma client
         run: pnpm --filter @pagosya/api exec prisma generate
@@ -42,7 +66,7 @@ jobs:
   browser-tests:
     name: Customer shopping and merchant publishing (Chromium)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -52,11 +76,20 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @pagosya/merchant-studio exec playwright install --with-deps chromium
-      - name: Test cart, fulfillment, publishing, and onboarding
-        run: pnpm --filter @pagosya/merchant-studio exec playwright test tests/source-next.spec.ts tests/source-shopping-flow.spec.ts tests/source-checks.spec.ts tests/source-publication.spec.ts tests/store-readiness.spec.ts
+      # The whole Studio suite, not a five-file subset. 32 of its 37 spec files
+      # were never run here despite passing: 177 of 178 tests green as of
+      # 2026-09-22, and fhasin-repair.local.spec.ts skips itself when its local
+      # snapshot is absent. Runs in about 4 minutes.
+      - name: Test Studio (full suite)
+        run: pnpm --filter @pagosya/merchant-studio exec playwright test
       - run: pnpm --filter @pagosya/merchant-dashboard run build:studio
-      - name: Test merchant navigation and account access
-        run: pnpm --filter @pagosya/merchant-dashboard exec playwright test tests/merchant-workspace.spec.mjs tests/auth-account.spec.mjs tests/consumer-auth-account.spec.mjs --workers=1
+      # store-settings (34 tests), domain-shop and international-payments all
+      # pass and were not being run. merchant-workspace.spec.mjs has six
+      # failures at HEAD — its assertions describe the dashboard's previous
+      # layout, before workspace-design.css; see docs/CLEAN_CODE_PLAN.md. It
+      # stays listed rather than quietly dropped, so the signal is not lost.
+      - name: Test merchant navigation, settings, and account access
+        run: pnpm --filter @pagosya/merchant-dashboard exec playwright test tests/merchant-workspace.spec.mjs tests/auth-account.spec.mjs tests/consumer-auth-account.spec.mjs tests/store-settings.spec.mjs tests/domain-shop.spec.mjs tests/international-payments.spec.mjs --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -3,9 +3,15 @@ import { watch } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { applySecurityHeaders, hardenHttpServer } from "../../scripts/http-security.mjs";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+const variantEditorDir = path.dirname(createRequire(import.meta.url).resolve("@pagosya/variant-editor"));
+const variantEditorAssets = new Map([
+  ["/variant-editor.js", "variant-editor.js"],
+  ["/variant-editor.css", "variant-editor.css"],
+]);
 const PORT = process.env.PORT ?? 4323;
 // Full-page live reload is opt-in. Native file pickers and browser-control
 // helpers can touch local files while a merchant is choosing imagery; treating
@@ -20,6 +26,9 @@ const mascotAssets = new Map([
   ["/assets/yapi-wave.png", "yapi-wave.png"],
   ["/assets/yapi-walk-a.png", "yapi-walk-a.png"],
   ["/assets/yapi-walk-b.png", "yapi-walk-b.png"],
+  ["/assets/pagosya-mark.png", "pagosya-mark.png"],
+  ["/assets/pagosya-wordmark.png", "pagosya-wordmark.png"],
+  ["/assets/pagosya-wordmark-on-dark.png", "pagosya-wordmark-on-dark.png"],
 ]);
 const sharedAssets = new Map([
   ["/assets/logo.png", path.join(dirname, "..", "..", "assets", "brand", "logo.png")],
@@ -116,18 +125,17 @@ const server = createServer(async (req, res) => {
       res.end(css);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/product-options.js", "/src/product-options.css", "/src/workspace-design.css", "/src/shipment-panel.mjs"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
       res.end(content); return;
     }
-    if (["/src/store-editor/state.js", "/src/store-editor/commands.js", "/src/store-editor/persistence.js", "/src/store-editor/selection.js", "/src/store-editor/bootstrap.js"].includes(requestUrl.pathname)) {
-      const filename = requestUrl.pathname.slice("/src/store-editor/".length);
-      const source = await readFile(path.join(dirname, "src", "store-editor", filename), "utf8");
-      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
-      res.end(source);
-      return;
+    if (variantEditorAssets.has(requestUrl.pathname)) {
+      const filename = variantEditorAssets.get(requestUrl.pathname);
+      const content = await readFile(path.join(variantEditorDir, filename), "utf8");
+      res.writeHead(200, { "content-type": filename.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", "cache-control": "no-store" });
+      res.end(content); return;
     }
     if (mascotAssets.has(requestUrl.pathname)) {
       const image = await readFile(path.join(dirname, "assets", mascotAssets.get(requestUrl.pathname)));

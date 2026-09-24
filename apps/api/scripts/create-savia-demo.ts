@@ -7,11 +7,11 @@ import { resolve, dirname } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StoresService } from '../src/stores/stores.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
-import { SourceGenerationService } from '../src/stores/source-generation.service';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { SourceGenerationService } from '../src/storefront-source/source-generation.service';
 import { UploadsService } from '../src/uploads/uploads.service';
 import { normalizeProductVariants, totalVariantStock } from '../src/payment-links/product-variants';
-import type { SourceImageUse } from '../src/stores/source-setup';
+import type { SourceImageUse } from '../src/storefront-source/source-setup';
 
 async function main() {
   const root = resolve(__dirname, '../../..');

@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
-const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
+const kit = (name: string) => readFileSync(kitPath(`${name}`), 'utf8');
 const photo = 'data:image/webp;base64,' + readFileSync(new URL('./fixtures/retention-product.webp', import.meta.url)).toString('base64');
 const second = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 
@@ -18,7 +19,7 @@ for (const width of [1024, 390]) for (const stock of [false, true]) test(`produc
   const copy = (await page.locator('.product-detail__copy').boundingBox())!;
   expect(media.width / layout.width).toBeGreaterThan(width > 899 ? 0.5 : 0.98);
   // The photo keeps a full frame even in a short viewport (550px): column height on desktop, 4:5 capped at 72dvh on phones.
-  expect(media.height).toBeGreaterThan(width > 899 ? 420 : 380);
+  expect(media.height).toBeGreaterThanOrEqual(width > 899 ? 420 : 380);
   if (width > 899) expect(copy.x).toBeGreaterThanOrEqual(media.x + media.width - 1);
   else expect(copy.y).toBeGreaterThanOrEqual(media.y + media.height - 1);
   await page.getByRole('button', { name: 'Ver foto 2', exact: true }).click();

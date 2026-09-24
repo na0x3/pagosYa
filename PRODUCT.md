@@ -54,7 +54,7 @@ Local-first payment infrastructure for Bolivia. The mechanism a global processor
 
 ## Evidence on Hand
 
-- `README.md`, `HANDOFF.md`, `docs/SESSION_LOG.md` — real, current architecture notes and decision history; treat as authoritative product/technical fact, not marketing copy.
+- `README.md`, `HANDOFF.md`, `docs/history/SESSION_LOG.md` — real, current architecture notes and decision history; treat as authoritative product/technical fact, not marketing copy.
 - Real brand assets at `assets/brand/logo.png`, `apps/checkout/public/logo-mark.png`.
 - No press, testimonials, case studies, pricing, or licensing materials exist in this repo — do not fabricate any.
 - `PAGOSYA_WEB_ORIGIN` in `.env.example` references a separate marketing site (pagosYaWeb) that is **not** part of this repository — out of scope for this PRODUCT.md; do not invent its content.

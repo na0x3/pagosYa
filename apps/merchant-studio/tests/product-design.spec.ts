@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { kitPath } from '@pagosya/storefront-kit';
 
-const kit = (name: string) => readFileSync(new URL(`../../api/src/stores/source-kit/${name}`, import.meta.url), 'utf8');
+const kit = (name: string) => readFileSync(kitPath(`${name}`), 'utf8');
 const photo = 'data:image/webp;base64,' + readFileSync(new URL('./fixtures/retention-product.webp', import.meta.url)).toString('base64');
 
 for (const width of [1280, 390, 320]) test(`colorful product choices and quantity work at ${width}px`, async ({ page }) => {

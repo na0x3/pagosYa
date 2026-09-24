@@ -1,5 +1,5 @@
 /** Structured Bolivian delivery address + door pin for stores with shipping carriers.
- * Mirrors the standalone kit (apps/api/src/stores/source-kit/commerce.js), which ships its own copy.
+ * Mirrors the standalone kit (packages/storefront-kit/kit/commerce.js), which ships its own copy.
  * The map is optional: when Leaflet cannot load, the address and "Usar mi ubicación" still work. */
 export type ShippingDestination = { department: string; city: string; street: string; references?: string; lat: number; lng: number; recipientName: string; recipientPhone: string };
 

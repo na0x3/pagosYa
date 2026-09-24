@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, ValidateNested } from "class-validator";
-import { ShippingDestinationDto } from "../../shipping/bolivia-address";
+import { BOLIVIA_DEPARTMENTS, ShippingDestinationDto, type Department } from "../../shipping/bolivia-address";
 
 export class CartItemDto {
   @ApiProperty()
@@ -72,4 +72,10 @@ export class CartCheckoutDto {
   @ApiProperty({ required: false, type: () => ShippingDestinationDto })
   @IsOptional() @ValidateNested() @Type(() => ShippingDestinationDto)
   shippingDestination?: ShippingDestinationDto;
+
+  // A hosted design never sees the buyer's address, so it quotes carrier rates by department alone;
+  // the full destination arrives with the checkout from pagosYa's secure form.
+  @ApiProperty({ required: false, enum: BOLIVIA_DEPARTMENTS, description: "Department to quote carrier rates for when no full shippingDestination is sent." })
+  @IsOptional() @IsIn(BOLIVIA_DEPARTMENTS)
+  shippingDepartment?: Department;
 }

@@ -84,7 +84,7 @@ test('compiled component videos play in the hosted preview sandbox', async ({ pa
   await page.goto('/?source=1');
   await page.evaluate(async ({ content, path }) => {
     // Use the same asset substitution route as compiled React, with deterministic test code.
-    const { sourcePreviewDocument } = await import('/src/source-preview.ts');
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
     const snapshot = { schemaVersion: 1, brief: { businessType: 'Café', audience: 'Vecinos', primaryAction: 'Pedir', visualDirection: 'Video' }, files: [
       { path: 'index.html', content: '<html><body><script src="_compiled/home.js"></script></body></html>' },
       { path: '_compiled/home.js', content: `const video=document.createElement("video");video.src=${JSON.stringify(path)};video.controls=true;video.playsInline=true;document.body.append(video);` },

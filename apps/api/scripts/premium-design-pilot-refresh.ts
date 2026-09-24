@@ -7,7 +7,8 @@ import { createHash } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { UploadsService } from '../src/uploads/uploads.service';
-import { SourceProjectsService } from '../src/stores/source-projects.service';
+import { SourceProjectsService } from '../src/storefront-source/source-projects.service';
+import { kitPath } from '@pagosya/storefront-kit';
 async function main() {
   const folder = resolve(__dirname, '../../../examples/savia/pilot');
   const runs = JSON.parse(await readFile(resolve(folder, 'results.json'), 'utf8'));
@@ -36,7 +37,7 @@ async function main() {
       file.content = 'window.PAGOSYA_CONFIG = ' + JSON.stringify(config) + ';\n';
       for (const name of ['commerce.js', 'commerce-pages.css']) {
         const entry = files.find((f: any) => f.path === name);
-        entry.content = await readFile(resolve(__dirname, '../src/stores/source-kit', name), 'utf8');
+        entry.content = await readFile(kitPath(name), 'utf8');
       }
       const saved = await projects.save(run.merchantId, run.storeId, { revision: current.revision, label: 'Platform asset portability and current commerce runtime', brief: snapshot.brief, files });
       for (const entry of files) {

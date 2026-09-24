@@ -1,12 +1,71 @@
+import { collectPersonalFields, withoutPersonalFields } from './trusted-form';
+import { merchantDestination } from './source-links';
+import { fetchVerification, mountVerificationSeal } from './verification';
 import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './source-product-capabilities';
 import { createStoreFunnel } from './store-funnel';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
 import { privacy } from './privacy';
-import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation } from '../../merchant-studio/src/source-preview';
-import { createPreviewImageLoader } from '../../merchant-studio/src/source-preview-media';
+import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, hostedImageUrls, hostedCatalogImages } from '@pagosya/storefront-preview';
 import { API_BASE_URL, type Store } from './api';
 import { sourceVisitorId, rememberSourceVisit } from './source-attribution';
 import { storePartnerCode } from './partner-referral';
+
+type StoredCartItem = { id: string; variantId?: string; quantity: number; extras?: string[] };
+const CART_TTL = 30 * 24 * 60 * 60 * 1000;
+const cartId = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 64;
+
+// Copy only selections across the untrusted frame/storage boundary, never prices.
+function validatedCart(value: unknown, extrasKey: 'extras' | 'extraIds' = 'extras'): StoredCartItem[] | null {
+  if (!Array.isArray(value) || value.length > 100) return null;
+  const items: StoredCartItem[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || !cartId(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999) return null;
+    if (item.variantId !== undefined && !cartId(item.variantId)) return null;
+    const extras = item[extrasKey];
+    if (extras !== undefined && (!Array.isArray(extras) || extras.length > 100 || ![...extras].every(cartId))) return null;
+    items.push({ id: item.id, quantity: item.quantity, ...(item.variantId !== undefined ? { variantId: item.variantId } : {}), ...(extras !== undefined ? { extras: [...extras] } : {}) });
+  }
+  return items;
+}
+
+const previewCart = (items: StoredCartItem[]) => items.map(({ extras, ...item }) => ({ ...item, ...(extras !== undefined ? { extraIds: extras } : {}) }));
+
+function sourceCartStorage(slug: string) {
+  const key = `pagosya:cart:${slug}`, legacyKey = `pagosya:source-cart:${slug}`;
+  // Access the properties inside try blocks: browsers may throw on the getter.
+  const stores = [() => localStorage, () => sessionStorage];
+  const save = (items: StoredCartItem[]) => {
+    const value = JSON.stringify({ items, expiresAt: Date.now() + CART_TTL });
+    try {
+      localStorage.setItem(key, value);
+      try { sessionStorage.removeItem(key); } catch {}
+    } catch {
+      try { sessionStorage.setItem(key, value); } catch {}
+    }
+    try { sessionStorage.removeItem(legacyKey); } catch {}
+  };
+  const load = () => {
+    let latest: { items: StoredCartItem[]; expiresAt: number } | undefined;
+    for (const storage of stores) {
+      try {
+        const entry = JSON.parse(storage().getItem(key) || 'null');
+        const items = validatedCart(entry?.items);
+        if (items && Number.isFinite(entry.expiresAt) && entry.expiresAt > Date.now() && (!latest || entry.expiresAt >= latest.expiresAt)) latest = { items, expiresAt: entry.expiresAt };
+      } catch {}
+    }
+    if (latest) return latest.items;
+    try {
+      const legacy = validatedCart(JSON.parse(sessionStorage.getItem(legacyKey) || 'null'), 'extraIds');
+      if (legacy) { save(legacy); return legacy; }
+    } catch {}
+    return [];
+  };
+  const clear = () => {
+    for (const storage of stores) { try { storage().removeItem(key); } catch {} }
+    try { sessionStorage.removeItem(legacyKey); } catch {}
+  };
+  return { load, save, clear };
+}
 
 export async function mountPublishedSource(app: HTMLElement, slug: string, store: Store, onPayment: (secret: string) => Promise<void>, merchantPreview = false) {
   const visitorId = merchantPreview ? undefined : sourceVisitorId(slug);
@@ -31,16 +90,17 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const match = config.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
   const settings = match ? JSON.parse(match[1]) : {};
   config.content = `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...settings, demo: false, slug, data: store, apiBaseUrl: API_BASE_URL, checkoutOrigin: location.origin })};`;
-  const prepared = await createPreviewImageLoader(API_BASE_URL)(snapshot);
+  // Mount immediately: photos load lazily from the platform's upload directory, the one image source the sandbox allows.
+  const { snapshot: prepared, imageSource } = hostedImageUrls(API_BASE_URL)(snapshot);
   if (!document.querySelector('link[rel=canonical]')) document.title = store.storeName;
   const frame = document.createElement('iframe');
   frame.title = store.storeName; frame.setAttribute('sandbox', 'allow-scripts allow-forms'); frame.referrerPolicy = 'no-referrer';
-  // Carrier checkouts pin the buyer's door; the kit also asks this page for the position (action 'location').
-  frame.setAttribute('allow', 'geolocation');
   frame.style.cssText = 'display:block;width:100%;height:100dvh;border:0;background:white';
   app.replaceChildren(frame);
   document.body.classList.add('source-store-page');
-  const cartKey = `pagosya:source-cart:${slug}`;
+  // The seal is platform chrome outside the sandboxed design; owner previews do not show it.
+  if (!merchantPreview) void fetchVerification(slug).then(verification => { if (verification) mountVerificationSeal(verification); });
+  const cartStorage = sourceCartStorage(slug);
   const themeKey = `pagosya:source-theme:${slug}`;
   let recoveryToken: string | undefined;
   try { recoveryToken = sessionStorage.getItem(`pagosya:recovery:${slug}`) || undefined; } catch {}
@@ -50,19 +110,30 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (collectionSlug) initialQuery.set('c', collectionSlug);
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
-  try { navigation.cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch {}
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true }); };
+  navigation.cart = previewCart(cartStorage.load());
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, imageSources: [imageSource] }); };
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
   const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug === slug) funnel.track('visit'); };
   window.addEventListener('pagosya:privacy-change', consentChanged);
   const pending = new Set<string>();
+  const carrierRates = new Set<string>();
   const receive = async (event: MessageEvent) => {
     if (event.source !== frame.contentWindow || event.origin !== 'null' || !frame.isConnected) return;
+    const data = event.data;
+    if (data?.type === 'pagosya:cart-changed') {
+      const items = validatedCart(data.items);
+      if (items) { navigation.cart = previewCart(items); cartStorage.save(items); }
+      return;
+    }
+    // Validate the raw navigation payload before the shared preview helper can
+    // truncate/filter it. Omitted carts retain the last mutation in memory.
+    const navigatingCart = data?.type === 'pagosya:source-navigate' && data.cart !== undefined ? validatedCart(data.cart, 'extraIds') : undefined;
+    if (navigatingCart === null) return;
     const next = receivePreviewNavigation(event, frame, prepared);
     if (next) {
-      navigation = { ...next, theme: next.theme || navigation.theme };
-      try { sessionStorage.setItem(cartKey, JSON.stringify(next.cart || [])); } catch {}
+      navigation = { ...next, cart: navigatingCart ? previewCart(navigatingCart) : navigation.cart, theme: next.theme || navigation.theme };
+      if (navigatingCart) cartStorage.save(navigatingCart);
       try { if (navigation.theme) sessionStorage.setItem(themeKey, navigation.theme); } catch {}
       if (!merchantPreview) {
         const destination = new URL(location.href); const params = new URLSearchParams(next.query || '');
@@ -80,11 +151,10 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         destination.hash = next.fragment || '';
         window.history.replaceState(window.history.state, '', destination);
         if (privatePage) markPrivateStorePage();
-        else void refreshStoreSeo(slug, product || undefined, product ? undefined : next.page);
+        else void refreshStoreSeo(slug, product || undefined, product ? undefined : next.page, product ? undefined : collection || undefined);
       }
       show(next.page); return;
     }
-    const data = event.data;
     if (data?.type === 'pagosya:source-theme') {
       if (data.theme === 'light' || data.theme === 'dark') {
         navigation.theme = data.theme;
@@ -95,6 +165,16 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     if (data?.type === 'pagosya:funnel') { funnel.track(data.event, data.method); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
       try {
+        // Merchant-configured destinations (social links, WhatsApp, phone, email) open for the shopper.
+        const destination = merchantDestination(data.url, store);
+        if (destination) {
+          if (!destination.newTab) { location.assign(destination.href); return; }
+          // window.open with noopener always returns null, so a real anchor is the reliable new-tab path.
+          const link = document.createElement('a');
+          link.href = destination.href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+          link.click();
+          return;
+        }
         const url = new URL(data.url);
         const phone = String(store.contactPhone || '').replace(/\D/g, '');
         const product = store.items.find(item => url.pathname === `/s/${encodeURIComponent(slug)}/p/${encodeURIComponent(item.id)}`);
@@ -111,24 +191,23 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       } catch {}
       return;
     }
-    if (data?.type !== 'pagosya:hosted-request' || !Number.isSafeInteger(data.id) || !['checkout', 'lead', 'catalog', 'shipping', 'content', 'review', 'retention', 'location'].includes(data.action)) return;
+    if (data?.type !== 'pagosya:hosted-request' || !Number.isSafeInteger(data.id) || !['checkout', 'lead', 'catalog', 'shipping', 'content', 'review', 'retention'].includes(data.action)) return;
     const target = event.source as Window;
     const reply = (ok: boolean, body: unknown) => target.postMessage({ type: 'pagosya:hosted-response', id: data.id, result: { ok, body } }, '*');
     if (pending.has(data.action)) { reply(false, { message: 'Ya hay una solicitud en curso.' }); return; }
     pending.add(data.action);
     try {
-      if (data.action === 'catalog') { reply(true, store); return; }
-      if (data.action === 'location') {
-        // The opaque sandboxed frame cannot use geolocation itself; this page (geolocation=(self)) asks on its behalf.
-        // Only answer a buyer's click: once the position permission exists, merchant script could otherwise read it
-        // silently and send it out through `lead`. A click in the frame activates this page too; browsers that cannot
-        // report activation fail closed and the buyer marks the pin on the map instead.
-        if (!navigator.userActivation?.isActive) { reply(false, { message: 'Toca «Usar mi ubicación» para compartirla.' }); return; }
-        if (!navigator.geolocation) { reply(false, { message: 'Tu navegador no comparte la ubicación.' }); return; }
-        const position = await new Promise<GeolocationPosition | null>(resolve => navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: true, timeout: 10000 }));
-        reply(Boolean(position), position ? { lat: position.coords.latitude, lng: position.coords.longitude } : { message: 'No pudimos obtener tu ubicación.' }); return;
-      }
-      const body = data.body && typeof data.body === 'object' ? data.body : {};
+      if (data.action === 'catalog') { reply(true, hostedCatalogImages(API_BASE_URL).rewrite(store)); return; }
+      // Personal fields are never taken from the design's frame: pagosYa's own dialog collects them.
+      const frameBody = withoutPersonalFields(data.action, data.body && typeof data.body === 'object' ? data.body : {});
+      const interactive = ['checkout', 'lead', 'review'].includes(data.action) || (data.action === 'retention' && ['subscribe', 'carts', 'cards'].includes(String(frameBody.path)));
+      let previous: { values?: Record<string, string | boolean>; error?: string } | undefined;
+      for (let attempt = 0; ; attempt++) {
+      const personal = interactive ? await collectPersonalFields(data.action, frameBody, { storeName: store.storeName, creditsEnabled: (store as { creditsEnabled?: boolean }).creditsEnabled, carrierRate: typeof frameBody.shippingZoneId === 'string' && carrierRates.has(frameBody.shippingZoneId) }, previous) : {};
+      if (personal === null) { reply(false, { message: 'Cancelaste el formulario seguro.', cancelled: true }); return; }
+      const body: Record<string, any> = data.action === 'retention' && (frameBody.payload || Object.keys(personal).length) ? { ...frameBody, payload: { ...(frameBody.payload as object || {}), ...personal } } : { ...frameBody, ...personal };
+      // A rejected entry (wrong tracking code, invalid credit…) reopens the dialog with the shopper's values.
+      const retry = (message: string) => { if (!interactive || attempt >= 4) return false; previous = { error: message, values: Object.fromEntries(Object.entries(personal).filter(([, value]) => value !== undefined && value !== null).map(([key, value]) => [key, typeof value === 'boolean' ? value : String(value)])) }; return true; };
       if (data.action === 'retention') {
         const path = typeof body.path === 'string' ? body.path : '';
         const read = path === '' || /^(cards|carts)\/[a-f0-9]{64}$/.test(path);
@@ -136,27 +215,33 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
         if ((!read && !write) || (read && body.payload)) throw new Error('Solicitud no válida.');
         const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/retention${path ? '/' + path : ''}`, { method: read ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(read ? {} : { body: JSON.stringify(body.payload || {}) }), signal: AbortSignal.timeout(18000) });
         const json = await result.json();
+        if (!result.ok && result.status < 500 && retry(Array.isArray(json.message) ? json.message.join(' ') : json.message || 'Revisa los datos.')) continue;
         if (result.ok && path === 'carts' && /^[a-f0-9]{64}$/.test(json.token)) { recoveryToken = json.token; try { sessionStorage.setItem(`pagosya:recovery:${slug}`, recoveryToken!); } catch {} }
         reply(result.ok, json); return;
       }
       const checkout = data.action === 'checkout';
       const shipping = data.action === 'shipping', content = data.action === 'content', review = data.action === 'review';
-      const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
+      const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, shippingDepartment: body.shippingDepartment, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
         : review ? { trackingToken: body.trackingToken, productId: body.productId, displayName: body.displayName, rating: body.rating, body: body.body }
         : { items: [], name: body.name, email: body.email, phone: body.phone, message: body.message };
       const endpoint = checkout ? 'cart-checkout' : shipping ? 'shipping/quote' : review ? 'content/reviews' : content ? `content?locale=${encodeURIComponent(typeof body.locale === 'string' ? body.locale.slice(0, 8) : 'es')}` : 'leads';
       const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/${endpoint}`, { method: content ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(content ? {} : { body: JSON.stringify(payload) }), signal: AbortSignal.timeout(18000) });
       const json = await result.json();
+      if (!result.ok && result.status < 500 && retry(Array.isArray(json.message) ? json.message.join(' ') : json.message || 'Revisa los datos.')) continue;
       if (!result.ok) { reply(false, { message: json.message || 'No se pudo completar la solicitud.' }); return; }
+      // Learned from pagosYa's own quotes, never from the frame: which rates are courier rates that need a pin.
+      if (shipping && Array.isArray(json.shippingOptions)) for (const option of json.shippingOptions) if (option?.carrierId && typeof option.id === 'string') carrierRates.add(option.id);
       if (checkout) {
         if (typeof json.clientSecret !== 'string' || !json.clientSecret) throw new Error('No se pudo abrir el pago. Intenta de nuevo.');
         reply(true, {}); window.removeEventListener('message', receive);
-        try { sessionStorage.removeItem(cartKey); } catch {}
         document.body.classList.remove('source-store-page');
         window.history.replaceState({ ...(window.history.state || {}), pagosYaCheckout: { clientSecret: json.clientSecret } }, '', location.href);
         markPrivateStorePage();
         await onPayment(json.clientSecret);
+        cartStorage.clear();
       } else reply(true, shipping || content ? json : { submitted: true });
+      return;
+      }
     } catch (error) { reply(false, { message: error instanceof Error ? error.message : 'No se pudo completar la solicitud.' }); }
     finally { pending.delete(data.action); }
   };

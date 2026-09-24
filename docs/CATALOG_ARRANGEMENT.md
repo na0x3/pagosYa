@@ -1,6 +1,6 @@
 # How products are arranged in a store
 
-Status: implemented (2026-09-16), on `feature/independent-storefront-projects`, not yet merged to `main`. Plan: `docs/CATALOG_ARRANGEMENT_PLAN.md`; build ledger: `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/progress.md`; final verification: `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/task-8-report.md`. Follows `docs/PRODUCT_PAGE_KIT.md` (Part 1) and `docs/PRODUCT_HIGHLIGHTS.md` (Part 2).
+Status: implemented (2026-09-16), on `feature/independent-storefront-projects`, not yet merged to `main`. Plan: `docs/history/CATALOG_ARRANGEMENT_PLAN.md`; build ledger: `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/progress.md`; final verification: `.superpowers/sdd/CATALOG_ARRANGEMENT_PLAN/task-8-report.md`. Follows `docs/PRODUCT_PAGE_KIT.md` (Part 1) and `docs/PRODUCT_HIGHLIGHTS.md` (Part 2).
 
 The two migrations (`20260916120000_store_collections`, `20260916130000_store_catalog_layout`) were applied for the first time against a real local database with pre-existing data during Task 8 verification and applied cleanly; see the verification report for the exact commands and output.
 

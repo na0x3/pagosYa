@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 
-const root = fileURLToPath(new URL('../apps/api/src/stores/source-kit/creative-assets/', import.meta.url));
+const root = fileURLToPath(new URL('../packages/storefront-kit/kit/creative-assets/', import.meta.url));
 const fluent = '1ffb34c752ecf5d402f04cfb4b392c77f57c54bc';
 const subjects = [
   ['Sparkles', '2728', 'sparkles', 'shine magic celebration'],

@@ -38,9 +38,9 @@ Verification: API tests cover concept validation, metadata persistence, redesign
 
 The implementation comparison adds `tmp/source-design-contract-20260909` (intermediate single-call batch) and `tmp/source-design-planned-20260909` (separate planning, per-business folders). The benchmark supports `--cycle-concepts --repeats 3` to cover all selected indexes, `--open-direction` to remove preset styling from the fixture, and a `breakfast` case using the repository's existing AI breakfast illustration as disclosed synthetic input. It records source/generator digests, committed concepts, font and catalog measurements, functional results and design-check results separately. Use `--recheck` for saved sources without new model calls; a passing automated check still requires visual judgment.
 
-Final results and remaining defects: [September 9 validation](SOURCE_DESIGN_VALIDATION_2026-09-09.md). The last replay additionally follows every generated product-detail link, rather than testing only direct product URLs.
+Final results and remaining defects: [September 9 validation](history/SOURCE_DESIGN_VALIDATION_2026-09-09.md). The last replay additionally follows every generated product-detail link, rather than testing only direct product URLs.
 
-The follow-up [layout repair report](SOURCE_DESIGN_REPAIRS_2026-09-09.md) contains original/repaired comparisons. Studio can prepare corrections from both blocking failures and visual warnings, prioritizing failures and preserving the current direction; preparing the message does not submit a generation.
+The follow-up [layout repair report](history/SOURCE_DESIGN_REPAIRS_2026-09-09.md) contains original/repaired comparisons. Studio can prepare corrections from both blocking failures and visual warnings, prioritizing failures and preserving the current direction; preparing the message does not submit a generation.
 
 The BURGUERIA browser review exposed unequal intrinsic photo heights, an over-cropped portrait carousel, and horizontal flex applied to text with line breaks. Generation guidance now covers these concrete failure modes. The browser reports measured overflow dimensions and warns when a carousel using `cover` retains less than 45% of an image's area; this is an advisory crop check, not a judgment about the subject or artistic intent.
 
