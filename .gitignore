@@ -1,6 +1,8 @@
 node_modules/
 dist/
 build/
+# matcho-showcase keeps build-time source (its Vite plugin) in build/, not output.
+!apps/matcho-showcase/build/
 .env
 .env.local
 *.log
