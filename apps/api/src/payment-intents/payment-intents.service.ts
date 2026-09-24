@@ -22,6 +22,7 @@ import { selectedExtrasLabel } from "../payment-links/product-extras";
 import { dlocalChargesAllowed, type DlocalConfig } from "../config/configuration";
 import { FxRateUnavailableError, invoiceAmountFor, lineCurrencyFor, pricingForRail, resolveChargeAmount } from "../international/fx";
 import { LimitsService } from "../limits/limits.service";
+import { LimitsWarningService } from "../limits/limits-warning.service";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -131,6 +132,7 @@ export class PaymentIntentsService {
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
     private readonly config: ConfigService,
     private readonly limits: LimitsService,
+    private readonly limitsWarning: LimitsWarningService,
   ) {}
 
   async create(merchantId: string, livemode: boolean, dto: CreatePaymentIntentDto) {
@@ -453,6 +455,8 @@ export class PaymentIntentsService {
         crossedWarning: reservation.crossedWarning,
       };
     });
+
+    if (crossedWarning) void this.limitsWarning.notify(merchantId);
 
     const rail = this.railRegistry.get(railId);
     const idempotencyKey = `confirm_${intentId}`;
