@@ -22,6 +22,8 @@ async function idleCanvas(page: import('@playwright/test').Page, width = 1280) {
 }
 
 test('the face runs through its moods and never covers the invitation', async ({ page }) => {
+  // One full loop is twelve 2.6 s beats; the turn is the last of them.
+  test.setTimeout(60_000);
   await idleCanvas(page);
   const face = page.locator('[data-face]');
   await expect(face).toHaveAttribute('data-mood', 'idle');
@@ -42,7 +44,8 @@ test('the face runs through its moods and never covers the invitation', async ({
   await shot(page, 'face-smirk');
   await expect(face).toHaveAttribute('data-mood', 'breathe', { timeout: 4000 });
   // It is a loop, not a one-shot sequence: the full turn comes last.
-  await expect(face).toHaveAttribute('data-mood', 'spin', { timeout: 14000 });
+  // From the breath to the turn is seven beats (idle, spark, idle, glance, idle, smirk, spin).
+  await expect(face).toHaveAttribute('data-mood', 'spin', { timeout: 22_000 });
   await shot(page, 'face-spin');
   await expect(face).toHaveAttribute('data-mood', 'idle', { timeout: 4000 });
 });

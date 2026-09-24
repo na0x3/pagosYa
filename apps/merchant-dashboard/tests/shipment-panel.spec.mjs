@@ -69,24 +69,22 @@ async function openDashboard(page, stores, responseForRequest) {
     }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
-  await page.goto("/#dashboard-appearance");
-  await expect(page.locator("#storeNameInput")).toHaveValue(stores[0].name);
-  if (await page.locator("body").evaluate((body) => body.classList.contains("store-preview-fullscreen"))) {
-    await page.locator("#previewFullscreenToggle").evaluate((button) => button.click());
-  }
-  if (await page.locator("#storeNameInput").isHidden()) await page.locator("#storeOptionsTab").evaluate((button) => button.click());
-  await expect(page.locator("#storeNameInput")).toBeVisible();
+  // The sidebar picker is the dashboard's own signal that the store list has loaded.
+  await page.goto("/#dashboard-stores");
+  await expect(page.locator("#sidebarStorePicker")).toContainText(stores[0].name);
   return requests;
 }
 
 async function goToPayments(page) {
-  const button = page.locator('.dashboard-nav-button[data-dashboard-view="payments"]');
-  if (await button.isHidden()) {
-    await page.locator("#storeFullscreenNavHandle").click();
-  }
-  await button.click();
-  const toggle = page.locator("#paymentsSection .section-toggle");
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  // On desktop the sidebar is docked; only narrow screens tuck it behind the handle.
+  const handle = page.locator("#storeFullscreenNavHandle");
+  if (await handle.isVisible() && !(await page.locator(".dashboard-sidebar").evaluate((element) => element.classList.contains("is-store-nav-pinned")))) await handle.click();
+  const link = page.locator('.dashboard-nav-button[data-dashboard-view="payments"]');
+  // The link sits inside a <details> nav group that starts closed.
+  await link.evaluate((element) => element.closest("details.dashboard-nav-group")?.setAttribute("open", ""));
+  await link.click();
+  // Payments owns its page, so its block opens without a click.
+  await expect(page.locator("#paymentsSectionBody")).toBeVisible();
 }
 
 // Task 14 shipped src/shipment-panel.mjs, lazily imported from index.html when
