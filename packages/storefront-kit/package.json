@@ -13,7 +13,7 @@
     "./kit/*": "./kit/*"
   },
   "scripts": {
-    "build": "node kit/build.mjs",
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node kit/check-runtimes.mjs && tsc -p tsconfig.json"
   },
