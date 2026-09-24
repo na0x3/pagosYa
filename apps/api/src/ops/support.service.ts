@@ -240,6 +240,9 @@ export class SupportService {
           email: true,
           status: true,
           settlementMode: true,
+          level: true,
+          monthlyLimitOverride: true,
+          perPaymentLimitOverride: true,
           createdAt: true,
           updatedAt: true,
           users: {

@@ -97,6 +97,8 @@
   tbody tr:hover td { background: var(--pg-bg); }
   code { font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.75rem; color: var(--pg-text-muted); }
   .actions-cell { display: flex; gap: 6px; }
+  .kyc-photos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kyc-photo { width: 56px; height: 56px; object-fit: cover; border: 1.5px solid var(--pg-border); border-radius: 6px; background: var(--pg-bg); color: var(--pg-text-faint); font-size: 0.625rem; text-align: center; }
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
   .badge-exhausted { background: var(--pg-error-soft); color: var(--pg-error); }
@@ -443,6 +445,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <a href="#incidencias">Incidencias</a>
     <a href="#dominios">Dominios</a>
     <a href="#pagos-internacionales">Pagos internacionales</a>
+    <a href="#limites">Límites</a>
     <a href="#auditoria">Auditoría</a>
   </nav>
 
@@ -518,10 +521,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <thead>
           <tr>
             <th>Comercio</th>
+            <th>Nivel</th>
             <th>Liquidación</th>
             <th>Razón social / NIT</th>
             <th>Representante legal</th>
             <th>Cuenta de desembolso</th>
+            <th>Fotos</th>
             <th>Enviado</th>
             <th>Acciones</th>
           </tr>
@@ -611,6 +616,52 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
   </section>
 
+  <section class="block" id="limites">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Límites</h2>
+        <p class="muted">Ajusta los límites por nivel, el tipo de cambio y revisa qué comercios están cerca de su tope mensual. Solo un administrador puede guardar cambios.</p>
+      </div>
+      <div id="notConnected6" class="empty-state">Conecta para consultar los límites.</div>
+      <div id="limitsWorkspace" style="display:none">
+        <h3>Políticas por nivel</h3>
+        <div class="table-wrap"><table id="policiesTable">
+          <thead>
+            <tr>
+              <th>Nivel</th>
+              <th>Nombre</th>
+              <th>En vivo</th>
+              <th>Límite mensual (Bs)</th>
+              <th>Límite por pago (Bs)</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="policiesRows"></tbody>
+        </table></div>
+
+        <h3 style="margin-top:24px">Tipo de cambio</h3>
+        <div class="panel-row">
+          <div><label for="usdRate">USD → BOB</label><input id="usdRate" type="number" step="0.01" min="0"></div>
+          <button class="primary" id="saveRate" type="button">Guardar</button>
+        </div>
+
+        <h3 style="margin-top:24px">Cerca del límite</h3>
+        <div id="nearLimitEmpty" class="empty-state" style="display:none">No hay comercios cerca de su límite.</div>
+        <div class="table-wrap"><table id="nearLimitTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Comercio</th>
+              <th>Nivel</th>
+              <th>Usado / Límite (Bs)</th>
+              <th>Porcentaje</th>
+            </tr>
+          </thead>
+          <tbody id="nearLimitRows"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
   <section class="block" id="auditoria">
     <div class="panel">
       <div class="section-head">
@@ -649,6 +700,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   const auditEmptyEl = document.getElementById("auditEmpty");
   const auditTableEl = document.getElementById("auditTable");
   const auditRowsEl = document.getElementById("auditRows");
+  const limitsWorkspaceEl = document.getElementById("limitsWorkspace");
+  const policiesRowsEl = document.getElementById("policiesRows");
+  const usdRateEl = document.getElementById("usdRate");
+  const nearLimitEmptyEl = document.getElementById("nearLimitEmpty");
+  const nearLimitTableEl = document.getElementById("nearLimitTable");
+  const nearLimitRowsEl = document.getElementById("nearLimitRows");
   const domainEmptyEl = document.getElementById("domainEmpty");
   const domainTableEl = document.getElementById("domainTable");
   const domainRowsEl = document.getElementById("domainRows");
@@ -765,6 +822,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <div class="fact-grid">
         <div class="fact"><span>Cuenta</span><strong>${statusBadge(merchant.status)}</strong></div>
         <div class="fact"><span>Liquidación</span><strong>${esc(merchant.settlementMode)}</strong></div>
+        <div class="fact"><span>Nivel</span><strong>Nivel ${esc(merchant.level ?? "—")}</strong></div>
         <div class="fact"><span>Desde</span><strong>${dateTime(merchant.createdAt)}</strong></div>
         <div class="fact"><span>Motivo</span><strong>${esc(caseCategoryLabels[supportCase.category] || supportCase.category)}</strong></div>
       </div>
@@ -778,6 +836,25 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         ${kyc ? `<div class="compact-list"><div class="compact-row"><strong>${esc(kyc.legalName)}</strong><span>NIT ${esc(maskedValue(kyc.taxId))}<br>Cuenta ${esc(maskedValue(kyc.payoutBankAccount))} · USD ${esc(maskedValue(kyc.payoutUsdBankAccount))}</span><span>${statusBadge(kyc.status)}</span><span>${dateTime(kyc.createdAt)}</span></div></div>` : `<p class="muted">KYC aún no presentado.</p>`}
         ${compactRows(merchant.payouts, (payout) => `<div class="compact-row"><strong>Desembolso <code>${esc(payout.id)}</code></strong><span>${money(payout.amount, payout.currency)} · ${esc(maskedValue(payout.bankAccount))}</span><span>${statusBadge(payout.status)}</span><span>${esc(payout.failureReason || dateTime(payout.createdAt))}</span></div>`, "No hay desembolsos recientes.")}
         ${compactRows(merchant.invoices, (invoice) => `<div class="compact-row"><strong>Factura <code>${esc(invoice.id)}</code></strong><span>${money(invoice.amount, invoice.currency)}</span><span>${statusBadge(invoice.status)}</span><span>${esc(invoice.failureReason || dateTime(invoice.createdAt))}</span></div>`, "No hay facturas recientes.")}
+      </section>
+      <section class="dossier-section">
+        <h4>Límites de pago</h4>
+        <p class="muted">Nivel ${esc(merchant.level ?? "—")}${merchant.monthlyLimitOverride != null || merchant.perPaymentLimitOverride != null ? " · usa límites personalizados" : " · usa los límites del nivel"}.</p>
+        <form id="merchantLimitsForm" data-merchant="${esc(merchant.id)}">
+          <div class="field-row">
+            <div><label for="merchantLevelSelect">Nivel</label>
+              <select id="merchantLevelSelect">${[0, 1, 2, 3].map((lvl) => `<option value="${lvl}" ${merchant.level === lvl ? "selected" : ""}>${lvl}</option>`).join("")}</select>
+            </div>
+            <div><label for="merchantMonthlyOverride">Límite mensual (Bs)</label>
+              <input id="merchantMonthlyOverride" type="number" step="0.01" min="0" value="${merchant.monthlyLimitOverride != null ? esc(merchant.monthlyLimitOverride / 100) : ""}" placeholder="Usar el del nivel"></div>
+          </div>
+          <div class="field-row">
+            <div><label for="merchantPerPaymentOverride">Límite por pago (Bs)</label>
+              <input id="merchantPerPaymentOverride" type="number" step="0.01" min="0" value="${merchant.perPaymentLimitOverride != null ? esc(merchant.perPaymentLimitOverride / 100) : ""}" placeholder="Usar el del nivel"></div>
+            <div></div>
+          </div>
+          <div class="action-buttons"><button class="primary" type="submit">Guardar límites</button></div>
+        </form>
       </section>
       <div class="support-action-zone">
         <h4>Acciones de acceso</h4><p class="muted">No vemos contraseñas ni tokens. Cada acción requiere una razón y queda auditada.</p>
@@ -815,20 +892,47 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         (s) => `
       <tr data-id="${esc(s.id)}">
         <td><strong>${esc(s.merchant.name)}</strong><br><span class="muted">${esc(s.merchant.email)}</span></td>
+        <td>Nivel solicitado: ${esc(s.targetLevel)}<br><span class="muted">Nivel actual: ${esc(s.merchant.level)}</span></td>
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
-        <td>${esc(s.legalName)}<br><span class="muted">${esc(s.taxId)}</span></td>
-        <td>${esc(s.legalRepName)}<br><span class="muted">${esc(s.legalRepDocumentId)}</span></td>
+        <td>${esc(s.legalName)}${s.taxId ? `<br><span class="muted">NIT ${esc(s.taxId)}</span>` : ""}</td>
+        <td>${s.legalRepName ? `${esc(s.legalRepName)}${s.legalRepDocumentId ? `<br><span class="muted">${esc(s.legalRepDocumentId)}</span>` : ""}` : `<span class="muted">—</span>`}</td>
         <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
+        <td>
+          <div class="kyc-photos">
+            ${s.ciFrontDocId ? `<img class="kyc-photo" alt="CI frente" data-submission="${esc(s.id)}" data-slot="CI_FRONT">` : ""}
+            ${s.ciBackDocId ? `<img class="kyc-photo" alt="CI dorso" data-submission="${esc(s.id)}" data-slot="CI_BACK">` : ""}
+            ${s.selfieDocId ? `<img class="kyc-photo" alt="Selfie" data-submission="${esc(s.id)}" data-slot="SELFIE">` : ""}
+          </div>
+        </td>
         <td>${esc(new Date(s.createdAt).toLocaleString("es-BO"))}</td>
         <td>
           <div class="actions-cell">
-            <button class="approve" data-action="approve">Aprobar</button>
+            <button class="approve" data-action="approve">Aprobar nivel ${esc(s.targetLevel)}</button>
             <button class="reject" data-action="reject">Rechazar</button>
           </div>
         </td>
       </tr>`,
       )
       .join("");
+    loadKycImages(rowsEl);
+  }
+
+  async function loadKycImages(root) {
+    for (const img of root.querySelectorAll("img.kyc-photo")) {
+      try {
+        const res = await fetch(
+          apiOriginEl.value.replace(/\/$/, "") + `/v1/merchants/kyc/${encodeURIComponent(img.dataset.submission)}/documents/${img.dataset.slot}`,
+          { headers: { authorization: "Bearer " + opsTokenEl.value } },
+        );
+        if (!res.ok) {
+          img.alt = "No disponible";
+          continue;
+        }
+        img.src = URL.createObjectURL(await res.blob());
+      } catch {
+        img.alt = "No disponible";
+      }
+    }
   }
 
   async function refreshFailures() {
@@ -1081,6 +1185,92 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       .join("");
   }
 
+  function policyRow(p) {
+    const monthlyBs = p.monthlyLimit == null ? "" : p.monthlyLimit / 100;
+    const perPaymentBs = p.perPaymentLimit == null ? "" : p.perPaymentLimit / 100;
+    return `
+      <tr data-level="${esc(p.level)}">
+        <td>${esc(p.level)}</td>
+        <td>${esc(p.name)}</td>
+        <td><input type="checkbox" class="policy-live" ${p.liveEnabled ? "checked" : ""}></td>
+        <td><input type="number" class="policy-monthly" step="0.01" min="0" value="${esc(monthlyBs)}" placeholder="Sin límite"></td>
+        <td><input type="number" class="policy-per-payment" step="0.01" min="0" value="${esc(perPaymentBs)}" placeholder="Sin límite"></td>
+        <td><button type="button" class="primary policy-save">Guardar</button></td>
+      </tr>`;
+  }
+
+  function nearLimitRow(row) {
+    return `
+      <tr>
+        <td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.email)}</span></td>
+        <td>${esc(row.level)}</td>
+        <td>${esc((row.used / 100).toFixed(2))} / ${esc((row.monthlyLimit / 100).toFixed(2))}</td>
+        <td>${esc(row.percent)}%</td>
+      </tr>`;
+  }
+
+  async function refreshLimits() {
+    const [policies, settings, nearLimit] = await Promise.all([
+      api("/internal/limits/policies"),
+      api("/internal/limits/settings"),
+      api("/internal/limits/near_limit"),
+    ]);
+    policiesRowsEl.innerHTML = policies.map(policyRow).join("");
+    usdRateEl.value = settings.usdToBobRate ?? "";
+    if (nearLimit.length === 0) {
+      nearLimitTableEl.style.display = "none";
+      nearLimitEmptyEl.style.display = "block";
+    } else {
+      nearLimitEmptyEl.style.display = "none";
+      nearLimitTableEl.style.display = "table";
+      nearLimitRowsEl.innerHTML = nearLimit.map(nearLimitRow).join("");
+    }
+  }
+
+  policiesRowsEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("button.policy-save");
+    if (!button) return;
+    const row = button.closest("tr");
+    const level = row.dataset.level;
+    const monthlyRaw = row.querySelector(".policy-monthly").value.trim();
+    const perPaymentRaw = row.querySelector(".policy-per-payment").value.trim();
+    const liveEnabled = row.querySelector(".policy-live").checked;
+    errorEl.textContent = "";
+    button.disabled = true;
+    try {
+      await api(`/internal/limits/policies/${encodeURIComponent(level)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          monthlyLimit: monthlyRaw === "" ? null : Math.round(Number(monthlyRaw) * 100),
+          perPaymentLimit: perPaymentRaw === "" ? null : Math.round(Number(perPaymentRaw) * 100),
+          liveEnabled,
+        }),
+      });
+      await refreshLimits();
+    } catch (err) {
+      errorEl.textContent = "No pudimos guardar el límite: " + err.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("saveRate").addEventListener("click", async () => {
+    const button = document.getElementById("saveRate");
+    errorEl.textContent = "";
+    button.disabled = true;
+    try {
+      await api("/internal/limits/settings", {
+        method: "PATCH",
+        body: JSON.stringify({ usdToBobRate: Number(usdRateEl.value) }),
+      });
+      await refreshLimits();
+    } catch (err) {
+      errorEl.textContent = "No pudimos guardar el tipo de cambio: " + err.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   async function refresh() {
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
@@ -1092,13 +1282,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     document.getElementById("notConnected3").style.display = "none";
     document.getElementById("notConnected4").style.display = "none";
     document.getElementById("notConnected5").style.display = "none";
+    document.getElementById("notConnected6").style.display = "none";
     supportNotConnectedEl.style.display = "none";
     supportWorkspaceEl.style.display = "grid";
+    limitsWorkspaceEl.style.display = "block";
 
     try {
       const me = await api("/internal/ops_users/me");
       whoamiEl.textContent = `Sesión de ${me.name} <${me.email}> · ${me.role}`;
-      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments()]);
+      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits()]);
     } catch (err) {
       errorEl.textContent = "No pudimos actualizar la consola: " + err.message;
       whoamiEl.textContent = "";
@@ -1117,6 +1309,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       intlDossierEl.style.display = "none";
       supportWorkspaceEl.style.display = "none";
       supportNotConnectedEl.style.display = "grid";
+      limitsWorkspaceEl.style.display = "none";
+      nearLimitTableEl.style.display = "none";
+      nearLimitEmptyEl.style.display = "none";
+      document.getElementById("notConnected6").style.display = "grid";
     }
   }
 
@@ -1205,6 +1401,32 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       await refreshAuditLog();
     } catch (err) {
       errorEl.textContent = "No pudimos guardar la nota: " + err.message;
+      button.disabled = false;
+    }
+  });
+
+  supportDossierEl.addEventListener("submit", async (event) => {
+    if (event.target.id !== "merchantLimitsForm") return;
+    event.preventDefault();
+    const form = event.target;
+    const button = form.querySelector("button[type=submit]");
+    const monthlyRaw = document.getElementById("merchantMonthlyOverride").value.trim();
+    const perPaymentRaw = document.getElementById("merchantPerPaymentOverride").value.trim();
+    errorEl.textContent = "";
+    button.disabled = true;
+    try {
+      await api(`/internal/merchants/${encodeURIComponent(form.dataset.merchant)}/limits`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          level: Number(document.getElementById("merchantLevelSelect").value),
+          monthlyLimitOverride: monthlyRaw === "" ? null : Math.round(Number(monthlyRaw) * 100),
+          perPaymentLimitOverride: perPaymentRaw === "" ? null : Math.round(Number(perPaymentRaw) * 100),
+        }),
+      });
+      await openSupportCase(selectedCase.id, selectedMerchant.id);
+      await refreshAuditLog();
+    } catch (err) {
+      errorEl.textContent = "No pudimos guardar los límites: " + err.message;
       button.disabled = false;
     }
   });
