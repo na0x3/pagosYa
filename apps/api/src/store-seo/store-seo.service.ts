@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from "../stores/public-stores.service";
 import { publicImage, seoEscape as e, seoHead, seoPrice, sourcePageUrl, sourceSeoCopy } from './store-seo';
+import { analyticsHead } from './store-analytics';
 @Injectable()
 export class StoreSeoService {
   constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly config: ConfigService) {}
@@ -63,7 +64,12 @@ export class StoreSeoService {
     } else graph.push({ '@type': (!sourcePage || isCollectionRoute) ? 'CollectionPage' : 'WebPage', '@id': canonical, name: title, url: canonical, isPartOf: { '@id': `${c.home}#website` }, ...((!sourcePage || isCollectionRoute) ? { mainEntity: { '@type': 'ItemList', itemListElement: catalogItems.map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: p.name, url: c.productUrl(p.id) })) } } : {}) });
     const productHtml = (p: typeof data.items[number]) => `<article><h2><a href="${e(c.productUrl(p.id))}">${e(p.name)}</a></h2>${p.imageUrls[0] ? `<img src="${e(publicImage(p.imageUrls[0], this.apiBase()))}" alt="${e(p.name)}" width="320" height="320" loading="lazy">` : ''}<p>${e(p.description)}</p><p>${e(p.currency)} ${(seoPrice(p) / 100).toFixed(2)}${p.stock === 0 ? ' · Agotado' : ''}</p></article>`;
     const body = `<main data-pagosya-seo><header><a href="${e(c.home)}">${e(c.store.name)}</a></header><h1>${e(product?.name || page?.blocks.find(b => b.tag === 'h1')?.text || title)}</h1><p>${e(description)}</p>${product ? productHtml(product) : `${(page?.blocks || []).filter(b => b.tag !== 'h1').map(b => `<${b.tag === 'li' ? 'p' : b.tag}>${e(b.text)}</${b.tag === 'li' ? 'p' : b.tag}>`).join('')}${(!sourcePage || isCollectionRoute) ? `<section aria-label="Productos">${catalogItems.map(productHtml).join('')}</section>` : ''}`}<nav aria-label="Páginas de la tienda">${c.pages.filter(p => p.path !== (sourcePage || 'index.html')).map(p => `<a href="${e(c.pageUrl(p.path))}">${e(p.title || p.path)}</a>`).join(' ')}</nav></main>`;
-    return { title, canonical, noindex: Boolean(!product && page?.noindex), head: seoHead({ title, description, canonical, image, graph, kind: product ? 'product' : 'website', noindex: !product && page?.noindex }), body, home: c.home };
+    // The merchant's measurement tags ride along with the SEO head so they reach every
+    // storefront page — classic and source-generated, custom domain or /s/:slug — through
+    // the one renderer in apps/checkout/storefront-seo.mjs. That renderer drops them again
+    // on URLs carrying private keys, so a recovery or checkout link never hands its query
+    // string to Google or Meta.
+    return { title, canonical, noindex: Boolean(!product && page?.noindex), head: seoHead({ title, description, canonical, image, graph, kind: product ? 'product' : 'website', noindex: !product && page?.noindex }) + analyticsHead(c.store), body, home: c.home };
   }
   async map(slug: string) {
     const c = await this.context(slug);

@@ -638,6 +638,30 @@ export class CreateStoreDto {
   @IsBoolean()
   publicVisibility?: boolean;
 
+  // Measurement IDs, validated here so a merchant who pastes the wrong thing is told so
+  // instead of silently going unmeasured. An empty string clears the field. The same
+  // patterns guard the injection site in store-analytics.ts — this layer is for the
+  // message, that one is the security boundary.
+  @ApiPropertyOptional({ description: "ID de medición de Google Analytics 4, con el formato G-XXXXXXX." })
+  @IsOptional()
+  @Matches(/^$|^G-[A-Z0-9]{4,20}$/i, { message: "El ID de Google Analytics debe verse como G-ABC1234567." })
+  analyticsGa4Id?: string;
+
+  @ApiPropertyOptional({ description: "ID del contenedor de Google Tag Manager, con el formato GTM-XXXXXXX." })
+  @IsOptional()
+  @Matches(/^$|^GTM-[A-Z0-9]{4,20}$/i, { message: "El ID de Google Tag Manager debe verse como GTM-ABCD123." })
+  analyticsGtmId?: string;
+
+  @ApiPropertyOptional({ description: "ID del pixel de Meta: sólo dígitos." })
+  @IsOptional()
+  @Matches(/^$|^[0-9]{8,20}$/, { message: "El pixel de Meta son sólo números, entre 8 y 20 dígitos." })
+  analyticsMetaPixelId?: string;
+
+  @ApiPropertyOptional({ description: "ID del pixel de TikTok." })
+  @IsOptional()
+  @Matches(/^$|^[A-Z0-9]{10,30}$/i, { message: "El pixel de TikTok son entre 10 y 30 letras o números." })
+  analyticsTiktokPixelId?: string;
+
   @ApiPropertyOptional({ description: "Shopper policies as plain text; empty or null removes one.", type: () => StorePoliciesDto })
   @IsOptional()
   @ValidateNested()

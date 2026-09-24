@@ -221,3 +221,20 @@ test('coalesces crawler text payloads as reusable bodies', async t => {
   assert.equal(results[0].body, '<urlset/>');
   assert.equal(results[1].body, '<urlset/>');
 });
+
+test('keeps the merchant analytics tags on public pages and drops them on links carrying a secret', () => {
+  const document = {
+    head: '<title>Café</title><script async data-pagosya-analytics="ga4-loader" src="https://www.googletagmanager.com/gtag/js?id=G-ABC1234567"></script><script data-pagosya-analytics="ga4">gtag(\'config\',\'G-ABC1234567\');</script>',
+    body: '<h1>Café</h1>',
+  };
+  const shell = '<head><title>Checkout</title></head><div id="app"></div>';
+  const publicPage = applySeoDocument(shell, document, false, false);
+  assert.match(publicPage, /G-ABC1234567/);
+  // A page the merchant excluded from search still gets measured.
+  assert.match(applySeoDocument(shell, document, true, false), /G-ABC1234567/);
+  // A recovery/checkout URL must not report its query string to any provider.
+  const privatePage = applySeoDocument(shell, document, true, true);
+  assert.doesNotMatch(privatePage, /G-ABC1234567/);
+  assert.doesNotMatch(privatePage, /data-pagosya-analytics/);
+  assert.match(privatePage, /<h1>Café<\/h1>/);
+});
