@@ -19612,9 +19612,14 @@
       const dashboardStatusLabels = { NOT_SUBMITTED: "Pendiente de envío", NOT_CONFIGURED: "Sin configurar" };
       kycBadge.textContent = paymentStore ? dashboardStatusLabels[kyc.status] || kyc.status : "No requerido para esta tienda";
       kycBadge.className = "badge " + (paymentStore ? kyc.status : "");
-      document.getElementById("kycSection").style.display = !paymentStore || kyc.status !== "APPROVED" ? "block" : "none";
+      // The level card (usage, 80%/100% banners, upgrade actions) must stay
+      // visible whenever we have limits data, even once KYC is APPROVED — an
+      // approved level 1 merchant still needs it to reach level 2, and a
+      // level 2 merchant still needs the level 3 request button.
+      document.getElementById("kycSection").style.display = "block";
       document.getElementById("kycModeNotice").hidden = paymentStore;
-      document.getElementById("kycForm").hidden = !paymentStore;
+      const canApplyForNextKycLevel = paymentStore && kyc.status !== "PENDING_REVIEW" && (!limits || limits.level < 2);
+      document.getElementById("kycForm").hidden = !canApplyForNextKycLevel;
       document.getElementById("liveKeysSection").style.display = paymentStore ? "block" : "none";
       currentKyc = kyc;
       renderTermsPrompt(terms);

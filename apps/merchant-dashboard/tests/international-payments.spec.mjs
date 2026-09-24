@@ -57,6 +57,7 @@ async function openOverview(page, stores = [store("store_1", "Primera")]) {
     }
     let body = {};
     if (path === "/stores") body = stores;
+    else if (path.startsWith("/dashboard/limits")) body = null;
     else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
     else if (path === "/merchants/kyc") body = { status: "APPROVED" };
     else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };

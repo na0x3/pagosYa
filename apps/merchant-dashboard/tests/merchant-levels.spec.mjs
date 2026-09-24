@@ -41,7 +41,7 @@ const store = {
   showLowStockToCustomers: false,
 };
 
-async function openCompliance(page, limits, posted = []) {
+async function openCompliance(page, limits, posted = [], { kycStatus = "NOT_SUBMITTED", expectFormVisible = true } = {}) {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
@@ -81,7 +81,7 @@ async function openCompliance(page, limits, posted = []) {
     let body = {};
     if (path === "/stores") body = [store];
     else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
-    else if (path === "/merchants/kyc") body = { status: "NOT_SUBMITTED" };
+    else if (path === "/merchants/kyc") body = { status: kycStatus };
     else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
     else if (path === "/merchants/balance") body = { payableBalance: 0, currency: "BOB", balances: [] };
     else if (path === "/merchants/international_payments") body = { status: "OFF", settlementMode: "AGGREGATOR", feeBps: 590, fxRateAvailable: true, usdPayoutAccountOnFile: false, note: null };
@@ -103,11 +103,11 @@ async function openCompliance(page, limits, posted = []) {
   });
   await page.goto("/#dashboard-compliance");
   await expect(page.locator("#app")).toBeVisible();
-  const kycForm = page.locator("#kycForm");
-  if (!(await kycForm.isVisible())) {
-    await page.getByRole("button", { name: "Mostrar Verificación (KYC)" }).click();
-  }
-  await expect(kycForm).toBeVisible();
+  // The compliance section itself is a collapsible panel independent of KYC
+  // status; expand it regardless of whether the form ends up visible.
+  const complianceToggle = page.getByRole("button", { name: "Mostrar Verificación (KYC)" });
+  if (await complianceToggle.count()) await complianceToggle.click();
+  if (expectFormVisible) await expect(page.locator("#kycForm")).toBeVisible();
 }
 
 const usage = (over = {}) => ({ level: 1, levelName: "Persona", liveEnabled: true, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, used: 620_000, month: "2026-09", resetsAt: "2026-10-01T04:00:00.000Z", ...over });
@@ -150,4 +150,18 @@ test("asks for NIT when applying for level 2", async ({ page }) => {
   await expect(page.locator("#kycTargetLevel")).toHaveValue("2");
   await expect(page.locator("#kycBusinessFields")).toBeVisible();
   await expect(page.locator("#kycForm [name=taxId]")).toHaveAttribute("required", "");
+});
+
+test("an approved level 1 merchant still sees the level card and can apply for level 2", async ({ page }) => {
+  await openCompliance(page, usage(), [], { kycStatus: "APPROVED" });
+  await expect(page.locator("#levelCard")).toBeVisible();
+  await expect(page.locator("#kycForm")).toBeVisible();
+  await expect(page.locator("#kycTargetLevel")).toHaveValue("2");
+});
+
+test("an approved level 2 merchant sees the card and the level 3 button but not the form", async ({ page }) => {
+  await openCompliance(page, usage({ level: 2, levelName: "Negocio" }), [], { kycStatus: "APPROVED", expectFormVisible: false });
+  await expect(page.locator("#levelCard")).toBeVisible();
+  await expect(page.locator("#level3RequestButton")).toBeVisible();
+  await expect(page.locator("#kycForm")).toBeHidden();
 });

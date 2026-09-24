@@ -54,6 +54,7 @@ async function openCompliance(page, termsHandler) {
     if (path.startsWith("/dashboard/terms")) return termsHandler(route);
     let body = {};
     if (path === "/stores") body = [store];
+    else if (path.startsWith("/dashboard/limits")) body = null;
     else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
     else if (path === "/merchants/kyc") body = { status: "NOT_SUBMITTED" };
     else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
