@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="/assets/pagosya-mark.png">
 <title>pagosYa - Panel de comercio</title>
-<link rel="stylesheet" href="/journey.css">
 <meta name="description" content="Administra tu tienda, catálogo, cobros, desembolsos y facturación local desde pagosYa.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" id="dashboardThemeColor" content="#0a0a0a">
@@ -405,80 +404,6 @@
     </section>
 
     <section class="gamification-board" id="gamificationSection" data-dashboard-page="progress" aria-labelledby="adventureMapTitle">
-      <section class="animal-adventure" id="animalAdventure" aria-labelledby="adventureMapTitle">
-        <div class="adventure-parchment">
-          <header class="adventure-map-header">
-            <div class="adventure-title-lockup">
-              <span class="adventure-kicker">La gran ruta animal</span>
-              <h2 id="adventureMapTitle">Aventura del tesoro</h2>
-              <p>Convierte cada venta y cada visita en pasos por el mapa.</p>
-            </div>
-            <div class="adventure-xp-status" aria-live="polite">
-              <div class="adventure-xp-heading"><span id="adventureCurrentLevel">Nivel 1 — Perdiz</span><strong id="adventureXpValue">0 / 100 XP</strong></div>
-              <div class="adventure-xp-track" id="adventureXpTrack" role="progressbar" aria-label="Progreso de experiencia del nivel actual" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="adventureXpFill"></span></div>
-              <div class="adventure-xp-meta"><span id="adventureXpRemaining">100 XP para Capibara</span><span id="adventureOverallProgress">0% de la aventura</span></div>
-            </div>
-          </header>
-
-          <div class="adventure-map-stage" id="adventureMapStage">
-            <svg class="adventure-terrain" viewBox="0 0 1200 720" preserveAspectRatio="none" aria-hidden="true">
-              <path class="adventure-water" d="M-30 350 C140 280 180 80 355 122 C475 151 448 292 585 307 C734 323 782 217 907 242 C1050 270 1046 453 1230 420 L1230 775 L-30 775Z"/>
-              <path class="adventure-water-line" d="M-20 370 C150 300 198 105 354 142 C470 169 452 310 586 327 C730 345 800 239 910 264 C1040 293 1060 475 1220 441"/>
-              <path class="adventure-island island-a" d="M58 422 C122 366 210 390 253 460 C288 520 246 605 166 626 C78 650 21 578 27 508 C30 474 39 445 58 422Z"/>
-              <path class="adventure-island island-b" d="M226 72 C336 30 467 60 493 145 C518 230 429 290 326 274 C225 258 170 182 226 72Z"/>
-              <path class="adventure-island island-c" d="M480 101 C613 53 781 87 831 169 C870 233 819 299 707 297 C571 295 453 235 480 101Z"/>
-              <path class="adventure-island island-d" d="M814 65 C947 26 1117 73 1161 170 C1200 255 1129 327 1004 308 C895 291 786 220 814 65Z"/>
-              <path class="adventure-island island-e" d="M241 335 C355 295 502 320 535 410 C564 488 480 543 367 534 C251 524 192 442 241 335Z"/>
-              <path class="adventure-island island-f" d="M553 334 C691 295 857 335 878 431 C895 509 810 551 684 544 C575 537 507 459 553 334Z"/>
-              <path class="adventure-island island-g" d="M398 510 C525 468 697 492 751 596 C779 651 728 706 599 710 C459 715 356 640 398 510Z"/>
-              <path class="adventure-island island-h" d="M823 456 C946 413 1125 447 1177 552 C1212 623 1153 699 1018 711 C895 722 787 641 823 456Z"/>
-              <g class="adventure-mountains">
-                <path d="M72 426l50-90 42 66 27-41 49 78z"/><path d="M871 127l52-83 50 85 30-46 53 78z"/><path d="M506 569l50-79 43 70 31-45 55 91z"/>
-              </g>
-              <g class="adventure-palms"><path d="M319 92q6 70-8 124M312 105q-44-31-68 7M312 105q33-42 66-10M312 105q-17-42-44-50M312 105q23-45 51-49"/><path d="M1051 208q0 54-13 105M1043 218q-36-25-58 6M1043 218q29-34 56-5M1043 218q-10-34-36-42M1043 218q20-36 43-38"/></g>
-              <g class="adventure-grass"><path d="M178 594q-4-28-18-45M178 594q4-34 20-54M178 594q16-25 34-31"/><path d="M433 258q-5-28-21-44M433 258q4-34 19-52M433 258q18-23 34-29"/><path d="M842 512q-5-30-22-47M842 512q5-36 21-56M842 512q18-25 36-31"/><path d="M1081 300q-4-27-18-42M1081 300q5-32 19-49M1081 300q16-23 32-28"/></g>
-              <g class="adventure-waterfall"><path d="M748 402q30 47 5 112"/><path d="M770 400q35 51 8 116"/><path d="M792 404q25 50 3 103"/></g>
-              <g class="adventure-footprints"><circle cx="196" cy="487" r="7"/><circle cx="214" cy="469" r="5"/><circle cx="908" cy="370" r="7"/><circle cx="927" cy="352" r="5"/><circle cx="734" cy="621" r="7"/><circle cx="755" cy="607" r="5"/></g>
-            </svg>
-            <svg class="adventure-compass" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="46"/><circle cx="60" cy="60" r="8"/><path d="M60 7l13 40-13 13-13-13zM60 113L47 73l13-13 13 13zM7 60l40-13 13 13-13 13zM113 60L73 73 60 60l13-13z"/><text x="60" y="16">N</text></svg>
-            <svg class="adventure-ship" viewBox="0 0 130 90" aria-hidden="true"><path d="M15 63h96l-18 18H35z"/><path d="M59 8v56M62 14q37 13 38 34H62zM55 20Q25 34 27 53h28z"/></svg>
-            <svg class="adventure-route" id="adventureRouteSvg" viewBox="0 0 1200 720" preserveAspectRatio="none" aria-hidden="true">
-              <path class="adventure-route-shadow" id="adventureRouteShadow"/>
-              <path class="adventure-route-base" id="adventureRouteBase"/>
-              <path class="adventure-route-progress-shadow" id="adventureRouteProgressShadow"/>
-              <path class="adventure-route-progress" id="adventureRouteProgress"/>
-            </svg>
-            <div class="adventure-level-nodes" id="adventureLevelNodes"></div>
-            <div class="adventure-player" id="adventurePlayer" aria-label="Tu posición actual en el mapa"><span class="adventure-player-face" id="adventurePlayerFace"></span><span class="adventure-player-flag">Tú</span></div>
-            <button class="adventure-guide" id="adventureGuide" type="button" aria-expanded="false" aria-controls="adventureGuideBubble">
-              <span class="adventure-guide-shine" aria-hidden="true"></span>
-              <img src="/assets/adventure-guide.png" alt="Loro guía leyendo el mapa">
-              <span class="adventure-guide-label">Toca para tu misión</span>
-            </button>
-            <aside class="adventure-guide-bubble" id="adventureGuideBubble" role="dialog" aria-modal="true" aria-labelledby="adventureGuideTitle" hidden>
-              <button class="adventure-guide-close" id="adventureGuideClose" type="button" aria-label="Cerrar instrucciones">×</button>
-              <img src="/assets/adventure-guide.png" alt="" aria-hidden="true">
-              <div class="adventure-guide-message">
-                <span>Guía de la aventura</span>
-                <strong id="adventureGuideTitle">Tu siguiente destino</strong>
-                <p id="adventureGuideCopy">Sigue sumando experiencia para avanzar.</p>
-                <small>Toca el mapa, los animales y los controles para explorar.</small>
-              </div>
-            </aside>
-          </div>
-
-          <footer class="adventure-map-footer">
-            <div class="adventure-level-detail" id="adventureLevelDetail" aria-live="polite"></div>
-            <div class="adventure-runner-control"><span>Compañero de celebraciones</span><div class="adventure-runner-picker" id="gamificationRunnerPicker" role="group" aria-label="Compañero para las celebraciones"></div></div>
-            <div class="adventure-debug" id="adventureDebugControls" aria-label="Controles de prueba de experiencia">
-              <span>Prueba XP</span><button type="button" data-adventure-xp="25">+25</button><button type="button" data-adventure-xp="100">+100</button><button type="button" data-adventure-reset>Reiniciar</button>
-            </div>
-          </footer>
-          <div class="adventure-xp-toast" id="adventureXpToast" hidden aria-live="polite">+25 XP</div>
-          <div class="adventure-level-up" id="adventureLevelUp" hidden aria-live="assertive"><span>Nueva etapa</span><strong id="adventureLevelUpTitle">Nivel 2 — Capibara</strong></div>
-        </div>
-      </section>
-
       <div class="gamification-hero">
         <div class="gamification-character-stage"><img id="gamificationHeroImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
         <div class="gamification-hero-copy">
@@ -516,6 +441,7 @@
           <p class="luck-wheel-note">Premios reales: XP para tu nivel, créditos de IA para YAPI y stickers para tu álbum. Los premios grandes son los más difíciles.</p>
         </div>
       </section>
+       <section class="rewards-board-panel" id="rewardsBoardSection" aria-labelledby="rewardsBoardTitle"><div class="rewards-board" id="rewardsBoard" role="list" aria-label="Tablero de premios"><span class="rewards-board-token" id="rewardsBoardToken" data-tile="0" aria-hidden="true"></span><div class="rewards-board-center"><h3 id="rewardsBoardTitle">Tablero de la suerte</h3><span class="rewards-board-die" id="rewardsBoardDie" aria-live="polite">🎲</span><button class="luck-wheel-spin" id="rewardsBoardRoll" type="button">Tirar dado</button></div></div><p class="rewards-board-hint" id="rewardsBoardHint"></p><div class="luck-wheel-result" id="rewardsBoardResult" aria-live="polite" hidden></div></section>
 
       <section aria-labelledby="gamificationStarsTitle">
         <div class="gamification-section-title"><h3 id="gamificationStarsTitle">Estrellas del negocio</h3><p id="gamificationStarsSummary">Completa hitos reales de ventas y audiencia. Las estrellas no se compran: se ganan.</p></div>

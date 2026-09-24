@@ -165,3 +165,33 @@ test("on a phone the wheel modal sits above the sidebar and the YAPI dock", asyn
   });
   expect(covered).toEqual([]);
 });
+
+test("the Horizonte map is gone and the dice board stands on its own below the wheel", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openDashboard(page, { wheelAvailable: false, currentRewards: rewards({ wheel: { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments } }) });
+  await page.evaluate(() => window.setDashboardView("progress"));
+  await expect(page.locator("#animalAdventure")).toHaveCount(0);
+  await expect(page.getByText("Horizonte pagosYa")).toHaveCount(0);
+  const board = page.locator("#rewardsBoardSection");
+  await expect(board).toBeVisible();
+  await expect(board.locator(".board-tile")).toHaveCount(24);
+  const [wheelBox, boardBox] = await Promise.all([page.locator("#luckWheel").boundingBox(), board.boundingBox()]);
+  expect(boardBox.y).toBeGreaterThan(wheelBox.y);
+  expect(errors).toEqual([]);
+});
+
+test("on a phone the board's center content stays inside the ring of tiles", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await openDashboard(page, { wheelAvailable: false, currentRewards: rewards({ wheel: { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments } }) });
+  await page.evaluate(() => window.setDashboardView("progress"));
+  await expect(page.locator("#rewardsBoard .board-tile")).toHaveCount(24);
+  const overlaps = await page.evaluate(() => {
+    const tiles = [...document.querySelectorAll("#rewardsBoard .board-tile")].map((tile) => tile.getBoundingClientRect());
+    const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+    return [...document.querySelectorAll(".rewards-board-center > *:not([hidden])")]
+      .filter((element) => tiles.some((tile) => hit(element.getBoundingClientRect(), tile)))
+      .map((element) => element.id || element.tagName);
+  });
+  expect(overlaps).toEqual([]);
+});

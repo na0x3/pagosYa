@@ -2513,7 +2513,14 @@
   .rewards-board-token.is-hopping { animation: board-hop 180ms ease-out; }
   .rewards-board-die { font-size: 40px; line-height: 1; }
   .rewards-board-die.is-rolling { animation: button-spin 400ms ease-out; }
-  .rewards-board-hint { margin: 0; font-size: 13px; }
+  .rewards-board-hint { margin: 10px auto 0; max-width: 520px; font-size: 13px; text-align: center; }
+  #rewardsBoardResult { max-width: 520px; margin: 10px auto 0; }
+  .rewards-board-center h3 { margin: 0; font-size: clamp(13px, 3.6vw, 20px); line-height: 1.15; }
+  @media (max-width: 480px) {
+    .rewards-board-center { gap: 4px; padding: 4px; }
+    .rewards-board-die { font-size: 26px; }
+    .rewards-board-center .luck-wheel-spin { padding: 6px 10px; font-size: 13px; }
+  }
   @keyframes board-hop { 50% { transform: translateY(-40%) scale(1.1); } }
   @media (prefers-reduced-motion: reduce) {
     .rewards-board-token.is-hopping, .rewards-board-die.is-rolling { animation: none; }

@@ -149,7 +149,7 @@ Cuando un `StoreSourceGeneration` termina bien (estado `COMPLETED` o `CANDIDATE`
 - Se borran el álbum y el estado de localStorage (`pagosya_luck_*`); ahora el álbum sale de `stickers`.
 - Los segmentos visuales se actualizan a la tabla nueva (XP, créditos, sticker, raro, consejo, +1 giro).
 
-**Tablero en Horizonte**
+**Tablero** (actualizado 2026-09-24: por pedido del usuario se eliminó el mapa de Horizonte pagosYa; el tablero pasa a ser una sección propia debajo de la ruleta, en la página de progreso)
 - Un anillo de 24 casillas dibujado encima del mapa de Horizonte. Cada casilla muestra el ícono de su premio y el compañero actual es la ficha.
 - Un panel con el dado (cara animada), "Tirar dado (N)" y "Te faltan X ventas para el próximo tiro".
 - Al tirar: se llama a la API y luego la ficha salta casilla por casilla (unos 180 ms por salto; con `prefers-reduced-motion` se mueve directo). Después aparece la tarjeta del premio y el confeti.
