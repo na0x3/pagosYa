@@ -2499,3 +2499,7 @@
   @media (prefers-reduced-motion: reduce) {
     .is-xp-gaining > span:first-child, .is-xp-pulse, .is-xp-flash, .xp-gain-float { animation: none; }
   }
+  .luck-wheel-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgb(21 53 47 / .55); animation: session-profile-backdrop .2s ease-out; }
+  .luck-wheel-modal[hidden] { display: none; }
+  .luck-wheel-modal-card { position: relative; width: min(760px, 100%); max-height: calc(100dvh - 32px); overflow: auto; border-radius: 24px; background: var(--pg-surface, #fff); animation: session-profile-enter .25s ease-out; }
+  .luck-wheel-modal-close { position: absolute; top: 10px; right: 12px; z-index: 1; width: 36px; height: 36px; border: 0; border-radius: 50%; font-size: 22px; background: transparent; color: inherit; cursor: pointer; }

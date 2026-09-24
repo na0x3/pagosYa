@@ -1,0 +1,133 @@
+import { expect, test } from "@playwright/test";
+
+// Login and route-mocking setup mirror merchant-levels.spec.mjs, plus the /dashboard/rewards endpoints.
+const store = {
+  id: "store_1",
+  merchantId: "merchant_1",
+  slug: "store_1",
+  name: "Primera",
+  websiteRevision: 0,
+  websitePublishedRevision: 0,
+  websiteDraft: null,
+  status: "ACTIVE",
+  backgroundColor: "#f8fafc",
+  backgroundMode: "solid",
+  backgroundGradientStart: "#f8fafc",
+  backgroundGradientEnd: "#e0e7ff",
+  backgroundGradientAngle: 135,
+  heroSlides: [],
+  contentOrder: ["hero", "about", "gallery", "products", "links"],
+  experienceStyle: "editorial-grid",
+  motionDuoEnabled: false,
+  motionExperience: "clarity-marquee",
+  motionExperiences: ["clarity-marquee"],
+  animations: [],
+  editorialGallery: [],
+  links: [],
+  customDomains: [],
+  checkoutMode: "payment",
+  contactPhone: null,
+  contactEmail: null,
+  contactFormEnabled: false,
+  contactFormEmail: null,
+  locationMapUrl: null,
+  locationDescription: null,
+  locationHighlight: null,
+  locations: [],
+  leadCaptureUrl: null,
+  cartRecommendationsEnabled: true,
+  cartRecommendationProductIds: [],
+  showLowStockToCustomers: false,
+};
+
+const segments = ["STICKER_COMMON", "XP_25", "AI_CREDITS_5", "TIP", "XP_50", "RESPIN", "STICKER_RARE", "XP_200", "AI_CREDITS_25"];
+const rewards = (overrides = {}) => ({
+  wheel: { available: true, day: "2026-09-24", spinsUsed: 0, spinsAllowed: 1, segments },
+  board: { position: 0, rollsUsed: 0, rollsAvailable: 1, salesUntilNextRoll: 10, lapsCompleted: 0, tiles: Array(24).fill("STICKER_COMMON") },
+  bonusXp: 0, stickers: [], aiCreditBalance: 0, aiCreditsThisMonth: 0, aiCreditMonthlyCap: 50, ...overrides,
+});
+
+async function openDashboard(page, options, hash = "") {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("pagosya_merchant_session", "dash_test");
+    sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
+  });
+  await page.route("http://localhost:3001/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace("/v1", "");
+    const json = (body, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    if (path === "/dashboard/daily-login-reward") return json({ awarded: false, totalStars: 1, wheelAvailable: options.wheelAvailable });
+    if (path === "/dashboard/rewards") return json(options.currentRewards);
+    if (path === "/dashboard/rewards/wheel/spin") {
+      if (options.spinResponse) return json(options.spinResponse.json, options.spinResponse.status);
+      options.currentRewards = { ...options.currentRewards, bonusXp: options.currentRewards.bonusXp + 50, wheel: { ...options.currentRewards.wheel, available: false, spinsUsed: 1 } };
+      return json({ segmentIndex: 4, grant: { id: "g1", prize: "XP_50", kind: "XP", amount: 50, convertedFrom: null, sticker: null, tip: null }, wheel: options.currentRewards.wheel });
+    }
+    if (path === "/dashboard/rewards/board/roll") {
+      options.currentRewards = { ...options.currentRewards, board: options.rollResponse.json.board };
+      return json(options.rollResponse.json);
+    }
+    if (path.startsWith("/dashboard/limits")) return json({ level: 1, levelName: "Persona", liveEnabled: true, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, used: 0, month: "2026-09", resetsAt: "2026-10-01T04:00:00.000Z" });
+    if (path.startsWith("/dashboard/terms")) return json({ current: null, upcoming: null, acceptedVersion: null, needsAcceptance: false });
+    let body = {};
+    if (path === "/stores") body = [store];
+    else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
+    else if (path === "/merchants/kyc") body = { status: "APPROVED" };
+    else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
+    else if (path === "/merchants/balance") body = { payableBalance: 0, currency: "BOB", balances: [] };
+    else if (path === "/merchants/international_payments") body = { status: "OFF", settlementMode: "AGGREGATOR", feeBps: 590, fxRateAvailable: true, usdPayoutAccountOnFile: false, note: null };
+    else if (
+      path === "/merchants/payouts" ||
+      path === "/payment_intents" ||
+      path === "/merchants/orders" ||
+      path.includes("/categories") ||
+      path.includes("/payment_links") ||
+      path.includes("/operations/integrations") ||
+      path.includes("/promo-codes") ||
+      path.includes("/debt-collection-links") ||
+      path.endsWith("/domains")
+    )
+      body = [];
+    else if (path === "/merchants/finances")
+      body = { totalRevenue: 0, paymentCount: 1, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" };
+    return json(body);
+  });
+  await page.goto(`/${hash}`);
+  await expect(page.locator("#app")).toBeVisible();
+}
+
+test("opens the wheel on the first login of the day and animates the XP bar on a win", async ({ page }) => {
+  await openDashboard(page, { wheelAvailable: true, currentRewards: rewards() });
+  const modal = page.locator("#luckWheelModal");
+  await expect(modal).toBeVisible();
+  await modal.locator("#luckWheelSpin").click();
+  await expect(modal.locator("#luckWheelResult")).toContainText("+50 XP", { timeout: 8000 });
+  await expect(page.locator("#xpGainAnnouncer")).toHaveText(/Ganaste 50 XP/, { timeout: 4000 });
+  await expect(page.locator("#topbarXpTrack")).toHaveClass(/is-xp-pulse/, { timeout: 4000 });
+});
+
+test("does not open the wheel when today's spin is used", async ({ page }) => {
+  await openDashboard(page, { wheelAvailable: false, currentRewards: rewards({ wheel: { available: false, day: "2026-09-24", spinsUsed: 1, spinsAllowed: 1, segments } }) });
+  await page.waitForTimeout(800);
+  await expect(page.locator("#luckWheelModal")).toBeHidden();
+});
+
+test("an API error leaves the wheel still and explains why", async ({ page }) => {
+  await openDashboard(page, { wheelAvailable: true, currentRewards: rewards(), spinResponse: { status: 409, json: { message: "Ya usaste tu giro de hoy." } } });
+  const modal = page.locator("#luckWheelModal");
+  await expect(modal).toBeVisible();
+  const before = await page.locator("#luckWheelDisc").evaluate((el) => el.style.transform);
+  await modal.locator("#luckWheelSpin").click();
+  await expect(modal.locator("#luckWheelStatus")).toContainText("Ya usaste tu giro de hoy.");
+  expect(await page.locator("#luckWheelDisc").evaluate((el) => el.style.transform)).toBe(before);
+});
+
+test("a malformed rewards response degrades to an explanation instead of breaking the dashboard", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openDashboard(page, { wheelAvailable: true, currentRewards: {} });
+  await page.evaluate(() => window.setDashboardView("progress"));
+  await expect(page.locator("#luckWheelStatus")).toContainText("No pudimos cargar la ruleta");
+  await expect(page.locator("#luckWheelModal")).toBeHidden();
+  expect(errors).toEqual([]);
+});

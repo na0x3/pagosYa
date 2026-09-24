@@ -418,6 +418,7 @@
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
+  let rewardsState = null;
   let lastTotalFinances = null;
   let lastBalances = null;
   const GAMIFICATION_XP_PER_SALE = 50;
@@ -1636,6 +1637,8 @@
       lastDebtCollectionLinks = [];
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
+      rewardsState = null;
+      loadRewards().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
   }
 
@@ -2516,7 +2519,8 @@
     const visits = Math.max(0, Number(finances?.totalStoreViews) || 0);
     const salesXp = sales * GAMIFICATION_XP_PER_SALE;
     const visitsXp = visits * GAMIFICATION_XP_PER_VISIT;
-    const xp = salesXp + visitsXp;
+    const gameXp = Math.max(0, Number(rewardsState?.bonusXp) || 0);
+    const xp = salesXp + visitsXp + gameXp;
     let levelIndex = 0;
     ADVENTURE_LEVELS.forEach((entry, index) => { if (xp >= entry.xpRequired) levelIndex = index; });
     const level = ADVENTURE_LEVELS[levelIndex];
@@ -2524,7 +2528,7 @@
     const span = nextLevel ? nextLevel.xpRequired - level.xpRequired : 1;
     const progress = nextLevel ? Math.max(0, Math.min(100, Math.round(((xp - level.xpRequired) / span) * 100))) : 100;
     const stars = GAMIFICATION_STARS.map((star) => ({ ...star, isEarned: star.earned({ sales, visits }) }));
-    return { sales, visits, salesXp, visitsXp, xp, levelIndex, level, nextLevel, progress, stars, earnedStars: stars.filter((star) => star.isEarned).length, dailyLoginStars: Math.max(0, Number(dailyLoginReward.totalStars) || 0) };
+    return { sales, visits, salesXp, visitsXp, gameXp, xp, levelIndex, level, nextLevel, progress, stars, earnedStars: stars.filter((star) => star.isEarned).length, dailyLoginStars: Math.max(0, Number(dailyLoginReward.totalStars) || 0) };
   }
 
   function getProgressState(currentXP, levels = ADVENTURE_LEVELS) {
@@ -2956,8 +2960,11 @@
       dailyLoginReward = {
         awarded: reward?.awarded === true,
         totalStars: Math.max(0, Number(reward?.totalStars) || 0),
+        wheelAvailable: reward?.wheelAvailable === true,
       };
+      await loadRewards();
       if (lastFinances) renderGamification(lastFinances, { announce: false });
+      if (dailyLoginReward.wheelAvailable && rewardsState?.wheel.available && !luckWheelModalShownThisLoad) { luckWheelModalShownThisLoad = true; openLuckWheelModal(); }
       if (!dailyLoginReward.awarded) return;
 
       const state = gamificationState(lastFinances);
@@ -3046,99 +3053,56 @@
     }
   }
 
-  // The wheel is a daily, purely playful loop: it never grants XP or stars,
-  // which stay derived from real sales, visits and server-side daily logins.
-  const LUCK_WHEEL_STICKERS = [
-    { id: "parrot", icon: "🦜", name: "Loro fiestero" },
-    { id: "llama", icon: "🦙", name: "Llama viajera" },
-    { id: "cactus", icon: "🌵", name: "Cactus firme" },
-    { id: "pineapple", icon: "🍍", name: "Piña dulce" },
-    { id: "rainbow", icon: "🌈", name: "Arcoíris" },
-    { id: "trumpet", icon: "🎺", name: "Trompeta de ventas" },
-    { id: "coffee", icon: "☕", name: "Cafecito" },
-    { id: "comet", icon: "🌠", name: "Estrella fugaz", rare: true },
-    { id: "crown", icon: "👑", name: "Corona del mercado", rare: true },
-  ];
-  const LUCK_WHEEL_MISSIONS = [
-    "Comparte el enlace de tu tienda en tu estado de WhatsApp.",
-    "Cambia la foto principal de tu producto más visto.",
-    "Responde hoy los mensajes pendientes de tu bandeja.",
-    "Pídele a un cliente feliz que recomiende tu tienda.",
-    "Escribe una descripción más clara para uno de tus productos.",
-    "Publica tu tienda en un grupo de tu barrio o ciudad.",
-  ];
-  const LUCK_WHEEL_TIPS = [
-    "Las fotos con luz natural y fondo liso suelen vender más.",
-    "Un precio con envío claro evita que el cliente abandone el pago.",
-    "Responder rápido un mensaje convierte curiosos en compradores.",
-    "Destaca tu producto estrella al inicio de tu tienda.",
-    "Un descuento corto, de fin de semana, crea urgencia sin regalar tu margen.",
-    "Cuenta en una línea qué hace especial a tu negocio: la gente compra historias.",
-  ];
-  const LUCK_WHEEL_SEGMENTS = [
-    { kind: "sticker", label: "Sticker", icon: "🎁", color: "#ffc956", weight: 3 },
-    { kind: "mission", label: "Misión", icon: "🧭", color: "#7fd3c3", weight: 2 },
-    { kind: "tip", label: "Consejo", icon: "💡", color: "#fff5bd", weight: 2 },
-    { kind: "respin", label: "+1 giro", icon: "🔁", color: "#f27a62", weight: 1 },
-    { kind: "sticker", label: "Sticker", icon: "🎁", color: "#ffc956", weight: 3 },
-    { kind: "party", label: "Fiesta", icon: "🎉", color: "#b9b4ff", weight: 2 },
-    { kind: "tip", label: "Consejo", icon: "💡", color: "#fff5bd", weight: 2 },
-    { kind: "rare", label: "Raro", icon: "✨", color: "#15352f", ink: "#fff5bd", weight: 1 },
-  ];
-  const LUCK_WHEEL_SLICE = 360 / LUCK_WHEEL_SEGMENTS.length;
+  // The API draws and stores every prize; the wheel only animates to the slice it was told.
+  let rewardsModule = null;
+  const loadRewardsModule = () => (rewardsModule ||= import("/src/rewards.mjs"));
   let luckWheelRotation = 0;
   let luckWheelSpinning = false;
-  let luckWheelMemory = null;
+  let luckWheelModalShownThisLoad = false;
+  let luckWheelHome = null;
 
-  function luckWheelToday() {
-    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz" }).format(new Date()); } catch { return new Date().toISOString().slice(0, 10); }
-  }
-  function luckWheelKey() { return `pagosya_luck_wheel_${gamificationStorageScope()}`; }
-  function luckWheelAlbumKey() { return `pagosya_luck_album_${gamificationIdentityHash()}`; }
-  function luckWheelState() {
-    let stored = luckWheelMemory;
-    try { stored = JSON.parse(localStorage.getItem(luckWheelKey()) || "null") || luckWheelMemory; } catch {}
-    const today = luckWheelToday();
-    if (!stored || stored.day !== today) return { day: today, spinsLeft: 1, last: stored?.last || null };
-    return { day: today, spinsLeft: Math.max(0, Number(stored.spinsLeft) || 0), last: stored.last || null };
-  }
-  function saveLuckWheelState(state) {
-    luckWheelMemory = state;
-    try { localStorage.setItem(luckWheelKey(), JSON.stringify(state)); } catch {}
-  }
-  function luckWheelAlbum() {
-    try { return new Set(JSON.parse(localStorage.getItem(luckWheelAlbumKey()) || "[]")); } catch { return new Set(); }
-  }
-  function saveLuckWheelAlbum(album) {
-    try { localStorage.setItem(luckWheelAlbumKey(), JSON.stringify([...album])); } catch {}
+  async function loadRewards() {
+    if (!currentStoreId || !sessionToken) return null;
+    try {
+      const state = await api(`/dashboard/rewards?storeId=${encodeURIComponent(currentStoreId)}`);
+      // Anything without the wheel and board shapes is treated as "no rewards data" rather than trusted.
+      rewardsState = state?.wheel && state?.board && Array.isArray(state.wheel.segments) ? state : null;
+    } catch { rewardsState = null; }
+    renderLuckWheel();
+    renderRewardsBoard();
+    return rewardsState;
   }
 
-  function buildLuckWheelDisc() {
+  function luckWheelSegments() { return rewardsState?.wheel.segments || []; }
+
+  async function buildLuckWheelDisc() {
     const disc = document.getElementById("luckWheelDisc");
-    if (!disc || disc.childElementCount) return;
+    const segments = luckWheelSegments();
+    if (!disc || !segments.length || disc.dataset.segments === segments.join(",")) return;
+    const { WHEEL_VISUALS } = await loadRewardsModule();
+    const slice = 360 / segments.length;
     const point = (degrees, radius) => [radius * Math.sin(degrees * Math.PI / 180), -radius * Math.cos(degrees * Math.PI / 180)].map((value) => Number(value.toFixed(2)));
-    disc.innerHTML = `<circle r="98" class="luck-wheel-rim"/>${LUCK_WHEEL_SEGMENTS.map((segment, index) => {
-      const start = index * LUCK_WHEEL_SLICE; const end = start + LUCK_WHEEL_SLICE; const center = start + LUCK_WHEEL_SLICE / 2;
-      return `<path d="M0 0 L${point(start, 92).join(" ")} A92 92 0 0 1 ${point(end, 92).join(" ")} Z" fill="${segment.color}"/><g transform="rotate(${center})" fill="${segment.ink || "#15352f"}"><text y="-76" class="luck-wheel-icon">${segment.icon}</text><text x="47" transform="rotate(-90)" class="luck-wheel-label">${esc(segment.label)}</text></g>`;
-    }).join("")}${LUCK_WHEEL_SEGMENTS.map((_, index) => { const [cx, cy] = point(index * LUCK_WHEEL_SLICE, 92); return `<circle cx="${cx}" cy="${cy}" r="3.2" class="luck-wheel-peg"/>`; }).join("")}`;
+    disc.dataset.segments = segments.join(",");
+    disc.innerHTML = `<circle r="98" class="luck-wheel-rim"/>${segments.map((key, index) => {
+      const visual = WHEEL_VISUALS[key]; const start = index * slice; const end = start + slice; const center = start + slice / 2;
+      return `<path d="M0 0 L${point(start, 92).join(" ")} A92 92 0 0 1 ${point(end, 92).join(" ")} Z" fill="${visual.color}"/><g transform="rotate(${center})" fill="${visual.ink || "#15352f"}"><text y="-76" class="luck-wheel-icon">${visual.icon}</text><text x="47" transform="rotate(-90)" class="luck-wheel-label">${esc(visual.label)}</text></g>`;
+    }).join("")}${segments.map((_, index) => { const [cx, cy] = point(index * slice, 92); return `<circle cx="${cx}" cy="${cy}" r="3.2" class="luck-wheel-peg"/>`; }).join("")}`;
   }
 
   function renderLuckWheelAlbum(newStickerId = null) {
-    const album = luckWheelAlbum();
-    document.getElementById("luckWheelAlbumCount").textContent = `${album.size} de ${LUCK_WHEEL_STICKERS.length}`;
-    document.getElementById("luckWheelAlbum").innerHTML = LUCK_WHEEL_STICKERS.map((sticker) => {
-      const owned = album.has(sticker.id);
-      const label = owned ? esc(sticker.name) : "Sticker por descubrir";
-      return `<span class="luck-wheel-sticker${owned ? " is-owned" : ""}${sticker.rare ? " is-rare" : ""}${sticker.id === newStickerId ? " is-new" : ""}" role="img" title="${label}" aria-label="${label}">${owned ? sticker.icon : "?"}</span>`;
+    const stickers = rewardsState?.stickers || [];
+    document.getElementById("luckWheelAlbumCount").textContent = `${stickers.filter((sticker) => sticker.owned).length} de ${stickers.length}`;
+    document.getElementById("luckWheelAlbum").innerHTML = stickers.map((sticker) => {
+      const label = sticker.owned ? esc(sticker.name) : "Sticker por descubrir";
+      return `<span class="luck-wheel-sticker${sticker.owned ? " is-owned" : ""}${sticker.rare ? " is-rare" : ""}${sticker.id === newStickerId ? " is-new" : ""}" role="img" title="${label}" aria-label="${label}">${sticker.owned ? sticker.icon : "?"}</span>`;
     }).join("");
   }
 
-  function showLuckWheelResult(result) {
+  function showLuckWheelResult(copy, kind = "") {
     const box = document.getElementById("luckWheelResult");
-    if (!result) { box.hidden = true; box.innerHTML = ""; return; }
-    box.hidden = false;
-    box.dataset.kind = result.kind;
-    box.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${result.icon}</span><span><strong>${esc(result.title)}</strong>${esc(result.message)}</span>`;
+    if (!copy) { box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false; box.dataset.kind = kind;
+    box.innerHTML = `<span class="luck-wheel-result-icon" aria-hidden="true">${copy.icon}</span><span><strong>${esc(copy.title)}</strong>${esc(copy.message)}</span>`;
   }
 
   function renderLuckWheel() {
@@ -3146,41 +3110,66 @@
     buildLuckWheelDisc();
     renderLuckWheelAlbum();
     if (luckWheelSpinning) return;
-    const state = luckWheelState();
-    const canSpin = state.spinsLeft > 0;
-    const spin = document.getElementById("luckWheelSpin");
-    const hub = document.getElementById("luckWheelHub");
+    const wheel = rewardsState?.wheel;
+    const canSpin = !!wheel?.available;
+    const spin = document.getElementById("luckWheelSpin"); const hub = document.getElementById("luckWheelHub");
     spin.disabled = !canSpin; hub.disabled = !canSpin;
     hub.textContent = canSpin ? "¡Gira!" : "Mañana";
-    spin.textContent = canSpin ? (state.last?.day === state.day ? "Girar otra vez" : "Girar la ruleta") : "Vuelve mañana";
-    document.getElementById("luckWheelStatus").textContent = canSpin
-      ? "Una vuelta por día. Gana misiones, consejos y stickers para tu álbum."
-      : "Ya usaste tu vuelta de hoy. Mañana (hora de Bolivia) la ruleta vuelve a girar.";
-    showLuckWheelResult(state.last?.day === state.day ? state.last : null);
+    spin.textContent = canSpin ? (wheel.spinsUsed > 0 ? "Girar otra vez" : "Girar la ruleta") : "Vuelve mañana";
+    document.getElementById("luckWheelStatus").textContent = !wheel
+      ? "No pudimos cargar la ruleta. Vuelve a intentarlo en un momento."
+      : canSpin ? "Una vuelta por día. Gana XP, créditos de IA y stickers." : "Ya usaste tu vuelta de hoy. Mañana (hora de Bolivia) la ruleta vuelve a girar.";
   }
 
-  function luckWheelPick() {
-    const total = LUCK_WHEEL_SEGMENTS.reduce((sum, segment) => sum + segment.weight, 0);
-    let roll = Math.random() * total;
-    return Math.max(0, LUCK_WHEEL_SEGMENTS.findIndex((segment) => (roll -= segment.weight) < 0));
+  function openLuckWheelModal() {
+    const modal = document.getElementById("luckWheelModal"); const wheel = document.getElementById("luckWheel");
+    if (!modal || !wheel) return;
+    luckWheelHome ||= { parent: wheel.parentElement, next: wheel.nextSibling };
+    document.getElementById("luckWheelModalSlot").appendChild(wheel);
+    modal.hidden = false;
+    document.getElementById("luckWheelSpin").focus();
   }
 
-  function luckWheelPrize(segment) {
-    const pick = (list) => list[Math.floor(Math.random() * list.length)];
-    const companion = ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)];
-    if (segment.kind === "sticker" || segment.kind === "rare") {
-      const album = luckWheelAlbum();
-      const pool = LUCK_WHEEL_STICKERS.filter((sticker) => !!sticker.rare === (segment.kind === "rare"));
-      const fresh = pool.filter((sticker) => !album.has(sticker.id));
-      const sticker = pick(fresh.length ? fresh : pool);
-      const isNew = !album.has(sticker.id);
-      album.add(sticker.id); saveLuckWheelAlbum(album);
-      return { kind: segment.kind, icon: sticker.icon, stickerId: sticker.id, title: isNew ? `¡Sticker nuevo: ${sticker.name}!` : `${sticker.name}, otra vez`, message: isNew ? " Ya está pegado en tu álbum." : " Ya lo tenías: ¡tu colección sigue brillando!" };
-    }
-    if (segment.kind === "mission") return { kind: "mission", icon: "🧭", title: "Misión del día", message: ` ${pick(LUCK_WHEEL_MISSIONS)}` };
-    if (segment.kind === "tip") return { kind: "tip", icon: "💡", title: `${companion.character} te comparte un consejo`, message: ` ${pick(LUCK_WHEEL_TIPS)}` };
-    if (segment.kind === "party") return { kind: "party", icon: "🎉", title: "¡Fiesta en la ruta!", message: ` ${companion.character} baila para celebrar todo lo que ya construiste.` };
-    return { kind: "respin", icon: "🔁", title: "¡Otra vuelta!", message: " La suerte te da un giro extra. ¡Dale!" };
+  function closeLuckWheelModal() {
+    const modal = document.getElementById("luckWheelModal"); const wheel = document.getElementById("luckWheel");
+    if (!modal || modal.hidden || luckWheelSpinning) return;
+    modal.hidden = true;
+    if (luckWheelHome) luckWheelHome.parent.insertBefore(wheel, luckWheelHome.next);
+  }
+  document.getElementById("luckWheelModalClose")?.addEventListener("click", closeLuckWheelModal);
+  document.getElementById("luckWheelModal")?.addEventListener("click", (event) => { if (event.target.id === "luckWheelModal") closeLuckWheelModal(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeLuckWheelModal(); });
+
+  function currentTotalXp() { return lastFinances ? gamificationState(lastFinances).xp : 0; }
+
+  async function announceRewardGrant(grant, previousXp, anchor, { showCard = true } = {}) {
+    const { rewardCopy, celebrateXpGain } = await loadRewardsModule();
+    if (showCard) showLuckWheelResult(rewardCopy(grant), grant.kind);
+    playAdventureTouchSound("open");
+    if (anchor) burstConfetti(anchor, { count: ["AI_CREDITS_25", "STICKER_RARE", "XP_200"].includes(grant.prize) ? 90 : 40, spread: 1 });
+    await loadRewards();
+    const rerender = (announce) => { if (lastFinances) renderGamification(lastFinances, { announce }); };
+    if (grant.kind !== "XP") return rerender(false);
+    const bars = [
+      { track: document.getElementById("topbarXpTrack") },
+      { track: document.getElementById("gamificationSummaryTrack"), label: document.getElementById("gamificationSummaryXp") },
+      { track: document.getElementById("adventureXpTrack") },
+    ].filter((bar) => bar.track);
+    // Animate from the old value first, then let the regular render settle every label and the level celebration.
+    const run = () => celebrateXpGain({
+      previousXp, gainedXp: grant.amount, thresholds: ADVENTURE_LEVELS.map((level) => level.xpRequired), bars,
+      announcer: document.getElementById("xpGainAnnouncer"),
+      reduceMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      playSound: () => playAdventureTouchSound("open"),
+    }).then(() => rerender(true));
+    // Wait until the top bar is on screen so the merchant actually sees it fill.
+    const topbar = document.getElementById("topbarXpTrack");
+    if (!topbar || typeof IntersectionObserver === "undefined") return run();
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect(); run();
+    });
+    observer.observe(topbar);
   }
 
   let luckWheelTickSegment = -1;
@@ -3200,7 +3189,7 @@
     if (!luckWheelSpinning) return;
     const matrix = new DOMMatrixReadOnly(getComputedStyle(disc).transform);
     const angle = (Math.atan2(matrix.b, matrix.a) * 180 / Math.PI + 360) % 360;
-    const segment = Math.floor(angle / LUCK_WHEEL_SLICE);
+    const segment = Math.floor(angle / (360 / Math.max(1, luckWheelSegments().length)));
     if (segment !== luckWheelTickSegment) {
       luckWheelTickSegment = segment;
       playLuckWheelTick();
@@ -3210,47 +3199,47 @@
     requestAnimationFrame(() => trackLuckWheelTicks(disc));
   }
 
-  function spinLuckWheel() {
-    if (luckWheelSpinning) return;
-    const state = luckWheelState();
-    if (state.spinsLeft <= 0) return;
-    const index = luckWheelPick();
-    const segment = LUCK_WHEEL_SEGMENTS[index];
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const center = index * LUCK_WHEEL_SLICE + LUCK_WHEEL_SLICE / 2;
-    const jitter = (Math.random() - .5) * LUCK_WHEEL_SLICE * .6;
-    // Land the chosen slice under the top pointer, always spinning forward.
-    luckWheelRotation = luckWheelRotation - (luckWheelRotation % 360) + (reduceMotion ? 360 : 360 * 6) + ((360 - center + jitter) % 360);
-    luckWheelSpinning = true;
-    saveLuckWheelState({ ...state, spinsLeft: state.spinsLeft - 1 });
-    const disc = document.getElementById("luckWheelDisc");
-    const spinButton = document.getElementById("luckWheelSpin");
-    spinButton.disabled = true; document.getElementById("luckWheelHub").disabled = true;
-    spinButton.textContent = "Girando…";
+  async function spinLuckWheel() {
+    if (luckWheelSpinning || !rewardsState?.wheel.available) return;
+    const spinButton = document.getElementById("luckWheelSpin"); const hub = document.getElementById("luckWheelHub");
+    spinButton.disabled = true; hub.disabled = true; spinButton.textContent = "Girando…";
     showLuckWheelResult(null);
+    const previousXp = currentTotalXp();
+    let result;
+    try {
+      result = await api("/dashboard/rewards/wheel/spin", { method: "POST", body: JSON.stringify({ storeId: currentStoreId }) });
+    } catch (error) {
+      await loadRewards();
+      document.getElementById("luckWheelStatus").textContent = error?.message || "No pudimos girar la ruleta. Vuelve a intentarlo.";
+      return;
+    }
+    const { wheelRotationFor } = await loadRewardsModule();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const count = luckWheelSegments().length;
+    luckWheelRotation = wheelRotationFor(luckWheelRotation, result.segmentIndex, count, { turns: reduceMotion ? 1 : 6, jitter: (Math.random() - .5) * (360 / count) * .6 });
+    luckWheelSpinning = true;
+    const disc = document.getElementById("luckWheelDisc");
     document.getElementById("luckWheel").classList.add("is-spinning");
     const duration = reduceMotion ? 500 : 4600;
     disc.style.transition = `transform ${duration}ms cubic-bezier(.12,.72,.14,1)`;
     disc.style.transform = `rotate(${luckWheelRotation}deg)`;
     if (!reduceMotion) requestAnimationFrame(() => trackLuckWheelTicks(disc));
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       luckWheelSpinning = false;
       document.getElementById("luckWheel").classList.remove("is-spinning");
-      const prize = { ...luckWheelPrize(segment), day: state.day };
-      const after = luckWheelState();
-      saveLuckWheelState({ ...after, spinsLeft: after.spinsLeft + (prize.kind === "respin" ? 1 : 0), last: prize });
-      renderLuckWheel();
-      renderLuckWheelAlbum(prize.stickerId || null);
-      playAdventureTouchSound("open");
-      burstConfetti(document.querySelector(".luck-wheel-stage"), { count: prize.kind === "party" || prize.kind === "rare" ? 90 : 40, spread: prize.kind === "party" ? 1.6 : 1 });
-      if (prize.kind === "party") {
+      // "Fiesta": a playful variant of a tip where the companion dances.
+      if (result.grant.kind === "TIP" && Math.random() < .3) {
         const hero = document.getElementById("gamificationHeroImage");
-        hero.classList.remove("is-dancing"); void hero.offsetWidth; hero.classList.add("is-dancing");
+        hero?.classList.remove("is-dancing"); void hero?.offsetWidth; hero?.classList.add("is-dancing");
       }
+      await announceRewardGrant(result.grant, previousXp, document.querySelector(".luck-wheel-stage"));
+      renderLuckWheelAlbum(result.grant.sticker?.isNew ? result.grant.sticker.id : null);
     }, duration + 60);
   }
   document.getElementById("luckWheelSpin")?.addEventListener("click", spinLuckWheel);
   document.getElementById("luckWheelHub")?.addEventListener("click", spinLuckWheel);
+
+  function renderRewardsBoard() {}
 
   function renderGamification(finances, { announce = true } = {}) {
     const state = gamificationState(finances);

@@ -513,7 +513,7 @@
             <div class="luck-wheel-album-head"><strong>Álbum de stickers</strong><span id="luckWheelAlbumCount">0 de 9</span></div>
             <div class="luck-wheel-album-grid" id="luckWheelAlbum"></div>
           </div>
-          <p class="luck-wheel-note">La ruleta es solo para divertirte: tu XP y tu nivel siguen saliendo de ventas y visitas reales.</p>
+          <p class="luck-wheel-note">Premios reales: XP para tu nivel, créditos de IA para YAPI y stickers para tu álbum. Los premios grandes son los más difíciles.</p>
         </div>
       </section>
 
@@ -1109,6 +1109,12 @@
   <p class="workspace-yapi-status" id="workspaceYapiStatus" role="status"></p>
 </aside>
 <link rel="stylesheet" href="/variant-editor.css">
+<div class="luck-wheel-modal" id="luckWheelModal" role="dialog" aria-modal="true" aria-labelledby="luckWheelTitle" hidden>
+  <div class="luck-wheel-modal-card">
+    <button class="luck-wheel-modal-close" id="luckWheelModalClose" type="button" aria-label="Cerrar la ruleta">×</button>
+    <div id="luckWheelModalSlot"></div>
+  </div>
+</div>
 <script src="/variant-editor.js"></script>
 <script src="/src/dashboard.js"></script>
 </body>
