@@ -126,6 +126,9 @@
   }
   input:focus { outline: none; border-color: var(--pg-accent); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
   input[type="file"] { min-width: 220px; padding: 7px; }
+  /* The floor above belongs to fields that hold typing; a radio or a checkbox
+     would take 200px of its row and squeeze its own label into a sliver. */
+  input[type="radio"], input[type="checkbox"] { min-width: 0; width: auto; }
   .password-input-wrap { position: relative; }
   .password-input-wrap input { width: 100%; padding-right: 44px; }
   .password-visibility-toggle {
@@ -1293,6 +1296,11 @@
     #loggedInAs { flex: 1 1 100%; max-width: none; white-space: normal; overflow-wrap: break-word; }
     .store-editor-section-body { grid-template-columns: 1fr; }
     .store-editor-section-body > .full { grid-column: 1; }
+    /* The toggle keeps its aria-label, so the word can go and give the
+       section's own heading and description the width back. */
+    .editor-section-head { padding-right: 52px; }
+    .editor-section-toggle { min-width: 40px; padding: 6px; }
+    .editor-section-toggle span { display: none; }
     .editor-settings-group { grid-template-columns: 1fr; gap: 15px; padding: 18px 0 24px; }
     .editor-settings-group > .full, .editor-settings-heading { grid-column: 1; }
     .editor-settings-heading { grid-template-columns: 1fr; }
@@ -1331,6 +1339,10 @@
 
   @media (max-width: 480px) {
     .theme-control { justify-content: space-between; }
+    /* Three columns leave a time field too narrow to show its own value, so
+       the day takes its own line and the two times share the next one. */
+    .store-location-hours-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; }
+    .store-location-hours-row > span, .store-location-hours-row label { grid-column: 1 / -1; }
     .finance-donut-layout { grid-template-columns: 1fr; justify-items: center; }
     .finance-legend { width: 100%; }
     .finance-legend-row { grid-template-columns: 10px minmax(0, 1fr) auto; }

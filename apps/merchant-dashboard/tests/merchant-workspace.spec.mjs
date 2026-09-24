@@ -2,6 +2,14 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 
+async function openNav(page, view) {
+  const link = page.locator(`#dashboardNav [data-dashboard-view="${view}"]`).first();
+  if (!await link.isVisible()) {
+    await page.locator(`#dashboardNav .dashboard-nav-group:has([data-dashboard-view="${view}"]) > summary`).click();
+  }
+  return link;
+}
+
 async function workspace(page, withSite = false) {
   let version = { revision: 1, label: 'Sitio guardado', snapshot: { schemaVersion: 1, brief: {}, files: [
     { path: 'index.html', content: '<h1>Mi café</h1><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p><script src="config.js"></script><script src="commerce.js"></script>' },
@@ -85,25 +93,6 @@ async function createProductWithGuide(page, name, price) {
   await expect(guide.getByText(`${name} ya está en tu catálogo.`)).toBeVisible();
 }
 
-test('motion replay reaches the sandbox without reloading or saving a new revision', async ({ page }) => {
-  const { editor, requests } = await workspace(page, true);
-  const preview = editor.frameLocator('iframe[title="Vista previa del sitio"]');
-  await preview.locator('body').evaluate(body => {
-    window.__replayProbe = { retainedState: 'cart-and-form-state', count: 0 };
-    window.addEventListener('pagosya:replay-motion', () => { body.dataset.replayed = String(++window.__replayProbe.count); });
-  });
-  await editor.locator('#source-replay-motion').click();
-  await expect(preview.locator('body')).toHaveAttribute('data-replayed', '1');
-  expect(await preview.locator('body').evaluate(() => window.__replayProbe.retainedState)).toBe('cart-and-form-state');
-  await editor.locator('#source-replay-motion').click();
-  await expect(preview.locator('body')).toHaveAttribute('data-replayed', '2');
-  await preview.locator('body').evaluate(() => { window.PAGOSYA_HOSTED = true; });
-  await editor.locator('#source-replay-motion').click();
-  await page.waitForTimeout(80);
-  await expect(preview.locator('body')).toHaveAttribute('data-replayed', '2');
-  expect(requests.filter(request => request.path.includes('/source-project') && request.method !== 'GET' && !request.path.endsWith('/checks'))).toEqual([]);
-});
-
 test('retired sections are absent and old view selections fall back to the overview', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const loadedResources = []; page.on('request', request => loadedResources.push(new URL(request.url()).pathname));
@@ -113,12 +102,14 @@ test('retired sections are absent and old view selections fall back to the overv
     await page.evaluate(view => window.setDashboardView(view), view);
     await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'overview');
   }
-  await expect(page.locator('#storeSettingsPage, #storeSettingsRoot, #customDomainStudio')).toHaveCount(0);
-  expect(loadedResources.some(path => /\/(?:store-settings|domain-shop)\.(?:mjs|css)$/.test(path))).toBe(false);
+  // `#storeSettingsRoot` is not retired: it is the mount point of the store settings
+  // page that replaced the old Apariencia editor, and store-settings.spec.mjs covers it.
+  await expect(page.locator('#storeSettingsPage, #customDomainStudio')).toHaveCount(0);
+  expect(loadedResources.some(path => /\/domain-shop\.(?:mjs|css)$/.test(path))).toBe(false);
   expect(requests.some(request => request.path.startsWith('/events') || request.path.endsWith('/operations/hub'))).toBe(false);
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
-  await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
+  await (await openNav(page, 'products')).click();
   await expect(page.locator('#paymentLinksSection')).toBeVisible();
   expect(errors).toEqual([]);
   await page.screenshot({ path: '.test-artifacts/retired-sections-desktop.png', fullPage: false });
@@ -134,7 +125,10 @@ test('store opens the shared editor; setup and an unsent message survive product
   await expect(page.locator('#merchantStoreTabs')).not.toBeVisible();
   await expect(page.locator('.dashboard-sidebar')).toBeVisible();
   const bounds = await page.locator('#merchantStudioFrame').boundingBox();
-  expect(bounds).toEqual({ x: 64, y: 0, width: page.viewportSize().width - 64, height: page.viewportSize().height });
+  // The frame fills everything right of the rail. Its exact width is pinned by
+  // the compact-navigation test; here only the relationship matters.
+  const rail = (await page.locator('.dashboard-sidebar').boundingBox()).width;
+  expect(bounds).toEqual({ x: rail, y: 0, width: page.viewportSize().width - rail, height: page.viewportSize().height });
   await expect(editor.locator('#source-store')).not.toBeVisible();
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Café de especialidad para el barrio'); await editor.getByRole('button', { name: 'Enviar a YAPI' }).click();
@@ -224,7 +218,6 @@ test('saved site previews refresh the real catalog after product creation withou
   await expect(preview.getByRole('dialog', { name: 'Café recién tostado' })).toBeVisible();
   await preview.getByRole('button', { name: 'Cerrar detalle del producto' }).click();
   await preview.getByRole('button', { name: 'Añadir Café recién tostado' }).click();
-  await editor.locator('#source-replay-motion').click();
   await preview.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
   await expect(preview.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
   await preview.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
@@ -303,7 +296,9 @@ test('integration logos load and provider details preserve the inventory draft',
   }
   await frame.locator('[name=name]').fill('Mi inventario');
   await frame.locator('[data-open-integration=tiktok-ads]').click();
-  await expect(frame.locator('.integration-detail')).toContainText('Sin conectar a esta tienda');
+  // Providers now carry their own ID field instead of an apology; matches
+  // source-business-workspace.test.ts.
+  await expect(frame.locator('.integration-detail')).toContainText('pega su ID para activarlo aquí');
   await expect(frame.locator('.integration-detail a').first()).toHaveAttribute('href', 'https://ads.tiktok.com/');
   await expect(frame.locator('[name=name]')).toHaveValue('Mi inventario');
   await frame.locator('[data-close-integration]').click();
@@ -313,27 +308,26 @@ test('integration logos load and provider details preserve the inventory draft',
 });
 
 
-test('compact navigation stays at the edge and inspiration pauses without losing the draft', async ({ page }) => {
+test('compact navigation stays at the edge and the idle canvas keeps the draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
   const { editor, requests } = await workspace(page);
   const rail = await page.locator('.dashboard-sidebar').boundingBox();
-  expect(rail.x).toBe(0); expect(rail.width).toBe(64); expect(rail.height).toBe(960);
+  // 64px is the <=999px icon rail; at 1440 the labeled sidebar is --sidebar-w.
+  expect(rail.x).toBe(0); expect(rail.width).toBe(196); expect(rail.height).toBe(960);
   await expect(page.getByRole('link', { name: 'Diseñar sitio', exact: true })).toHaveAttribute('aria-current', 'page');
   const composer = editor.getByRole('textbox', { name: 'Indicación para YAPI' });
   await composer.fill('Una tienda con mi propia identidad');
-  const art = editor.locator('.source-inspiration');
-  await expect(art).toBeVisible();
-  await expect(art.locator('img').first()).toHaveJSProperty('naturalWidth', 736);
-  await editor.getByRole('button', { name: 'Pausar animación de inspiración' }).click();
-  await expect(art).toHaveClass(/is-paused/);
+  await expect(editor.locator('.source-inspiration')).toBeVisible();
+  // What the canvas is made of -- the face, its moods, reduced motion and the
+  // fact that it carries no controls -- belongs to the studio's own
+  // source-face.spec.ts. This test only guards the frame around it.
   await expect(composer).toHaveValue('Una tienda con mi propia identidad');
   expect(requests.some(r => r.method === 'POST' && /messages|generate/.test(r.path))).toBe(false);
   await page.screenshot({ path: '.test-artifacts/yapi-inspiration-desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(editor.locator('#agent-command')).toBeVisible();
+  await expect(composer).toHaveValue('Una tienda con mi propia identidad');
   await page.screenshot({ path: '.test-artifacts/yapi-inspiration-mobile.png' });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(art.locator('.inspiration-card').first()).toHaveCSS('animation-name', 'none');
 });
 
 

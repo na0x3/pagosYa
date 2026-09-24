@@ -597,11 +597,17 @@
     toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
   }
 
-  function initStoreEditorSections() {
-    document.querySelectorAll(".store-editor-section").forEach((section, index) => {
+  // The store settings form is injected by a dynamic import long after this
+  // first runs, so it runs again over that form once it exists. Sections that
+  // already carry their body are left alone, and the remembered key is the
+  // section's own heading id so the choice survives a reordering.
+  function initStoreEditorSections(scope = document) {
+    scope.querySelectorAll(".store-editor-section").forEach((section, index) => {
+      if (section.dataset.editorSection === "ready") return;
       const head = section.querySelector(":scope > .editor-section-head");
       const title = head?.querySelector("h3")?.textContent?.trim();
       if (!head || !title) return;
+      section.dataset.editorSection = "ready";
 
       const body = document.createElement("div");
       body.className = "store-editor-section-body";
@@ -616,7 +622,7 @@
       toggle.innerHTML = `<span>Mostrar</span>${COLLAPSE_CHEVRON}`;
       head.appendChild(toggle);
 
-      const storageKey = `pagosya_store_editor_section_${index + 1}`;
+      const storageKey = `pagosya_store_editor_section_${section.getAttribute("aria-labelledby") || index + 1}`;
       const setExpanded = (expanded, remember = true) => {
         body.hidden = !expanded;
         section.classList.toggle("is-expanded", expanded);
@@ -627,7 +633,9 @@
         if (remember) localStorage.setItem(storageKey, String(expanded));
       };
 
-      setExpanded(savedExpandedState(storageKey, index === 0), false);
+      // Settings open: a merchant who came here to change one field should not
+      // have to guess which section hides it. Collapsing is theirs to choose.
+      setExpanded(savedExpandedState(storageKey, true), false);
       toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
     });
   }
@@ -710,14 +718,18 @@
   function canLeaveMerchantStudio() {
     try { return ["merchantStudioFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].every(id => document.getElementById(id).contentWindow?.pagosyaStudioCanLeave?.() ?? true); } catch { return false; }
   }
+  /* Deja Correos y marketing en una pestaña concreta; el iframe se recarga con ese tab. */
+  function selectMarketingTab(tab) {
+    document.getElementById("marketingTabs").dataset.tab = tab;
+    document.querySelectorAll("[data-marketing-tab]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.marketingTab === tab)));
+    document.getElementById("marketingPromotions").hidden = tab !== "promotions";
+    document.getElementById("storeMarketingFrame").removeAttribute("src");
+  }
   document.getElementById("marketingTabs").addEventListener("click", event => {
     const button = event.target.closest("[data-marketing-tab]"); if (!button) return;
     const frame = document.getElementById("storeMarketingFrame");
     if (frame.contentWindow?.pagosyaStudioCanLeave && !frame.contentWindow.pagosyaStudioCanLeave()) return;
-    document.getElementById("marketingTabs").dataset.tab = button.dataset.marketingTab;
-    document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab === button)));
-    document.getElementById("marketingPromotions").hidden = button.dataset.marketingTab !== "promotions";
-    frame.removeAttribute("src"); syncStoreResourceViews("marketing");
+    selectMarketingTab(button.dataset.marketingTab); syncStoreResourceViews("marketing");
   });
   function syncStoreResourceViews(view) {
     for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
@@ -744,12 +756,7 @@
     if (!frame || frame.dataset.storeId !== currentStoreId || event.data?.storeId !== currentStoreId) return;
     if (event.data.type === "pagosya:workspace" && ["marketing", "integrations", "experiments", "workspace"].includes(event.data.view)) {
       if (!canLeaveMerchantStudio()) return;
-      if (event.data.view === "marketing" && ["program", "templates"].includes(event.data.tab)) {
-        document.getElementById("marketingTabs").dataset.tab = event.data.tab;
-        document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab.dataset.marketingTab === event.data.tab)));
-        document.getElementById("marketingPromotions").hidden = true;
-        document.getElementById("storeMarketingFrame").removeAttribute("src");
-      }
+      if (event.data.view === "marketing" && ["program", "templates"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
       history.pushState(null, "", `#dashboard-${event.data.view}`); setDashboardView(event.data.view); return;
     }
     if (event.data.type === "pagosya:source-publication-changed") { void refresh(); return; }
@@ -801,12 +808,7 @@
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
     if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments"].includes(event.data.view)) {
-      if (event.data.view === "marketing" && event.data.tab === "program") {
-        document.getElementById("marketingTabs").dataset.tab = "program";
-        document.querySelectorAll("[data-marketing-tab]").forEach(tab => tab.setAttribute("aria-pressed", String(tab.dataset.marketingTab === "program")));
-        document.getElementById("marketingPromotions").hidden = true;
-        document.getElementById("storeMarketingFrame").removeAttribute("src");
-      }
+      if (event.data.view === "marketing" && event.data.tab === "program") selectMarketingTab("program");
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
       document.getElementById("dashboardWorkspace").scrollIntoView({ block: "start" });
@@ -3290,11 +3292,26 @@
   // A store can accumulate threads before it ever verifies an email domain:
   // reading is fine, but a reply would be rejected server-side. Disable the
   // form instead of letting the merchant type a reply and hit a Spanish error.
-  function setInboxReplyEnabled(enabled) {
+  function setInboxReplyEnabled(enabled, domain) {
     document.getElementById("inboxDomainNotice").hidden = enabled;
     document.getElementById("inboxReplyBody").disabled = !enabled;
     document.getElementById("inboxReplySubmit").disabled = !enabled;
+    // El aviso lleva al paso que falta de verdad: conectar el dominio o confirmar sus registros.
+    document.getElementById("inboxDomainStep").textContent = domain
+      ? `Ya conectaste ${domain.name}: solo falta confirmar sus registros DNS.`
+      : "Conecta el dominio desde el que responderás y confirma sus registros DNS.";
+    document.getElementById("inboxDomainLink").textContent = domain
+      ? `Verificar los registros de ${domain.name} →`
+      : "Conectar mi dominio de correo →";
   }
+
+  document.getElementById("inboxDomainLink").addEventListener("click", (event) => {
+    event.preventDefault();
+    if (!canLeaveMerchantStudio()) return;
+    selectMarketingTab("domain");
+    history.pushState(null, "", "#dashboard-marketing");
+    setDashboardView("marketing");
+  });
 
   async function refreshInbox() {
     if (!currentStoreId) return;
@@ -3307,7 +3324,7 @@
     document.getElementById("inboxScopeLabel").textContent =
       lastStores.find((store) => store.id === currentStoreId)?.name || "Sin tienda seleccionada";
     inboxDomainVerified = workspace?.domain?.status === "verified";
-    setInboxReplyEnabled(inboxDomainVerified);
+    setInboxReplyEnabled(inboxDomainVerified, workspace?.domain);
     document.getElementById("inboxThreads").innerHTML = threads.length
       ? threads.map((thread) => `<li><button type="button" data-thread-id="${esc(thread.id)}" class="${thread.unreadForMerchant ? "is-unread" : ""}"><strong>${esc(thread.customerName || thread.customerEmail)}</strong><span>${esc(thread.subject)}</span></button></li>`).join("")
       : `<li class="muted">Todavía no hay conversaciones.</li>`;
@@ -3838,6 +3855,7 @@
       },
     });
     storeSettings.setStore(lastStores.find((store) => store.id === currentStoreId) || null, lastPaymentLinks);
+    initStoreEditorSections(document.getElementById("storeSettingsRoot"));
   }).catch(() => {
     document.getElementById("storeSettingsRoot").textContent = "No pudimos cargar los ajustes de la tienda. Recarga la página para volver a intentar.";
   });
