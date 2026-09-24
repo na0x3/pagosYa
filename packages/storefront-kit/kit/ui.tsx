@@ -125,7 +125,8 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-hero[data-variant=split] .ui-hero__media{border-radius:var(--ui-radius-media);overflow:hidden;aspect-ratio:4/5;background:var(--ui-surface)}
 .ui-hero__media img{width:100%;height:100%;object-fit:cover}
 .ui-hero[data-variant=fullbleed]{min-height:min(92dvh,900px);display:grid;align-items:end;color:#fff}.ui-hero[data-variant=fullbleed] .ui-hero__media{position:absolute;inset:0}.ui-hero[data-variant=fullbleed] .ui-hero__media::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0/.62),rgb(0 0 0/.08) 55%,transparent)}.ui-hero[data-variant=fullbleed] .ui-hero__copy{position:relative;padding-block:var(--ui-s7)}.ui-hero[data-variant=fullbleed] .ui-lead,.ui-hero[data-variant=fullbleed] .ui-eyebrow{color:inherit}
-.ui-hero[data-variant=editorial] .ui-hero__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--ui-s4);padding-block:var(--ui-s6) var(--ui-s7);align-items:center;min-height:min(84dvh,820px)}.ui-hero[data-variant=editorial] .ui-hero__copy{grid-column:1/7;position:relative;z-index:1}.ui-hero[data-variant=editorial] .ui-display{max-width:11ch}.ui-hero[data-variant=editorial] .ui-hero__media{grid-column:7/13;height:min(72dvh,720px);border-radius:var(--ui-radius-media);overflow:hidden}
+/* Editorial is a masthead: one wide band of photography, the headline beneath it. It must not read as a second 'split'. */
+.ui-hero[data-variant=editorial] .ui-hero__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--ui-s5) var(--ui-s4);padding-block:var(--ui-s5) var(--ui-s7)}.ui-hero[data-variant=editorial] .ui-hero__copy{grid-column:1/9;position:relative;z-index:1}.ui-hero[data-variant=editorial] .ui-display{max-width:16ch}.ui-hero[data-variant=editorial] .ui-hero__media{order:-1;grid-column:1/13;aspect-ratio:21/9;max-height:min(58dvh,560px);border-radius:var(--ui-radius-media);overflow:hidden;background:var(--ui-surface)}
 .ui-hero[data-variant=typographic]{padding-block:var(--ui-s8) var(--ui-s7);text-align:center}.ui-hero[data-variant=typographic] .ui-display{max-width:14ch;margin-inline:auto;font-size:calc(var(--ui-display) * 1.25)}.ui-hero[data-variant=typographic] .ui-lead{margin-inline:auto}.ui-hero[data-variant=typographic] .ui-row{justify-content:center}.ui-hero[data-variant=typographic] .ui-hero__media{margin:var(--ui-s6) auto 0;width:min(100%,980px);aspect-ratio:16/9;border-radius:var(--ui-radius-media);overflow:hidden}
 .ui-hero__actions{margin-top:var(--ui-s5)}
 .ui-hero .ui-display{font-size:calc(var(--ui-display) * 1.3)}
@@ -150,7 +151,7 @@ html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!
 .ui-compare__caption{display:grid;gap:var(--ui-s2);padding-top:var(--ui-s3)}.ui-compare__labels{display:flex;justify-content:space-between;gap:var(--ui-s3);font-size:13px}.ui-compare__label{font-size:14px;font-weight:600}.ui-compare__range{display:block;width:100%;min-height:44px;margin:0;accent-color:var(--ui-accent);cursor:ew-resize}.ui-compare__hint{margin:0;font-size:12px;color:var(--ui-ink-70)}
 @media(max-width:820px){.ui-floating__grid{grid-template-columns:1fr;min-height:0;gap:var(--ui-s5);padding-block:var(--ui-s6)}.ui-floating__stage{height:clamp(300px,95vw,500px);margin-inline:var(--ui-s3)}.ui-floating__item{transform:none!important}.ui-floating .ui-display{max-width:15ch}.ui-video-hero{min-height:78dvh}.ui-video-hero__copy{padding-top:var(--ui-s8);padding-right:0}.ui-video-hero .ui-display{font-size:calc(var(--ui-display) * 1.2)}.ui-parallax-stack{height:clamp(340px,110vw,520px)}.ui-scroll-hero{height:auto}.ui-scroll-hero__stage{position:relative;min-height:78dvh;height:auto}.ui-scroll-hero__media{transform:none!important}.ui-scroll-hero .ui-display{font-size:calc(var(--ui-display) * 1.15)}}
 @media(prefers-reduced-motion:reduce){.ui-video-hero__media>video{transition:none}.ui-floating__item{transform:none!important}}
-@media (max-width:820px){.ui-hero[data-variant=split] .ui-hero__grid,.ui-hero[data-variant=editorial] .ui-hero__grid{grid-template-columns:1fr;min-height:0}.ui-hero[data-variant=editorial] .ui-hero__copy,.ui-hero[data-variant=editorial] .ui-hero__media{grid-column:1/-1;transform:none}.ui-hero[data-variant=split] .ui-hero__media{order:-1;aspect-ratio:4/5}}
+@media (max-width:820px){.ui-hero[data-variant=split] .ui-hero__grid,.ui-hero[data-variant=editorial] .ui-hero__grid{grid-template-columns:1fr;min-height:0}.ui-hero[data-variant=editorial] .ui-hero__copy,.ui-hero[data-variant=editorial] .ui-hero__media{grid-column:1/-1;transform:none}.ui-hero[data-variant=editorial] .ui-hero__media{aspect-ratio:3/2;max-height:none}.ui-hero[data-variant=split] .ui-hero__media{order:-1;aspect-ratio:4/5}}
 .ui-showcase{position:relative;height:230vh}.ui-showcase__stage{position:sticky;top:0;height:100dvh;display:grid;place-items:center;overflow:clip}.ui-showcase__media{height:min(62dvh,700px);width:auto;max-width:86vw;aspect-ratio:var(--ui-aspect);border-radius:var(--ui-radius-media);overflow:hidden;will-change:transform;background:var(--ui-surface);box-shadow:var(--ui-shadow)}.ui-showcase__media img{width:100%;height:100%;object-fit:cover}.ui-showcase__copy{position:absolute;inset:auto 0 var(--ui-s6);text-align:center;padding-inline:16px}.ui-showcase__copy>*{margin-inline:auto}.ui-showcase__copy .ui-text{color:inherit}
 .ui-showcase__veil{position:absolute;inset:0;background:linear-gradient(to top,color-mix(in srgb,var(--ui-paper) 92%,transparent),transparent 45%);pointer-events:none}
 .ui-showcase[data-static]{height:auto}.ui-showcase[data-static] .ui-showcase__stage{position:relative;height:auto;padding-block:var(--ui-s7);gap:var(--ui-s5)}.ui-showcase[data-static] .ui-showcase__copy{position:static}.ui-showcase[data-static] .ui-showcase__veil{display:none}
@@ -603,11 +604,17 @@ export function SiteHeader({ name, tagline, logo, links = [], variant = 'classic
 
 /* ------------------------------------------------------------------ sections */
 
-export function Hero({ variant = 'split', eyebrow, title, lead, image, actions, scrollGrow = false, entrance = false }: {
+export function Hero({ variant, eyebrow, title, lead, image, actions, scrollGrow = false, entrance = false }: {
   variant?: 'split' | 'fullbleed' | 'editorial' | 'typographic'; eyebrow?: ReactNode; title: ReactNode; lead?: ReactNode; image?: Img; actions?: ReactNode;
   /** The image grows into place as it scrolls into view. */ scrollGrow?: boolean; entrance?: boolean;
 }) {
   const media = image?.src ? <div className={['ui-hero__media', scrollGrow ? 'ui-scroll-grow' : ''].filter(Boolean).join(' ')}><Picture image={image} eager /></div> : null;
+  // An unstated variant used to mean 'split', so every opening that forgot to say
+  // otherwise arrived as the same copy-left / photo-right picture. And every
+  // photo-shaped variant without a photo is broken on its own terms: split and
+  // editorial leave an empty track, fullbleed puts white text on paper. The
+  // photo-free opening is the only honest answer in that case.
+  const shape = media ? variant || 'editorial' : 'typographic';
   const Copy = entrance ? EntranceGroup : 'div';
   const copy = <Copy className="ui-hero__copy">
     {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
@@ -615,9 +622,9 @@ export function Hero({ variant = 'split', eyebrow, title, lead, image, actions, 
     {lead ? <Lead>{lead}</Lead> : null}
     {actions ? <div className="ui-row ui-hero__actions">{actions}</div> : null}
   </Copy>;
-  if (variant === 'fullbleed') return <section className="ui-hero" data-variant="fullbleed">{media}<div className="ui-container">{copy}</div></section>;
-  if (variant === 'typographic') return <section className="ui-hero" data-variant="typographic"><div className="ui-container">{copy}{media}</div></section>;
-  return <section className="ui-hero" data-variant={variant}><div className="ui-container ui-hero__grid">{copy}{media}</div></section>;
+  if (shape === 'fullbleed') return <section className="ui-hero" data-variant="fullbleed">{media}<div className="ui-container">{copy}</div></section>;
+  if (shape === 'typographic') return <section className="ui-hero" data-variant="typographic"><div className="ui-container">{copy}{media}</div></section>;
+  return <section className="ui-hero" data-variant={shape}><div className="ui-container ui-hero__grid">{copy}{media}</div></section>;
 }
 
 /** A real optional video, always backed by a real poster. Decorative footage only; narration belongs in an accessible player. */

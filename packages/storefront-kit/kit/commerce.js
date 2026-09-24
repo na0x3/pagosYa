@@ -3,7 +3,22 @@
   // pagosya-product-options:v1 — bounded variant IDs, prices, stock and galleries.
   const config = window.PAGOSYA_CONFIG || {};
   const hosted = window.PAGOSYA_HOSTED === true;
-  const track = (event, method) => { if (hosted) parent.postMessage({ type: 'pagosya:funnel', event, ...(method ? { method } : {}) }, '*'); };
+  // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
+  // and the merchant's measurement tags. Those tags exist only after the shopper accepted
+  // statistics — see privacy.js and the gate the API puts in the head — so a missing
+  // gtag/fbq/ttq here is that refusal, and the event is dropped rather than queued.
+  const PIXEL_EVENTS = { product_view: ['view_item', 'ViewContent'], add_to_cart: ['add_to_cart', 'AddToCart'], checkout_started: ['begin_checkout', 'InitiateCheckout'] };
+  const track = (event, method, detail) => {
+    if (hosted) parent.postMessage({ type: 'pagosya:funnel', event, ...(method ? { method } : {}) }, '*');
+    const names = PIXEL_EVENTS[event];
+    if (!names) return;
+    // Amounts are integer centavos here; every provider expects major units.
+    const amount = detail?.value ?? (event === 'checkout_started' ? cartValue() : 0);
+    const payload = amount > 0 ? { value: amount / 100, currency: detail?.currency || cartCurrency() } : {};
+    try { window.gtag?.('event', names[0], payload); } catch {}
+    try { window.fbq?.('track', names[1], payload); } catch {}
+    try { window.ttq?.track?.(names[1], payload); } catch {}
+  };
   const preview = window.PAGOSYA_PREVIEW === true && !hosted;
   const request = async (url, options) => {
     if (!hosted) return fetch(url, options);
@@ -133,6 +148,8 @@
     }
     return left;
   }
+  function cartValue() { return [...cart].reduce((sum, [key, quantity]) => { const line = cartLine(key); return sum + (line?.amount || 0) * quantity; }, 0); }
+  function cartCurrency() { for (const [key] of cart) { const line = cartLine(key); if (line?.p?.currency) return line.p.currency; } return selectedProduct?.currency || 'BOB'; }
   const cartItems = () => [...cart].flatMap(([key, quantity]) => {
     const line = cartLine(key);
     return line ? [{ id: line.p.id, ...(line.variant ? { variantId: line.variant.id } : {}), ...(line.picks ? { extraIds: line.picks } : {}), quantity }] : [];
@@ -217,10 +234,13 @@
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
-      [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:start}
+      [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy p,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy p{margin-top:2px;opacity:.8}
+      /* A card's size never depends on its copy: descriptions stop at a fixed line count and price and action sit on the card's bottom edge, so a row of cards stays even. */
+      .menu-item:not([data-custom-product]) .menu-item__copy p,.menu-item[data-custom-product] .menu-item__description{display:-webkit-box;-webkit-line-clamp:var(--pagosya-description-lines,2);line-clamp:var(--pagosya-description-lines,2);-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+      [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy{flex:1 1 auto}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-add,[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-add{align-self:flex-start}
       /* Arrangement chrome: group headings, the "see all" link, and the collection tab row. */
       [data-pagosya-catalog] .catalog-group__title{margin:24px 0 12px;font-family:var(--store-heading-font,var(--brand-heading-font,var(--font-heading,inherit)));font-size:1.05rem}
@@ -878,7 +898,7 @@
   function openProduct(id, trigger) {
     const p = products().find(p => p.id === id);
     if (!p) { if (fullProductPage) detail.innerHTML = '<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="index.html#catalogo">Explorar productos</a>'; return; }
-    track('product_view');
+    track('product_view', undefined, { value: price(p), currency: p.currency });
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     selectedOptions = completeSelection(p, []);
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
@@ -1876,7 +1896,7 @@
     if (button.hasAttribute("data-bundle-add") && ready) {
       const bundle = (Array.isArray(store.bundles) ? store.bundles : []).find(candidate => candidate.id === button.dataset.bundleAdd), entries = bundleEntries(bundle);
       if (!bundle || !entries.length || entries.some(entry => !entry.p || !simpleProduct(entry.p) || remaining(entry.p) < entry.quantity)) { message("Este paquete ya no está disponible completo."); return; }
-      track('add_to_cart');
+      track('add_to_cart', undefined, { value: entries.reduce((sum, entry) => sum + price(entry.p) * entry.quantity, 0), currency: entries[0].p.currency });
       for (const entry of entries) cart.set(lineKey(entry.p.id), (cart.get(lineKey(entry.p.id)) || 0) + entry.quantity);
       renderCart(); message(`${bundle.name} añadido a tu pedido.`);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${bundle.name} añadido a tu pedido.`;
@@ -1888,7 +1908,7 @@
       const { p, variant, name } = line;
       const quantity = cart.get(key) || 0;
       if (remaining(p, variant, line.picks) <= 0) { message("Ya añadiste la cantidad disponible."); return; }
-      track('add_to_cart');
+      track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
       cart.set(key, quantity + units); renderCart(); message(`${name} añadido a tu pedido.`); addedFeedback({ ...p, name }, button, event.detail === 0);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a tu pedido.`;

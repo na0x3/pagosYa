@@ -39,19 +39,14 @@ for (const clipped of [false, true]) test(`design findings prepare a repair mess
   await page.getByLabel('Correo', { exact: true }).fill('test@example.com');
   await page.getByLabel('Contraseña').fill('test-password');
   await page.getByRole('button', { name: 'Entrar al Studio', exact: true }).click();
-  await page.locator('[data-source-checks] summary').click();
-  const prepare = page.getByRole('button', { name: clipped ? 'Preparar correcciones' : 'Preparar ajustes de diseño' });
-  await expect(prepare).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('status', { name: 'Comprobación del navegador' })).toContainText(clipped ? 'correcciones pendientes' : 'detalles visuales');
-  await expect.poll(() => recorded?.passed).toBe(!clipped);
+  await expect.poll(() => recorded?.passed, { timeout: 15000 }).toBe(!clipped);
   expect(recorded.findings.length).toBeGreaterThan(0);
   expect(Object.keys(recorded).sort()).toEqual(['findings', 'passed']);
-  await prepare.click();
-  const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
-  await expect(composer).toHaveValue(clipped ? /Controles de compra completos/ : /Sección incompleta para revisar/);
-  await expect(composer).toBeFocused();
-  await expect(prepare).toBeDisabled();
+  // Checking the site never costs the merchant a request; the findings only ride
+  // along with the next message they choose to send.
   expect(paid).toEqual([]);
+  const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
+  await composer.fill('Ajusta el diseño de la portada.');
   await page.getByRole('button', { name: 'Enviar a YAPI', exact: true }).click();
   await expect.poll(() => submitted?.browserReview?.length || 0).toBeGreaterThan(0);
   expect(submitted.browserReview.join('\n')).toContain(clipped ? 'Controles de compra completos' : 'Sección incompleta para revisar');
@@ -76,13 +71,10 @@ test('empty catalog is one pending setup step in chat and keeps publishing block
   await page.getByLabel('Correo', { exact: true }).fill('test@example.com');
   await page.getByLabel('Contraseña').fill('test-password');
   await page.getByRole('button', { name: 'Entrar al Studio', exact: true }).click();
-  await expect(page.getByRole('status', { name: 'Comprobación del navegador' })).toContainText('Las imágenes del diseño no crean productos', { timeout: 15000 });
+  await expect(page.locator('[data-readiness-step=products] span')).toHaveText('Por revisar', { timeout: 15000 });
   await expect(page.getByRole('button', { name: 'Publicar este diseño', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Ver móvil', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Publicar este diseño', exact: true })).toBeDisabled();
-  await page.locator('[data-source-checks] summary').click();
-  await expect(page.locator('[data-source-checks] [data-check-status="skipped"]')).toHaveCount(1);
-  await expect(page.locator('[data-source-checks] [data-check-status="failed"]')).toHaveCount(0);
 });
 
 test('source studio generates, previews commerce, edits a file, restores and downloads',async({page})=>{
@@ -333,43 +325,6 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
 });
 
 
-test('motion changes save a revision without AI generation and persist after reload', async ({page}) => {
-  const versions = [{revision:1,label:'Original',snapshot:structuredClone(snapshot)}];
-  let changes = 0;
-  await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
-  await page.route('**/api/v1/**', async route => {
-    const pathname = new URL(route.request().url()).pathname;
-    let body:any;
-    if(pathname.endsWith('/stores')) body=[{id:'s1',name:'Café Aroma',slug:'cafe'}];
-    else if(pathname.endsWith('/conversation')) body={messages:[]};
-    else if(pathname.endsWith('/estimate')) body={model:'gpt-5.6-terra',maxCredits:50,estimate:{minCredits:4,maxCredits:16}};
-    else if(pathname.endsWith('/catalog'))body=structuredClone(snapshotCatalog);
-    else if(pathname.endsWith('/source-project')) body={revision:versions[0].revision,versions,nextBefore:null};
-    else if(/\/versions\/\d+$/.test(pathname)) body=versions.find(v=>v.revision===Number(pathname.split('/').at(-1)));
-    else if(pathname.endsWith('/motion')) {
-      const input=route.request().postDataJSON(); expect(input).toEqual({revision:1,motion:'off',scrollFeel:'soft'}); changes++;
-      const next=structuredClone(versions[0]); next.revision++; next.label='Sin movimiento';
-      const config=next.snapshot.files.find(f=>f.path==='config.js')!;
-      const data=JSON.parse(config.content.slice(config.content.indexOf('=')+1).trim().replace(/;$/,''));
-      config.content='window.PAGOSYA_CONFIG = '+JSON.stringify({...data,motion:input.motion,scrollFeel:input.scrollFeel})+';';
-      versions.unshift(next); body=next;
-    } else if (pathname.endsWith('/checks')) body = { id: 'check' };
-    else if (pathname.endsWith('/design-jobs')) body = { enabled: false, job: null };
-    else throw new Error('Unexpected request '+pathname);
-    await route.fulfill({json:body});
-  });
-  await page.goto('/?source=1');
-  await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toHaveValue('subtle');
-  await page.getByRole('combobox',{name:'Movimiento',exact:true}).selectOption('off');
-  await expect(page.locator('#source-revision')).toHaveCount(0);
-  await page.reload();
-  await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toHaveValue('off');
-  await expect(page.getByRole('combobox',{name:'Movimiento',exact:true})).toBeEnabled();
-  await expect(page.getByRole('combobox',{name:'Desplazamiento',exact:true})).toHaveValue('soft');
-  await expect(page.getByRole('combobox',{name:'Desplazamiento',exact:true})).toBeDisabled();
-  expect(changes).toBe(1);
-});
-
 test('first-site creation starts in chat and preserves the message after a failure', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
   let sent: any;
@@ -396,4 +351,30 @@ test('first-site creation starts in chat and preserves the message after a failu
   await page.getByRole('button',{name:'Enviar a YAPI'}).click();
   await expect.poll(() => sent.instruction).toBe('Usa tonos crema para mi cafetería');
   expect(sent).not.toHaveProperty('setupAction');
+});
+
+
+test('the idle canvas never takes focus from the merchant setting up their first site', async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
+  await page.route('**/api/v1/**', async route => {
+    const pathname = new URL(route.request().url()).pathname;
+    const body = pathname.endsWith('/stores') ? [{id:'s1',name:'Café Aroma',slug:'cafe'}]
+      : pathname.endsWith('/conversation') ? {messages:[],setup:{step:'conversation',prompt:'Cuéntame qué quieres crear.',options:[]}}
+      : pathname.endsWith('/source-project') ? {revision:0,versions:[],nextBefore:null} : {};
+    await route.fulfill({json:body});
+  });
+  await page.goto('/?source=1');
+  const active = () => page.evaluate(() => { const el = document.activeElement as HTMLElement | null; return el ? el.id || el.tagName.toLowerCase() : 'none'; });
+  const composer = page.getByRole('textbox', { name: 'Indicación para YAPI' });
+  await composer.click();
+  await page.keyboard.type('Quiero una web para mi café');
+  // Changing what to create re-renders the whole canvas, which remounts the idle
+  // drawing underneath. Neither the select nor the composer may lose the caret.
+  await page.selectOption('#source-site-purpose', 'service');
+  expect(await active()).toBe('source-site-purpose');
+  await composer.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' con reservas');
+  expect(await active()).toBe('agent-command');
+  expect(await composer.inputValue()).toBe('Quiero una web para mi café con reservas');
 });

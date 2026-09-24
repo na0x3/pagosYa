@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn(), openRecommendations: vi.fn(), domainShop: vi.fn(), openDomain: vi.fn() }));
+const mocks = vi.hoisted(() => ({ workspace: vi.fn(), retention: vi.fn(), source: vi.fn(), connections: vi.fn(), createConnection: vi.fn(), mappings: vi.fn(), saveMapping: vi.fn(), deleteMapping: vi.fn(), checks: vi.fn(), start: vi.fn(), finish: vi.fn(), openArrangement: vi.fn(), openRecommendations: vi.fn(), domainShop: vi.fn(), openDomain: vi.fn(), listStores: vi.fn(), saveAnalyticsId: vi.fn() }));
 vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'http://localhost:3001/v1', MerchantStudioApi: class {
         businessWorkspace = mocks.workspace;
         retention = mocks.retention;
@@ -13,6 +13,8 @@ vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'ht
         deleteIntegrationMapping = mocks.deleteMapping;
         startSourceTest = mocks.start;
         finishSourceTest = mocks.finish;
+        listStores = mocks.listStores;
+        saveAnalyticsId = mocks.saveAnalyticsId;
         sourceVersion = vi.fn().mockResolvedValue({ snapshot: { files: [] } });
     } }));
 vi.mock('./source-checks', () => ({ checkSourceWebsite: mocks.checks, sourceChecksBlockPublishing: (checks: any[]) => checks.some(row => row.status === 'failed') }));
@@ -44,6 +46,7 @@ beforeEach(() => {
     mocks.source.mockResolvedValue(source());
     mocks.connections.mockResolvedValue([]);
     mocks.domainShop.mockResolvedValue({ available: false, sandbox: true, tlds: ['com'], orders: [] });
+    mocks.listStores.mockResolvedValue([{ id: 'store-a', name: 'Tienda', slug: 'tienda' }]);
     mocks.workspace.mockResolvedValue({ storeName: 'Tienda A', revision: 2, emailConfigured: true, staff: { enabled: false, recipients: [] }, templates: [{ id: 'SHIPPED', name: 'Pedido enviado', group: 'transactional', trigger: 'Al enviar', supported: true, enabled: false, subject: 'En camino', body: 'Hola {{customer}}' }], logs: { items: [], nextBefore: null } });
 });
 describe('marketing workspaces', () => {
@@ -153,12 +156,41 @@ describe('marketing workspaces', () => {
         expect(tiktok.querySelector('.business-badge')!.textContent).toBe('Externa');
         input('[name=name]', 'Mi inventario');
         click('[data-open-integration=tiktok-ads]');
-        expect(app.querySelector('.integration-detail')!.textContent).toContain('Sin conectar a esta tienda');
+        // An unconfigured provider now offers its own field instead of an apology, and
+        // still is not counted as configured until an ID is actually saved.
+        expect(app.querySelector('.integration-detail')!.textContent).toContain('pega su ID para activarlo aquí');
+        expect(app.querySelector('[data-analytics-form] input')!.getAttribute('placeholder')).toBe('CJKLMNOP1234');
         expect(app.querySelector('.integration-detail a')!.getAttribute('href')).toBe('https://ads.tiktok.com/');
         expect((app.querySelector('[name=name]') as HTMLInputElement).value).toBe('Mi inventario');
         const only = app.querySelector<HTMLInputElement>('[data-only-connected]')!;
         only.checked = true; only.dispatchEvent(new Event('change'));
         expect(app.querySelector('[data-open-integration=tiktok-ads]')).toBeNull();
+    });
+
+    it('saves a measurement ID from its card and reports what the API stored, not what was typed', async () => {
+        mocks.listStores.mockResolvedValue([{ id: 'store-a', name: 'Tienda', slug: 'tienda', analyticsTiktokPixelId: 'CJKLMNOP1234' }]);
+        // The API normalizes; the card must show its answer so a merchant never sees a
+        // value that is not the one actually installed on the storefront.
+        mocks.saveAnalyticsId.mockResolvedValue({ analyticsTiktokPixelId: 'ZZZZYYYY9988' });
+        await mount('library=integrations');
+        const tiktok = app.querySelector('[data-open-integration=tiktok-ads]')!.closest('article')!;
+        expect(tiktok.querySelector('.business-badge')!.textContent).toBe('Configurada');
+        click('[data-open-integration=tiktok-ads]');
+        expect(app.querySelector<HTMLInputElement>('[data-analytics-form] input')!.value).toBe('CJKLMNOP1234');
+        input('[data-analytics-form] input', 'zzzzyyyy9988');
+        submit('[data-analytics-form]');
+        await vi.waitFor(() => expect(mocks.saveAnalyticsId).toHaveBeenCalledWith('store-a', 'analyticsTiktokPixelId', 'zzzzyyyy9988'));
+        await vi.waitFor(() => expect(app.querySelector<HTMLInputElement>('[data-analytics-form] input')!.value).toBe('ZZZZYYYY9988'));
+    });
+
+    it('clears a measurement ID with an empty value rather than a separate route', async () => {
+        mocks.listStores.mockResolvedValue([{ id: 'store-a', name: 'Tienda', slug: 'tienda', analyticsGa4Id: 'G-ABC1234567' }]);
+        mocks.saveAnalyticsId.mockResolvedValue({ analyticsGa4Id: null });
+        await mount('library=integrations');
+        click('[data-open-integration=google-analytics]');
+        click('[data-analytics-clear]');
+        await vi.waitFor(() => expect(mocks.saveAnalyticsId).toHaveBeenCalledWith('store-a', 'analyticsGa4Id', ''));
+        await vi.waitFor(() => expect(app.querySelector('.integration-detail')!.textContent).toContain('pega su ID para activarlo aquí'));
     });
     it('preserves YAPI instructions when a different saved design is selected', async () => {
         await mount('library=experiments');

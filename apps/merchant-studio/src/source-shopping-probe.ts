@@ -38,25 +38,6 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       // Advisory findings describe rendered evidence, never a prescribed aesthetic.
       const warn = (label: string, detail: string) => results.push({ label, detail, status: 'warning' });
       if (placeholderPhotos.length) warn('Fotografía de producto', `${placeholderPhotos.length} producto(s) muestran un ícono o ilustración vectorial en vez de una foto real: ${[...new Set(placeholderPhotos.map(img => img.alt || img.closest('.menu-item,[data-pagosya-product]')?.querySelector('[data-product-field="name"],h1,h2,h3')?.textContent?.trim() || 'producto'))].slice(0, 3).join(' · ')}. Sube fotografía real del producto; un marcador de posición se percibe como una tienda inacabada.`);
-      const collidingHeadings = [...document.querySelectorAll<HTMLElement>('h1,h2,h3')].filter(heading => {
-        if (!shown(heading) || heading.closest('[aria-hidden="true"]')) return false;
-        const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
-        const boxes: DOMRect[] = [];
-        let node: Node | null;
-        while ((node = walker.nextNode())) {
-          if (!node.textContent?.trim()) continue;
-          const range = document.createRange(); range.selectNodeContents(node);
-          boxes.push(...[...range.getClientRects()].filter(rect => rect.width > 2 && rect.height > 2));
-        }
-        return boxes.some((a, index) => boxes.slice(index + 1).some(b => {
-          const height = Math.min(a.height, b.height);
-          const lineDistance = Math.abs((a.top + a.bottom - b.top - b.bottom) / 2);
-          return lineDistance > height * .35 && lineDistance < Math.max(a.height, b.height)
-            && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6
-            && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > height * .15;
-        }));
-      });
-      if (collidingHeadings.length) warn('Líneas de título superpuestas', `Las cajas de texto de distintas líneas se cruzan en: ${collidingHeadings.slice(0, 3).map(el => el.textContent?.trim().slice(0, 100)).join(' · ')}. Revisa el interlineado, los saltos y el ancho disponible con la fuente cargada; conserva la identidad del diseño.`);
       // Measured design craft (docs/STOREFRONT_DESIGN_LEVEL_UP.md): advisory, never a publish blocker.
       const paragraphs = [...document.querySelectorAll<HTMLElement>('p,li')].filter(el => shown(el) && (el.textContent || '').trim().length >= 90 && !el.closest('[aria-hidden="true"],dialog'));
       if (paragraphs.length) {

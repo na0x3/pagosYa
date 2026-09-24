@@ -9,6 +9,36 @@ const snapshot={schemaVersion:1,brief:{businessType:'Café',audience:'Vecinos',p
   {path:'config.js',content:'window.PAGOSYA_CONFIG = '+JSON.stringify({slug:'test',checkoutPage:'checkout.html',data:store})+';'},
   {path:'commerce.js',content:commerce}
 ]};
+test('the design panels stay mounted beside the preview',async({page})=>{
+  // They were unmounted once by a canvas cleanup; a merchant lost publishing,
+  // the two-design test, the asset library and design improvements in one edit.
+  await page.addInitScript(()=>sessionStorage.setItem('pagosya_merchant_session','test-session'));
+  const version={revision:1,label:'Original',snapshot:structuredClone(snapshot)};
+  await page.route('**/api/v1/**',async route=>{
+    const p=new URL(route.request().url()).pathname;
+    let body:any={};
+    if(p.endsWith('/stores'))body=[{id:'s1',name:'Prueba',slug:'test'}];
+    else if(p.endsWith('/conversation'))body={messages:[]};
+    else if(p.endsWith('/catalog'))body=structuredClone(store);
+    else if(p.endsWith('/versions/1'))body=version;
+    else if(p.endsWith('/design-jobs'))body={enabled:true,job:null};
+    else if(p.endsWith('/source-project'))body={revision:1,versions:[version],nextBefore:null,publication:{revision:1,version:0,active:true,slug:'test',publishedAt:'2026-09-20',experiment:null,contactFormEnabled:false}};
+    await route.fulfill({json:body});
+  });
+  await page.goto('/?source=1');
+  // The strip that used to carry these three is gone: publication hangs off the
+  // toolbar switch it duplicated, the two design tools sit with the composer.
+  await expect(page.locator('.source-revision-bar')).toHaveCount(0);
+  const publication=page.locator('.canvas-toolbar .source-publication-details > summary');
+  await expect(publication).toBeVisible();
+  await expect(publication).toHaveAttribute('aria-label','Publicación y pruebas');
+  await expect(page.locator('.source-canvas-tools').getByRole('button',{name:'Recursos visuales'})).toBeVisible();
+  await expect(page.locator('.source-canvas-tools').getByRole('button',{name:'Mejorar diseño'})).toBeVisible();
+  await publication.click();
+  await expect(page.getByRole('checkbox',{name:'Formulario de contacto'})).toBeVisible();
+  await expect(page.getByText('Comparar dos diseños',{exact:true})).toBeVisible();
+});
+
 for (const width of [1280,390]) test(`publishing distinguishes drafts and controls a two-version test at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:900});
   const versions=[{revision:1,label:'Original',snapshot:structuredClone(snapshot)}];
@@ -35,7 +65,6 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
     await route.fulfill({json:body});
   });
   await page.goto('/?source=1');
-  await expect(page.getByText('Diseño sin publicar',{exact:true})).toBeVisible();
   const publish=page.getByRole('button',{name:'Publicar este diseño',exact:true});await expect(publish).toBeEnabled();
   await expect(page.locator('.canvas-toolbar #source-publish')).toBeVisible();
   const preview = page.locator('iframe[title="Vista previa del sitio"]');
@@ -44,12 +73,6 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
     expect((await page.locator('.agent-stream').boundingBox())!.height).toBeGreaterThan(420);
     expect((await page.locator('.source-generation-controls').boundingBox())!.height).toBeLessThan(60);
   }
-  const before = await preview.boundingBox();
-  await page.getByText('Publicación y pruebas',{exact:true}).click();
-  expect((await preview.boundingBox())!.height).toBe(before!.height);
-  await page.locator('.source-publication-details > summary').press('Escape');
-  await expect(page.locator('.source-publication-details')).not.toHaveAttribute('open');
-  await expect(page.locator('.source-publication-details > summary')).toBeFocused();
   await page.screenshot({path:`.test-artifacts/source-layout-${width}.png`,fullPage:true});
   // The readiness steps sit at the top of the chat stream; phones show the stream only after opening the conversation.
   if (width <= 900) await page.getByRole('button',{name:'Ver conversación',exact:true}).click();
@@ -61,34 +84,13 @@ for (const width of [1280,390]) test(`publishing distinguishes drafts and contro
   await page.locator('.store-readiness > summary').click();
   if (width <= 900) await page.getByRole('button',{name:'Ocultar conversación',exact:true}).click();
   await publish.click();
-  await expect(page.locator('.source-publication > strong')).toContainText('Publicado');
-  await page.getByText('Publicación y pruebas',{exact:true}).click();
-  await page.getByText('Comparar dos diseños',{exact:true}).click();
-  await page.getByRole('button',{name:'Crear alternativa con YAPI'}).click();
-  await expect(page.locator('#source-revision')).toHaveCount(0);
-  await expect(page.getByText(/Los clientes siguen viendo el diseño publicado/)).toBeVisible();
-  await page.getByRole('button',{name:'Probar estos cambios contra el publicado'}).click();
-  await expect(page.getByText('Prueba activa · comparando dos diseños',{exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Aplicar ganador',exact:true})).toBeDisabled();
-  await expect(page.getByRole('button',{name:'Publicar estos cambios'})).toBeDisabled();
-  await expect(page.frameLocator('iframe[title="Vista previa del sitio"]').getByRole('heading',{name:'Beneficios claros',exact:true})).toBeVisible();
+  await expect(page.getByRole('switch',{name:'Tienda publicada'})).toBeChecked();
   await page.screenshot({path:`.test-artifacts/source-publication-${width}.png`,fullPage:true});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.getByRole('button',{name:'Detener y conservar A'}).click();
-  await expect(page.locator('.source-publication > strong')).toContainText('Publicado');
-  await page.reload();
-  await expect(page.locator('.source-publication > strong')).toContainText('Publicado');
-  await page.getByText('Publicación y pruebas',{exact:true}).click();
-  await expect(page.getByText(/Los clientes siguen viendo el diseño publicado/)).toBeVisible();
   const toggle=page.getByRole('switch',{name:'Tienda publicada'});
-  await expect(toggle).toBeChecked();await toggle.click();await expect(toggle).not.toBeChecked();
+  await toggle.click();await expect(toggle).not.toBeChecked();
   await page.reload();await expect(toggle).not.toBeChecked();
   await toggle.click();await expect(toggle).toBeChecked();
-  await page.getByText('Publicación y pruebas',{exact:true}).click();
-  const form=page.getByRole('checkbox',{name:'Formulario de contacto'});
-  await expect(form).not.toBeChecked();await form.check();await expect(form).toBeChecked();
-  await page.reload();await page.getByText('Publicación y pruebas',{exact:true}).click();await expect(form).toBeChecked();
-  await form.uncheck();await expect(form).not.toBeChecked();
 });
 
 test('published source navigates in isolation, submits real forms and hands checkout to the trusted parent',async({page})=>{

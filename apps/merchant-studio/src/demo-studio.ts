@@ -1,4 +1,5 @@
 import "./style.css";
+import { renderFaceMark } from './source-face';
 import type { StoreSiteDocument } from "@pagosya/shared-types";
 import { batchStatusLabel, validateImageBatch } from "./batch-upload";
 
@@ -259,7 +260,7 @@ function renderConversation(): string {
         ${renderBatch()}
       </article>
       <article class="agent-note" aria-live="polite">
-        <div class="agent-note__meta"><span class="yapi-dot"></span><strong>YAPI</strong><span>${state.assistantBusy ? "trabajando" : "listo"}</span></div>
+        <div class="agent-note__meta">${renderFaceMark({ thinking: state.assistantBusy })}<strong>YAPI</strong><span>${state.assistantBusy ? "trabajando" : "listo"}</span></div>
         ${state.assistantBusy
           ? `<div class="thinking"><i></i><i></i><i></i><span>Revisando la tienda y preparando una vista segura…</span></div>`
           : `<p>${state.assistantReply

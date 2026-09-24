@@ -80,7 +80,7 @@
       catch { status.textContent = 'No se pudo solicitar el envío. Intenta de nuevo.'; button.disabled = false; }
     });
   };
-  function mountSignup(host, settings, config, state, api, preview, query) {
+  function mountSignup(host, settings, config, state, api, preview, query, launcher = true) {
     host.className = 'pagosya-signup-host';
     if (!document.getElementById('pagosya-signup-style')) {
       const style = document.createElement('style'); style.id = 'pagosya-signup-style';
@@ -118,10 +118,11 @@
     const interests = Array.isArray(visual.interests) ? visual.interests.slice(0, 8) : [];
     const launcherImage = image ? `<img src="${escape(image)}" alt="Selección de ${escape(name)}" referrerpolicy="no-referrer">` : `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`;
     const launcherAction = preview ? `<button type="button" class="signup-reopen" disabled>${escape(settings.signupButton)}</button><p class="pagosya-signup-preview-note">Vista previa: el formulario se activa al publicar tu tienda.</p>` : '<button type="button" class="signup-reopen" aria-haspopup="dialog">Comunidad</button>';
-    host.innerHTML = `<section class="pagosya-signup-launcher" aria-label="Comunidad">
+    // A design that draws its own signup entry keeps only the dialog; the launcher would repeat it.
+    host.innerHTML = `${launcher ? `<section class="pagosya-signup-launcher" aria-label="Comunidad">
         <figure class="pagosya-signup-launcher-media">${launcherImage}</figure>
         <div class="pagosya-signup-launcher-copy"><p class="signup-eyebrow">${escape(name)}</p><h2>${escape(settings.signupTitle)}</h2><p class="signup-description">${escape(settings.signupBody)}</p>${launcherAction}</div>
-      </section>${preview ? '' : `<dialog class="pagosya-signup-dialog" aria-label="${escape(settings.signupTitle)}">
+      </section>` : ''}${preview ? '' : `<dialog class="pagosya-signup-dialog" aria-label="${escape(settings.signupTitle)}">
         <button type="button" class="signup-close" aria-label="Cerrar suscripción">×</button>
         <div class="pagosya-signup-layout">
           <figure class="pagosya-signup-photo">${image ? `<img src="${escape(image)}" alt="Selección de ${escape(name)}" referrerpolicy="no-referrer">` : `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`}</figure>
@@ -144,7 +145,7 @@
         const photo = event.currentTarget;
         photo.parentElement.innerHTML = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`;
       }, { once: true });
-      return;
+      return null;
     }
     const dialog = host.querySelector('dialog');
     const remember = () => { state.signupDismissed = true; try { sessionStorage.setItem(dismissedKey, '1'); } catch {} };
@@ -152,7 +153,7 @@
     dialog.addEventListener('close', remember);
     dialog.querySelector('.signup-close').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
-    host.querySelector('.signup-reopen').addEventListener('click', open);
+    host.querySelector('.signup-reopen')?.addEventListener('click', open);
     const photo = host.querySelector('.pagosya-signup-photo img');
     photo?.addEventListener('error', () => { photo.parentElement.innerHTML = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`; }, { once: true });
     secureFields(dialog.querySelector('form'));
@@ -165,15 +166,16 @@
           ...(String(data.get('name') ?? '').trim() ? { name: String(data.get('name')).trim() } : {}),
           ...(String(data.get('phone') ?? '').trim() ? { phone: String(data.get('phone')).trim() } : {}),
           ...(data.getAll('interests').length ? { interests: data.getAll('interests') } : {}) });
-        remember(); state.subscribed = true; form.hidden = true; host.querySelector('.signup-reopen').hidden = true;
+        remember(); state.subscribed = true; form.hidden = true; host.querySelector('.signup-reopen')?.setAttribute('hidden', '');
         status.textContent = '¡Ya formas parte de nuestra comunidad! Revisa tu correo para recibir nuestras novedades.';
       } catch (error) { status.textContent = error.message; button.disabled = false; }
     });
     let dismissed = state.signupDismissed;
     try { dismissed ||= sessionStorage.getItem(dismissedKey) === '1'; } catch {}
-    if (state.subscribed) host.querySelector('.signup-reopen').hidden = true;
+    if (state.subscribed) host.querySelector('.signup-reopen')?.setAttribute('hidden', '');
     // Never cover a receipt, private card, recovery link, or merchant preview.
     if (!dismissed && !preview && !['comeback', 'recover', 'unsubscribe'].some(key => query.has(key)) && !document.querySelector('[data-pagosya-checkout-page]')) open();
+    return open;
   }
   window.PAGOSYA_RETENTION_MOUNT = async function mountRetention(options) {
     const config = options || window.PAGOSYA_CONFIG || {};
@@ -205,7 +207,7 @@
         .pagosya-retention form{display:grid;gap:12px;max-width:600px}.pagosya-retention label{display:grid;gap:8px;font:inherit}.pagosya-retention input[type=email]{box-sizing:border-box;min-width:0;width:100%;min-height:48px;padding:12px;border:1px solid var(--brand-border,var(--line,currentColor));border-radius:var(--brand-radius,0);font:inherit;background:var(--brand-background,var(--paper,Canvas));color:inherit}
         .pagosya-retention button{min-height:48px;padding:12px 20px;border:1px solid currentColor;border-radius:var(--brand-radius,0);font:inherit;font-weight:700;background:var(--brand-accent,var(--accent,var(--ink,CanvasText)));color:var(--brand-accent-foreground,var(--paper,Canvas));cursor:pointer}.pagosya-retention button:disabled{opacity:.6;cursor:wait}.pagosya-retention :focus-visible{outline:3px solid currentColor;outline-offset:4px}
         .pagosya-retention .retention-consent{display:flex;align-items:flex-start;gap:12px;line-height:1.5;font-size:14px}.pagosya-retention input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;margin:2px 0;accent-color:var(--brand-accent,var(--accent,auto))}.retention-stamps{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0;list-style:none;padding:0}.retention-stamps li{display:grid;place-items:center;width:44px;height:44px;border:1px solid currentColor;border-radius:50%;font:inherit}.retention-stamps [data-earned=true]{background:var(--brand-accent,var(--accent,var(--ink,CanvasText)));color:var(--brand-accent-foreground,var(--paper,Canvas))}.retention-code{display:block;padding:16px 0;overflow-wrap:anywhere;font:inherit;font-weight:700;user-select:all}
-        [data-retention-recovery]{width:auto;margin:24px 0;padding:20px 0}.pagosya-retention [role=status]:empty{display:none}
+        [data-pagosya-subscribe-block][hidden],[data-pagosya-subscribe-open][hidden]{display:none!important}[data-retention-recovery]{width:auto;margin:24px 0;padding:20px 0}.pagosya-retention [role=status]:empty{display:none}
         @media(max-width:480px){.pagosya-retention{width:calc(100% - 32px);margin:32px auto;padding:24px 0}[data-retention-recovery]{width:100%;margin:20px 0}}
       }`;
       document.head.append(style);
@@ -226,10 +228,38 @@
         finally { delete target.dataset.busy; button.disabled = false; }
       });
     }
+    // The design may draw its own signup entry (a footer block, a banner): a real button with
+    // data-pagosya-subscribe-open, optionally inside a data-pagosya-subscribe-block wrapper. The
+    // email is still typed in pagosYa's form, never in the design.
+    const openers = [...document.querySelectorAll('[data-pagosya-subscribe-open]')];
+    const block = el => el.closest('[data-pagosya-subscribe-block]') || el;
+    let openSignup = null;
     if (settings.signupEnabled) {
       document.querySelectorAll('.store-site-newsletter').forEach(el => el.hidden = true);
-      mountSignup(slot('data-pagosya-subscribe'), settings, config, state, api, preview, query);
+      openSignup = mountSignup(slot('data-pagosya-subscribe'), settings, config, state, api, preview, query, !openers.length);
     }
+    // The editor preview keeps the drawn block visible so the merchant sees the design before turning subscriptions on.
+    openers.forEach(el => { block(el).hidden = !settings.signupEnabled && !preview; });
+    const subscribeFromDesign = async el => {
+      const status = block(el).querySelector('[role=status]') || document.querySelector('[data-pagosya-status]');
+      const say = text => { if (status) status.textContent = text; };
+      if (preview) return say('Vista previa: el formulario de suscripción se activa al publicar tu tienda.');
+      if (!hosted) return openSignup?.();
+      if (el.disabled) return;
+      el.disabled = true; say('Un momento…');
+      try {
+        // The trusted parent asks for the email and consent and merges them into this request.
+        await api('subscribe', { consent: true });
+        state.subscribed = true; state.signupDismissed = true;
+        say('¡Listo! Ya estás suscrito. Revisa tu correo para recibir nuestras novedades.');
+      } catch (error) { say(error.message); }
+      finally { el.disabled = false; }
+    };
+    openers.forEach(el => {
+      // Remounts after navigation rebind the latest settings without stacking listeners.
+      if (!el.pagosyaSubscribe) el.addEventListener('click', event => { event.preventDefault(); el.pagosyaSubscribe(); });
+      el.pagosyaSubscribe = () => subscribeFromDesign(el);
+    });
     // Loyalty cards are shown after payment or when reopening a private card link.
     document.querySelectorAll('[data-pagosya-comeback]').forEach(el => { el.replaceChildren(); el.hidden = true; });
     if (settings.comebackEnabled && query.get('comeback')) {

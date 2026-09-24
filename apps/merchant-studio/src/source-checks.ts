@@ -1,4 +1,4 @@
-import { CHECKOUT_ORIGIN } from './api';
+import { CHECKOUT_ORIGIN } from './checkout-origin';
 import { sourceShoppingProbe } from './source-shopping-probe';
 import { sourcePreviewDocument, type SourceSnapshot } from '@pagosya/storefront-preview';
 export type SourceCheck = { label: string; status: 'passed' | 'failed' | 'skipped' | 'warning'; detail?: string; blocking?: boolean };
@@ -83,12 +83,25 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
     for (const file of htmlPages) {
       if (signal?.aborted) return [...results, { label: 'Comprobación interrumpida', status: 'skipped', blocking: true }];
       const pageResults = await new Promise<SourceCheck[]>(resolve => {
-        const previousFocus = document.activeElement as HTMLElement | null;
         const frame = document.createElement('iframe');
         frame.inert = true; frame.title = 'Comprobación automática del sitio'; frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
         frame.setAttribute('sandbox', 'allow-scripts'); frame.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;height:844px;border:0;pointer-events:none;`;
+        // The checked page moves focus inside its own frame whenever it opens a
+        // dialog, which pulls the caret out of whatever the merchant is typing.
+        // Track the live focus and bounce it back the moment the frame takes it.
+        // Focus entering an opaque-origin frame raises no focusin here, so watch
+        // the element that loses it and check where focus actually landed.
+        let previousFocus = document.activeElement as HTMLElement | null;
+        const trackFocus = (event: FocusEvent) => { const target = event.target as HTMLElement | null; if (target && target !== frame) previousFocus = target; };
+        const bounceFocus = () => queueMicrotask(() => {
+          if (document.activeElement !== frame) return;
+          if (previousFocus?.isConnected && previousFocus !== frame) previousFocus.focus({ preventScroll: true });
+          else frame.blur();
+        });
+        document.addEventListener('focusin', trackFocus);
+        document.addEventListener('focusout', bounceFocus);
         let settled = false, pagePaymentOpened = false, checkoutNavigation = false;
-        const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); signal?.removeEventListener('abort', abort); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }); resolve(rows); };
+        const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); document.removeEventListener('focusin', trackFocus); document.removeEventListener('focusout', bounceFocus); signal?.removeEventListener('abort', abort); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && previousFocus?.isConnected && previousFocus !== frame) previousFocus.focus({ preventScroll: true }); resolve(rows); };
         const abort = () => finish([{ label: 'Comprobación interrumpida', status: 'failed', detail: 'Vuelve a comprobar el sitio antes de publicarlo.' }]);
         const timeout = window.setTimeout(() => finish([{ label: 'Carga del sitio', status: 'failed', detail: 'La página no respondió en 8 segundos.' }]), 8000);
         const receive = (event: MessageEvent) => {

@@ -67,15 +67,6 @@ for (const mobile of [false, true]) test(`MP4 upload, playback and saved resourc
   await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(.1);
   await video.evaluate((v: HTMLVideoElement) => v.pause());
   expect(uploads).toBe(1);
-  await page.getByRole('button', { name: 'Recursos visuales', exact: true }).click();
-  const resources = page.getByRole('region', { name: 'Recursos visuales', exact: true });
-  await expect(resources.locator('video')).toBeVisible();
-  await expect(resources.locator('video')).toHaveJSProperty('loop', true);
-  await expect(resources.locator('video')).toHaveJSProperty('paused', false);
-  await expect(resources.locator('video')).toHaveJSProperty('muted', true);
-  await expect(resources.getByRole('combobox', { name: 'Uso', exact: true })).toHaveValue('background');
-  await resources.getByRole('button', { name: 'Usar este video' }).click();
-  await expect(page.getByRole('textbox', { name: 'Indicación para YAPI' })).toHaveValue(/Usa el video guardado assets\/video-sample\.mp4.*video reproducible/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `/private/tmp/yapi-mp4-${mobile ? 'mobile' : 'desktop'}.png`, fullPage: true });
 });

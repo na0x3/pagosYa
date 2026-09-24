@@ -1,12 +1,6 @@
 /* Runs inside the preview sandbox before authored scripts. Resolve media at the
  * DOM boundary so computed URLs work just like literal asset paths. */
 (function (assets, page, editing) {
-  // Only the embedding Studio can replay. Hosted sites never accept this command.
-  window.addEventListener('message', event => {
-    if (event.source !== parent || parent === window || window.PAGOSYA_HOSTED === true || event.data?.type !== 'pagosya:preview-replay-motion') return;
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('pagosya:replay-motion')));
-  });
   const base = new URL(page, 'https://source.invalid/');
   const resolve = value => {
     if (typeof value !== 'string' || /^(?:[a-z]+:|\/\/|#)/i.test(value.trim())) return value;
