@@ -270,6 +270,8 @@ model Merchant {
   perPaymentLimitOverride     Int?
   monthlyVolumes              MerchantMonthlyVolume[]
   kycDocuments                MerchantKycDocument[]
+  rewardGrants                RewardGrant[]
+  aiCreditRedemptions         AiCreditRedemption[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -301,6 +303,8 @@ model MerchantUser {
   supportCases         SupportCase[]                 @relation("SupportCaseMerchantCreator")
   progressCelebrations MerchantProgressCelebration[]
   termsAcceptances     MerchantTermsAcceptance[]
+  rewardGrants         RewardGrant[]
+  wheelSpins           DailyWheelSpin[]
 }
 
 // Durable acknowledgement for a newly unlocked companion. This is scoped to
@@ -912,6 +916,8 @@ model Store {
   promoCodes                   PromoCode[]
   progressCelebrations         MerchantProgressCelebration[]
   partners                     StorePartner[]
+  rewardGrants                 RewardGrant[]
+  boardState                   BoardState?
 
   @@index([merchantId, createdAt])
 }
@@ -2764,4 +2770,76 @@ model BuyerTermsAcceptance {
   ipAddress         String?
   userAgent         String?
   acceptedAt        DateTime       @default(now())
+}
+
+enum RewardSource {
+  WHEEL
+  BOARD
+}
+
+enum RewardKind {
+  XP
+  AI_CREDITS
+  STICKER
+  TIP
+  RESPIN
+}
+
+// Every prize handed out by the daily wheel or the Horizonte board. The only source
+// of game XP and stickers; AI credit grants are the positive side of the reward balance.
+model RewardGrant {
+  id             String          @id @default(cuid())
+  merchantId     String
+  merchant       Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  storeId        String
+  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  merchantUserId String
+  merchantUser   MerchantUser    @relation(fields: [merchantUserId], references: [id], onDelete: Cascade)
+  source         RewardSource
+  kind           RewardKind
+  amount         Int             @default(0)
+  stickerId      String?
+  tipId          String?
+  convertedFrom  RewardKind?
+  createdAt      DateTime        @default(now())
+  wheelSpin      DailyWheelSpin?
+
+  @@index([storeId, kind])
+  @@index([merchantId, kind, createdAt])
+  @@index([merchantUserId, stickerId])
+}
+
+// One row per wheel spin. attempt 0 is the free daily spin; 1+ are spins won with RESPIN.
+model DailyWheelSpin {
+  merchantUserId String
+  merchantUser   MerchantUser @relation(fields: [merchantUserId], references: [id], onDelete: Cascade)
+  day            String
+  attempt        Int
+  grantId        String       @unique
+  grant          RewardGrant  @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@id([merchantUserId, day, attempt])
+}
+
+model BoardState {
+  storeId       String   @id
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  merchantId    String
+  position      Int      @default(0)
+  rollsUsed     Int      @default(0)
+  lapsCompleted Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+// Negative side of the AI reward-credit balance: credits applied to a finished YAPI generation.
+model AiCreditRedemption {
+  id           String   @id @default(cuid())
+  merchantId   String
+  merchant     Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  credits      Int
+  generationId String   @unique
+  createdAt    DateTime @default(now())
+
+  @@index([merchantId])
 }
