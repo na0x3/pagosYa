@@ -106,10 +106,15 @@ export class KycService {
         },
       });
 
+      // A stale submission (e.g. targetLevel 1, still pending after ops raised
+      // the merchant to level 3 directly) must never LOWER the merchant's level.
+      let resultingLevel: number | undefined;
       if (dto.decision === KycStatus.APPROVED) {
+        const merchant = await tx.merchant.findUniqueOrThrow({ where: { id: submission.merchantId } });
+        resultingLevel = Math.max(merchant.level, submission.targetLevel);
         await tx.merchant.update({
           where: { id: submission.merchantId },
-          data: { status: MerchantStatus.ACTIVE, level: submission.targetLevel },
+          data: { status: MerchantStatus.ACTIVE, level: resultingLevel },
         });
       }
 
@@ -120,7 +125,12 @@ export class KycService {
         action: `kyc.${dto.decision.toLowerCase()}`,
         targetType: "MerchantKycSubmission",
         targetId: submissionId,
-        metadata: { merchantId: submission.merchantId, level: submission.targetLevel, note: dto.note },
+        metadata: {
+          merchantId: submission.merchantId,
+          targetLevel: submission.targetLevel,
+          ...(resultingLevel !== undefined ? { level: resultingLevel } : {}),
+          note: dto.note,
+        },
       });
 
       return reviewed;

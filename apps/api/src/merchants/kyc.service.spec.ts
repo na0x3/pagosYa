@@ -126,6 +126,7 @@ describe("KycService.submit", () => {
 describe("KycService.review", () => {
   it("approving a submission activates the merchant and attributes it to the reviewing actor", async () => {
     const prisma = makeFakePrisma();
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", level: 0 });
     prisma.merchantKycSubmission.findUnique.mockResolvedValue({
       id: "kyc_1",
       merchantId: "m_1",
@@ -164,6 +165,7 @@ describe("KycService.review", () => {
 
   it("approving a level 1 submission raises the merchant to level 1", async () => {
     const prisma = makeFakePrisma();
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", level: 0 });
     prisma.merchantKycSubmission.findUnique.mockResolvedValue({
       id: "kyc_1",
       merchantId: "m_1",
@@ -179,6 +181,26 @@ describe("KycService.review", () => {
     expect(prisma.merchant.update).toHaveBeenCalledWith({
       where: { id: "m_1" },
       data: { status: MerchantStatus.ACTIVE, level: 1 },
+    });
+  });
+
+  it("never lowers the merchant's level when approving a stale lower-level submission", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", level: 3 });
+    prisma.merchantKycSubmission.findUnique.mockResolvedValue({
+      id: "kyc_1",
+      merchantId: "m_1",
+      status: KycStatus.PENDING_REVIEW,
+      targetLevel: 1,
+    });
+    prisma.merchantKycSubmission.update.mockResolvedValue({ id: "kyc_1", status: KycStatus.APPROVED });
+
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any);
+    await service.review("kyc_1", { decision: KycStatus.APPROVED }, actor);
+
+    expect(prisma.merchant.update).toHaveBeenCalledWith({
+      where: { id: "m_1" },
+      data: { status: MerchantStatus.ACTIVE, level: 3 },
     });
   });
 
