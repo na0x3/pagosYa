@@ -897,12 +897,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td>${esc(s.legalName)}${s.taxId ? `<br><span class="muted">NIT ${esc(s.taxId)}</span>` : ""}</td>
         <td>${s.legalRepName ? `${esc(s.legalRepName)}${s.legalRepDocumentId ? `<br><span class="muted">${esc(s.legalRepDocumentId)}</span>` : ""}` : `<span class="muted">—</span>`}</td>
         <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
-        <td>
-          <div class="kyc-photos">
-            ${s.ciFrontDocId ? `<img class="kyc-photo" alt="CI frente" data-submission="${esc(s.id)}" data-slot="CI_FRONT">` : ""}
-            ${s.ciBackDocId ? `<img class="kyc-photo" alt="CI dorso" data-submission="${esc(s.id)}" data-slot="CI_BACK">` : ""}
-            ${s.selfieDocId ? `<img class="kyc-photo" alt="Selfie" data-submission="${esc(s.id)}" data-slot="SELFIE">` : ""}
-          </div>
+        <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : ""].filter(Boolean).join(","))}">
+          <button type="button" class="secondary kyc-view-photos">Ver fotos</button>
+          <div class="kyc-photos"></div>
         </td>
         <td>${esc(new Date(s.createdAt).toLocaleString("es-BO"))}</td>
         <td>
@@ -914,8 +911,14 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </tr>`,
       )
       .join("");
-    loadKycImages(rowsEl);
+    // Photos are fetched only when ops clicks "Ver fotos" for a submission
+    // (below) — loading all three eagerly on every queue refresh wrote three
+    // kyc.document_viewed audit rows per submission per refresh, which
+    // defeated the purpose of that audit trail (it should mean "someone
+    // looked").
   }
+
+  const KYC_SLOT_LABELS = { CI_FRONT: "CI frente", CI_BACK: "CI dorso", SELFIE: "Selfie" };
 
   async function loadKycImages(root) {
     for (const img of root.querySelectorAll("img.kyc-photo")) {
@@ -934,6 +937,23 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       }
     }
   }
+
+  rowsEl.addEventListener("click", async (event) => {
+    const button = event.target.closest(".kyc-view-photos");
+    if (!button) return;
+    const cell = button.closest(".kyc-photos-cell");
+    const container = cell.querySelector(".kyc-photos");
+    const slots = (cell.dataset.slots || "").split(",").filter(Boolean);
+    // Revoke any blob URLs from a previous click on this same submission
+    // before replacing the <img> elements that held them.
+    for (const img of container.querySelectorAll("img.kyc-photo")) {
+      if (img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+    }
+    container.innerHTML = slots
+      .map((slot) => `<img class="kyc-photo" alt="${esc(KYC_SLOT_LABELS[slot] || slot)}" data-submission="${esc(cell.dataset.submission)}" data-slot="${esc(slot)}">`)
+      .join("");
+    await loadKycImages(container);
+  });
 
   async function refreshFailures() {
     const summary = await api("/internal/delivery_failures");
@@ -1188,13 +1208,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   function policyRow(p) {
     const monthlyBs = p.monthlyLimit == null ? "" : p.monthlyLimit / 100;
     const perPaymentBs = p.perPaymentLimit == null ? "" : p.perPaymentLimit / 100;
+    // Level 3 (Empresa) has no shared limit — it always runs on per-merchant
+    // overrides. Every other live level needs both limits set, or the API
+    // now refuses the save; "Sin límite" used to suggest blank was safe.
+    const limitPlaceholder = p.level === 3 ? "Definido por comercio" : "Requerido";
     return `
       <tr data-level="${esc(p.level)}">
         <td>${esc(p.level)}</td>
         <td>${esc(p.name)}</td>
         <td><input type="checkbox" class="policy-live" ${p.liveEnabled ? "checked" : ""}></td>
-        <td><input type="number" class="policy-monthly" step="0.01" min="0" value="${esc(monthlyBs)}" placeholder="Sin límite"></td>
-        <td><input type="number" class="policy-per-payment" step="0.01" min="0" value="${esc(perPaymentBs)}" placeholder="Sin límite"></td>
+        <td><input type="number" class="policy-monthly" step="0.01" min="0" value="${esc(monthlyBs)}" placeholder="${limitPlaceholder}"></td>
+        <td><input type="number" class="policy-per-payment" step="0.01" min="0" value="${esc(perPaymentBs)}" placeholder="${limitPlaceholder}"></td>
         <td><button type="button" class="primary policy-save">Guardar</button></td>
       </tr>`;
   }

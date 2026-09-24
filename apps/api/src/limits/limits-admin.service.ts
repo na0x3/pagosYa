@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { OpsRole, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditLogService } from "../ops/audit-log.service";
@@ -36,6 +36,15 @@ export class LimitsAdminService {
     return this.prisma.$transaction(async (tx) => {
       const before = await tx.merchantLevelPolicy.findUnique({ where: { level } });
       if (!before) throw new NotFoundException("Nivel no encontrado");
+      // Blank -> null on a live, non-level-3 policy would fail every payment
+      // at that level closed (level 3 legitimately has no shared limit — it
+      // always runs on per-merchant overrides instead).
+      const mergedLiveEnabled = data.liveEnabled ?? before.liveEnabled;
+      const mergedMonthlyLimit = data.monthlyLimit !== undefined ? data.monthlyLimit : before.monthlyLimit;
+      const mergedPerPaymentLimit = data.perPaymentLimit !== undefined ? data.perPaymentLimit : before.perPaymentLimit;
+      if (mergedLiveEnabled && level !== 3 && (mergedMonthlyLimit === null || mergedPerPaymentLimit === null)) {
+        throw new BadRequestException("Un nivel activo necesita límite mensual y por pago.");
+      }
       const after = await tx.merchantLevelPolicy.update({ where: { level }, data });
       await this.audit(tx, actor, "limits.policy_updated", "MerchantLevelPolicy", String(level), before, after);
       return after;
@@ -63,6 +72,14 @@ export class LimitsAdminService {
       const select = { id: true, level: true, monthlyLimitOverride: true, perPaymentLimitOverride: true } as const;
       const before = await tx.merchant.findUnique({ where: { id: merchantId }, select });
       if (!before) throw new NotFoundException("Comercio no encontrado");
+      // Level 3 (Empresa) has no shared policy limits: a merchant landing on
+      // it without its own overrides would be blocked from every live charge.
+      const mergedLevel = data.level ?? before.level;
+      const mergedMonthlyOverride = data.monthlyLimitOverride !== undefined ? data.monthlyLimitOverride : before.monthlyLimitOverride;
+      const mergedPerPaymentOverride = data.perPaymentLimitOverride !== undefined ? data.perPaymentLimitOverride : before.perPaymentLimitOverride;
+      if (mergedLevel === 3 && (mergedMonthlyOverride === null || mergedPerPaymentOverride === null)) {
+        throw new BadRequestException("El nivel Empresa necesita límites propios (mensual y por pago).");
+      }
       const after = await tx.merchant.update({ where: { id: merchantId }, data, select });
       await this.audit(tx, actor, "limits.merchant_updated", "Merchant", merchantId, before, after);
       return after;

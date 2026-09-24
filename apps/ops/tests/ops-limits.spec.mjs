@@ -105,28 +105,45 @@ async function openOps(page, { onRequest } = {}) {
   await expect(page.locator("#whoami")).toContainText("Ana Ops");
 }
 
-test("a pending level-1 submission shows its level, three photos, and the approve label", async ({ page }) => {
+test("a pending level-1 submission shows its level and the approve label, and loads photos only on demand", async ({ page }) => {
   const consoleErrors = [];
   page.on("pageerror", (err) => consoleErrors.push(String(err)));
   page.on("console", (msg) => { if (msg.type() === "error") consoleErrors.push(msg.text()); });
 
-  await openOps(page);
+  // Every fetch of a KYC document photo writes a kyc.document_viewed audit
+  // row; loading all three for every submission on every queue refresh would
+  // make that trail meaningless. Track these requests to prove they only
+  // happen once ops explicitly asks to see the photos.
+  const documentRequests = [];
+  await openOps(page, {
+    onRequest: async (route, { path }) => {
+      if (/^\/v1\/merchants\/kyc\/[^/]+\/documents\/[^/]+$/.test(path)) documentRequests.push(path);
+      return false;
+    },
+  });
 
   const row = page.locator("#rows tr");
   await expect(row).toContainText("Nivel solicitado: 1");
   await expect(row).toContainText("Nivel actual: 0");
   await expect(page.getByRole("button", { name: "Aprobar nivel 1" })).toBeVisible();
 
+  // Before clicking "Ver fotos": no document requests, no photos rendered.
+  expect(documentRequests).toEqual([]);
+  await expect(row.locator("img.kyc-photo")).toHaveCount(0);
+
+  await row.getByRole("button", { name: "Ver fotos" }).click();
+
   const images = row.locator("img.kyc-photo");
   await expect(images).toHaveCount(3);
   await expect(images.nth(0)).toHaveAttribute("src", /^blob:/);
   await expect(images.nth(1)).toHaveAttribute("src", /^blob:/);
   await expect(images.nth(2)).toHaveAttribute("src", /^blob:/);
+  expect(documentRequests).toHaveLength(3);
 
   expect(consoleErrors).toEqual([]);
 });
 
-test("the limits page shows policies in Bs and saves centavos, mapping empty to null", async ({ page }) => {
+test("the limits page shows policies in Bs and saves centavos", async ({ page }) => {
   let patchBody = null;
   await openOps(page, {
     onRequest: async (route, { path, method }) => {
@@ -142,12 +159,37 @@ test("the limits page shows policies in Bs and saves centavos, mapping empty to 
   const row = page.locator('#policiesRows tr[data-level="1"]');
   await expect(row.locator(".policy-monthly")).toHaveValue("10000");
   await expect(row.locator(".policy-per-payment")).toHaveValue("2000");
+  // A live, non-Empresa level always needs both limits — the API refuses a
+  // blank one, so the placeholder must not read "Sin límite" any more.
+  await expect(row.locator(".policy-monthly")).toHaveAttribute("placeholder", "Requerido");
+  await expect(row.locator(".policy-per-payment")).toHaveAttribute("placeholder", "Requerido");
 
   await row.locator(".policy-monthly").fill("20000");
-  await row.locator(".policy-per-payment").fill("");
+  await row.locator(".policy-per-payment").fill("3000");
   await row.locator("button.policy-save").click();
 
-  await expect.poll(() => patchBody).toEqual({ monthlyLimit: 2_000_000, perPaymentLimit: null, liveEnabled: true });
+  await expect.poll(() => patchBody).toEqual({ monthlyLimit: 2_000_000, perPaymentLimit: 300_000, liveEnabled: true });
+});
+
+test("level 3's policy limits can be left blank — Empresa always runs on its own per-merchant overrides", async ({ page }) => {
+  let patchBody = null;
+  await openOps(page, {
+    onRequest: async (route, { path, method }) => {
+      if (path === "/internal/limits/policies/3" && method === "PATCH") {
+        patchBody = JSON.parse(route.request().postData());
+        await route.fulfill({ json: { level: 3, name: "Nivel 3", liveEnabled: patchBody.liveEnabled, monthlyLimit: patchBody.monthlyLimit, perPaymentLimit: patchBody.perPaymentLimit } });
+        return true;
+      }
+      return false;
+    },
+  });
+
+  const row = page.locator('#policiesRows tr[data-level="3"]');
+  await expect(row.locator(".policy-monthly")).toHaveAttribute("placeholder", "Definido por comercio");
+  await expect(row.locator(".policy-per-payment")).toHaveAttribute("placeholder", "Definido por comercio");
+  await row.locator("button.policy-save").click();
+
+  await expect.poll(() => patchBody).toEqual({ monthlyLimit: null, perPaymentLimit: null, liveEnabled: true });
 });
 
 test("a 403 saving a policy shows the API message in the error element", async ({ page }) => {
