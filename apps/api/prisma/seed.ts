@@ -1,8 +1,10 @@
 import "reflect-metadata";
+import { randomUUID } from "node:crypto";
 import * as argon2 from "argon2";
 import { ApiKeyMode, ApiKeyType, KycStatus, LegalDocumentKind, PrismaClient, SettlementMode, TermsAcceptanceSource } from "@prisma/client";
 import { ApiKeyService } from "../src/auth/api-key.service";
 import { KycService } from "../src/merchants/kyc.service";
+import { IdentityDocumentsService } from "../src/merchants/identity-documents.service";
 import { MerchantsService } from "../src/merchants/merchants.service";
 import { OpsUserService } from "../src/ops/ops-user.service";
 import { AuditLogService } from "../src/ops/audit-log.service";
@@ -25,7 +27,10 @@ async function main() {
   const auditLog = new AuditLogService(prisma as unknown as PrismaService);
   const legal = new LegalDocumentsService(prisma as unknown as PrismaService, auditLog);
   const terms = new TermsAcceptanceService(prisma as unknown as PrismaService, legal);
-  const kyc = new KycService(prisma as unknown as PrismaService, auditLog, terms);
+  // assertOwned only reads merchantKycDocument rows — no object storage needed
+  // for seed data, so the files dependency is never exercised here.
+  const identityDocuments = new IdentityDocumentsService(prisma as unknown as PrismaService, undefined as never, auditLog);
+  const kyc = new KycService(prisma as unknown as PrismaService, auditLog, terms, identityDocuments);
   const merchantsService = new MerchantsService(prisma as unknown as PrismaService, apiKeys);
   const opsUsers = new OpsUserService(prisma as unknown as PrismaService);
 
@@ -101,12 +106,25 @@ async function main() {
         source: TermsAcceptanceSource.DASHBOARD,
         context: { ipAddress: null, userAgent: "seed" },
       });
+      // Fake identity documents so IdentityDocumentsService.assertOwned finds
+      // real rows to check against — the seed never uploads real photos.
+      const [ciFront, ciBack, selfie] = await Promise.all(
+        (["CI_FRONT", "CI_BACK", "SELFIE"] as const).map((slot) =>
+          prisma.merchantKycDocument.create({
+            data: { merchantId: merchant.id, slot, storageKey: randomUUID(), mimeType: "image/png", byteSize: 1 },
+          }),
+        ),
+      );
       const submission = await kyc.submit(merchant.id, {
+        targetLevel: 2,
         legalName: m.name,
         taxId: "1023456028",
         legalRepName: "Maria Fernanda Rojas",
         legalRepDocumentId: "7654321 LP",
         payoutBankAccount: "BNB 4012345678",
+        ciFrontDocId: ciFront.id,
+        ciBackDocId: ciBack.id,
+        selfieDocId: selfie.id,
       });
       const reviewed = await kyc.review(
         submission.id,
@@ -114,10 +132,7 @@ async function main() {
         opsUser,
       );
       console.log(`  kyc:             ${reviewed.status} (reviewed by ${reviewed.reviewedByLabel} at ${reviewed.reviewedAt?.toISOString()})`);
-
-      // Approved KYC implies verification level 2 ("Negocio") — same rule the
-      // migration backfill applies to existing approved/active merchants.
-      await prisma.merchant.update({ where: { id: merchant.id }, data: { level: 2 } });
+      // KycService.review sets Merchant.level = submission.targetLevel (2, "Negocio") on approval.
 
       const { liveKeys } = await merchantsService.issueLiveKeys(merchant.id);
       console.log(`  live secret key: ${liveKeys.secretKey}`);

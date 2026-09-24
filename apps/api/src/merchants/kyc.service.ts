@@ -5,6 +5,7 @@ import { AuditLogService } from "../ops/audit-log.service";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
 import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
+import { IdentityDocumentsService } from "./identity-documents.service";
 
 export interface OpsActor {
   id: string;
@@ -24,16 +25,24 @@ export class KycService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly terms: TermsAcceptanceService,
+    private readonly identityDocuments: IdentityDocumentsService,
   ) {}
 
   async submit(merchantId: string, dto: SubmitKycDto) {
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
-    if (merchant.status === MerchantStatus.ACTIVE) {
-      throw new BadRequestException("Merchant is already active");
-    }
+    const targetLevel = dto.targetLevel ?? 2;
+    if (targetLevel <= merchant.level) throw new BadRequestException("Ya tienes este nivel");
     if (await this.terms.needsMerchantAcceptance(merchantId)) {
       throw new BadRequestException("Debes aceptar los Términos y Condiciones vigentes antes de enviar tu verificación");
     }
+    if (!dto.ciFrontDocId || !dto.ciBackDocId || !dto.selfieDocId) {
+      throw new BadRequestException("Sube las dos caras de tu CI y una selfie con tu CI");
+    }
+    if (targetLevel >= 2 && (!dto.taxId || !dto.legalRepName || !dto.legalRepDocumentId)) {
+      throw new BadRequestException("Para el nivel Negocio necesitamos NIT, razón social y representante legal");
+    }
+    if (targetLevel === 1 && !dto.legalRepDocumentId) throw new BadRequestException("Ingresa tu número de CI");
+    await this.identityDocuments.assertOwned(merchantId, dto);
 
     const pending = await this.prisma.merchantKycSubmission.findFirst({
       where: { merchantId, status: KycStatus.PENDING_REVIEW },
@@ -43,7 +52,19 @@ export class KycService {
     }
 
     return this.prisma.merchantKycSubmission.create({
-      data: { merchantId, ...dto, payoutUsdBankAccount: dto.payoutUsdBankAccount?.trim() || null },
+      data: {
+        merchantId,
+        targetLevel,
+        legalName: dto.legalName,
+        taxId: dto.taxId?.trim() || null,
+        legalRepName: dto.legalRepName?.trim() || (targetLevel === 1 ? dto.legalName : null),
+        legalRepDocumentId: dto.legalRepDocumentId?.trim() || null,
+        payoutBankAccount: dto.payoutBankAccount,
+        payoutUsdBankAccount: dto.payoutUsdBankAccount?.trim() || null,
+        ciFrontDocId: dto.ciFrontDocId,
+        ciBackDocId: dto.ciBackDocId,
+        selfieDocId: dto.selfieDocId,
+      },
     });
   }
 
@@ -59,7 +80,7 @@ export class KycService {
   async listPending() {
     return this.prisma.merchantKycSubmission.findMany({
       where: { status: KycStatus.PENDING_REVIEW },
-      include: { merchant: { select: { id: true, name: true, email: true, settlementMode: true } } },
+      include: { merchant: { select: { id: true, name: true, email: true, settlementMode: true, level: true } } },
       orderBy: { createdAt: "asc" },
     });
   }
@@ -88,7 +109,7 @@ export class KycService {
       if (dto.decision === KycStatus.APPROVED) {
         await tx.merchant.update({
           where: { id: submission.merchantId },
-          data: { status: MerchantStatus.ACTIVE },
+          data: { status: MerchantStatus.ACTIVE, level: submission.targetLevel },
         });
       }
 
@@ -99,7 +120,7 @@ export class KycService {
         action: `kyc.${dto.decision.toLowerCase()}`,
         targetType: "MerchantKycSubmission",
         targetId: submissionId,
-        metadata: { merchantId: submission.merchantId, note: dto.note },
+        metadata: { merchantId: submission.merchantId, level: submission.targetLevel, note: dto.note },
       });
 
       return reviewed;
