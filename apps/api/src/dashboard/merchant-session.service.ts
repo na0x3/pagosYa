@@ -6,7 +6,7 @@ import { customAlphabet } from "nanoid";
 import { GoogleIdentityService } from "../auth/google-identity.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { boliviaDayKey } from "../rewards/reward-policy";
-import { countStoreSales, wheelSpinsToday } from "../rewards/reward-queries";
+import { countStoreSales, gameXpForStore, wheelSpinsToday } from "../rewards/reward-queries";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
@@ -191,8 +191,8 @@ export class MerchantSessionService {
   private async authoritativeProgressLevel(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, viewCount: true } });
     if (!store) throw new NotFoundException("Tienda no encontrada");
-    const paymentCount = await countStoreSales(this.prisma, merchantId, storeId);
-    const xp = paymentCount * PROGRESS_XP_PER_SALE + store.viewCount * PROGRESS_XP_PER_VIEW;
+    const [paymentCount, gameXp] = await Promise.all([countStoreSales(this.prisma, merchantId, storeId), gameXpForStore(this.prisma, storeId)]);
+    const xp = paymentCount * PROGRESS_XP_PER_SALE + store.viewCount * PROGRESS_XP_PER_VIEW + gameXp;
     return PROGRESS_XP_THRESHOLDS.reduce<number>((level, threshold, index) => xp >= threshold ? index : level, 0);
   }
 

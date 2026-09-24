@@ -13,6 +13,7 @@ function makeFakePrisma() {
     store: { findFirst: jest.fn(), updateMany: jest.fn() },
     paymentIntent: { count: jest.fn() },
     dailyWheelSpin: { findMany: jest.fn().mockResolvedValue([]) },
+    rewardGrant: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }) },
     merchantProgressCelebration: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     apiKey: { updateMany: jest.fn() },
     webhookEndpoint: { updateMany: jest.fn() },

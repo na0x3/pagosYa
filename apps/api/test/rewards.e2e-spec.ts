@@ -145,4 +145,11 @@ describe('Rewards: daily wheel and Horizonte board', () => {
     expect((await boardState()).rollsAvailable).toBe(0);
     await roll().expect(409);
   });
+
+  it('counts game XP toward the server-side companion level', async () => {
+    const level = async () => (await http().post('/v1/dashboard/progress-celebrations').set(auth()).send({ storeId }).expect(201)).body.currentLevel;
+    expect(await level()).toBe(0);
+    await prisma.rewardGrant.create({ data: { merchantId, storeId, merchantUserId, source: 'WHEEL', kind: 'XP', amount: 200 } });
+    expect(await level()).toBe(1); // 200 XP ≥ 100 (Capi) and < 250
+  });
 });
