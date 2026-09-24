@@ -2486,3 +2486,16 @@
   @media (prefers-reduced-motion: reduce) {
     .topbar-xp-track span, .topbar-xp-track span::after, .topbar-xp.is-gaining, .topbar-xp-gain, .gamification-character-stage img.is-dancing, .luck-wheel-pointer.is-ticking, .luck-wheel.is-spinning .luck-wheel-hub, .luck-wheel-result, .luck-wheel-sticker.is-new { animation: none; transition: none; }
   }
+  /* Reward XP gain: the bar visibly fills, shines and pulses (driven frame by frame by celebrateXpGain). */
+  .gamification-summary-track, .gamification-level-track { position: relative; overflow: visible; }
+  .is-xp-gaining { box-shadow: 0 0 0 2px rgb(255 201 86 / .55), 0 0 18px rgb(255 201 86 / .75); transition: box-shadow .2s; }
+  .is-xp-gaining > span:first-child { transition: none !important; background-image: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .75) 45%, transparent 70%); background-size: 220% 100%; animation: xp-sheen 900ms linear infinite; }
+  .is-xp-pulse { animation: xp-pulse 420ms cubic-bezier(.3, 1.6, .5, 1); }
+  .is-xp-flash { animation: xp-flash 360ms ease-out; }
+  .xp-gain-float { position: absolute; right: 0; bottom: 100%; font-weight: 800; color: #b7791f; white-space: nowrap; pointer-events: none; animation: adventure-xp-pop 1400ms ease-out forwards; }
+  @keyframes xp-sheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+  @keyframes xp-pulse { 50% { transform: scale(1.04); } }
+  @keyframes xp-flash { 0% { filter: brightness(2.2); } 100% { filter: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .is-xp-gaining > span:first-child, .is-xp-pulse, .is-xp-flash, .xp-gain-float { animation: none; }
+  }

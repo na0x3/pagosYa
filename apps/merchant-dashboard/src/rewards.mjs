@@ -62,3 +62,67 @@ export function rewardCopy(grant) {
   const mission = grant.tip?.kind === "mission";
   return { icon: mission ? "🧭" : "💡", title: mission ? "Misión del día" : "Un consejo para vender más", message: ` ${grant.tip?.text || ""}` };
 }
+
+const SEGMENT_MS = 900;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+// Some bars scale via --xp-progress-scale, others (topbar, Horizonte) via an inline scaleX on their fill span; drive both.
+function setBar(track, pct) {
+  const scale = Math.round(pct) / 100;
+  track.style.setProperty("--xp-progress-scale", String(scale));
+  const fill = track.querySelector(":scope > span:not(.xp-gain-float)");
+  if (fill) fill.style.transform = `scaleX(${scale})`;
+  track.setAttribute("aria-valuenow", String(Math.round(pct)));
+}
+
+function restartClass(element, className) {
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+function tween(duration, onStep, frame, now) {
+  return new Promise((resolve) => {
+    const start = now();
+    const step = () => {
+      const t = Math.min(1, (now() - start) / duration);
+      onStep(easeOut(t));
+      if (t < 1) frame(step); else resolve();
+    };
+    frame(step);
+  });
+}
+
+/** Fills every visible XP bar from the old value to the new one, with a sheen, a counting label and a pulse at the end. */
+export async function celebrateXpGain({ previousXp, gainedXp, thresholds, bars, announcer, reduceMotion = false, onLevelUp, playSound, frame = (cb) => requestAnimationFrame(cb), now = () => performance.now() }) {
+  if (!(gainedXp > 0) || !bars.length) return;
+  const segments = xpAnimationSegments(previousXp, gainedXp, thresholds);
+  const target = previousXp + gainedXp;
+  const label = (xp) => bars.forEach((bar) => { if (bar.label) bar.label.textContent = bar.format ? bar.format(Math.round(xp)) : `${Math.round(xp).toLocaleString("es-BO")} XP`; });
+  if (announcer) announcer.textContent = `Ganaste ${gainedXp.toLocaleString("es-BO")} XP`;
+  bars.forEach(({ track }) => {
+    const float = document.createElement("span");
+    float.className = "xp-gain-float"; float.setAttribute("aria-hidden", "true");
+    float.textContent = `+${gainedXp.toLocaleString("es-BO")} XP`;
+    track.appendChild(float);
+    setTimeout(() => float.remove(), reduceMotion ? 2000 : 1400);
+  });
+  if (reduceMotion) {
+    bars.forEach(({ track }) => setBar(track, segments[segments.length - 1].toPct));
+    label(target);
+    segments.slice(1).forEach((segment) => onLevelUp?.(segment.level));
+    return;
+  }
+  playSound?.();
+  bars.forEach(({ track }) => track.classList.add("is-xp-gaining"));
+  const xpPerSegment = gainedXp / segments.length;
+  for (const [index, segment] of segments.entries()) {
+    if (index > 0) { bars.forEach(({ track }) => restartClass(track, "is-xp-flash")); onLevelUp?.(segment.level); }
+    await tween(SEGMENT_MS, (p) => {
+      bars.forEach(({ track }) => setBar(track, segment.fromPct + (segment.toPct - segment.fromPct) * p));
+      label(previousXp + xpPerSegment * (index + p));
+    }, frame, now);
+  }
+  label(target);
+  bars.forEach(({ track }) => { track.classList.remove("is-xp-gaining"); restartClass(track, "is-xp-pulse"); });
+}

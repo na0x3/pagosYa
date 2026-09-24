@@ -38,3 +38,37 @@ test('every prize has visuals and converted credits explain themselves', () => {
   assert.match(rewardCopy({ prize: 'XP_50', kind: 'XP', amount: 50, convertedFrom: null }).title, /\+50 XP/);
   assert.match(rewardCopy({ prize: 'AI_CREDITS_5', kind: 'AI_CREDITS', amount: 5, convertedFrom: null }).title, /5 créditos de IA/);
 });
+
+import { JSDOM } from 'jsdom';
+import { celebrateXpGain } from './rewards.mjs';
+
+test('celebrateXpGain fills the bar, counts up, announces and flags each level-up', async () => {
+  const { window } = new JSDOM('<div id="t" role="progressbar"><span></span></div><strong id="l"></strong><p id="a"></p>');
+  globalThis.document = window.document;
+  const track = window.document.getElementById('t'); const label = window.document.getElementById('l'); const announcer = window.document.getElementById('a');
+  let clock = 0; const levels = [];
+  await celebrateXpGain({
+    previousXp: 90, gainedXp: 200, thresholds: [0, 100, 250, 450],
+    bars: [{ track, label, format: (xp) => `${xp} XP` }], announcer,
+    frame: (cb) => { clock += 1000; cb(); return 0; }, now: () => clock,
+    onLevelUp: (level) => levels.push(level),
+  });
+  assert.equal(track.style.getPropertyValue('--xp-progress-scale'), '0.2');
+  assert.equal(track.getAttribute('aria-valuenow'), '20');
+  assert.equal(track.firstElementChild.style.transform, 'scaleX(0.2)', 'bars drawn by an inner fill span (topbar, Horizonte) move too');
+  assert.equal(label.textContent, '290 XP');
+  assert.match(announcer.textContent, /Ganaste 200 XP/);
+  assert.deepEqual(levels, [1, 2]);
+  assert.ok(track.classList.contains('is-xp-pulse'));
+  assert.ok(!track.classList.contains('is-xp-gaining'));
+  assert.ok(track.querySelector('.xp-gain-float'));
+});
+
+test('celebrateXpGain jumps straight to the end with reduced motion', async () => {
+  const { window } = new JSDOM('<div id="t"></div>'); globalThis.document = window.document;
+  const track = window.document.getElementById('t'); let frames = 0;
+  await celebrateXpGain({ previousXp: 10, gainedXp: 25, thresholds: [0, 100], bars: [{ track }], reduceMotion: true, frame: (cb) => { frames++; cb(); return 0; }, now: () => 0 });
+  assert.equal(frames, 0);
+  assert.equal(track.style.getPropertyValue('--xp-progress-scale'), '0.35');
+  assert.ok(!track.classList.contains('is-xp-gaining'));
+});
