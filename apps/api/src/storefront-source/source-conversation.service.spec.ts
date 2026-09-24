@@ -53,7 +53,7 @@ describe('Source conversation interpretation', () => {
     respond(reply());
     const browserReview = ['Imágenes rotas: 2 imágenes no pudieron cargarse', 'Catálogo: añade un producto con nombre y precio'];
     await service.decide('merchant', { ...input(), instruction: 'Corrige lo detectado', browserReview });
-    const context = JSON.parse(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content[1].text);
+    const context = JSON.parse(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content[2].text);
     expect(context.browserReview).toEqual(browserReview);
   });
   it('sends rendered references as image inputs and never as base64 text or merchant artwork', async () => {
