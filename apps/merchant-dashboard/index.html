@@ -26,6 +26,14 @@
     <!-- The bird now sits at the top of the sidebar; the topbar carries no
          second brand lockup. Kept as the page's only h1 for the outline. -->
     <h1 class="sr-only">pagosYa · Panel de Comercio</h1>
+    <a class="topbar-xp" id="topbarXp" href="#dashboard-progress" data-dashboard-view="progress" hidden>
+      <span class="topbar-xp-avatar" aria-hidden="true"><img id="topbarXpImage" src="/assets/profile-1.png" alt=""></span>
+      <span class="topbar-xp-body">
+        <span class="topbar-xp-line"><strong id="topbarXpLevel">Nivel 1 · Perdiz</strong><span class="topbar-xp-next" id="topbarXpNext">100 XP para Capibara</span></span>
+        <span class="topbar-xp-track" id="topbarXpTrack" role="progressbar" aria-label="Experiencia para el siguiente nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topbarXpFill"></span></span>
+      </span>
+      <span class="topbar-xp-gain" id="topbarXpGain" aria-hidden="true" hidden></span>
+    </a>
     <div class="topbar-actions">
       <div class="theme-control">
         <span class="theme-control-label" id="dashboardThemeLabel">Tema</span>
@@ -485,6 +493,28 @@
           </div>
         </div>
       </div>
+
+      <section class="luck-wheel" id="luckWheel" aria-labelledby="luckWheelTitle">
+        <div class="luck-wheel-stage">
+          <div class="luck-wheel-dial">
+            <span class="luck-wheel-pointer" id="luckWheelPointer" aria-hidden="true"></span>
+            <svg class="luck-wheel-disc" id="luckWheelDisc" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+            <button class="luck-wheel-hub" id="luckWheelHub" type="button" aria-label="Girar la ruleta">¡Gira!</button>
+          </div>
+        </div>
+        <div class="luck-wheel-copy">
+          <span class="luck-wheel-kicker">Ruleta diaria</span>
+          <h3 id="luckWheelTitle">Ruleta de la suerte</h3>
+          <p id="luckWheelStatus">Una vuelta por día. Gana misiones, consejos y stickers para tu álbum.</p>
+          <button class="luck-wheel-spin" id="luckWheelSpin" type="button">Girar la ruleta</button>
+          <div class="luck-wheel-result" id="luckWheelResult" aria-live="polite" hidden></div>
+          <div class="luck-wheel-album">
+            <div class="luck-wheel-album-head"><strong>Álbum de stickers</strong><span id="luckWheelAlbumCount">0 de 9</span></div>
+            <div class="luck-wheel-album-grid" id="luckWheelAlbum"></div>
+          </div>
+          <p class="luck-wheel-note">La ruleta es solo para divertirte: tu XP y tu nivel siguen saliendo de ventas y visitas reales.</p>
+        </div>
+      </section>
 
       <section aria-labelledby="gamificationStarsTitle">
         <div class="gamification-section-title"><h3 id="gamificationStarsTitle">Estrellas del negocio</h3><p id="gamificationStarsSummary">Completa hitos reales de ventas y audiencia. Las estrellas no se compran: se ganan.</p></div>
