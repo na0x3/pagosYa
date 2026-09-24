@@ -1,4 +1,36 @@
 /* pagosya-motion:start */
+// Headings wrap differently once the merchant's own font loads, and a display
+// line-height chosen against the fallback can leave real glyphs overlapping.
+// Measure the loaded font's ink and open only the headings that need it, so the
+// merchant never has to read a diagnostic about interlineado.
+(() => {
+  'use strict';
+  let ctx;
+  const openTightHeadings = () => {
+    ctx ||= document.createElement('canvas').getContext('2d');
+    if (!ctx) return;
+    for (const el of document.querySelectorAll('h1,h2,h3')) {
+      const text = el.textContent?.trim();
+      const style = getComputedStyle(el);
+      const size = parseFloat(style.fontSize);
+      const advance = parseFloat(style.lineHeight);
+      // 'normal' leaves the font's own leading in place and never collides.
+      if (!text || !size || !advance) continue;
+      // A single line cannot cross another one; leave tight display type alone.
+      if (el.getBoundingClientRect().height < advance * 1.5) continue;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${size}px ${style.fontFamily}`;
+      const ink = ctx.measureText(text);
+      const needed = Math.ceil(ink.actualBoundingBoxAscent + ink.actualBoundingBoxDescent);
+      if (needed > advance) el.style.lineHeight = `${needed}px`;
+    }
+  };
+  let timer;
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(openTightHeadings, 150); };
+  document.fonts?.ready.then(openTightHeadings).catch(() => {});
+  window.addEventListener('load', schedule);
+  window.addEventListener('resize', schedule);
+})();
+
 (() => {
   'use strict';
   const mode = ['auto', 'off', 'subtle', 'expressive'].includes(window.PAGOSYA_CONFIG?.motion) ? window.PAGOSYA_CONFIG.motion : 'subtle';

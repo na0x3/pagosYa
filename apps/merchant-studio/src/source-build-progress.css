@@ -19,3 +19,33 @@
 .build-waiting { color: #737373; font: 13px/1.6 Arial, Helvetica, sans-serif; }
 @keyframes source-build-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .build-state.is-running { animation: none; } }
+
+/* ---- Waiting room: the four openings YAPI chooses between, then the facts ---- */
+.yapi-stage { margin: 14px 0 6px; font: 13px/1.55 Arial, Helvetica, sans-serif; color: #444; }
+.yapi-stage__scene { margin-bottom: 18px; }
+
+.yapi-stage__status { margin: 12px 0 7px; color: #2b2b2b; font-size: 13.5px; }
+.yapi-stage__meter { height: 4px; border-radius: 3px; background: #e8e4dc; overflow: hidden; }
+.yapi-stage__meter > span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6f8f74, #2f6f4e); transition: width .8s cubic-bezier(.3,.8,.3,1); }
+.yapi-stage__meta { display: flex; align-items: center; gap: 12px; margin: 7px 0 0; color: #7a7a7a; font-size: 12px; font-variant-numeric: tabular-nums; }
+.yapi-stage__link { background: none; border: 0; padding: 0; color: #5a6b5c; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.yapi-stage__link:hover { color: #2f6f4e; }
+.yapi-stage__steps { margin-top: 2px; }
+.yapi-stage__steps .source-build-progress { margin: 8px 0 0; }
+/* The stage's own status line already names the current step. */
+.yapi-stage__steps .source-build-progress > summary { display: none; }
+.yapi-stage__steps .source-build-progress ol { padding-top: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .yapi-stage__meter > span { transition: none; }
+}
+
+/* The stage also fills the main canvas while a store is being created, where it
+   has far more room than the chat column it was first sized for. */
+.source-build-canvas { display: grid; justify-items: center; align-content: center; height: 100%; min-height: 420px; padding: 32px 24px; background: radial-gradient(120% 90% at 78% 8%, #fbf8f2 0%, #f3eee4 46%, #ece6da 100%); }
+/* The width belongs to the host: a centred grid item shrink-wraps its content. */
+.source-build-canvas [data-build-stage-host] { width: min(520px, 100%); }
+.source-build-canvas .yapi-stage { width: 100%; margin: 0; }
+.source-build-canvas .yapi-stage__scene { margin-bottom: 26px; }
+.source-build-canvas .yapi-stage__status { font-size: 17px; margin: 22px 0 10px; }
+.source-build-canvas .yapi-stage__meta { font-size: 13px; }

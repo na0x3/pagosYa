@@ -1,16 +1,32 @@
 import './source-inspiration.css';
+import { renderFace } from './source-face';
 
-/** Decorative waiting canvas, never an invented preview of the merchant's site. */
-export function renderInspiration(options: { busy: boolean; disabled: boolean; paused: boolean; commerce?: boolean }): string {
-  const images = ['alpine-ridge.jpg', 'alpine-lake.jpg', 'forest-lake.jpg', 'alpine-ridge.jpg', 'alpine-lake.jpg'];
-  return `<section class="source-empty-preview source-inspiration ${options.paused ? 'is-paused' : ''}" aria-label="Tu sitio a medida">
-    <div class="inspiration-stage" aria-hidden="true">
-      ${Array.from({ length: 5 }, (_, index) => `<div class="inspiration-card inspiration-card--${index}" style="--card-index:${index}">
-        <img src="${import.meta.env.BASE_URL}inspiration/${images[index]}" alt="" width="736" height="1104" decoding="async" draggable="false">
-        ${index % 2 === 0 ? '<div class="inspiration-site"><span>HORIZONTE<span>Explora ↗</span></span><strong>Todo empieza<br>con una idea.</strong><small>Encuentra tu propio camino.</small></div>' : ''}
-      </div>`).join('')}
+/**
+ * The idle canvas: what fills the preview before a merchant has a site.
+ *
+ * It has been, in turn, three stock landscape photographs behind a fictional
+ * brand, a stack of CSS storefront cards with a small game docked in the corner,
+ * a wireframe that re-composed itself, and an ink line drawing. Each one drew a
+ * window holding a site nobody had built yet.
+ *
+ * It is now the invitation beside YAPI itself: a face that waits and blinks
+ * while the merchant thinks. No photography, no invented brand, no fake browser,
+ * nothing to play, and nothing to press but the invitation itself.
+ */
+export function renderInspiration(options: { busy: boolean; disabled: boolean; commerce?: boolean }): string {
+  return `<section class="source-empty-preview source-inspiration" aria-label="Tu sitio a medida">
+    <div class="inspiration-layout">
+      <div class="source-empty-copy">
+        <img class="inspiration-mark" src="${import.meta.env.BASE_URL}logo-mark.png" alt="pagosYa" width="42" height="42" decoding="async">
+        <span class="inspiration-eyebrow">${options.busy ? 'YAPI ESTÁ CREANDO' : 'TU PRÓXIMA IDEA'}</span>
+        <h1>Tu negocio, tu sitio.</h1>
+        <p>${options.busy ? 'Tu diseño está tomando forma. Puedes seguir el proceso en la conversación.' : 'Cuéntale a YAPI qué quieres crear. Tu idea, tus fotos y tu marca darán forma al diseño.'}</p>
+        ${options.commerce === false ? '' : `<div class="source-empty-actions"><button type="button" class="button" data-start-photo ${options.disabled ? 'disabled' : ''}>Crear tienda desde una foto <span aria-hidden="true">↗</span></button></div>`}
+        <small>Tu sitio aparecerá aquí</small>
+      </div>
+      <div class="inspiration-stage">
+        ${renderFace()}
+      </div>
     </div>
-    <div class="inspiration-topline"><span>Un espacio para imaginar</span><button type="button" data-inspiration-pause aria-pressed="${options.paused}" aria-label="${options.paused ? 'Reanudar animación de inspiración' : 'Pausar animación de inspiración'}">${options.paused ? 'Reanudar' : 'Pausar'}<span aria-hidden="true">${options.paused ? '▷' : 'Ⅱ'}</span></button></div>
-    <div class="source-empty-copy"><span class="inspiration-eyebrow">${options.busy ? 'YAPI está creando' : 'TU PRÓXIMA IDEA'}</span><h1>Tu negocio, tu sitio.</h1><p>${options.busy ? 'Tu diseño está tomando forma. Puedes seguir el proceso en la conversación.' : 'Cuéntale a YAPI qué quieres crear. Tu idea, tus fotos y tu marca darán forma al diseño.'}</p>${options.commerce === false ? '' : `<div class="source-empty-actions"><button type="button" class="button" data-start-photo ${options.disabled ? 'disabled' : ''}>Crear tienda desde una foto <span aria-hidden="true">↗</span></button></div>`}<small>Inspiración visual · tu sitio aparecerá aquí</small></div>
   </section>`;
 }

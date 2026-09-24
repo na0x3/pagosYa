@@ -10,7 +10,7 @@ for (const hosted of [false, true]) test(`computed photo paths load in ${hosted 
     const directory = '/assets/';
     export default function Home() {
       const [alternate, setAlternate] = useState(false);
-      return <main><button onClick={() => setAlternate(!alternate)}>Change photo</button>
+      return <main><h1>Fotos de la tienda</h1><button onClick={() => setAlternate(!alternate)}>Change photo</button>
         {Array.from({length: 8}, (_, i) => <img key={i} alt={'Photo ' + i} src={directory + 'photo-' + (alternate ? 7 - i : i) + '.png'} />)}
         <div data-background style={{ backgroundImage: 'url(' + directory + 'photo-0.png)' }}>Photo background</div>
         <div data-pagosya-catalog /><div data-pagosya-cart hidden /><p data-pagosya-status /><button data-cart-open>My order</button>

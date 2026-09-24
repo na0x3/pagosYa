@@ -1,0 +1,324 @@
+/**
+ * YAPI's face — the waiting animation shared by the idle canvas and the build
+ * stage. An orb with eyes that blinks, glances, smirks, breathes, turns all the
+ * way round, and talks when a merchant asks it to.
+ *
+ * It replaces a line drawing, which replaced a wireframe, which replaced a card
+ * stack with a game in it. Everything before this drew a window — a fake browser
+ * holding a site nobody had built yet. A face draws nothing at all: it is the
+ * thing the merchant is about to talk to, waiting for them.
+ *
+ * No card, no frame, no buttons: the orb floats straight on the canvas with its
+ * own shadow.
+ */
+
+.yapi-face {
+  --ease: cubic-bezier(.62, .02, .16, 1);
+  /* One filter id per mount; the script writes the real one into the markup. */
+  margin: 0;
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  justify-items: center;
+}
+
+/* ---- Palettes. The orb is lit from 50% 45%, so every ramp runs dark core →
+   mid → rim → almost-white edge, which is what makes a flat gradient read as a
+   sphere rather than a disc. ---- */
+/* The default: a small warm sun. Its core is only a few steps darker than its
+   rim, which is what keeps it light instead of golden. */
+.yapi-face[data-color=amarillo], .yapi-mark[data-color=amarillo] {
+  --skin: radial-gradient(circle at 50% 45%, #e3a922 0%, #f5c948 38%, #ffdd7c 66%, #ffeec2 100%);
+  --halo: 0 0 4px 0 #d9a11f5c, 0 0 28px 10px #e8bb4a3d, inset 0 0 0 1px #ffffff40;
+  --iris: linear-gradient(135deg, #574118 0%, #7a5c23 100%);
+  --glow: #f8dc95;
+}
+.yapi-face[data-color=verde], .yapi-mark[data-color=verde] {
+  --skin: radial-gradient(circle at 50% 45%, #0b5c2d 0%, #2a9d5f 40%, #6dd187 68%, #d1fadd 100%);
+  --halo: 0 0 4px 0 #0ca85259, 0 0 24px 8px #0ca8522e, inset 0 0 0 1px #ffffff0d;
+  --iris: linear-gradient(135deg, #ffffff 0%, #c5f5d8 100%);
+  --glow: #74ca99;
+}
+.yapi-face[data-color=azul], .yapi-mark[data-color=azul] {
+  --skin: radial-gradient(circle at 50% 45%, #0d4d9a 0%, #3d7dd8 40%, #6fb3ff 68%, #e0eeff 100%);
+  --halo: 0 0 4px 0 #1466d859, 0 0 24px 8px #1466d82e, inset 0 0 0 1px #ffffff0d;
+  --iris: linear-gradient(135deg, #ffffff 0%, #d4ecff 100%);
+  --glow: #8ec1ff;
+}
+
+.yapi-face__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: clamp(210px, 32vh, 340px);
+  /* The orb floats and turns inside here; keep the work in this box. */
+  contain: layout paint style;
+}
+
+/* A soft wash of the orb's own colour, so the face is not a sticker on cream. */
+.yapi-face__stage::before {
+  content: "";
+  position: absolute;
+  width: min(74%, 420px); aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 46%, var(--glow), transparent 66%);
+  opacity: .26;
+  filter: blur(10px);
+  animation: face-wash 17s ease-in-out infinite;
+}
+@keyframes face-wash {
+  0%, 100% { transform: translate3d(-3%, 2%, 0) scale(1); }
+  50% { transform: translate3d(4%, -3%, 0) scale(1.08); }
+}
+
+.yapi-face__orb {
+  position: relative;
+  width: clamp(126px, 20vw, 196px);
+  aspect-ratio: 1;
+  animation: face-float 6.5s ease-in-out infinite;
+}
+@keyframes face-float {
+  0%, 100% { transform: translateY(-3%); }
+  50% { transform: translateY(3%); }
+}
+
+/* The sphere itself. Scale lives here so the float above never fights it. */
+.yapi-face__ball {
+  position: relative;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--skin);
+  box-shadow: var(--halo);
+  transition: background 1s var(--ease);
+}
+
+.yapi-face__grain {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: .2;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.yapi-face__shine {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 30% 24%, #ffffffbf 0%, #ffffff1a 50%, transparent 70%);
+  opacity: .82;
+}
+/* The occlusion under the light, which is most of the illusion of volume. */
+.yapi-face__shade {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  filter: blur(2px);
+  background: radial-gradient(circle at 62% 72%, #7a530c40 0%, transparent 60%);
+}
+
+.yapi-face__ground {
+  position: absolute;
+  bottom: calc(50% - clamp(126px, 20vw, 196px) * .62);
+  width: clamp(72px, 11vw, 116px); height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #3a2a1c4a, transparent 68%);
+  filter: blur(5px);
+  animation: face-ground 6.5s ease-in-out infinite;
+}
+@keyframes face-ground {
+  0%, 100% { transform: scale(.92); opacity: .5; }
+  50% { transform: scale(1.06); opacity: .72; }
+}
+
+/* ---- The features, which move as one so the head can turn ---- */
+.yapi-face__features {
+  position: absolute; inset: 0;
+  z-index: 2;
+  transition: transform .5s var(--ease);
+}
+
+.yapi-face__eye {
+  position: absolute;
+  top: 38%;
+  width: 11%; height: 17.5%;
+  border-radius: 999px;
+  background: var(--iris);
+  animation: face-blink 3.6s ease-in-out infinite;
+  transition: transform .35s var(--ease), height .35s var(--ease);
+}
+.yapi-face__eye[data-eye=left] { left: 32%; }
+.yapi-face__eye[data-eye=right] { right: 32%; animation-delay: 60ms; }
+@keyframes face-blink {
+  0%, 88%, 100% { transform: scaleY(1); }
+  93%, 97% { transform: scaleY(.07); }
+}
+
+/* A closed, faintly pleased mouth: an arc, not a line. */
+.yapi-face__mouth {
+  position: absolute;
+  left: 50%; top: 64%;
+  width: 15%; height: 4.6%;
+  margin-left: -7.5%;
+  border-radius: 20% 20% 999px 999px;
+  background: var(--iris);
+  transform-origin: 50% 30%;
+  transition: width .35s var(--ease), height .35s var(--ease), transform .35s var(--ease), border-radius .35s var(--ease);
+}
+
+/* ---- Moods. The script sets data-mood; everything below is the difference
+   between them. ---- */
+
+/* Glancing: the head turns a little and the eyes lead it, which is the whole
+   difference between a face that is waiting and a prop that is idling. */
+.yapi-face[data-mood=glance] .yapi-face__features { transform: translateX(6%) rotate(2.5deg); }
+.yapi-face[data-mood=glance] .yapi-face__eye { transform: translateX(14%); }
+
+.yapi-face[data-mood=smirk] .yapi-face__mouth {
+  width: 13%; margin-left: -4%;
+  transform: rotate(-13deg) scaleX(.9);
+  border-radius: 999px 30% 999px 999px;
+}
+.yapi-face[data-mood=smirk] .yapi-face__eye[data-eye=left] { height: 10%; }
+.yapi-face[data-mood=smirk] .yapi-face__features { transform: rotate(-2deg); }
+
+.yapi-face[data-mood=breathe] .yapi-face__ball { animation: face-breathe 2.6s var(--ease); }
+@keyframes face-breathe {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.075); }
+  70% { transform: scale(.975); }
+  100% { transform: scale(1); }
+}
+
+/* A full turn: the features leave to the right and come back around from the
+   left while the highlight sweeps the far side. */
+.yapi-face[data-mood=spin] .yapi-face__features { animation: face-turn 1.7s var(--ease); }
+.yapi-face[data-mood=spin] .yapi-face__shine { animation: face-sweep 1.7s var(--ease); }
+@keyframes face-turn {
+  0% { transform: translateX(0) scaleX(1); opacity: 1; }
+  34% { transform: translateX(44%) scaleX(.15); opacity: 0; }
+  62% { transform: translateX(-44%) scaleX(.15); opacity: 0; }
+  100% { transform: translateX(0) scaleX(1); opacity: 1; }
+}
+@keyframes face-sweep {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(62%); }
+  100% { transform: translateX(0); }
+}
+
+/* A hop. Saved for the moments the merchant earned one — a build finishing, a
+   site publishing — never for the idle rhythm: a face that jumps on a clock is
+   asking for attention it has no news to justify. The squash before and after
+   the rise is what separates a hop from a float; without it the orb just
+   teleports upward. */
+.yapi-face[data-mood=hop] .yapi-face__orb { animation: face-hop .62s var(--ease-out-ui); }
+.yapi-face[data-mood=hop] .yapi-face__ground { animation: face-hop-shadow .62s var(--ease-out-ui); }
+@keyframes face-hop {
+  0% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(0) scale(1.09, .9); }
+  48% { transform: translateY(-26%) scale(.95, 1.06); }
+  78% { transform: translateY(0) scale(1.06, .94); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes face-hop-shadow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  48% { transform: scale(.7); opacity: .45; }
+}
+
+/* A shimmer. The highlight crosses the orb and the surface lifts with it, so it
+   reads as light moving over a body rather than the body changing colour. It is
+   the quietest gesture here on purpose: it sits in the ambient loop, where
+   anything louder becomes a tic. */
+.yapi-face[data-mood=spark] .yapi-face__shine { animation: face-spark .9s var(--ease-out-ui); }
+.yapi-face[data-mood=spark] .yapi-face__ball { animation: face-spark-lift .9s var(--ease-out-ui); }
+@keyframes face-spark {
+  0% { transform: translateX(-30%) scale(.9); opacity: .5; }
+  45% { transform: translateX(18%) scale(1.25); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: .8; }
+}
+@keyframes face-spark-lift {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.03); }
+}
+
+/* Talking. The rhythm is uneven on purpose: an evenly pulsing mouth reads as a
+   loading indicator, not as speech. */
+.yapi-face[data-mood=speak] .yapi-face__mouth {
+  animation: face-talk .92s ease-in-out infinite;
+  border-radius: 999px;
+}
+@keyframes face-talk {
+  0%, 100% { height: 5%; width: 15%; margin-left: -7.5%; }
+  12% { height: 13%; width: 18%; margin-left: -9%; }
+  26% { height: 6.5%; width: 14%; margin-left: -7%; }
+  40% { height: 16%; width: 19.5%; margin-left: -9.75%; }
+  55% { height: 5.5%; width: 13.5%; margin-left: -6.75%; }
+  68% { height: 11%; width: 17%; margin-left: -8.5%; }
+  84% { height: 7%; width: 15%; margin-left: -7.5%; }
+}
+.yapi-face[data-mood=speak] .yapi-face__features { transform: translateY(-1%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .yapi-face__orb, .yapi-face__ground, .yapi-face__stage::before { animation: none; }
+  .yapi-face__eye { animation-duration: 7s; }
+  .yapi-face__features, .yapi-face__mouth, .yapi-face__eye { transition: none; }
+  .yapi-face[data-mood=spin] .yapi-face__features,
+  .yapi-face[data-mood=spin] .yapi-face__shine,
+  .yapi-face[data-mood=hop] .yapi-face__orb,
+  .yapi-face[data-mood=hop] .yapi-face__ground,
+  .yapi-face[data-mood=spark] .yapi-face__ball,
+  .yapi-face[data-mood=breathe] .yapi-face__ball { animation: none; }
+  /* The shimmer survives reduced motion: it only changes light, never position,
+     which is exactly the kind of motion that setting asks us to keep. */
+  .yapi-face[data-mood=spark] .yapi-face__shine { animation: face-spark .9s var(--ease-out-ui); }
+}
+
+@media (max-width: 759px) {
+  .yapi-face__stage { min-height: 180px; }
+  .yapi-face__orb { width: 128px; }
+  .yapi-face__ground { bottom: calc(50% - 128px * .62); width: 76px; }
+}
+
+/* ---- La marca: la misma cara, en tamaño de logo ---- */
+.yapi-mark {
+  --mark: 22px;
+  display: inline-grid; place-items: center; flex: none;
+  width: var(--mark); height: var(--mark);
+  vertical-align: middle;
+}
+.yapi-mark__ball {
+  position: relative; width: 100%; height: 100%;
+  border-radius: 50%;
+  background: var(--skin);
+  box-shadow: var(--halo);
+}
+.yapi-mark__eye {
+  position: absolute; top: 36%;
+  width: 12%; height: 20%;
+  border-radius: 999px; background: var(--iris);
+  animation: face-blink 3.6s ease-in-out infinite;
+}
+.yapi-mark__eye:nth-child(1) { left: 31%; }
+.yapi-mark__eye:nth-child(2) { right: 31%; animation-delay: 60ms; }
+.yapi-mark__mouth {
+  position: absolute; left: 50%; top: 62%;
+  width: 16%; height: 6%; margin-left: -8%;
+  border-radius: 20% 20% 999px 999px; background: var(--iris);
+}
+
+/* Razonando: respira y mira alrededor. Es la única señal de que está pensando
+   que no es un spinner. */
+.yapi-mark.is-thinking .yapi-mark__ball { animation: mark-breathe 2.1s ease-in-out infinite; }
+.yapi-mark.is-thinking .yapi-mark__eye { animation: face-blink 2.4s ease-in-out infinite, mark-glance 3.4s ease-in-out infinite; }
+@keyframes mark-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.09); }
+}
+@keyframes mark-glance {
+  0%, 44%, 100% { translate: 0 0; }
+  16%, 30% { translate: 16% 0; }
+  62%, 78% { translate: -14% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yapi-mark__eye, .yapi-mark.is-thinking .yapi-mark__ball, .yapi-mark.is-thinking .yapi-mark__eye { animation: none; }
+}

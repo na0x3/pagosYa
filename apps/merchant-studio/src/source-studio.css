@@ -2,15 +2,12 @@
 .source-mode .source-canvas {
   grid-template-rows: auto auto minmax(0, 1fr) 31px;
 }
+.source-editor label { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .62rem; }
+.source-editor select { min-width: 0; max-width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line-firm); background: var(--surface); font: inherit; }
 .source-mode .canvas-toolbar { display: flex; min-height: 52px; flex-wrap: wrap; gap: 10px; padding-block: 6px; }
 .source-mode .source-view-controls { display: flex; gap: 2px; margin-right: auto; }
 .source-view-controls button { min-height: 40px; padding: 8px 10px; background: transparent; font-size: .65rem; }
 .source-view-controls button[aria-pressed=true] { background: var(--amber); color: var(--amber-ink); border: 1px solid var(--ink); }
-.source-revision-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
-.source-revision-bar label, .source-editor label { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .62rem; }
-.source-revision-bar label:has(#source-revision) { flex: 1; }
-.source-revision-bar select, .source-editor select { min-width: 0; max-width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line-firm); background: var(--surface); font: inherit; }
-.source-revision-bar label:has(#source-revision) select { width: 100%; }
 .source-mode .source-frame-wrap { display: flex; justify-content: center; min-height: 0; padding: 0; }
 .source-mode .source-frame-wrap iframe { border: 0; border-radius: 0; box-shadow: none; }
 .source-frame-wrap.is-mobile iframe { max-width: 390px; }
@@ -39,7 +36,7 @@
 @media (max-width: 900px) {
   .source-mode .agent-panel { min-height: 600px; grid-template-rows: 60px minmax(220px, 1fr) auto; }
   .source-mode .agent-stream { max-height: 440px; }
-  .source-mode .source-canvas { min-height: 760px; grid-template-rows: auto auto minmax(580px, 1fr) 31px; }
+  .source-mode .source-canvas { min-height: 760px; grid-template-rows: auto minmax(580px, 1fr) 31px; }
   .source-mode .source-frame-wrap iframe { min-height: 580px; }
   .source-mode .connected-topbar .top-actions .button--ghost { display: inline-flex; }
   .source-mode .product-mark strong { display: none; }
@@ -51,8 +48,6 @@
   .source-mode .product-mark { padding: 0 10px; }
   .source-mode .product-mark img { margin: 0; }
   .source-mode .source-view-controls { margin-left: 0; }
-  .source-revision-bar { padding: 10px; }
-  .source-revision-bar label:has(#source-revision) { flex-basis: 100%; }
   .source-empty-copy { padding: 28px 22px; }
   .source-mode .canvas-status { font-size: .53rem; }
 }
@@ -62,7 +57,6 @@
 .source-embedded-title { font-size: .7rem; }
 @media (min-width: 901px) { .source-mode .studio-workspace { grid-template-columns: minmax(320px, 29%) minmax(0, 1fr); } }
 @media (max-width: 900px) { .studio-shell.source-embedded { grid-template-rows: auto; } }
-
 
 /* Reserve the first header slot for the dashboard's purple menu overlay. */
 .source-embedded .agent-header { padding-left: 124px; }
@@ -89,17 +83,21 @@
 .source-checks [data-check-status=skipped] strong { color: #755600; }
 .source-checks button { min-height: 40px; padding: 8px 12px; font: inherit; cursor: pointer; }
 
-.source-revision-bar:has([data-source-checks]) { flex-wrap: wrap; }
-.source-revision-bar [data-source-checks] { flex-basis: 100%; min-width: 0; }
-.source-revision-bar .source-checks { border-bottom: 0; padding: 0; }
-
-#source-motion-help { color: var(--muted); font-size: 12px; line-height: 1.5; }
-
-.source-publication { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; width: 100%; min-width: 0; }
-.source-publication-details > summary { min-height: 32px; display: flex; align-items: center; gap: 6px; font-size: 11px; }
+/* Publish state was on screen three times at once — topbar, toolbar switch and
+   a strip under the toolbar. Only the switch keeps it; this hangs off the
+   switch and holds the settings that used to need a strip of their own. */
+.source-publication { position: relative; min-width: 0; }
+.source-publish-controls > .source-visibility + .source-publication { margin-left: -8px; }
+.source-publication-details > summary { display: inline-flex; align-items: center; justify-content: center; width: 30px; min-height: 40px; border: 1px solid var(--line-firm); background: var(--surface); font-size: 11px; list-style: none; }
+.source-publication-details > summary::-webkit-details-marker { display: none; }
+.source-publication-details[open] > summary { background: var(--ink); color: var(--surface); }
 .source-publication-details > summary::after, .source-credit-details > summary::after { content: '⌄'; }
+.source-publication .source-disclosure-panel { width: min(540px, calc(100vw - 32px)); }
+/* The phone toolbar is a capped scroll area, so a panel hanging off it is
+   clipped to a sliver. There it opens as a sheet from the bottom instead. */
+@media (max-width: 759px) { .source-publication .source-disclosure-panel { position: fixed; inset: auto 0 0 0; width: auto; max-height: 70dvh; } }
 .source-draft-label { color: var(--muted); font-weight: 400; }
-.source-publication strong { font-size: 13px; line-height: 1.5; }
+.source-publication strong { display: block; margin-bottom: 8px; font-size: 13px; line-height: 1.5; }
 .source-publication p { font-size: 12px; line-height: 1.55; color: var(--muted); margin: 4px 0 8px; max-width: 72ch; }
 .source-publication-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .source-publication-actions .button { min-height: 40px; font-size: 11px; text-decoration: none; white-space: normal; }
@@ -111,14 +109,13 @@
 .source-experiment-results caption { text-align: left; padding-block: 8px; }
 .source-experiment-results th, .source-experiment-results td { padding: 8px; border-bottom: 1px solid var(--line); }
 @media (max-width: 600px) { .source-publication-actions { width: 100%; } .source-publication-actions .button { flex: 1 1 145px; } }
-.source-mode .source-canvas, .source-revision-bar, .source-experiments, .source-experiments-body, .source-experiment-results { min-width: 0; max-width: 100%; }
+.source-mode .source-canvas, .source-experiments, .source-experiments-body, .source-experiment-results { min-width: 0; max-width: 100%; }
 .source-publication-actions a.button { color: var(--ink); }
 
 /* Secondary controls float over the canvas, keeping its height stable. */
 .source-disclosure > summary { cursor: pointer; }
 .source-disclosure > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .source-disclosure-panel { position: absolute; z-index: 20; right: 0; top: 100%; width: min(540px, 100%); max-height: min(480px, 65dvh); overflow: auto; padding: 16px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); box-shadow: 3px 3px 0 rgb(0 0 0 / .14); }
-.source-revision-bar { position: relative; }
 .source-checks .source-disclosure-panel { left: 12px; right: auto; width: min(540px, calc(100% - 24px)); }
 .source-credit-details > summary { display: flex; align-items: center; gap: 6px; min-height: 36px; font-size: 11px; }
 .source-credit-details .source-disclosure-panel { top: auto; bottom: calc(100% - 1px); right: 8px; width: calc(100% - 16px); }
@@ -158,3 +155,17 @@
 .source-photo-ready .text-button { display: block; margin-top: 4px; }
 
 .source-compose-area .batch-thumb video { width: 100%; height: 100%; object-fit: contain; background: #111; }
+
+/* "Recursos visuales" and "Mejorar diseño" sit above the composer, with the
+   merchant's other tools, instead of in a strip of their own over the preview.
+   The assets panel keeps its own full-height overlay. The improvement form
+   cannot float: this column clips its own children, and letting it overflow
+   puts the chat over the preview and eats clicks meant for it. `display:
+   contents` makes the button and the form siblings in this row, so the button
+   stays in line and the form opens below it, full width. */
+.source-canvas-tools { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 0 10px 8px; }
+.source-canvas-tools .source-visual-buttons > button,
+.source-canvas-tools .source-design-job > button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--line-firm); background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.source-canvas-tools .source-design-job > button[aria-expanded="true"] { background: var(--ink); color: var(--surface); }
+.source-canvas-tools .source-design-job { display: contents; }
+.source-canvas-tools .source-design-job section { position: static; flex: 1 0 100%; width: auto; max-height: 40dvh; overflow: auto; padding: 16px; }

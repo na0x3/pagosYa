@@ -9,16 +9,12 @@ const snapshot = { schemaVersion: 1, brief: {}, files: [
 ] };
 const productTemplate = '<template data-pagosya-product-template><article class="custom-row"><div><a class="menu-item__details" data-product-link><h3 data-product-field="name"></h3></a><p data-product-field="description"></p></div><strong data-product-field="price"></strong><button data-product-add>Comprar</button></article></template>';
 
-test('checks detect colliding headline lines and allow multiple opening controls', async ({ page }) => {
+test('checks allow multiple opening controls', async ({ page }) => {
   await page.goto('/');
   const fixture = structuredClone(snapshot);
   fixture.files[0].content = fixture.files[0].content.replace('<h1>Tienda de prueba</h1>', '<h1 style="font-size:64px;line-height:.65">La próxima<br/><em>jugada</em> se viste.</h1><button style="background:black;color:white">Pausar movimiento</button><a href="#catalogo" style="background:black;color:white">Ver colección</a>');
-  const check = () => page.evaluate(async value => { const { checkSourceWebsite } = await import('/src/source-checks.ts'); return checkSourceWebsite(value as any); }, fixture);
-  const before = await check();
-  expect(before.some(row => row.label.includes('Líneas de título superpuestas'))).toBe(true);
-  expect(before.some(row => row.label.includes('Jerarquía de acciones'))).toBe(false);
-  fixture.files[0].content = fixture.files[0].content.replace('line-height:.65', 'line-height:1.15');
-  expect((await check()).some(row => row.label.includes('Líneas de título superpuestas'))).toBe(false);
+  const checks = await page.evaluate(async value => { const { checkSourceWebsite } = await import('/src/source-checks.ts'); return checkSourceWebsite(value as any); }, fixture);
+  expect(checks.some(row => row.label.includes('Jerarquía de acciones'))).toBe(false);
 });
 
 for (const scenario of [

@@ -1,4 +1,5 @@
 import { escapeHtml, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from "./studio-ui";
+import { renderFaceMark } from './source-face';
 import { batchStatusLabel, validateImageBatch } from "./batch-upload";
 import {
   ApiError,
@@ -134,7 +135,7 @@ function renderMessage(message: AgentMessage): string {
     : [];
   return `
     <article class="${user ? "message message--remote-user" : "agent-note remote-agent-note"}">
-      <div class="${user ? "message-meta" : "agent-note__meta"}">${user ? '<span class="avatar">TÚ</span>' : '<span class="yapi-dot"></span>'}<strong>${user ? "Tú" : "YAPI"}</strong><time>${formatTime(message.createdAt)}</time></div>
+      <div class="${user ? "message-meta" : "agent-note__meta"}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? "Tú" : "YAPI"}</strong><time>${formatTime(message.createdAt)}</time></div>
       <p>${escapeHtml(message.content)}</p>
       ${clarification ? `<div class="clarification-options">${clarification.options.map((option) => `<button type="button" data-clarification="${escapeHtml(option.value)}">${escapeHtml(option.label)}</button>`).join("")}</div>` : ""}
       ${proposals.length ? `<div class="remote-proposals">${proposals.map(renderProposalCard).join("")}</div>` : ""}
@@ -170,8 +171,8 @@ function renderReview(): string {
 function renderConversation(): string {
   const messages = state.messages.slice(-30);
   return `<div class="agent-stream" data-agent-stream>
-    ${messages.length ? messages.map(renderMessage).join("") : `<section class="conversation-welcome"><span class="yapi-dot"></span><strong>YAPI está listo</strong><p>Pídeme cambios de portada, color, texto, imágenes, secciones u organización del catálogo.</p></section>`}
-    ${state.busy ? `<article class="agent-note"><div class="agent-note__meta"><span class="yapi-dot"></span><strong>YAPI</strong><span>trabajando</span></div><div class="thinking"><i></i><i></i><i></i><span>${state.images.length ? "Subiendo el lote y preparando una variante…" : "Leyendo la tienda y preparando una variante…"}</span></div></article>` : ""}
+    ${messages.length ? messages.map(renderMessage).join("") : `<section class="conversation-welcome">${renderFaceMark({ size: 30 })}<strong>YAPI está listo</strong><p>Pídeme cambios de portada, color, texto, imágenes, secciones u organización del catálogo.</p></section>`}
+    ${state.busy ? `<article class="agent-note"><div class="agent-note__meta">${renderFaceMark({ thinking: true })}<strong>YAPI</strong><span>trabajando</span></div><div class="thinking"><i></i><i></i><i></i><span>${state.images.length ? "Subiendo el lote y preparando una variante…" : "Leyendo la tienda y preparando una variante…"}</span></div></article>` : ""}
     ${renderReview()}
   </div>`;
 }

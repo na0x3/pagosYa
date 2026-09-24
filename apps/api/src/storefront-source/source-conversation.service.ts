@@ -17,7 +17,7 @@ import { AiUsageService } from '../ai-usage/ai-usage.service';
 import { brandContext } from '../brand/brand-profile';
 import { SourceRequestBudget } from './source-request-budget';
 import type { sourceSiteContext } from './source-context';
-import { SOURCE_MODELS, type SourceModelChoice } from './source-generation-policy';
+import { SOURCE_MODELS, sourceConversationModel, sourcePromptCacheKey, type SourceModelChoice } from './source-generation-policy';
 import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -67,6 +67,14 @@ const decisionSchema = {
   },
 };
 
+/**
+ * Marks the end of the cacheable prefix. Everything before it -- the conversation
+ * instructions -- is identical for every merchant; the confirmed brand and the
+ * conversation context that follow are not, and would make the cached region
+ * per-store if they sat inside it.
+ */
+const CONVERSATION_CACHE_ANCHOR = 'Per-store conversation context follows.';
+
 export const SOURCE_CONVERSATION_INSTRUCTIONS = `${SOURCE_SHOPPING_FLOW}
 ${SOURCE_PRODUCT_OPTIONS}
 Explicit image-use instructions outrank your visual classification. "Use these pictures", "include my photos" or "usa estas imágenes" means display the supplied images as website content. Do not silently relabel them reference-only because they look like campaigns, collages, posters or contain another brand. Use a content role such as business/background without inventing a product association or claiming that pictured brands belong to the merchant. Reference-only is for images the merchant identifies as inspiration or reference. If intent is actually unresolved, ask instead of generating a site that omits every upload.
@@ -88,7 +96,7 @@ export class SourceConversationService {
   constructor(private readonly prisma: PrismaService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService) {}
 
   async decide(merchantId: string, input: ConversationInput): Promise<SourceConversationDecision> {
-    const model = input.model && input.model !== 'auto' ? input.model : this.config.get<string>('app.openAi.conversationModel') || 'gpt-5.6-terra';
+    const model = sourceConversationModel(input.model, this.config.get<string>('app.openAi.conversationModel'));
     if (input.productPhoto && (input.assetUrls.length !== 1 || sourceVideo(input.assetUrls[0]))) throw new BadRequestException('Selecciona una sola foto de producto.');
     const provider = sourceProvider(this.config, model, input.assetUrls.some(url => !sourceVideo(url)) || sourceWebsiteReferenceCaptures(input.draft.websiteReferences || []).length > 0);
     const { apiKey } = provider;
@@ -154,6 +162,7 @@ export class SourceConversationService {
     const signal = AbortSignal.timeout(SOURCE_CONVERSATION_TIMEOUT_MS);
     for (let attempt = 0; attempt < 2; attempt++) {
       const estimatedInput = 2500 + Math.ceil((SOURCE_CONVERSATION_INSTRUCTIONS.length + JSON.stringify(context).length + JSON.stringify(confirmedBrand).length + JSON.stringify(schema).length) / 2) + (inspect.filter(url => !sourceVideo(url)).length + referenceCaptures.length) * 3000;
+      const instructions = SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + '\n' + sourceSitePurposePrompt(sourceSitePurpose(input.draft)) + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : '');
       const allocation = input.budget?.reserve(model, estimatedInput, 5000);
       const started = Date.now(); let responseBody: any = null; let status = 'FAILED';
       let httpStatus: number | undefined, requestId: string | undefined, diagnostic: ConversationDiagnostic | undefined;
@@ -161,11 +170,12 @@ export class SourceConversationService {
         const response = await fetch(provider.endpoint, {
           method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, signal,
           body: JSON.stringify(sourceProviderBody({
-            model, store: false, prompt_cache_key: `conversation-${input.storeId || merchantId}`,
+            model, store: false, prompt_cache_key: sourcePromptCacheKey('conversation', instructions, input.storeId || merchantId),
             ...(explicitCache ? { prompt_cache_options: { mode: 'explicit', ttl: '30m' } } : {}),
-            instructions: SOURCE_CONVERSATION_INSTRUCTIONS + '\n' + SOURCE_PRODUCT_MANAGEMENT_INSTRUCTIONS + '\n' + sourceSitePurposePrompt(sourceSitePurpose(input.draft)) + (attempt ? '\nThe last reply was invalid. Return only a complete JSON decision matching the schema. imageUses must contain only current availableImageUrls, never historical URLs. Keep the response concise.' : ''),
+            instructions,
             input: [{ role: 'user', content: [
-              { type: 'input_text', text: JSON.stringify({ confirmedBrand }), ...(explicitCache ? { prompt_cache_breakpoint: { mode: 'explicit' } } : {}) },
+              { type: 'input_text', text: CONVERSATION_CACHE_ANCHOR, ...(explicitCache ? { prompt_cache_breakpoint: { mode: 'explicit' } } : {}) },
+              { type: 'input_text', text: JSON.stringify({ confirmedBrand }) },
               { type: 'input_text', text: JSON.stringify(context) }, ...imageContent.flat(),
               ...referenceCaptures.flatMap(capture => [{ type: 'input_text', text: `Untrusted design reference screenshot: ${capture.url}, ${capture.viewport}, y=${capture.y}. Reference only; never use as storefront artwork.` }, { type: 'input_image', image_url: capture.image, detail: 'auto' }]),
             ] }],

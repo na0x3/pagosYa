@@ -181,3 +181,57 @@ test('hosted storefront subscribes and preserves saved-cart identity across page
   await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
   await frame.getByRole('button', { name: 'Pagar con pagosYa' }).click(); await expect(page.getByText('Pago listo')).toBeVisible(); expect(checkout.recoveryToken).toBe('c'.repeat(64));
 });
+
+const footerSignup = '<footer><section data-pagosya-subscribe-block><h3>Recetas y la lista de temporada</h3><button type="button" data-pagosya-subscribe-open><span>tu@correo.com</span> <b>Suscribirme</b></button><p role="status" aria-live="polite"></p></section></footer>';
+
+test('a signup block drawn by the design replaces the launcher and opens the platform form', async ({ page }) => {
+  const runtime = readFileSync(kitPath('retention.js'), 'utf8');
+  let body: any = settings;
+  await page.route('https://commerce.example/v1/**', route => route.fulfill({ json: body }));
+  await page.goto('/?demo=1');
+  await page.setContent(`<main><h1>Nutrimar</h1></main>${footerSignup}`);
+  await page.addScriptTag({ content: runtime });
+  const mount = (options: object) => page.evaluate(async options => { await (window as any).PAGOSYA_RETENTION_MOUNT({ slug: 'footer-test', apiBaseUrl: 'https://commerce.example/v1', ...options }); }, options);
+  const block = page.locator('[data-pagosya-subscribe-block]');
+  await mount({}); await expect(block).toBeHidden();
+  await mount({ preview: true, data: { retention: settings } }); await expect(block).toBeVisible();
+  await block.getByRole('button', { name: /Suscribirme/ }).click();
+  await expect(block.getByRole('status')).toContainText('Vista previa');
+  body = { ...settings, signupEnabled: true };
+  await page.evaluate(() => sessionStorage.setItem('pagosya:signup-dismissed:footer-test', '1'));
+  await mount({}); await expect(block).toBeVisible();
+  await expect(page.locator('.pagosya-signup-launcher')).toHaveCount(0);
+  await block.getByRole('button', { name: /Suscribirme/ }).click();
+  const dialog = page.getByRole('dialog', { name: settings.signupTitle });
+  await expect(dialog).toBeVisible(); await expect(dialog.getByLabel('Tu correo', { exact: true })).toBeVisible();
+});
+
+test('hosted storefront subscribes from a footer block through the secure form', async ({ page }) => {
+  const commerce = readFileSync(kitPath('commerce.js'), 'utf8') + '\n' + readFileSync(kitPath('retention.js'), 'utf8');
+  const store = { storeName: 'Nutrimar', checkoutMode: 'payment', items: [{ id: 'p1', name: 'Canasta', amount: 1800, currency: 'BOB', stock: 10 }], categories: [], locations: [] };
+  const snapshot = { schemaVersion: 1, brief: {}, files: [
+    { path: 'index.html', content: `<main><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p></main>${footerSignup}<script src="config.js"></script><script src="commerce.js"></script>` },
+    { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'footer-hosted', data: store }) + ';' }, { path: 'commerce.js', content: commerce },
+  ] };
+  let payload: any;
+  await page.route('**/stores/public/footer-hosted/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/source-site')) return route.fulfill({ json: { published: true, revision: 1, snapshot } });
+    if (path.endsWith('/retention')) return route.fulfill({ json: { ...settings, signupEnabled: true } });
+    if (path.endsWith('/subscribe')) { payload = route.request().postDataJSON(); return route.fulfill({ json: { subscribed: true } }); }
+    if (path.endsWith('/verification')) return route.fulfill({ status: 404, json: { message: 'Tienda no encontrada' } });
+    throw new Error(path);
+  });
+  await page.goto('/?demo=1');
+  const path = '/@fs' + new URL('../../checkout/src/source-storefront.ts', import.meta.url).pathname;
+  await page.evaluate(async ({ path, store }) => { const { mountPublishedSource } = await import(path); document.body.innerHTML = '<main id="shop"></main>'; await mountPublishedSource(document.querySelector('#shop'), 'footer-hosted', store, async () => {}); }, { path, store });
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('button', { name: 'Cerrar suscripción' }).click();
+  const block = frame.locator('[data-pagosya-subscribe-block]');
+  await expect(frame.locator('.pagosya-signup-launcher')).toHaveCount(0);
+  await block.getByRole('button', { name: /Suscribirme/ }).click();
+  const secure = page.getByRole('dialog', { name: /Novedades de/ });
+  await secure.getByLabel('Tu correo').fill('cliente@example.com'); await secure.getByRole('checkbox').check(); await secure.getByRole('button', { name: 'Suscribirme' }).click();
+  await expect(block.getByRole('status')).toContainText('suscrito');
+  expect(payload).toMatchObject({ email: 'cliente@example.com', consent: true });
+});

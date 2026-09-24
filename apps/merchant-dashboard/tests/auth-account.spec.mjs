@@ -63,9 +63,9 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
     await expect(page.locator("body")).toHaveClass(/is-logged-out/);
     await expect(page.locator("body")).not.toHaveClass(/store-preview-fullscreen/);
     await expect(page.locator(".store-preview-panel")).toBeHidden();
-    await page.locator("#loginForm").getByLabel("Correo electrónico", { exact: true }).fill("fixture@example.com");
+    await page.locator("#loginForm").getByLabel("Correo", { exact: true }).fill("fixture@example.com");
     await page.locator("#loginForm").getByLabel("Contraseña", { exact: true }).fill("fixture-password");
-    await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click({ trial: true });
+    await page.getByRole("button", { name: "Continuar", exact: true }).click({ trial: true });
   });
 }
 
@@ -81,14 +81,16 @@ test("an expired session returns to sign-in", async ({ page }) => {
     contentType: "application/json",
     body: JSON.stringify(expired ? { message: "Tu sesión venció. Vuelve a iniciar sesión." } : [store]),
   }));
-  await page.goto("/#dashboard-settings");
-  await expect(page.locator("#storeNameInput")).toHaveValue(store.name);
+  // The #dashboard-settings view no longer exists (see 3b66e2f); the sidebar
+  // picker is the dashboard's own signal that the store list has loaded.
+  await page.goto("/#dashboard-stores");
+  await expect(page.locator("#sidebarStorePicker")).toContainText(store.name);
   expired = true;
   await page.evaluate(() => window.refresh());
   await expect(page.locator("body")).toHaveClass(/is-logged-out/);
   await expect(page.locator("#storeSettingsPage")).toBeHidden();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
-  await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click({ trial: true });
+  await page.getByRole("button", { name: "Continuar", exact: true }).click({ trial: true });
   await expect(page.locator("#error")).toContainText("sesión venció");
 });
 

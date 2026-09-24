@@ -1,4 +1,5 @@
 import { AiUsageService } from '../ai-usage/ai-usage.service';
+import { sourceImageMicroUsd } from '../storefront-source/source-generation-policy';
 import { Optional } from '@nestjs/common';
 import { BrandProfileService } from '../brand/brand-profile.service';
 import { brandContext } from '../brand/brand-profile';
@@ -25,14 +26,14 @@ export class VisualAiService {
     @Optional() private readonly metering?: AiUsageService,
   ) {}
 
-  async meteredRequest(storeId: string | undefined, stage: string, model: string, url: string, init: RequestInit) {
+  async meteredRequest(storeId: string | undefined, stage: string, model: string, url: string, init: RequestInit, priceMicroUsd?: number | null) {
     const started = Date.now(); let body: any = null; let status = 'FAILED';
     try {
       const response = await fetch(url, init);
       body = await response.json();
       if (response.ok && (!body.status || body.status === 'completed')) status = 'COMPLETED';
       return { response, body };
-    } finally { if (storeId) await this.metering?.record(storeId, stage, model, body, Date.now() - started, status); }
+    } finally { if (storeId) await this.metering?.record(storeId, stage, model, body, Date.now() - started, status, undefined, priceMicroUsd); }
   }
   canPlanStorefrontOperations(): boolean {
     return Boolean(this.config.get<boolean>("app.openAi.enabled") && this.config.get<string>("app.openAi.apiKey"));
@@ -88,7 +89,11 @@ export class VisualAiService {
           moderation: "auto",
         }),
         signal: AbortSignal.timeout(150_000),
-      }));
+      }, sourceImageMicroUsd(size, 1, {
+        square: this.config.get<number>('app.openAi.imagePriceSquare'),
+        portrait: this.config.get<number>('app.openAi.imagePricePortrait'),
+        landscape: this.config.get<number>('app.openAi.imagePriceLandscape'),
+      })));
     } catch (error) {
       throw new ServiceUnavailableException(`No pudimos generar la imagen en este momento: ${(error as Error).message}`);
     }

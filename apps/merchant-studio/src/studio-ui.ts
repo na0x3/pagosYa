@@ -15,8 +15,19 @@ const iconPaths = {
   logout: '<path d="M10 5H5v14h5m4-4 4-3-4-3m4 3H9"/>',
 } as const;
 
-export function escapeHtml(value: string): string {
-  return value.replace(/[&<>'"]/g, (character) => ({
+/**
+ * Escapa para HTML cualquier valor, no solo cadenas.
+ *
+ * La firma decía `string`, pero casi todo lo que entra aquí viene de la API
+ * tipado como `any`: un número (`ttl: 3600`, `priority: 10`) llegaba intacto y
+ * `value.replace` no existía, así que la vista entera caía con «a.replace is
+ * not a function» y el comercio solo veía un botón de reintentar. Un escapador
+ * que revienta con un número es una trampa; nulo y undefined se escriben como
+ * vacío, que es lo que la plantilla quería decir.
+ */
+export function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value).replace(/[&<>'"]/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
   })[character] ?? character);
 }

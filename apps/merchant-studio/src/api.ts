@@ -1,24 +1,16 @@
 import type { SourceDesignJob } from './source-design-jobs';
-import type { VisualFields } from './source-direct-editor';
+import type { VisualFields } from './source-visual-fields';
 import type { AssetLibrary, VisualReport } from './source-visual-tools';
 import type { BuildProgress } from './source-build-progress';
 import type { BrandState } from './brand-profile';
+import { CHECKOUT_ORIGIN } from './checkout-origin';
 export const SESSION_STORAGE_KEY = "pagosya_merchant_session";
 
 const embedded = new URLSearchParams(location.search).get("embedded") === "1" && window.parent !== window;
 export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "library", "productGuide"].some(key => new URLSearchParams(location.search).has(key))
   ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
-function configuredCheckoutOrigin(): string {
-  if (import.meta.env.VITE_CHECKOUT_ORIGIN) return import.meta.env.VITE_CHECKOUT_ORIGIN;
-  // Embedded Studio and its browser preview share the dashboard's connection settings.
-  try {
-    const saved = sessionStorage.getItem('pagosya_checkout_origin');
-    if (saved) return saved;
-  } catch { /* Storage may be unavailable in a restricted preview. */ }
-  return 'http://localhost:5175'; // Port used by the repository's pnpm dev stack.
-}
-export const CHECKOUT_ORIGIN: string = configuredCheckoutOrigin();
+export { CHECKOUT_ORIGIN };
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -34,7 +26,14 @@ export interface MerchantStore {
   cartRecommendationsEnabled?: boolean;
   cartRecommendationProductIds?: string[];
   checkoutMode?: string;
+  analyticsGa4Id?: string | null;
+  analyticsGtmId?: string | null;
+  analyticsMetaPixelId?: string | null;
+  analyticsTiktokPixelId?: string | null;
 }
+
+/** Store columns holding a measurement ID the merchant pastes. */
+export type AnalyticsField = 'analyticsGa4Id' | 'analyticsGtmId' | 'analyticsMetaPixelId' | 'analyticsTiktokPixelId';
 
 /** SIN classification of a product, needed on electronic invoices. */
 export interface ProductFiscalMapping { codigoProducto?: string; actividadEconomica?: string; codigoProductoSin?: string; unidadMedida?: number }
@@ -227,6 +226,8 @@ export class MerchantStudioApi {
   setCollectionProducts(storeId: string, id: string, paymentLinkIds: string[]): Promise<Collection> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/${encodeURIComponent(id)}/products`, { method: 'PUT', body: JSON.stringify({ paymentLinkIds }) }); }
   reorderCollections(storeId: string, ids: string[]): Promise<Collection[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/collections/order`, { method: 'PUT', body: JSON.stringify({ collectionIds: ids }) }); }
   // Reuses the store-update endpoint other Studio settings already write through — no dedicated route for catalogLayout.
+  /** An empty string clears the ID; the API rejects anything that is not that provider's shape. */
+  saveAnalyticsId(storeId: string, field: AnalyticsField, value: string): Promise<MerchantStore> { return this.request(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: JSON.stringify({ [field]: value }) }); }
   saveCatalogLayout(storeId: string, layout: CatalogLayout): Promise<MerchantStore> { return this.request(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: JSON.stringify({ catalogLayout: layout }) }); }
   brandProfile(storeId: string): Promise<BrandState> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/brand`);

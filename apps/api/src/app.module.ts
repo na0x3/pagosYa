@@ -65,7 +65,10 @@ import { InboxModule } from "./inbox/inbox.module";
       useFactory: (config: ConfigService) => {
         const redisUrl = config.get<string>("app.redisUrl");
         return {
-          throttlers: [{ ttl: 60_000, limit: 120 }],
+          // The hourly companion to the burst limit: 120/min kept up for an hour, so
+          // ordinary use never meets it. Routes that cost real CPU lower it for
+          // themselves (see source-compile-budget.ts).
+          throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }, { name: 'sustained', ttl: 3_600_000, limit: 7_200 }],
           ...(redisUrl ? { storage: new ThrottlerStorageRedisService(redisUrl) } : {}),
         };
       },

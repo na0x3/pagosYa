@@ -39,7 +39,7 @@ it('repairs an inconsistent completed plan once with an actionable layout diagno
   const result = await new SourceDesignPlanner().explore(request);
   expect(result.selected).toBe(2);
   expect(request.attempts.map(attempt => attempt.status)).toEqual(['FAILED', 'COMPLETED']);
-  expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[0].text).toContain('catalogSection incluido');
+  expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('catalogSection incluido');
 });
 
 it('accepts an intro planned before the catalog without spending a repair on the flag', async () => {

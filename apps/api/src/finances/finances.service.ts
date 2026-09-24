@@ -79,15 +79,16 @@ export class FinancesService {
     if (storeId && !selectedStore) throw new NotFoundException("Store not found");
 
     const term = search?.trim().slice(0, 120);
-    const contactSearch = term
-      ? {
-          OR: [
-            { id: { contains: term, mode: Prisma.QueryMode.insensitive } },
-            { customerName: { contains: term, mode: Prisma.QueryMode.insensitive } },
-            { customerEmail: { contains: term, mode: Prisma.QueryMode.insensitive } },
-            { customerPhone: { contains: term, mode: Prisma.QueryMode.insensitive } },
-          ],
-        }
+    const like = { contains: term, mode: Prisma.QueryMode.insensitive };
+    const contactClauses = term
+      ? [{ id: like }, { customerName: like }, { customerEmail: like }, { customerPhone: like }]
+      : null;
+    const contactSearch = contactClauses ? { OR: contactClauses } : {};
+    // A buyer quotes the id from their confirmation email and tracking link,
+    // and both carry the StoreOrder id — never the pi_ id on the intent. Only
+    // payments can be matched that way; StoreLead has no order behind it.
+    const paymentSearch = contactClauses
+      ? { OR: [...contactClauses, { storeOrder: { id: like } }] }
       : {};
     const statusFilter = normalizeOrderStatusFilter(status);
     const [payments, leads, stores] = await Promise.all([
@@ -95,7 +96,7 @@ export class FinancesService {
         where: {
           merchantId,
           ...(storeId ? { metadata: { path: ["storeId"], equals: storeId } } : {}),
-          ...contactSearch,
+          ...paymentSearch,
         },
         include: { storeOrder: { select: { id: true, status: true } } },
         orderBy: { createdAt: "desc" },

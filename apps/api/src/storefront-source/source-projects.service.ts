@@ -16,6 +16,7 @@ import { PaymentLinkStatus, Prisma, type PaymentLink } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
 import { EditSourceFileDto, SaveSourceProjectDto } from "./dto/save-source-project.dto";
+import { validateLegacySources } from './source-legacy';
 import { sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot, SourceProjectSnapshot } from "./source-project";
 import type { SourceProduct, SourceProductOperation } from './source-products';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -80,7 +81,7 @@ export class SourceProjectsService {
       const compiled = await compileNextPreview(snapshot.files.filter(f => nextSourceFile(f.path)), sourceSitePurpose(snapshot.brief));
       const paths = new Set(compiled.map(f => f.path));
       snapshot = sourceProjectSnapshot({ ...input, files: [...snapshot.files.filter(f => !paths.has(f.path) && !f.path.startsWith('_compiled/')), ...compiled] });
-    }
+    } else validateLegacySources(snapshot.files);
     const system = savedSourceVisualSystem(snapshot.files);
     if (system?.version === 3) snapshot = { ...snapshot, files: snapshot.files.map(file => file.path === SOURCE_VISUAL_SYSTEM_FILE ? { ...file, content: JSON.stringify(withSourceStyleTokens(system, snapshot.files), null, 2) + '\n' } : file) };
     return snapshot;

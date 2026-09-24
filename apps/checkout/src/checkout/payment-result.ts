@@ -89,6 +89,23 @@ export function backToStoreHtml(): string {
   return `<a class="back-to-store" href="${escapeHtml(storeCatalogUrl(state.currentStoreSlug))}">Volver a la tienda</a>`;
 }
 
+const reportedPurchases = new Set<string>();
+/**
+ * The sale, reported to whichever of the merchant's measurement tags is loaded. They are
+ * loaded only when the shopper accepted statistics, so finding none here means "do not
+ * track" and the sale is simply not reported — pagosYa's own order record is unaffected.
+ * Guarded by order id because a re-render of the success screen is not a second sale.
+ */
+function reportPurchase(order: OrderSummary) {
+  if (reportedPurchases.has(order.id)) return;
+  reportedPurchases.add(order.id);
+  const runtime = window as unknown as { gtag?: (...args: unknown[]) => void; fbq?: (...args: unknown[]) => void; ttq?: { track?: (...args: unknown[]) => void } };
+  const value = order.amount / 100, currency = String(order.currency || "").toUpperCase();
+  try { runtime.gtag?.("event", "purchase", { transaction_id: order.id, value, currency }); } catch {}
+  try { runtime.fbq?.("track", "Purchase", { value, currency }); } catch {}
+  try { runtime.ttq?.track?.("CompletePayment", { value, currency }); } catch {}
+}
+
 export function renderSuccess(order: OrderSummary, preview = false) {
   document.body.classList.add("payment-page", "payment-success-page");
   const cart = Array.isArray(order.metadata?.cart) ? order.metadata.cart as CartLine[] : null;
@@ -170,7 +187,7 @@ export function renderSuccess(order: OrderSummary, preview = false) {
     trackingActionHtml,
     printActionHtml,
   });
-  if (!preview) postToParent("PAYMENT_SUCCEEDED", { paymentIntentId: order.id, status: "succeeded" });
+  if (!preview) { reportPurchase(order); postToParent("PAYMENT_SUCCEEDED", { paymentIntentId: order.id, status: "succeeded" }); }
 }
 
 export const celebratedPaymentIntentIds = new Set<string>();

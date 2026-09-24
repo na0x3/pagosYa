@@ -49,7 +49,9 @@ it('persists failed checks and keeps publishing disabled', async () => {
 it('keeps publishing blocked if persisting a passing result fails', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockRejectedValue(new Error('No se pudo guardar la comprobación.'));
   await mountSourceStudio(app);
-  await vi.waitFor(() => expect(app.textContent).toContain('No se pudo guardar la comprobación.'));
+  // The merchant never reads the diagnostic; the readiness step and a blocked
+  // publish button carry the state instead.
+  await vi.waitFor(() => expect(app.querySelector('[data-readiness-step=test] span')?.textContent).toBe('Por revisar'));
   expect(publish().disabled).toBe(true);
 });
 it('discards cancelled checks when another revision loads', async () => {
@@ -68,15 +70,4 @@ it('discards cancelled checks when another revision loads', async () => {
   finishOld(passed);
   await vi.waitFor(() => expect(publish().disabled).toBe(false));
   expect(record).toHaveBeenCalledTimes(1);
-});
-
-it('saves the scroll feel as a revision without starting generation', async () => {
-  const saveMotion = vi.spyOn(MerchantStudioApi.prototype, 'setSourceMotion').mockResolvedValue({ ...version, revision: 3 });
-  await mountSourceStudio(app);
-  const select = app.querySelector<HTMLSelectElement>('#source-scroll-feel')!;
-  expect(select.value).toBe('soft');
-  select.value = 'cinematic';
-  select.dispatchEvent(new Event('change', { bubbles: true }));
-  await vi.waitFor(() => expect(saveMotion).toHaveBeenCalledWith('s1', 2, 'subtle', 'cinematic'));
-  expect(app.querySelector('#source-scroll-feel')).not.toBeNull();
 });

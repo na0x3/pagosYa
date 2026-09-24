@@ -39,6 +39,25 @@ describe('email lifecycle hooks', () => {
         expect(body).toContain('/track/');
         expect(email.send).not.toHaveBeenCalled();
     });
+    // Without this the merchant gets "a new order arrived" and has no way to
+    // answer the buyer: no address in the body, nothing behind Reply.
+    it('points the staff order notification at the buyer so Reply reaches them', async () => {
+        const { db, payment } = harness();
+        db.storeRetention.findUnique.mockResolvedValue({ settings: { emailWorkspace: {
+            templates: {},
+            staff: { enabled: true, recipients: [{ email: 'duena@tienda.test', events: ['NEW_ORDER'] }] },
+        } } });
+
+        await (payment as any).applyRailResult('payment-1', 'merchant', 'rail', { status: 'succeeded', raw: {} }, TransactionType.CAPTURE);
+
+        const staff = db.storeEmailDelivery.upsert.mock.calls
+            .map((call: any[]) => call[0].create)
+            .find((row: any) => row.kind === 'STAFF_NEW_ORDER');
+        expect(staff.email).toBe('duena@tienda.test');
+        expect(staff.replyTo).toBe('buyer@example.test');
+        expect(staff.body).toContain('buyer@example.test');
+        expect(staff.body).toContain('Ana');
+    });
     it('does not queue workspace mail for sandbox payments', async () => {
         const { db, payment } = harness(false);
         await (payment as any).applyRailResult('payment-1', 'merchant', 'rail', { status: 'succeeded', raw: {} }, TransactionType.CAPTURE);

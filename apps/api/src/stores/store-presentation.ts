@@ -5,6 +5,7 @@ import { STORE_SITE_SECTION_PATTERN, STORE_BASE_CONTENT_SECTIONS, STORE_MOTION_E
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { applySiteArtDirection, siteSectionBlockSlotIsSupported, resolveSiteSectionFamily } from "@pagosya/shared-types";
 import { storeLocationSnapshot } from "./store-locations";
+import { normalizeAnalyticsId } from "../store-seo/store-analytics";
 
 export type StoreHeroSlide = {
   imageUrl: string;
@@ -677,6 +678,13 @@ export function storeUpdateData(
     ...(dto.showLowStockToCustomers !== undefined && { showLowStockToCustomers: dto.showLowStockToCustomers }),
     ...(dto.policies !== undefined && { policies: storePolicies(dto.policies) as Prisma.InputJsonValue }),
     ...(dto.publicVisibility !== undefined && { publicVisibility: dto.publicVisibility }),
+    // normalizeAnalyticsId returns null for an empty or malformed value, so clearing a
+    // field and pasting something the DTO somehow let through both land as "not configured"
+    // rather than as a value the storefront would try to inject.
+    ...(dto.analyticsGa4Id !== undefined && { analyticsGa4Id: normalizeAnalyticsId('analyticsGa4Id', dto.analyticsGa4Id) }),
+    ...(dto.analyticsGtmId !== undefined && { analyticsGtmId: normalizeAnalyticsId('analyticsGtmId', dto.analyticsGtmId) }),
+    ...(dto.analyticsMetaPixelId !== undefined && { analyticsMetaPixelId: normalizeAnalyticsId('analyticsMetaPixelId', dto.analyticsMetaPixelId) }),
+    ...(dto.analyticsTiktokPixelId !== undefined && { analyticsTiktokPixelId: normalizeAnalyticsId('analyticsTiktokPixelId', dto.analyticsTiktokPixelId) }),
     ...(dto.salesGoalLabel !== undefined && { salesGoalLabel: dto.salesGoalLabel }),
     ...(dto.salesGoalAmount !== undefined && { salesGoalAmount: dto.salesGoalAmount }),
     ...(siteDocument !== undefined && { siteDocument }),

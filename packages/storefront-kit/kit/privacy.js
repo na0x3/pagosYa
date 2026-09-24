@@ -42,5 +42,8 @@
   }
   window.PAGOSYA_PRIVACY = { choice, save, analyticsAllowed: slug => choice(slug) === true, mount, clearTracking };
   window.addEventListener('storage', event => { if (event.key?.startsWith('pagosya:privacy:')) { const slug = event.key.slice('pagosya:privacy:'.length); memory.delete(slug); if (choice(slug) !== true) clearTracking(slug); } });
-  if (window.PAGOSYA_CONFIG && !window.PAGOSYA_HOSTED && !window.PAGOSYA_PREVIEW && !window.PAGOSYA_CONFIG.demo) mount(window.PAGOSYA_CONFIG.slug);
+  // PAGOSYA_ANALYTICS_AVAILABLE is set by the measurement gate the API injects into the
+  // head, so a store whose merchant configured a pixel asks the question unprompted
+  // instead of waiting for the shopper to find the privacy button.
+  if (window.PAGOSYA_CONFIG && !window.PAGOSYA_HOSTED && !window.PAGOSYA_PREVIEW && !window.PAGOSYA_CONFIG.demo) mount(window.PAGOSYA_CONFIG.slug, { analyticsAvailable: window.PAGOSYA_ANALYTICS_AVAILABLE === true });
 })();

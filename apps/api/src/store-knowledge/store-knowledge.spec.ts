@@ -6,7 +6,7 @@ const product = (id: string, name: string, extra: Partial<StoreKnowledgeInput['p
   discountPercent: null, discountStartsAt: null, discountEndsAt: null, createdAt: new Date('2026-09-01'), category: null, collectionProducts: [], ...extra,
 });
 const input = (overrides: Partial<StoreKnowledgeInput> = {}): StoreKnowledgeInput => ({
-  store: { name: 'Pliegue', tagline: 'Textiles de altura', aboutText: null, announcement: null, checkoutMode: 'payment', contactPhone: '+59170000000', contactEmail: null,
+  store: { name: 'Pliegue', tagline: 'Textiles de altura', aboutText: null, announcement: null, checkoutMode: 'payment', logoUrl: '/logo.png', contactPhone: '+59170000000', contactEmail: null,
     contactFormEnabled: false, shippingEnabled: true, shippingPickupEnabled: true, status: 'ACTIVE', sourcePublicationPaused: false, publicVisibility: true,
     publishedSourceRevision: 3, websitePublishedRevision: 0, merchant: { status: 'ACTIVE' },
     locations: [{ name: 'El Alto', address: 'Av. 6 de Marzo', pickupEnabled: true, deliveryEnabled: false, openingHours: [{ day: 1, open: '09:00', close: '18:00', closed: false }, { day: 0, open: '', close: '', closed: true }] }] },
@@ -44,5 +44,17 @@ describe('Store Brain', () => {
     expect(JSON.stringify(k).length).toBeLessThan(24000);
     expect(JSON.stringify(k)).not.toContain('+59170000000');
     expect(JSON.stringify(storeKnowledgeForGeneration(k)).length).toBeLessThan(3000);
+  });
+});
+
+describe('el logo del comercio', () => {
+  it('viaja en la identidad para que YAPI sepa si existe', () => {
+    expect(buildStoreKnowledge(input()).identity.logo).toBe(true);
+  });
+
+  it('se reporta como carencia cuando falta, que es cuando YAPI debe pedirlo', () => {
+    const knowledge = buildStoreKnowledge(input({ store: { ...input().store, logoUrl: null } }));
+    expect(knowledge.identity.logo).toBe(false);
+    expect(knowledge.gaps).toContain('La tienda no tiene logo cargado.');
   });
 });

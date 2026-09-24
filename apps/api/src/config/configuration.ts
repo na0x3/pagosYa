@@ -109,6 +109,9 @@ export interface AppConfig {
     conversationModel: string;
     inventoryModel: string;
     imageModel: string;
+    imagePriceSquare?: number;
+    imagePricePortrait?: number;
+    imagePriceLandscape?: number;
     enabled: boolean;
   };
   google: {
@@ -325,10 +328,13 @@ export default (): { app: AppConfig } => {
     deepSeek: { apiKey: process.env.DEEPSEEK_API_KEY ?? "", enabled: process.env.DEEPSEEK_ENABLED !== "false" },
     openAi: {
       apiKey: process.env.OPENAI_API_KEY ?? "",
-      conversationModel: process.env.OPENAI_CONVERSATION_MODEL ?? "gpt-5.6-terra",
+      conversationModel: process.env.OPENAI_CONVERSATION_MODEL ?? "gpt-5.6-luna",
       designModel: process.env.OPENAI_DESIGN_MODEL ?? "gpt-5.6-sol",
       inventoryModel: process.env.OPENAI_INVENTORY_MODEL ?? "gpt-5.6-sol",
       imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2",
+      imagePriceSquare: Number(process.env.OPENAI_IMAGE_PRICE_SQUARE) || undefined,
+      imagePricePortrait: Number(process.env.OPENAI_IMAGE_PRICE_PORTRAIT) || undefined,
+      imagePriceLandscape: Number(process.env.OPENAI_IMAGE_PRICE_LANDSCAPE) || undefined,
       enabled: process.env.OPENAI_VISUAL_STUDIO_ENABLED !== "false",
     },
     google: {

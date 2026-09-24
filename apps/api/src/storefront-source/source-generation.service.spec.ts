@@ -560,7 +560,7 @@ describe('Independent source generation',()=>{
     expect(output.find((f: any) => f.path === 'brand.css').content).toContain('--brand-body-font');
     expect(output.find((f: any) => f.path.endsWith('.woff2')).content).toBe(Buffer.from('owned-font-data').toString('base64'));
     for (const page of output.filter((f: any) => f.path.endsWith('.html'))) expect(page.content).toContain('href="brand.css"');
-    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text).toContain('#135724');
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).toContain('#135724');
   });
   it('reuses the brand prefix across requests and catalog changes, but refreshes changed brand rules', async () => {
     const { prisma, projects, config, uploads, stores } = setup();
@@ -578,20 +578,30 @@ describe('Independent source generation',()=>{
     const updated: any = await service.generate('m', 's', input);
     const requests = fetchMock.mock.calls.map(call => JSON.parse(call[1]!.body as string));
     const blocks = requests.map(request => request.input[0].content);
+    // The cached prefix holds no per-store text at all, so it stays byte-identical
+    // across a catalog change AND a brand change -- and, being the same for every
+    // merchant, it is already warm on a store's first generation.
     expect(blocks[0][0]).toEqual(blocks[1][0]);
-    expect(blocks[0][0]).toMatchObject({ prompt_cache_breakpoint: { mode: 'explicit' }, text: expect.stringContaining('#135724') });
-    expect(blocks[0][0].text).toContain('Warm and direct');
+    expect(blocks[0][0]).toEqual(blocks[2][0]);
+    expect(blocks[0][0]).toMatchObject({ prompt_cache_breakpoint: { mode: 'explicit' } });
+    expect(blocks[0][0].text).not.toContain('#135724');
+    expect(blocks[0][0].text).not.toContain('Warm and direct');
     expect(blocks[0][0].text).not.toContain('Private evidence');
     expect(blocks[0][0].text).not.toContain('#123456');
     expect(blocks[0][0].text).not.toContain(input.instruction);
+    // Brand rules still reach the model, now beside the rest of the store context.
+    expect(blocks[0][1].text).toContain('#135724');
+    expect(blocks[0][1].text).toContain('Warm and direct');
+    expect(blocks[0][1].text).not.toContain('Private evidence');
+    expect(blocks[0][1].text).not.toContain('#123456');
     expect(blocks[0][1]).not.toEqual(blocks[1][1]);
     expect(blocks[1][1].text).toContain('Updated café');
-    expect(blocks[1][1].text).not.toContain('Confirmed brand rules');
     expect(blocks[1][1]).not.toHaveProperty('prompt_cache_breakpoint');
-    expect(blocks[2][0].text).toContain('#246813');
-    expect(blocks[2][0].text).not.toContain('#135724');
+    expect(blocks[2][1].text).toContain('#246813');
+    expect(blocks[2][1].text).not.toContain('#135724');
     expect(updated.snapshot.files.find((file: any) => file.path === 'brand.css').content).toContain('#246813');
-    expect(requests[0].prompt_cache_key).toBe('source-s');
+    expect(requests[0].prompt_cache_key).not.toContain('source-s');
+    expect(requests[0].prompt_cache_key).toBe(requests[1].prompt_cache_key);
     expect(requests[0].prompt_cache_options).toEqual({ mode: 'explicit', ttl: '30m' });
   });
   it('edits an existing revision with exact patches and preserves unrelated design files and bundled photos', async () => {

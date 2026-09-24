@@ -1,9 +1,15 @@
 /** Shared server renderer for Vite development and the production checkout server. */
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const privateKeys = ['client_secret', 'publishable_key', 'recover', 'comeback', 'unsubscribe', 'source_owner', 'source_payment_preview', 'preview', 'source_preview'];
-export function applySeoDocument(html, document, noindex = false) {
+export function applySeoDocument(html, document, noindex = false, privateUrl = false) {
   html = html.replace(/<title\b[^>]*>[^]*?<\/title>/gi, '').replace(/<meta\b[^>]*(?:name=["'](?:description|robots|twitter:[^"']+)["']|property=["']og:[^"']+["'])[^>]*>/gi, '').replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '');
-  const head = noindex ? document.head.replace(/content="index, follow, max-image-preview:large"/, 'content="noindex, nofollow"') : document.head;
+  let head = noindex ? document.head.replace(/content="index, follow, max-image-preview:large"/, 'content="noindex, nofollow"') : document.head;
+  // A recovery, comeback or checkout URL carries a secret in its query string, and every
+  // analytics tag reports the current location to its provider. Drop the merchant's tags
+  // on those pages rather than hand the secret to Google, Meta or TikTok. A merchant page
+  // that is merely noindex still gets them: not indexing a page is not a reason to stop
+  // measuring it.
+  if (privateUrl) head = head.replace(/<script\b[^>]*\bdata-pagosya-analytics=[^>]*>[^]*?<\/script>/gi, '');
   return html.replace('</head>', () => `${head}</head>`).replace(/(<div\s+id="app"[^>]*>)[^]*?(<\/div>)/, (_match, open, close) => open + document.body + close);
 }
 export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
@@ -87,9 +93,10 @@ export function createStorefrontSeo({ apiBase, checkoutOrigin, template }) {
       if (collectionSlug !== undefined) { params.set('page', 'coleccion.html'); params.set('collection', decodeURIComponent(collectionSlug)); }
       if (url.searchParams.has('source_page')) params.set('page', url.searchParams.get('source_page'));
       const document = await get(`/stores/public/${encodeURIComponent(slug)}/seo?${params}`);
-      const noindex = document.noindex === true || privateKeys.some(key => url.searchParams.has(key));
+      const privateUrl = privateKeys.some(key => url.searchParams.has(key));
+      const noindex = document.noindex === true || privateUrl;
       // Identical initial HTML for people and crawlers; authored JS remains sandboxed.
-      return send(200, 'text/html; charset=utf-8', applySeoDocument(await template(url.pathname + url.search), document, noindex), { 'X-Robots-Tag': noindex ? 'noindex, nofollow' : 'index, follow' });
+      return send(200, 'text/html; charset=utf-8', applySeoDocument(await template(url.pathname + url.search), document, noindex, privateUrl), { 'X-Robots-Tag': noindex ? 'noindex, nofollow' : 'index, follow' });
     } catch (error) {
       const status = error.status === 404 ? 404 : 503;
       return send(status, 'text/html; charset=utf-8', `<!doctype html><html lang="es"><head><meta name="robots" content="noindex"><title>${status === 404 ? 'Tienda o página no disponible' : 'La tienda volverá en un momento'}</title></head><body><h1>${status === 404 ? 'Esta página no está disponible.' : 'No pudimos cargar la tienda. Vuelve a intentarlo en un momento.'}</h1></body></html>`, { 'X-Robots-Tag': 'noindex', ...(status === 503 ? { 'Retry-After': '60' } : {}) });
