@@ -77,6 +77,15 @@ pagosYa publishes its own versioned texts at `GET /v1/legal/merchant-terms`, `GE
 - **Merchant signup.** `POST /v1/merchants` accepts an optional `termsVersion`. Send the `version` your signup screen showed with a required "I accept" checkbox; an unknown or superseded version is rejected with 400 before the merchant is created. Once merchant terms are in force, KYC submission and payouts wait until the merchant has accepted them (the dashboard asks).
 - **Custom checkouts.** Hosted checkout and the widget already do this. If you build your own payment form, show "Al pagar aceptas los Términos y la Política de privacidad de pagosYa" beside the pay button, linking to `https://pagosya.bo/terminos/compradores` and `https://pagosya.bo/privacidad`, and send the displayed versions as `buyerTermsVersion` and `buyerPrivacyVersion` on `POST /v1/payment_intents/:id/confirm`. A stale or unknown version is rejected with 400; omit both fields when no buyer terms are published.
 
+## Límites por nivel
+
+Every merchant has a verification level (Sin verificar / Persona / Negocio / Empresa) with a monthly payment-volume limit and a per-payment limit, both in BOB. Levels and limits are visible to the merchant in the dashboard alongside their current usage for the month.
+
+- **`POST /v1/payment_intents`** refuses to create a live PaymentIntent above the merchant's per-payment limit: `403` with `{ "code": "per_payment_limit_exceeded", "message": "Este cobro supera el máximo por pago de tu nivel." }`. Buyer-facing store and checkout flows that hit a merchant's limit instead get the neutral `{ "code": "limit_exceeded", "message": "Este comercio no puede recibir pagos en este momento." }` — never an amount or a limit.
+- **`POST /v1/payment_intents/:id/confirm`** refuses confirmation if it would push the merchant over their monthly limit: `403` with `{ "code": "limit_exceeded", "message": "Este comercio no puede recibir pagos en este momento." }`.
+- These checks only apply in **live mode**; `sk_test_...`/`pk_test_...` traffic is never limited, reserved, or counted toward a limit.
+- Refunds do not free up room against the monthly limit.
+
 ## Production checklist
 
 - Complete KYC and use matching `pk_live_...` and `sk_live_...` credentials.
