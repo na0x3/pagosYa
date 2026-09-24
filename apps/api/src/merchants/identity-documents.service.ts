@@ -4,7 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { PrivateFilesService } from "../commerce-platform/private-files.service";
 import { AuditLogService } from "../ops/audit-log.service";
 import { assertSafeImageDimensions, detectedMediaMime, MAX_IMAGE_UPLOAD_BYTES } from "../uploads/uploads.service";
-import type { OpsActor } from "./kyc.service";
+import type { OpsActor } from "./ops-actor";
 
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const SLOT_FIELD = { CI_FRONT: "ciFrontDocId", CI_BACK: "ciBackDocId", SELFIE: "selfieDocId" } as const;

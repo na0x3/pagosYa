@@ -6,12 +6,7 @@ import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
 import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
 import { IdentityDocumentsService } from "./identity-documents.service";
-
-export interface OpsActor {
-  id: string;
-  name: string;
-  email: string;
-}
+import type { OpsActor } from "./ops-actor";
 
 /**
  * pagosYa-side half of merchant onboarding: collect KYC once, review it

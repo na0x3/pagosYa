@@ -33,7 +33,7 @@ import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { OpsAuthGuard } from "../ops/guards/ops-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { CurrentOpsUser } from "../ops/decorators/current-ops-user.decorator";
-import { OpsActor } from "./kyc.service";
+import type { OpsActor } from "./ops-actor";
 
 @ApiTags("merchants")
 @Controller("v1/merchants")
