@@ -107,4 +107,42 @@ describe('Rewards: daily wheel and Horizonte board', () => {
     expect((await service.state(merchantId, merchantUserId, storeId, new Date('2026-09-25T03:59:30Z'))).wheel.available).toBe(false);
     expect((await service.state(merchantId, merchantUserId, storeId, new Date('2026-09-25T04:00:30Z'))).wheel.available).toBe(true);
   });
+
+  const roll = () => http().post('/v1/dashboard/rewards/board/roll').set(auth()).send({ storeId });
+  const boardState = async () => (await http().get(`/v1/dashboard/rewards?storeId=${storeId}`).set(auth()).expect(200)).body.board;
+
+  it('earns one roll per 10 successful sales of this store only', async () => {
+    await sell(9); await sell(30, foreignStoreId);
+    expect(await boardState()).toMatchObject({ rollsAvailable: 0, salesUntilNextRoll: 1 });
+    await roll().expect(409);
+    await sell(1);
+    expect(await boardState()).toMatchObject({ rollsAvailable: 1, salesUntilNextRoll: 10 });
+  });
+
+  it('moves by the die and grants the landing tile, wrapping into a new lap', async () => {
+    await sell(20);
+    draws.push(2); // die = 3 → tile 3 = AI_CREDITS_5
+    expect((await roll().expect(201)).body).toMatchObject({ die: 3, from: 0, to: 3, lapCompleted: false, grant: { prize: 'AI_CREDITS_5', kind: 'AI_CREDITS', amount: 5 }, board: { position: 3, rollsAvailable: 1 } });
+    await prisma.boardState.update({ where: { storeId }, data: { position: 22 } });
+    draws.push(3, 0); // die = 4 → (22 + 4) % 24 = 2 = STICKER_COMMON; the second draw picks the sticker
+    expect((await roll().expect(201)).body).toMatchObject({ die: 4, from: 22, to: 2, lapCompleted: true, board: { lapsCompleted: 1, rollsAvailable: 0 } });
+    expect((await http().get(`/v1/dashboard/rewards?storeId=${storeId}`).set(auth()).expect(200)).body.aiCreditBalance).toBe(5);
+  });
+
+  it('allows exactly one of two concurrent rolls when only one is available', async () => {
+    await sell(10);
+    draws.push(0, 0, 0, 0);
+    const statuses = (await Promise.all([roll(), roll()])).map((r) => r.status).sort();
+    expect(statuses).toEqual([201, 409]);
+    expect((await prisma.boardState.findUniqueOrThrow({ where: { storeId } })).rollsUsed).toBe(1);
+  });
+
+  it('never reports negative rolls after sales stop counting', async () => {
+    await sell(10);
+    draws.push(0);
+    await roll().expect(201);
+    await prisma.paymentIntent.updateMany({ where: { merchantId }, data: { status: 'CANCELED' } });
+    expect((await boardState()).rollsAvailable).toBe(0);
+    await roll().expect(409);
+  });
 });

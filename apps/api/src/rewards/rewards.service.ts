@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, RewardKind, RewardSource } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { AI_CREDIT_MONTHLY_CAP, BOARD_LAYOUT, BOARD_SALES_PER_ROLL, CAP_FALLBACK_XP, PRIZES, STICKERS, TIPS, WHEEL_SEGMENTS, boliviaDayKey, boliviaMonthStart, pickWeighted, type PrizeKey, type RandomSource } from "./reward-policy";
+import { AI_CREDIT_MONTHLY_CAP, BOARD_LAYOUT, BOARD_SALES_PER_ROLL, BOARD_TILES, CAP_FALLBACK_XP, PRIZES, STICKERS, TIPS, WHEEL_SEGMENTS, boliviaDayKey, boliviaMonthStart, pickWeighted, type PrizeKey, type RandomSource } from "./reward-policy";
 import { aiCreditBalance, aiCreditsGrantedSince, countStoreSales, gameXpForStore, wheelSpinsToday, type Db } from "./reward-queries";
 import { REWARD_RANDOM } from "./reward-random";
 
@@ -70,6 +70,30 @@ export class RewardsService {
       throw error;
     });
     return { ...result, wheel: this.wheelView(day, await wheelSpinsToday(this.prisma, merchantUserId, day)) };
+  }
+
+  async rollBoard(merchantId: string, merchantUserId: string, storeId: string, now = new Date()) {
+    await this.assertStore(merchantId, storeId);
+    const noRolls = () => new ConflictException("Todavía no tienes tiros. Cada 10 ventas ganas uno.");
+    const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockMerchant(tx, merchantId);
+      const board = await tx.boardState.upsert({ where: { storeId }, create: { storeId, merchantId }, update: {} });
+      const sales = await countStoreSales(tx, merchantId, storeId);
+      if (Math.floor(sales / BOARD_SALES_PER_ROLL) - board.rollsUsed <= 0) throw noRolls();
+      const die = this.random.int(6) + 1;
+      const from = board.position;
+      const lapCompleted = from + die >= BOARD_TILES;
+      const to = (from + die) % BOARD_TILES;
+      const moved = await tx.boardState.updateMany({
+        where: { storeId, rollsUsed: board.rollsUsed },
+        data: { position: to, rollsUsed: { increment: 1 }, ...(lapCompleted ? { lapsCompleted: { increment: 1 } } : {}) },
+      });
+      if (moved.count !== 1) throw noRolls();
+      const grant = await this.grant(tx, { merchantId, merchantUserId, storeId }, BOARD_LAYOUT[to], RewardSource.BOARD, now);
+      return { die, from, to, lapCompleted, grant };
+    });
+    const { board } = await this.state(merchantId, merchantUserId, storeId, now);
+    return { ...result, board };
   }
 
   protected wheelView(day: string, spins: { used: number; allowed: number }) {

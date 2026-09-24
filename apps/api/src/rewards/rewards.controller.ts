@@ -21,4 +21,9 @@ export class RewardsController {
   spinWheel(@Req() req: SessionRequest, @Body() dto: StoreRewardsDto) {
     return this.rewards.spinWheel(req.merchant.id, req.merchantUser.id, dto.storeId);
   }
+
+  @Post("board/roll")
+  rollBoard(@Req() req: SessionRequest, @Body() dto: StoreRewardsDto) {
+    return this.rewards.rollBoard(req.merchant.id, req.merchantUser.id, dto.storeId);
+  }
 }
