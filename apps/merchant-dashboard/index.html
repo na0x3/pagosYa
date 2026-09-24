@@ -1044,6 +1044,12 @@
   .terms-prompt { margin: 0 0 14px; padding: 14px 16px; border: 1px solid var(--pg-border, rgba(15, 23, 42, .12)); border-radius: 10px; background: var(--pg-accent-soft); }
   .terms-prompt p { margin: 0 0 8px; line-height: 1.5; }
   .terms-prompt a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .level-card { margin: 0 0 14px; padding: 14px 16px; border: 1px solid var(--pg-border, rgba(15, 23, 42, .12)); border-radius: 10px; }
+  .level-card p { margin: 0 0 6px; line-height: 1.5; }
+  .limit-banner { padding: 10px 12px; border-radius: 8px; font-size: .8rem; }
+  .limit-banner[data-state="warn"] { background: #fff7e6; color: #8a5300; }
+  .limit-banner[data-state="blocked"] { background: #fdecec; color: #9b1c1c; }
+  #kycBusinessFields[hidden] { display: none; }
   .inline[hidden] { display: none !important; }
   .visual-ai-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .visual-ai-preview { position: relative; width: 84px; min-height: 94px; overflow: hidden; border: 2px solid var(--bento-keyline); border-radius: 2px; background: var(--pg-bg); }
@@ -5161,19 +5167,37 @@
       <div class="panel">
         <div class="section-head"><h2>Verificación (KYC)</h2></div>
         <p class="compliance-mode-notice" id="kycModeNotice" hidden><strong>No se requiere para esta tienda</strong>Esta tienda no cobra con pagosYa. Activa “Cobrar con pagosYa” en Apariencia cuando quieras habilitar pagos; entonces te pediremos KYC y NIT.</p>
+        <div class="level-card" id="levelCard" hidden>
+          <p><strong id="levelName"></strong></p>
+          <p class="muted" id="levelUsage"></p>
+          <p class="muted"><span id="levelPerPayment"></span> <span id="levelResets"></span></p>
+          <p class="limit-banner" id="limitBanner" hidden></p>
+          <button class="secondary" type="button" id="levelUpgradeButton">Subir de nivel</button>
+          <button class="secondary" type="button" id="level3RequestButton" hidden>Solicitar nivel Empresa</button>
+        </div>
         <div class="terms-prompt" id="termsPrompt" hidden>
           <p><strong id="termsPromptTitle"></strong> <span id="termsPromptWhen"></span></p>
           <p class="muted">Para enviar tu verificación y recibir tus pagos, acepta los Términos y Condiciones de pagosYa. <a id="termsPromptLink" target="_blank" rel="noopener">Leer el texto completo</a></p>
           <button class="primary" type="button" id="termsAcceptButton">Aceptar</button>
         </div>
         <form class="inline" id="kycForm">
-          <div><label>Razón social</label><input name="legalName" required></div>
-          <div><label>NIT</label><input name="taxId" required></div>
-          <div><label>Nombre del representante legal</label><input name="legalRepName" required></div>
-          <div><label>CI del representante legal</label><input name="legalRepDocumentId" required></div>
-          <div><label>Cuenta bancaria para pagos</label><input name="payoutBankAccount" required></div>
+          <div><label>Nivel que solicitas</label>
+            <select name="targetLevel" id="kycTargetLevel">
+              <option value="1">Nivel 1 · Persona (sin NIT)</option>
+              <option value="2">Nivel 2 · Negocio (con NIT)</option>
+            </select></div>
+          <div><label id="kycNameLabel">Nombre completo</label><input name="legalName" required></div>
+          <div><label>Número de CI</label><input name="legalRepDocumentId" required></div>
+          <div id="kycBusinessFields" hidden>
+            <div><label>NIT</label><input name="taxId"></div>
+            <div><label>Nombre del representante legal</label><input name="legalRepName"></div>
+          </div>
+          <div><label>Foto del CI (anverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocFront" data-slot="CI_FRONT" required></div>
+          <div><label>Foto del CI (reverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocBack" data-slot="CI_BACK" required></div>
+          <div><label>Selfie sosteniendo tu CI</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocSelfie" data-slot="SELFIE" required></div>
+          <div><label>Cuenta bancaria a tu nombre para pagos</label><input name="payoutBankAccount" required></div>
           <div><label>Cuenta en USD para desembolsos internacionales (opcional)</label><input name="payoutUsdBankAccount" maxlength="300"></div>
-          <button class="primary" type="submit">Enviar KYC</button>
+          <button class="primary" type="submit">Enviar verificación</button>
         </form>
       </div>
     </section>
@@ -19549,6 +19573,7 @@
         api("/merchants/finances"),
         api("/merchants/international_payments").catch(() => null),
         api("/dashboard/terms").catch(() => null),
+        api("/dashboard/limits").catch(() => null),
       ]);
       const stores = await api("/stores");
       if (refreshVersion !== dashboardRefreshVersion) {
@@ -19562,7 +19587,7 @@
 
       const selectedStoreId = currentStoreId;
       const storeQuery = selectedStoreId ? `?storeId=${encodeURIComponent(selectedStoreId)}` : "";
-      const [[balance, kyc, invoicing, payouts, totalFinances, international, terms], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
+      const [[balance, kyc, invoicing, payouts, totalFinances, international, terms, limits], payments, finances, categories, paymentLinks, promoCodes, debtCollectionLinks, customDomains] = await Promise.all([
         overviewPromise,
         api(`/merchants/orders${storeQuery}`),
         selectedStoreId ? api(`/merchants/finances${storeQuery}`) : api("/merchants/finances"),
@@ -19593,6 +19618,7 @@
       document.getElementById("liveKeysSection").style.display = paymentStore ? "block" : "none";
       currentKyc = kyc;
       renderTermsPrompt(terms);
+      renderLevel(limits);
 
       const invBadge = document.getElementById("invoicingBadge");
       const invStatus = invoicing.status || (invoicing.cuis ? "CONFIGURED" : "NOT_CONFIGURED");
@@ -19784,6 +19810,64 @@
 
   // pagosYa's own terms (ASFI): the version in force must be accepted before KYC
   // and payouts; an announced next version is shown early but blocks nothing.
+  const bobFmt = (centavos) => `Bs ${(centavos / 100).toLocaleString("es-BO", { maximumFractionDigits: 0 })}`;
+
+  // ASFI afiliación: level, monthly usage and the path to the next level.
+  function renderLevel(limits) {
+    const card = document.getElementById("levelCard");
+    card.hidden = !limits;
+    if (!limits) return;
+    document.getElementById("levelName").textContent = `Nivel ${limits.level} · ${limits.levelName}`;
+    document.getElementById("levelUsage").textContent = limits.monthlyLimit
+      ? `${bobFmt(limits.used)} de ${bobFmt(limits.monthlyLimit)} este mes`
+      : "Aún no puedes cobrar en vivo. Verifícate para empezar.";
+    document.getElementById("levelPerPayment").textContent = limits.perPaymentLimit ? `Máximo por pago: ${bobFmt(limits.perPaymentLimit)}` : "";
+    document.getElementById("levelResets").textContent = limits.monthlyLimit
+      ? `· Se reinicia el ${new Date(limits.resetsAt).toLocaleDateString("es-BO", { timeZone: "America/La_Paz" })}`
+      : "";
+    const banner = document.getElementById("limitBanner");
+    const ratio = limits.monthlyLimit ? limits.used / limits.monthlyLimit : 0;
+    banner.hidden = ratio < 0.8;
+    banner.dataset.state = ratio >= 1 ? "blocked" : "warn";
+    banner.textContent = ratio >= 1
+      ? "Llegaste a tu límite mensual: los cobros en vivo están pausados hasta el inicio del próximo mes o hasta que subas de nivel."
+      : "Ya usaste el 80% de tu límite mensual. Sube de nivel para seguir cobrando sin pausas.";
+    document.getElementById("levelUpgradeButton").hidden = limits.level >= 2;
+    document.getElementById("level3RequestButton").hidden = limits.level !== 2;
+    const select = document.getElementById("kycTargetLevel");
+    select.querySelector('option[value="1"]').disabled = limits.level >= 1;
+    select.value = limits.level >= 1 ? "2" : "1";
+    syncKycLevelFields();
+  }
+
+  function syncKycLevelFields() {
+    const business = document.getElementById("kycTargetLevel").value === "2";
+    document.getElementById("kycBusinessFields").hidden = !business;
+    document.getElementById("kycNameLabel").textContent = business ? "Razón social" : "Nombre completo";
+    for (const name of ["taxId", "legalRepName"]) document.querySelector(`#kycForm [name=${name}]`).required = business;
+  }
+  document.getElementById("kycTargetLevel").addEventListener("change", syncKycLevelFields);
+  document.getElementById("levelUpgradeButton").addEventListener("click", () => document.getElementById("kycForm").scrollIntoView({ behavior: "smooth" }));
+  document.getElementById("level3RequestButton").addEventListener("click", async () => {
+    errorEl.textContent = "";
+    try {
+      await api("/dashboard/limits/level3_request", { method: "POST" });
+      infoEl.textContent = "Recibimos tu solicitud. El equipo de pagosYa te escribirá para pedir los documentos de tu empresa.";
+    } catch (err) {
+      errorEl.textContent = "Error: " + err.message;
+    }
+  });
+
+  async function uploadKycPhoto(input) {
+    const file = input.files?.[0];
+    if (!file) return undefined;
+    const form = new FormData();
+    form.append("slot", input.dataset.slot);
+    form.append("file", file);
+    const doc = await api("/merchants/kyc/documents", { method: "POST", body: form });
+    return doc.id;
+  }
+
   function renderTermsPrompt(terms) {
     const prompt = document.getElementById("termsPrompt");
     const target = terms?.needsAcceptance
@@ -19823,7 +19907,12 @@
     infoEl.textContent = "";
     const data = Object.fromEntries(new FormData(e.target));
     try {
-      await api("/merchants/kyc", { method: "POST", body: JSON.stringify(data) });
+      const [ciFrontDocId, ciBackDocId, selfieDocId] = await Promise.all(
+        ["kycDocFront", "kycDocBack", "kycDocSelfie"].map((id) => uploadKycPhoto(document.getElementById(id))),
+      );
+      const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId };
+      for (const key of Object.keys(payload)) if (payload[key] === "" || payload[key] === undefined) delete payload[key];
+      await api("/merchants/kyc", { method: "POST", body: JSON.stringify(payload) });
       await refresh();
       infoEl.textContent = "Verificación enviada — te avisaremos cuando sea revisada.";
     } catch (err) {
