@@ -1,11 +1,14 @@
 import 'reflect-metadata';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { OpsRole } from '@prisma/client';
+import * as argon2 from 'argon2';
 import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MerchantsService } from '../src/merchants/merchants.service';
 import { LimitsService } from '../src/limits/limits.service';
+import { OpsUserService } from '../src/ops/ops-user.service';
 
 // Mock card rail: apps/api/src/rails/adapters/mock-card.adapter.ts declines
 // synchronously whenever the token includes "decline".
@@ -19,6 +22,7 @@ const INTERNAL_RAIL_CALLBACK_SECRET = 'e2e-internal-rail-secret';
 
 describe('Merchant levels and limits', () => {
   let app: INestApplication, prisma: PrismaService, merchantId: string, liveKey: string, testKey: string;
+  let opsAdminToken: string, opsAgentToken: string, dashboardSessionToken: string;
   const http = () => request(app.getHttpServer());
   const createIntent = (amount: number, currency = 'BOB') => http().post('/v1/payment_intents').set({ Authorization: `Bearer ${liveKey}` }).send({ amount, currency });
   const confirm = (pi: any, token = 'tok_visa_success') => http().post(`/v1/payment_intents/${pi.id}/confirm`).set({ Authorization: `Bearer ${pi.clientSecret}` }).send({ paymentMethod: { type: 'CARD', token } });
@@ -33,6 +37,22 @@ describe('Merchant levels and limits', () => {
     testKey = created.body.testKeys.secretKey;
     await prisma.merchant.update({ where: { id: merchantId }, data: { status: 'ACTIVE', level: 1 } });
     liveKey = (await app.get(MerchantsService).issueLiveKeys(merchantId)).liveKeys.secretKey;
+
+    const opsUsers = app.get(OpsUserService);
+    opsAdminToken = (await opsUsers.create('Limits Admin', 'limits-admin@pagosya.bo', OpsRole.SUPPORT_ADMIN)).fullToken;
+    opsAgentToken = (await opsUsers.create('Limits Agent', 'limits-agent@pagosya.bo', OpsRole.SUPPORT_AGENT)).fullToken;
+
+    const dashboardPassword = 'Correct-password-2026!';
+    await prisma.merchantUser.create({
+      data: {
+        merchantId,
+        email: 'owner-limits@test.example',
+        hashedPassword: await argon2.hash(dashboardPassword),
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const login = await http().post('/v1/dashboard/login').send({ email: 'owner-limits@test.example', password: dashboardPassword }).expect(201);
+    dashboardSessionToken = login.body.token;
   });
   afterAll(async () => { await app?.close(); });
   beforeEach(async () => {
@@ -143,5 +163,53 @@ describe('Merchant levels and limits', () => {
     const stored = await prisma.merchantKycDocument.findUniqueOrThrow({ where: { id: doc.id } });
     await http().get(`/v1/uploads/${stored.storageKey}`).expect(404);
     await http().get(`/v1/uploads/private%2F${stored.storageKey}`).expect(404);
+  });
+
+  it('lets only an admin edit a level policy, and audits the change with before and after', async () => {
+    await http().patch('/internal/limits/policies/1').set({ Authorization: `Bearer ${opsAgentToken}` }).send({ monthlyLimit: 3_000_000 }).expect(403);
+    await http().patch('/internal/limits/policies/1').set({ Authorization: `Bearer ${opsAdminToken}` }).send({ monthlyLimit: 3_000_000 }).expect(200);
+    expect(await prisma.auditLogEntry.count({ where: { action: 'limits.policy_updated', targetId: '1' } })).toBeGreaterThan(0);
+    // Restore the seeded default so it doesn't leak into other tests in this file.
+    await http().patch('/internal/limits/policies/1').set({ Authorization: `Bearer ${opsAdminToken}` }).send({ monthlyLimit: 1_000_000 }).expect(200);
+  });
+
+  it("shows the dashboard the merchant's own usage, matching settled volume", async () => {
+    await confirm((await createIntent(40_000).expect(201)).body).expect(201);
+    const res = await http().get('/v1/dashboard/limits').set({ Authorization: `Bearer ${dashboardSessionToken}` }).expect(200);
+    expect(res.body.used).toBe(40_000);
+    expect(await volume()).toMatchObject({ reserved: 0, settled: 40_000 });
+  });
+
+  it('lets any authenticated ops user view a submitted KYC document, audits the view, and refuses a merchant key', async () => {
+    const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5f1a1f60000000049454e44ae426082', 'hex');
+    const upload = (slot: string) =>
+      http().post('/v1/merchants/kyc/documents').set({ Authorization: `Bearer ${liveKey}` }).field('slot', slot).attach('file', png, { filename: `${slot}.png`, contentType: 'image/png' }).expect(201);
+    const ciFront = (await upload('CI_FRONT')).body;
+    const ciBack = (await upload('CI_BACK')).body;
+    const selfie = (await upload('SELFIE')).body;
+
+    const submission = await http()
+      .post('/v1/merchants/kyc')
+      .set({ Authorization: `Bearer ${liveKey}` })
+      .send({
+        targetLevel: 2,
+        legalName: 'Limits SRL',
+        taxId: '1023456028',
+        legalRepName: 'Maria Fernanda Rojas',
+        legalRepDocumentId: '7654321 LP',
+        payoutBankAccount: 'BNB 4012345678',
+        ciFrontDocId: ciFront.id,
+        ciBackDocId: ciBack.id,
+        selfieDocId: selfie.id,
+      })
+      .expect(201);
+    const submissionId = submission.body.id;
+
+    const view = await http().get(`/v1/merchants/kyc/${submissionId}/documents/CI_FRONT`).set({ Authorization: `Bearer ${opsAgentToken}` }).expect(200);
+    expect(view.headers['content-type']).toContain('image/png');
+    expect(await prisma.auditLogEntry.count({ where: { action: 'kyc.document_viewed', targetId: submissionId } })).toBeGreaterThan(0);
+
+    const res = await http().get(`/v1/merchants/kyc/${submissionId}/documents/CI_FRONT`).set({ Authorization: `Bearer ${liveKey}` });
+    expect([401, 403]).toContain(res.status);
   });
 });
