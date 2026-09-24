@@ -145,7 +145,7 @@ export function detectedImageDimensions(buffer: Buffer, mimeType: string): Media
   return null;
 }
 
-function assertSafeImageDimensions(buffer: Buffer, mimeType: string): void {
+export function assertSafeImageDimensions(buffer: Buffer, mimeType: string): void {
   if (!mimeType.startsWith("image/")) return;
   const dimensions = detectedImageDimensions(buffer, mimeType);
   if (!dimensions) throw new BadRequestException("Malformed image data");

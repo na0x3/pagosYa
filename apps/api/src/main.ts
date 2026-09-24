@@ -67,7 +67,8 @@ async function bootstrap() {
     const bodyMethod = req.method === "POST" || req.method === "PUT" || req.method === "PATCH";
     const hasBody = Number(req.headers["content-length"] ?? 0) > 0 || Boolean(req.headers["transfer-encoding"]);
     if (!bodyMethod || !hasBody) return next();
-    const multipartUpload = req.path === "/v1/uploads" && req.is("multipart/form-data");
+    const multipartUpload =
+      (req.path === "/v1/uploads" || req.path === "/v1/merchants/kyc/documents") && req.is("multipart/form-data");
     if (multipartUpload || req.is(["application/json", "application/*+json"])) return next();
     return res.status(415).json({ statusCode: 415, message: "Unsupported Media Type" });
   });

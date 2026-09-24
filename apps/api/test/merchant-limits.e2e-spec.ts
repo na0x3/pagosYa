@@ -136,4 +136,12 @@ describe('Merchant levels and limits', () => {
     await http().post(`/v1/payment_intents/${pi.id}/confirm`).set({ Authorization: `Bearer ${pi.clientSecret}` }).send({ paymentMethod: { type: 'CARD', token: 'tok_visa_success' } }).expect(201);
     expect(await volume()).toBeNull();
   });
+
+  it('keeps KYC photos out of the public uploads route', async () => {
+    const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5f1a1f60000000049454e44ae426082', 'hex');
+    const doc = (await http().post('/v1/merchants/kyc/documents').set({ Authorization: `Bearer ${liveKey}` }).field('slot', 'CI_FRONT').attach('file', png, { filename: 'ci.png', contentType: 'image/png' }).expect(201)).body;
+    const stored = await prisma.merchantKycDocument.findUniqueOrThrow({ where: { id: doc.id } });
+    await http().get(`/v1/uploads/${stored.storageKey}`).expect(404);
+    await http().get(`/v1/uploads/private%2F${stored.storageKey}`).expect(404);
+  });
 });

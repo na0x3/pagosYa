@@ -1,15 +1,33 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
-import { LegalDocumentKind, TermsAcceptanceSource } from "@prisma/client";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseEnumPipe,
+  Post,
+  Req,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { KycDocumentSlot, LegalDocumentKind, TermsAcceptanceSource } from "@prisma/client";
+import type { Response } from "express";
 import { LegalDocumentsService } from "../legal/legal-documents.service";
 import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
 import { RequestWithContext, requestContext } from "../legal/request-context";
 import { Throttle } from "@nestjs/throttler";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import { MerchantsService } from "./merchants.service";
 import { KycService } from "./kyc.service";
+import { IdentityDocumentsService } from "./identity-documents.service";
 import { CreateMerchantDto } from "./dto/create-merchant.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
+import { UploadKycDocumentDto } from "./dto/upload-kyc-document.dto";
 import { SecretApiKeyGuard } from "../auth/guards/secret-api-key.guard";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { OpsAuthGuard } from "../ops/guards/ops-auth.guard";
@@ -23,6 +41,7 @@ export class MerchantsController {
   constructor(
     private readonly merchants: MerchantsService,
     private readonly kyc: KycService,
+    private readonly identityDocuments: IdentityDocumentsService,
     private readonly legal: LegalDocumentsService,
     private readonly terms: TermsAcceptanceService,
   ) {}
@@ -82,6 +101,32 @@ export class MerchantsController {
   @UseGuards(OpsAuthGuard)
   listPendingKyc() {
     return this.kyc.listPending();
+  }
+
+  /** Merchant uploads a CI photo or selfie into private storage — never the public /v1/uploads path. */
+  @Post("kyc/documents")
+  @ApiBearerAuth()
+  @ApiConsumes("multipart/form-data")
+  @UseGuards(MerchantAuthGuard)
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 8_000_000 } }))
+  uploadKycDocument(@CurrentMerchant() merchant: { id: string }, @UploadedFile() file: Express.Multer.File, @Body() dto: UploadKycDocumentDto) {
+    if (!file) throw new BadRequestException("Selecciona una foto");
+    return this.identityDocuments.upload(merchant.id, dto.slot, file);
+  }
+
+  /** pagosYa ops/compliance viewing a private identity document — every view is audit-logged. */
+  @Get("kyc/:submissionId/documents/:slot")
+  @ApiBearerAuth()
+  @UseGuards(OpsAuthGuard)
+  async viewKycDocument(
+    @CurrentOpsUser() opsUser: OpsActor,
+    @Param("submissionId") submissionId: string,
+    @Param("slot", new ParseEnumPipe(KycDocumentSlot)) slot: KycDocumentSlot,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { bytes, mimeType } = await this.identityDocuments.readForOps(submissionId, slot, opsUser);
+    res.set({ "Content-Type": mimeType, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+    return new StreamableFile(bytes);
   }
 
   /** pagosYa ops/compliance review action — not merchant- or public-facing. */

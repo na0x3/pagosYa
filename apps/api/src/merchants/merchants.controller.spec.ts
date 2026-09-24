@@ -6,7 +6,7 @@ function setup() {
   const merchants = { create: jest.fn().mockResolvedValue({ merchant: { id: "m_1" }, testKeys: {} }) };
   const legal = { resolveAcceptable: jest.fn() };
   const terms = { recordMerchantAcceptance: jest.fn().mockResolvedValue(undefined) };
-  const controller = new MerchantsController(merchants as any, {} as any, legal as any, terms as any);
+  const controller = new MerchantsController(merchants as any, {} as any, {} as any, legal as any, terms as any);
   const req = { ip: "1.1.1.1", headers: { "user-agent": "UA" } };
   return { merchants, legal, terms, controller, req };
 }
