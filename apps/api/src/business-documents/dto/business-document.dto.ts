@@ -135,3 +135,24 @@ export class ListBusinessDocumentsQueryDto {
   @ApiPropertyOptional({ enum: BusinessDocumentStatus }) @IsOptional() @IsEnum(BusinessDocumentStatus)
   status?: BusinessDocumentStatus;
 }
+
+export const COBRO_REMINDER_CHANNELS = ["email", "whatsapp"] as const;
+export const COBRO_SHARE_CHANNELS = ["whatsapp", "link"] as const;
+
+export class RemindCobroDto {
+  @ApiProperty({ enum: COBRO_REMINDER_CHANNELS, description: "email sends a reminder (capped per store); whatsapp only records it — the dashboard opens wa.me." })
+  @IsIn(COBRO_REMINDER_CHANNELS)
+  channel!: (typeof COBRO_REMINDER_CHANNELS)[number];
+}
+
+export class ShareCobroDto {
+  @ApiProperty({ enum: COBRO_SHARE_CHANNELS })
+  @IsIn(COBRO_SHARE_CHANNELS)
+  channel!: (typeof COBRO_SHARE_CHANNELS)[number];
+}
+
+export class DocumentCustomersQueryDto {
+  @ApiPropertyOptional({ description: "Part of a name, email or phone." })
+  @IsOptional() @IsString() @MaxLength(80)
+  q?: string;
+}

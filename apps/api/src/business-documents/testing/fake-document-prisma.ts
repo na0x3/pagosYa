@@ -117,6 +117,17 @@ export class FakePrisma {
     },
   };
   businessDocumentEvent = {
+    createMany: async ({ data, skipDuplicates }: Row) => {
+      let count = 0;
+      for (const row of data as Row[]) {
+        const duplicate = row.dedupeKey && this.events.some((e) => e.documentId === row.documentId && e.dedupeKey === row.dedupeKey);
+        if (duplicate && !skipDuplicates) throw unique();
+        if (duplicate) continue;
+        this.events.push({ id: id("evt"), at: new Date(), dedupeKey: null, ipAddress: null, userAgent: null, ...row });
+        count += 1;
+      }
+      return { count };
+    },
     findFirst: async ({ where, orderBy }: Row) => {
       const rows = this.events.filter((event) => matches(event, where));
       if (orderBy?.at === "desc") rows.sort((a, b) => b.at - a.at);

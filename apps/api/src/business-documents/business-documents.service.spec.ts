@@ -569,6 +569,19 @@ describe("BusinessDocumentsService — cobros (D1)", () => {
     expect(prisma.paymentIntents).toEqual([{ id: "pi_open", status: "CANCELED" }, { id: "pi_other", status: "REQUIRES_PAYMENT_METHOD" }]);
   });
 
+  it("reads the store logo from its own uploads for the PDF, never from a remote URL", async () => {
+    const { prisma } = setup();
+    const uploads = { getBuffer: jest.fn().mockResolvedValue(Buffer.from("png")) };
+    const service = new BusinessDocumentsService(prisma as any, { get: () => undefined } as any, { send: jest.fn() } as any, uploads as any);
+    await expect(service.storeLogo("/v1/uploads/abc.png")).resolves.toEqual(Buffer.from("png"));
+    expect(uploads.getBuffer).toHaveBeenCalledWith("abc.png");
+    await expect(service.storeLogo("https://evil.example/logo.png")).resolves.toBeNull();
+    await expect(service.storeLogo(null)).resolves.toBeNull();
+    uploads.getBuffer.mockRejectedValueOnce(new Error("S3 down"));
+    await expect(service.storeLogo("/v1/uploads/abc.png")).resolves.toBeNull();
+    expect(uploads.getBuffer).toHaveBeenCalledTimes(2);
+  });
+
   it("leaves a checkout already in progress alone when voiding", async () => {
     const { service, prisma } = setup();
     const { id } = await sent(service);

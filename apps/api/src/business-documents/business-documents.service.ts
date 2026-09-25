@@ -6,12 +6,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { BusinessDocumentStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
+import { UploadsService } from "../uploads/uploads.service";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { buildDocumentEmail } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
@@ -86,6 +88,7 @@ export class BusinessDocumentsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+    @Optional() private readonly uploads?: UploadsService,
   ) {}
 
   // ── merchant ──────────────────────────────────────────────────────────
@@ -263,7 +266,14 @@ export class BusinessDocumentsService {
     const to = sent.to;
     if (dto.email !== false && to) {
       try {
-        const pdf = await renderBusinessDocumentPdf({ storeName: store.name, numberLabel: sent.snapshot.numberLabel, version: sent.version, sha256: sent.sha256, snapshot: sent.snapshot });
+        const pdf = await renderBusinessDocumentPdf({
+          storeName: store.name,
+          logo: await this.storeLogo(store.logoUrl),
+          numberLabel: sent.snapshot.numberLabel,
+          version: sent.version,
+          sha256: sent.sha256,
+          snapshot: sent.snapshot,
+        });
         const message = buildDocumentEmail({ storeName: store.name, snapshot: sent.snapshot, publicUrl, message: dto.message });
         await this.email.send({
           to,
@@ -362,10 +372,11 @@ export class BusinessDocumentsService {
   /** The frozen version as a PDF; a voided one carries only its header and an ANULADO stamp on every page. */
   async publicPdf(token: string) {
     const { doc, version, snapshot } = await this.publicVersion(token);
-    const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true } });
+    const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, logoUrl: true } });
     const voided = doc.status === S.VOIDED;
     const buffer = await renderBusinessDocumentPdf({
       storeName: store?.name ?? "",
+      logo: await this.storeLogo(store?.logoUrl ?? null),
       numberLabel: snapshot.numberLabel,
       version: version.version,
       sha256: version.sha256,
@@ -409,6 +420,21 @@ export class BusinessDocumentsService {
   }
 
   // ── helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * The store's uploaded logo as bytes for the PDF header. Only our own uploads
+   * are read (never a remote URL); a missing or unreadable file means no logo.
+   */
+  async storeLogo(logoUrl: string | null | undefined): Promise<Buffer | null> {
+    const filename = /^\/v1\/uploads\/([^/?#]+)$/.exec(logoUrl ?? "")?.[1];
+    if (!filename || !this.uploads) return null;
+    try {
+      return await this.uploads.getBuffer(filename);
+    } catch (error) {
+      this.logger.warn(`Store logo ${filename} unreadable for a document PDF: ${(error as Error).message}`);
+      return null;
+    }
+  }
 
   /**
    * A per-store cap on document emails in the last 24 hours, counted from the

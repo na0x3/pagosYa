@@ -6,24 +6,41 @@ export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 }
 
+/** Why a reminder goes out: the merchant's Recordar, the due day, or 3 days late. */
+export type DocumentReminderStage = "manual" | "due" | "overdue";
+
 /**
  * The customer's email for a sent document. Every merchant-typed string is
  * escaped in the HTML; the text body carries the same facts for clients that
  * do not render HTML. The PDF goes as an attachment (see the service).
  */
-export function buildDocumentEmail(input: { storeName: string; snapshot: DocumentSnapshot; publicUrl: string; message?: string | null }) {
-  const { snapshot } = input;
+export function buildDocumentEmail(input: {
+  storeName: string;
+  snapshot: DocumentSnapshot;
+  publicUrl: string;
+  message?: string | null;
+  reminder?: DocumentReminderStage;
+}) {
+  const { snapshot, reminder } = input;
   const kind = DOCUMENT_KIND_LABEL[snapshot.kind];
-  const subject = `${kind} ${snapshot.numberLabel} de ${input.storeName}`;
+  const subject = `${reminder ? "Recordatorio: " : ""}${kind} ${snapshot.numberLabel} de ${input.storeName}`;
   const facts = [
     snapshot.title,
     snapshot.items.length ? `Total: ${money(snapshot.totalAmount, snapshot.currency)}` : "",
     snapshot.dueAt ? `Vence: ${documentDate(snapshot.dueAt)}` : "",
     snapshot.validUntil ? `Válido hasta: ${documentDate(snapshot.validUntil)}` : "",
   ].filter(Boolean);
-  const action = `Ver ${kind.toLowerCase()}`;
+  // A cobro is there to be paid: its button says so.
+  const action = snapshot.kind === "INVOICE" ? "Ver y pagar" : `Ver ${kind.toLowerCase()}`;
   const greeting = snapshot.customer.name ? `Hola ${snapshot.customer.name},` : "Hola,";
-  const intro = `${input.storeName} te envió ${kind === "Propuesta" ? "una" : "un"} ${kind.toLowerCase()}.`;
+  const noun = kind.toLowerCase();
+  const intro = reminder === "due"
+    ? `Te recordamos que tu ${noun} de ${input.storeName} vence hoy.`
+    : reminder === "overdue"
+      ? `Tu ${noun} de ${input.storeName} venció el ${documentDate(snapshot.dueAt)}. Si ya lo pagaste, ignora este mensaje.`
+      : reminder === "manual"
+        ? `${input.storeName} te recuerda ${kind === "Propuesta" ? "esta" : "este"} ${noun} pendiente.`
+        : `${input.storeName} te envió ${kind === "Propuesta" ? "una" : "un"} ${noun}.`;
 
   const text = [
     greeting,

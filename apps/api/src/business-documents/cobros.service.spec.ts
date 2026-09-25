@@ -154,3 +154,186 @@ describe("CobrosService — pay", () => {
     await expect(cobros.pay(sentProposal.publicUrl.split("/d/")[1])).rejects.toThrow(NotFoundException);
   });
 });
+
+const HOUR = 3600_000;
+const DAY = 24 * HOUR;
+
+describe("CobrosService — reminders and sharing", () => {
+  it("emails a reminder with the PDF and records it", async () => {
+    const { documents, cobros, prisma, email } = setup();
+    const { id } = await sentCobro(documents);
+    const result = await cobros.remind("m_1", "store_1", id, { channel: "email" });
+    expect(result.emailed).toBe(true);
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: "ana@example.com",
+      subject: "Recordatorio: Cobro COB-0001 de Estudio Illimani",
+      replyTo: "hola@illimani.bo",
+      attachments: [expect.objectContaining({ filename: "COB-0001.pdf", contentType: "application/pdf" })],
+      failLoudly: true,
+    }));
+    expect(email.send.mock.calls[0][0].html).toContain("Ver y pagar");
+    expect(prisma.events.filter((event) => event.type === "reminded")).toEqual([
+      expect.objectContaining({ version: 1, data: { channel: "email", automatic: false, to: "ana@example.com" } }),
+    ]);
+  });
+
+  it("waits six hours before another email reminder, and points to WhatsApp meanwhile", async () => {
+    const { documents, cobros, email } = setup();
+    const { id } = await sentCobro(documents);
+    await cobros.remind("m_1", "store_1", id, { channel: "email" });
+    const refused = await cobros.remind("m_1", "store_1", id, { channel: "email" }).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(ConflictException);
+    expect((refused as Error).message).toMatch(/WhatsApp/);
+    expect(email.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps reminder emails under the store's daily cap", async () => {
+    const { documents, cobros, email } = setup({ "app.documentEmailsPerDay": 1 });
+    const { id } = await sentCobro(documents);
+    const other = await sentCobro(documents);
+    await cobros.remind("m_1", "store_1", id, { channel: "email" });
+    await expect(cobros.remind("m_1", "store_1", other.id, { channel: "email" })).rejects.toThrow(/límite/);
+    expect(email.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a WhatsApp reminder without emailing", async () => {
+    const { documents, cobros, prisma, email } = setup();
+    const { id } = await sentCobro(documents);
+    await expect(cobros.remind("m_1", "store_1", id, { channel: "whatsapp" })).resolves.toEqual(expect.objectContaining({ emailed: false }));
+    expect(email.send).not.toHaveBeenCalled();
+    expect(prisma.events.find((event) => event.type === "reminded")!.data).toEqual({ channel: "whatsapp", automatic: false });
+  });
+
+  it("only reminds about a sent, unpaid cobro of the merchant's own store", async () => {
+    const { documents, cobros, prisma } = setup();
+    const draft = await documents.create("m_1", "store_1", invoice);
+    await expect(cobros.remind("m_1", "store_1", draft.id, { channel: "whatsapp" })).rejects.toThrow(ConflictException);
+    const { id } = await sentCobro(documents);
+    prisma.documents.find((doc) => doc.id === id)!.status = "PAID";
+    await expect(cobros.remind("m_1", "store_1", id, { channel: "whatsapp" })).rejects.toThrow(ConflictException);
+    await expect(cobros.remind("m_2", "store_1", id, { channel: "whatsapp" })).rejects.toThrow(NotFoundException);
+  });
+
+  it("asks for an email address when the customer has none", async () => {
+    const { documents, cobros } = setup();
+    const { id } = await sentCobro(documents, { customerEmail: "" });
+    await expect(cobros.remind("m_1", "store_1", id, { channel: "email" })).rejects.toThrow(/correo/);
+  });
+
+  it("records where the merchant shared the link", async () => {
+    const { documents, cobros, prisma } = setup();
+    const { id } = await sentCobro(documents);
+    await cobros.shared("m_1", "store_1", id, { channel: "whatsapp" });
+    expect(prisma.events.find((event) => event.type === "shared")).toEqual(expect.objectContaining({ version: 1, data: { channel: "whatsapp" } }));
+    const draft = await documents.create("m_1", "store_1", invoice);
+    await expect(cobros.shared("m_1", "store_1", draft.id, { channel: "link" })).rejects.toThrow(ConflictException);
+  });
+});
+
+describe("CobrosService — customer suggestions", () => {
+  it("merges the store's CRM, earlier cobros and paying buyers, without duplicates or other stores", async () => {
+    const { documents, cobros, prisma } = setup();
+    prisma.customers.push(
+      { id: "cust_1", storeId: "store_1", name: "Ana Quispe", email: "ana@example.com", phone: "70000000", document: "4567890", updatedAt: new Date() },
+      { id: "cust_2", storeId: "store_2", name: "Ajena", email: "ajena@example.com", phone: null, document: null, updatedAt: new Date() },
+    );
+    await documents.create("m_1", "store_1", { ...invoice, customerName: "Ana Quispe", customerEmail: "ANA@example.com" });
+    await documents.create("m_1", "store_1", { ...invoice, customerName: "Beto Mamani", customerEmail: "", customerPhone: "71111111" });
+    prisma.paymentIntents.push(
+      { id: "pi_a", merchantId: "m_1", status: "SUCCEEDED", customerName: "Carla Rojas", customerEmail: "carla@example.com", customerPhone: null, customerDocument: null, metadata: { storeId: "store_1" }, createdAt: new Date() },
+      { id: "pi_b", merchantId: "m_1", status: "SUCCEEDED", customerName: "De otra tienda", customerEmail: "otra@example.com", customerPhone: null, customerDocument: null, metadata: { storeId: "store_9" }, createdAt: new Date() },
+      { id: "pi_c", merchantId: "m_1", status: "FAILED", customerName: "Fallida", customerEmail: "f@example.com", customerPhone: null, customerDocument: null, metadata: { storeId: "store_1" }, createdAt: new Date() },
+    );
+    const all = await cobros.customerSuggestions("m_1", "store_1");
+    expect(all).toEqual([
+      { businessCustomerId: "cust_1", name: "Ana Quispe", email: "ana@example.com", phone: "70000000", document: "4567890", source: "crm" },
+      expect.objectContaining({ businessCustomerId: null, name: "Beto Mamani", phone: "71111111", source: "cobro" }),
+      expect.objectContaining({ name: "Carla Rojas", email: "carla@example.com", source: "buyer" }),
+    ]);
+    expect(await cobros.customerSuggestions("m_1", "store_1", "carl")).toEqual([expect.objectContaining({ name: "Carla Rojas" })]);
+    await expect(cobros.customerSuggestions("m_2", "store_1")).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe("CobrosService — maintenance (overdue and automatic reminders)", () => {
+  const now = new Date("2026-10-10T15:00:00Z");
+  async function cobroDue(setupResult: ReturnType<typeof setup>, dueAt: Date, sentAt: Date, extra: Record<string, unknown> = {}) {
+    const { id } = await sentCobro(setupResult.documents, extra);
+    const row = setupResult.prisma.documents.find((doc) => doc.id === id)!;
+    Object.assign(row, { dueAt, sentAt });
+    return row;
+  }
+
+  it("marks sent and viewed cobros overdue once their date passed, once per version", async () => {
+    const context = setup();
+    const late = await cobroDue(context, new Date(now.getTime() - HOUR), new Date(now.getTime() - 5 * DAY));
+    const viewed = await cobroDue(context, new Date(now.getTime() - DAY), new Date(now.getTime() - 5 * DAY));
+    viewed.status = "VIEWED";
+    const future = await cobroDue(context, new Date(now.getTime() + DAY), new Date(now.getTime() - 5 * DAY));
+    const paid = await cobroDue(context, new Date(now.getTime() - DAY), new Date(now.getTime() - 5 * DAY));
+    paid.status = "PAID";
+    const voided = await cobroDue(context, new Date(now.getTime() - DAY), new Date(now.getTime() - 5 * DAY));
+    voided.status = "VOIDED";
+    const first = await context.cobros.runMaintenance(now);
+    expect(first.overdue).toBe(2);
+    expect([late.status, viewed.status, future.status, paid.status, voided.status]).toEqual(["OVERDUE", "OVERDUE", "SENT", "PAID", "VOIDED"]);
+    await context.cobros.runMaintenance(now);
+    expect(context.prisma.events.filter((event) => event.type === "overdue").map((event) => event.dedupeKey)).toEqual(["overdue:v1", "overdue:v1"]);
+  });
+
+  it("never marks a proposal overdue", async () => {
+    const context = setup();
+    const proposal = await context.documents.create("m_1", "store_1", { ...invoice, kind: "PROPOSAL" });
+    await context.documents.send("m_1", "store_1", proposal.id, { email: false });
+    Object.assign(context.prisma.documents[0], { dueAt: new Date(now.getTime() - DAY) });
+    expect((await context.cobros.runMaintenance(now)).overdue).toBe(0);
+  });
+
+  it("reminds on the due day once, only when the cobro was sent at least a day earlier", async () => {
+    const context = setup();
+    const dueTonight = new Date(now.getTime() + 8 * HOUR);
+    await cobroDue(context, dueTonight, new Date(now.getTime() - 3 * DAY));
+    await cobroDue(context, dueTonight, new Date(now.getTime() - 2 * HOUR)); // just sent: no reminder
+    await cobroDue(context, new Date(now.getTime() + 20 * HOUR), new Date(now.getTime() - 3 * DAY)); // due tomorrow
+    const result = await context.cobros.runMaintenance(now);
+    expect(result.reminders).toBe(1);
+    expect(context.email.send).toHaveBeenCalledTimes(1);
+    expect(context.email.send.mock.calls[0][0].subject).toMatch(/^Recordatorio/);
+    expect(context.email.send.mock.calls[0][0].html).toContain("vence hoy");
+    await context.cobros.runMaintenance(now);
+    expect(context.email.send).toHaveBeenCalledTimes(1);
+    expect(context.prisma.events.filter((event) => event.type === "reminded")).toEqual([
+      expect.objectContaining({ dedupeKey: "reminder:due:v1", data: expect.objectContaining({ channel: "email", automatic: true, stage: "due" }) }),
+    ]);
+  });
+
+  it("reminds three days after the due date, once, and stops after ten", async () => {
+    const context = setup();
+    await cobroDue(context, new Date(now.getTime() - 3 * DAY - HOUR), new Date(now.getTime() - 9 * DAY));
+    await cobroDue(context, new Date(now.getTime() - 2 * DAY), new Date(now.getTime() - 9 * DAY)); // too early
+    await cobroDue(context, new Date(now.getTime() - 11 * DAY), new Date(now.getTime() - 20 * DAY)); // too late
+    const result = await context.cobros.runMaintenance(now);
+    expect(result.reminders).toBe(1);
+    expect(context.email.send.mock.calls[0][0].html).toContain("venció");
+    await context.cobros.runMaintenance(now);
+    expect(context.email.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips cobros with reminders off or no customer email", async () => {
+    const context = setup();
+    await cobroDue(context, new Date(now.getTime() + 8 * HOUR), new Date(now.getTime() - 3 * DAY), { autoReminders: false });
+    await cobroDue(context, new Date(now.getTime() + 8 * HOUR), new Date(now.getTime() - 3 * DAY), { customerEmail: "" });
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(0);
+    expect(context.email.send).not.toHaveBeenCalled();
+  });
+
+  it("leaves a reminder for the next run when the store reached its email cap", async () => {
+    const context = setup({ "app.documentEmailsPerDay": 1 });
+    const row = await cobroDue(context, new Date(now.getTime() + 8 * HOUR), new Date(now.getTime() - 3 * DAY));
+    context.prisma.events.push({ id: "e_cap", documentId: row.id, type: "emailed", at: new Date(), data: {} });
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(0);
+    expect(context.prisma.events.some((event) => event.type === "reminded")).toBe(false);
+    context.prisma.events = context.prisma.events.filter((event) => event.id !== "e_cap");
+    expect((await context.cobros.runMaintenance(now)).reminders).toBe(1);
+  });
+});
