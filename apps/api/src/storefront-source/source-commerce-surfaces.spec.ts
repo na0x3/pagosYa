@@ -229,6 +229,16 @@ describe('added-to-cart placement', () => {
     expect(addOne('toast', { cart: rect(300, 700, 80, 40), notice: rect(12, 690, 366, 60) }).dataset.flip).toBe('top');
     expect(addOne('toast').dataset.flip).toBeUndefined();
   });
+  it.each(['<a href="#carrito">Carrito</a>', '<a href="#pedido">Pedido</a>', '<a href="#cart">Cart</a>', '<a href="/cart">Bolsa <span data-cart-count>0</span></a>'])('moves off any cart control the click handler opens the cart from: %s', control => {
+    const { w, doc } = boot({ ...DNA, added: 'toast' }, { items: [ITEM], body: `<header>${control}</header><section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>` });
+    const add = doc.querySelector('[data-pagosya-catalog] [data-add]'), link = doc.querySelector('header a'), notice = doc.querySelector('.cart-added');
+    link.getBoundingClientRect = () => rect(300, 700, 80, 40);
+    add.getBoundingClientRect = () => rect(300, 400, 44, 44);
+    notice.getBoundingClientRect = () => rect(12, 690, 366, 60);
+    w.innerWidth = 390; w.innerHeight = 768;
+    add.click();
+    expect(notice.dataset.flip).toBe('top');
+  });
   it('writes nothing extra without DNA', () => {
     const notice = addOne(null, { cart: rect(0, 0, 400, 800) });
     expect([notice.getAttribute('style'), notice.dataset.flip]).toEqual([null, undefined]);

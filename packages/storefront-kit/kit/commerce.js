@@ -1122,7 +1122,11 @@
   });
   // An empty mount is reserved for the drawer. Preserve deliberately authored
   // inline cart content, but do not append a second empty order below the footer.
-  const authoredDrawerTrigger = document.querySelector('[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]');
+  // Every control that opens the cart (source-commerce-contract accepts these); the click handler, the drawer mount
+  // and the added-notice overlap check share it. A link or button holding the cart count opens the cart too.
+  const CART_TRIGGERS = '[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]';
+  const cartTriggers = () => [...new Set([...document.querySelectorAll(CART_TRIGGERS), ...[...document.querySelectorAll('[data-cart-count]')].map(count => count.closest('a,button')).filter(Boolean)])];
+  const authoredDrawerTrigger = document.querySelector(CART_TRIGGERS);
   if (authoredDrawerTrigger) document.querySelectorAll('[data-pagosya-cart]:not([data-checkout-review])').forEach(slot => {
     if (!slot.childElementCount && !slot.textContent.trim()) slot.hidden = true;
   });
@@ -1183,7 +1187,7 @@
     }
   });
   document.addEventListener('click', event => {
-    const trigger = event.target.closest('[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]')
+    const trigger = event.target.closest(CART_TRIGGERS)
       || event.target.closest('a,button')?.querySelector('[data-cart-count]')?.closest('a,button');
     if (!trigger) return;
     event.preventDefault(); event.stopImmediatePropagation(); openCart(trigger, event.detail === 0);
@@ -1200,7 +1204,7 @@
     for (const name of ['--added-top', '--added-left', '--added-right', '--added-arrow']) addedNotice.style.removeProperty(name);
     delete addedNotice.dataset.flip;
     const shown = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
-    const triggers = [...document.querySelectorAll('[data-cart-open]')].filter(el => !addedNotice.contains(el) && !cartDrawer.contains(el) && shown(el));
+    const triggers = cartTriggers().filter(el => !addedNotice.contains(el) && !cartDrawer.contains(el) && shown(el));
     const placement = document.documentElement.getAttribute('data-dna-added');
     const cartBox = triggers[0]?.getBoundingClientRect();
     if (placement === 'bubble') {
