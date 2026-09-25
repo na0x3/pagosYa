@@ -2,7 +2,7 @@ jest.setTimeout(60_000);
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { collectStoreSample, kitDefaultSnapshot, snapshotFromDirectory, staticMotionHooks } from './source-scorecard-capture';
+import { collectStoreSample, kitDefaultSnapshot, snapshotFromDirectory, staticMotionHooks, staticMotionTokens } from './source-scorecard-capture';
 import { SURFACE_NAMES, surfaceDistance } from './source-scorecard';
 
 it('collects every surface for the kit default store, with clean quality', async () => {
@@ -14,7 +14,7 @@ it('collects every surface for the kit default store, with clean quality', async
   expect(sample.surfaces.added).toEqual(expect.objectContaining({ position: 'bottom-right' }));
   expect(sample.surfaces.product).toEqual(expect.objectContaining({ style: expect.any(String), gallery: expect.any(String) }));
   expect(sample.surfaces.review).toEqual(expect.objectContaining({ columns: 2, summary: expect.any(String), 'm.columns': 1 }));
-  expect(sample.surfaces.page).toEqual({ motionHooks: 0 });
+  expect(sample.surfaces.page).toEqual({ motionHooks: 0, motionTokens: 0 });
   expect(sample.quality).toEqual(expect.objectContaining({ shopping: 'passed', overflow: { desktop: false, mobile: false }, fontsLoaded: true, missingImages: 0 }));
   expect(sample.quality.buyContrast).toBeGreaterThan(4.5);
   expect(screenshots.map(s => s.name)).toEqual(['added-desktop', 'cart-desktop', 'added-mobile', 'cart-mobile']);
@@ -23,10 +23,10 @@ it('collects every surface for the kit default store, with clean quality', async
 it('sees a restyled button and the store DNA', async () => {
   const kit = await kitDefaultSnapshot();
   const styled = { ...kit, files: kit.files.map(f => f.path === 'index.html' ? { ...f, content: f.content.replace('</head>', '<style>.menu-item .menu-add[data-add]{border-radius:999px!important;text-transform:uppercase;letter-spacing:.2em;height:56px!important;border:3px solid #000!important}</style></head>') }
-    : f.path === 'config.js' ? { ...f, content: f.content.replace('"demo":true', '"demo":true,"dna":{"version":1,"button":"pill","cart":"sheet"}') } : f) };
+    : f.path === 'config.js' ? { ...f, content: f.content.replace('"demo":true', '"demo":true,"dna":{"version":1,"button":"pill","cart":"sheet","motion":"snappy"}') } : f) };
   const [base, restyled] = await Promise.all([kit, styled].map((snapshot, i) => collectStoreSample({ id: String(i), name: String(i), snapshot })));
   expect(surfaceDistance(base.sample.surfaces.button!, restyled.sample.surfaces.button!)).toBeGreaterThan(0.25);
-  expect(restyled.sample.surfaces.page).toEqual(expect.objectContaining({ 'dna.button': 'pill', 'dna.cart': 'sheet' }));
+  expect(restyled.sample.surfaces.page).toEqual(expect.objectContaining({ 'dna.button': 'pill', 'dna.cart': 'sheet', 'dna.motion': 'snappy' }));
 });
 
 it('measures the DNA kit surfaces apart from each other and from the kit default', async () => {
@@ -111,4 +111,14 @@ it('reads an exported site folder, binaries as base64', async () => {
     { path: 'index.html', content: '<h1>x</h1>', encoding: 'utf8' },
     { path: 'assets/a.png', content: Buffer.from([137, 80, 78, 71]).toString('base64'), encoding: 'base64' },
   ]));
+});
+
+it('counts the store\'s own --motion-* token uses, not the kit\'s or compiled output', () => {
+  const files = [
+    { path: 'styles.css', content: '.a{transition:transform var(--motion-base,300ms) var(--motion-ease,ease)}.b{animation-duration:var(--motion-slow)}' },
+    { path: 'components/home.tsx', content: 'el.animate(k, { duration: 400 }); const d = "var(--motion-fast, 120ms)";' },
+    { path: 'commerce.js', content: 'var(--motion-base,250ms) var(--motion-fast,200ms)' },
+    { path: '_compiled/home.js', content: 'var(--motion-base)' },
+  ];
+  expect(staticMotionTokens(files as any)).toBe(4);
 });

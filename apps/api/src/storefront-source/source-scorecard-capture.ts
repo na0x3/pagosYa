@@ -239,6 +239,12 @@ export function staticMotionHooks(files: SourceProjectSnapshot['files']): number
     .reduce((sum, f) => sum + (f.content.match(MOTION_HOOKS)?.length ?? 0), 0);
 }
 
+/** Informational: how often the store's own files use the --motion-* tokens (sub-project 6) instead of literals. */
+export function staticMotionTokens(files: SourceProjectSnapshot['files']): number {
+  return files.filter(f => f.encoding !== 'base64' && !KIT_FILES.has(f.path) && !f.path.startsWith('_compiled/') && /\.(html|css|js|mjs|tsx?|jsx)$/.test(f.path))
+    .reduce((sum, f) => sum + (f.content.match(/var\(\s*--motion-/g)?.length ?? 0), 0);
+}
+
 function parseConfig(snapshot: SourceProjectSnapshot) {
   const content = snapshot.files.find(f => f.path === 'config.js')?.content ?? '';
   try { return JSON.parse(content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)?.[1] || '{}'); } catch { return {}; }
@@ -260,7 +266,7 @@ export async function collectStoreSample(input: { id: string; name: string; snap
     surfaces[surface] = { ...surfaces[surface], ...Object.fromEntries(Object.entries(sample).map(([key, value]) => [viewport === 'desktop' ? key : `m.${key}`, value])) };
   }
   const dna = views.desktop?.dna ?? views.mobile?.dna ?? {};
-  surfaces.page = { ...Object.fromEntries(Object.entries(dna).map(([name, value]) => [`dna.${name}`, value])), motionHooks: staticMotionHooks(input.snapshot.files) };
+  surfaces.page = { ...Object.fromEntries(Object.entries(dna).map(([name, value]) => [`dna.${name}`, value])), motionHooks: staticMotionHooks(input.snapshot.files), motionTokens: staticMotionTokens(input.snapshot.files) };
   let shopping: Pick<QualityFacts, 'shopping' | 'shoppingError'> = { shopping: 'unsupported' };
   try {
     const probes = await probeSourceShopping(runtime, options.signal);

@@ -24,3 +24,10 @@ export const SOURCE_MOTION_TOKENS: Record<SourceMotionPersonality, SourceMotionT
   playful: { ease: 'cubic-bezier(.34,1.56,.64,1)', settle: 'cubic-bezier(.22,1,.36,1)', exit: 'cubic-bezier(.36,0,.66,-.56)', settleExit: 'cubic-bezier(.5,0,.75,0)', fast: 200, base: 360, slow: 600, distance: 18, stagger: 60, parallax: 0.8, press: 0.92 },
   cinematic: { ease: 'cubic-bezier(.16,1,.3,1)', settle: 'cubic-bezier(.16,1,.3,1)', exit: 'cubic-bezier(.7,0,.84,0)', settleExit: 'cubic-bezier(.7,0,.84,0)', fast: 260, base: 520, slow: 900, distance: 28, stagger: 110, parallax: 1.3, press: 0.98 },
 };
+
+/** Prompt guidance (stable across stores): the personality is given per store as 'Motion personality'. Not a validator. */
+export const SOURCE_MOTION_PERSONALITY_DIRECTION = "The store's motion personality is given as 'Motion personality'. The runtime sets it on :root: --motion-fast, --motion-base, --motion-slow, --motion-ease (may overshoot: transforms only), --motion-ease-settle, --motion-distance, --motion-stagger. Author timing with them and a fallback, e.g. var(--motion-base,300ms), not literals; with @pagosya/ui leave duration and stagger unset.";
+
+export function sourceMotionPersonalityLine(personality: SourceMotionPersonality): string {
+  return `Motion personality: ${personality}.`;
+}
