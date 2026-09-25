@@ -1,6 +1,6 @@
 # YAPI unique stores — umbrella design
 
-Date: 2026-09-24. Status: approved in conversation, awaiting written review.
+Date: 2026-09-24. Status: approved by the owner ("do all of it"), 2026-09-24.
 This is the roadmap and the shared contracts. Each sub-project below gets its own
 spec → plan → build cycle when it starts.
 
@@ -64,10 +64,33 @@ Owner decisions recorded in the conversation:
 | 2 | Design DNA | One structured identity per store, including product motifs (§4), generated in the design step and saved with each revision. |
 | 3 | Illustrated motion | YAPI draws small animated SVG illustrations tied to products and themes, placeable in pages, product page, cart and confirmation, with triggers (appear, scroll, hover, add-to-cart, purchase). |
 | 4 | Diversity memory and a wider vocabulary | ~30 curated fonts, more layout directions, no stock patterns, avoidance of recently used DNA. |
-| 5 | Every kit surface unique per store | Buttons (form, fill, hover, press), cart (drawer, page, sheet, overlay), product page, pre-checkout and confirmation all read the DNA and motifs. |
+| 5 | Every kit surface unique per store | Every surface in §3.1 reads the DNA and motifs: buttons (form, fill, hover, press), cart (drawer, page, sheet, overlay), the added-to-cart confirmation, product page, sticky buy bar, pre-checkout, checkout overlay, confirmation and the contact button. |
 | 6 | Motion personalities | Calm, snappy, playful and cinematic presets for timing, easing, parallax depth and scroll scenes, applied to pages and kit. |
 | 7 | Free-CSS layer | YAPI may add CSS per surface, validated against §5. |
 | 8 | Uniqueness and quality scorecard | Fails a store too similar to another store or to kit defaults; checks commerce, speed and accessibility. Run as a before/after benchmark for every sub-project, on a 24–30 merchant diversity bank. |
+
+### 3.1 Surfaces that must never look the same between stores
+
+Owner requirement (2026-09-24): "no equal checkout, or pre-checkout, or cart, nor
+when product added there's a little button that appears right bottom that is always
+the same too". Every one of these is rendered by the shared kit today and is
+identical across stores. Each gets store-specific form, placement, typography,
+motion and, where it fits, a motif from the DNA:
+
+| Surface | Today (`packages/storefront-kit/kit/commerce.js`) |
+|---|---|
+| Added-to-cart confirmation | `.cart-added`, fixed 24px from the bottom-right corner (`:1241`) |
+| Cart | `.cart-drawer`, fixed right-side drawer (`:1192`) |
+| Pre-checkout review | rendered inside the cart / checkout review |
+| Checkout overlay | `[data-pagosya-checkout]`, full-screen fixed layer (`:1064`) |
+| Product page and quick view | `[data-pagosya-product][data-style]`, four styles (`:271` onward) |
+| Mobile sticky buy bar | `.product-detail__sticky` (`:448`) |
+| Contact button | `[data-pagosya-contact]`, fixed bottom-right (`:1728`) |
+| Buttons everywhere | add, quantity, remove, checkout, pay |
+| Order confirmation | payment result and Comeback card (`apps/checkout/src/checkout/payment-result.ts`) |
+
+The uniqueness scorecard (sub-project 8) measures each of these surfaces
+separately, not just the homepage.
 
 0 is a contained bug fix and goes first. 8's measurement half is useful from the
 start and may be built alongside 1–2.
