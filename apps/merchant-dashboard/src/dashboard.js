@@ -1,6 +1,7 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
-import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
-import { normalizeVariation, profileBlobHtml, randomVariation, variationChoices } from "/src/profile-blob.mjs";
+import { ANIMATIONS, mountBlob } from "@pagosya/blob-characters";
+import { ADVENTURE_LEVELS, companionBlobHtml, companionBlobUri, companionSeed } from "/src/companions.mjs";
+import { normalizeVariation, profileBlobHtml, profileBlobUri, randomVariation, variationChoices } from "/src/profile-blob.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
@@ -100,6 +101,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     try { localStorage.setItem(blobSeedStorageKey(), seed); } catch {}
     renderProfileAvatar();
     setLoginAvatar(selectedLoginAvatar);
+    void rewards.renderBoard();
   }
 
   function profileNameFromEmail(email) {
@@ -471,7 +473,11 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     storeId: () => currentStoreId,
     signedIn: () => !!sessionToken,
     currentXp: () => (lastFinances ? gamificationState(lastFinances).xp : 0),
-    companionAsset: () => ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)].asset,
+    // The dice-board runner is the merchant's own blob; the level's companion stands in until the API sends the seed.
+    runnerImage: () => (currentBlobSeed
+      ? profileBlobUri(currentBlobSeed, selectedProfileAvatar)
+      : companionBlobUri(ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)])),
+    celebrateCompanion: () => { if (heroBlob) void heroBlob.play(ANIMATIONS.cheer); },
     rerender: (announce) => { if (lastFinances) renderGamification(lastFinances, { announce }); },
     burstConfetti,
     playTouchSound: playAdventureTouchSound,
@@ -1001,12 +1007,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (!button || button.disabled || !lastFinances) return;
     try { localStorage.setItem(gamificationCompanionKey(), button.dataset.companionSelect); } catch {}
     renderGamification(lastFinances, { announce: false });
-  });
-  document.getElementById("gamificationRunnerPicker")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-runner-select]");
-    if (!button || !lastFinances) return;
-    try { localStorage.setItem(gamificationRunnerKey(), button.dataset.runnerSelect); } catch {}
-    renderAdventureRunner();
   });
   document.getElementById("adventureLevelNodes")?.addEventListener("click", (event) => {
     const node = event.target.closest("[data-adventure-level-index]");
@@ -2564,10 +2564,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     return `pagosya_gamification_snapshot_${gamificationStorageScope()}`;
   }
 
-  function gamificationRunnerKey() {
-    return `pagosya_gamification_runner_${gamificationStorageScope()}`;
-  }
-
   function adventureDebugXpKey() {
     return `pagosya_adventure_debug_xp_${gamificationStorageScope()}`;
   }
@@ -2588,14 +2584,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       if (Number.isInteger(stored) && stored >= 0 && stored <= levelIndex && stored < ADVENTURE_LEVELS.length) return stored;
     } catch {}
     return levelIndex;
-  }
-
-  function selectedGamificationRunner() {
-    try {
-      const stored = Number(localStorage.getItem(gamificationRunnerKey()));
-      if (Number.isInteger(stored) && stored >= 0 && stored < GAMIFICATION_RUNNERS.length) return stored;
-    } catch {}
-    return 0;
   }
 
   function storedStringList(key) {
@@ -2780,17 +2768,6 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     else if (restoreFocus) guide.focus();
   }
 
-  function renderAdventureRunner(state = lastAdventureState) {
-    const runnerIndex = selectedGamificationRunner();
-    const runner = GAMIFICATION_RUNNERS[runnerIndex];
-    document.getElementById("gamificationRunnerPicker").innerHTML = GAMIFICATION_RUNNERS.map((entry, index) => `<button class="adventure-runner-option" type="button" data-runner-select="${index}" aria-pressed="${index === runnerIndex}" aria-label="Elegir a ${esc(entry.name)} para las celebraciones" title="${esc(entry.name)}">
-      <span class="gamification-runner-face">${profileAvatarHtml(index + 1)}</span><span><strong>${esc(entry.name)}</strong><span>${esc(entry.description)}</span></span>
-    </button>`).join("");
-    const currentLevel = state?.currentLevel || ADVENTURE_LEVELS[0];
-    document.getElementById("adventurePlayerFace").innerHTML = `<img class="profile-avatar-image" src="${esc(currentLevel.asset)}" alt="">`;
-    document.getElementById("adventurePlayer").setAttribute("aria-label", `${currentLevel.name}, tu nivel actual, está viajando hacia ${state?.nextLevel?.name || "la guía final"}. ${runner.name} es tu compañero de celebraciones.`);
-  }
-
   const JOURNEY_NODE_Y = [350, 235, 365, 205, 325, 245, 380, 220, 345, 235, 375, 210, 330, 250, 370, 205];
   let journeySoundTimer = null;
   let journeySoundEnabled = false;
@@ -2858,13 +2835,13 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       if (stage.type === "start") return `<button class="journey-node is-start is-completed" type="button" data-world-stage-index="${index}" style="left:${position.x}px;top:${position.y}px"><span class="journey-node-platform"><span class="journey-start-flag"></span></span><span class="journey-node-copy"><strong>Comienza aquí</strong><small>Comparte tu tienda</small></span><span class="journey-node-badge">✓</span></button>`;
       if (stage.type === "reward") { const reward = ADVENTURE_REWARDS[stage.rewardIndex]; return `<button class="journey-node is-reward is-${status}" type="button" data-world-stage-index="${index}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(reward.title)}, ${status === "earned" ? "ganada" : "bloqueada"}"><span class="journey-node-platform"><span class="journey-reward-gem" aria-hidden="true">${esc(reward.icon)}</span></span><span class="journey-node-copy"><strong>${status === "earned" ? esc(reward.title) : "Recompensa misteriosa"}</strong><small>${status === "earned" ? "Ganada" : esc(reward.requirementCopy)}</small></span><span class="journey-node-badge">${status === "earned" ? "✓" : "🔒"}</span></button>`; }
       const level = ADVENTURE_LEVELS[stage.levelIndex]; const isSelected = selected === stage.levelIndex;
-      return `<button class="journey-node is-${status}${isSelected ? " is-selected" : ""}" type="button" data-world-stage-index="${index}" data-journey-companion="${stage.levelIndex}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(level.character)}, ${status === "locked" ? `bloqueado hasta ${level.xpRequired} XP` : `${level.rarity}, desbloqueado`}" aria-disabled="${status === "locked"}"><span class="journey-node-platform"><span class="journey-node-art"><img src="${esc(level.asset)}" alt="${esc(level.alt)}" loading="${status === "locked" ? "lazy" : "eager"}" decoding="async"></span></span><span class="journey-node-copy"><strong>${status === "locked" ? "???" : esc(level.character)}</strong><small>${status === "locked" ? `${level.xpRequired.toLocaleString("es-BO")} XP` : esc(level.rarity)}</small></span><span class="journey-node-badge">${status === "completed" ? "✓" : status === "current" ? "AHORA" : "🔒"}</span></button>`;
+      return `<button class="journey-node is-${status}${isSelected ? " is-selected" : ""}" type="button" data-world-stage-index="${index}" data-journey-companion="${stage.levelIndex}" style="left:${position.x}px;top:${position.y}px" aria-label="${esc(level.character)}, ${status === "locked" ? `bloqueado hasta ${level.xpRequired} XP` : `${level.rarity}, desbloqueado`}" aria-disabled="${status === "locked"}"><span class="journey-node-platform"><span class="journey-node-art">${companionBlobHtml(level)}</span></span><span class="journey-node-copy"><strong>${status === "locked" ? "???" : esc(level.character)}</strong><small>${status === "locked" ? `${level.xpRequired.toLocaleString("es-BO")} XP` : esc(level.rarity)}</small></span><span class="journey-node-badge">${status === "completed" ? "✓" : status === "current" ? "AHORA" : "🔒"}</span></button>`;
     }).join("");
     const route = journeyPathData(positions); ["journeyRouteShadow","journeyRouteBase","journeyRouteProgressShadow","journeyRouteProgress"].forEach((id) => document.getElementById(id).setAttribute("d", route)); return positions;
   }
   function renderJourneyCompanions(state) {
     const selected = selectedGamificationCompanion(state.currentLevelIndex);
-    document.getElementById("gamificationRunnerPicker").innerHTML = ADVENTURE_LEVELS.slice(0, state.currentLevelIndex + 1).map((level, index) => `<button class="journey-companion-option" type="button" data-journey-companion="${index}" aria-pressed="${index === selected}" aria-label="Elegir a ${esc(level.character)}" title="${esc(level.character)} · ${esc(level.rarity)}"><img src="${esc(level.asset)}" alt=""></button>`).join("");
+    document.getElementById("gamificationRunnerPicker").innerHTML = ADVENTURE_LEVELS.slice(0, state.currentLevelIndex + 1).map((level, index) => `<button class="journey-companion-option" type="button" data-journey-companion="${index}" aria-pressed="${index === selected}" aria-label="Elegir a ${esc(level.character)}" title="${esc(level.character)} · ${esc(level.rarity)}">${companionBlobHtml(level)}</button>`).join("");
   }
   function ensureJourneyMarkup() {
     const root = document.getElementById("animalAdventure"); if (!root || root.querySelector(".journey-shell")) return;
@@ -2905,7 +2882,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const positions = renderJourneyNodes(state, commerceState);
     renderJourneyCompanions(state);
     const selected = ADVENTURE_LEVELS[selectedGamificationCompanion(state.currentLevelIndex)];
-    document.getElementById("adventurePlayerFace").innerHTML = `<img src="${esc(selected.asset)}" alt="" loading="eager" decoding="async">`;
+    document.getElementById("adventurePlayerFace").innerHTML = companionBlobHtml(selected);
     const path = document.getElementById("journeyRouteBase");
     const progress = journeyPathProgress(state);
     const totalLength = path.getTotalLength();
@@ -2978,7 +2955,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     activeGamificationAnnouncement = gamificationAnnouncementQueue.shift();
     const { companion, title, message, achievementId } = activeGamificationAnnouncement;
     const toast = document.getElementById("gamificationToast");
-    document.getElementById("gamificationToastImage").src = companion.asset;
+    paintBlob(document.getElementById("gamificationToastBlob"), `${companion.id}:happy`, companionBlobHtml(companion, { expression: "happy" }));
     document.getElementById("gamificationToastTitle").textContent = title;
     document.getElementById("gamificationToastMessage").textContent = message;
     toast.dataset.kind = achievementId ? "achievement" : "progress";
@@ -3003,6 +2980,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     showNextGamificationAnnouncement();
   }
 
+  let unlockBlob = null;
   function showNextBirdUnlock() {
     const dialog = document.getElementById("birdUnlockDialog");
     const blockingDialog = document.querySelector("dialog[open]:not(#birdUnlockDialog)");
@@ -3015,8 +2993,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       return;
     }
     const { level, storeName, storeId, levelIndex } = pending;
-    document.getElementById("birdUnlockImage").src = level.asset;
-    document.getElementById("birdUnlockImage").alt = level.alt;
+    unlockBlob?.destroy();
+    unlockBlob = mountBlob(document.getElementById("birdUnlockBlob"), { seed: companionSeed(level), look: level.look, expression: level.expression });
     document.getElementById("birdUnlockTitle").textContent = `¡${level.character} llegó!`;
     document.getElementById("birdUnlockLevel").textContent = `Nivel ${level.id} · ${level.name}`;
     document.getElementById("birdUnlockSpeech").textContent = `¡Felicidades! Has llegado al nivel ${level.id}. ${storeName} va muy bien; cada venta y cada visita cuentan. Desde ahora ${level.character} te acompaña. ¡Sigue así!`;
@@ -3024,6 +3002,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       dialog.showModal();
       birdUnlockQueue.shift();
       document.getElementById("birdUnlockContinue").focus();
+      void unlockBlob.play(ANIMATIONS.unlock);
       progressAcknowledgementChain = progressAcknowledgementChain.then(() => acknowledgeBirdUnlock(storeId, levelIndex));
     } catch {
       // Keep the unlock pending locally and on the server so a later render can retry it.
@@ -3129,7 +3108,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const bar = document.getElementById("topbarXp");
     const scope = gamificationStorageScope();
     const nextCopy = state.nextLevel ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para nivel ${state.levelIndex + 2}` : "Nivel máximo";
-    document.getElementById("topbarXpImage").src = companion.asset;
+    paintBlob(document.getElementById("topbarXpBlob"), String(companion.id), companionBlobHtml(companion));
     document.getElementById("topbarXpLevel").textContent = `Nivel ${state.levelIndex + 1} · ${state.level.name}`;
     document.getElementById("topbarXpNext").textContent = nextCopy;
     const track = document.getElementById("topbarXpTrack");
@@ -3179,6 +3158,23 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     }
   }
 
+  // B1: repaint a static blob only when what it shows changed, so the 60-second refresh does not churn the DOM.
+  function paintBlob(element, key, markup) {
+    if (!element || element.dataset.blobKey === key) return;
+    element.dataset.blobKey = key;
+    element.innerHTML = markup;
+  }
+
+  // The Progreso hero is the one animated companion on the page (idle on hover, "cheer" on a Fiesta tip).
+  let heroBlob = null;
+  let heroBlobLevel = null;
+  function mountHeroBlob(companion) {
+    const host = document.getElementById("gamificationHeroBlob");
+    if (!host || (heroBlob && heroBlobLevel === companion.id)) return;
+    heroBlob?.destroy();
+    heroBlob = mountBlob(host, { seed: companionSeed(companion), look: companion.look, expression: companion.expression, animate: "hover" });
+    heroBlobLevel = companion.id;
+  }
 
   function renderGamification(finances, { announce = true } = {}) {
     const state = gamificationState(finances);
@@ -3193,15 +3189,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para ${state.nextLevel.name}`
       : "Nivel máximo alcanzado";
 
-    const imageTargets = [
-      ["gamificationSummaryImage", `${companion.character}, compañero de progreso`],
-      ["gamificationHeroImage", companion.alt],
-    ];
-    imageTargets.forEach(([id, alt]) => {
-      const image = document.getElementById(id);
-      image.src = companion.asset;
-      image.alt = alt;
-    });
+    paintBlob(document.getElementById("gamificationSummaryBlob"), `${companion.id}:hover`, companionBlobHtml(companion, { animate: "hover" }));
+    mountHeroBlob(companion);
 
     document.getElementById("gamificationSummaryXp").textContent = `${state.xp.toLocaleString("es-BO")} XP`;
     document.getElementById("gamificationSummarySpeech").textContent = speech;
@@ -3238,7 +3227,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       const buttonLabel = isLocked ? `Se abre en nivel ${index + 1}` : isSelected ? "Acompañándote" : `Elegir a ${entry.character}`;
       return `<article class="gamification-companion${isLocked ? " is-locked" : ""}${isSelected ? " is-selected" : ""}">
         ${isLocked ? `<span class="gamification-companion-lock">Nivel ${index + 1}</span>` : ""}
-        <div class="gamification-companion-art"><img src="${entry.asset}" alt="${esc(entry.alt)}"></div>
+        <div class="gamification-companion-art">${companionBlobHtml(entry, { expression: isLocked ? "sleepy" : entry.expression })}</div>
         <div class="gamification-companion-copy"><strong>${esc(entry.character)} · ${esc(entry.name)}</strong><span>${esc(entry.description)}</span><button type="button" data-companion-select="${index}" aria-pressed="${isSelected}"${isLocked ? " disabled" : ""}>${esc(buttonLabel)}</button></div>
       </article>`;
     }).join("");
@@ -3249,11 +3238,10 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     if (activeGamificationAnnouncement?.achievementId) {
       document.querySelector(`[data-achievement-id="${activeGamificationAnnouncement.achievementId}"]`)?.classList.add("is-unlocking");
     }
-    const runner = GAMIFICATION_RUNNERS[selectedGamificationRunner()];
     achievementIds.forEach((achievementId) => {
       const achievement = state.stars.find((star) => star.id === achievementId);
       if (!achievement) return;
-      showGamificationToast(runner, "¡Logro desbloqueado!", `${runner.name} encontró “${achievement.title}”. ${achievement.description}`, achievement.id, gamificationStorageScope());
+      showGamificationToast(companion, "¡Logro desbloqueado!", `${companion.character} encontró “${achievement.title}”. ${achievement.description}`, achievement.id, gamificationStorageScope());
     });
     if (celebration) showGamificationToast(companion, celebration.title, celebration.message);
   }

@@ -12,7 +12,8 @@ import { escapeHtml as esc } from "./html.mjs";
  *   storeId()            active store id
  *   signedIn()           whether a merchant session exists
  *   currentXp()          total XP as the dashboard currently shows it
- *   companionAsset()     image of the companion that walks the board
+ *   runnerImage()        data URI of the blob that walks the board (the merchant's own)
+ *   celebrateCompanion() plays the Progreso companion's "cheer"
  *   rerender(announce)   re-render the gamification view after a grant
  *   burstConfetti(anchor, options), playTouchSound(kind), audioContext()
  */
@@ -194,11 +195,8 @@ export function mountRewardsPanel(deps) {
     window.setTimeout(async () => {
       luckWheelSpinning = false;
       document.getElementById("luckWheel").classList.remove("is-spinning");
-      // "Fiesta": a playful variant of a tip where the companion dances.
-      if (result.grant.kind === "TIP" && Math.random() < .3) {
-        const hero = document.getElementById("gamificationHeroImage");
-        hero?.classList.remove("is-dancing"); void hero?.offsetWidth; hero?.classList.add("is-dancing");
-      }
+      // "Fiesta": a playful variant of a tip where the companion celebrates.
+      if (result.grant.kind === "TIP" && Math.random() < .3) deps.celebrateCompanion();
       await announceRewardGrant(result.grant, previousXp, document.querySelector(".luck-wheel-stage"));
       renderLuckWheelAlbum(result.grant.sticker?.isNew ? result.grant.sticker.id : null);
     }, duration + 60);
@@ -260,7 +258,7 @@ export function mountRewardsPanel(deps) {
       });
     }
     const token = document.getElementById("rewardsBoardToken");
-    token.style.backgroundImage = `url(${deps.companionAsset()})`;
+    token.style.backgroundImage = `url("${deps.runnerImage()}")`;
     if (rewardsBoardRolling) return;
     placeBoardToken(token, state.position, boardTileCoords);
     button.disabled = state.rollsAvailable <= 0;
@@ -309,6 +307,7 @@ export function mountRewardsPanel(deps) {
     state: () => rewardsState,
     reset: () => { rewardsState = null; },
     renderWheel: renderLuckWheel,
+    renderBoard: renderRewardsBoard,
     openWheelModal: openLuckWheelModal,
   };
 }

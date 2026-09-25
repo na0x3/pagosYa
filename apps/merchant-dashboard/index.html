@@ -25,7 +25,7 @@
          second brand lockup. Kept as the page's only h1 for the outline. -->
     <h1 class="sr-only">pagosYa · Panel de Comercio</h1>
     <a class="topbar-xp" id="topbarXp" href="#dashboard-progress" data-dashboard-view="progress" hidden>
-      <span class="topbar-xp-avatar" aria-hidden="true"><img id="topbarXpImage" src="/assets/profile-1.png?v=3" alt=""></span>
+      <span class="topbar-xp-avatar" aria-hidden="true"><span class="topbar-xp-blob" id="topbarXpBlob"></span></span>
       <span class="topbar-xp-body">
         <span class="topbar-xp-line"><strong id="topbarXpLevel">Nivel 1 · Perdiz</strong><span class="topbar-xp-next" id="topbarXpNext">100 XP para Capibara</span></span>
         <span class="topbar-xp-track" id="topbarXpTrack" role="progressbar" aria-label="Experiencia para el siguiente nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topbarXpFill"></span></span>
@@ -265,7 +265,7 @@
     <div id="internationalPaymentsCard" data-dashboard-page="overview"></div>
 
     <section class="gamification-summary" id="gamificationSummary" data-dashboard-page="overview" aria-labelledby="gamificationSummaryTitle">
-      <div class="gamification-summary-character"><img id="gamificationSummaryImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
+      <div class="gamification-summary-character"><span class="gamification-blob" id="gamificationSummaryBlob" aria-hidden="true"></span></div>
       <div class="gamification-summary-copy">
         <div class="gamification-summary-title"><h3 id="gamificationSummaryTitle">Tu negocio gana experiencia</h3><strong id="gamificationSummaryXp">0 XP</strong></div>
         <p class="gamification-summary-speech" id="gamificationSummarySpeech">Cada venta y cada visita empujan tu tienda al siguiente nivel.</p>
@@ -394,7 +394,7 @@
 
     <section class="gamification-board" id="gamificationSection" data-dashboard-page="progress" aria-labelledby="adventureMapTitle">
       <div class="gamification-hero">
-        <div class="gamification-character-stage"><img id="gamificationHeroImage" src="/assets/gamification-1.png" alt="Pico, compañero de progreso"></div>
+        <div class="gamification-character-stage"><span class="gamification-blob" id="gamificationHeroBlob" aria-hidden="true"></span></div>
         <div class="gamification-hero-copy">
           <div class="gamification-level-line"><h3 id="gamificationLevelTitle">Semilla</h3><span class="gamification-level-number" id="gamificationLevelNumber">Nivel 1 de 4</span></div>
           <p class="gamification-speech" id="gamificationSpeech" aria-live="polite">¡Tu tienda ya está en marcha! Cada visita suma y cada venta te hace avanzar más rápido.</p>
@@ -958,13 +958,13 @@
   </section>
 
   <div class="gamification-toast" id="gamificationToast" role="status" aria-live="polite" hidden>
-    <img id="gamificationToastImage" src="/assets/gamification-1.png" alt="">
+    <span class="gamification-toast-blob" id="gamificationToastBlob" aria-hidden="true"></span>
     <div class="gamification-toast-copy"><strong id="gamificationToastTitle">¡Tu negocio avanzó!</strong><span id="gamificationToastMessage"></span></div>
     <button class="gamification-toast-close" id="gamificationToastClose" type="button" aria-label="Cerrar felicitación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
   <dialog class="bird-unlock-dialog" id="birdUnlockDialog" aria-labelledby="birdUnlockTitle" aria-describedby="birdUnlockSpeech">
     <div class="bird-unlock-layout">
-      <div class="bird-unlock-stage"><img id="birdUnlockImage" src="/assets/gamification-1.png" alt=""></div>
+      <div class="bird-unlock-stage"><span class="bird-unlock-blob" id="birdUnlockBlob" aria-hidden="true"></span></div>
       <div class="bird-unlock-copy">
         <h2 id="birdUnlockTitle">¡Nuevo compañero!</h2>
         <span class="bird-unlock-level" id="birdUnlockLevel">Nivel desbloqueado</span>

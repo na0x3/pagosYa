@@ -1596,7 +1596,7 @@
     content: ""; position: absolute; width: 180px; height: 180px; border: var(--bento-line) solid var(--bento-ink); border-radius: 50%;
     background: rgba(255,255,255,.52); transform: translateY(28px);
   }
-  .gamification-summary-character img { position: relative; z-index: 1; width: 190px; height: 190px; object-fit: contain; transform: translateY(12px) scale(1.32); }
+  .gamification-summary-character .gamification-blob { position: relative; z-index: 1; width: 150px; height: 150px; margin-bottom: 30px; }
   .gamification-summary-copy { display: grid; align-content: center; padding: clamp(20px, 3vw, 34px); }
   .gamification-summary-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
   .gamification-summary-title h3 { margin: 0; max-width: 12ch; font-size: clamp(1.45rem, 3vw, 2.8rem); line-height: .95; letter-spacing: -.04em; text-transform: uppercase; }
@@ -1623,7 +1623,7 @@
     content: ""; position: absolute; width: 142px; height: 142px; bottom: 28px; border: var(--bento-line) solid var(--bento-ink); border-radius: 50%;
     background: rgba(255,255,255,.55); box-shadow: 8px 8px 0 rgba(5,5,5,.2);
   }
-  .gamification-character-stage img { position: relative; z-index: 1; width: 170px; height: 205px; object-fit: contain; transform: translateY(5px) scale(1.04); }
+  .gamification-character-stage .gamification-blob { position: relative; z-index: 1; width: 124px; height: 124px; margin-bottom: 36px; }
   .gamification-hero-copy { display: grid; align-content: center; padding: clamp(20px, 2.6vw, 34px); }
   .gamification-level-line { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
   .gamification-level-line h3 { margin: 0; max-width: 12ch; font-size: clamp(1.7rem, 3vw, 3rem); font-weight: 950; line-height: .9; letter-spacing: -.05em; text-transform: uppercase; }
@@ -1666,17 +1666,17 @@
   .gamification-companion:nth-child(3) .gamification-companion-art { background: var(--bento-red); }
   .gamification-companion:nth-child(4) .gamification-companion-art { background: var(--bento-green); }
   .gamification-companion-art { display: grid; height: 220px; place-items: center; border-bottom: 3px solid var(--bento-ink); overflow: hidden; }
-  .gamification-companion-art img { width: 94%; height: 210px; object-fit: contain; transform: scale(1.25); transition: transform 180ms var(--ease-out-ui); }
+  .gamification-companion-art svg { width: 150px; height: 150px; transition: transform 180ms var(--ease-out-ui); }
   .gamification-companion-copy { padding: 14px; }
   .gamification-companion-copy strong { display: block; font-size: .85rem; }
   .gamification-companion-copy span { display: block; min-height: 2.8em; margin-top: 4px; color: var(--pg-text-muted); font-size: .67rem; line-height: 1.4; }
   .gamification-companion button { width: 100%; min-height: 39px; margin-top: 12px; border: var(--bento-line-soft) solid var(--bento-keyline); background: var(--pg-surface); border-radius: var(--bento-radius);}
   .gamification-companion.is-selected button { background: var(--bento-violet); color: var(--bento-ink); }
   .gamification-companion.is-locked { filter: grayscale(.78); }
-  .gamification-companion.is-locked .gamification-companion-art img { opacity: .42; }
+  .gamification-companion.is-locked .gamification-companion-art svg { opacity: .42; }
   .gamification-companion-lock { position: absolute; top: 10px; right: 10px; padding: 4px 6px; border: var(--bento-line-soft) solid var(--bento-ink); background: #fff; color: var(--bento-ink); font-size: .58rem; font-weight: 950; text-transform: uppercase; border-radius: var(--bento-radius);}
   @media (hover: hover) and (pointer: fine) {
-    .gamification-companion:not(.is-locked):hover .gamification-companion-art img { transform: translateY(-5px) rotate(-1deg) scale(1.25); }
+    .gamification-companion:not(.is-locked):hover .gamification-companion-art svg { transform: translateY(-5px) rotate(-1deg); }
   }
 
   .gamification-rulebook { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: var(--bento-line) solid var(--bento-keyline); background: var(--bento-violet); color: #09090b; box-shadow: var(--bento-shadow); border-radius: var(--bento-radius);}
@@ -1752,7 +1752,7 @@
     box-shadow: var(--bento-shadow-lg-ink); animation: gamification-toast-enter 520ms var(--ease-out-ui) both; border-radius: var(--bento-radius);}
   .gamification-toast[hidden] { display: none; }
   /* The fullscreen storefront (z-index 4000+) would otherwise cover the toast and its close button. */
-  .gamification-toast img { align-self: end; width: 86px; height: 100px; object-fit: contain; }
+  .gamification-toast-blob { align-self: center; justify-self: center; width: 66px; height: 66px; }
   .gamification-toast-copy { align-self: center; padding: 14px 8px; }
   .gamification-toast-copy strong { display: block; font-size: .8rem; }
   .gamification-toast-copy span { display: block; margin-top: 5px; font-size: .7rem; font-weight: 800; line-height: 1.45; }
@@ -1768,7 +1768,7 @@
   .bird-unlock-layout { display: grid; grid-template-columns: minmax(260px, .9fr) minmax(320px, 1.1fr); }
   .bird-unlock-stage { position: relative; display: grid; min-height: 430px; place-items: end center; overflow: hidden; border-right: 3px solid var(--bento-ink); background: var(--bento-blue); }
   .bird-unlock-stage::before { content: ""; position: absolute; width: 240px; height: 240px; border: var(--bento-line) solid var(--bento-ink); border-radius: 50%; background: var(--bento-yellow); }
-  .bird-unlock-stage img { position: relative; z-index: 1; width: 94%; height: 390px; object-fit: contain; transform: translateY(5%) scale(1.18); }
+  .bird-unlock-blob { position: relative; z-index: 1; width: 200px; height: 200px; margin-bottom: 115px; }
   .bird-unlock-copy { display: grid; align-content: center; padding: clamp(28px, 5vw, 54px); }
   .bird-unlock-copy h2 { max-width: 10ch; margin: 0; font-size: clamp(2rem, 5vw, 4.4rem); line-height: .88; letter-spacing: -.04em; text-transform: uppercase; }
   .bird-unlock-level { justify-self: start; margin: 18px 0 0; padding: 6px 8px; border: var(--bento-line-soft) solid var(--bento-ink); background: var(--bento-green); font-size: .68rem; font-weight: 950; text-transform: uppercase; border-radius: var(--bento-radius);}
@@ -1781,7 +1781,7 @@
     .bird-unlock-layout { grid-template-columns: 1fr; }
     .bird-unlock-stage { min-height: 250px; border-right: 0; border-bottom: 3px solid var(--bento-ink); }
     .bird-unlock-stage::before { width: 170px; height: 170px; }
-    .bird-unlock-stage img { width: 270px; height: 245px; }
+    .bird-unlock-blob { width: 140px; height: 140px; margin-bottom: 55px; }
     .bird-unlock-copy { padding: 26px 22px 30px; }
     .bird-unlock-speech { margin-top: 22px; }
     .bird-unlock-speech::before { left: 28px; top: -12px; border: 0; border-left: 3px solid var(--bento-ink); border-top: 3px solid var(--bento-ink); }
@@ -1802,11 +1802,11 @@
     body[data-dashboard-view="progress"] .workspace-header { display: none; }
     .gamification-summary, .gamification-hero { grid-template-columns: 1fr; }
     .gamification-summary-character { min-height: 160px; border-right: 0; border-bottom: 3px solid var(--bento-ink); }
-    .gamification-summary-character img { width: 160px; height: 160px; }
+    .gamification-summary-character .gamification-blob { width: 120px; height: 120px; margin-bottom: 24px; }
     .gamification-hero-copy { order: 1; padding: 20px 17px 23px; }
     .gamification-character-stage { order: 2; min-height: 142px; border-top: 3px solid var(--bento-ink); border-right: 0; }
     .gamification-character-stage::before { width: 112px; height: 112px; bottom: 12px; }
-    .gamification-character-stage img { width: 138px; height: 138px; transform: translateY(4px); }
+    .gamification-character-stage .gamification-blob { width: 96px; height: 96px; margin-bottom: 20px; }
     .gamification-speech { margin: 18px 0 20px; padding: 14px 15px; }
     .gamification-speech::before { left: 26px; top: auto; bottom: -14px; border: 0; border-right: 3px solid var(--bento-ink); border-bottom: 3px solid var(--bento-ink); }
     .gamification-section-title { align-items: flex-start; flex-direction: column; }
@@ -1816,7 +1816,7 @@
     .gamification-star:last-child { border-bottom: 0; }
     .gamification-companions { grid-template-columns: 1fr 1fr; }
     .gamification-companion-art { height: 180px; }
-    .gamification-companion-art img { height: 174px; }
+    .gamification-companion-art svg { width: 130px; height: 130px; }
     .gamification-rulebook { grid-template-columns: 1fr; }
     .gamification-rulebook > div { border-right: 0; border-bottom: 3px solid var(--bento-ink); }
     .gamification-rulebook > div:last-child { border-bottom: 0; }
@@ -1829,7 +1829,7 @@
     .gamification-xp-total span { text-align: right; }
     .gamification-companions { grid-template-columns: 1fr; }
     .gamification-toast { grid-template-columns: 72px minmax(0, 1fr) 44px; }
-    .gamification-toast img { width: 72px; height: 92px; }
+    .gamification-toast-blob { width: 56px; height: 56px; }
     .gamification-runner-picker { grid-template-columns: 1fr; }
     .gamification-runner-option, .gamification-runner-option:nth-child(2) { border-right: 0; border-bottom: 3px solid var(--bento-keyline); }
     .gamification-runner-option:last-child { border-bottom: 0; }
@@ -2036,7 +2036,6 @@
     .adventure-debug { justify-self: start; flex-wrap: wrap; }
     .adventure-debug button { min-height: 42px; }
     .adventure-xp-toast { right: 25px; top: 214px; }
-    .gamification-hero { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
     .gamification-summary-track span, .gamification-level-track span, .gamification-companion-art img { transition: none; }
@@ -2351,7 +2350,7 @@
   .topbar-xp[aria-current="page"] { background: var(--pg-accent-soft); }
   .topbar-xp:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--pg-focus-ring); }
   .topbar-xp-avatar { display: grid; flex: none; place-items: center; width: 38px; height: 38px; overflow: hidden; border-radius: 50%; background: #ffc956; box-shadow: inset 0 0 0 2px rgb(0 0 0 / .1); }
-  .topbar-xp-avatar img { width: 112%; height: 112%; object-fit: contain; transform: translateY(3px); }
+  .topbar-xp-blob, .topbar-xp-blob svg { display: block; width: 100%; height: 100%; }
   .topbar-xp-body { display: grid; flex: 1; gap: 5px; min-width: 0; }
   .topbar-xp-line { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.2; white-space: nowrap; }
   .topbar-xp-line strong { overflow: hidden; text-overflow: ellipsis; }
@@ -2374,9 +2373,6 @@
   /* Confetti bursts shared by the celebration toast and the luck wheel. */
   .confetti-layer { position: fixed; inset: 0; z-index: 4300; overflow: hidden; pointer-events: none; }
   .confetti-layer span { position: absolute; width: 9px; height: 13px; border-radius: 2px; }
-
-  .gamification-character-stage img.is-dancing { animation: companion-dance 1.6s cubic-bezier(.3,1.4,.5,1) both; }
-  @keyframes companion-dance { 0%, 100% { transform: translateY(5px) scale(1.04) rotate(0); } 15% { transform: translateY(-18px) scale(1.1) rotate(-8deg); } 30% { transform: translateY(5px) scale(1.04) rotate(6deg); } 45% { transform: translateY(-14px) scale(1.08) rotate(8deg); } 60% { transform: translateY(5px) scale(1.04) rotate(-5deg); } 75% { transform: translateY(-8px) scale(1.06) rotate(0); } }
 
   /* Daily luck wheel on the progress page. Playful only: it never touches XP. */
   .luck-wheel { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); overflow: hidden; border: var(--bento-line) solid var(--bento-keyline); border-radius: var(--bento-radius); background: #fff8e1; color: #15352f; box-shadow: var(--bento-shadow); }
@@ -2428,7 +2424,7 @@
     .luck-wheel-stage { border-right: 0; border-bottom: 3px solid var(--bento-ink); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .topbar-xp-track span, .topbar-xp-track span::after, .topbar-xp.is-gaining, .topbar-xp-gain, .gamification-character-stage img.is-dancing, .luck-wheel-pointer.is-ticking, .luck-wheel.is-spinning .luck-wheel-hub, .luck-wheel-result, .luck-wheel-sticker.is-new { animation: none; transition: none; }
+    .topbar-xp-track span, .topbar-xp-track span::after, .topbar-xp.is-gaining, .topbar-xp-gain, .luck-wheel-pointer.is-ticking, .luck-wheel.is-spinning .luck-wheel-hub, .luck-wheel-result, .luck-wheel-sticker.is-new { animation: none; transition: none; }
   }
   /* Reward XP gain: the bar visibly fills, shines and pulses (driven frame by frame by celebrateXpGain). */
   .gamification-summary-track, .gamification-level-track { position: relative; overflow: visible; }
@@ -2475,3 +2471,11 @@
   /* Blob characters (B1): profile blobs. The placeholder holds the circle until the API sends the seed. */
   .blob-avatar-pending { display: block; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 42%, var(--pg-border-strong) 0 28%, var(--pg-surface) 29%); }
   .profile-avatar-shuffle, .session-profile-avatar-shuffle { min-height: 44px; margin-top: 10px; padding: 0 14px; font-size: .72rem; font-weight: 900; }
+
+  /* Blob characters (B1): companion blobs. The ink edge keeps pale blobs readable on the bright bento stages. */
+  .gamification-blob, .gamification-toast-blob, .bird-unlock-blob { display: block; }
+  .gamification-blob svg, .gamification-toast-blob svg, .bird-unlock-blob svg { display: block; width: 100%; height: 100%; }
+  .gamification-blob svg, .gamification-toast-blob svg, .bird-unlock-blob svg, .gamification-companion-art svg {
+    filter: drop-shadow(2px 0 0 var(--bento-ink)) drop-shadow(-2px 0 0 var(--bento-ink)) drop-shadow(0 2px 0 var(--bento-ink)) drop-shadow(0 -2px 0 var(--bento-ink));
+  }
+  .topbar-xp-blob svg { filter: drop-shadow(1px 0 0 var(--bento-ink)) drop-shadow(-1px 0 0 var(--bento-ink)) drop-shadow(0 1px 0 var(--bento-ink)) drop-shadow(0 -1px 0 var(--bento-ink)); }

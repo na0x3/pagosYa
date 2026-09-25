@@ -192,3 +192,57 @@ test('rapid double-clicks on "Otra variación" send only one PATCH while a save 
   await page.waitForTimeout(200);
   expect(state.patches.length).toBe(1);
 });
+
+for (const width of [390, 1280]) test(`Progreso shows the level's blob companion at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await openDashboard(page, { sales: 3, hash: "/#dashboard-progress" });
+  await expect(page.locator("#gamificationLevelTitle")).toHaveText("Capibara");
+  const hero = page.locator("#gamificationHeroBlob");
+  await expect(hero.locator("svg.blob-figure")).toBeVisible();
+  await expect(hero).toHaveAttribute("data-blob-expression", "sleepy");
+  await expect(page.locator("#topbarXpBlob svg.blob-figure")).toHaveCount(1);
+  await expect(page.locator("#gamificationToastMessage")).toContainText("Capi encontró");
+  await expect(page.locator("#gamificationToastBlob svg.blob-figure")).toHaveCount(1);
+  expect(await page.locator("#gamificationSection .mo-root").count()).toBeLessThanOrEqual(1);
+  expect(await hero.locator("svg").evaluate((svg) => getComputedStyle(svg).filter)).toContain("drop-shadow");
+  await page.screenshot({ path: `${SHOTS}/levels-${width}.png` });
+  // The companion grid stays hidden in the product; it is unhidden here only so all 8 blobs can be reviewed.
+  await page.evaluate(() => { document.getElementById("gamificationCompanions").closest("section").hidden = false; });
+  await expect(page.locator("#gamificationCompanions svg.blob-figure")).toHaveCount(8);
+  await page.locator("#gamificationCompanions").screenshot({ path: `${SHOTS}/companions-${width}.png` });
+});
+
+test("reaching a level opens the celebration: the new companion hops, celebrates, then rests on its own mood", async ({ page }) => {
+  await openDashboard(page, { sales: 3, unlockLevels: [1] });
+  await expect(page.locator("#birdUnlockDialog")).toBeVisible();
+  await expect(page.locator("#birdUnlockTitle")).toHaveText("¡Capi llegó!");
+  const blob = page.locator("#birdUnlockBlob");
+  await expect(blob).toHaveAttribute("data-blob-motion", /hop|celebrate/);
+  await expect(blob).toHaveAttribute("data-blob-expression", /surprised|happy/);
+  await page.screenshot({ path: `${SHOTS}/unlock-1280.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: `${SHOTS}/unlock-390.png` });
+  await expect(blob).toHaveAttribute("data-blob-expression", "sleepy", { timeout: 5000 });
+  expect(await blob.getAttribute("data-blob-motion")).toBeNull();
+});
+
+test("with reduced motion the celebration shows the happy blob at once and never moves it", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openDashboard(page, { sales: 3, unlockLevels: [1] });
+  const blob = page.locator("#birdUnlockBlob");
+  await expect(blob).toHaveAttribute("data-blob-expression", "happy");
+  expect(await blob.getAttribute("data-blob-motion")).toBeNull();
+  expect(await blob.locator(".mo-bob").evaluate((node) => getComputedStyle(node).animationName)).toBe("none");
+  await expect(blob).toHaveAttribute("data-blob-expression", "sleepy", { timeout: 5000 });
+  expect(await blob.getAttribute("data-blob-motion")).toBeNull();
+});
+
+for (const width of [390, 1280]) test(`the dice board runner is your own blob at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await openDashboard(page, { rewards: rewardsState({ ...idleBoard, rollsAvailable: 1, salesUntilNextRoll: 4 }) });
+  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
+  const token = page.locator("#rewardsBoardToken");
+  // Only the profile blob has a plate; the companion stand-in has none.
+  await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).toContain(encodeURIComponent('class="blob-plate"'));
+  await page.screenshot({ path: `${SHOTS}/dice-board-${width}.png` });
+});
