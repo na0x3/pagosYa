@@ -63,9 +63,23 @@
   const MOTIF_ATTRIBUTES = ['viewBox', 'preserveAspectRatio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'fx', 'fy', 'fr', 'd', 'points', 'pathLength', 'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'color', 'transform', 'vector-effect', 'clip-path', 'clip-rule', 'mask', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform', 'spreadMethod', 'clipPathUnits', 'maskUnits', 'maskContentUnits', 'class', 'id', 'data-part', 'aria-hidden', 'focusable'];
   const MOTIF_BEHAVIORS = ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'];
   const MOTIF_SLOT_TRIGGERS = ['appear', 'scroll', 'hover', 'add-to-cart'];
-  const MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
+  const AI_MOTIFS = (Array.isArray(config.motifs) ? config.motifs : []).slice(0, 3).filter(motif => motif && typeof motif === 'object'
     && MOTIF_BEHAVIORS.includes(motif.behavior) && MOTIF_SLOT_TRIGGERS.includes(motif.trigger) && ['product', 'card', 'cart'].includes(motif.placement)
     && ['store', 'category', 'product'].includes(motif.for) && typeof motif.target === 'string' && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg));
+  /* Identity libraries (T2a): one drawn motif pack, at most 8 placements, one drawing each. The API sanitised the markup
+   * (config.motifPack, re-sanitised on every save); it is verified again here with the same lists. Pack motifs are
+   * store-wide; the store's own targeted motifs above keep precedence in the slots both can fill. A store without a
+   * pack gets nothing new: no entry, no style, no observer. */
+  const MOTIF_PACK_PLACEMENTS = ['button', 'pattern', 'divider', 'sticker', 'empty', 'product', 'card', 'cart'];
+  const MOTIF_PACK_TRIGGERS = { product: 'appear', card: 'hover', cart: 'add-to-cart', button: 'hover', pattern: 'none', divider: 'scroll', sticker: 'appear', empty: 'appear' };
+  const MOTIF_PACK = config.motifPack && typeof config.motifPack === 'object' && typeof config.motifPack.id === 'string'
+    && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(config.motifPack.id) && Array.isArray(config.motifPack.motifs) ? config.motifPack : null;
+  const PACK_MOTIFS = (MOTIF_PACK ? MOTIF_PACK.motifs : []).slice(0, 8).filter((motif, index, all) => motif && typeof motif === 'object'
+    && MOTIF_PACK_PLACEMENTS.includes(motif.placement) && all.findIndex(other => other && other.placement === motif.placement) === index
+    && MOTIF_BEHAVIORS.includes(motif.behavior) && typeof motif.svg === 'string' && motif.svg.length <= 6144 && motifDrawing(motif.svg))
+    .map(motif => ({ file: '', for: 'store', target: '', behavior: motif.behavior, trigger: MOTIF_PACK_TRIGGERS[motif.placement], placement: motif.placement, svg: motif.svg, pack: true }));
+  const MOTIFS = [...AI_MOTIFS, ...PACK_MOTIFS];
+  const packMotif = placement => MOTIFS.findIndex(motif => motif.pack && motif.placement === placement);
   let motifObserver = null;
   const hosted = window.PAGOSYA_HOSTED === true;
   // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
@@ -1523,6 +1537,21 @@
       if (motif && (holder.dataset.motifProduct ? holder.dataset.motifProduct === p.id : motifMatches(motif, p))) playMotif(holder);
     });
   }
+  /* The empty placement: the kit's own empty cart line shows the pack drawing. A store's cart template shows it only where
+   * it asks, in an element marked data-motif-empty inside its "empty" slot: the template owns that state's design. */
+  function placeEmptyMotif(el) {
+    const index = packMotif('empty');
+    if (index < 0) return;
+    const asked = [...el.querySelectorAll('[data-cart-slot="empty"] [data-motif-empty]')];
+    const hosts = asked.length ? asked : [...el.querySelectorAll('.order-items > li.order-empty')];
+    for (const host of hosts) {
+      if (host.querySelector(':scope > .pagosya-motif[data-motif-slot="empty"]')) continue;
+      const holder = motifSlot(index, 'empty');
+      if (!holder) return;
+      host.prepend(holder);
+      armMotif(holder, host);
+    }
+  }
   if (MOTIFS.length) {
     const motifStyle = document.createElement('style');
     motifStyle.dataset.pagosyaKit = 'motifs';
@@ -1561,6 +1590,17 @@
     const cartIndex = MOTIFS.findIndex(motif => motif.placement === 'cart');
     const cartHolder = cartIndex < 0 ? null : motifSlot(cartIndex, 'cart');
     if (cartHolder) { cartDrawer.querySelector('#cart-drawer-title').after(cartHolder); armMotif(cartHolder, cartDrawer); }
+  }
+  /* Pack placements' own rules, written only for a store with a pack: a store without one keeps exactly the styles it had.
+   * Later placements add their rules to this list. */
+  const PACK_CSS = [
+    '.pagosya-motif[data-motif-slot=empty]{display:block!important;width:64px;height:64px;margin:0 0 12px}',
+  ];
+  if (PACK_MOTIFS.length) {
+    const packStyle = document.createElement('style');
+    packStyle.dataset.pagosyaKit = 'motif-pack';
+    packStyle.textContent = `@layer pagosya-commerce {\n${PACK_CSS.join('\n')}\n}`;
+    document.head.append(packStyle);
   }
   const shoppingStyle = document.createElement('style');
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
@@ -2306,6 +2346,7 @@
       if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
       const panelTemplate = review ? null : cartTemplate();
       if (panelTemplate) applyCartTemplate(el, !count, panelTemplate);
+      if (!count && PACK_MOTIFS.length) placeEmptyMotif(el);
       if (hosted) secureFields(el, ['shippingAddress', 'creditCode'], 'Tu dirección y tu saldo se piden en el formulario seguro de pagosYa al continuar.');
       if (previewOptions) {
         const note = document.createElement('p'); note.className = 'order-note';
