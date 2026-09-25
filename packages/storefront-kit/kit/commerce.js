@@ -1235,7 +1235,7 @@
   // Every control that opens the cart (source-commerce-contract accepts these); the click handler, the drawer mount
   // and the added-notice overlap check share it. A link or button holding the cart count opens the cart too.
   const CART_TRIGGERS = '[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]';
-  const cartTriggers = () => [...new Set([...document.querySelectorAll(CART_TRIGGERS), ...[...document.querySelectorAll('[data-cart-count]')].map(count => count.closest('a,button')).filter(Boolean)])];
+  const cartTriggers = () => [...new Set([...document.querySelectorAll(CART_TRIGGERS), ...[...document.querySelectorAll('[data-cart-count]')].map(count => count.closest('a,button')).filter(Boolean)])].filter(el => !el.closest('template'));
   const authoredDrawerTrigger = document.querySelector(CART_TRIGGERS);
   if (authoredDrawerTrigger) document.querySelectorAll('[data-pagosya-cart]:not([data-checkout-review])').forEach(slot => {
     if (!slot.childElementCount && !slot.textContent.trim()) slot.hidden = true;
@@ -1341,7 +1341,16 @@
   function addedFeedback(product, button, keyboard) {
     if (button.closest('[data-pagosya-cart]')) return;
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
-    addedNotice.querySelector('span').textContent = `${product.name} añadido a tu pedido.`;
+    const template = addedTemplate();
+    if (template && !addedNotice.hasAttribute('data-template')) { addedNotice.replaceChildren(template.make()); addedNotice.setAttribute('data-template', ''); }
+    const text = `${product.name} añadido a tu pedido.`;
+    if (addedNotice.hasAttribute('data-template')) {
+      addedNotice.querySelector('[data-added-field="message"]').textContent = text;
+      const name = addedNotice.querySelector('[data-added-field="name"]');
+      if (name) name.textContent = product.name;
+      const photo = addedNotice.querySelector('[data-added-field="photo"]'), image = galleryImages(product)[0];
+      if (photo) { photo.hidden = !image; if (image) { photo.src = image; photo.alt = ''; } else photo.removeAttribute('src'); }
+    } else addedNotice.querySelector('span').textContent = text;
     addedNotice.dataset.visible = 'true';
     placeAddedNotice(button);
     clearTimeout(addedTimer);
@@ -2128,6 +2137,8 @@
     return { make: () => root.cloneNode(true) };
   }
   const imgField = (root, selector) => { const node = root.querySelector(selector); return !node || node.tagName === 'IMG'; };
+  const addedTemplate = () => kitTemplate('added', 'addedTemplateInvalid', root =>
+    root.querySelector('[data-added-field="message"]') && root.querySelector('button[data-cart-open]') && imgField(root, '[data-added-field="photo"]'));
   const cartLineTemplate = () => kitTemplate('cart-line', 'cartLineTemplateInvalid', root =>
     ['name', 'line-total', 'quantity'].every(field => root.querySelector(`[data-cart-field="${field}"]`)) && imgField(root, '[data-cart-field="photo"]'));
   function applyLineTemplate(el, views, template) {

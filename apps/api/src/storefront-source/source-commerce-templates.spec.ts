@@ -136,3 +136,43 @@ describe('cart panel template', () => {
     expect(shop.flag('cartTemplateInvalid')).toBe('true');
   });
 });
+
+const ADDED = `<template data-pagosya-added-template><div class="mi-aviso"><img data-added-field="photo" alt=""><p><b data-added-field="name"></b> <span data-added-field="message"></span></p><button data-cart-open>Ver mi canasta</button></div></template>`;
+
+describe('added notice template', () => {
+  it('fills the authored notice with the product added', async () => {
+    const shop = boot(ADDED);
+    await shop.tick();
+    shop.$('[data-pagosya-catalog] [data-add="lamp"]').click();
+    const notice = shop.$('.cart-added')!;
+    expect(notice.querySelector('.mi-aviso')).not.toBeNull();
+    expect(notice.querySelector('[data-added-field="name"]').textContent).toBe('Lámpara Luna');
+    expect(notice.querySelector('[data-added-field="message"]').textContent).toBe('Lámpara Luna añadido a tu pedido.');
+    expect(notice.querySelector('[data-added-field="photo"]').getAttribute('src')).toBe('https://cdn.test/lamp.jpg');
+    expect(notice.dataset.visible).toBe('true');
+    notice.querySelector('[data-cart-open]').click();
+    expect(shop.$('.cart-drawer').hasAttribute('open')).toBe(true);
+  });
+
+  it('keeps the kit notice when the template has no cart button', async () => {
+    const shop = boot(ADDED.replace('<button data-cart-open>Ver mi canasta</button>', ''));
+    await shop.tick();
+    shop.$('[data-pagosya-catalog] [data-add="lamp"]').click();
+    expect(shop.$('.cart-added span').textContent).toBe('Lámpara Luna añadido a tu pedido.');
+    expect(shop.flag('addedTemplateInvalid')).toBe('true');
+  });
+
+  it('reads a React-rendered notice template and never counts its button as a live cart trigger', async () => {
+    const shop = boot('', { body: HEADER + SLOTS + '<template data-pagosya-added-template></template>' });
+    const tpl = shop.$('template[data-pagosya-added-template]')!;
+    const div = shop.w.document.createElement('div');
+    div.innerHTML = '<span data-added-field="message"></span><button data-cart-open>Ver</button>';
+    tpl.appendChild(div);
+    await shop.tick();
+    shop.$('[data-pagosya-catalog] [data-add="lamp"]').click();
+    expect(shop.$('.cart-added [data-added-field="message"]').textContent).toBe('Lámpara Luna añadido a tu pedido.');
+    // The live notice holds a copy; the button left inside the <template> must not be treated as a trigger.
+    const live = shop.$$('[data-cart-open]').filter((el: any) => !el.closest('template'));
+    expect(live.length).toBe(2); // the header button and the notice copy
+  });
+});
