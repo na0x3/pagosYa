@@ -1373,6 +1373,31 @@
   }, true);
   // Sold out means no units for the product or for any of its combinations; a shopper cannot choose options that cannot be bought.
   const soldOut = p => limit(p) === 0 || (Array.isArray(p.variants) && p.variants.length > 0 && p.variants.every(v => limit(v) === 0));
+  /* Card preview (DNA): how a catalog card previews the product before it is opened. Each falls back to a
+   * still card when its data is missing (one photo, fewer than two variant photos, or a full product page). */
+  const cardMode = () => hasDna ? document.documentElement.getAttribute('data-dna-card') : null;
+  function cardSwatches(p) {
+    const seen = new Set(), list = [];
+    for (const v of Array.isArray(p.variants) ? p.variants : []) {
+      const url = safeUrl(v?.imageUrl);
+      if (!url || seen.has(url) || typeof v.name !== 'string' || !v.name.trim()) continue;
+      seen.add(url);
+      list.push({ url, name: v.name, color: (Array.isArray(v.options) ? v.options : []).map(o => typeof o?.name === 'string' && typeof o?.value === 'string' ? swatchColor(o.name, o.value) : '').find(Boolean) || '' });
+      if (list.length === 4) break;
+    }
+    return list.length > 1 ? list : [];
+  }
+  function cardPreview(p, image) {
+    const mode = cardMode();
+    if (!image || !mode) return {};
+    if (mode === 'second-photo') { const alt = galleryImages(p).find(url => url !== image); return alt ? { alt } : {}; }
+    if (mode === 'swatch-swap') { const swatches = cardSwatches(p); return swatches.length ? { swatches } : {}; }
+    if (mode === 'quick-look' && !fullProductPage) return { chip: true };
+    return {};
+  }
+  const cardAltMarkup = url => `<img class="menu-item__image-alt" src="${escape(url)}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
+  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}" alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
+  const cardChipMarkup = p => `<button type="button" class="menu-item__quick-look" data-product="${escape(p.id)}" aria-label="Vista rápida de ${escape(p.name)}">Vista rápida</button>`;
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
     if (!template || !template.content) return null;
@@ -1421,6 +1446,14 @@
         detail.replaceWith(button);
       }
     });
+    const cardExtras = cardPreview(p, image);
+    // Re-read the photo: an image link may have been rebuilt as a button above.
+    if (cardExtras.alt) root.querySelector('.menu-item__image')?.insertAdjacentHTML('afterend', cardAltMarkup(cardExtras.alt));
+    if (cardExtras.swatches) {
+      const after = field('price');
+      if (after && !after.closest('a,button')) after.insertAdjacentHTML('afterend', cardSwatchMarkup(p, cardExtras.swatches)); else root.insertAdjacentHTML('beforeend', cardSwatchMarkup(p, cardExtras.swatches));
+    }
+    if (cardExtras.chip) root.insertAdjacentHTML('beforeend', cardChipMarkup(p));
     root.toggleAttribute('data-no-image', !image);
     root.querySelectorAll('[data-product-media]').forEach(media => { media.hidden = !image; });
     buy.classList.add('menu-add'); buy.type = 'button';
@@ -1447,7 +1480,8 @@
     const complex = p.variants?.length || p.extras?.length;
     const custom = customProductCard(p, image, complex);
     if (custom) return custom;
-    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : ""}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
+    const cardExtras = cardPreview(p, image);
+    return `<article class="menu-item">${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : ""}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}<div class="menu-item__copy"><h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${money(price(p), p.currency)}</strong>${cardExtras.swatches ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}${soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`}</article>`;
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
@@ -1869,13 +1903,76 @@
     ':root[data-dna-review=notebook] .checkout-review__summary .order-item{border-bottom-style:dotted}',
     '@media(max-width:700px){:root[data-dna-review] .checkout-review{grid-template-columns:minmax(0,1fr)}:root[data-dna-review] :is(.checkout-review__summary,.checkout-review__fields){grid-column:auto;grid-row:auto;position:static}}',
     '@container(max-width:700px){:root[data-dna-review] .checkout-review{grid-template-columns:minmax(0,1fr)}:root[data-dna-review] :is(.checkout-review__summary,.checkout-review__fields){grid-column:auto;grid-row:auto;position:static}}',
+    /* Catalog cards: framing, and how the card previews the product (hover, keyboard focus, long press on touch). */
+    ':root[data-dna-frame=bleed]{--kit-photo-round:0px}:root[data-dna-frame=inset]{--kit-photo-round:var(--kit-radius)}:root[data-dna-frame=rounded]{--kit-photo-round:18px}:root[data-dna-frame=arch]{--kit-photo-round:50% 50% 8px 8px / 42% 42% 8px 8px}:root[data-dna-frame=polaroid]{--kit-photo-round:2px}',
+    ':root[data-dna-frame] .menu-item :is(.menu-item__image,.menu-item__image-alt){box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background-color:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
+    ':root[data-dna-card=second-photo] .menu-item__image-alt{position:absolute;z-index:0;top:0;left:0;width:100%;height:auto;object-fit:cover;opacity:0;pointer-events:none;transition:opacity 320ms var(--kit-ease)}',
+    '@media(hover:hover){:root[data-dna-card=second-photo] .menu-item:hover .menu-item__image-alt{opacity:1}}:root[data-dna-card=second-photo] .menu-item:is(:focus-within,[data-previewing]) .menu-item__image-alt{opacity:1}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches button{display:grid;place-items:center;width:36px;height:36px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches span{display:block;width:22px;height:22px;overflow:hidden;border-radius:50%;background:var(--swatch,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 28%,transparent)}:root[data-dna-card=swatch-swap] .menu-item__swatches img{display:block;width:100%;height:100%;object-fit:cover}',
+    ':root[data-dna-card=swatch-swap] .menu-item__swatches button[aria-pressed=true] span{box-shadow:0 0 0 2px var(--kit-paper),0 0 0 3.5px currentColor}:root[data-dna-card=swatch-swap] .menu-item__swatches button:focus-visible{outline:2px solid currentColor;outline-offset:1px}',
+    ':root[data-dna-card=zoom] .menu-item__image{clip-path:inset(0 round var(--kit-photo-round,0px));transition:transform 600ms var(--kit-ease),clip-path 600ms var(--kit-ease)}',
+    '@media(hover:hover){:root[data-dna-card=zoom] .menu-item:hover .menu-item__image{transform:scale(1.08);clip-path:inset(3.7% round var(--kit-photo-round,0px))}}:root[data-dna-card=zoom] .menu-item:focus-within .menu-item__image{transform:scale(1.08);clip-path:inset(3.7% round var(--kit-photo-round,0px))}',
+    ':root[data-dna-card=quick-look] .menu-item__quick-look{position:absolute;z-index:3;top:10px;right:10px;min-height:36px;margin:0;padding:6px 14px;border:1px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);color:var(--kit-ink);font:inherit;font-size:13px;line-height:1.2;cursor:pointer;opacity:0;transform:translateY(-4px);transition:opacity 200ms var(--kit-ease),transform 200ms var(--kit-ease)}',
+    '@media(hover:hover){:root[data-dna-card=quick-look] .menu-item:hover .menu-item__quick-look{opacity:1;transform:none}}:root[data-dna-card=quick-look] .menu-item:focus-within .menu-item__quick-look{opacity:1;transform:none}@media(hover:none){:root[data-dna-card=quick-look] .menu-item__quick-look{opacity:1;transform:none}}',
+    ':root[data-dna-card=quick-look] .menu-item__quick-look:focus-visible{outline:3px solid currentColor;outline-offset:2px}',
+    ':root[data-dna-card=tilt] .menu-item{transition:transform 240ms var(--kit-ease)}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:perspective(900px) rotateX(var(--card-tilt-y,0deg)) rotateY(var(--card-tilt-x,0deg))}',
   ];
-  const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added{transition:none}}`;
+  const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added,:root[data-dna-card] .menu-item,:root[data-dna-card] .menu-item :is(.menu-item__image,.menu-item__image-alt,.menu-item__quick-look){transition:none}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:none}}`;
   if (hasDna) {
     const dnaStyle = document.createElement('style');
     dnaStyle.dataset.pagosyaKit = 'dna';
     dnaStyle.textContent = [...DNA_CSS, DNA_REDUCED_MOTION].join('\n');
     document.head.append(dnaStyle);
+  }
+  /* Card preview listeners (DNA stores only). The second photo follows the photo's box; a long press previews
+   * it on touch (and swallows the click that follows); keyboard focus previews it too (CSS :focus-within). */
+  function syncCardAlt(card) {
+    const photo = card?.querySelector('.menu-item__image'), alt = card?.querySelector('.menu-item__image-alt');
+    if (!photo || !alt) return;
+    const style = getComputedStyle(photo);
+    Object.assign(alt.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: style.borderRadius, objectPosition: style.objectPosition });
+  }
+  if (hasDna) {
+    const cardOf = event => event.target?.closest?.('.menu-item');
+    document.addEventListener('pointerover', event => syncCardAlt(cardOf(event)), { passive: true });
+    document.addEventListener('focusin', event => syncCardAlt(cardOf(event)));
+    let pressTimer, pressedCard = null, swallowUntil = 0;
+    document.addEventListener('touchstart', event => {
+      const card = cardOf(event);
+      if (!card?.querySelector('.menu-item__image-alt')) return;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => { syncCardAlt(card); card.setAttribute('data-previewing', ''); pressedCard = card; }, 450);
+    }, { passive: true });
+    const release = () => { clearTimeout(pressTimer); if (pressedCard) { pressedCard.removeAttribute('data-previewing'); pressedCard = null; swallowUntil = Date.now() + 600; } };
+    for (const name of ['touchend', 'touchcancel', 'touchmove']) document.addEventListener(name, release, { passive: true });
+    document.addEventListener('contextmenu', event => { if (event.target?.closest?.('.menu-item[data-previewing]')) event.preventDefault(); });
+    document.addEventListener('click', event => {
+      if (Date.now() < swallowUntil && cardOf(event)) { swallowUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
+      const swatch = event.target?.closest?.('[data-card-swatch]');
+      const card = swatch?.closest('.menu-item'), photo = card?.querySelector('.menu-item__image');
+      if (!photo) return;
+      event.preventDefault();
+      photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
+      card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
+    }, true);
+    // Tilt follows a fine pointer only, and never with reduced motion.
+    const tiltAllowed = () => cardMode() === 'tilt' && config.motion !== 'off' && matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.addEventListener('pointermove', event => {
+      const card = event.pointerType === 'mouse' && tiltAllowed() ? cardOf(event) : null;
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      card.setAttribute('data-tilting', '');
+      card.style.setProperty('--card-tilt-x', `${(((event.clientX - r.left) / r.width) - 0.5) * 7}deg`);
+      card.style.setProperty('--card-tilt-y', `${(0.5 - ((event.clientY - r.top) / r.height)) * 7}deg`);
+    }, { passive: true });
+    document.addEventListener('pointerout', event => {
+      const card = cardOf(event);
+      if (!card || card.contains(event.relatedTarget)) return;
+      card.removeAttribute('data-tilting'); card.style.removeProperty('--card-tilt-x'); card.style.removeProperty('--card-tilt-y');
+    }, { passive: true });
   }
   // Carrier stores (shippingCarriersEnabled) need a structured Bolivian address
   // and a door pin. The map is optional: address + "Usar mi ubicación" still work.

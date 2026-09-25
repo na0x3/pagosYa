@@ -174,3 +174,60 @@ describe('checkout review layout', () => {
     expect(css).toMatch(/@container\(max-width:700px\)\{:root\[data-dna-review\] \.checkout-review\{grid-template-columns:minmax\(0,1fr\)/);
   });
 });
+
+describe('product card preview', () => {
+  const TWO = { id: 'taza', name: 'Taza', amount: 12000, currency: 'BOB', stock: 5, imageUrls: ['https://cdn.test/a.jpg', 'https://cdn.test/b.jpg'] };
+  const ONE = { ...TWO, id: 'vaso', name: 'Vaso', imageUrls: ['https://cdn.test/c.jpg'] };
+  const COLORS = { id: 'polo', name: 'Polo', amount: 9000, currency: 'BOB', stock: 9, imageUrls: ['https://cdn.test/p.jpg'], variants: ['Rojo', 'Azul', 'Negro', 'Blanco', 'Verde'].map((value, i) => ({ id: `v${i}`, name: value, amount: 9000, stock: 3, imageUrl: `https://cdn.test/${value}.jpg`, options: [{ name: 'Color', value }] })) };
+  const TEMPLATE = '<template data-pagosya-product-template><article class="card"><a data-product-link data-product-media><img data-product-field="image" alt=""></a><h3><a data-product-link><span data-product-field="name"></span></a></h3><p data-product-field="price"></p><button data-product-add>Añadir</button></article></template>';
+  const catalog = (card: string | null, items: unknown[], template = false) => boot(card ? { ...DNA, card } : undefined, {
+    items, body: `${template ? TEMPLATE : ''}<header><button data-cart-open>Pedido</button></header><section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>`,
+  });
+
+  it.each([false, true])('second-photo adds the second image only when there is one (template: %s)', template => {
+    const { doc } = catalog('second-photo', [TWO, ONE], template);
+    const alts = Array.from(doc.querySelectorAll('.menu-item__image-alt') as ArrayLike<any>);
+    expect(alts.map(img => [img.getAttribute('src'), img.getAttribute('alt'), img.getAttribute('aria-hidden')])).toEqual([['https://cdn.test/b.jpg', '', 'true']]);
+    expect(doc.querySelectorAll('.menu-item')).toHaveLength(2);
+  });
+  it('adds no preview markup without DNA or for a still card', () => {
+    for (const handle of [catalog(null, [TWO, COLORS]), catalog('still', [TWO, COLORS])]) {
+      expect(handle.doc.querySelectorAll('.menu-item__image-alt, .menu-item__swatches, .menu-item__quick-look')).toHaveLength(0);
+    }
+  });
+  it.each([false, true])('swatch-swap shows up to four variant photos that swap the card photo (template: %s)', template => {
+    const { doc } = catalog('swatch-swap', [COLORS, TWO], template);
+    const swatches = Array.from(doc.querySelectorAll('.menu-item__swatches button[data-card-swatch]') as ArrayLike<any>);
+    expect(swatches.map(b => b.getAttribute('aria-label'))).toEqual(['Ver Rojo', 'Ver Azul', 'Ver Negro', 'Ver Blanco']);
+    swatches[1].click();
+    const card = swatches[1].closest('.menu-item'), photo = card.querySelector('.menu-item__image');
+    expect(photo.getAttribute('src')).toBe('https://cdn.test/Azul.jpg');
+    expect(swatches.map(b => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false']);
+    expect(doc.querySelectorAll('.menu-item__swatches')).toHaveLength(1); // a product without variant photos stays still
+  });
+  it('quick-look shows a chip that opens the product', () => {
+    const { w, doc } = catalog('quick-look', [TWO]);
+    const chip = doc.querySelector('.menu-item button.menu-item__quick-look');
+    expect(chip?.textContent).toBe('Vista rápida');
+    chip.click();
+    expect(w.__modal).toContain(doc.querySelector('dialog[data-pagosya-product]'));
+  });
+  it('a long press previews the second photo on touch, and lifting the finger ends it', () => {
+    jest.useFakeTimers();
+    try {
+      const { w, doc } = catalog('second-photo', [TWO]);
+      const card = doc.querySelector('.menu-item'), photo = card.querySelector('.menu-item__image');
+      photo.dispatchEvent(new w.Event('touchstart', { bubbles: true }));
+      jest.advanceTimersByTime(500);
+      expect(card.hasAttribute('data-previewing')).toBe(true);
+      photo.dispatchEvent(new w.Event('touchend', { bubbles: true }));
+      expect(card.hasAttribute('data-previewing')).toBe(false);
+    } finally { jest.useRealTimers(); }
+  });
+  it('has CSS for every card value and frames the card photos', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const card of DNA_VALUES.card.filter(card => card !== 'still')) expect(css).toContain(`:root[data-dna-card=${card}]`);
+    expect(rules(css).find(rule => rule.selector.includes('.menu-item__image') && rule.body.includes('var(--kit-photo-radius)'))).toBeDefined();
+    expect(css).toMatch(/prefers-reduced-motion:reduce\)\{[^@]*\.menu-item/);
+  });
+});
