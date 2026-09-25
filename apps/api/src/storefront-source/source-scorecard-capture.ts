@@ -63,7 +63,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     return 'none';
   }
   // The typeface a surface's title or text renders in, and its case (text-transform / small caps).
-  const voice = (el: Element | null | undefined) => el ? { font: family(getComputedStyle(el).fontFamily), titleCase: `${getComputedStyle(el).textTransform}/${getComputedStyle(el).fontVariantCaps}` } : { font: '', titleCase: '' };
+  const voice = (el: Element | null | undefined) => el ? { font: family(getComputedStyle(el).fontFamily), titleCase: `${getComputedStyle(el).textTransform}/${getComputedStyle(el).fontVariantCaps}`, titleTracking: getComputedStyle(el).letterSpacing === 'normal' ? 0 : round(px(getComputedStyle(el).letterSpacing)) } : { font: '', titleCase: '', titleTracking: 0 };
   if (kind === 'button-press') { const el = first('.menu-add'); return el ? getComputedStyle(el).transform : null; }
   if (kind === 'button-hover') {
     const el = first('.menu-add');
@@ -194,7 +194,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       if (!opened) throw new Error('no cart trigger');
       await page.waitForSelector('dialog.cart-drawer[open]', { timeout: 3000 });
       const cart = await page.evaluate(measureInPage, { kind: 'cart' as const }) as any;
-      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000, border: cart.border, font: cart.font, titleCase: cart.titleCase, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
+      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000, border: cart.border, font: cart.font, titleCase: cart.titleCase, titleTracking: cart.titleTracking, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
       await shot('cart');
       await page.evaluate(() => document.querySelector<HTMLDialogElement>('dialog.cart-drawer[open]')?.close());
     };
@@ -220,7 +220,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       await page.goto(`${origin}/${config.checkoutPage}`, { waitUntil: 'load', timeout: 10000 });
       await page.waitForSelector('.checkout-review', { timeout: 5000 });
       const review = await page.evaluate(measureInPage, { kind: 'review' as const }) as any;
-      facts.surfaces.review = { columns: review.columns, summary: review.summary, font: review.font, titleCase: review.titleCase, summaryPaint: review.summaryPaint, summaryEdge: review.summaryEdge, pad: review.pad, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
+      facts.surfaces.review = { columns: review.columns, summary: review.summary, font: review.font, titleCase: review.titleCase, titleTracking: review.titleTracking, summaryPaint: review.summaryPaint, summaryEdge: review.summaryEdge, pad: review.pad, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
     });
   } finally { await page.close(); }
   return facts;

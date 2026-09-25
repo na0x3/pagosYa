@@ -51,6 +51,7 @@ it('measures the DNA kit surfaces apart from each other and from the kit default
   for (const surface of ['cart', 'review', 'added', 'card'] as const) expect(first.sample.surfaces[surface]).toEqual(expect.objectContaining({ font: expect.any(String) }));
   expect([first.sample.surfaces.review!.summaryPaint, second.sample.surfaces.review!.summaryPaint]).toEqual(['perforated', 'flat']);
   expect(first.sample.surfaces.review!.pad).toEqual(expect.any(Number));
+  expect([first.sample.surfaces.review!.titleTracking, first.sample.surfaces.cart!.titleTracking]).toEqual([expect.any(Number), expect.any(Number)]);
   expect(first.sample.surfaces.card).toEqual(expect.objectContaining({ addTracking: expect.any(Number), addTransform: expect.stringContaining('/') }));
 });
 
