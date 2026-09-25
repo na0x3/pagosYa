@@ -5,17 +5,18 @@ import { parseFragment, parse } from 'parse5';
 import postcss from 'postcss';
 import type { SourceProjectFileDto as File } from './dto/save-source-project.dto';
 import { sourceHomeRegions } from './source-edit-scope';
-import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 
 export type SourceVisualField = { id: string; path: string; label: string; kind: 'text' | 'image' | 'color' | 'select'; value: string; previewValue?: string; options?: string[]; optionLabels?: Record<string, string> };
 type Editable = SourceVisualField & { start: number; end: number; format: 'jsx-text' | 'js-string' | 'html-text' | 'html-attribute' | 'css' | 'section' | 'image-position' };
 const TEXT_PROPS = new Set(['title', 'eyebrow', 'lead', 'body', 'blurb', 'tagline', 'alt', 'label', 'beforeLabel', 'afterLabel', 'note']);
 const COLOR_PROPS = new Set(['paper', 'ink', 'accent', 'onAccent', 'surface']);
-/** Every self-hosted catalogue font, CSS-ready. The original five keep their exact values: saved stores match on them. */
-const FONT_CHOICES = SOURCE_FONT_CATALOG.map(font => {
-  const generic = font.personality.includes('mono') ? 'monospace' : font.personality.some(trait => trait === 'serif' || trait === 'slab') ? 'serif' : 'sans-serif';
-  return { id: font.id, value: `"${font.family}", ${generic}`, family: font.family, asset: font.id, weight: font.weights.replace('–', ' ') };
-});
+const FONT_CHOICES = [
+  { value: '"Bricolage Grotesque", sans-serif', family: 'Bricolage Grotesque', asset: 'bricolage', weight: '200 800' },
+  { value: '"Fraunces", serif', family: 'Fraunces', asset: 'fraunces', weight: '100 900' },
+  { value: '"Instrument Sans", sans-serif', family: 'Instrument Sans', asset: 'instrument', weight: '400 700' },
+  { value: '"Oswald", sans-serif', family: 'Oswald', asset: 'oswald', weight: '200 700' },
+  { value: '"Instrument Serif", serif', family: 'Instrument Serif', asset: 'instrument-serif', weight: '400' },
+];
 const IMAGE_POSITIONS: Record<string, string> = { '0% 0%': 'Arriba izquierda', '50% 0%': 'Arriba centro', '100% 0%': 'Arriba derecha', '0% 50%': 'Centro izquierda', '50% 50%': 'Centro', '100% 50%': 'Centro derecha', '0% 100%': 'Abajo izquierda', '50% 100%': 'Abajo centro', '100% 100%': 'Abajo derecha' };
 const COLORS = /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i;
 const VARIANTS: Record<string, Record<string, string[]>> = {
@@ -211,31 +212,6 @@ export function applySourceVisualEdit(files: File[], fieldId: string, value: str
     const declaration = `${marker}\n@font-face{font-family:"${font.family}";src:url('/assets/${font.asset}.ttf') format('truetype');font-style:normal;font-weight:${font.weight};font-display:swap}\n`;
     if (!css) updated.push({ path: 'styles/globals.css', content: declaration });
     else if (!css.content.includes(marker)) updated[updated.indexOf(css)] = { ...css, content: css.content + '\n' + declaration };
-    return { files: withFontDna(updated, field.label.endsWith('Títulos') ? 'display' : 'text', font.id), label: `Edición visual · ${field.label}`.slice(0, 120) };
   }
   return { files: updated, label: `Edición visual · ${field.label}`.slice(0, 120) };
-}
-
-const CONFIG_PATTERN = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
-/** A chosen typeface is part of the store's DNA (type.display/text, and the fingerprint built from them): the
- * selected concept in design-direction.json and the runtime dna in config.js follow it. A design without DNA or an
- * unreadable file is left exactly as it was. */
-function withFontDna(files: File[], role: 'display' | 'text', fontId: string): File[] {
-  return files.map(file => {
-    try {
-      if (file.path === 'design-direction.json') {
-        const design = JSON.parse(file.content);
-        const type = design?.concepts?.[design.selected]?.dna?.type;
-        if (!type || typeof type !== 'object' || type[role] === fontId) return file;
-        type[role] = fontId;
-        return { ...file, content: JSON.stringify(design, null, 2) + '\n' };
-      }
-      if (file.path === 'config.js') {
-        const config = JSON.parse(file.content.match(CONFIG_PATTERN)?.[1] ?? '');
-        if (!config?.dna || typeof config.dna !== 'object' || config.dna[role] === fontId) return file;
-        return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, dna: { ...config.dna, [role]: fontId } })};` };
-      }
-    } catch { /* unreadable: leave it for the save checks to report */ }
-    return file;
-  });
 }

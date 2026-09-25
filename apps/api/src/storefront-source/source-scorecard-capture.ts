@@ -117,7 +117,7 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
   if (summary && fields) { const a = summary.getBoundingClientRect(), b = fields.getBoundingClientRect(); position = a.left >= b.right - 1 ? 'right' : a.right <= b.left + 1 ? 'left' : a.top >= b.bottom - 1 ? 'below' : 'above'; }
   const box = summary?.getBoundingClientRect(), whole = review.getBoundingClientRect();
   return { columns: s.display.includes('grid') ? s.gridTemplateColumns.split(' ').filter(Boolean).length : 1, summary: position,
-    ...voice(summary?.querySelector('h2')), summaryPaint: paint(summary), summaryEdge: summary ? edge(summary) : 'none', summaryShare: box && whole.width ? round(box.width / whole.width) : 0, width: round(whole.width / vw), radius: summary ? radius(summary) : 0, border: summary ? border(summary) : 0,
+    ...voice(summary?.querySelector('h2')), summaryPaint: paint(summary), summaryEdge: summary ? edge(summary) : 'none', pad: summary ? Math.round(px(getComputedStyle(summary).paddingLeft)) : 0, summaryShare: box && whole.width ? round(box.width / whole.width) : 0, width: round(whole.width / vw), radius: summary ? radius(summary) : 0, border: summary ? border(summary) : 0,
     bgDelta: summary ? round(Math.abs(lum(background(summary)) - lum(background(document.body))) * 1000) / 1000 : 0, ...form(review.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
 }
 
@@ -220,7 +220,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       await page.goto(`${origin}/${config.checkoutPage}`, { waitUntil: 'load', timeout: 10000 });
       await page.waitForSelector('.checkout-review', { timeout: 5000 });
       const review = await page.evaluate(measureInPage, { kind: 'review' as const }) as any;
-      facts.surfaces.review = { columns: review.columns, summary: review.summary, font: review.font, titleCase: review.titleCase, summaryPaint: review.summaryPaint, summaryEdge: review.summaryEdge, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
+      facts.surfaces.review = { columns: review.columns, summary: review.summary, font: review.font, titleCase: review.titleCase, summaryPaint: review.summaryPaint, summaryEdge: review.summaryEdge, pad: review.pad, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
     });
   } finally { await page.close(); }
   return facts;

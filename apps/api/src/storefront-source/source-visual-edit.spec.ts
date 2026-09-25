@@ -2,7 +2,6 @@ import { sourceVisualFields, applySourceVisualEdit } from './source-visual-edit'
 import { sourceHomeRegions } from './source-edit-scope';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectFileDto as File } from './dto/save-source-project.dto';
-import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 
 const fixture = (): File[] => [
   { path: 'components/home.tsx', content: `import {Hero, Catalog, StoreTheme} from '@pagosya/ui';
@@ -104,46 +103,6 @@ it('offers literal token typefaces, adds a local font declaration and bundles it
   const body = sourceVisualFields(changed).find(candidate => candidate.label === 'Tipografía · Texto')!;
   const second = applySourceVisualEdit(changed, body.id, '"Fraunces", serif').files;
   expect(second[1].content.match(/pagosya-visual-font:fraunces/g)).toHaveLength(1);
-});
-it('offers every catalogued typeface under its family name, with a local declaration', () => {
-  const files: File[] = [{ path: 'components/theme.tsx', content: 'const tokens = {displayFont:"system-ui",bodyFont:"system-ui"}; export default tokens;' }];
-  const field = sourceVisualFields(files).find(field => field.label === 'Tipografía · Títulos')!;
-  for (const font of SOURCE_FONT_CATALOG) expect(Object.entries(field.optionLabels!)).toContainEqual([expect.stringContaining(`"${font.family}"`), font.family]);
-  expect(field.options).toContain('"Space Mono", monospace');
-  expect(field.options).toContain('"Bodoni Moda", serif');
-  const changed = applySourceVisualEdit(files, field.id, '"Big Shoulders Display", sans-serif').files;
-  const css = changed.find(file => file.path === 'styles/globals.css')!.content;
-  expect(css).toContain('/* pagosya-visual-font:big-shoulders-display */');
-  expect(css).toContain("src:url('/assets/big-shoulders-display.ttf') format('truetype');font-style:normal;font-weight:100 900;");
-});
-it('keeps the saved design and runtime DNA truthful when a typeface changes', () => {
-  const dna = { version: 1, type: { display: 'fraunces', text: 'instrument', case: 'none', tracking: 'normal' }, buttons: { form: 'pill' } };
-  const files: File[] = [
-    { path: 'components/theme.tsx', content: 'const tokens = {displayFont:"\\"Fraunces\\", serif",bodyFont:"\\"Instrument Sans\\", sans-serif"}; export default tokens;' },
-    { path: 'design-direction.json', content: JSON.stringify({ selected: 1, concepts: [{ dna: { ...dna } }, { dna }] }) },
-    { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ storeId: 's1', dna: { version: 1, display: 'fraunces', text: 'instrument', button: 'pill' } })};` },
-  ];
-  const display = sourceVisualFields(files).find(field => field.label === 'Tipografía · Títulos')!;
-  const once = applySourceVisualEdit(files, display.id, '"Anton", sans-serif').files;
-  const text = sourceVisualFields(once).find(field => field.label === 'Tipografía · Texto')!;
-  const twice = applySourceVisualEdit(once, text.id, '"Newsreader", serif').files;
-  const design = JSON.parse(twice.find(file => file.path === 'design-direction.json')!.content);
-  expect(design.concepts[1].dna.type).toEqual({ display: 'anton', text: 'newsreader', case: 'none', tracking: 'normal' });
-  expect(design.concepts[0].dna.type.display).toBe('fraunces');
-  const config = JSON.parse(twice.find(file => file.path === 'config.js')!.content.match(/=\s*([\s\S]*?);?\s*$/)![1]);
-  expect(config.dna).toEqual({ version: 1, display: 'anton', text: 'newsreader', button: 'pill' });
-  expect(config.storeId).toBe('s1');
-});
-it('leaves a design without DNA and an unreadable config untouched on a typeface change', () => {
-  const files: File[] = [
-    { path: 'components/theme.tsx', content: 'const tokens = {displayFont:"system-ui"}; export default tokens;' },
-    { path: 'design-direction.json', content: JSON.stringify({ selected: 0, concepts: [{ layout: {} }] }) },
-    { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {broken' },
-  ];
-  const field = sourceVisualFields(files).find(field => field.label === 'Tipografía · Títulos')!;
-  const changed = applySourceVisualEdit(files, field.id, '"Anton", sans-serif').files;
-  expect(changed.find(file => file.path === 'design-direction.json')).toBe(files[1]);
-  expect(changed.find(file => file.path === 'config.js')).toBe(files[2]);
 });
 it('edits an existing literal focal position or inserts one without changing photo identity', () => {
   for (const properties of ["src:'/assets/a.jpg',alt:'Photo'", "src:'/assets/a.jpg',alt:'Photo',", "src:'/assets/a.jpg',alt:'Photo',position:'25% 30%'"]) {
