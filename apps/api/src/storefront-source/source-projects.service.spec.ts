@@ -172,6 +172,33 @@ describe('React source revisions', () => {
   });
 });
 
+describe('store kit CSS on save', () => {
+  it('serves the component block while it exists and drops the compiled file with it', async () => {
+    const { service } = setup();
+    const withBlock = nextStoreFiles().map(f => f.path === 'styles/globals.css' ? { ...f, content: f.content + '\n/* pagosya-kit:start */\n.cart-drawer{background:#fff}\n/* pagosya-kit:end */\n' } : f);
+    await service.save('m1', 's1', { revision: 0, label: 'Next', brief: nextBrief, files: [...withBlock, ...nextProjectScaffold('cafe'), { path: 'config.js', content: `window.PAGOSYA_CONFIG=${JSON.stringify(nextStoreConfig)};` }, { path: 'commerce.js', content: '/* runtime */' }] });
+    const first: any = await service.version('m1', 's1', 1);
+    expect(first.snapshot.files.find((f: any) => f.path === 'styles/kit.css').content).toContain('@layer pagosya-store-kit');
+    await service.editFile('m1', 's1', { revision: 1, path: 'styles/globals.css', content: nextStoreFiles().find(f => f.path === 'styles/globals.css')!.content });
+    const second: any = await service.version('m1', 's1', 2);
+    expect(second.snapshot.files.some((f: any) => f.path === 'styles/kit.css')).toBe(false);
+    expect(second.snapshot.files.find((f: any) => f.path === 'index.html').content).not.toContain('kit.css');
+  });
+  it('validates a static kit file a merchant edits by hand, and leaves their other stylesheets alone', async () => {
+    const { service } = setup();
+    const prepared = await service.prepare({ revision: 0, label: 'Static', brief: nextBrief, files: [
+      { path: 'index.html', content: '<!doctype html><html><head><link rel="stylesheet" href="styles.css"></head><body></body></html>' },
+      { path: 'styles.css', content: '.menu-add{display:none}' }, { path: 'styles/kit.css', content: '.cart-drawer{color:red}body{margin:0}' },
+      { path: 'package.json', content: JSON.stringify({ name: 'x', private: true, type: 'module', scripts: { build: 'node build.mjs', start: 'node server.mjs' } }) }, { path: 'README.md', content: '# x' },
+    ] } as any);
+    const file = (path: string) => prepared.files.find((f: any) => f.path === path)!.content;
+    expect(file('styles/kit.css')).toContain('@layer pagosya-store-kit');
+    expect(file('styles/kit.css')).not.toContain('body');
+    expect(file('styles.css')).toContain('.menu-add{display:none}');
+    expect(file('index.html')).toContain('data-pagosya-kit="store"');
+  });
+});
+
 describe('design fingerprint memory', () => {
   const designFile = (dna?: unknown) => ({ path: 'design-direction.json', content: JSON.stringify({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
     name, premise: 'Handmade ceramics', opening: `${name} opening`, flow: `${name} flow`, typography: 'Fraunces / Instrument Sans', imagery: 'None', mobile: 'Stack',

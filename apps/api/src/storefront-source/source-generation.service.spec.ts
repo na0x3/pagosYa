@@ -78,6 +78,20 @@ describe('Independent source generation',()=>{
     expect(config.dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
     expect(config.dna.product).toBe(config.productPageStyle);
   });
+  it('validates the store kit CSS and every stylesheet, links the kit CSS and records the repairs', async () => {
+    const { service, projects } = setup();
+    const source = [...files().map(f => f.path === 'styles.css' ? { ...f, content: 'body { color: #222; }\n.menu-add{display:none}' } : f), { path: 'styles/kit.css', content: '.cart-drawer{background:#fff}body{margin:0}' }];
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: source }) }] }] })));
+    const result: any = await service.generate('m', 's', input);
+    const saved = projects.save.mock.calls[0][2].files;
+    const file = (path: string) => saved.find((f: any) => f.path === path)?.content;
+    expect(file('styles.css')).toContain('body { color: #222; }');
+    expect(file('styles.css')).not.toMatch(/\.menu-add\s*\{\s*display/);
+    expect(file('styles/kit.css')).toContain('@layer pagosya-store-kit');
+    expect(file('index.html')).toContain('<link rel="stylesheet" href="styles/kit.css" data-pagosya-kit="store">');
+    expect(result.generation.autoRepairs).toEqual(expect.arrayContaining([expect.stringMatching(/^styles\.css: removed `display:none` on \.menu-add/), 'styles/kit.css: removed selector body (not a kit surface)']));
+    expect(() => validateGeneratedSource(source)).not.toThrow();
+  });
   it('writes the chosen concept DNA in component mode and records planner DNA repairs', async () => {
     const { service, projects } = setup('next');
     const planned = design(); planned.concepts[0].dna = validDna(); planned.concepts[0].layout!.productPage = 'story-led';

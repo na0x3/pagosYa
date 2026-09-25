@@ -1,4 +1,5 @@
 import postcss, { type AtRule, type ChildNode, type Container, type Declaration, type Root, type Rule } from 'postcss';
+import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 
 /**
  * Validated free-CSS layer (sub-project 7). YAPI writes kit-surface CSS in one place: `styles/kit.css` (static) or a
@@ -253,8 +254,8 @@ function checkResources(decl: Declaration, notes: Notes): void {
   if (/url\(/i.test(value.replace(/url\(\s*(["']?)[^"')]*\1\s*\)/gi, ''))) { notes.add(`removed \`${decl.prop}\` (unreadable url())`); decl.remove(); }
 }
 
-/** Store kit CSS (plain or served form) → the served form, or '' when nothing is left. */
-export function validateStoreKitCss(css: string, path = SOURCE_KIT_CSS_PATH): { css: string; repairs: string[] } {
+/** Store kit CSS (plain or served form) → the served form (or the plain validated rules), or '' when nothing is left. */
+export function validateStoreKitCss(css: string, path = SOURCE_KIT_CSS_PATH, form: 'served' | 'plain' = 'served'): { css: string; repairs: string[] } {
   const notes = new Notes(path);
   let root: Root;
   try { root = postcss.parse(css); } catch { notes.add('could not be parsed; removed'); return { css: '', repairs: notes.list() }; }
@@ -299,7 +300,7 @@ export function validateStoreKitCss(css: string, path = SOURCE_KIT_CSS_PATH): { 
     notes.add('trimmed the last rules to stay within 12 KB');
   }
   if (!root.nodes.length) return { css: '', repairs: notes.list() };
-  return { css: servedForm(root), repairs: notes.list() };
+  return { css: form === 'plain' ? root.toString().trim() : servedForm(root), repairs: notes.list() };
 }
 
 /** Surface rules in the store-kit layer; product-page rules unlayered, scoped by one ID (never released by the kit). */
@@ -328,4 +329,77 @@ function servedForm(plain: Root): string {
   };
   const surface = text(layered), page = text(product);
   return `${HEADER}\n${STORE_KIT_LAYER_ORDER}\n${surface ? `@layer pagosya-store-kit {${surface}\n}\n` : ''}${page ? page.slice(1) + '\n' : ''}`;
+}
+
+/* ---- project files ---- */
+const KIT_BLOCK = /\/\*\s*pagosya-kit:start\s*\*\/([\s\S]*?)(?:\/\*\s*pagosya-kit:end\s*\*\/|$)/g;
+const BLOCK_PLACEHOLDER = '/*pagosya-kit-block*/';
+const PLATFORM_CSS = new Set(['commerce-pages.css', 'brand.css', SOURCE_KIT_CSS_PATH]);
+
+/** The component-mode block(s) of globals.css, concatenated, and the file without them. */
+export function extractKitBlock(css: string): { rest: string; block: string | null } {
+  let block: string | null = null;
+  const rest = css.replace(KIT_BLOCK, (_match, inner: string) => { block = (block ?? '') + inner; return ''; });
+  return { rest, block };
+}
+
+/** The link the platform owns: after the store's stylesheet; data-pagosya-kit exempts it from the product-page release. */
+export const storeKitLink = (prefix = '') => `<link rel="stylesheet" href="${prefix}${SOURCE_KIT_CSS_PATH}" data-pagosya-kit="store">`;
+function linkStoreKit(html: string, path: string, present: boolean): string {
+  let out = html.replace(/<link\b[^>]*\bhref\s*=\s*["'](?:\.\.?\/)*styles\/kit\.css["'][^>]*>/gi, '');
+  // Only the platform marks a stylesheet as the kit's own.
+  out = out.replace(/(<(?:link|style)\b[^>]*?)\s+data-pagosya-kit(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, '$1');
+  if (!present) return out;
+  const link = storeKitLink('../'.repeat(path.split('/').length - 1));
+  const styles = out.match(/<link\b[^>]*\bhref\s*=\s*["'](?:\.\.?\/)*styles\.css["'][^>]*>/i);
+  if (styles) return out.replace(styles[0], styles[0] + link);
+  if (/<\/head>/i.test(out)) return out.replace(/<\/head>/i, link + '</head>');
+  return out.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype = '') => doctype + link);
+}
+
+/**
+ * The validated free-CSS layer on a project's files. Static: styles/kit.css becomes its served form (removed when nothing
+ * valid is left) and every page links it; component mode: the globals.css block keeps plain validated rules (the compile
+ * serves them). `authored` also checks the store's other stylesheets (a generation); a merchant's own save leaves them.
+ */
+export function applySourceKitCss<T extends SourceProjectFileDto>(files: T[], options: { next: boolean; authored?: boolean }): { files: T[]; repairs: string[] } {
+  const authored = options.authored !== false;
+  const repairs: string[] = [];
+  const text = (file: SourceProjectFileDto) => file.encoding !== 'base64' && typeof file.content === 'string';
+  if (options.next) {
+    return { files: files.map(file => {
+      if (file.path !== 'styles/globals.css' || !text(file)) return file;
+      let count = 0, block: string | null = null;
+      let content = file.content.replace(KIT_BLOCK, (_match, inner: string) => { block = (block ?? '') + inner; return count++ ? '' : BLOCK_PLACEHOLDER; });
+      if (authored) { const checked = validateAuthoredCss(content, file.path); content = checked.css; repairs.push(...checked.repairs); }
+      if (block !== null) {
+        const kit = validateStoreKitCss(block, file.path, 'plain');
+        repairs.push(...kit.repairs);
+        content = content.replace(BLOCK_PLACEHOLDER, kit.css ? `/* pagosya-kit:start */\n${kit.css}\n/* pagosya-kit:end */` : '');
+      }
+      return content === file.content ? file : { ...file, content };
+    }), repairs };
+  }
+  let present = false;
+  const checked = files.flatMap(file => {
+    if (!text(file)) return [file];
+    if (file.path === SOURCE_KIT_CSS_PATH) {
+      const kit = validateStoreKitCss(file.content, file.path);
+      repairs.push(...kit.repairs);
+      if (!kit.css) return [];
+      present = true;
+      return [kit.css === file.content ? file : { ...file, content: kit.css }];
+    }
+    if (authored && file.path.endsWith('.css') && !PLATFORM_CSS.has(file.path)) {
+      const css = validateAuthoredCss(file.content, file.path);
+      repairs.push(...css.repairs);
+      return [css.css === file.content ? file : { ...file, content: css.css }];
+    }
+    return [file];
+  });
+  return { files: checked.map(file => {
+    if (!file.path.endsWith('.html') || !text(file)) return file;
+    const content = linkStoreKit(file.content, file.path, present);
+    return content === file.content ? file : { ...file, content };
+  }), repairs };
 }

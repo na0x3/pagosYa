@@ -9,6 +9,18 @@ import { creativeStoreFiles } from './fixtures/creative-store';
 import { withCreativeAssets } from './source-creative-assets';
 
 describe('Next.js storefront compilation', () => {
+  it('compiles the pagosya-kit block of globals.css into the served store kit CSS, linked after the store stylesheet', async () => {
+    const source = nextStoreFiles().map(f => f.path === 'styles/globals.css' ? { ...f, content: f.content + '\n/* pagosya-kit:start */\n.cart-drawer{background:rgb(9,8,7)}\n.product-detail__buy{border-radius:3px}\n/* pagosya-kit:end */\n' } : f);
+    const compiled = await compileNextPreview(source);
+    const kit = compiled.find(f => f.path === 'styles/kit.css')!.content;
+    expect(kit).toContain('@layer pagosya-store-kit');
+    expect(kit).toContain(':root:not(#pagosya-store-kit) .product-detail__buy');
+    expect(compiled.find(f => f.path === 'styles.css')!.content).not.toMatch(/rgb\(9, ?8, ?7\)|product-detail__buy/);
+    expect(compiled.find(f => f.path === 'index.html')!.content).toContain('<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="styles/kit.css" data-pagosya-kit="store">');
+    const plain = await compileNextPreview(nextStoreFiles());
+    expect(plain.some(f => f.path === 'styles/kit.css')).toBe(false);
+    expect(plain.find(f => f.path === 'index.html')!.content).not.toContain('kit.css');
+  });
   it.each([
     '<img src="foto.png" />', '<img src="foto.png"></img>',
     '<img {...props} />', '<img alt="" />', '<img alt={""} />',

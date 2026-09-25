@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import postcss from 'postcss';
 import { kitPath } from '@pagosya/storefront-kit';
-import { SOURCE_KIT_PRODUCT_HOOK, SOURCE_MOTION_LIMITS, STORE_KIT_LAYER_ORDER, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
+import { SOURCE_KIT_PRODUCT_HOOK, SOURCE_MOTION_LIMITS, STORE_KIT_LAYER_ORDER, applySourceKitCss, extractKitBlock, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
 
 /** Every declaration of a stylesheet with where it sits: inside the store-kit layer or not. */
 function sheet(css: string) {
@@ -196,5 +196,66 @@ describe('validateAuthoredCss', () => {
 
   it('leaves unparsable CSS to the other validators', () => {
     expect(validateAuthoredCss('.a{', 'styles.css')).toEqual({ css: '.a{', repairs: [] });
+  });
+});
+
+describe('applySourceKitCss: static projects', () => {
+  const LINK = '<link rel="stylesheet" href="styles/kit.css" data-pagosya-kit="store">';
+  const project = () => [
+    { path: 'index.html', content: '<!doctype html><html><head><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">\n<style data-pagosya-kit="product">.x{}</style></head><body></body></html>' },
+    { path: 'pages/nosotros.html', content: '<!doctype html><html><head><link rel="stylesheet" href="../styles.css"></head><body></body></html>' },
+    { path: 'bare.html', content: '<!doctype html><main></main>' },
+    { path: 'styles.css', content: '.menu-add{display:none;color:red}' },
+    { path: 'brand.css', content: '.menu-add{display:none}' },
+    { path: 'styles/kit.css', content: '.cart-drawer{background:#fff}body{margin:0}' },
+  ];
+
+  it('links the kit CSS after the store\'s stylesheet on every page and validates every stylesheet', () => {
+    const { files, repairs } = applySourceKitCss(project(), { next: false });
+    const file = (path: string) => files.find((f: { path: string }) => f.path === path)!.content;
+    expect(file('index.html')).toContain(`<link rel="stylesheet" href="styles.css">${LINK}`);
+    expect(file('pages/nosotros.html')).toContain(`<link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../styles/kit.css" data-pagosya-kit="store">`);
+    expect(file('bare.html')).toBe(`<!doctype html>${LINK}<main></main>`);
+    expect(file('index.html')).toContain('<style>.x{}</style>');
+    expect(file('styles.css')).toBe('.menu-add{color:red}');
+    expect(file('brand.css')).toBe('.menu-add{display:none}');
+    expect(file('styles/kit.css')).toBe(validateStoreKitCss('.cart-drawer{background:#fff}').css);
+    expect(repairs.join('\n')).toMatch(/styles\.css: removed `display:none`/);
+    expect(repairs.join('\n')).toMatch(/styles\/kit\.css: removed selector body/);
+    const again = applySourceKitCss(files, { next: false });
+    expect(again).toEqual({ files, repairs: [] });
+  });
+
+  it('unlinks the kit CSS when there is none, or when nothing valid is left', () => {
+    const linked = applySourceKitCss(project(), { next: false }).files;
+    for (const files of [linked.filter(f => f.path !== 'styles/kit.css'), linked.map(f => f.path === 'styles/kit.css' ? { ...f, content: 'body{margin:0}' } : f)]) {
+      const out = applySourceKitCss(files, { next: false }).files;
+      expect(out.some(f => f.path === 'styles/kit.css')).toBe(false);
+      expect(out.filter(f => f.path.endsWith('.html')).map(f => f.content).join('')).not.toContain('kit.css');
+    }
+  });
+
+  it('leaves the store\'s other stylesheets alone when asked to (a merchant\'s own save)', () => {
+    const { files } = applySourceKitCss(project(), { next: false, authored: false });
+    expect(files.find((f: { path: string }) => f.path === 'styles.css')!.content).toBe('.menu-add{display:none;color:red}');
+    expect(files.find((f: { path: string }) => f.path === 'styles/kit.css')!.content).toContain('@layer pagosya-store-kit');
+  });
+});
+
+describe('applySourceKitCss: component projects', () => {
+  it('keeps the block plain and validated in globals.css and checks the rest of the file', () => {
+    const globals = 'body{margin:0}\n/* pagosya-kit:start */\n.cart-drawer{background:#fff}\n.hero{color:red}\n/* pagosya-kit:end */\n.menu-add{font-size:8px}\n';
+    const { files, repairs } = applySourceKitCss([{ path: 'styles/globals.css', content: globals }, { path: 'components/home.tsx', content: 'x' }], { next: true });
+    const out = files.find((f: { path: string }) => f.path === 'styles/globals.css')!.content;
+    expect(out).toBe('body{margin:0}\n/* pagosya-kit:start */\n.cart-drawer{background:#fff}\n/* pagosya-kit:end */\n');
+    expect(files.some(f => f.path === 'styles/kit.css')).toBe(false);
+    expect(repairs.join('\n')).toMatch(/styles\/globals\.css: removed selector \.hero/);
+    expect(repairs.join('\n')).toMatch(/styles\/globals\.css: removed `font-size:8px`/);
+    expect(applySourceKitCss(files, { next: true })).toEqual({ files, repairs: [] });
+  });
+
+  it('reads every block, and a block without its end marker runs to the end of the file', () => {
+    expect(extractKitBlock('a{}/* pagosya-kit:start */.cart-drawer{}/* pagosya-kit:end */b{}/*pagosya-kit:start*/.cart-added{}')).toEqual({ rest: 'a{}b{}', block: '.cart-drawer{}.cart-added{}' });
+    expect(extractKitBlock('a{}')).toEqual({ rest: 'a{}', block: null });
   });
 });

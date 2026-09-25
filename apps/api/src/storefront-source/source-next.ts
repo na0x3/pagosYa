@@ -1,3 +1,4 @@
+import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateStoreKitCss } from './source-kit-css';
 import { BadGatewayException } from '@nestjs/common';
 import { build } from 'esbuild';
 import postcss from 'postcss';
@@ -495,10 +496,14 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
   const source = new Map(authored.map(f => [f.path, f.content]));
   source.set('lib/creative.tsx', creativeRuntime());
   source.set('lib/ui.tsx', uiRuntime());
+  // The store kit block is served on its own, in its cascade layer (sub-project 7); Tailwind never sees it.
+  const globals = extractKitBlock(source.get('styles/globals.css') ?? '');
+  const storeKit = globals.block === null ? '' : validateStoreKitCss(globals.block).css;
   // Tailwind may resolve a different PostCSS 8 patch; its plugin uses the same runtime contract.
   const css = await postcss([tailwindcss({ content: authored.filter(f => f.path.endsWith('.tsx')).map(f => ({ raw: f.content, extension: 'tsx' })), corePlugins: { preflight: true } }) as unknown as import('postcss').Plugin])
-    .process('@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' + source.get('styles/globals.css'), { from: undefined });
+    .process('@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' + globals.rest, { from: undefined });
   const compiled: SourceProjectFileDto[] = [{ path: 'styles.css', content: css.css }, { path: 'site.js', content: '/* React components own authored interactions. */' }];
+  if (storeKit) compiled.push({ path: SOURCE_KIT_CSS_PATH, content: storeKit });
   for (const page of pages) {
     const entry = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {flushSync} from 'react-dom'; import {CreativeProvider} from '@pagosya/creative'; import Page from './components/${page.name}'; flushSync(()=>createRoot(document.getElementById('pagosya-react-root')).render(React.createElement(CreativeProvider, null, React.createElement(Page))));`;
     try {
@@ -527,7 +532,7 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
     } catch (error: any) {
       throw new BadGatewayException(`No se pudo compilar ${page.name}: ${String(error.errors?.[0]?.text || error.message).slice(0, 450)}`);
     }
-    compiled.push({ path: page.path, content: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="brand.css"></head><body><div id="pagosya-react-root"></div><script src="config.js" defer></script><script src="_compiled/${page.name}.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>` });
+    compiled.push({ path: page.path, content: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title><link rel="stylesheet" href="commerce-pages.css"><link rel="stylesheet" href="styles.css">${storeKit ? storeKitLink() : ''}<link rel="stylesheet" href="brand.css"></head><body><div id="pagosya-react-root"></div><script src="config.js" defer></script><script src="_compiled/${page.name}.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>` });
   }
   compiled.push({ path: 'source-next-layout.json', content: JSON.stringify(Object.fromEntries(pages.map(page => [page.path, nextPageMarkup(authored, page.name)]))) });
   return compiled;

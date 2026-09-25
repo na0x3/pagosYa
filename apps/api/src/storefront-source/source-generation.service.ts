@@ -47,6 +47,7 @@ import { validateSourcePreflight } from './source-preflight';
 import { repairSourceContracts } from './source-autorepair';
 import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
+import { applySourceKitCss, SOURCE_KIT_CSS_PATH } from './source-kit-css';
 import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
@@ -95,7 +96,7 @@ export function validateGeneratedSource(files: SourceProjectFileDto[], purpose: 
   if (!Array.isArray(files) || files.length > 24) throw new BadGatewayException("La generación no devolvió un proyecto válido.");
   if (purpose === 'shop') validateSourcePriceClaims(files);
   for (const file of files) {
-    if (!file || typeof file.content !== "string" || !/^(?:pages\/)?[a-zA-Z0-9_-]+\.(html|css|js)$/.test(file.path) || ["config.js", "commerce.js", "brand.css"].includes(file.path)) throw new BadGatewayException("La generación intentó cambiar un archivo reservado.");
+    if (!file || typeof file.content !== "string" || !(/^(?:pages\/)?[a-zA-Z0-9_-]+\.(html|css|js)$/.test(file.path) || file.path === SOURCE_KIT_CSS_PATH) || ["config.js", "commerce.js", "brand.css"].includes(file.path)) throw new BadGatewayException("La generación intentó cambiar un archivo reservado.");
     if (file.path.endsWith(".js")) {
       try { new Script(file.content, { filename: file.path }); } catch { throw new BadGatewayException(`Error de sintaxis en ${file.path}. Vuelve a generar.`); }
     }
@@ -618,6 +619,10 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
             if (!editExisting || redesign || migrating || stylesheetChanged) generated.files = applySourceLayoutBaseline(generated.files);
             // Give the bounded repair all independent failures, not only the first one.
             generated.files = relaxSourceTracking(generated.files, editExisting ? oldFiles : []);
+            // Validated free-CSS layer (sub-project 7): kit CSS and every stylesheet's protected elements are repaired, never failed.
+            const kitCss = applySourceKitCss(generated.files, { next: useNext });
+            generated.files = kitCss.files;
+            autoRepairs.push(...kitCss.repairs);
             const validationErrors: string[] = [];
             for (const check of [
               () => validateSourcePresentation(generated.files, editExisting ? oldFiles : []),
