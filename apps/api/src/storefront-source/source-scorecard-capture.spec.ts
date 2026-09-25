@@ -29,6 +29,23 @@ it('sees a restyled button and the store DNA', async () => {
   expect(restyled.sample.surfaces.page).toEqual(expect.objectContaining({ 'dna.button': 'pill', 'dna.cart': 'sheet' }));
 });
 
+it('measures the DNA kit surfaces apart from each other and from the kit default', async () => {
+  const kit = await kitDefaultSnapshot();
+  const withDna = (dna: Record<string, string>) => ({ ...kit, files: kit.files.map(f => f.path === 'config.js' ? { ...f, content: f.content.replace('"demo":true', `"demo":true,"dna":${JSON.stringify({ version: 1, ...dna })}`) } : f) });
+  const a = { button: 'pill', hover: 'lift', press: 'squash', radius: 'round', border: 'hairline', frame: 'rounded', cart: 'sheet', added: 'ribbon', review: 'ticket', card: 'zoom' };
+  const b = { button: 'stamp', hover: 'invert', press: 'pop', radius: 'none', border: 'bold', frame: 'polaroid', cart: 'overlay', added: 'bubble', review: 'stacked', card: 'quick-look' };
+  const [base, first, second] = await Promise.all([kit, withDna(a), withDna(b)].map((snapshot, i) => collectStoreSample({ id: String(i), name: String(i), snapshot })));
+  for (const surface of ['cart', 'added', 'review', 'card', 'button'] as const) {
+    const distances = { surface, pair: surfaceDistance(first.sample.surfaces[surface]!, second.sample.surfaces[surface]!), a: surfaceDistance(first.sample.surfaces[surface]!, base.sample.surfaces[surface]!), b: surfaceDistance(second.sample.surfaces[surface]!, base.sample.surfaces[surface]!) };
+    expect({ surface, far: Math.min(distances.pair, distances.a, distances.b) >= 0.25, distances }).toEqual({ surface, far: true, distances });
+  }
+  expect(first.sample.surfaces.cart).toEqual(expect.objectContaining({ position: 'bottom' }));
+  expect(second.sample.surfaces.cart).toEqual(expect.objectContaining({ position: 'centered' }));
+  expect(first.sample.surfaces.card).toEqual(expect.objectContaining({ hover: 'scale' }));
+  expect(second.sample.surfaces.card).toEqual(expect.objectContaining({ hover: 'chip' }));
+  expect(first.sample.errors).toEqual([]);
+});
+
 it('counts motion hooks in authored files only', () => {
   expect(staticMotionHooks([
     { path: 'index.html', content: '<style>@keyframes a{} @keyframes b{}</style><script>new IntersectionObserver(()=>{});el.animate([])</script>', encoding: 'utf8' },

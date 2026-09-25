@@ -21,7 +21,7 @@ type ViewportFacts = {
 };
 
 /** Everything measured in the page, in one self-contained function (it is serialized into the browser). */
-function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' | 'review' }) {
+function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' | 'review' | 'card-hover' | 'button-hover' }) {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   // Canvas parsing handles every CSS colour syntax (color-mix, oklch, color()) and returns sRGB bytes.
@@ -44,31 +44,56 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
     const s = getComputedStyle(el), r = el.getBoundingClientRect(), bg = background(el);
     return { radius: radius(el), border: px(s.borderTopWidth), bg, color: over(rgba(s.color), bg), transform: s.textTransform, tracking: s.letterSpacing === 'normal' ? 0 : round(px(s.letterSpacing)), font: family(s.fontFamily), height: Math.round(r.height), padRatio: round(px(s.paddingLeft) / r.height) };
   };
+  const border = (el: Element) => { const st = getComputedStyle(el); return Math.max(...[st.borderTopWidth, st.borderRightWidth, st.borderBottomWidth, st.borderLeftWidth].map(px)); };
+  // The facts a DNA button form changes, for a button inside another surface.
+  const form = (el: HTMLElement | undefined) => el ? { btnRadius: radius(el), btnBorder: px(getComputedStyle(el).borderTopWidth), btnTransform: getComputedStyle(el).textTransform, btnBg: background(el) } : {};
+  const lum = (rgb: number[]) => { const c = rgb.map(v => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
   const vw = innerWidth, vh = innerHeight;
+  if (kind === 'card-hover') {
+    const cardEl = first('article.menu-item, [data-custom-product]');
+    if (!cardEl) return null;
+    const alt = cardEl.querySelector('.menu-item__image-alt'), image = cardEl.querySelector('.menu-item__image, img'), chip = cardEl.querySelector('.menu-item__quick-look');
+    if (alt && Number(getComputedStyle(alt).opacity) > 0.5) return 'swap';
+    if (chip && Number(getComputedStyle(chip).opacity) > 0.5) return 'chip';
+    if (image && getComputedStyle(image).transform !== 'none') return 'scale';
+    if (getComputedStyle(cardEl).transform !== 'none') return 'tilt';
+    return 'none';
+  }
+  if (kind === 'button-hover') {
+    const el = first('.menu-add');
+    if (!el) return null;
+    const st = getComputedStyle(el);
+    return JSON.stringify([st.transform, st.filter, st.backgroundImage === 'none' ? 'none' : `${st.backgroundSize} ${st.backgroundPosition}`, st.boxShadow]);
+  }
   if (kind === 'home') {
     const dna = Object.fromEntries(Array.from(document.documentElement.attributes).filter(a => a.name.startsWith('data-dna-')).map(a => [a.name.slice(9), a.value]));
     const heading = first('h1') || first('h2'), text = first('p') || document.body;
     const type = heading ? { display: family(getComputedStyle(heading).fontFamily), body: family(getComputedStyle(text).fontFamily), ratio: round(px(getComputedStyle(heading).fontSize) / px(getComputedStyle(text).fontSize)), headingCase: getComputedStyle(heading).textTransform } : null;
     const cardEl = first('article.menu-item, [data-custom-product]');
     const image = cardEl?.querySelector('img');
-    const card = cardEl ? { aspect: round(cardEl.getBoundingClientRect().width / cardEl.getBoundingClientRect().height), imageRadius: image ? radius(image) : 0, align: getComputedStyle(cardEl.querySelector('h3, h2, .menu-item__copy') || cardEl).textAlign, images: cardEl.querySelectorAll('img').length } : null;
     const buttonEl = first('.menu-add');
+    const add = buttonEl && cardEl?.contains(buttonEl) ? form(buttonEl) : {};
+    const card = cardEl ? { aspect: round(cardEl.getBoundingClientRect().width / cardEl.getBoundingClientRect().height), imageRadius: image ? radius(image) : 0, align: getComputedStyle(cardEl.querySelector('h3, h2, .menu-item__copy') || cardEl).textAlign, images: cardEl.querySelectorAll('img').length,
+      pad: image ? Math.round(px(getComputedStyle(image).paddingBottom)) : 0, swatches: cardEl.querySelectorAll('[data-card-swatch]').length, addRadius: add.btnRadius ?? -1, addBorder: add.btnBorder ?? -1, addTransform: add.btnTransform ?? 'none' } : null;
+    const hoverBefore = buttonEl ? (() => { const st = getComputedStyle(buttonEl); return JSON.stringify([st.transform, st.filter, st.backgroundImage === 'none' ? 'none' : `${st.backgroundSize} ${st.backgroundPosition}`, st.boxShadow]); })() : null;
     const missingImages = Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && (!i.complete || !i.naturalWidth); }).length;
-    return { dna, type, card, button: buttonEl ? control(buttonEl) : null, overflow: document.documentElement.scrollWidth > vw + 1, fontsLoaded: document.fonts.status === 'loaded', missingImages };
+    return { dna, type, card, hoverBefore, button: buttonEl ? control(buttonEl) : null, overflow: document.documentElement.scrollWidth > vw + 1, fontsLoaded: document.fonts.status === 'loaded', missingImages };
   }
   if (kind === 'added') {
     const el = first('.cart-added[data-visible="true"]');
     if (!el) return null;
     const r = el.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
     const position = `${cy < vh / 3 ? 'top' : cy > vh * 2 / 3 ? 'bottom' : 'middle'}-${cx < vw / 3 ? 'left' : cx > vw * 2 / 3 ? 'right' : 'center'}`;
-    return { position, width: round(r.width / vw), height: Math.round(r.height), radius: radius(el), bg: background(el) };
+    return { position, width: round(r.width / vw), height: Math.round(r.height), radius: radius(el), bg: background(el), border: border(el), ...form(first('.cart-added[data-visible="true"] button') ?? undefined) };
   }
   if (kind === 'cart') {
     const el = document.querySelector('dialog.cart-drawer[open]');
     if (!el) return null;
     const r = el.getBoundingClientRect(), left = r.left <= 1, right = r.right >= vw - 1, top = r.top <= 1, bottom = r.bottom >= vh - 1;
-    const position = left && right && top && bottom ? 'full' : left && right && bottom ? 'bottom' : left && right && top ? 'top' : right && !left ? 'right' : left && !right ? 'left' : 'centered';
-    return { position, width: round(r.width / vw), radius: radius(el), bg: background(el), page: background(document.body) };
+    // A bottom sheet narrower than the viewport still reads as a bottom sheet.
+    const position = left && right && top && bottom ? 'full' : bottom && !top ? 'bottom' : top && !bottom ? 'top' : right && !left ? 'right' : left && !right ? 'left' : 'centered';
+    const photo = el.querySelector('.order-item__photo'), step = el.querySelector('.quantity button');
+    return { position, width: round(r.width / vw), radius: radius(el), bg: background(el), page: background(document.body), border: border(el), photoRadius: photo ? radius(photo) : -1, stepRadius: step ? radius(step) : -1, ...form(el.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
   }
   if (kind === 'product') {
     const el = document.querySelector('[data-pagosya-product][data-style]');
@@ -83,10 +108,15 @@ function measureInPage({ kind }: { kind: 'home' | 'added' | 'cart' | 'product' |
   const s = getComputedStyle(review), summary = review.querySelector('.checkout-review__summary'), fields = review.querySelector('.checkout-review__fields');
   let position = 'none';
   if (summary && fields) { const a = summary.getBoundingClientRect(), b = fields.getBoundingClientRect(); position = a.left >= b.right - 1 ? 'right' : a.right <= b.left + 1 ? 'left' : a.top >= b.bottom - 1 ? 'below' : 'above'; }
-  return { columns: s.display.includes('grid') ? s.gridTemplateColumns.split(' ').filter(Boolean).length : 1, summary: position };
+  const box = summary?.getBoundingClientRect(), whole = review.getBoundingClientRect();
+  return { columns: s.display.includes('grid') ? s.gridTemplateColumns.split(' ').filter(Boolean).length : 1, summary: position,
+    summaryShare: box && whole.width ? round(box.width / whole.width) : 0, width: round(whole.width / vw), radius: summary ? radius(summary) : 0, border: summary ? border(summary) : 0,
+    bgDelta: summary ? round(Math.abs(lum(background(summary)) - lum(background(document.body))) * 1000) / 1000 : 0, ...form(review.querySelector<HTMLElement>('.checkout-button') ?? undefined) };
 }
 
 const luminance = (rgb: Rgb) => Math.round(relativeLuminance(rgb) * 1000) / 1000;
+/** A button inside another surface (cart, added, review): the facts its DNA form changes. */
+const formSample = (facts: { btnRadius?: number; btnBorder?: number; btnTransform?: string; btnBg?: Rgb }): SurfaceSample => facts.btnBg ? { btnRadius: facts.btnRadius!, btnBorder: facts.btnBorder!, btnTransform: facts.btnTransform!, btnBgLum: luminance(facts.btnBg) } : {};
 const buttonSample = (c: Control, from: string): SurfaceSample => ({ from, radius: c.radius, border: c.border, bgLum: luminance(c.bg), transform: c.transform, tracking: c.tracking, font: c.font, height: c.height, padRatio: c.padRatio });
 
 async function settle(page: Page) {
@@ -119,7 +149,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
   const measureAdded = async () => {
     const added = await page.evaluate(measureInPage, { kind: 'added' as const }) as any;
     if (!added) throw new Error('the added-to-cart confirmation did not appear');
-    facts.surfaces.added = { position: added.position, width: added.width, height: added.height, radius: added.radius, bgLum: luminance(added.bg) };
+    facts.surfaces.added = { position: added.position, width: added.width, height: added.height, radius: added.radius, bgLum: luminance(added.bg), border: added.border, ...formSample(added) };
     await shot('added');
   };
   let added = false;
@@ -132,6 +162,19 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       if (home.type) facts.surfaces.type = home.type; else errors.push(`${viewport} type: no heading`);
       if (home.card) facts.surfaces.card = home.card; else errors.push(`${viewport} card: no product card on the home`);
       if (home.button) { facts.surfaces.button = buttonSample(home.button, 'card'); facts.buyContrast = contrastRatio(home.button.color, home.button.bg); }
+      // Preview and hover behaviour: hover the card, then the button, and record what changed.
+      const cardTarget = page.locator('article.menu-item, [data-custom-product]').first();
+      if (home.card && await cardTarget.isVisible()) {
+        await cardTarget.hover({ position: { x: 20, y: 20 }, timeout: 2000 }).catch(() => undefined);
+        facts.surfaces.card!.hover = await page.evaluate(measureInPage, { kind: 'card-hover' as const }) as string ?? 'none';
+      }
+      const buttonTarget = page.locator('.menu-add').first();
+      if (facts.surfaces.button && await buttonTarget.isVisible()) {
+        await buttonTarget.hover({ timeout: 2000 }).catch(() => undefined);
+        const after = await page.evaluate(measureInPage, { kind: 'button-hover' as const }) as string | null;
+        facts.surfaces.button.hover = after === null || after === home.hoverBefore ? 'none' : after;
+      }
+      await page.mouse.move(0, 0);
     });
     await step('added', async () => { if (await addFirstProduct(page)) { added = true; await measureAdded(); } });
     await step('cart', async () => {
@@ -139,7 +182,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       if (!opened) throw new Error('no cart trigger');
       await page.waitForSelector('dialog.cart-drawer[open]', { timeout: 3000 });
       const cart = await page.evaluate(measureInPage, { kind: 'cart' as const }) as any;
-      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000 };
+      facts.surfaces.cart = { position: cart.position, width: cart.width, radius: cart.radius, bgDelta: Math.round(Math.abs(relativeLuminance(cart.bg) - relativeLuminance(cart.page)) * 1000) / 1000, border: cart.border, photoRadius: cart.photoRadius, stepRadius: cart.stepRadius, ...formSample(cart) };
       await shot('cart');
       await page.evaluate(() => document.querySelector<HTMLDialogElement>('dialog.cart-drawer[open]')?.close());
     });
@@ -162,7 +205,7 @@ async function visitViewport(context: BrowserContext, viewport: Viewport, width:
       await page.goto(`${origin}/${config.checkoutPage}`, { waitUntil: 'load', timeout: 10000 });
       await page.waitForSelector('.checkout-review', { timeout: 5000 });
       const review = await page.evaluate(measureInPage, { kind: 'review' as const }) as any;
-      facts.surfaces.review = { columns: review.columns, summary: review.summary };
+      facts.surfaces.review = { columns: review.columns, summary: review.summary, summaryShare: review.summaryShare, width: review.width, radius: review.radius, border: review.border, bgDelta: review.bgDelta, ...formSample(review) };
     });
   } finally { await page.close(); }
   return facts;
