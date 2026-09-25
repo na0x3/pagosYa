@@ -351,8 +351,16 @@ describe('applySourceKitCss: component projects', () => {
     expect(applySourceKitCss(files, { next: true })).toEqual({ files, repairs: [] });
   });
 
-  it('reads every block, and a block without its end marker runs to the end of the file', () => {
-    expect(extractKitBlock('a{}/* pagosya-kit:start */.cart-drawer{}/* pagosya-kit:end */b{}/*pagosya-kit:start*/.cart-added{}')).toEqual({ rest: 'a{}b{}', block: '.cart-drawer{}.cart-added{}' });
+  it('reads every block', () => {
+    expect(extractKitBlock('a{}/* pagosya-kit:start */.cart-drawer{}/* pagosya-kit:end */b{}/*pagosya-kit:start*/.cart-added{}/*pagosya-kit:end*/')).toEqual({ rest: 'a{}b{}', block: '.cart-drawer{}.cart-added{}' });
     expect(extractKitBlock('a{}')).toEqual({ rest: 'a{}', block: null });
+  });
+
+  it('never swallows the rest of globals.css: a block without its end marker leaves the file untouched, with a repair note', () => {
+    const globals = ':root{--brand:#123}\n/* pagosya-kit:start */\n.cart-drawer{background:#fff}\n\nbody{font-family:Inter;margin:0}\n.hero{display:grid;min-height:80vh}\n.menu-add{font-size:8px}\n';
+    expect(extractKitBlock(globals)).toEqual({ rest: globals, block: null });
+    const { files, repairs } = applySourceKitCss([{ path: 'styles/globals.css', content: globals }], { next: true });
+    expect(files[0].content).toBe(globals);
+    expect(repairs.join('\n')).toMatch(/styles\/globals\.css: .*pagosya-kit:end/);
   });
 });

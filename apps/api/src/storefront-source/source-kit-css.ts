@@ -480,12 +480,17 @@ function servedForm(plain: Root): string {
 }
 
 /* ---- project files ---- */
-const KIT_BLOCK = /\/\*\s*pagosya-kit:start\s*\*\/([\s\S]*?)(?:\/\*\s*pagosya-kit:end\s*\*\/|$)/g;
+const KIT_BLOCK = /\/\*\s*pagosya-kit:start\s*\*\/([\s\S]*?)\/\*\s*pagosya-kit:end\s*\*\//g;
+const KIT_START = /\/\*\s*pagosya-kit:start\s*\*\//;
+/** A start marker left once the complete blocks are out: an unterminated block, which must never swallow the file. */
+const unterminated = (css: string) => KIT_START.test(css.replace(KIT_BLOCK, ''));
 const BLOCK_PLACEHOLDER = '/*pagosya-kit-block*/';
 const PLATFORM_CSS = new Set(['commerce-pages.css', 'brand.css', SOURCE_KIT_CSS_PATH]);
 
-/** The component-mode block(s) of globals.css, concatenated, and the file without them. */
+/** The component-mode block(s) of globals.css, concatenated, and the file without them. A file with an unterminated block
+ * is left whole (no block): its rules stay ordinary globals.css rules instead of vanishing into the kit layer. */
 export function extractKitBlock(css: string): { rest: string; block: string | null } {
+  if (unterminated(css)) return { rest: css, block: null };
   let block: string | null = null;
   const rest = css.replace(KIT_BLOCK, (_match, inner: string) => { block = (block ?? '') + inner; return ''; });
   return { rest, block };
@@ -517,6 +522,7 @@ export function applySourceKitCss<T extends SourceProjectFileDto>(files: T[], op
   if (options.next) {
     return { files: files.map(file => {
       if (file.path !== 'styles/globals.css' || !text(file)) return file;
+      if (unterminated(file.content)) { repairs.push(`${file.path}: a /* pagosya-kit:start */ has no /* pagosya-kit:end */; the file was left as written and its kit rules were not applied (add the end marker)`); return file; }
       let count = 0, block: string | null = null;
       let content = file.content.replace(KIT_BLOCK, (_match, inner: string) => { block = (block ?? '') + inner; return count++ ? '' : BLOCK_PLACEHOLDER; });
       if (authored) { const checked = validateAuthoredCss(content, file.path); content = checked.css; repairs.push(...checked.repairs); }
