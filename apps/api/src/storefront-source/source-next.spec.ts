@@ -343,3 +343,22 @@ describe('mechanical commerce mount repair', () => {
     expect(() => validateNextSources(repaired)).toThrow('home necesita data-cart-open');
   });
 });
+
+describe('kit templates in React', () => {
+  it('a store using every kit template helper validates and compiles', async () => {
+    const files = nextStoreFiles();
+    const home = files.find(f => f.path === 'components/home.tsx')!;
+    home.content = "import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, ProductPageTemplate, KitSlot } from '@pagosya/ui';\n"
+      + home.content.replace('<div data-pagosya-catalog />', `<div data-pagosya-catalog />
+<CartTemplate><div className="canasta"><h2>Tu canasta</h2><button data-cart-close>Cerrar</button><KitSlot kind="cart" name="lines" /><KitSlot kind="cart" name="total" /><KitSlot kind="cart" name="action" /></div></CartTemplate>
+<CartLineTemplate><li><KitSlot kind="line" name="name" as="h3" /><KitSlot kind="line" name="line-total" as="strong" /><KitSlot kind="line" name="quantity" /></li></CartLineTemplate>
+<AddedTemplate><div><KitSlot kind="added" name="message" as="span" /><button data-cart-open>Ver</button></div></AddedTemplate>
+<ReviewTemplate><div><KitSlot kind="review" name="summary" /><KitSlot kind="review" name="fields" /></div></ReviewTemplate>
+<ProductPageTemplate><article><KitSlot kind="product" name="gallery" /><KitSlot kind="product" name="title" /><KitSlot kind="product" name="pricing" /><KitSlot kind="product" name="buy" /></article></ProductPageTemplate>`);
+    expect(() => validateNextSources(files)).not.toThrow();
+    const compiled = await compileNextPreview(files);
+    const compiledHome = compiled.find(f => f.path === '_compiled/home.js')!;
+    expect(compiledHome.content).toContain('data-pagosya-cart-template');
+    expect(compiledHome.content).toContain('data-cart-slot');
+  });
+});

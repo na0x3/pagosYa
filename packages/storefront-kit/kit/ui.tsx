@@ -10,7 +10,7 @@
  * Styling is self-contained (`ui-` classes + CSS custom properties), never Tailwind, because the
  * Tailwind pass only scans authored components.
  */
-import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
 
 /* ------------------------------------------------------------------ tokens */
@@ -595,6 +595,20 @@ export function CartButton({ label = 'Pedido' }: { label?: string }) {
 /** Required once per page that sells: the cart drawer and the live status line. */
 export function CommerceSlots() {
   return <><div data-pagosya-cart hidden /><p data-pagosya-status role="status" aria-live="polite" /></>;
+}
+/* T1 kit templates: author the markup of a kit surface; the commerce runtime fills the slots. Prices, totals,
+ * stock, options and checkout stay platform-owned. Each template needs one root element and its required slots:
+ * product page gallery/title/pricing/buy; cart lines/total/action plus a button[data-cart-close]; cart line
+ * name/line-total/quantity; added notice message plus a button[data-cart-open]; review summary/fields. */
+export function ProductPageTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-product-page-template>{children}</template>; }
+export function CartTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-cart-template>{children}</template>; }
+export function CartLineTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-cart-line-template>{children}</template>; }
+export function AddedTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-added-template>{children}</template>; }
+export function ReviewTemplate({ children }: { children: ReactNode }) { return <template data-pagosya-review-template>{children}</template>; }
+const KIT_SLOT_ATTRIBUTE = { product: 'data-product-slot', cart: 'data-cart-slot', line: 'data-cart-field', added: 'data-added-field', review: 'data-review-slot' } as const;
+export function KitSlot({ kind, name, as = 'div', className, children }: { kind: keyof typeof KIT_SLOT_ATTRIBUTE; name: string; as?: keyof JSX.IntrinsicElements; className?: string; children?: ReactNode }) {
+  const Tag = as as any;
+  return <Tag className={className} {...{ [KIT_SLOT_ATTRIBUTE[kind]]: name }}>{children}</Tag>;
 }
 export function AnnouncementBar({ children }: { children: ReactNode }) { return <div className="ui-announcement">{children}</div>; }
 
