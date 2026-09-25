@@ -4,6 +4,7 @@
  * the sanitised markup, never the meaning prose. config.js carries the markup because the storefront sandbox cannot
  * fetch (connect-src 'none'); the files stay in the snapshot for the hero <img> and for later edits. */
 import { SOURCE_DNA_MOTIF_ENUMS, type SourceDnaMotif } from './source-dna';
+import { sanitizeRuntimeMotifPack } from './source-motif-packs';
 import { MOTIF_SVG_ELEMENTS, sanitizeMotifSvg } from './source-svg-sanitize';
 
 type File = { path: string; content: string; encoding?: 'utf8' | 'base64' };
@@ -107,11 +108,23 @@ export function withSanitizedMotifs<F extends File>(files: F[]): { files: F[]; r
     if (file.path !== 'config.js') return [file];
     let config: any;
     try { config = JSON.parse(file.content.match(CONFIG_PATTERN)?.[1] ?? ''); } catch { return [file]; }
-    if (!config || typeof config !== 'object' || !('motifs' in config)) return [file];
-    const motifs = sanitizeRuntimeMotifs(config.motifs);
-    if (JSON.stringify(motifs) === JSON.stringify(config.motifs)) return [file];
-    changed = true; repairs.push('config.js: motifs re-sanitised');
-    return [{ ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, motifs })};\n` }];
+    if (!config || typeof config !== 'object' || !('motifs' in config || 'motifPack' in config)) return [file];
+    let next = config;
+    if ('motifs' in config) {
+      const motifs = sanitizeRuntimeMotifs(config.motifs);
+      if (JSON.stringify(motifs) !== JSON.stringify(config.motifs)) { next = { ...next, motifs }; repairs.push('config.js: motifs re-sanitised'); }
+    }
+    if ('motifPack' in config) {
+      const motifPack = sanitizeRuntimeMotifPack(config.motifPack);
+      if (JSON.stringify(motifPack) !== JSON.stringify(config.motifPack)) {
+        const { motifPack: _dropped, ...rest } = next;
+        next = motifPack ? { ...rest, motifPack } : rest;
+        repairs.push(motifPack ? 'config.js: motif pack re-sanitised' : 'config.js: motif pack dropped');
+      }
+    }
+    if (next === config) return [file];
+    changed = true;
+    return [{ ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(next)};\n` }];
   });
   return { files: changed ? next : files, repairs };
 }
