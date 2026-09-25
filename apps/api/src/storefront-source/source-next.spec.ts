@@ -1,7 +1,7 @@
 // Compiles real Next.js projects; under a full parallel run this takes well past the 5s default.
 jest.setTimeout(60_000);
 
-import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
+import { compileNextPreview, nextPageMarkup, nextProjectExport, nextProjectScaffold, repairNextCommerceMounts, repairNextSharedComponentReferences, validateNextDesign, validateNextSources } from './source-next';
 import { nextBrief, nextStoreFiles, nextStoreConfig, nextStoreImage } from './fixtures/next-store';
 import { sourceProjectSnapshot } from './source-project';
 import { assertSourceCommerceContract } from './source-commerce-contract';
@@ -206,5 +206,60 @@ export default function Home() { const [tab] = useState('portada'); return <><He
     expect(checkout.content).toContain("import Footer from './Footer';");
     expect(checkout.content).not.toContain('generated page referenced Footer');
     await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/checkout.js' })]));
+  });
+});
+
+describe('mechanical commerce mount repair', () => {
+  const home = (files: ReturnType<typeof nextStoreFiles>) => files.find(f => f.path === 'components/home.tsx')!;
+  const product = (files: ReturnType<typeof nextStoreFiles>) => files.find(f => f.path === 'components/product.tsx')!;
+
+  it('adds CommerceSlots when a page lacks the cart and status mounts, and the result compiles', async () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content).toContain('<CommerceSlots />');
+    expect(home(repaired).content).toMatch(/import \{[^}]*\bCommerceSlots\b[^}]*\} from '@pagosya\/ui';/);
+    expect(repairs).toEqual(['components/home.tsx: added CommerceSlots']);
+    expect(() => validateNextSources(repaired)).not.toThrow();
+    await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/home.js' })]));
+  });
+
+  it('adds ProductDetail to a product page with no product mount', () => {
+    const files = nextStoreFiles();
+    product(files).content = product(files).content.replace('<main data-pagosya-product-page/>', '<main/>');
+    const { files: repaired } = repairNextCommerceMounts(files);
+    expect(product(repaired).content).toContain('<ProductDetail />');
+    expect(() => validateNextSources(repaired)).not.toThrow();
+  });
+
+  it('extends an existing @pagosya/ui import instead of adding a second one', () => {
+    const files = nextStoreFiles();
+    home(files).content = "import { Reveal } from '@pagosya/ui';\n" + home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '');
+    const { files: repaired } = repairNextCommerceMounts(files);
+    expect(home(repaired).content.match(/from '@pagosya\/ui'/g)).toHaveLength(1);
+    expect(home(repaired).content).toMatch(/import \{ Reveal, CommerceSlots \} from '@pagosya\/ui';/);
+  });
+
+  it('never duplicates a mount the page already names, even inside a conditional', () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '{open && <CommerceSlots />}');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content.match(/CommerceSlots \/>/g)).toHaveLength(1);
+    expect(repairs).toEqual([]);
+  });
+
+  it('leaves a page without a default-exported JSX return unchanged', () => {
+    const files = nextStoreFiles();
+    home(files).content = 'const Page = () => null; export default Page;';
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content).toBe('const Page = () => null; export default Page;');
+    expect(repairs).toEqual([]);
+  });
+
+  it('does not decide where the cart button goes: a missing data-cart-open still fails', () => {
+    const files = nextStoreFiles();
+    files[0].content = files[0].content.replace('data-cart-open', 'data-other');
+    const { files: repaired } = repairNextCommerceMounts(files);
+    expect(() => validateNextSources(repaired)).toThrow('home necesita data-cart-open');
   });
 });

@@ -22,7 +22,7 @@ import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-referenc
 import { sourceUiCompositions, sourceUiCompositionPrompt, type SourceCompositionInput } from './source-ui';
 import { sourceUiCompositionRecipe } from './source-composition-registry';
 import { validateSourcePriceClaims } from './source-price-claims';
-import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
+import { compileNextPreview, nextPageMarkup, validateNextSources, validateNextDesign, isNextSource, nextSourceFile, nextProjectScaffold, nextContentPages, repairNextCommerceMounts, repairNextSharedComponentReferences, SOURCE_NEXT_INSTRUCTIONS } from './source-next';
 import { requestsArtwork, sourceSectionScope, sourceSectionScopePrompt, validateSourceEditScope, validateSourceArtwork, sourceDesignAfterSectionEdit, SourceScopeConflict } from './source-edit-scope';
 import { SOURCE_FONT_CHOICES, withSourceFonts } from './source-fonts';
 import { SourceDesignPlanner } from './source-design-planner';
@@ -573,7 +573,13 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
               if (Array.isArray((generated as any).edits) && (generated as any).edits.some((edit: any) => context.omitted.includes(edit?.path))) throw new BadGatewayException('La edición intentó cambiar una página fuera del contexto solicitado.');
               generated.files = applySourceEdits(oldFiles || [], generated, { allowUnchanged: products.length > 0 || productOperations.length > 0, replaceablePaths, ...(useNext ? { appendPaths: ['styles/globals.css'] } : {}), ...(targetedEditPaths ? { allowedEditPaths: targetedEditPaths } : {}) });
             }
-            if (useNext) generated.files = repairNextSharedComponentReferences(generated.files);
+            if (useNext) {
+              generated.files = repairNextSharedComponentReferences(generated.files);
+              // Plumbing mounts are inserted in code; a paid repair for them would buy nothing.
+              const mounts = repairNextCommerceMounts(generated.files, sitePurpose);
+              generated.files = mounts.files;
+              autoRepairs.push(...mounts.repairs);
+            }
             await progress?.('validating');
             validateSourceArtwork(oldFiles, generated.files, dto.instruction);
             if (previous) validateSourceEditScope(oldFiles, generated.files, dto.instruction, sectionScope);

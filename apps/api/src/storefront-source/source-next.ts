@@ -310,6 +310,74 @@ function nextComponentExports(source: ts.SourceFile): { defaultExport: boolean; 
   return { defaultExport, named };
 }
 
+/** Platform mounts that carry no design: inserting one never changes how the store looks. */
+const COMMERCE_MOUNTS: Record<string, Array<{ hooks: string[]; component: string }>> = {
+  home: [{ hooks: ['data-pagosya-catalog'], component: 'Catalog' }, { hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
+  product: [{ hooks: ['data-pagosya-product-page'], component: 'ProductDetail' }, { hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
+  checkout: [{ hooks: ['data-pagosya-checkout-page'], component: 'CheckoutDetail' }, { hooks: ['data-pagosya-status'], component: 'CommerceSlots' }],
+};
+
+/** The JSX element or fragment returned by the file's default-exported component, if it has one. */
+function defaultExportRoot(source: ts.SourceFile): ts.JsxElement | ts.JsxFragment | undefined {
+  const unwrap = (node: ts.Node | undefined): ts.JsxElement | ts.JsxFragment | undefined => {
+    let expression = node as ts.Expression | undefined;
+    while (expression && ts.isParenthesizedExpression(expression)) expression = expression.expression;
+    return expression && (ts.isJsxElement(expression) || ts.isJsxFragment(expression)) ? expression : undefined;
+  };
+  const returned = (body: ts.Node | undefined): ts.JsxElement | ts.JsxFragment | undefined => {
+    if (!body) return undefined;
+    if (!ts.isBlock(body)) return unwrap(body);
+    for (const statement of body.statements) if (ts.isReturnStatement(statement)) return unwrap(statement.expression);
+    return undefined;
+  };
+  for (const statement of source.statements) {
+    const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) || [] : [];
+    const isDefault = modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword) && modifiers.some(m => m.kind === ts.SyntaxKind.DefaultKeyword);
+    if (isDefault && ts.isFunctionDeclaration(statement)) return returned(statement.body);
+    if (ts.isExportAssignment(statement) && (ts.isArrowFunction(statement.expression) || ts.isFunctionExpression(statement.expression))) return returned(statement.expression.body);
+  }
+  return undefined;
+}
+
+function withUiImport(content: string, names: string[]): string {
+  const existing = /import \{([^}]*)\} from '@pagosya\/ui';/.exec(content);
+  if (!existing) return `import { ${names.join(', ')} } from '@pagosya/ui';\n${content}`;
+  const current = existing[1].split(',').map(name => name.trim()).filter(Boolean);
+  const merged = [...current, ...names.filter(name => !current.includes(name))];
+  return content.replace(existing[0], `import { ${merged.join(', ')} } from '@pagosya/ui';`);
+}
+
+/**
+ * Inserts platform-owned commerce mounts a page lacks entirely. They carry no design, so a
+ * paid repair round-trip for them buys nothing. The cart button is left to the AI: where it
+ * sits is part of the design.
+ */
+export function repairNextCommerceMounts(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop'): { files: SourceProjectFileDto[]; repairs: string[] } {
+  if (purpose !== 'shop') return { files, repairs: [] };
+  const repairs: string[] = [];
+  let current = files;
+  for (const [page, mounts] of Object.entries(COMMERCE_MOUNTS)) {
+    const path = `components/${page}.tsx`;
+    const file = current.find(f => f.path === path);
+    if (!file) continue;
+    const markup = nextPageMarkup(current, page);
+    const needed = mounts.filter(mount =>
+      mount.hooks.some(hook => !new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup))
+      // Named anywhere in the file (even inside a conditional) means it is there; never duplicate it.
+      && !file.content.includes(mount.component) && !mount.hooks.some(hook => file.content.includes(hook)));
+    if (!needed.length) continue;
+    const source = ts.createSourceFile(path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const root = defaultExportRoot(source);
+    if (!root) continue;
+    const at = ts.isJsxElement(root) ? root.closingElement.getStart(source) : root.closingFragment.getStart(source);
+    const names = needed.map(mount => mount.component);
+    const content = withUiImport(file.content.slice(0, at) + names.map(name => `<${name} />`).join('') + file.content.slice(at), names);
+    current = current.map(f => f === file ? { ...f, content } : f);
+    repairs.push(`${path}: added ${names.join(', ')}`);
+  }
+  return { files: current, repairs };
+}
+
 /**
  * Repairs omitted local imports and the two shared primitives most likely to
  * be omitted by a compact model response. Unknown missing components still go
