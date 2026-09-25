@@ -49,6 +49,8 @@ it('measures the DNA kit surfaces apart from each other and from the kit default
   expect(first.sample.surfaces.button!.press).not.toBe(second.sample.surfaces.button!.press);
   expect([first.sample.surfaces.added!.border, second.sample.surfaces.added!.border]).toEqual([1, 2]); // hairline; bold 2.5px snaps to 2 device pixels
   for (const surface of ['cart', 'review', 'added', 'card'] as const) expect(first.sample.surfaces[surface]).toEqual(expect.objectContaining({ font: expect.any(String) }));
+  expect([first.sample.surfaces.review!.summaryPaint, second.sample.surfaces.review!.summaryPaint]).toEqual(['perforated', 'flat']);
+  expect(first.sample.surfaces.card).toEqual(expect.objectContaining({ addTracking: expect.any(Number), addTransform: expect.stringContaining('/') }));
 });
 
 it('measures the cart with the product in it when the home page cannot add to the cart', async () => {
