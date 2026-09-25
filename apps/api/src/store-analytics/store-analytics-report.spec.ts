@@ -51,16 +51,37 @@ describe('buildAnalyticsReport', () => {
 
   it('computes checkout drop-off from the previous required step (delivery is optional, never negative)', () => {
     expect(report.checkoutSteps).toEqual([
-      { step: 'cart_open', optional: false, sessions: 4, dropOff: null },
-      { step: 'review', optional: false, sessions: 3, dropOff: 25 },
-      { step: 'delivery', optional: true, sessions: 1, dropOff: 66.7 },
-      { step: 'pay_click', optional: false, sessions: 2, dropOff: 33.3 },
-      { step: 'contact', optional: false, sessions: 2, dropOff: 0 },
-      { step: 'payment', optional: false, sessions: 0, dropOff: 100 },
+      { step: 'cart_open', optional: false, reachable: true, sessions: 4, dropOff: null },
+      { step: 'review', optional: false, reachable: true, sessions: 3, dropOff: 25 },
+      { step: 'delivery', optional: true, reachable: true, sessions: 1, dropOff: 66.7 },
+      { step: 'pay_click', optional: false, reachable: true, sessions: 2, dropOff: 33.3 },
+      { step: 'whatsapp', optional: false, reachable: false, sessions: 0, dropOff: null },
+      { step: 'contact', optional: false, reachable: true, sessions: 2, dropOff: 0 },
+      { step: 'payment', optional: false, reachable: true, sessions: 0, dropOff: 100 },
     ]);
     const empty = buildAnalyticsReport([], new Map(), '2026-09-01', '2026-09-01');
-    expect(empty.checkoutSteps.map(step => step.dropOff)).toEqual([null, null, null, null, null, null]);
+    expect(empty.checkoutSteps.map(step => step.dropOff)).toEqual([null, null, null, null, null, null, null]);
     expect(buildAnalyticsReport([row('2026-09-01', 'checkout_step', 5, 5, { target: 'review' })], new Map(), '2026-09-01', '2026-09-01').checkoutSteps[1].dropOff).toBeNull();
+  });
+
+  it('follows the store\'s checkout mode: a WhatsApp store ends at the WhatsApp click, an external one at the pay click', () => {
+    const walk = [
+      row('2026-09-01', 'cart_open', 10, 10), row('2026-09-01', 'checkout_step', 8, 8, { target: 'review' }),
+      row('2026-09-01', 'pay_click', 8, 8), row('2026-09-01', 'whatsapp_click', 6, 6),
+    ];
+    const steps = (mode: string) => buildAnalyticsReport(walk, new Map(), '2026-09-01', '2026-09-01', mode).checkoutSteps
+      .map(({ step, reachable, sessions, dropOff }) => [step, reachable, sessions, dropOff]);
+    expect(steps('whatsapp')).toEqual([
+      ['cart_open', true, 10, null], ['review', true, 8, 20], ['delivery', true, 0, 100], ['pay_click', true, 8, 0],
+      ['whatsapp', true, 6, 25], ['contact', false, 0, null], ['payment', false, 0, null],
+    ]);
+    expect(steps('external')).toEqual([
+      ['cart_open', true, 10, null], ['review', true, 8, 20], ['delivery', true, 0, 100], ['pay_click', true, 8, 0],
+      ['whatsapp', false, 6, null], ['contact', false, 0, null], ['payment', false, 0, null],
+    ]);
+    // Integrated payments (and any mode this code does not know) walk to the secure payment form.
+    expect(steps('payment').slice(4)).toEqual([['whatsapp', false, 6, null], ['contact', true, 0, 100], ['payment', true, 0, null]]);
+    expect(steps('something-new')).toEqual(steps('payment'));
   });
 
   it('counts a session once per type and day from the rollup\'s (type, day) row, not once per product or label', () => {

@@ -9,17 +9,24 @@ export type RollupRow = { day: string; type: string; productId: string; target: 
  */
 export const ROLLUP_ALL = '*';
 type Tally = { count: number; sessions: number };
-export type CheckoutStep = { step: string; optional: boolean; sessions: number; dropOff: number | null };
+export type CheckoutStep = { step: string; optional: boolean; reachable: boolean; sessions: number; dropOff: number | null };
 
-/** The checkout path in the order a shopper walks it. Delivery is skipped by digital-only and pickup-less stores. */
-const CHECKOUT_PATH: { step: string; type: string; target: string; optional: boolean }[] = [
-  { step: 'cart_open', type: 'cart_open', target: '', optional: false },
-  { step: 'review', type: 'checkout_step', target: 'review', optional: false },
-  { step: 'delivery', type: 'checkout_step', target: 'delivery', optional: true },
-  { step: 'pay_click', type: 'pay_click', target: '', optional: false },
-  { step: 'contact', type: 'checkout_step', target: 'contact', optional: false },
-  { step: 'payment', type: 'checkout_step', target: 'payment', optional: false },
+/**
+ * Every checkout step in the order a shopper walks it, and the checkout modes that reach it. Delivery is skipped by
+ * digital-only and pickup-less stores. A WhatsApp store ends at the WhatsApp click; an external (lead link) store ends
+ * at the review's final button, which leaves for the merchant's link; integrated payments go on to pagosYa's secure form
+ * (contact) and the payment form.
+ */
+const CHECKOUT_PATH: { step: string; type: string; target: string; optional: boolean; modes: readonly string[] }[] = [
+  { step: 'cart_open', type: 'cart_open', target: '', optional: false, modes: ['payment', 'whatsapp', 'external'] },
+  { step: 'review', type: 'checkout_step', target: 'review', optional: false, modes: ['payment', 'whatsapp', 'external'] },
+  { step: 'delivery', type: 'checkout_step', target: 'delivery', optional: true, modes: ['payment', 'whatsapp', 'external'] },
+  { step: 'pay_click', type: 'pay_click', target: '', optional: false, modes: ['payment', 'whatsapp', 'external'] },
+  { step: 'whatsapp', type: 'whatsapp_click', target: '', optional: false, modes: ['whatsapp'] },
+  { step: 'contact', type: 'checkout_step', target: 'contact', optional: false, modes: ['payment'] },
+  { step: 'payment', type: 'checkout_step', target: 'payment', optional: false, modes: ['payment'] },
 ];
+const CHECKOUT_MODES = ['payment', 'whatsapp', 'external'];
 const rate = (part: number, whole: number) => Math.round((part / whole) * 1000) / 10;
 
 /**
@@ -27,7 +34,9 @@ const rate = (part: number, whole: number) => Math.round((part / whole) * 1000) 
  * (a session crossing midnight counts twice). addRate = add sessions per view session, in percent; it can exceed
  * 100 when shoppers add from the card without opening the product.
  */
-export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, string>, from: string, to: string) {
+export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, string>, from: string, to: string, checkoutMode = 'payment') {
+  // The store's current mode rules the whole range; an unknown mode is treated as integrated payments.
+  const mode = CHECKOUT_MODES.includes(checkoutMode) ? checkoutMode : 'payment';
   const days = daysBetween(from, to);
   const totals = Object.fromEntries(ANALYTICS_EVENT_TYPES.map(type => [type, { count: 0, sessions: 0 }])) as Record<AnalyticsEventType, Tally>;
   // Per (type, day): the rollup's `*` row when present; rows rolled before it existed fall back to the sum.
@@ -69,12 +78,14 @@ export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, strin
     addRate: p.viewSessions ? rate(p.addSessions, p.viewSessions) : null,
   }));
   let previous: number | null = null;
-  const checkoutSteps: CheckoutStep[] = CHECKOUT_PATH.map(({ step, type, target, optional }) => {
+  const checkoutSteps: CheckoutStep[] = CHECKOUT_PATH.map(({ step, type, target, optional, modes }) => {
     const sessions = steps.get(`${type}|${target}`) || 0;
+    // A step this store's checkout never reaches has no loss and does not break the chain.
+    if (!modes.includes(mode)) return { step, optional, reachable: false, sessions, dropOff: null };
     // Loss from the last required step; a later step reached by another path never shows a negative loss.
     const dropOff = previous ? Math.max(0, rate(previous - sessions, previous)) : null;
     if (!optional) previous = sessions;
-    return { step, optional, sessions, dropOff };
+    return { step, optional, reachable: true, sessions, dropOff };
   });
   return {
     from, to, granularity: 'day' as const, totals, series, topProducts,

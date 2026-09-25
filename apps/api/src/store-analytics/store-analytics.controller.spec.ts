@@ -52,7 +52,7 @@ describe('GET v1/stores/:storeId/analytics', () => {
 
   it('answers the owner with a report over the requested Bolivia days', async () => {
     const { body } = await request(app.getHttpServer()).get('/v1/stores/s1/analytics?from=2026-09-01&to=2026-09-03&granularity=day').expect(200);
-    expect(findFirst).toHaveBeenCalledWith({ where: { id: 's1', merchantId: 'm1' }, select: { id: true } });
+    expect(findFirst).toHaveBeenCalledWith({ where: { id: 's1', merchantId: 'm1' }, select: { id: true, checkoutMode: true } });
     expect(findMany).toHaveBeenCalledWith({ where: { storeId: 's1', day: { gte: new Date('2026-09-01T00:00:00Z'), lte: new Date('2026-09-03T00:00:00Z') } }, select: { day: true, type: true, productId: true, target: true, count: true, uniqueSessions: true } });
     expect(body.series.page_view).toHaveLength(3);
   });
