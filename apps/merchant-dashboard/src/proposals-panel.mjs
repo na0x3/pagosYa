@@ -4,8 +4,11 @@ import {
   EXAMPLE_PROMPTS,
   PROPOSAL_STATE_LABEL,
   blankProposalBlocks,
+  CONFIRM_MARKER,
+  PRICE_MARKER,
   editorItems,
   pendingData,
+  pendingSummary,
   proposalPayload,
   proposalState,
   proposalTimeline,
@@ -499,7 +502,8 @@ export function mountProposalsPanel(deps) {
         <div class="proposal-pending" data-proposal-pending role="status" ${pendingData(e).length ? "" : "hidden"}>${pendingHtml()}</div>
       </div>
       <footer class="proposal-sheet-foot">
-        <div class="proposal-total-line"><small>Inversión total</small><strong data-proposal-total>${esc(formatMoney(proposalTotal(e.items)))}</strong></div>
+        <div class="proposal-total-line"><small>Inversión total</small><strong data-proposal-total>${esc(formatMoney(proposalTotal(e.items)))}</strong>
+          <button type="button" class="proposal-pending-jump" data-proposal-pending-jump ${pendingData(e).length ? "" : "hidden"}>${esc(pendingSummary(pendingData(e)))} ›</button></div>
         <button type="button" class="primary proposal-submit" data-proposal-send ${pendingData(e).length ? "disabled" : ""}>${sent ? "Enviar versión nueva" : "Enviar propuesta"}</button>
       </footer>`;
   }
@@ -621,8 +625,8 @@ export function mountProposalsPanel(deps) {
   function pendingHtml() {
     const rows = pendingData(editor);
     if (!rows.length) return "";
-    return `<p><strong>${rows.length === 1 ? "Falta 1 dato" : `Faltan ${rows.length} datos`} antes de enviar:</strong></p>
-      <ul>${rows.map((row) => `<li><button type="button" class="proposal-link-button" data-proposal-goto="${esc(row.where)}">${esc(row.label)}${row.token === "{{precio}}" ? "" : ` · ${esc(row.token)}`}</button></li>`).join("")}</ul>`;
+    return `<p><strong>${esc(pendingSummary(rows))} antes de enviar:</strong></p>
+      <ul>${rows.map((row) => `<li><button type="button" class="proposal-link-button" data-proposal-goto="${esc(row.where)}">${esc(row.label)}${[PRICE_MARKER, CONFIRM_MARKER].includes(row.token) ? "" : ` · ${esc(row.token)}`}</button></li>`).join("")}</ul>`;
   }
 
   /** Totals, pending data, the send button and line flags, without re-rendering what the merchant is typing in. */
@@ -635,6 +639,8 @@ export function mountProposalsPanel(deps) {
     if (pending) { pending.hidden = !rows.length; pending.innerHTML = pendingHtml(); }
     const send = panel.querySelector("[data-proposal-send]");
     if (send && !editor.sending) send.disabled = rows.length > 0;
+    const jump = panel.querySelector("[data-proposal-pending-jump]");
+    if (jump) { jump.hidden = !rows.length; jump.textContent = `${pendingSummary(rows)} ›`; }
     const hint = panel.querySelector("[data-proposal-valid-hint]");
     if (hint) hint.textContent = validHint();
   }
@@ -1208,6 +1214,12 @@ export function mountProposalsPanel(deps) {
         panel.querySelector("[data-proposal-catalog]")?.setAttribute("aria-expanded", "false");
         rerenderItems();
         markDirty();
+        return;
+      }
+      if (target.closest("[data-proposal-pending-jump]")) {
+        const list = panel.querySelector("[data-proposal-pending]");
+        list?.scrollIntoView({ block: "center", behavior: "smooth" });
+        list?.querySelector("[data-proposal-goto]")?.focus({ preventScroll: true });
         return;
       }
       const goto = target.closest("[data-proposal-goto]");

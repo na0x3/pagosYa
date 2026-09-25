@@ -6,6 +6,7 @@ import {
   blankProposalBlocks,
   editorItems,
   pendingData,
+  pendingSummary,
   proposalItemsPayload,
   proposalPayload,
   proposalState,
@@ -82,6 +83,11 @@ test("lists every pending {{dato}} with where it is, so the merchant can fix it 
     { where: "block:0", label: "Cronograma", token: "{{fecha de inicio}}" },
     { where: "block:1", label: "Alcance", token: "{{detalle}}" },
   ]);
+  // A {{precio}} inside a text is an amount YAPI took out: the merchant writes it or deletes it.
+  const removed = pendingData({ title: "T", customer: {}, items: [], blocks: [{ type: "paragraph", title: "Inversión", text: "Son {{precio}} en total." }] });
+  assert.deepEqual(removed, [{ where: "block:0", label: "Inversión: YAPI quitó un monto — escríbelo o bórralo", token: "{{precio}}" }]);
+  assert.equal(pendingSummary(removed), "Falta 1 dato");
+  assert.equal(pendingSummary(pending), "Faltan 4 datos");
 });
 
 test("validity line", () => {

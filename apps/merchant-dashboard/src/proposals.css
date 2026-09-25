@@ -188,7 +188,10 @@ body.proposal-sheet-open { overflow: hidden; }
 .proposal-pending p { margin: 0 0 4px; }
 .proposal-pending ul { display: grid; gap: 2px; margin: 0; padding-left: 18px; }
 .proposal-pending .proposal-link-button { color: #7c2d12; padding: 4px 0; }
-.proposal-total-line { display: grid; min-width: 0; }
+.proposal-total-line { display: grid; min-width: 0; justify-items: start; }
+.proposal-pending-jump { min-height: 44px; margin-top: 2px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff4e5; color: #9a3412; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.proposal-pending-jump:hover { background: #ffe8cc; }
+.proposal-pending-jump[hidden] { display: none; }
 .proposal-total-line small { color: var(--pg-text-muted); font-size: 12px; font-weight: 700; }
 .proposal-total-line strong { font: 800 clamp(22px, 5vw, 26px)/1.1 Arial, sans-serif; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
 

@@ -135,7 +135,9 @@ export function pendingData(draft) {
   /** @type {Array<{ where: string, label: string, token: string }>} */
   const found = [];
   const add = (where, label, token) => { if (!found.some((row) => row.where === where && row.token === token)) found.push({ where, label, token }); };
-  tokens(draft.title).forEach((token) => add("title", "Título", token));
+  // A {{precio}} inside a text is an amount YAPI took out because nobody wrote it.
+  const where = (label, token) => (token === PRICE_MARKER ? `${label}: YAPI quitó un monto — escríbelo o bórralo` : label);
+  tokens(draft.title).forEach((token) => add("title", where("Título", token), token));
   for (const value of Object.values(draft.customer || {})) tokens(value).forEach((token) => add("customer", "Cliente", token));
   draft.items.forEach((item, index) => {
     const name = stripMarker(item.description);
@@ -144,9 +146,14 @@ export function pendingData(draft) {
     tokens(stripMarker(item.description)).forEach((token) => add(`item:${index}`, `«${name}»`, token));
   });
   draft.blocks.forEach((block, index) => {
-    [block.title, block.text, ...(block.items || [])].forEach((text) => tokens(text).forEach((token) => add(`block:${index}`, block.title?.trim() || `Sección ${index + 1}`, token)));
+    [block.title, block.text, ...(block.items || [])].forEach((text) => tokens(text).forEach((token) => add(`block:${index}`, where(block.title?.trim() || `Sección ${index + 1}`, token), token)));
   });
   return found;
+}
+
+/** "Falta 1 dato" / "Faltan 3 datos" (the editor's footer and the pending list). @param {unknown[]} rows */
+export function pendingSummary(rows) {
+  return rows.length === 1 ? "Falta 1 dato" : `Faltan ${rows.length} datos`;
 }
 
 /**

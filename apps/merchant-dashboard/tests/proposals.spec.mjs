@@ -207,6 +207,13 @@ for (const width of [390, 1280]) {
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/dashboard-draft-${width}.png` });
       if (SHOTS) { await editor.getByLabel("Precio de la línea 2").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${SHOTS}/dashboard-items-${width}.png` }); }
 
+      // The footer says how many data are missing and jumps to the list.
+      const jump = page.locator("[data-proposal-pending-jump]");
+      await expect(jump).toHaveText("Faltan 2 datos ›");
+      await jump.click();
+      await expect(editor.locator("[data-proposal-pending] [data-proposal-goto]").first()).toBeFocused();
+      await expect(editor.locator("[data-proposal-pending]")).toBeInViewport();
+
       // A price read from the merchant's words is shown, flagged, and waits for a confirm tap.
       await expect(editor.locator("[data-proposal-pending]")).toContainText("Confirma el precio de «Letrero»");
       const letrero = editor.locator('[data-proposal-line="2"]');
@@ -222,6 +229,7 @@ for (const width of [390, 1280]) {
       await letrero.getByRole("button", { name: "Confirmar precio de la línea 3" }).click();
       await expect(letrero.locator("[data-proposal-line-flag]")).toHaveCount(0);
       await expect(editor.locator("[data-proposal-pending]")).toBeHidden();
+      await expect(jump).toBeHidden();
       await expect(send).toBeEnabled();
 
       // Edit a block, regenerate it with AI, move one down.
