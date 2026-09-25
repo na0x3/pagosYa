@@ -34,17 +34,17 @@ export type MoneyMention = {
   digitRun: number;
 };
 
-const NUMBER = String.raw`\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d{1,3}(?:[  ]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?`;
+const NUMBER = String.raw`\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?`;
 const NUMBER_RE = new RegExp(String.raw`(?<![\d.,])(?:${NUMBER})(?!\d|[.,]\d)`, "gu");
-const MULTIPLIER_RE = /^[  ]*(mil|k)(?![\p{L}\d])/iu;
+const MULTIPLIER_RE = /^[ \u00a0]*(mil|k)(?![\p{L}\d])/iu;
 
 // Currency written before the number: Bs, Bs., Bs.-, BOB, $us, Sus, US$, USD, $.
-const PREFIX_RE = /(?<![\p{L}\d$])(US\$|USD|BOB|\$us\.?|Bs\.?-?|\$)[  ]*$/iu;
-const SUS_PREFIX_RE = /(?<![\p{L}\d$])(S[uU][sS]\.?)[  ]*$/u; // "Sus", never the word "sus"
+const PREFIX_RE = /(?<![\p{L}\d$])(US\$|USD|BOB|\$us\.?|Bs\.?-?|\$)[ \u00a0]*$/iu;
+const SUS_PREFIX_RE = /(?<![\p{L}\d$])(S[uU][sS]\.?)[ \u00a0]*$/u; // "Sus", never the word "sus"
 // Currency written after it. A trailing "Bs." keeps its period (it may end the sentence).
-const SUFFIX_RE = /^[  ]*(Bs(?![\p{L}])|BOB(?![\p{L}])|USD(?![\p{L}])|\$us(?![\p{L}])|bolivianos?(?![\p{L}])|d[oó]lar(?:es)?(?:[  ]+(?:americanos|estadounidenses))?(?![\p{L}])|pesos?(?![\p{L}]))/iu;
-const SUS_SUFFIX_RE = /^[  ]*(S[uU][sS])(?![\p{L}])/u;
-const RANGE_GAP_RE = /^[  ]*(-|–|—|a|y|hasta)[  ]*$/iu;
+const SUFFIX_RE = /^[ \u00a0]*(Bs(?![\p{L}])|BOB(?![\p{L}])|USD(?![\p{L}])|\$us(?![\p{L}])|bolivianos?(?![\p{L}])|d[oó]lar(?:es)?(?:[ \u00a0]+(?:americanos|estadounidenses))?(?![\p{L}])|pesos?(?![\p{L}]))/iu;
+const SUS_SUFFIX_RE = /^[ \u00a0]*(S[uU][sS])(?![\p{L}])/u;
+const RANGE_GAP_RE = /^[ \u00a0]*(-|–|—|a|y|hasta)[ \u00a0]*$/iu;
 
 const MONTHS = new Set(["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "setiembre", "octubre", "noviembre", "diciembre"]);
 const YEAR_WORDS = new Set(["año", "años", "en", "del", "gestión", "gestion", "hasta", "desde"]);
@@ -67,7 +67,7 @@ const WORD_VALUES: Record<string, number> = {
   novecientos: 900, novecientas: 900, mil: 1000, millón: 1_000_000, millon: 1_000_000, millones: 1_000_000,
 };
 const WORD = Object.keys(WORD_VALUES).sort((a, b) => b.length - a.length).join("|");
-const WORDS_RE = new RegExp(String.raw`(?<![\p{L}\d])(?:${WORD})(?:[  ]+(?:y[  ]+)?(?:${WORD}))*(?![\p{L}])`, "giu");
+const WORDS_RE = new RegExp(String.raw`(?<![\p{L}\d])(?:${WORD})(?:[ \u00a0]+(?:y[ \u00a0]+)?(?:${WORD}))*(?![\p{L}])`, "giu");
 
 /** Centavos from a written number: "1.500", "1,500.50", "1500,00", "1 500", "3" (× 1000 with "mil"/"k"). */
 export function numberToCents(token: string, thousands: boolean): number | null {
@@ -84,7 +84,7 @@ export function numberToCents(token: string, thousands: boolean): number | null 
 function wordsToUnits(phrase: string): number | null {
   let total = 0;
   let current = 0;
-  for (const word of phrase.toLowerCase().split(/[  ]+/)) {
+  for (const word of phrase.toLowerCase().split(/[ \u00a0]+/)) {
     if (word === "y") continue;
     const value = WORD_VALUES[word];
     if (value === undefined) return null;
@@ -180,8 +180,8 @@ export function scanMoney(text: string): MoneyMention[] {
     const after = wordsAfter(text, end);
     const tail = text.slice(end);
     let notMoney: MoneyMention["notMoney"] = null;
-    const nextWord = /^[  ]*([\p{L}][\p{L}²³\d]*)/u.exec(tail)?.[1]?.toLowerCase();
-    if (/^[  ]*%/.test(tail)) notMoney = "percent";
+    const nextWord = /^[ \u00a0]*([\p{L}][\p{L}²³\d]*)/u.exec(tail)?.[1]?.toLowerCase();
+    if (/^[ \u00a0]*%/.test(tail)) notMoney = "percent";
     else if (/^[:/hH]\d/.test(tail) || /\d[:/]$/.test(text.slice(0, start))) notMoney = "time";
     else if (nextWord === "de" && MONTHS.has(after[1] ?? "")) notMoney = "date";
     else if (MONTHS.has(before[before.length - 1] ?? "")) notMoney = "date";
