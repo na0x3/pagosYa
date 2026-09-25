@@ -43,9 +43,9 @@ export async function markBusinessDocumentPaid(
   const doc = await tx.businessDocument.findUnique({ where: { id: link.documentId }, select: { id: true, status: true, currentVersion: true } });
   if (!doc) return;
   const base = { paymentIntentId: intent.id, amount: intent.amount, currency: intent.currency, livemode: intent.livemode, statusBefore: doc.status };
-  const record = (type: "paid" | "payment_after_close" | "payment_mismatch", extra: Record<string, unknown> = {}) =>
+  const record = (type: "paid" | "payment_after_close" | "payment_mismatch", extra: Record<string, string | number | null> = {}) =>
     tx.businessDocumentEvent.createMany({
-      data: [{ documentId: doc.id, type, version: link.version, dedupeKey: `paid:${intent.id}`, data: { ...base, ...extra } as Prisma.InputJsonValue }],
+      data: [{ documentId: doc.id, type, version: link.version, dedupeKey: `paid:${intent.id}`, data: { ...base, ...extra } }],
       skipDuplicates: true,
     });
   if (!PAYABLE.includes(doc.status)) {
@@ -56,14 +56,14 @@ export async function markBusinessDocumentPaid(
     where: { documentId_version: { documentId: doc.id, version: doc.currentVersion } },
     select: { content: true },
   });
-  const frozen = latest?.content as { totalAmount?: unknown; currency?: unknown } | undefined;
+  const frozen = latest?.content as { totalAmount?: number; currency?: string } | undefined;
   if (link.version !== doc.currentVersion || !frozen || frozen.totalAmount !== intent.amount || frozen.currency !== intent.currency) {
     await record("payment_mismatch", { currentVersion: doc.currentVersion, expectedAmount: frozen?.totalAmount ?? null, expectedCurrency: frozen?.currency ?? null });
     return;
   }
   // Conditional on status and version: a void or a re-send committed meanwhile wins.
   const { count } = await tx.businessDocument.updateMany({
-    where: { id: doc.id, status: { in: PAYABLE }, currentVersion: link.version! },
+    where: { id: doc.id, status: { in: PAYABLE }, currentVersion: doc.currentVersion },
     data: { status: S.PAID, paidAt: new Date(), paymentIntentId: intent.id },
   });
   await record(count ? "paid" : "payment_after_close");

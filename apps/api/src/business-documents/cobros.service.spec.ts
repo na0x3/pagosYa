@@ -452,7 +452,7 @@ describe("CobrosService — summary", () => {
     for (let index = 0; index < 105; index += 1) await sentCobro(documents); // Bs 30,00 each, open
     const late = await sentCobro(documents);
     Object.assign(prisma.documents.find((doc) => doc.id === late.id)!, { dueAt: new Date(Date.now() - 3600_000) }); // worker not run yet
-    const usd = await sentCobro(documents, { currency: "USD" });
+    await sentCobro(documents, { currency: "USD" });
     const paid = await sentCobro(documents);
     await cobros.markPaid("m_1", "store_1", paid.id, { method: "cash" });
     await documents.create("m_1", "store_1", invoice); // a draft
