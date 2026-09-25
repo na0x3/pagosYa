@@ -151,3 +151,15 @@ describe("domain commerce configuration", () => {
     expect(app.customDomains.target).toBe("edge.example.test");
   });
 });
+
+describe("source framework default", () => {
+  const saved = process.env.SOURCE_FRAMEWORK;
+  afterEach(() => { if (saved === undefined) delete process.env.SOURCE_FRAMEWORK; else process.env.SOURCE_FRAMEWORK = saved; });
+
+  it("generates new stores in component mode unless static is asked for explicitly", () => {
+    delete process.env.SOURCE_FRAMEWORK;
+    expect(configuration().app.sourceFramework).toBe("next");
+    process.env.SOURCE_FRAMEWORK = "static";
+    expect(configuration().app.sourceFramework).toBe("static");
+  });
+});
