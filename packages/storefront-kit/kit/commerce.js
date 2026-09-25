@@ -13,8 +13,10 @@
     cart: ['drawer', 'sheet', 'page', 'overlay'], added: ['toast', 'ribbon', 'bubble', 'inline', 'stamp'], product: ['editorial', 'dense', 'image-led', 'story-led'],
     review: ['split', 'stacked', 'ticket', 'notebook'], card: ['still', 'second-photo', 'swatch-swap', 'zoom', 'quick-look', 'tilt'],
   };
-  if (config.dna && typeof config.dna === 'object') {
-    for (const name of Object.keys(DNA_VALUES)) if (DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+  // product is the one exception: render() sets it from productPageStyle(), the page this kit actually draws.
+  const hasDna = Boolean(config.dna && typeof config.dna === 'object');
+  if (hasDna) {
+    for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
   }
   const hosted = window.PAGOSYA_HOSTED === true;
   // One moment, two audiences: pagosYa's own funnel (only while hosted in the studio)
@@ -1513,6 +1515,8 @@
   const catalogTabs = (currentSlug) => `<nav class="catalog-tabs" aria-label="Colecciones">${collections().map((c) => `<a href="${escape(collectionHref(c.slug))}"${c.slug === currentSlug ? ' aria-current="page"' : ''}>${escape(c.name)}</a>`).join("")}</nav>`;
   function render() {
     delete document.documentElement.dataset.productTemplateInvalid;
+    // The catalog can change the fallback style, so this follows every render.
+    if (hasDna) document.documentElement.setAttribute('data-dna-product', productPageStyle());
     document.querySelectorAll("[data-store-name]").forEach((el) => { el.textContent = store.storeName || "Tu tienda"; });
     document.querySelectorAll("[data-pagosya-categories]").forEach((el) => {
       el.hidden = !(store.categories || []).length;
