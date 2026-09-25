@@ -14,7 +14,7 @@ type Boot = { w: any; doc: any; close: () => void };
 const opened: Boot[] = [];
 afterEach(() => { while (opened.length) opened.pop()!.close(); });
 
-function boot(dna: Record<string, string> | undefined, options: { items?: unknown[]; body?: string; settings?: Record<string, unknown> } = {}): Boot {
+function boot(dna: Record<string, string> | undefined, options: { items?: unknown[]; body?: string; settings?: Record<string, unknown>; cart?: unknown[] } = {}): Boot {
   const body = options.body ?? '<header><button data-cart-open>Pedido (<span data-cart-count>0</span>)</button></header><section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>';
   const dom = new JSDOM(`<html><head></head><body>${body}</body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
   const w = dom.window;
@@ -25,6 +25,7 @@ function boot(dna: Record<string, string> | undefined, options: { items?: unknow
   w.HTMLDialogElement.prototype.show = function () { this.setAttribute('open', ''); (w as any).__shown = true; };
   w.HTMLDialogElement.prototype.close = function () { if (!this.hasAttribute('open')) return; this.removeAttribute('open'); this.dispatchEvent(new w.Event('close')); };
   w.PAGOSYA_PREVIEW = true;
+  if (options.cart) w.PAGOSYA_PREVIEW_CART = options.cart;
   const data = { storeName: 'Marca', items: options.items ?? [] };
   w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...(dna ? { dna } : {}), ...options.settings };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
@@ -152,5 +153,24 @@ describe('added-to-cart placement', () => {
     const css = dnaCss(boot(DNA).doc);
     for (const added of DNA_VALUES.added) expect(css).toContain(`:root[data-dna-added=${added}] .cart-added{`);
     expect(css).toContain('.cart-added[data-flip=bottom]');
+  });
+});
+
+describe('checkout review layout', () => {
+  const review = (value: string | null) => boot(value ? { ...DNA, review: value } : undefined, {
+    body: '<main><div data-pagosya-checkout-page></div></main><p data-pagosya-status></p>',
+    items: [{ id: 'taza', name: 'Taza', amount: 12000, currency: 'BOB', stock: 5, imageUrls: [] }], cart: [{ id: 'taza', quantity: 2 }],
+  }).doc.querySelector('.checkout-review');
+  it('keeps the same fields, order and actions in every layout', () => {
+    const plain = review(null);
+    expect(plain?.querySelector('.checkout-review__summary .order-total')).not.toBeNull();
+    for (const value of DNA_VALUES.review) expect({ value, html: review(value)?.innerHTML }).toEqual({ value, html: plain.innerHTML });
+  });
+  it('has a layout for every review value, the ticket summary in the second column, and one column on phones', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const value of DNA_VALUES.review) expect(css).toContain(`:root[data-dna-review=${value}] .checkout-review{`);
+    expect(rules(css).find(rule => rule.selector === ':root[data-dna-review=ticket] .checkout-review__summary')?.body).toContain('grid-column:2');
+    expect(css).toMatch(/@media\(max-width:700px\)\{:root\[data-dna-review\] \.checkout-review\{grid-template-columns:minmax\(0,1fr\)/);
+    expect(css).toMatch(/@container\(max-width:700px\)\{:root\[data-dna-review\] \.checkout-review\{grid-template-columns:minmax\(0,1fr\)/);
   });
 });
