@@ -1,4 +1,4 @@
-import { ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { BusinessDocumentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -45,6 +45,16 @@ export function endOfLaPazDay(days: number, now = new Date()): Date {
   const shifted = new Date(now.getTime() - LA_PAZ_OFFSET_MS);
   const day = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) + days * DAY_MS;
   return new Date(day + DAY_MS - 1000 + LA_PAZ_OFFSET_MS);
+}
+
+/** A name the customer typed, on one line: no CR/LF or other control characters (it reaches an email subject). */
+export function oneLine(text: string | null | undefined): string {
+  return String(text ?? "").replace(/[\p{Cc}\p{Cf}\u2028\u2029]+/gu, " ").replace(/\s+/g, " ").trim();
+}
+
+/** A message the customer typed: its line breaks kept (as \n), every other control character dropped. */
+function plainMessage(text: string): string {
+  return text.replace(/\r\n?/g, "\n").replace(/[\u2028\u2029]/g, "\n").replace(/[^\P{Cc}\n]|\p{Cf}/gu, "").trim();
 }
 
 /** How many "Pedir cambios" one proposal takes in 24 hours: enough for a conversation, not a relay. */
@@ -266,8 +276,9 @@ export class ProposalsService {
       if (!version) throw new NotFoundException("No encontramos esta propuesta");
       const { count } = await tx.businessDocument.updateMany({ where: { id, status: { in: OPEN_PROPOSAL }, currentVersion: dto.version }, data: { status: S.ACCEPTED } });
       if (!count) throw new ConflictException("Esta propuesta ya no se puede aceptar.");
+      const name = oneLine(dto.name);
+      if (name.length < 2) throw new BadRequestException("Escribe tu nombre para aceptar la propuesta.");
       const accepted = await this.restoreAcceptedVersion(tx, id, version.content as unknown as DocumentSnapshot);
-      const name = dto.name.trim();
       const email = dto.email.trim().toLowerCase();
       const event = await tx.businessDocumentEvent.create({
         data: {
@@ -290,9 +301,10 @@ export class ProposalsService {
    */
   async requestChanges(token: string, dto: RequestProposalChangesDto, context: AcceptanceContext) {
     const id = this.tokenId(token);
-    const name = dto.name?.trim() || null;
+    const name = oneLine(dto.name) || null;
     const email = dto.email.trim().toLowerCase();
-    const message = dto.message.trim();
+    const message = plainMessage(dto.message);
+    if (message.length < 3) throw new BadRequestException("Cuéntale al comercio qué cambiarías.");
     const outcome = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
       const doc = await this.lockedProposal(tx, id);

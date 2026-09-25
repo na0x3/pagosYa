@@ -342,6 +342,23 @@ describe("ProposalsService — the customer accepts", () => {
     expect(mail.body).not.toContain("Borrador nuevo");
   });
 
+  it("keeps a typed name on one line everywhere, the email subject included", async () => {
+    const ctx = setupProposals();
+    const { token } = await sentProposal(ctx);
+    await ctx.proposals.accept(token, { name: "Ana\r\nBcc: todos@example.com\u0085\u2028 Quispe", email: "ana@example.com", version: 1 }, CONTEXT);
+    const event = ctx.prisma.events.find((row) => row.type === "accepted")!;
+    expect(event.data.name).toBe("Ana Bcc: todos@example.com Quispe");
+    const mail = ctx.email.send.mock.calls[0][0];
+    expect(mail.subject).toBe("¡Ana Bcc: todos@example.com Quispe aceptó tu propuesta PRO-0001!");
+    expect(mail.subject).not.toMatch(/[\r\n]/);
+    const other = await sentProposal(ctx);
+    await ctx.proposals.requestChanges(other.token, { name: "Beto\nX-Header: 1", email: "beto@example.com", message: "Línea uno\r\nLínea dos\u0007" }, CONTEXT);
+    const changes = ctx.prisma.events.find((row) => row.type === "changes_requested")!;
+    expect(changes.data).toEqual(expect.objectContaining({ name: "Beto X-Header: 1", message: "Línea uno\nLínea dos" }));
+    expect(ctx.prisma.inboxThreads[0].customerName).toBe("Beto X-Header: 1");
+    expect(ctx.email.send.mock.calls[1][0].subject).toBe("Beto X-Header: 1 pidió cambios en la propuesta PRO-0002");
+  });
+
   it("answers a double tap with the same acceptance, without a second record or email", async () => {
     const ctx = setupProposals();
     const { token } = await sentProposal(ctx);

@@ -17,7 +17,9 @@ export function buildProposalMerchantEmail(input: {
   message?: string | null;
   dashboardUrl: string;
 }) {
-  const who = input.customerName?.trim() || input.customerEmail;
+  // One line: the name reaches the subject header (CR/LF would split it).
+  const oneLine = (text: string | null | undefined) => String(text ?? "").replace(/[\p{Cc}\p{Cf}\u2028\u2029]+/gu, " ").replace(/\s+/g, " ").trim();
+  const who = oneLine(input.customerName) || oneLine(input.customerEmail);
   const accepted = input.reason === "accepted";
   const subject = accepted ? `¡${who} aceptó tu propuesta ${input.numberLabel}!` : `${who} pidió cambios en la propuesta ${input.numberLabel}`;
   const total = input.totalAmount > 0 ? money(input.totalAmount, input.currency) : null;
