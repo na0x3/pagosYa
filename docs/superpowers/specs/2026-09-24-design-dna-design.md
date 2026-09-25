@@ -33,13 +33,18 @@ Status: written under the owner's instruction "build everything from 2-8"; open 
    proves they arrive.
 4. **Every store gets a DNA, including existing ones.** If a revision has no `dna` (old designs,
    static stores, edits), `defaultDna(seed)` derives one deterministically from the store id. It is
-   seeded, so it stays stable across reloads, and it differs between stores. Existing stores
-   therefore start differing as soon as sub-project 5 ships, with no regeneration and no cost.
+   seeded, so it stays stable across reloads, and it differs between stores. No regeneration and no
+   cost. Already-published stores keep their pinned, checked kit: they receive the DNA attributes on
+   their next publish, when the current kit is pinned through the usual publish checks. Forcing a
+   runtime re-pin onto live stores would bypass those checks, so it is not done (owner-facing ruling).
+   Studio previews, design jobs and visual reviews seed the same DNA (`withSeededDna`), so a preview
+   matches what the next publish serves.
 5. **Validation rejects anything outside the enums** and repairs rather than failing: an unknown
    value is replaced with the seeded default for that field and recorded in `autoRepairs`. A bad
    DNA never costs a paid repair.
 6. **Planner budget:** the DNA adds about 150 output tokens per concept. The planner's requested
-   output goes from 4,200 to 4,800 tokens.
+   output goes from 4,200 to 5,600 tokens, and the prose is bounded (motif `target` ≤ 40, `meaning`
+   ≤ 80, `signature` ≤ 100 characters) so three worst-case DNAs never truncate the response.
 7. **Cross-store avoidance is sub-project 4's.** This sub-project exposes
    `dnaFingerprint(dna): string` (button form, cart surface, added style, type pairing), which
    sub-project 4 compares across stores.
@@ -62,7 +67,7 @@ type SourceDesignDna = {
     card: 'still' | 'second-photo' | 'swatch-swap' | 'zoom' | 'quick-look' | 'tilt';
   };
   motifs: Array<{ for: 'store' | 'category' | 'product'; target: string; meaning: string; behavior: 'glow' | 'draw' | 'sway' | 'steam' | 'grow' | 'bounce' | 'spin' | 'float'; trigger: 'appear' | 'scroll' | 'hover' | 'add-to-cart' | 'purchase'; placement: 'hero' | 'card' | 'product' | 'cart' | 'confirmation' }>; // ≤ 3
-  signature: string; // ≤ 160 chars
+  signature: string; // ≤ 100 chars
 };
 type FontId = 'bricolage' | 'fraunces' | 'instrument' | 'instrument-serif' | 'oswald'; // widened in sub-project 4
 ```
@@ -78,13 +83,13 @@ to it, so `productPageStyle` in `config.js` stays the single source the kit alre
 | DNA model | `apps/api/src/storefront-source/source-dna.ts` (new) | Enums, `SourceDesignDna` type, JSON schema fragment, `normalizeDna(raw, seed) → { dna, repairs }`, `defaultDna(seed)`, `dnaFingerprint(dna)`, `dnaRuntimeConfig(dna)` (enums only). |
 | Planner | `source-design-planner.ts`, `source-design.ts` | Adds `dna` to the concept schema and the planner prompt (a short DNA brief), raises output to 4,800, validates each concept's DNA through `normalizeDna`. |
 | Generation | `source-generation.service.ts` | Writes `dna: dnaRuntimeConfig(...)` into `config.js` for every generation (default DNA when the design has none), and aligns `productPageStyle` with `dna.surfaces.product`. |
-| Runtime | `packages/storefront-kit/kit/commerce.js` | At start-up, applies `config.dna` enums as `data-dna-*` attributes on `<html>`, ignoring unknown values. |
+| Runtime | `packages/storefront-kit/kit/commerce.js` | At start-up, applies `config.dna` enums as `data-dna-*` attributes on `<html>`, ignoring unknown values. `data-dna-product` comes from the kit's own `productPageStyle()` (the page it renders), not from `config.dna.product`. |
 | Published stores without DNA | `source-publishing.service.ts` (`publicSite`) and the hosted `config.js` rewrite in `apps/checkout/src/source-storefront.ts` | When `config.js` lacks `dna`, the published site gets `defaultDna(store.id)`, so existing stores carry attributes without regeneration. |
 
 ## 5. Tests
 
 - `source-dna.spec.ts`: `normalizeDna` accepts a full valid DNA unchanged; replaces each invalid
-  enum with the seeded default and reports it; caps motifs at 3 and signature at 160; `defaultDna` is
+  enum with the seeded default and reports it; caps motifs at 3 (target ≤ 40, meaning ≤ 80) and signature at 100; `defaultDna` is
   stable for a seed and differs across 50 seeds in at least 40 fingerprints; `dnaRuntimeConfig`
   contains no prose.
 - Planner spec: the schema includes `dna`; an invalid DNA from the model is repaired, not retried.
