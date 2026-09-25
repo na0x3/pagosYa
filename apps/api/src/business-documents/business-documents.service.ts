@@ -40,6 +40,19 @@ const NOT_VOIDABLE: BusinessDocumentStatus[] = [S.PAID, S.SIGNED, S.VOIDED];
 /** Accepted, signed, paid, declined, expired or voided documents are records, not drafts. */
 const FINAL: BusinessDocumentStatus[] = [S.ACCEPTED, S.SIGNED, S.PAID, S.DECLINED, S.EXPIRED, S.VOIDED];
 
+/** A voided document keeps its identity (kind, number, title) and loses everything else. */
+const revokedSnapshot = (snapshot: DocumentSnapshot): DocumentSnapshot => ({
+  ...snapshot,
+  customer: { name: null, email: null, phone: null, document: null },
+  items: [],
+  subtotalAmount: 0,
+  discountAmount: 0,
+  totalAmount: 0,
+  dueAt: null,
+  validUntil: null,
+  blocks: [],
+});
+
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
 type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }>;
@@ -274,10 +287,16 @@ export class BusinessDocumentsService {
   /**
    * What the customer's link shows: the latest sent version exactly as frozen,
    * plus the store's name and logo. Opening it records "viewed" once per version.
+   * Voiding revokes the content: a voided link keeps only the store, number,
+   * title, status and void date — no customer data, items or blocks.
    */
   async publicView(token: string, context: AcceptanceContext) {
     const { doc, version, snapshot } = await this.publicVersion(token);
     const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, logoUrl: true } });
+    const storeView = { name: store?.name ?? "", logoUrl: store?.logoUrl ?? null };
+    if (doc.status === S.VOIDED) {
+      return { kind: doc.kind, numberLabel: snapshot.numberLabel, title: snapshot.title, status: doc.status, voidedAt: doc.voidedAt, store: storeView };
+    }
     const status = (await this.recordView(doc.id, version.version, context)) && doc.status === S.SENT ? S.VIEWED : doc.status;
     return {
       kind: doc.kind,
@@ -287,20 +306,23 @@ export class BusinessDocumentsService {
       sha256: version.sha256,
       sentAt: version.sentAt,
       updatedAfterFirstSend: version.version > 1,
-      store: { name: store?.name ?? "", logoUrl: store?.logoUrl ?? null },
+      store: storeView,
       document: snapshot,
     };
   }
 
+  /** The frozen version as a PDF; a voided one carries only its header and an ANULADO stamp on every page. */
   async publicPdf(token: string) {
     const { doc, version, snapshot } = await this.publicVersion(token);
     const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true } });
+    const voided = doc.status === S.VOIDED;
     const buffer = await renderBusinessDocumentPdf({
       storeName: store?.name ?? "",
       numberLabel: snapshot.numberLabel,
       version: version.version,
       sha256: version.sha256,
-      snapshot,
+      snapshot: voided ? revokedSnapshot(snapshot) : snapshot,
+      voidedAt: voided ? (doc.voidedAt ?? new Date()).toISOString() : null,
     });
     return { buffer, filename: `${snapshot.numberLabel}.pdf` };
   }
@@ -311,7 +333,7 @@ export class BusinessDocumentsService {
     if (!id) throw notFound();
     const doc = await this.prisma.businessDocument.findUnique({
       where: { id },
-      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true },
+      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true, voidedAt: true },
     });
     // A never-sent draft answers exactly like a bad token.
     if (!doc || doc.currentVersion < 1) throw notFound();

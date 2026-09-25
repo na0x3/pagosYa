@@ -74,6 +74,24 @@ describe("renderBusinessDocumentPdf", () => {
     expect(content).toContain("Ítem número 90");
   });
 
+  it("stamps a voided document ANULADO on every page, with the void date", async () => {
+    const items = Array.from({ length: 90 }, (_, i) => ({ description: `Ítem número ${i + 1}`, quantity: 1, unitAmount: 100, amount: 100 }));
+    const pdf = await renderBusinessDocumentPdf({
+      storeName: "Tienda", numberLabel: "COB-0004", version: 1, sha256, voidedAt: "2026-09-20T15:00:00.000Z",
+      snapshot: { ...snapshot, numberLabel: "COB-0004", items, subtotalAmount: 9000, discountAmount: 0, totalAmount: 9000 },
+    });
+    const content = text(pdf);
+    const pages = (content.match(/COB-0004 · v1 · sha256 0123456789ab/g) ?? []).length;
+    expect(pages).toBeGreaterThanOrEqual(2);
+    expect((content.match(/ANULADO/g) ?? []).length).toBeGreaterThanOrEqual(pages);
+    expect(content).toContain("Documento anulado el 20/09/2026");
+  });
+
+  it("draws no stamp on a document that is not voided", async () => {
+    const pdf = await renderBusinessDocumentPdf({ storeName: "Tienda", numberLabel: "COB-0001", version: 1, sha256, snapshot });
+    expect(text(pdf)).not.toContain("ANULADO");
+  });
+
   it("renders a document with no items, no customer and no blocks", async () => {
     const empty: DocumentSnapshot = {
       ...snapshot, kind: "CONTRACT", numberLabel: "Borrador", items: [], subtotalAmount: 0, discountAmount: 0, totalAmount: 0,

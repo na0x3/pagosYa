@@ -6,6 +6,7 @@ const INK = "#111111";
 const MUTED = "#666666";
 const LINE = "#d4d4d4";
 const MARGIN = 42;
+const VOID_RED = "#b91c1c";
 
 export const DOCUMENT_KIND_LABEL: Record<BusinessDocumentKindName, string> = {
   INVOICE: "Cobro",
@@ -22,6 +23,8 @@ export type BusinessDocumentPdfInput = {
   /** Empty for a preview that has not been frozen yet. */
   sha256: string;
   snapshot: DocumentSnapshot;
+  /** ISO date. When set, every page carries an ANULADO stamp and the void date. */
+  voidedAt?: string | null;
 };
 
 export function documentDate(value: string | null): string {
@@ -68,6 +71,10 @@ export async function renderBusinessDocumentPdf(input: BusinessDocumentPdfInput)
   doc.x = MARGIN;
   doc.y = MARGIN + 76;
   doc.fillColor(INK).font("Helvetica-Bold").fontSize(15).text(snapshot.title, { width });
+  if (input.voidedAt) {
+    doc.moveDown(0.3).fillColor(VOID_RED).font("Helvetica-Bold").fontSize(10)
+      .text(`Documento anulado el ${documentDate(input.voidedAt)}. Ya no tiene validez.`, { width });
+  }
   const dates = [
     snapshot.dueAt ? `Vence: ${documentDate(snapshot.dueAt)}` : "",
     snapshot.validUntil ? `Válido hasta: ${documentDate(snapshot.validUntil)}` : "",
@@ -158,6 +165,15 @@ export async function renderBusinessDocumentPdf(input: BusinessDocumentPdfInput)
     doc.page.margins.bottom = 0;
     doc.fillColor(MUTED).font("Helvetica").fontSize(7.5)
       .text(`${identity} · Página ${index - range.start + 1} de ${range.count}`, MARGIN, doc.page.height - 36, { width, align: "center", lineBreak: false });
+    if (input.voidedAt) {
+      // A diagonal stamp across the page, drawn over the content so no page reads as valid.
+      const centerX = doc.page.width / 2;
+      const centerY = doc.page.height / 2;
+      doc.save().rotate(-35, { origin: [centerX, centerY] }).fillColor(VOID_RED).fillOpacity(0.22).font("Helvetica-Bold").fontSize(96)
+        .text("ANULADO", centerX - 260, centerY - 48, { width: 520, align: "center", lineBreak: false });
+      doc.restore();
+      doc.fillOpacity(1);
+    }
     doc.page.margins.bottom = bottom;
   }
   doc.end();

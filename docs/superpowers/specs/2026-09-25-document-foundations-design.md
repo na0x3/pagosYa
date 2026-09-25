@@ -57,7 +57,13 @@ questions: every choice below is a ruling the owner may overturn.
 8. **Public link.** `createDocumentLinkToken(id, secret)` uses its own context,
    `pagosya-business-document-link-v1`, and a new secret, `DOCUMENT_LINK_SECRET`. It has a
    development default and is added to the production check, so production refuses to start
-   without it. The link has no version and no expiry: voiding the document is how it is revoked.
+   without it. The link has no version and no expiry: voiding the document is how it is revoked,
+   and void revokes the content, not the URL. A voided link still answers (so the customer learns
+   why), but its JSON view keeps only `kind`, `numberLabel`, `title`, `status: VOIDED`, `voidedAt`
+   and the store's name and logo — no customer name, email, phone or document, no items, totals,
+   dates or blocks, no version or sha256. Its PDF is rendered from that same reduced content
+   (header, title, "Documento anulado el <fecha>") with a diagonal "ANULADO" stamp on every page.
+   Opening a voided link records no view.
    The public URL is `${CHECKOUT_ORIGIN}/d/<token>`. D1 builds that page.
 9. **Viewed is recorded once per version.** `BusinessDocumentEvent.dedupeKey` is unique per
    document (`viewed:v<n>`), so concurrent opens insert one row. The event carries the IP and user

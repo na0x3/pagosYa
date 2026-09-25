@@ -459,7 +459,7 @@ describe("BusinessDocumentsService — public link", () => {
       store: { name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png" },
       document: prisma.versions[0].content,
     });
-    expect(view.document.title).toBe("Diseño de logo");
+    expect(view.document?.title).toBe("Diseño de logo");
     const serialized = JSON.stringify(view);
     for (const internal of ["store_1", "m_1", id, "pl_", "cust_", "hola@illimani.bo"]) expect(serialized).not.toContain(internal);
   });
@@ -494,6 +494,40 @@ describe("BusinessDocumentsService — public link", () => {
     prisma.documents[0].status = "PAID";
     expect((await service.publicView(token, context)).status).toBe("PAID");
     expect(prisma.documents[0].status).toBe("PAID");
+  });
+
+  it("revokes a voided document's content: the link keeps only store, number, title, status and void date", async () => {
+    const { service, prisma } = setup();
+    const { id, token } = await sent(service);
+    await service.void("m_1", "store_1", id, { reason: "Duplicado" });
+    const view = await service.publicView(token, context);
+    expect(view).toEqual({
+      kind: "INVOICE",
+      numberLabel: "COB-0001",
+      title: "Diseño de logo",
+      status: "VOIDED",
+      voidedAt: prisma.documents[0].voidedAt,
+      store: { name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png" },
+    });
+    const serialized = JSON.stringify(view);
+    for (const revoked of ["Ana Quispe", "ana@example.com", "Boceto", "Revisión", "Gracias.", "Duplicado"]) expect(serialized).not.toContain(revoked);
+    expect(prisma.events.some((event) => event.type === "viewed")).toBe(false);
+  });
+
+  it("serves a voided document's PDF stamped ANULADO, without the customer, items or blocks", async () => {
+    const { service } = setup();
+    const { id, token } = await sent(service);
+    await service.void("m_1", "store_1", id, {});
+    const pdf = await service.publicPdf(token);
+    const raw = pdf.buffer.toString("latin1");
+    expect(raw.startsWith("%PDF-")).toBe(true);
+    const { inflateSync } = await import("node:zlib");
+    const streams = [...raw.matchAll(/stream\r?\n([\s\S]*?)endstream/g)].map((match) => {
+      try { return inflateSync(Buffer.from(match[1], "latin1")).toString("latin1"); } catch { return ""; }
+    }).join("");
+    const drawn = (streams.match(/<[0-9a-fA-F]+>/g) ?? []).map((hex) => Buffer.from(hex.slice(1, -1), "hex").toString("latin1")).join("");
+    expect(drawn).toContain("ANULADO");
+    for (const revoked of ["Ana Quispe", "ana@example.com", "Boceto", "Gracias."]) expect(drawn).not.toContain(revoked);
   });
 
   it("serves the frozen version as a PDF without recording a view", async () => {
