@@ -111,3 +111,46 @@ describe('cart placement', () => {
     expect(rules(css).find(rule => rule.selector.includes('.order-item__photo'))?.body).toContain('var(--kit-photo-radius)');
   });
 });
+
+describe('added-to-cart placement', () => {
+  const ITEM = { id: 'taza', name: 'Taza', amount: 12000, currency: 'BOB', stock: 5, imageUrls: [] };
+  const rect = (left: number, top: number, width: number, height: number) => ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} });
+  /** Boots, places the cart button and the add button, adds one product and returns the notice. */
+  function addOne(added: string | null, place: { cart?: ReturnType<typeof rect>; add?: ReturnType<typeof rect>; notice?: ReturnType<typeof rect> } = {}) {
+    const { w, doc } = boot(added ? { ...DNA, added } : undefined, { items: [ITEM] });
+    const add = doc.querySelector('[data-pagosya-catalog] [data-add]'), trigger = doc.querySelector('header [data-cart-open]'), notice = doc.querySelector('.cart-added');
+    trigger.getBoundingClientRect = () => place.cart ?? rect(900, 16, 96, 40);
+    add.getBoundingClientRect = () => place.add ?? rect(300, 500, 44, 44);
+    notice.getBoundingClientRect = () => place.notice ?? rect(640, 700, 360, 56);
+    w.innerWidth = 1024; w.innerHeight = 768;
+    add.click();
+    return notice;
+  }
+  it.each(['toast', 'ribbon', 'bubble', 'inline', 'stamp'])('%s stays a polite status message and becomes visible', added => {
+    const notice = addOne(added);
+    expect([notice.getAttribute('role'), notice.getAttribute('aria-live'), notice.dataset.visible]).toEqual(['status', 'polite', 'true']);
+    expect(notice.textContent).toContain('Taza añadido a tu pedido.');
+  });
+  it('anchors the bubble under the cart button', () => {
+    const notice = addOne('bubble', { cart: rect(900, 16, 96, 40) });
+    expect([notice.style.getPropertyValue('--added-top'), notice.style.getPropertyValue('--added-right')]).toEqual(['66px', '28px']);
+  });
+  it('anchors the inline confirmation under the pressed add button', () => {
+    const notice = addOne('inline', { add: rect(300, 500, 44, 44) });
+    expect([notice.style.getPropertyValue('--added-top'), notice.style.getPropertyValue('--added-left')]).toEqual(['552px', '300px']);
+  });
+  it('moves off a cart button it would cover, on a phone', () => {
+    expect(addOne('ribbon', { cart: rect(300, 8, 80, 40), notice: rect(0, 0, 390, 60) }).dataset.flip).toBe('bottom');
+    expect(addOne('toast', { cart: rect(300, 700, 80, 40), notice: rect(12, 690, 366, 60) }).dataset.flip).toBe('top');
+    expect(addOne('toast').dataset.flip).toBeUndefined();
+  });
+  it('writes nothing extra without DNA', () => {
+    const notice = addOne(null, { cart: rect(0, 0, 400, 800) });
+    expect([notice.getAttribute('style'), notice.dataset.flip]).toEqual([null, undefined]);
+  });
+  it('has a rule for every placement', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const added of DNA_VALUES.added) expect(css).toContain(`:root[data-dna-added=${added}] .cart-added{`);
+    expect(css).toContain('.cart-added[data-flip=bottom]');
+  });
+});

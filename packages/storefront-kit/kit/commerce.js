@@ -1190,11 +1190,35 @@
   addedNotice.innerHTML = '<span></span><button type="button" data-cart-open>Ver pedido</button>';
   document.body.append(addedNotice);
   let addedTimer;
+  /* DNA placements: the bubble hangs under the cart button, the inline note under the pressed button.
+   * Whatever the placement, the note never covers a cart button (phone headers especially): it moves to the other edge. */
+  function placeAddedNotice(button) {
+    if (!hasDna) return;
+    for (const name of ['--added-top', '--added-left', '--added-right']) addedNotice.style.removeProperty(name);
+    delete addedNotice.dataset.flip;
+    const shown = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
+    const triggers = [...document.querySelectorAll('[data-cart-open]')].filter(el => !addedNotice.contains(el) && !cartDrawer.contains(el) && shown(el));
+    const placement = document.documentElement.getAttribute('data-dna-added');
+    if (placement === 'bubble') {
+      const r = triggers[0]?.getBoundingClientRect();
+      addedNotice.style.setProperty('--added-top', `${r ? Math.round(r.bottom + 10) : 16}px`);
+      addedNotice.style.setProperty('--added-right', `${r ? Math.max(12, Math.round(innerWidth - r.right)) : 16}px`);
+    }
+    if (placement === 'inline' && button?.isConnected) {
+      const r = button.getBoundingClientRect();
+      addedNotice.style.setProperty('--added-top', `${Math.round(Math.min(r.bottom + 8, innerHeight - 96))}px`);
+      addedNotice.style.setProperty('--added-left', `${Math.round(Math.max(12, Math.min(r.left, innerWidth - 332)))}px`);
+    }
+    const box = addedNotice.getBoundingClientRect();
+    const covers = triggers.some(el => { const r = el.getBoundingClientRect(); return r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; });
+    if (covers) addedNotice.dataset.flip = box.top + box.bottom < innerHeight ? 'bottom' : 'top';
+  }
   function addedFeedback(product, button, keyboard) {
     if (button.closest('[data-pagosya-cart]')) return;
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
     addedNotice.querySelector('span').textContent = `${product.name} añadido a tu pedido.`;
     addedNotice.dataset.visible = 'true';
+    placeAddedNotice(button);
     clearTimeout(addedTimer);
     addedTimer = setTimeout(() => { if (!addedNotice.contains(document.activeElement)) delete addedNotice.dataset.visible; }, 4000);
     // The confirmation remains visible with reduced motion or motion explicitly off.
@@ -1819,8 +1843,22 @@
     '@starting-style{:root[data-dna-cart=overlay] .cart-drawer[open]{transform:scale(.96);opacity:0}}',
     '@media(max-width:700px){:root[data-dna-cart=drawer] .cart-drawer{width:100vw;border-radius:0}:root[data-dna-cart=sheet] .cart-drawer{width:100vw;max-height:92dvh}:root[data-dna-cart=page] .cart-drawer{width:100vw}:root[data-dna-cart=overlay] .cart-drawer{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}}',
     ':root[data-dna-frame] .order-item__photo{box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
+    /* Added to cart: corner toast (restyled), ribbon, bubble under the cart button, inline note, centred stamp. */
+    ':root[data-dna-added] .cart-added{box-sizing:border-box;border:var(--kit-border) solid var(--kit-line);flex-wrap:wrap;gap:6px 16px}',
+    ':root[data-dna-added=toast] .cart-added{inset:auto 24px 24px auto;width:min(360px,calc(100vw - 48px));padding:14px 16px;border-radius:var(--kit-radius-panel);background:var(--kit-paper);color:var(--kit-ink);box-shadow:0 18px 44px -18px #0008}',
+    ':root[data-dna-added=ribbon] .cart-added{inset:0 0 auto 0;width:auto;max-width:none;justify-content:center;padding:14px 24px;border-width:0 0 var(--kit-border);border-radius:0;background:var(--kit-accent);color:var(--kit-on-accent);box-shadow:0 10px 30px -18px #0009}',
+    ':root[data-dna-added=ribbon] .cart-added:not([data-visible=true]){transform:translateY(-100%)}',
+    ':root[data-dna-added=bubble] .cart-added{inset:var(--added-top,16px) var(--added-right,16px) auto auto;width:min(300px,calc(100vw - 24px));padding:12px 14px;border-radius:max(var(--kit-radius-panel),8px);background:var(--kit-ink);color:var(--kit-paper);box-shadow:0 14px 34px -14px #0009}',
+    ':root[data-dna-added=bubble] .cart-added::before{content:"";position:absolute;top:-7px;right:24px;width:12px;height:12px;background:inherit;transform:rotate(45deg)}',
+    ':root[data-dna-added=bubble] .cart-added:not([data-visible=true]){transform:translateY(-8px) scale(.96)}',
+    ':root[data-dna-added=inline] .cart-added{inset:var(--added-top,auto) auto auto var(--added-left,12px);width:min(320px,calc(100vw - 24px));padding:10px 12px;border-radius:var(--kit-radius);border-left:4px solid var(--kit-accent);background:var(--kit-surface);color:var(--kit-ink);box-shadow:0 10px 24px -14px #0008}',
+    ':root[data-dna-added=inline] .cart-added:not([data-visible=true]){transform:translateY(-6px)}',
+    ':root[data-dna-added=stamp] .cart-added{inset:0;margin:auto;width:fit-content;height:fit-content;max-width:calc(100vw - 48px);flex-direction:column;justify-content:center;padding:18px 28px;border:4px double currentColor;border-radius:var(--kit-radius);background:var(--kit-paper);color:var(--kit-ink);text-align:center;text-transform:uppercase;letter-spacing:.12em;box-shadow:0 30px 80px -30px #0009;transform:rotate(-4deg)}',
+    ':root[data-dna-added=stamp] .cart-added:not([data-visible=true]){transform:rotate(-4deg) scale(1.12)}',
+    '@media(max-width:700px){:root[data-dna-added=toast] .cart-added{inset:auto 12px 12px 12px;width:auto}:root[data-dna-added=ribbon] .cart-added{inset:auto 0 0 0;border-width:var(--kit-border) 0 0}:root[data-dna-added=ribbon] .cart-added:not([data-visible=true]){transform:translateY(100%)}:root[data-dna-added=bubble] .cart-added{left:12px;right:12px;width:auto}}',
+    ':root[data-dna-added] .cart-added[data-flip=bottom]{inset:auto 12px 12px 12px;width:auto;margin:0}:root[data-dna-added] .cart-added[data-flip=top]{inset:12px 12px auto 12px;width:auto;margin:0}',
   ];
-  const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer{transition:none}}`;
+  const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added{transition:none}}`;
   if (hasDna) {
     const dnaStyle = document.createElement('style');
     dnaStyle.dataset.pagosyaKit = 'dna';
