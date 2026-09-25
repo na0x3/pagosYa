@@ -116,7 +116,7 @@ it('asks for a DNA per concept in both arms, with room for it in the output budg
     expect(items.properties.dna).toEqual(SOURCE_DNA_SCHEMA);
     expect(body.input[0].content[0].text).toContain(SOURCE_DNA_DIRECTION);
   }
-  expect(reserve.mock.calls.map(call => call[2])).toEqual([4800, 4800]);
+  expect(reserve.mock.calls.map(call => call[2])).toEqual([5600, 5600]);
 });
 
 it('repairs an invalid DNA in code instead of spending the paid retry', async () => {

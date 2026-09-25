@@ -24,9 +24,10 @@ export const SOURCE_DNA_MOTIF_ENUMS = {
   for: ['store', 'category', 'product'], behavior: ['glow', 'draw', 'sway', 'steam', 'grow', 'bounce', 'spin', 'float'],
   trigger: ['appear', 'scroll', 'hover', 'add-to-cart', 'purchase'], placement: ['hero', 'card', 'product', 'cart', 'confirmation'],
 } as const;
-const MOTIF_LIMITS = { target: 60, meaning: 140 } as const;
+// Worst case (3 motifs + signature) × 3 concepts must fit the planner's 5,600-token output reserve.
+const MOTIF_LIMITS = { target: 40, meaning: 80 } as const;
 const MAX_MOTIFS = 3;
-const MAX_SIGNATURE = 160;
+const MAX_SIGNATURE = 100;
 
 type Enums = typeof SOURCE_DNA_ENUMS;
 type MotifEnums = typeof SOURCE_DNA_MOTIF_ENUMS;
