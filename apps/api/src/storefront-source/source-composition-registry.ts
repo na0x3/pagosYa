@@ -33,18 +33,12 @@ export type SourceCompositionFamily = {
   id: string; purpose: string; terms: readonly string[]; referenceExample?: string;
   /** DNA layout grammars this family serves, strongest first: the chosen concept's grammar prefers it. */
   grammars: readonly SourceLayoutGrammar[];
-  /**
-   * The family's look only makes sense for its own trade (a café menu, a beauty
-   * edit). It earns the grammar bonus only when the brief names that trade, so a
-   * planner's grammar never turns a watch shop into a coffee counter.
-   */
-  domainBound?: boolean;
   directions: readonly Direction[];
 };
 
 export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
   {
-    id: 'cafe-expressive', domainBound: true, grammars: ['poster', 'editorial'], purpose: 'A memorable food or drink identity with a fast path to the real menu.',
+    id: 'cafe-expressive', grammars: ['poster', 'editorial'], purpose: 'A memorable food or drink identity with a fast path to the real menu.',
     terms: ['cafe', 'coffee', 'cafeteria', 'panaderia', 'bakery', 'restaurante', 'restaurant', 'bebidas', 'heladeria'],
     referenceExample: 'examples/yapi-design-families/cafe-expressive',
     directions: [
@@ -56,7 +50,7 @@ export const SOURCE_COMPOSITION_FAMILIES: readonly SourceCompositionFamily[] = [
     ],
   },
   {
-    id: 'beauty-editorial', domainBound: true, grammars: ['editorial', 'magazine'], purpose: 'Editorial beauty, skincare or fragrance presentation with clear product choices.',
+    id: 'beauty-editorial', grammars: ['editorial', 'magazine'], purpose: 'Editorial beauty, skincare or fragrance presentation with clear product choices.',
     terms: ['beauty', 'belleza', 'cosmetica', 'cosmeticos', 'skincare', 'piel', 'perfume', 'fragrance', 'maquillaje'],
     referenceExample: 'examples/yapi-design-families/beauty-editorial',
     directions: [
@@ -151,15 +145,12 @@ export function sourceUiCompositions(input: SourceCompositionInput = {}): Source
   const text = normalized(`${brief} ${input.instruction ?? ''}`);
   const imageCount = (input.assets ?? []).filter(asset => asset.kind === 'image' && !['logo', 'reference', 'unused'].includes(asset.role ?? '')).length;
   const seed = input.seed ?? `${brief}|${input.instruction ?? ''}`;
-  const ranked = SOURCE_COMPOSITION_FAMILIES.map(family => {
-    const keywords = family.terms.reduce((sum, term) => sum + (new RegExp(`(?:^|[^a-z])${term}(?:$|[^a-z])`).test(text) ? 10 : 0), 0);
-    // The planner already committed to this grammar, so it outweighs a keyword match —
-    // except for a domain-bound family the brief never named.
-    const grammarFits = Boolean(input.grammar) && (!family.domainBound || keywords > 0);
-    return { family, score: keywords
+  const ranked = SOURCE_COMPOSITION_FAMILIES.map(family => ({ family,
+    score: family.terms.reduce((sum, term) => sum + (new RegExp(`(?:^|[^a-z])${term}(?:$|[^a-z])`).test(text) ? 10 : 0), 0)
       + (family.id === 'catalog-practical' ? 1 + ((input.catalogItemCount ?? 0) > 24 ? 12 : 0) : 0)
-      + (grammarFits && family.grammars[0] === input.grammar ? 25 : grammarFits && family.grammars.includes(input.grammar as SourceLayoutGrammar) ? 12 : 0) };
-  }).sort((a, b) => b.score - a.score);
+      // The planner already committed to this grammar, so it outweighs a keyword match.
+      + (input.grammar && family.grammars[0] === input.grammar ? 25 : input.grammar && family.grammars.includes(input.grammar as SourceLayoutGrammar) ? 12 : 0),
+  })).sort((a, b) => b.score - a.score);
   const primary = ranked[0].family;
   const candidates = ranked.flatMap(({ family }, rank) => family.directions
     .filter(direction => direction.minImages <= imageCount)

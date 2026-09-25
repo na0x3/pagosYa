@@ -75,6 +75,11 @@ describe('DNA tokens and buttons', () => {
     const title = rules(css).find(rule => rule.selector.includes('.cart-drawer__header h2') && rule.selector.includes('.checkout-review__summary h2'));
     expect(title?.body).toContain('text-transform:var(--kit-type-case)');
   });
+  it('the stamp form rocks on top of the store\'s press, not instead of it', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const press of DNA_VALUES.press) expect(css).toMatch(new RegExp(`:root\\[data-dna-press=${press}\\]\\{--kit-press:`));
+    expect(css).toMatch(/:root\[data-dna-button=stamp\] [^{]*:active:not\(:disabled\)\{transform:var\(--kit-press\) rotate\(-2\.5deg\)/);
+  });
   it('gives every commerce button the shared button tokens and keeps focus visible', () => {
     const css = dnaCss(boot(DNA).doc);
     const button = rules(css).find(rule => rule.selector.includes('.menu-add') && rule.body.includes('var(--kit-btn-radius)'));

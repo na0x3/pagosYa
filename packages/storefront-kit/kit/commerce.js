@@ -1866,11 +1866,9 @@
     dnaHover('shine', 'background-position:0 0'),
     dnaHover('invert', 'background-color:var(--kit-btn-invert-bg);color:var(--kit-btn-invert-fg)'),
     /* Press. The stamp form rocks a little instead. */
-    `:root[data-dna-press=squash] ${KIT_BUTTONS}:active:not(:disabled){transform:scale(.97,.9)}`,
-    `:root[data-dna-press=sink] ${KIT_BUTTONS}:active:not(:disabled){transform:translateY(2px);box-shadow:none}`,
-    `:root[data-dna-press=pop] ${KIT_BUTTONS}:active:not(:disabled){transform:scale(1.06)}`,
-    `:root[data-dna-press=none] ${KIT_BUTTONS}:active:not(:disabled){transform:none}`,
-    `:root[data-dna-button=stamp] ${KIT_BUTTONS}:active:not(:disabled){transform:rotate(-2.5deg) scale(.98)}`,
+    ':root[data-dna-press=squash]{--kit-press:scale(.97,.9)}:root[data-dna-press=sink]{--kit-press:translateY(2px)}:root[data-dna-press=pop]{--kit-press:scale(1.06)}:root[data-dna-press=none]{--kit-press:translate(0)}',
+    `:root[data-dna-press] ${KIT_BUTTONS}:active:not(:disabled){transform:var(--kit-press)}:root[data-dna-press=sink] ${KIT_BUTTONS}:active:not(:disabled){box-shadow:none}`,
+    `:root[data-dna-button=stamp] ${KIT_BUTTONS}:active:not(:disabled){transform:var(--kit-press) rotate(-2.5deg)}`,
     /* Cart: right drawer (today's place, restyled), bottom sheet, full page or centred card. */
     ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}:root[data-dna-cart] .cart-drawer__grip{display:none}',
     ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(440px,92vw);border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
