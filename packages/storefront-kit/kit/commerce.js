@@ -1975,9 +1975,20 @@
     document.addEventListener('pointerover', event => syncCardAlt(cardOf(event)), { passive: true });
     document.addEventListener('focusin', event => syncCardAlt(cardOf(event)));
     let pressTimer, pressedCard = null, swallowUntil = 0;
+    /* Only a press on the photo previews: a slow tap on the add button, a link or a field must still act. The default
+     * card's details overlay covers the photo, so a press on it counts when the finger is inside the photo's box. */
+    const photoPress = event => {
+      const card = cardOf(event), photo = card?.querySelector('.menu-item__image');
+      if (!photo || !card.querySelector('.menu-item__image-alt')) return null;
+      if (photo.contains(event.target) || event.target.closest?.('.menu-item__image-alt')) return card;
+      const control = event.target.closest?.('button,a,input,select,textarea,label,summary,[role=button]');
+      if (control && !control.contains(photo) && !control.matches('.menu-item__details')) return null;
+      const touch = event.touches?.[0], r = photo.getBoundingClientRect();
+      return touch && touch.clientX >= r.left && touch.clientX <= r.right && touch.clientY >= r.top && touch.clientY <= r.bottom ? card : null;
+    };
     document.addEventListener('touchstart', event => {
-      const card = cardOf(event);
-      if (!card?.querySelector('.menu-item__image-alt')) return;
+      const card = photoPress(event);
+      if (!card) return;
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => { syncCardAlt(card); card.setAttribute('data-previewing', ''); pressedCard = card; }, 450);
     }, { passive: true });

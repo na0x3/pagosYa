@@ -314,6 +314,33 @@ describe('product card preview', () => {
       expect(card.hasAttribute('data-previewing')).toBe(false);
     } finally { jest.useRealTimers(); }
   });
+  it('a slow tap (500ms) on the add button still adds: only a press on the photo previews', () => {
+    jest.useFakeTimers();
+    try {
+      const { w, doc } = catalog('second-photo', [TWO]);
+      const card = doc.querySelector('.menu-item'), add = card.querySelector('[data-add]');
+      add.dispatchEvent(new w.Event('touchstart', { bubbles: true }));
+      jest.advanceTimersByTime(500);
+      expect(card.hasAttribute('data-previewing')).toBe(false);
+      add.dispatchEvent(new w.Event('touchend', { bubbles: true }));
+      add.click();
+      expect(doc.querySelector('.cart-added').dataset.visible).toBe('true');
+    } finally { jest.useRealTimers(); }
+  });
+  it('a long press on the photo area of the details overlay previews, a press elsewhere on the card does not', () => {
+    jest.useFakeTimers();
+    try {
+      const { w, doc } = catalog('second-photo', [TWO]);
+      const card = doc.querySelector('.menu-item'), photo = card.querySelector('.menu-item__image'), overlay = card.querySelector('.menu-item__details');
+      photo.getBoundingClientRect = () => ({ left: 0, top: 0, right: 200, bottom: 250, width: 200, height: 250, x: 0, y: 0, toJSON() {} });
+      const press = (x: number, y: number) => { const event = new w.Event('touchstart', { bubbles: true }); Object.defineProperty(event, 'touches', { value: [{ clientX: x, clientY: y }] }); overlay.dispatchEvent(event); jest.advanceTimersByTime(500); };
+      press(180, 300); // below the photo: the name and price
+      expect(card.hasAttribute('data-previewing')).toBe(false);
+      overlay.dispatchEvent(new w.Event('touchend', { bubbles: true }));
+      press(100, 120);
+      expect(card.hasAttribute('data-previewing')).toBe(true);
+    } finally { jest.useRealTimers(); }
+  });
   it('has CSS for every card value and frames the card photos', () => {
     const css = dnaCss(boot(DNA).doc);
     for (const card of DNA_VALUES.card.filter(card => card !== 'still')) expect(css).toContain(`:root[data-dna-card=${card}]`);
