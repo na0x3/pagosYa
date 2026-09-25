@@ -54,5 +54,305 @@
     "file": "instrument-serif-OFL.txt",
     "source": "examples/independent-cafe/assets/InstrumentSerif-OFL.txt",
     "sha256": "b6b2292aa580937fb63796878d65a027a27f8c3db2d97601d0c34d9031f4ca17"
+  },
+  {
+    "file": "syne.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/syne/Syne%5Bwght%5D.ttf",
+    "gitBlob": "af1814d0f4d9d4302b57c9b0f5aab4c85847479a",
+    "sha256": "ce5ac77142a65cab2248a1a2ebb740b1d4d9c20b52488877d3ff664d1356104a"
+  },
+  {
+    "file": "syne-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/syne/OFL.txt",
+    "gitBlob": "f410e51ceb99dcbf9fb3048c09a525243001b542",
+    "sha256": "cc43cdce6f91c57989af8459341c276655e34224e954fa69c2ad700831a742d8"
+  },
+  {
+    "file": "unbounded.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/unbounded/Unbounded%5Bwght%5D.ttf",
+    "gitBlob": "e3c064ddfa3acdd3af2e0f06cd2f2288cc4fcae3",
+    "sha256": "323b511be380c8d474ef030686b71aedde501f8d9cd46da558b7c40454372c3f"
+  },
+  {
+    "file": "unbounded-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/unbounded/OFL.txt",
+    "gitBlob": "1c7db28325aa3a1e8bd8978ef1d760daf3bb357b",
+    "sha256": "31e5d4e83955e7103c34570dd49b0570ef490800bd65b42923c0dd02445263b3"
+  },
+  {
+    "file": "space-grotesk.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf",
+    "gitBlob": "a1b2e6c26093066510a31147e7aec9abdc8d6c5e",
+    "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72"
+  },
+  {
+    "file": "space-grotesk-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/OFL.txt",
+    "gitBlob": "cb512b9af44ff61e75e1aad387b7424cdfab36a3",
+    "sha256": "564ce565c371c5e5bbf286006565a7c9aa55a9f56e7ca58d56e05d649dd61a72"
+  },
+  {
+    "file": "dm-serif-display.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmserifdisplay/DMSerifDisplay-Regular.ttf",
+    "gitBlob": "bc5ed0cea657f264ea9c2a11a54da62ed619c5da",
+    "sha256": "8cc3643535edf039aa5d95440a8542735e9197e4f4b8d9303e980fefbf5ab616"
+  },
+  {
+    "file": "dm-serif-display-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmserifdisplay/OFL.txt",
+    "gitBlob": "be384f0ec9b54c6fed236106d3f6dfa029780b1b",
+    "sha256": "a3e5cdd67d4571dd0a24fcc968de0efde7ae97ef752daf0906e4767619dd7231"
+  },
+  {
+    "file": "playfair-display.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf",
+    "gitBlob": "7a09eb71f10622fd083134ac9ed46f59b21bee18",
+    "sha256": "c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6"
+  },
+  {
+    "file": "playfair-display-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/OFL.txt",
+    "gitBlob": "13153890847ba9bde8a852596d1515261156e474",
+    "sha256": "566be814f8e96e93dfa16101331557eb6b5467e9e03f627c0910fe93ca12300e"
+  },
+  {
+    "file": "epilogue.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/epilogue/Epilogue%5Bwght%5D.ttf",
+    "gitBlob": "87b5dfc0fe05cfd3d75e5058bb74263bbe2bc633",
+    "sha256": "012f651b45f47c10c7714cb7e3f2f7d9ccb7f235a2cc72c6b273ddc735705c67"
+  },
+  {
+    "file": "epilogue-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/epilogue/OFL.txt",
+    "gitBlob": "6604bf713a68999838860185665057de32fa4451",
+    "sha256": "95ebd6a2e4035b8398c83928fb85297b48441f27f405398c29b59aae899fc747"
+  },
+  {
+    "file": "sora.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf",
+    "gitBlob": "3b93d661fa07f5948799ba29979009b409cd4740",
+    "sha256": "84ff7096ae3ec6c8be47d906d1a0ba4de7f2ce78c615275c77301964a316e16c"
+  },
+  {
+    "file": "sora-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/sora/OFL.txt",
+    "gitBlob": "f1d9d6af7ba46af6c2da765fa123d93239c913f5",
+    "sha256": "ba0b9729c9428ba79a0459ab8ec575791b51509dbec213e383d0316d37fec299"
+  },
+  {
+    "file": "manrope.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/Manrope%5Bwght%5D.ttf",
+    "gitBlob": "75274da58537d6123b14f2cd0c355ad4681fc2b3",
+    "sha256": "3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6"
+  },
+  {
+    "file": "manrope-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt",
+    "gitBlob": "e271172a9ed0cddc895aabb6509f1c7d880b492d",
+    "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+  },
+  {
+    "file": "newsreader.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/newsreader/Newsreader%5Bopsz%2Cwght%5D.ttf",
+    "gitBlob": "ad4a9a8c44ec328c80b61c773f1ba02f6b5ed292",
+    "sha256": "8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1"
+  },
+  {
+    "file": "newsreader-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/newsreader/OFL.txt",
+    "gitBlob": "d2d4f407109e9c74b8ab502fc79b912408ab8e41",
+    "sha256": "fdfad38143ec470553cae82a1e45320bdd1b9ec70415d37bd0171051d8a4ded8"
+  },
+  {
+    "file": "young-serif.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/youngserif/YoungSerif-Regular.ttf",
+    "gitBlob": "689af2a720c43310ef5490562b37a2c41d655bb2",
+    "sha256": "42bb2602364b28569fdce5eeb6ab3d81cf8090ba81b211f1229ed69f33155523"
+  },
+  {
+    "file": "young-serif-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/youngserif/OFL.txt",
+    "gitBlob": "b2a30e42dcbdcb4c70cd83e7dd70e472fef04b7a",
+    "sha256": "737d8d343b674c6894f373de71a044b6782c130f2aebf180933d63ddf7a3dc19"
+  },
+  {
+    "file": "rubik.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/rubik/Rubik%5Bwght%5D.ttf",
+    "gitBlob": "a59aeb632df494345a542697c357f608875481b0",
+    "sha256": "1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88"
+  },
+  {
+    "file": "rubik-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/rubik/OFL.txt",
+    "gitBlob": "03af63b533942ef3bb9919f81138fde8824d4554",
+    "sha256": "472cbe7c25441df63e9c7864b43eb3c0f4b3df950c66a76224e6cfe1eae843fb"
+  },
+  {
+    "file": "space-mono.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacemono/SpaceMono-Regular.ttf",
+    "gitBlob": "1cfa3653dc8ddb7aa9f4ef1c9c581e9516137e6e",
+    "sha256": "95837e182baeeada83368f7748db28357f0a1b75c6b84ff7065b5edf933c8e18"
+  },
+  {
+    "file": "space-mono-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacemono/OFL.txt",
+    "gitBlob": "a72b0a7845bec3214559673ffeba60c816a21841",
+    "sha256": "8e4ee42b2553e1e01504e61cb0d46d148cd8c9e5eacaa3622a7df2d4f2955b9f"
+  },
+  {
+    "file": "big-shoulders-display.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bigshouldersdisplay/BigShouldersDisplay%5Bwght%5D.ttf",
+    "gitBlob": "abb8c8d40a9824c48e206dd293a2aa2e1dd692f7",
+    "sha256": "60e208dc276a1c35fc5b62e94f9fb959c40c11783a9eb7548175c14b1fbeb720"
+  },
+  {
+    "file": "big-shoulders-display-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bigshouldersdisplay/OFL.txt",
+    "gitBlob": "b5a4e0dff07361d6a5da5d7bb403796d3e08a8be",
+    "sha256": "338f9c050f19daeda1d597243faf79f3a3d437c338af58cb7047617d0ce08771"
+  },
+  {
+    "file": "bebas-neue.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf",
+    "gitBlob": "c328c6e08b20a20a1de47d823e007ee73812a438",
+    "sha256": "08e4623805102d819f58601e46e345648846075e363b2ceb23313c2d1c83ec73"
+  },
+  {
+    "file": "bebas-neue-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/OFL.txt",
+    "gitBlob": "da9571488f44176ef90d7f10c0f402c8be74db67",
+    "sha256": "72082f6cb4d04be2ecf7cc7d9e1e7d73787f0af8a5a278a47cade70c16b78341"
+  },
+  {
+    "file": "anton.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf",
+    "gitBlob": "4d65707db9d8663ccfa99cd28cd3a4e0025be178",
+    "sha256": "a4ba3a92350ebb031da0cb47630ac49eb265082ca1bc0450442f4a83ab947cab"
+  },
+  {
+    "file": "anton-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/OFL.txt",
+    "gitBlob": "93feddee37145696e123ea65a6772cab09663f9e",
+    "sha256": "ee67e6ee22790b7929f1a3769ca2801d565c64b5a9096942c1adf5596de9c9e4"
+  },
+  {
+    "file": "chivo.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/chivo/Chivo%5Bwght%5D.ttf",
+    "gitBlob": "ed0990edcf472d26cf6cf95d3574d7b5e85d0093",
+    "sha256": "801674cbeff749011a0186b2c932dc9158187a8ca4ca6598db2a1f5c7c4342d1"
+  },
+  {
+    "file": "chivo-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/chivo/OFL.txt",
+    "gitBlob": "4e5e18cc08ec70f44a65bcdc8bebbb466cdd8012",
+    "sha256": "c9b69fa18c372df2b187b49efc57b1ea643b86a938e5af32f6b5a7af1017c891"
+  },
+  {
+    "file": "lora.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/lora/Lora%5Bwght%5D.ttf",
+    "gitBlob": "ee1914c3746140523de2940d267ec2215bd85d5b",
+    "sha256": "822a6621ccbe8d97d20ac88c1c41f5615c9c2c202eaa75f272cd452aac6475a7"
+  },
+  {
+    "file": "lora-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt",
+    "gitBlob": "d0ce7fe062e60eaa92c4af3ee1bebe81c5141b4e",
+    "sha256": "1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716"
+  },
+  {
+    "file": "libre-caslon-text.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/librecaslontext/LibreCaslonText%5Bwght%5D.ttf",
+    "gitBlob": "01377705e6bc046f6f81e86235abebb0e948ebad",
+    "sha256": "c11809dbfd5445886293d89b32bfc2584075c80e77750cf1c284113e36b8b3f4"
+  },
+  {
+    "file": "libre-caslon-text-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/librecaslontext/OFL.txt",
+    "gitBlob": "d718bc9c02ee10a8106b57025190c432875fcd2b",
+    "sha256": "a294245c822c5aa9fd9a9f3189418e99415428be5fecadf797793d5d8f6a3ad3"
+  },
+  {
+    "file": "outfit.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/outfit/Outfit%5Bwght%5D.ttf",
+    "gitBlob": "466d6245f9582df39bf73da91a8b3c938fd061cd",
+    "sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade"
+  },
+  {
+    "file": "outfit-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/outfit/OFL.txt",
+    "gitBlob": "723cd447edee83ed3bb07c3343f478d352aa7440",
+    "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416"
+  },
+  {
+    "file": "figtree.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/figtree/Figtree%5Bwght%5D.ttf",
+    "gitBlob": "579e2ab5f30beb21cd0b618dd0796b0fce0eff8e",
+    "sha256": "26ad3db9b31ff7dde67a91ff515d022d2f495cd506590699cf264f0bfe6fb714"
+  },
+  {
+    "file": "figtree-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/figtree/OFL.txt",
+    "gitBlob": "80b12bb3d0c0942676657ef6d125daf4a1e1346d",
+    "sha256": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268"
+  },
+  {
+    "file": "familjen-grotesk.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/familjengrotesk/FamiljenGrotesk%5Bwght%5D.ttf",
+    "gitBlob": "1c03eb598e678759e94946e5bfc21729fbbf3214",
+    "sha256": "2d25fc41321a04561fab20a90fc8bc9ed4d1c0743fe8ba76cc51cd3632138b80"
+  },
+  {
+    "file": "familjen-grotesk-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/familjengrotesk/OFL.txt",
+    "gitBlob": "1926b039a9cca04ced22b88180c21a71043ff498",
+    "sha256": "9708dd560d1f8aa1f006461aa447a31fda7b9aff662d152837654a388e0eb2ee"
+  },
+  {
+    "file": "bitter.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bitter/Bitter%5Bwght%5D.ttf",
+    "gitBlob": "7f6d58e633e22ab99597e0c0c17bd21c11630d99",
+    "sha256": "ef2b9a711fb02f1e5823b34da1b7450e0fc76793b7d733a8b41006e24916d4a7"
+  },
+  {
+    "file": "bitter-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bitter/OFL.txt",
+    "gitBlob": "dccc3f4a882cd04852985be1ecc2849eb4338410",
+    "sha256": "152a1e283e23b42c4940da4c72f2f5bebaa17969cb77c76d7af05903846006f1"
+  },
+  {
+    "file": "nunito.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/Nunito%5Bwght%5D.ttf",
+    "gitBlob": "2ec1f4b0676c83ef33049db87b311171699e9192",
+    "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207"
+  },
+  {
+    "file": "nunito-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/OFL.txt",
+    "gitBlob": "c8210f08ca3cece05b4f7baa428afe8e1abe3293",
+    "sha256": "580df76c95a1ec5ab878ceb25bb3d85c6a076804e9c970c8c6972aea775fdf65"
+  },
+  {
+    "file": "shrikhand.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/shrikhand/Shrikhand-Regular.ttf",
+    "gitBlob": "e52b55e45676ec8ad4a78a8dc798a6e0155932bf",
+    "sha256": "8ba32f6d6a96fb8dbc92fc1acfbc4d2123d5348063d89b2c3dd784e7afcb81af"
+  },
+  {
+    "file": "shrikhand-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/shrikhand/OFL.txt",
+    "gitBlob": "89b7ab3e47818d731e7b250172b480e8307187ca",
+    "sha256": "325e890b8b26fe0a683c3ba24c506d902bdd7034d9c47bd7fa2bb72b5433b9c9"
+  },
+  {
+    "file": "bodoni-moda.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bodonimoda/BodoniModa%5Bopsz%2Cwght%5D.ttf",
+    "gitBlob": "c5d582f8003ae692761dd8e9ce69de23cb9fea53",
+    "sha256": "550f5e34ee0a828d7941b1fe9bc58b34e5260d3f33a61532e6d0a0114e79a5cf"
+  },
+  {
+    "file": "bodoni-moda-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/bodonimoda/OFL.txt",
+    "gitBlob": "973cec73f0874f3b7821a44ff43e4a4c88e44844",
+    "sha256": "931dfe2e0cd3c9443295f5c1d754b8a8403bf060df50c1d5900267ade83d0046"
   }
 ]
