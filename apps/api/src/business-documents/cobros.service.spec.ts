@@ -130,6 +130,19 @@ describe("CobrosService — pay", () => {
     expect(prisma.paymentIntents[0].status).toBe("PROCESSING");
   });
 
+  it.each([
+    ["a suspended merchant", (prisma: FakePrisma) => { prisma.merchants[0].status = "SUSPENDED"; }, /no está recibiendo pagos/],
+    ["an archived store", (prisma: FakePrisma) => { prisma.stores[0].status = "ARCHIVED"; }, /tienda ya no está activa/],
+  ])("refuses to take a payment for %s, with a message the customer understands", async (_case, change, message) => {
+    const { documents, cobros, prisma, paymentIntents } = setup();
+    const { token } = await sentCobro(documents);
+    change(prisma);
+    const refused = await cobros.pay(token).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(ConflictException);
+    expect((refused as Error).message).toMatch(message);
+    expect(paymentIntents.createInTransaction).not.toHaveBeenCalled();
+  });
+
   it("uses test mode while the merchant or the store is not active", async () => {
     const { documents, cobros, prisma, paymentIntents } = setup();
     prisma.merchants[0].status = "PENDING_REVIEW";
@@ -430,5 +443,58 @@ describe("CobrosService — marcar como pagado and the reminders switch", () => 
     expect(prisma.events.filter((event) => event.type.startsWith("reminders_")).map((event) => event.type)).toEqual(["reminders_off", "reminders_on"]);
     prisma.documents[0].status = "PAID";
     await expect(cobros.setAutoReminders("m_1", "store_1", id, { autoReminders: false })).rejects.toThrow(ConflictException);
+  });
+});
+
+describe("CobrosService — summary", () => {
+  it("counts and sums every cobro of the store per currency — not a page — with overdue computed from the due date", async () => {
+    const { documents, cobros, prisma } = setup();
+    for (let index = 0; index < 105; index += 1) await sentCobro(documents); // Bs 30,00 each, open
+    const late = await sentCobro(documents);
+    Object.assign(prisma.documents.find((doc) => doc.id === late.id)!, { dueAt: new Date(Date.now() - 3600_000) }); // worker not run yet
+    const usd = await sentCobro(documents, { currency: "USD" });
+    const paid = await sentCobro(documents);
+    await cobros.markPaid("m_1", "store_1", paid.id, { method: "cash" });
+    await documents.create("m_1", "store_1", invoice); // a draft
+    const voided = await sentCobro(documents);
+    await documents.void("m_1", "store_1", voided.id, {});
+    const summary = await cobros.summary("m_1", "store_1");
+    expect(summary.counts).toEqual({ all: 110, draft: 1, open: 107, overdue: 1, paid: 1, voided: 1 });
+    expect(summary.totals).toEqual([
+      { currency: "BOB", owed: 106 * 3000, overdue: 3000, collected: 3000, testCollected: 0 },
+      { currency: "USD", owed: 3000, overdue: 0, collected: 0, testCollected: 0 },
+    ]);
+    expect(summary.testMode).toBe(false);
+    await expect(cobros.summary("m_2", "store_1")).rejects.toThrow(NotFoundException);
+  });
+
+  it("keeps test payments out of Cobrado, and says payments are tests while the merchant is not verified", async () => {
+    const { documents, cobros, prisma } = setup();
+    prisma.merchants[0].status = "PENDING";
+    const test = await sentCobro(documents);
+    Object.assign(prisma.documents.find((doc) => doc.id === test.id)!, { status: "PAID", paidAt: new Date() });
+    prisma.events.push({ id: "p_test", documentId: test.id, type: "paid", at: new Date(), data: { livemode: false } });
+    const summary = await cobros.summary("m_1", "store_1");
+    expect(summary.testMode).toBe(true);
+    expect(summary.merchantStatus).toBe("PENDING");
+    expect(summary.totals).toEqual([{ currency: "BOB", owed: 0, overdue: 0, collected: 0, testCollected: 3000 }]);
+  });
+
+  it("lists the payments to refund or reconcile from the last 30 days", async () => {
+    const { documents, cobros, prisma } = setup();
+    const voided = await sentCobro(documents);
+    await documents.void("m_1", "store_1", voided.id, {});
+    const mismatch = await sentCobro(documents);
+    prisma.events.push(
+      { id: "p_after", documentId: voided.id, type: "payment_after_close", at: new Date(), data: { amount: 3000, currency: "BOB", statusBefore: "VOIDED" } },
+      { id: "p_mis", documentId: mismatch.id, type: "payment_mismatch", at: new Date(), data: { amount: 1500, currency: "BOB" } },
+      { id: "p_old", documentId: mismatch.id, type: "payment_after_close", at: new Date(Date.now() - 40 * 86_400_000), data: {} },
+    );
+    const { attention } = await cobros.summary("m_1", "store_1");
+    expect(attention).toEqual(expect.arrayContaining([
+      { documentId: voided.id, numberLabel: "COB-0001", type: "payment_after_close", statusBefore: "VOIDED", amount: 3000, currency: "BOB", at: expect.any(Date) },
+      { documentId: mismatch.id, numberLabel: "COB-0002", type: "payment_mismatch", statusBefore: null, amount: 1500, currency: "BOB", at: expect.any(Date) },
+    ]));
+    expect(attention).toHaveLength(2);
   });
 });

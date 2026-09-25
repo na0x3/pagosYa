@@ -46,7 +46,7 @@ export class FakePrisma {
     const result: Row = { ...doc };
     if (include.items) result.items = this.items.filter((item) => item.documentId === doc.id).sort((a, b) => a.position - b.position);
     if (include.versions) result.versions = this.versions.filter((v) => v.documentId === doc.id).sort((a, b) => a.version - b.version);
-    if (include.events) result.events = this.events.filter((e) => e.documentId === doc.id);
+    if (include.events) result.events = this.events.filter((e) => e.documentId === doc.id && matches(e, include.events.where ?? {}));
     return result;
   }
 
@@ -82,7 +82,26 @@ export class FakePrisma {
       const doc = this.documents.find((row) => row.id === where.id);
       return doc ? this.withIncludes(doc, include) : null;
     },
-    findMany: async ({ where, include, take }: Row) => this.documents.filter((row) => matches(row, where)).slice(0, take ?? undefined).map((doc) => this.withIncludes(doc, include)),
+    findMany: async ({ where, include, take, orderBy, cursor, skip }: Row) => {
+      let rows = this.documents.filter((row) => matches(row, where));
+      // Newest first, ties broken by id (ids grow with creation), like the service's orderBy.
+      if (orderBy) rows = [...rows].sort((a, b) => (b.createdAt - a.createdAt) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+      if (cursor) rows = rows.slice(Math.max(0, rows.findIndex((row) => row.id === cursor.id)) + (skip ?? 0));
+      return rows.slice(0, take ?? undefined).map((doc) => this.withIncludes(doc, include));
+    },
+    count: async ({ where }: Row) => this.documents.filter((row) => matches(row, where)).length,
+    groupBy: async ({ by, where, _count, _sum }: Row) => {
+      const groups = new Map<string, Row[]>();
+      for (const row of this.documents.filter((candidate) => matches(candidate, where))) {
+        const key = JSON.stringify((by as string[]).map((field) => row[field]));
+        groups.set(key, [...(groups.get(key) ?? []), row]);
+      }
+      return [...groups.entries()].map(([key, rows]) => ({
+        ...Object.fromEntries((by as string[]).map((field, index) => [field, JSON.parse(key)[index]])),
+        ...(_count && { _count: { _all: rows.length } }),
+        ...(_sum && { _sum: Object.fromEntries(Object.keys(_sum).map((field) => [field, rows.reduce((total, row) => total + (row[field] ?? 0), 0)])) }),
+      }));
+    },
     update: async ({ where, data }: Row) => {
       const doc = this.documents.find((row) => row.id === where.id)!;
       const next = { ...doc, ...data, updatedAt: new Date() };
@@ -128,6 +147,8 @@ export class FakePrisma {
       }
       return { count };
     },
+    findMany: async ({ where: { document, ...where } }: Row) => this.events.filter((event) => matches(event, where)
+      && (!document || matches(this.documents.find((doc) => doc.id === event.documentId) ?? {}, document))),
     findFirst: async ({ where, orderBy }: Row) => {
       const rows = this.events.filter((event) => matches(event, where));
       if (orderBy?.at === "desc") rows.sort((a, b) => b.at - a.at);

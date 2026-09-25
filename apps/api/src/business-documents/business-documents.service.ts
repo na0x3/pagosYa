@@ -72,6 +72,30 @@ const PREVIEW_TTL_MS = 2 * 60 * 60 * 1000;
 /** A cobro the customer can still pay: sent and not closed. Overdue stays payable. */
 const PAYABLE: BusinessDocumentStatus[] = [S.SENT, S.VIEWED, S.OVERDUE];
 
+/** The events that say how (and whether properly) a cobro was paid. */
+const PAYMENT_EVENTS = ["paid", "paid_manually", "payment_after_close", "payment_mismatch"];
+
+/**
+ * What the list and the detail show about a cobro's payment: a test-mode payment (not real money),
+ * one marked by hand, and payments the merchant has to refund or reconcile.
+ */
+export function paymentFlags(events: Array<{ type: string; data: Prisma.JsonValue | null }>) {
+  const livemodeFalse = (data: Prisma.JsonValue | null) => Boolean(data && typeof data === "object" && !Array.isArray(data) && data.livemode === false);
+  return {
+    testMode: events.some((event) => event.type === "paid" && livemodeFalse(event.data)),
+    manual: events.some((event) => event.type === "paid_manually"),
+    afterClose: events.some((event) => event.type === "payment_after_close"),
+    mismatch: events.some((event) => event.type === "payment_mismatch"),
+  };
+}
+
+/** The cobros tabs as a filter: "open" includes overdue (money still owed); overdue does not wait for the worker. */
+export function cobroStateWhere(state: "open" | "overdue" | "paid", now: Date): Prisma.BusinessDocumentWhereInput {
+  if (state === "paid") return { status: S.PAID };
+  if (state === "open") return { status: { in: PAYABLE } };
+  return { OR: [{ status: S.OVERDUE }, { status: { in: [S.SENT, S.VIEWED] }, dueAt: { lt: now } }] };
+}
+
 const isUniqueViolation = (error: unknown) => (error as { code?: string } | null)?.code === "P2002";
 
 type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }>;
@@ -121,15 +145,20 @@ export class BusinessDocumentsService {
     return this.view(await this.load(storeId, created.id));
   }
 
+  /**
+   * Newest first, one page at a time (`limit`, then `cursor` = the last id of the previous page).
+   * `state` is the cobros tab, computed here so a tab is never limited to the rows already loaded.
+   */
   async list(merchantId: string, storeId: string, query: ListBusinessDocumentsQueryDto) {
     await this.ownedStore(merchantId, storeId);
     const rows = await this.prisma.businessDocument.findMany({
-      where: { storeId, ...(query.kind && { kind: query.kind }), ...(query.status && { status: query.status }) },
-      include: { items: { orderBy: { position: "asc" } } },
-      orderBy: { createdAt: "desc" },
-      take: 100,
+      where: { storeId, ...(query.kind && { kind: query.kind }), ...(query.status && { status: query.status }), ...(query.state && cobroStateWhere(query.state, new Date())) },
+      include: { items: { orderBy: { position: "asc" } }, events: { where: { type: { in: PAYMENT_EVENTS } }, select: { type: true, data: true } } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: query.limit ?? 100,
+      ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
     });
-    return rows.map((row) => this.view(row));
+    return rows.map(({ events, ...row }) => ({ ...this.view(row), payment: paymentFlags(events) }));
   }
 
   async get(merchantId: string, storeId: string, id: string) {
@@ -145,6 +174,7 @@ export class BusinessDocumentsService {
     if (!doc) throw new NotFoundException("Documento no encontrado");
     return {
       ...this.view(doc),
+      payment: paymentFlags(doc.events),
       // The merchant's "ver como cliente": the same page, without recording a view.
       previewUrl: doc.currentVersion > 0
         ? `${this.publicUrl(doc.id)}?preview=${createDocumentPreviewToken(doc.id, this.secret(), new Date(Date.now() + PREVIEW_TTL_MS))}`

@@ -134,6 +134,18 @@ export class ListBusinessDocumentsQueryDto {
 
   @ApiPropertyOptional({ enum: BusinessDocumentStatus }) @IsOptional() @IsEnum(BusinessDocumentStatus)
   status?: BusinessDocumentStatus;
+
+  @ApiPropertyOptional({ enum: ["open", "overdue", "paid"], description: "Cobros: open = sent and unpaid (overdue included); overdue = past its due date, computed on the server." })
+  @IsOptional() @IsIn(["open", "overdue", "paid"])
+  state?: "open" | "overdue" | "paid";
+
+  @ApiPropertyOptional({ default: 100, minimum: 1, maximum: 100 })
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100)
+  limit?: number;
+
+  @ApiPropertyOptional({ description: "The id of the last row of the previous page (newest first)." })
+  @IsOptional() @IsString() @MaxLength(40)
+  cursor?: string;
 }
 
 export const COBRO_REMINDER_CHANNELS = ["email", "whatsapp"] as const;

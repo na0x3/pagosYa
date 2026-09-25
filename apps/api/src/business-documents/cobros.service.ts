@@ -6,7 +6,8 @@ import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { paymentCheckoutUrl } from "../operations/operations-helpers";
-import { BusinessDocumentsService } from "./business-documents.service";
+import { BusinessDocumentsService, cobroStateWhere } from "./business-documents.service";
+import { documentNumberLabel } from "./business-document-snapshot";
 import { businessDocumentLink, cancelStaleCheckout } from "./cobro-payment";
 import { buildDocumentEmail, type DocumentReminderStage } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
@@ -92,6 +93,16 @@ export class CobrosService {
       const snapshot = version.content as unknown as DocumentSnapshot;
       if (snapshot.totalAmount <= 0) throw new UnprocessableEntityException("Este cobro no tiene un monto para pagar");
 
+      const store = await tx.store.findUnique({ where: { id: doc.storeId }, select: { name: true, status: true } });
+      const merchant = await tx.merchant.findUnique({ where: { id: doc.merchantId }, select: { status: true } });
+      // Checked before any checkout is handed out, a reused one included.
+      if (!merchant || merchant.status === MerchantStatus.SUSPENDED) {
+        throw new ConflictException(`${store?.name || "Este comercio"} no está recibiendo pagos en línea en este momento. Escríbele para pagarle de otra forma.`);
+      }
+      if (!store || store.status !== "ACTIVE") {
+        throw new ConflictException(`Esta tienda ya no está activa y no recibe pagos en línea. Escríbele a ${store?.name || "el comercio"} para pagarle de otra forma.`);
+      }
+
       const existing = doc.paymentIntentId ? await tx.paymentIntent.findUnique({ where: { id: doc.paymentIntentId } }) : null;
       if (existing) {
         if (existing.status === PaymentIntentStatus.SUCCEEDED) throw new ConflictException("Este cobro ya está pagado. ¡Gracias!");
@@ -107,14 +118,13 @@ export class CobrosService {
         }
       }
 
-      const store = await tx.store.findUnique({ where: { id: doc.storeId }, select: { name: true, status: true } });
-      const merchant = await tx.merchant.findUnique({ where: { id: doc.merchantId }, select: { status: true } });
       // The subscriptions rule: real money only once both the merchant and the store are live.
-      const livemode = merchant?.status === MerchantStatus.ACTIVE && store?.status === "ACTIVE";
+      // Here that means a PENDING (not yet verified) merchant pays in test mode.
+      const livemode = merchant.status === MerchantStatus.ACTIVE && store.status === "ACTIVE";
       const intent = await this.paymentIntents.createInTransaction(tx, doc.merchantId, livemode, {
         amount: snapshot.totalAmount,
         currency: snapshot.currency,
-        description: `${snapshot.numberLabel} · ${snapshot.title} · ${store?.name ?? ""}`.slice(0, 250),
+        description: `${snapshot.numberLabel} · ${snapshot.title} · ${store.name}`.slice(0, 250),
         // The frozen customer: the checkout prefills it and the SIN factura gets the NIT/CI.
         customerName: snapshot.customer.name ?? undefined,
         customerEmail: snapshot.customer.email ?? undefined,
@@ -252,6 +262,83 @@ export class CobrosService {
       if (unique.length === 12) break;
     }
     return unique;
+  }
+
+  /**
+   * The Cobros header, over every cobro of the store (the list is paged): counts per tab,
+   * overdue computed from the due date, and per-currency sums. "Cobrado" is the last 30 days
+   * of real money — a test-mode payment is summed apart — and `attention` lists the payments
+   * of the last 30 days the merchant has to refund or reconcile.
+   */
+  async summary(merchantId: string, storeId: string) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, status: true } });
+    if (!store) throw new NotFoundException("Store not found");
+    const merchant = await this.prisma.merchant.findUnique({ where: { id: merchantId }, select: { status: true } });
+    const now = new Date();
+    const since = new Date(now.getTime() - 30 * DAY_MS);
+    const base = { storeId, kind: "INVOICE" as const };
+    const [byStatus, late, testPaid, attentionEvents] = await Promise.all([
+      this.prisma.businessDocument.groupBy({ by: ["status", "currency"], where: base, _count: { _all: true }, _sum: { totalAmount: true } }),
+      this.prisma.businessDocument.groupBy({ by: ["currency"], where: { ...base, ...cobroStateWhere("overdue", now) }, _count: { _all: true }, _sum: { totalAmount: true } }),
+      this.prisma.businessDocumentEvent.findMany({
+        where: { type: "paid", data: { path: ["livemode"], equals: false }, document: { ...base, status: S.PAID } },
+        select: { documentId: true },
+      }),
+      this.prisma.businessDocumentEvent.findMany({
+        where: { type: { in: ["payment_after_close", "payment_mismatch"] }, at: { gte: since }, document: base },
+        select: { documentId: true, type: true, at: true, data: true },
+        orderBy: { at: "desc" },
+        take: 20,
+      }),
+    ]);
+    const testIds = [...new Set(testPaid.map((event) => event.documentId))];
+    const paidWindow = { ...base, status: S.PAID, paidAt: { gte: since } };
+    const [collected, testCollected] = await Promise.all([
+      this.prisma.businessDocument.groupBy({ by: ["currency"], where: { ...paidWindow, id: { notIn: testIds } }, _sum: { totalAmount: true } }),
+      testIds.length ? this.prisma.businessDocument.groupBy({ by: ["currency"], where: { ...paidWindow, id: { in: testIds } }, _sum: { totalAmount: true } }) : Promise.resolve([]),
+    ]);
+
+    const count = (statuses: BusinessDocumentStatus[]) => byStatus.filter((row) => statuses.includes(row.status)).reduce((total, row) => total + row._count._all, 0);
+    const sumOf = (rows: Array<{ currency: string; _sum: { totalAmount: number | null } }>, currency: string) =>
+      rows.filter((row) => row.currency === currency).reduce((total, row) => total + (row._sum.totalAmount ?? 0), 0);
+    const currencies = [...new Set(byStatus.map((row) => row.currency))].sort((a, b) => (a === "BOB" ? -1 : b === "BOB" ? 1 : a.localeCompare(b)));
+    const owedRows = byStatus.filter((row) => OPEN.includes(row.status));
+
+    const labels = new Map((await (attentionEvents.length
+      ? this.prisma.businessDocument.findMany({ where: { id: { in: [...new Set(attentionEvents.map((event) => event.documentId))] } }, select: { id: true, kind: true, number: true } })
+      : Promise.resolve([]))).map((doc) => [doc.id, documentNumberLabel(doc.kind, doc.number)]));
+    const field = (data: Prisma.JsonValue | null, key: string) => (data && typeof data === "object" && !Array.isArray(data) ? (data[key] ?? null) : null);
+
+    return {
+      // While the merchant is not verified (or the store is not live) a cobro's checkout runs in test mode.
+      testMode: merchant?.status !== MerchantStatus.ACTIVE || store.status !== "ACTIVE",
+      merchantStatus: merchant?.status ?? null,
+      storeStatus: store.status,
+      counts: {
+        all: count(Object.values(S)),
+        draft: count([S.DRAFT]),
+        open: count(OPEN),
+        overdue: late.reduce((total, row) => total + row._count._all, 0),
+        paid: count([S.PAID]),
+        voided: count([S.VOIDED]),
+      },
+      totals: currencies.map((currency) => ({
+        currency,
+        owed: sumOf(owedRows, currency),
+        overdue: sumOf(late, currency),
+        collected: sumOf(collected, currency),
+        testCollected: sumOf(testCollected, currency),
+      })),
+      attention: attentionEvents.map((event) => ({
+        documentId: event.documentId,
+        numberLabel: labels.get(event.documentId) ?? "",
+        type: event.type,
+        statusBefore: field(event.data, "statusBefore"),
+        amount: field(event.data, "amount"),
+        currency: field(event.data, "currency"),
+        at: event.at,
+      })),
+    };
   }
 
   // ── worker ────────────────────────────────────────────────────────────

@@ -11,11 +11,14 @@ describe("cobros routes", () => {
       customerSuggestions: jest.fn().mockResolvedValue([]),
       markPaid: jest.fn().mockResolvedValue({ status: "PAID" }),
       setAutoReminders: jest.fn().mockResolvedValue({ autoReminders: false }),
+      summary: jest.fn().mockResolvedValue({ counts: {} }),
     };
     const controller = new CobrosController(cobros as any);
     await controller.markPaid(merchant, "store_1", "cdoc1", { method: "cash", reference: "Recibo 12" });
     await controller.reminders(merchant, "store_1", "cdoc1", { autoReminders: false });
     expect(cobros.markPaid).toHaveBeenCalledWith("m_1", "store_1", "cdoc1", { method: "cash", reference: "Recibo 12" });
+    await controller.summary(merchant, "store_1");
+    expect(cobros.summary).toHaveBeenCalledWith("m_1", "store_1");
     expect(cobros.setAutoReminders).toHaveBeenCalledWith("m_1", "store_1", "cdoc1", { autoReminders: false });
     await controller.remind(merchant, "store_1", "cdoc1", { channel: "email" });
     await controller.shared(merchant, "store_1", "cdoc1", { channel: "whatsapp" });

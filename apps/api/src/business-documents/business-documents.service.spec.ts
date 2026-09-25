@@ -115,6 +115,64 @@ describe("BusinessDocumentsService — drafts", () => {
   });
 });
 
+describe("BusinessDocumentsService — the cobros list (pages, states, payment flags)", () => {
+  async function sent(service: BusinessDocumentsService) {
+    const doc = await service.create("m_1", "store_1", invoice);
+    await service.send("m_1", "store_1", doc.id, { email: false });
+    return { id: doc.id };
+  }
+
+  it("pages newest first with a cursor, never stopping at the first 100", async () => {
+    const { service } = setup();
+    const ids: string[] = [];
+    for (let index = 0; index < 5; index += 1) ids.push((await service.create("m_1", "store_1", invoice)).id);
+    const first = await service.list("m_1", "store_1", { kind: "INVOICE", limit: 2 });
+    const second = await service.list("m_1", "store_1", { kind: "INVOICE", limit: 2, cursor: first[1].id });
+    const third = await service.list("m_1", "store_1", { kind: "INVOICE", limit: 2, cursor: second[1].id });
+    expect([...first, ...second, ...third].map((doc: any) => doc.id)).toEqual([...ids].reverse());
+  });
+
+  it("filters by the state the dashboard shows, overdue computed from the due date on the server", async () => {
+    const { service, prisma } = setup();
+    const make = async (status: string, dueAt: Date | null) => {
+      const { id } = await sent(service);
+      Object.assign(prisma.documents.find((doc) => doc.id === id)!, { status, dueAt });
+      return id;
+    };
+    const past = new Date(Date.now() - 86_400_000);
+    const future = new Date(Date.now() + 86_400_000);
+    const late = await make("SENT", past);
+    const marked = await make("OVERDUE", past);
+    const open = await make("VIEWED", future);
+    const paid = await make("PAID", past);
+    await make("VOIDED", past);
+    const ids = async (state: "open" | "overdue" | "paid") => (await service.list("m_1", "store_1", { kind: "INVOICE", state })).map((doc: any) => doc.id).sort();
+    expect(await ids("open")).toEqual([late, marked, open].sort());
+    expect(await ids("overdue")).toEqual([late, marked].sort());
+    expect(await ids("paid")).toEqual([paid]);
+  });
+
+  it("flags a test payment, a payment by hand, and a payment that needs a refund on each row", async () => {
+    const { service, prisma } = setup();
+    const test = await sent(service);
+    const manual = await sent(service);
+    const refund = await sent(service);
+    const mismatch = await sent(service);
+    prisma.events.push(
+      { id: "p1", documentId: test.id, type: "paid", at: new Date(), data: { livemode: false } },
+      { id: "p2", documentId: manual.id, type: "paid_manually", at: new Date(), data: { method: "cash" } },
+      { id: "p3", documentId: refund.id, type: "payment_after_close", at: new Date(), data: { livemode: true, statusBefore: "VOIDED" } },
+      { id: "p4", documentId: mismatch.id, type: "payment_mismatch", at: new Date(), data: { livemode: true } },
+    );
+    const rows = new Map((await service.list("m_1", "store_1", { kind: "INVOICE" })).map((doc: any) => [doc.id, doc.payment]));
+    expect(rows.get(test.id)).toEqual({ testMode: true, manual: false, afterClose: false, mismatch: false });
+    expect(rows.get(manual.id)).toEqual({ testMode: false, manual: true, afterClose: false, mismatch: false });
+    expect(rows.get(refund.id)).toEqual({ testMode: false, manual: false, afterClose: true, mismatch: false });
+    expect(rows.get(mismatch.id)).toEqual({ testMode: false, manual: false, afterClose: false, mismatch: true });
+    expect((await service.get("m_1", "store_1", test.id)).payment).toEqual(expect.objectContaining({ testMode: true }));
+  });
+});
+
 describe("BusinessDocumentsService — send", () => {
   it("numbers the document, freezes version 1 with its sha and links to it", async () => {
     const { service, prisma } = setup();

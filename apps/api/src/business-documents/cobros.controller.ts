@@ -20,6 +20,12 @@ export class CobrosController {
     return this.cobros.customerSuggestions(merchant.id, storeId, query.q);
   }
 
+  /** The Cobros header: counts per tab and sums per currency over every cobro (the list is paged). */
+  @Get("cobros/summary")
+  summary(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string) {
+    return this.cobros.summary(merchant.id, storeId);
+  }
+
   @Post("documents/:id/remind")
   @HttpCode(200)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
