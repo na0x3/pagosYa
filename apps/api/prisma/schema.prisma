@@ -2994,3 +2994,43 @@ model BusinessDocumentSignature {
 
   @@unique([documentId, version, role])
 }
+
+/// G1 analytics: one consented storefront event. No IP, user agent, customer field or search words.
+/// Kept 13 months (StoreAnalyticsWorker prunes). No relation to Store: plain indexed id (D0 rule).
+model StoreAnalyticsEvent {
+  id           BigInt   @id @default(autoincrement())
+  storeId      String
+  /// sha256 of the funnel session UUID — the same hash StoreFunnelVisit stores.
+  sessionHash  String
+  type         String
+  productId    String?
+  /// A data-track label (cta_click) or a checkout step (checkout_step).
+  target       String?
+  /// The store page file, e.g. product.html.
+  path         String?
+  /// mobile | desktop
+  device       String
+  /// Host name only, on page_view.
+  referrerHost String?
+  createdAt    DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([createdAt])
+}
+
+/// G1 analytics: per Bolivia day (UTC−4) rollup of StoreAnalyticsEvent. No personal data; kept.
+/// productId / target are '' for "none" so the unique key holds. type also takes _device and _referrer.
+model StoreAnalyticsDaily {
+  id             String   @id @default(cuid())
+  storeId        String
+  day            DateTime @db.Date
+  type           String
+  productId      String   @default("")
+  target         String   @default("")
+  count          Int
+  uniqueSessions Int
+  updatedAt      DateTime @updatedAt
+
+  @@unique([storeId, day, type, productId, target])
+  @@index([storeId, day])
+}
