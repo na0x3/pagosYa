@@ -3,6 +3,7 @@ import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/
 import { escapeHtml as esc } from "/src/html.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
+import { mountProposalsPanel } from "/src/proposals-panel.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -417,6 +418,18 @@ import { mountCobrosPanel } from "/src/cobros-panel.mjs";
     invoicingReady: () => Boolean(lastInvoicingProfile?.cuis),
     apiBase: () => apiBaseEl.value,
   });
+  // Documentos → Propuestas (D2); an accepted proposal hands its new cobro to the Cobros view.
+  const proposals = mountProposalsPanel({
+    api,
+    storeId: () => currentStoreId,
+    store: () => lastStores.find((candidate) => candidate.id === currentStoreId) || null,
+    signedIn: () => !!sessionToken,
+    apiBase: () => apiBaseEl.value,
+    openCobro: (id, options) => {
+      setDashboardView("cobros");
+      cobros.open(id, options);
+    },
+  });
   let luckWheelModalShownThisLoad = false;
   let lastTotalFinances = null;
   let lastBalances = null;
@@ -681,6 +694,7 @@ import { mountCobrosPanel } from "/src/cobros-panel.mjs";
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
+    proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
@@ -831,6 +845,7 @@ import { mountCobrosPanel } from "/src/cobros-panel.mjs";
     if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     syncMerchantStoreWorkspace(nextView);
     if (nextView === "cobros") cobros.show();
+    if (nextView === "proposals") proposals.show();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
     }
@@ -1625,6 +1640,7 @@ import { mountCobrosPanel } from "/src/cobros-panel.mjs";
       resetInventoryImportState();
       rewards.reset();
       cobros.reset();
+      proposals.reset();
       rewards.load().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
   }

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // Every view must open without a script error; removals in dashboard.js
 // surface here first, because one stale element lookup stops the whole script.
-const VIEWS = ["overview", "progress", "stores", "store-settings", "products", "media", "marketing", "experiments", "integrations", "charge-links", "cobros", "inbox", "payments", "payouts", "account", "compliance", "workspace"];
+const VIEWS = ["overview", "progress", "stores", "store-settings", "products", "media", "marketing", "experiments", "integrations", "charge-links", "cobros", "proposals", "inbox", "payments", "payouts", "account", "compliance", "workspace"];
 
 test("every dashboard view opens without script errors", async ({ page }) => {
   const errors = [];

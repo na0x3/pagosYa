@@ -1168,6 +1168,15 @@ export function mountCobrosPanel(deps) {
       render();
       void load();
     },
+    /** Open one cobro from another view (e.g. one just created from an accepted proposal): its share sheet or its detail. */
+    async open(id, { share = false } = {}) {
+      if (!share) { void openDetail(id); return; }
+      try {
+        openShare(await deps.api(storePath(`/documents/${encodeURIComponent(id)}`)), { fresh: true });
+      } catch (error) {
+        notify(errorText(error), "bad");
+      }
+    },
     /** The active store changed. */
     reset() {
       documents = [];
