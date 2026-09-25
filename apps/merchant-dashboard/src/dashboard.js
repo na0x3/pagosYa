@@ -1,5 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
+import { escapeHtml as esc } from "/src/html.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -3452,9 +3453,6 @@ import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/
     });
   }
 
-  function esc(s) {
-    return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  }
   // Shows only the last 4 digits — a payout row has no reason to repeat the
   // full account number on every line.
   function maskBankAccount(s) {

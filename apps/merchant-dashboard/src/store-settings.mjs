@@ -1,3 +1,4 @@
+import { escapeHtml } from "./html.mjs";
 // Store settings the live checkout reads: identity, how an order ends, support
 // contact, pickup/delivery locations with their stock, and link buttons.
 // Everything saves straight to the store (PATCH /stores/:id, PUT /links).
@@ -21,9 +22,7 @@ const POLICY_FIELDS = /** @type {const} */ ([
 /** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, publicVisibility?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
 
 /** @type {Record<string, string>} */
-const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 /** @param {unknown} value */
-const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 /** @param {unknown} error */
 const messageOf = (error) => error instanceof Error ? error.message : String(error);
 

@@ -1,0 +1,5 @@
+// The one HTML escaper for dashboard modules. Every value interpolated into
+// markup goes through it, in text and in both double- and single-quoted attributes.
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+
+export const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
