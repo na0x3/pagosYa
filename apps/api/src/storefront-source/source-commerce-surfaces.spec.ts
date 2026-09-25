@@ -1,0 +1,79 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { runInNewContext } from 'node:vm';
+import { kitPath } from '@pagosya/storefront-kit';
+
+/** Sub-project 5: every kit surface takes the store's DNA. jsdom has no layout, so these tests pin
+ * the markup, the listeners and the CSS text; the scorecard collector measures the rendered result. */
+const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
+const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
+const DNA_VALUES: Record<string, string[]> = runInNewContext(`(${commerce.match(/const DNA_VALUES = (\{[\s\S]*?\n {2}\});/)![1]})`);
+
+type Boot = { w: any; doc: any; close: () => void };
+const opened: Boot[] = [];
+afterEach(() => { while (opened.length) opened.pop()!.close(); });
+
+function boot(dna: Record<string, string> | undefined, options: { items?: unknown[]; body?: string; settings?: Record<string, unknown> } = {}): Boot {
+  const body = options.body ?? '<header><button data-cart-open>Pedido (<span data-cart-count>0</span>)</button></header><section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>';
+  const dom = new JSDOM(`<html><head></head><body>${body}</body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
+  const w = dom.window;
+  w.HTMLElement.prototype.scrollIntoView = () => {};
+  w.matchMedia = (query: string) => ({ matches: /reduce/.test(query) ? false : /hover/.test(query), addEventListener() {}, removeEventListener() {} });
+  // jsdom has no <dialog> modality: record how the kit opens it.
+  w.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); (w as any).__modal = (w as any).__modal ?? []; (w as any).__modal.push(this); };
+  w.HTMLDialogElement.prototype.show = function () { this.setAttribute('open', ''); (w as any).__shown = true; };
+  w.HTMLDialogElement.prototype.close = function () { if (!this.hasAttribute('open')) return; this.removeAttribute('open'); this.dispatchEvent(new w.Event('close')); };
+  w.PAGOSYA_PREVIEW = true;
+  const data = { storeName: 'Marca', items: options.items ?? [] };
+  w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...(dna ? { dna } : {}), ...options.settings };
+  w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
+  w.eval(commerce);
+  const handle = { w, doc: w.document, close: () => w.close() };
+  opened.push(handle);
+  return handle;
+}
+
+const DNA = { version: 1 as unknown as string, button: 'pill', hover: 'lift', press: 'squash', radius: 'round', border: 'hairline', frame: 'rounded', cart: 'drawer', added: 'toast', review: 'split', card: 'still' };
+const dnaCss = (doc: any) => doc.querySelector('style[data-pagosya-kit="dna"]')?.textContent ?? '';
+/** Innermost rule blocks: selector and declarations (at-rule wrappers are skipped). */
+const rules = (css: string) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ selector: m[1].trim(), body: m[2] }));
+const PROTECTED = /price|total|__buy|checkout-button|data-pay|finish-demo|polic|privacy|order-note|sold-out|legal|receipt/;
+
+describe('DNA tokens and buttons', () => {
+  it('adds the DNA style only for a store with DNA and leaves every other kit style unchanged', () => {
+    const plain = boot(undefined), styled = boot(DNA);
+    expect(plain.doc.querySelectorAll('style[data-pagosya-kit="dna"]')).toHaveLength(0);
+    expect(styled.doc.querySelectorAll('style[data-pagosya-kit="dna"]')).toHaveLength(1);
+    const others = (doc: any) => Array.from(doc.querySelectorAll('style') as ArrayLike<any>).filter(s => s.dataset.pagosyaKit !== 'dna').map(s => s.textContent);
+    expect(others(styled.doc)).toEqual(others(plain.doc));
+  });
+
+  it('never hides or shrinks prices, totals, buy or pay buttons or legal text', () => {
+    const css = dnaCss(boot(DNA).doc);
+    expect(css.length).toBeGreaterThan(0);
+    for (const { selector, body } of rules(css).filter(rule => PROTECTED.test(rule.selector))) {
+      const declarations = body.replace(/\s+/g, '');
+      expect({ selector, hidden: /display:none|visibility:hidden|(?:^|;)opacity:0(?:[;!]|$)/.test(declarations) }).toEqual({ selector, hidden: false });
+      const small = [...declarations.matchAll(/font-size:([\d.]+)(px|em|rem)/g)].filter(([, size, unit]) => (unit === 'px' ? Number(size) : Number(size) * 16) < 12);
+      expect({ selector, small: small.map(m => m[0]) }).toEqual({ selector, small: [] });
+    }
+  });
+
+  it('has a rule for every button form, hover and press, keyed on the root DNA attribute', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const [field, name] of [['button', 'button'], ['hover', 'hover'], ['press', 'press'], ['radius', 'radius'], ['border', 'border'], ['frame', 'frame']] as const) {
+      for (const value of DNA_VALUES[field]) expect(css).toContain(`:root[data-dna-${name}=${value}]`);
+    }
+  });
+
+  it('gives every commerce button the shared button tokens and keeps focus visible', () => {
+    const css = dnaCss(boot(DNA).doc);
+    const button = rules(css).find(rule => rule.selector.includes('.menu-add') && rule.body.includes('var(--kit-btn-radius)'));
+    expect(button?.selector).toEqual(expect.stringContaining('.checkout-button'));
+    for (const hook of ['.product-detail__buy', '.product-detail__sticky button', '.cart-added button', '[data-pagosya-contact] form>button[type=submit]']) expect(button?.selector).toContain(hook);
+    for (const token of ['--kit-btn-border', '--kit-btn-bg', '--kit-btn-fg', '--kit-btn-case', '--kit-btn-tracking', '--kit-btn-pad']) expect(button?.body).toContain(`var(${token})`);
+    expect(rules(css).some(rule => rule.selector.includes(':focus-visible') && /outline:\s*3px solid/.test(rule.body))).toBe(true);
+    expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  });
+});
