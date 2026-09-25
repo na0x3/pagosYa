@@ -13,6 +13,8 @@ import { SOURCE_CONVERSATION_INSTRUCTIONS } from './source-conversation.service'
 import { sourceProjectSnapshot } from './source-project';
 import { SourceRequestBudget } from './source-request-budget';
 import { samplePhotoColours } from './source-photo-sampler';
+import { dnaRuntimeConfig, sourceRuntimeDna } from './source-dna';
+import { validDna } from './fixtures/dna';
 // Pixel sampling launches Chromium; unit tests exercise what the service does with a sample, not the decoder.
 jest.mock('./source-photo-sampler', () => ({ samplePhotoColours: jest.fn().mockResolvedValue(new Map()) }));
 const design = (): designModule.SourceDesign => ({ selected: 0, concepts: ['Menu', 'Poster', 'Counter'].map(name => ({
@@ -67,6 +69,39 @@ function setup(framework = 'static') {
 describe('Independent source generation',()=>{
   beforeEach(() => { jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(design()); const exploration = designModule.sourceDesignExploration(0); jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(exploration); });
   afterEach(()=>jest.restoreAllMocks());
+  const configOf = (saved: any) => JSON.parse(saved.files.find((f: any) => f.path === 'config.js').content.match(/=\s*([\s\S]*);/)[1]);
+  it('writes a seeded DNA into config.js of a static store whose design has none', async () => {
+    const { service, projects } = setup();
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));
+    await service.generate('m', 's', input);
+    const config = configOf(projects.save.mock.calls[0][2]);
+    expect(config.dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
+    expect(config.dna.product).toBe(config.productPageStyle);
+  });
+  it('writes the chosen concept DNA in component mode and records planner DNA repairs', async () => {
+    const { service, projects } = setup('next');
+    const planned = design(); planned.concepts[0].dna = validDna(); planned.concepts[0].layout!.productPage = 'story-led';
+    jest.mocked(SourceDesignPlanner.prototype.explore).mockImplementation(async request => { request.repairs?.push('concepts[0].dna.buttons.hover: invalid'); return planned; });
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'React shop', files: nextStoreFiles(), products: [] }) }] }] })));
+    const result = await service.generate('m', 's', input);
+    expect(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].dnaSeed).toBe('s');
+    const config = configOf(projects.save.mock.calls[0][2]);
+    expect(config.dna).toEqual(dnaRuntimeConfig(validDna()));
+    expect(config.productPageStyle).toBe('story-led');
+    expect(result.generation.autoRepairs).toContain('concepts[0].dna.buttons.hover: invalid');
+  });
+  it('gives an edited store whose saved design has no DNA the same seeded DNA', async () => {
+    const { service, projects } = setup();
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));
+    await service.generate('m', 's', input);
+    const saved = projects.save.mock.calls[0][2];
+    const old = configOf(saved); delete old.dna;
+    saved.files.find((f: any) => f.path === 'config.js').content = `window.PAGOSYA_CONFIG = ${JSON.stringify(old)};\n`;
+    projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: saved });
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Color', edits: [{ path: 'styles.css', search: '#222', replacement: '#333' }], files: [] }) }] }] })));
+    await service.generate('m', 's', { ...input, revision: 1, instruction: 'Cambia el color de texto a #333' });
+    expect(configOf(projects.save.mock.calls[1][2]).dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
+  });
   it('generates a presentation site without silently adding product or checkout pages', async () => {
     const { service, projects } = setup('next');
     const source = nextStoreFiles().filter(file => !['components/product.tsx', 'components/checkout.tsx'].includes(file.path)).map(file => ({ ...file,
@@ -370,7 +405,7 @@ describe('Independent source generation',()=>{
     expect(result.generation.attempts.map(attempt => attempt.phase)).toEqual(['design', 'source']);
     expect(result.generation.credits).toBe(3);
     expect(JSON.parse(projects.save.mock.calls[0][2].files.find((file: any) => file.path === 'design-direction.json').content))
-      .toMatchObject(designModule.validateSourceDesign(design(), 0, true, true));
+      .toMatchObject(designModule.validateSourceDesign(design(), 0, true, true, { seed: 's' }));
   });
   it('repairs a disguised extra hero against the same committed concept before saving', async () => {
     const { service, projects } = setup();
