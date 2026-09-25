@@ -9,6 +9,7 @@ import { markPrivateStorePage } from "../store-seo";
 import { app } from "../ui/app";
 import { ICON_CHECK, ICON_CLOCK, ICON_LOCK, ICON_WHATSAPP, ICON_X } from "../ui/icons";
 import { renderProposalView, type ProposalView } from "./proposal-page";
+import { renderContractView, type ContractView } from "./contract-page";
 
 type Snapshot = {
   kind: string;
@@ -198,7 +199,7 @@ function bindPay(token: string): void {
 }
 
 export async function renderCobroPage(token: string): Promise<void> {
-  document.body.classList.remove("store-page", "product-detail-page", "payment-page", "payment-success-page", "debt-collection-page", "order-tracking-page", "proposal-document-page");
+  document.body.classList.remove("store-page", "product-detail-page", "payment-page", "payment-success-page", "debt-collection-page", "order-tracking-page", "proposal-document-page", "contract-document-page");
   document.body.classList.add("cobro-document-page");
   document.title = "Cobro — pagosYa";
   markPrivateStorePage();
@@ -211,6 +212,11 @@ export async function renderCobroPage(token: string): Promise<void> {
     // The same link serves every document kind: a proposal (D2) has its own page.
     if (body.kind === "PROPOSAL") {
       renderProposalView(body as unknown as ProposalView, token);
+      return;
+    }
+    // …and so does a contract (D3).
+    if (body.kind === "CONTRACT") {
+      renderContractView(body as unknown as ContractView, token);
       return;
     }
     const view = body as unknown as CobroView;
