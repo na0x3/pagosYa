@@ -407,7 +407,9 @@ export class BusinessDocumentsService {
           sha256: sent.sha256,
           snapshot: sent.snapshot,
         };
-        const pdf = sent.snapshot.kind === "CONTRACT" ? await renderContractPdf({ ...pdfInput, signatures: [] }) : await renderBusinessDocumentPdf(pdfInput);
+        // A contract's PDF carries the signatures already on this version (the merchant's, when they signed first).
+        const signatures = sent.snapshot.kind === "CONTRACT" ? await this.prisma.businessDocumentSignature.findMany({ where: { documentId: id, version: sent.version } }) : [];
+        const pdf = sent.snapshot.kind === "CONTRACT" ? await renderContractPdf({ ...pdfInput, signatures: signatures as unknown as ContractPdfSignature[] }) : await renderBusinessDocumentPdf(pdfInput);
         const message = buildDocumentEmail({ storeName: store.name, snapshot: sent.snapshot, publicUrl, message: dto.message });
         await this.email.send({
           to,
