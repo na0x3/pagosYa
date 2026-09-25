@@ -1236,7 +1236,7 @@
   // and the added-notice overlap check share it. A link or button holding the cart count opens the cart too.
   const CART_TRIGGERS = '[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]';
   const cartTriggers = () => [...new Set([...document.querySelectorAll(CART_TRIGGERS), ...[...document.querySelectorAll('[data-cart-count]')].map(count => count.closest('a,button')).filter(Boolean)])].filter(el => !el.closest('template'));
-  const authoredDrawerTrigger = document.querySelector(CART_TRIGGERS);
+  const authoredDrawerTrigger = [...document.querySelectorAll(CART_TRIGGERS)].find(el => !el.closest('template'));
   if (authoredDrawerTrigger) document.querySelectorAll('[data-pagosya-cart]:not([data-checkout-review])').forEach(slot => {
     if (!slot.childElementCount && !slot.textContent.trim()) slot.hidden = true;
   });

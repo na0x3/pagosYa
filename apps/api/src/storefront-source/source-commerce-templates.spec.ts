@@ -15,7 +15,7 @@ const SLOTS = '<section data-pagosya-cart hidden></section><p data-pagosya-statu
 const opened: any[] = [];
 afterEach(() => { while (opened.length) opened.pop().close(); });
 
-function boot(templates: string, options: { cart?: Array<{ id: string; quantity: number }>; items?: unknown[]; body?: string } = {}) {
+function boot(templates: string, options: { cart?: Array<{ id: string; quantity: number }>; items?: unknown[]; body?: string; beforeKit?: (w: any) => void } = {}) {
   const errors: Error[] = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!error.message.includes('Could not parse CSS stylesheet')) errors.push(error); });
@@ -31,6 +31,7 @@ function boot(templates: string, options: { cart?: Array<{ id: string; quantity:
   const data = { storeName: 'Luz', items: options.items ?? ITEMS, categories: [] };
   w.PAGOSYA_CONFIG = { slug: 'luz', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
+  options.beforeKit?.(w);
   w.eval(commerce);
   const $ = (selector: string) => w.document.querySelector(selector);
   const $$ = (selector: string) => [...w.document.querySelectorAll(selector)];
@@ -174,5 +175,25 @@ describe('added notice template', () => {
     // The live notice holds a copy; the button left inside the <template> must not be treated as a trigger.
     const live = shop.$$('[data-cart-open]').filter((el: any) => !el.closest('template'));
     expect(live.length).toBe(2); // the header button and the notice copy
+  });
+
+  it('does not let a button inside a template become the authored drawer trigger at init', async () => {
+    const bodyWithoutTemplate = '<section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>';
+    const bodyWithTemplate = bodyWithoutTemplate + '<template data-pagosya-added-template></template>';
+    const baseline = boot('', { body: bodyWithoutTemplate });
+    await baseline.tick();
+    // React has already attached the notice's button to the <template> element (light DOM) before the kit script runs.
+    const shop = boot('', {
+      body: bodyWithTemplate,
+      beforeKit: (w: any) => {
+        const tpl = w.document.querySelector('template[data-pagosya-added-template]');
+        const button = w.document.createElement('button');
+        button.setAttribute('data-cart-open', '');
+        tpl.appendChild(button);
+      },
+    });
+    await shop.tick();
+    expect(baseline.$('[data-pagosya-cart]').hidden).toBe(false);
+    expect(shop.$('[data-pagosya-cart]').hidden).toBe(baseline.$('[data-pagosya-cart]').hidden);
   });
 });
