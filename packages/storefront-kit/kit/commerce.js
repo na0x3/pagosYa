@@ -45,7 +45,7 @@
     const number = raw.match(/^(-?\d*\.?\d+)(ms|s|px)?$/);
     if (number) return Number(number[1]) * (number[2] === 's' ? 1000 : 1);
     const personality = document.documentElement.getAttribute('data-dna-motion');
-    return Object.hasOwn(MOTION_TOKENS, personality ?? '') ? MOTION_TOKENS[personality][name] : fallback;
+    return Object.prototype.hasOwnProperty.call(MOTION_TOKENS, personality ?? '') ? MOTION_TOKENS[personality][name] : fallback;
   }
   // product is the one exception: render() sets it from productPageStyle(), the page this kit actually draws.
   const hasDna = Boolean(config.dna && typeof config.dna === 'object');
