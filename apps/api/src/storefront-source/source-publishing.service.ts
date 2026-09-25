@@ -8,11 +8,23 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { sourceProjectDigest, sourceProjectSnapshot, type SourceProjectSnapshot } from './source-project';
 import { sourceMotionMode, withSourceMotion } from './source-motion';
+import { sourceRuntimeDna } from './source-dna';
 
 const PUBLIC_ASSET = /\.(png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i;
 const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', mp4: 'video/mp4', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf' };
 /** Published revisions are immutable, so their decoded media can be cached by store and revision. */
 const ASSET_CACHE_REVISIONS = 12;
+
+const CONFIG_PATTERN = /^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/;
+/** Stores published before the DNA existed get one seeded by the store id, so they carry data-dna-* without
+ * regenerating. A new object: the file may be shared by the revision cache. An unreadable config is served as-is. */
+function withSeededDna<F extends { content: string }>(file: F, storeId: string): F {
+  try {
+    const config = JSON.parse(file.content.match(CONFIG_PATTERN)?.[1] ?? '');
+    if (!config || typeof config !== 'object' || (config.dna && typeof config.dna === 'object')) return file;
+    return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, dna: sourceRuntimeDna(undefined, storeId, config.productPageStyle) })};` };
+  } catch { return file; }
+}
 
 export function experimentEvidence(a: { visitors: number; buyers: number }, b: { visitors: number; buyers: number }, startedAt: Date, now = new Date(), truncated = false) {
   const interval = (n: number, x: number) => {
@@ -190,7 +202,7 @@ export class SourcePublishingService {
     const publicFiles = files
       .filter(f => /\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) && !['server.mjs', 'build.mjs'].includes(f.path))
       // Binary media is served by publicAsset; the site JSON only names it.
-      .map(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path) ? { path: f.path, encoding: 'url' as const, content: '' } : f);
+      .map(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path) ? { path: f.path, encoding: 'url' as const, content: '' } : f.path === 'config.js' ? withSeededDna(f, store.id) : f);
     return { published: true, revision, visitToken, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };
   }
 

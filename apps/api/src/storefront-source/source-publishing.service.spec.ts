@@ -28,6 +28,20 @@ it('serves merchant MP4 video bytes from the asset route while omitting private 
   expect(site.snapshot?.files.some(f => f.path === 'server.mjs')).toBe(false);
 });
 
+import { sourceRuntimeDna } from './source-dna';
+it('gives a published revision without a DNA a seeded one, and leaves an existing DNA alone', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 'store-7', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'b'.repeat(64) }) } };
+  const service = new SourcePublishingService(prisma);
+  const config = (value: object) => ({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(value)};`, encoding: 'utf8' as const });
+  const served = async (value: object) => {
+    jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [{ path: 'index.html', content: '<main></main>', encoding: 'utf8' }, config(value)] } as any);
+    const site = await service.publicSite('demo');
+    return JSON.parse(site.snapshot!.files.find(f => f.path === 'config.js')!.content.match(/=\s*([\s\S]*?);?\s*$/)![1]);
+  };
+  expect((await served({ productPageStyle: 'dense', data: {} })).dna).toEqual(sourceRuntimeDna(undefined, 'store-7', 'dense'));
+  expect((await served({ dna: { button: 'pill' } })).dna).toEqual({ button: 'pill' });
+});
+
 import { createHash } from 'node:crypto';
 import { currentSourceRuntimeBundle } from './source-runtime';
 import fs = require('node:fs/promises');
