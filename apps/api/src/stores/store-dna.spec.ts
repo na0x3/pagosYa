@@ -1,7 +1,8 @@
-import { publishedStoreDna } from './store-dna';
+import { clearStoreDnaCache, publishedStoreDna } from './store-dna';
 import { sourceRuntimeDna } from '../storefront-source/source-dna';
 
 describe('publishedStoreDna', () => {
+  beforeEach(() => clearStoreDnaCache());
   const seeded = sourceRuntimeDna(undefined, 'store-1');
   const config = (dna: unknown): any => ({ $queryRaw: jest.fn(async () => [{ content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 's', dna })};` }]) });
 
@@ -27,5 +28,26 @@ describe('publishedStoreDna', () => {
     ['a config without dna', 2, config(undefined)],
   ])('falls back to the seeded DNA with %s', async (_label, revision, prisma) => {
     await expect(publishedStoreDna(prisma as any, 'store-1', revision as number | null)).resolves.toEqual(seeded);
+  });
+
+  it('reads a published revision once: revisions are immutable, so the next request is a cache hit', async () => {
+    const prisma = config({ ...seeded, button: 'stamp' });
+    const first = await publishedStoreDna(prisma, 'store-1', 4);
+    await expect(publishedStoreDna(prisma, 'store-1', 4)).resolves.toEqual(first);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    await publishedStoreDna(prisma, 'store-1', 5); // a new publication is a new key
+    await publishedStoreDna(prisma, 'store-2', 4);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(3);
+  });
+  it('does not cache a failed read, and keeps the cache bounded', async () => {
+    const failing = { $queryRaw: jest.fn(async () => { throw new Error('db'); }) };
+    await publishedStoreDna(failing as any, 'store-1', 6);
+    await publishedStoreDna(failing as any, 'store-1', 6);
+    expect(failing.$queryRaw).toHaveBeenCalledTimes(2);
+    const prisma = config({ button: 'pill' });
+    for (let i = 0; i < 600; i++) await publishedStoreDna(prisma, `s${i}`, 1);
+    await publishedStoreDna(prisma, 's0', 1); // evicted (least recently used)
+    await publishedStoreDna(prisma, 's599', 1); // still cached
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(601);
   });
 });
