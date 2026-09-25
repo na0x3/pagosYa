@@ -310,11 +310,16 @@ function nextComponentExports(source: ts.SourceFile): { defaultExport: boolean; 
   return { defaultExport, named };
 }
 
-/** Platform mounts that carry no design: inserting one never changes how the store looks. */
+/**
+ * Platform mounts that carry no design: inserting one never changes how the store looks.
+ * Only CommerceSlots qualifies (a hidden cart container and a status line). Catalog,
+ * ProductDetail and CheckoutDetail render real sections and a <main>; where they go is design,
+ * so a page missing them still goes to the AI repair.
+ */
 const COMMERCE_MOUNTS: Record<string, Array<{ hooks: string[]; component: string }>> = {
-  home: [{ hooks: ['data-pagosya-catalog'], component: 'Catalog' }, { hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
-  product: [{ hooks: ['data-pagosya-product-page'], component: 'ProductDetail' }, { hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
-  checkout: [{ hooks: ['data-pagosya-checkout-page'], component: 'CheckoutDetail' }, { hooks: ['data-pagosya-status'], component: 'CommerceSlots' }],
+  home: [{ hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
+  product: [{ hooks: ['data-pagosya-cart', 'data-pagosya-status'], component: 'CommerceSlots' }],
+  checkout: [{ hooks: ['data-pagosya-status'], component: 'CommerceSlots' }],
 };
 
 /** The JSX element or fragment returned by the file's default-exported component, if it has one. */
@@ -339,6 +344,20 @@ function defaultExportRoot(source: ts.SourceFile): ts.JsxElement | ts.JsxFragmen
   return undefined;
 }
 
+/** The page file and every local component it imports, followed transitively. */
+function pageComponentFiles(files: SourceProjectFileDto[], pagePath: string): SourceProjectFileDto[] {
+  const byPath = new Map(files.map(f => [f.path, f]));
+  const seen = new Set<string>(), queue = [pagePath];
+  while (queue.length) {
+    const path = queue.shift()!;
+    const file = byPath.get(path);
+    if (!file || seen.has(path)) continue;
+    seen.add(path);
+    for (const match of file.content.matchAll(/from\s+['"]\.\/([\w-]+)(?:\.tsx)?['"]/g)) queue.push(`components/${match[1]}.tsx`);
+  }
+  return [...seen].map(path => byPath.get(path)!);
+}
+
 function withUiImport(content: string, names: string[]): string {
   const existing = /import \{([^}]*)\} from '@pagosya\/ui';/.exec(content);
   if (!existing) return `import { ${names.join(', ')} } from '@pagosya/ui';\n${content}`;
@@ -361,10 +380,12 @@ export function repairNextCommerceMounts(files: SourceProjectFileDto[], purpose:
     const file = current.find(f => f.path === path);
     if (!file) continue;
     const markup = nextPageMarkup(current, page);
+    // A mount named in any component file (even inside a conditional the markup walk cannot see)
+    // may already render on this page; never add a second one.
+    const componentText = pageComponentFiles(current, path).map(f => f.content).join('\n');
     const needed = mounts.filter(mount =>
       mount.hooks.some(hook => !new RegExp('<[^>]+\\b' + hook + '(?:\\s|=|>)').test(markup))
-      // Named anywhere in the file (even inside a conditional) means it is there; never duplicate it.
-      && !file.content.includes(mount.component) && !mount.hooks.some(hook => file.content.includes(hook)));
+      && !componentText.includes(mount.component) && !mount.hooks.some(hook => componentText.includes(hook)));
     if (!needed.length) continue;
     const source = ts.createSourceFile(path, file.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const root = defaultExportRoot(source);
@@ -446,15 +467,22 @@ function checkNextTypes(files: SourceProjectFileDto[]) {
     const describe = (error: ts.Diagnostic) => {
       const fileName = error.file?.fileName.replace(root + '/', '') || '';
       const line = error.file && error.start !== undefined ? `:${error.file.getLineAndCharacterOfPosition(error.start).line + 1}` : '';
-      const detail = ts.flattenDiagnosticMessageText(error.messageText, ' ').slice(0, 450);
+      const detail = ts.flattenDiagnosticMessageText(error.messageText, ' ').slice(0, 220);
       const hint = error.code === 2304 && /Cannot find name '(Header|Footer)'/.test(detail)
         ? ' Decláralo en el archivo o impórtalo desde un componente local.'
         : '';
       return `TypeScript ${fileName}${line}: ${detail}${detail.endsWith('.') ? '' : '.'}${hint}`;
     };
-    // The single bounded repair only sees this message: list every error (capped) so it can fix them together.
-    const shown = errors.slice(0, 8).map(describe);
-    throw new BadGatewayException(shown.join('\n') + (errors.length > 8 ? `\n…y ${errors.length - 8} errores más.` : ''));
+    // The single bounded repair only sees this message, and the prompt keeps 2,000 characters of it:
+    // list as many errors as fit (at most 8) so it can fix them together, then count the rest.
+    const shown: string[] = [];
+    for (const error of errors.slice(0, 8)) {
+      const line = describe(error);
+      if (shown.length && shown.join('\n').length + line.length + 1 > 1700) break;
+      shown.push(line);
+    }
+    const rest = errors.length - shown.length;
+    throw new BadGatewayException(shown.join('\n') + (rest > 0 ? `\n…y ${rest} errores más.` : ''));
   }
 }
 

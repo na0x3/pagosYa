@@ -183,6 +183,16 @@ export default function Home() { const [tab] = useState('portada'); return <><He
     expect(message.split('\n').filter(line => line.startsWith('TypeScript '))).toHaveLength(8);
     expect(message).toContain('…y 3 errores más.');
   });
+  it('keeps the whole TypeScript report within the repair prompt budget', async () => {
+    const files = nextStoreFiles();
+    // "missing properties" diagnostics print the whole target type, so each detail is long.
+    const shape = Array.from({ length: 12 }, (_, i) => `veryLongPropertyNameForTheDiagnostic${i}: number`).join('; ');
+    files[1].content = Array.from({ length: 8 }, (_, i) => `const wrong${i}: { ${shape} } = {};`).join('\n') + '\n' + files[1].content;
+    let message = '';
+    try { await compileNextPreview(files); } catch (error) { message = (error as Error).message; }
+    expect(message.length).toBeLessThanOrEqual(1800);
+    expect(message).toMatch(/TypeScript components\/home\.tsx:\d+:/);
+  });
   it('returns an actionable compile error for missing local components', async () => {
     const files = nextStoreFiles(); files[1].content = "import Missing from './Missing';\n" + files[1].content.replace('<main>', '<Missing/><main>');
     await expect(compileNextPreview(files)).rejects.toThrow('Missing');
@@ -224,12 +234,24 @@ describe('mechanical commerce mount repair', () => {
     await expect(compileNextPreview(repaired)).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ path: '_compiled/home.js' })]));
   });
 
-  it('adds ProductDetail to a product page with no product mount', () => {
+  it('leaves design-bearing mounts (product page, catalog) to the AI repair', () => {
     const files = nextStoreFiles();
     product(files).content = product(files).content.replace('<main data-pagosya-product-page/>', '<main/>');
-    const { files: repaired } = repairNextCommerceMounts(files);
-    expect(product(repaired).content).toContain('<ProductDetail />');
-    expect(() => validateNextSources(repaired)).not.toThrow();
+    home(files).content = home(files).content.replace('<div data-pagosya-catalog />', '');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(product(repaired).content).not.toContain('ProductDetail');
+    expect(home(repaired).content).not.toContain('Catalog');
+    expect(repairs).toEqual([]);
+    expect(() => validateNextSources(repaired)).toThrow('product necesita data-pagosya-product-page');
+  });
+
+  it('never duplicates a mount that an imported component renders conditionally', () => {
+    const files = nextStoreFiles();
+    home(files).content = home(files).content.replace('<div data-pagosya-cart hidden/><p data-pagosya-status role="status" aria-live="polite"/>', '');
+    files[0].content = "import { CommerceSlots } from '@pagosya/ui';\n" + files[0].content.replace('</header>', '{Math.random() > 1 && <CommerceSlots />}</header>');
+    const { files: repaired, repairs } = repairNextCommerceMounts(files);
+    expect(home(repaired).content).not.toContain('CommerceSlots');
+    expect(repairs).toEqual([]);
   });
 
   it('extends an existing @pagosya/ui import instead of adding a second one', () => {
