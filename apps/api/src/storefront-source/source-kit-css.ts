@@ -193,6 +193,70 @@ function farOffset(prop: string, value: string): boolean {
   });
 }
 
+/** A translation of its own size (100%) or a phone's width: out of an overflow-hidden card or off screen. */
+const farShift = (part: string) => {
+  if (part.endsWith('%')) { const n = parseFloat(part); return Number.isFinite(n) && Math.abs(n) >= 100; }
+  const px = lengthPx(part, PHONE);
+  return px !== null && Math.abs(px) >= 320;
+};
+const DEGREES: Record<string, number> = { deg: 1, rad: 180 / Math.PI, turn: 360, grad: 0.9 };
+/** rotateX/rotateY near 90° turns the element edge-on: nothing is left to see or click. */
+const edgeOn = (value: string) => [...value.matchAll(/rotate([xy])\(\s*(-?[\d.]+)(deg|rad|turn|grad)\s*\)/gi)]
+  .some(m => Math.abs(Math.cos(Number(m[2]) * DEGREES[m[3].toLowerCase()] * Math.PI / 180)) < 0.2);
+/** Why a filter() list makes text unreadable, or null. */
+function filterViolation(value: string, state: boolean): string | null {
+  for (const m of value.matchAll(/(opacity|blur|brightness|contrast)\(\s*([^)]*)\)/gi)) {
+    const name = m[1].toLowerCase(), arg = m[2].trim();
+    const n = arg === '' ? (name === 'blur' ? 0 : 1) : arg.endsWith('%') ? parseFloat(arg) / 100 : parseFloat(arg);
+    if (name === 'blur') { const px = lengthPx(arg || '0', PHONE); if (px !== null && px >= 2) return 'blurs'; continue; }
+    if (!Number.isFinite(n)) return name === 'opacity' && !state ? 'fades' : null;
+    if (name === 'opacity' && n < 1 && !state) return 'fades';
+    if ((name === 'brightness' || name === 'contrast') && n <= 0.3) return 'darkens away';
+  }
+  return null;
+}
+/** A polygon() whose points span less than half the box (percentages) or under 12px (lengths). */
+function degeneratePolygon(value: string): boolean {
+  return [...value.matchAll(/polygon\(([^)]*)\)/gi)].some(m => {
+    const points = m[1].replace(/^\s*(?:nonzero|evenodd)\s*,/i, '').split(',').map(point => point.trim().split(/\s+/));
+    const axis = (index: number) => points.map(point => point[index] ?? '').map(part => part.endsWith('%') ? { pct: parseFloat(part) } : { px: lengthPx(part, PHONE) });
+    return [0, 1].some(index => {
+      const values = axis(index);
+      if (values.every(v => 'pct' in v || v.px === 0)) { const n = values.map(v => ('pct' in v ? v.pct : 0) as number); return Math.max(...n) - Math.min(...n) < 50; }
+      if (values.every(v => 'px' in v && v.px !== null)) { const n = values.map(v => (v as { px: number }).px); return Math.max(...n) - Math.min(...n) < 12; }
+      return false;
+    });
+  });
+}
+/** Alpha of a colour value in 0–1, or null when it cannot be read (var(), currentcolor…). */
+function colorAlpha(value: string): number | null {
+  const v = value.trim().toLowerCase();
+  if (v === 'transparent') return 0;
+  const hex = v.match(/^#([\da-f]{3,8})$/);
+  if (hex) { const h = hex[1]; return h.length === 4 ? parseInt(h[3] + h[3], 16) / 255 : h.length === 8 ? parseInt(h.slice(6), 16) / 255 : 1; }
+  const fn = v.match(/^([a-z-]+)\(([\s\S]*)\)$/);
+  if (!fn) return /^[a-z]+$/.test(v) && v !== 'currentcolor' && v !== 'inherit' && v !== 'initial' && v !== 'unset' && v !== 'revert' ? 1 : null;
+  const [, name, inner] = fn;
+  if (/var\(|calc\(|attr\(|env\(/.test(inner)) return null;
+  if (name === 'color-mix') {
+    const args = splitSelectors(inner);
+    if (args.length !== 3) return null;
+    const sides = args.slice(1).map(arg => { const m = arg.match(/^(.*?)\s+([\d.]+)%$/) || arg.match(/^([\d.]+)%\s+(.*)$/); return m ? (/%$/.test(arg) ? { color: m[1], weight: Number(m[2]) } : { color: m[2], weight: Number(m[1]) }) : { color: arg, weight: null as number | null }; });
+    const [a, b] = sides;
+    const wa = a.weight ?? (b.weight !== null ? 100 - b.weight : 50), wb = b.weight ?? 100 - wa;
+    const alphaA = colorAlpha(a.color), alphaB = colorAlpha(b.color);
+    if (alphaA === null || alphaB === null || wa + wb <= 0) return null;
+    return (alphaA * wa + alphaB * wb) / Math.max(100, wa + wb);
+  }
+  if (!/^(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)$/.test(name)) return null;
+  const slash = inner.split('/');
+  const raw = slash.length === 2 ? slash[1].trim() : inner.split(',').length === 4 ? inner.split(',')[3].trim() : null;
+  if (raw === null) return 1;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? (raw.endsWith('%') ? n / 100 : n) : null;
+}
+const OVERFLOW_CLIPS = (rule: Rule) => (rule.nodes || []).some(node => node.type === 'decl' && /^overflow(?:-[xy]|-block|-inline)?$/i.test(node.prop) && /\b(?:hidden|clip)\b/i.test(node.value));
+
 /** Why a declaration hides, fades or shrinks a protected element, or null. */
 function protectedViolation(decl: Declaration, state: boolean, level: 'element' | 'container'): string | null {
   const prop = decl.prop.toLowerCase(), value = decl.value.trim().toLowerCase();
@@ -209,10 +273,17 @@ function protectedViolation(decl: Declaration, state: boolean, level: 'element' 
   if (prop === 'font-size') { const floor = fontFloor(value); if (floor !== null && floor < 12) return 'shrinks'; }
   if (prop === 'transform' && scaleFactors(value).some(n => n < 0.9)) return 'shrinks';
   if ((prop === 'scale' || prop === 'zoom') && value.split(/\s+/).some(part => { const n = parseFloat(part); return Number.isFinite(n) && (part.endsWith('%') ? n / 100 : n) < 0.9; })) return 'shrinks';
-  if (prop === 'transform' && [...value.matchAll(/translate(?:3d|x|y)?\(([^)]*)\)/gi)].some(m => m[1].split(/[\s,]+/).some(part => { const px = lengthPx(part, { vw: 10, vh: 10 }); return px !== null && !part.endsWith('%') && Math.abs(px) >= 1000; }))) return 'moves off screen';
-  if (prop === 'translate' && value.split(/\s+/).some(part => { const px = lengthPx(part, { vw: 10, vh: 10 }); return px !== null && !part.endsWith('%') && Math.abs(px) >= 1000; })) return 'moves off screen';
+  if (prop === 'transform' && [...value.matchAll(/translate(?:3d|x|y)?\(([^)]*)\)/gi)].some(m => m[1].split(/[\s,]+/).filter(Boolean).some(farShift))) return 'moves off screen';
+  if (prop === 'translate' && value.split(/\s+/).some(farShift)) return 'moves off screen';
+  if (prop === 'transform' && edgeOn(value)) return 'turns edge-on';
+  if (/^(?:-webkit-)?filter$/.test(prop)) { const reason = filterViolation(value, state); if (reason) return reason; }
+  if (/^(?:-webkit-)?mask(?:-image|-border(?:-source)?)?$/.test(prop) && !/^none$/.test(value)) return 'masks';
+  if (prop === 'clip-path' && degeneratePolygon(value)) return 'clips';
+  if (prop === 'content' && !/^(?:normal|none)$/.test(value)) return 'replaces';
+  if (/^(?:max-)?(?:height|block-size)$/.test(prop) && OVERFLOW_CLIPS(decl.parent as Rule)) { const px = lengthPx(value, PHONE); if (px !== null && px <= 1) return 'collapses'; }
   if (/^(?:left|right|top|bottom|inset(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|text-indent)$/.test(prop) && farOffset(prop, value)) return 'moves off screen';
   if ((prop === 'color' || prop === '-webkit-text-fill-color') && TRANSPARENT.test(value)) return 'makes its text invisible';
+  if (prop === 'color' || prop === '-webkit-text-fill-color') { const alpha = colorAlpha(value); if (alpha === 0) return 'makes its text invisible'; if (alpha !== null && alpha < 0.5 && !state) return 'fades'; }
   if (prop === 'color' || /^background(?:-color)?$/.test(prop)) {
     const rule = decl.parent as Rule;
     const siblings = (rule.nodes || []).filter((node): node is Declaration => node.type === 'decl');
@@ -238,10 +309,25 @@ function clampMotion(decl: Declaration, notes: Notes): void {
   decl.value = `${value}${unit}`;
 }
 
+/** A rule's selectors resolved against CSS nesting (`&`, or a relative selector) and `@scope (root)` (`:scope`). */
+function effectiveSelectors(rule: Rule): string[] {
+  const own = splitSelectors(rule.selector);
+  for (let parent = rule.parent as Container | undefined; parent && parent.type !== 'root'; parent = parent.parent as Container | undefined) {
+    const scope = parent.type === 'atrule' && (parent as AtRule).name.toLowerCase() === 'scope' ? (parent as AtRule).params.match(/^\s*\(([^)]*)\)/)?.[1] : undefined;
+    if (parent.type !== 'rule' && !scope) continue;
+    const outer = scope ? splitSelectors(scope) : effectiveSelectors(parent as Rule);
+    return outer.flatMap(base => own.map(selector => {
+      const nested = scope ? selector.replace(/:scope\b/gi, '&') : selector;
+      return nested.includes('&') ? nested.replace(/&/g, `:is(${base})`) : `${base} ${nested}`;
+    }));
+  }
+  return own;
+}
+
 function checkProtected(decl: Declaration, notes: Notes): void {
   const rule = decl.parent;
   if (!rule || rule.type !== 'rule' || insideKeyframes(decl)) return;
-  for (const selector of splitSelectors((rule as Rule).selector)) {
+  for (const selector of effectiveSelectors(rule as Rule)) {
     const hit = protectedSelector(selector);
     if (!hit.protected) continue;
     const reason = protectedViolation(decl, hit.state, hit.protected);
@@ -250,6 +336,29 @@ function checkProtected(decl: Declaration, notes: Notes): void {
     decl.remove();
     return;
   }
+}
+
+/**
+ * A positioned ::before/::after on a kit surface can sit over the buy button and take its clicks (the pseudo-element's
+ * clicks go to the card, not the button). Such an overlay gets pointer-events:none; it still paints.
+ */
+function releaseOverlays(root: Root, notes: Notes): void {
+  root.walkRules(rule => {
+    if (insideKeyframes(rule)) return;
+    const decls = (rule.nodes || []).filter((node): node is Declaration => node.type === 'decl');
+    if (!decls.some(decl => decl.prop.toLowerCase() === 'position' && /^(?:absolute|fixed)\b/i.test(decl.value.trim()))) return;
+    const events = decls.filter(decl => decl.prop.toLowerCase() === 'pointer-events');
+    if (events.length && events.every(decl => /^none\b/i.test(decl.value.trim()))) return;
+    const selectors = splitSelectors(rule.selector);
+    const overlays = selectors.filter(selector => {
+      const parts = compounds(selector), subject = parts.at(-1) ?? '';
+      return /::?(?:before|after)\b/i.test(subject) && parts.some(part => KIT_ROOT.test(withoutNot(part)));
+    });
+    if (!overlays.length) return;
+    if (overlays.length === selectors.length) { events.forEach(decl => decl.remove()); rule.append({ prop: 'pointer-events', value: 'none' }); }
+    else rule.after(postcss.rule({ selector: overlays.join(', '), nodes: [postcss.decl({ prop: 'pointer-events', value: 'none' })] }));
+    notes.add(`added pointer-events:none to ${overlays.join(', ')} (a positioned overlay must not take the buy button's clicks)`);
+  });
 }
 
 function removeEmpty(container: Container): void {
@@ -267,6 +376,7 @@ export function validateAuthoredCss(css: string, path: string): { css: string; r
   try { root = postcss.parse(css); } catch { return { css, repairs: [] }; }
   const notes = new Notes(path);
   root.walkDecls(decl => { clampMotion(decl, notes); if (decl.parent) checkProtected(decl, notes); });
+  releaseOverlays(root, notes);
   if (!notes.size) return { css, repairs: [] };
   root.walkRules(rule => { if (!rule.nodes.length) rule.remove(); });
   return { css: root.toString(), repairs: notes.list() };
@@ -325,6 +435,7 @@ export function validateStoreKitCss(css: string, path = SOURCE_KIT_CSS_PATH, for
     clampMotion(decl, notes);
     if (decl.parent) checkProtected(decl, notes);
   });
+  releaseOverlays(root, notes);
   removeEmpty(root);
   if (Buffer.byteLength(root.toString()) > SOURCE_KIT_CSS_MAX_BYTES) {
     while (root.nodes.length && Buffer.byteLength(root.toString()) > SOURCE_KIT_CSS_MAX_BYTES) root.last!.remove();

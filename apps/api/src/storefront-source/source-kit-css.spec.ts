@@ -112,6 +112,52 @@ describe('protected scope: the product page buy flow and legal text', () => {
   });
 });
 
+describe('hiding techniques that defeat the buy button', () => {
+  it.each([
+    ['.menu-add', 'height:0;overflow:hidden', 'height'], ['.checkout-button', 'max-height:0;overflow:clip', 'max-height'], ['.product-detail__purchase', 'max-height:0px;overflow-y:hidden', 'max-height'],
+    ['.menu-add', 'transform:translateY(120%)', 'transform'], ['.product-detail__sticky', 'transform:translateY(100%)', 'transform'], ['.menu-add', 'translate:0 100%', 'translate'],
+    ['.menu-add', 'left:9999px', 'left'], ['.checkout-button', 'right:100vw', 'right'], ['.menu-add', 'top:-499px', 'top'],
+    ['.menu-add', 'filter:opacity(0)', 'filter'], ['.checkout-button', 'filter:blur(8px)', 'filter'], ['.menu-add', 'filter:brightness(0) opacity(.2)', 'filter'],
+    ['.menu-add', 'transform:rotateY(90deg)', 'transform'], ['.menu-add', 'mask:linear-gradient(transparent,transparent)', 'mask'],
+    ['.menu-add', 'clip-path:polygon(0 0,0 0,0 0)', 'clip-path'], ['.menu-add', 'content:url(assets/x.svg)', 'content'],
+    ['.menu-add', 'color:rgba(0,0,0,.02)', 'color'], ['.checkout-review .order-total', 'color:#0003', 'color'], ['.menu-add', 'color:rgb(0 0 0 / 40%)', 'color'],
+    ['.menu-add', 'color:color-mix(in srgb, red 0%, transparent)', 'color'], ['.menu-add', 'color:hsla(0,0%,0%,.3)', 'color'], ['.menu-add', '-webkit-text-fill-color:#00000010', '-webkit-text-fill-color'],
+  ])('strips %s { %s }', (selector, declarations, prop) => {
+    for (const out of [kit(`${selector}{${declarations};border-radius:3px}`), validateAuthoredCss(`${selector}{${declarations};border-radius:3px}`, 'styles.css')]) {
+      expect(find(out.css, selector, prop)).toBeUndefined();
+      expect(find(out.css, selector, 'border-radius')?.value).toBe('3px');
+      expect(out.repairs.join('\n')).toMatch(/protected/);
+    }
+  });
+
+  it('makes a positioned overlay on a kit surface let clicks through', () => {
+    for (const [css, selector] of [['.menu-item::after{content:"";position:absolute;inset:0;z-index:50}', '.menu-item::after'], ['.cart-drawer:before{content:"";position:fixed;inset:0;pointer-events:auto}', '.cart-drawer:before']]) {
+      for (const out of [kit(css), validateAuthoredCss(css, 'styles.css')]) {
+        expect(find(out.css, selector, 'pointer-events')?.value).toBe('none');
+        expect(sheet(out.css).filter(d => d.prop === 'pointer-events')).toHaveLength(1);
+        expect(out.repairs.join('\n')).toMatch(/pointer-events/);
+      }
+    }
+  });
+
+  it.each([
+    '.menu-add{height:0}', '.menu-add{overflow:hidden;max-height:3rem}', '.menu-add{transform:translateY(-2px)}', '.menu-add{translate:0 50%}',
+    '.menu-add{filter:drop-shadow(0 1px 2px #0003)}', '.menu-add{filter:brightness(1.1)}', '.menu-add{transform:rotate(90deg)}',
+    '.menu-add{color:rgba(0,0,0,.8)}', '.menu-add{background:rgba(0,0,0,.1)}', '.menu-add:disabled{color:rgb(0 0 0 / 40%)}',
+    '.menu-item::after{content:"";position:absolute;inset:0;pointer-events:none}', '.menu-item::after{content:"";display:block;height:2px}',
+    '.menu-add{clip-path:inset(0 round 8px)}', '.menu-add{margin-left:auto;left:12px}',
+  ])('keeps %s', css => {
+    const out = kit(css);
+    expect(sheet(out.css).length).toBe(sheet(css).length);
+    expect(out.repairs).toEqual([]);
+  });
+
+  it('leaves the store\'s own overlays off kit surfaces alone', () => {
+    const css = '.hero::after{content:"";position:absolute;inset:0}';
+    expect(validateAuthoredCss(css, 'styles.css')).toEqual({ css, repairs: [] });
+  });
+});
+
 describe('store kit CSS: resources, importance and size', () => {
   it.each([
     '.cart-drawer{background:url(https://x.test/a.png)}', '.cart-drawer{background:url(data:image/png;base64,AAAA)}',
@@ -223,6 +269,12 @@ describe('validateAuthoredCss', () => {
     const out = validateAuthoredCss('.menu-add{display:none;color:red}', 'styles.css');
     expect(sheet(out.css).map(d => d.prop)).toEqual(['color']);
     expect(out.repairs[0]).toMatch(/^styles\.css: /);
+  });
+
+  it('reads nested rules and @scope rules against their parent selector', () => {
+    const out = validateAuthoredCss('.menu-add{ &{display:none} &:disabled{opacity:.5} .x &{gap:1px} }@scope (.menu-add){ :scope{opacity:0} }.hero{ .menu-add{visibility:hidden} }', 'styles.css');
+    expect(sheet(out.css).map(d => d.prop)).toEqual(['opacity', 'gap']);
+    expect(out.repairs).toHaveLength(3);
   });
 
   it('leaves unparsable CSS to the other validators', () => {
