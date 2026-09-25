@@ -215,6 +215,16 @@ export function contractMoney(cents: number, currency: string): string {
   return `${currency === "USD" ? "US$" : "Bs"} ${grouped} (${amountInWords(cents, currency)})`;
 }
 
+const ORDINALS = ["PRIMERA", "SEGUNDA", "TERCERA", "CUARTA", "QUINTA", "SEXTA", "SÉPTIMA", "OCTAVA", "NOVENA", "DÉCIMA"];
+
+/** "PRIMERA", …, "DÉCIMA", "DÉCIMA PRIMERA", …, "VIGÉSIMA", then "CLÁUSULA 21". */
+export function clauseOrdinal(position: number): string {
+  if (position >= 1 && position <= 10) return ORDINALS[position - 1];
+  if (position > 10 && position < 20) return `DÉCIMA ${ORDINALS[position - 11]}`;
+  if (position === 20) return "VIGÉSIMA";
+  return `CLÁUSULA ${position}`;
+}
+
 // ── server-written texts ─────────────────────────────────────────────────
 
 const or = (value: string | null | undefined, placeholder: string) => (value && value.trim() ? value.trim() : `{{${placeholder}}}`);
