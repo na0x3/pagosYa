@@ -1,9 +1,11 @@
-import { Controller, Get, Header, HttpCode, Param, Post, Query, Req, StreamableFile } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, Param, Post, Query, Req, StreamableFile } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { requestContext, type RequestWithContext } from "../legal/request-context";
 import { BusinessDocumentsService } from "./business-documents.service";
 import { CobrosService } from "./cobros.service";
+import { ProposalsService } from "./proposals.service";
+import { AcceptProposalDto, RequestProposalChangesDto } from "./dto/business-document.dto";
 
 /**
  * The customer's side of a signed document link (rendered by the checkout app
@@ -15,6 +17,7 @@ export class BusinessDocumentsPublicController {
   constructor(
     private readonly documents: BusinessDocumentsService,
     private readonly cobros: CobrosService,
+    private readonly proposals: ProposalsService,
   ) {}
 
   @Get(":token")
@@ -32,6 +35,24 @@ export class BusinessDocumentsPublicController {
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   pay(@Param("token") token: string) {
     return this.cobros.pay(token);
+  }
+
+  /** Proposals: "Aceptar propuesta" (name, email and the version read; IP and user agent kept as evidence). */
+  @Post(":token/accept")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  accept(@Param("token") token: string, @Body() dto: AcceptProposalDto, @Req() req: RequestWithContext) {
+    return this.proposals.accept(token, dto, requestContext(req));
+  }
+
+  /** Proposals: "Pedir cambios" (timeline, the merchant's Inbox and an email inside the store's cap). */
+  @Post(":token/changes")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  changes(@Param("token") token: string, @Body() dto: RequestProposalChangesDto, @Req() req: RequestWithContext) {
+    return this.proposals.requestChanges(token, dto, requestContext(req));
   }
 
   @Get(":token/pdf")

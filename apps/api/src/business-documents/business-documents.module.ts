@@ -9,12 +9,16 @@ import { CobrosService } from "./cobros.service";
 import { CobrosWorker } from "./cobros.worker";
 import { UploadsModule } from "../uploads/uploads.module";
 import { PaymentIntentsModule } from "../payment-intents/payment-intents.module";
+import { AiModule } from "../ai/ai.module";
+import { ProposalsController } from "./proposals.controller";
+import { ProposalsService } from "./proposals.service";
+import { ProposalsWorker } from "./proposals.worker";
 
-/** D0 and D1 (cobros) of docs/superpowers/specs/2026-09-25-business-documents-and-guided-growth-design.md. */
+/** D0, D1 (cobros) and D2 (proposals) of docs/superpowers/specs/2026-09-25-business-documents-and-guided-growth-design.md. */
 @Module({
-  imports: [AuthModule, DashboardModule, PaymentIntentsModule, UploadsModule],
-  controllers: [BusinessDocumentsController, BusinessDocumentsPublicController, CobrosController],
-  providers: [BusinessDocumentsService, CobrosService, CobrosWorker],
+  imports: [AuthModule, DashboardModule, PaymentIntentsModule, UploadsModule, AiModule],
+  controllers: [BusinessDocumentsController, BusinessDocumentsPublicController, CobrosController, ProposalsController],
+  providers: [BusinessDocumentsService, CobrosService, CobrosWorker, ProposalsService, ProposalsWorker],
   exports: [BusinessDocumentsService],
 })
 export class BusinessDocumentsModule {}
