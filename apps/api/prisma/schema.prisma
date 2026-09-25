@@ -2911,6 +2911,10 @@ model BusinessDocument {
   sentAt             DateTime?
   viewedAt           DateTime?
   voidedAt           DateTime?
+  // Cobros (D1): the checkout that pays it, when it was paid, and whether the worker sends reminders.
+  paymentIntentId    String?
+  paidAt             DateTime?
+  autoReminders      Boolean                     @default(true)
   createdAt          DateTime                    @default(now())
   updatedAt          DateTime                    @updatedAt
   items              BusinessDocumentItem[]
@@ -2921,6 +2925,8 @@ model BusinessDocument {
   @@unique([storeId, kind, number])
   @@index([storeId, kind, status, createdAt])
   @@index([merchantId, createdAt])
+  @@index([paymentIntentId])
+  @@index([kind, status, dueAt])
 }
 
 model BusinessDocumentItem {
