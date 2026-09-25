@@ -126,6 +126,11 @@ describe('overshoot stays on transforms', () => {
       const uses = [...source.matchAll(/var\(--motion-ease(?:-exit)?[,)]/g)];
       for (const use of uses) {
         const before = source.slice(Math.max(0, use.index! - 120), use.index);
+        // The notice's hide curves are a timing-function list in the order of its transition: opacity, transform, visibility.
+        if (before.endsWith('.cart-added:not([data-visible=true]){transition-timing-function:var(--motion-ease-settle-exit),')) {
+          expect(commerce).toMatch(/\.cart-added\{[^}]*transition:opacity var[^}]*\),transform var[^}]*\),visibility var/);
+          continue;
+        }
         const property = before.match(/([a-z-]+)\s+var\(--motion-(?:fast|base|slow)(?:,[^()]*(?:\([^()]*\))?)?\)\s+$/)?.[1];
         expect({ file, at: before.slice(-60), property }).toEqual({ file, at: before.slice(-60), property: 'transform' });
       }
@@ -221,5 +226,39 @@ describe('motion.js reveals and card hover take the personality', () => {
         expect({ personality, value }).toEqual({ personality, value: duration });
       } finally { await page.close(); }
     }
+  });
+});
+
+describe('reduced motion and motion off stop every personality', () => {
+  it.each(PERSONALITIES)('%s: no add pulse with reduced motion or with motion off', personality => {
+    expect(addWithPointer({ dna: { ...DNA, motion: personality }, reduce: true })).toEqual([]);
+    expect(addWithPointer({ dna: { ...DNA, motion: personality }, settings: { motion: 'off' } })).toEqual([]);
+  });
+  const durations = (page: Page) => page.evaluate(() => Object.fromEntries(['.cart-drawer', '.cart-added', '.menu-add'].map(selector => [selector, getComputedStyle(document.querySelector(selector)!).transitionDuration.split(', ').every(d => d === '0s')])));
+  it.each(PERSONALITIES)('%s: with reduced motion the cart, the notice and the buttons have no transition (kit runtime alone)', async personality => {
+    for (const added of ['toast', 'ribbon']) {
+      const page = await open({ dna: { ...DNA, added, motion: personality }, reducedMotion: 'reduce' });
+      try {
+        await page.waitForSelector('.menu-add');
+        expect({ added, still: await durations(page) }).toEqual({ added, still: { '.cart-drawer': true, '.cart-added': true, '.menu-add': true } });
+      } finally { await page.close(); }
+    }
+  });
+  it.each(PERSONALITIES)('%s: a keyboard add shows the notice instantly', async personality => {
+    const page = await open({ dna: { ...DNA, motion: personality } });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.focus('.menu-add');
+      await page.keyboard.press('Enter');
+      await page.waitForSelector('.cart-added[data-visible="true"]');
+      expect(await page.evaluate(() => getComputedStyle(document.querySelector('.cart-added')!).transitionDuration.split(', ').every(d => d === '0s'))).toBe(true);
+    } finally { await page.close(); }
+  });
+  it.each(PERSONALITIES)('%s: with motion off and the motion runtime, nothing transitions or reveals', async personality => {
+    const page = await open({ dna: { ...DNA, motion: personality }, settings: { motion: 'off' }, runtime: `${commerce}\n${motionRuntime}` });
+    try {
+      await page.waitForSelector('.menu-add');
+      expect(await durations(page)).toEqual({ '.cart-drawer': true, '.cart-added': true, '.menu-add': true });
+    } finally { await page.close(); }
   });
 });

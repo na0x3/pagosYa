@@ -31,7 +31,8 @@
     ':root[data-dna-motion]{--ease-out:var(--motion-ease-settle);--ease-drawer:var(--motion-ease-settle)}',
     /* Leaving: panels on the settle exit curve (never anticipates), the notice's slide on the exit curve. */
     ':root[data-dna-motion] .cart-drawer:not([open]){transition-timing-function:var(--motion-ease-settle-exit)}',
-    ':root[data-dna-motion] .cart-added:not([data-visible=true]){transition:opacity var(--motion-fast) var(--motion-ease-settle-exit),transform var(--motion-fast) var(--motion-ease-exit),visibility var(--motion-fast) linear}',
+    /* Curves only (the notice's transition lists opacity, transform, visibility): the kit's instant and reduced-motion rules still switch it off. */
+    ':root[data-dna-motion] .cart-added:not([data-visible=true]){transition-timing-function:var(--motion-ease-settle-exit),var(--motion-ease-exit),linear}',
     /* The ribbon hangs from a screen edge: an overshoot would open a gap above it. */
     ':root[data-dna-added=ribbon] .cart-added{--motion-ease:var(--motion-ease-settle);--motion-ease-exit:var(--motion-ease-settle-exit)}',
   ];

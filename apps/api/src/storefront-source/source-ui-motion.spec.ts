@@ -112,3 +112,18 @@ describe('@pagosya/ui motion personality', () => {
     expect(playful).toEqual([[360, 'cubic-bezier(.22,1,.36,1)'], [200, 'cubic-bezier(.5,0,.75,0)']]);
   });
 });
+
+describe('reduced motion and motion off stop every personality in @pagosya/ui', () => {
+  const everything = `${group(3)}<Reveal><p>r</p></Reveal><BrandEntrance name="Marca" /><SiteHeader name="Marca" menu="overlay" links={[{ label: "Tienda", href: "#t" }]} />`;
+  const openMenu = (w: any) => w.document.querySelector('.ui-overlay-trigger').dispatchEvent(new w.MouseEvent('click', { bubbles: true, detail: 1 }));
+  it.each(PERSONALITIES)('%s: nothing animates with reduced motion or with motion off', async personality => {
+    expect((await run(everything, { personality, reduce: true, after: openMenu })).calls).toEqual([]);
+    expect((await run(everything, { personality, motion: 'off', after: openMenu })).calls).toEqual([]);
+    expect((await run(everything, { personality, after: openMenu })).calls.length).toBeGreaterThan(0);
+  });
+  it('the CSS scroll reveals and entrances stay gated on reduced motion and motion off', () => {
+    const css = ui.match(/const UI_CSS = `([\s\S]*?)\n`;/)![1];
+    expect(css).toContain('@media (prefers-reduced-motion:no-preference){\n    :root:not([data-ui-motion=off]) .ui-reveal{animation:ui-reveal');
+    expect(css).toMatch(/@media \(prefers-reduced-motion:reduce\)\{[^\n]*\.ui-entrance\{display:none\}/);
+  });
+});
