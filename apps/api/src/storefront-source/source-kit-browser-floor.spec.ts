@@ -14,6 +14,8 @@ const BEYOND_FLOOR: Array<[string, RegExp]> = [
   ['Array.prototype.findLast', /\.findLast(Index)?\s*\(/],
   ['change-by-copy arrays', /\.(toSorted|toReversed|toSpliced)\s*\(/],
   ['Object.groupBy', /\b(Object|Map)\.groupBy\s*\(/],
+  // Missing on iOS Safari ≤ 15 and Chrome < 103: calling it throws. Use an AbortController and a timer instead.
+  ['AbortSignal.timeout / .any', /\bAbortSignal\.(timeout|any)\s*\(/],
 ];
 
 describe('kit runtimes stay within the browser floor', () => {

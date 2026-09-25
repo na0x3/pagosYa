@@ -117,3 +117,24 @@ it('names the products whose quantity grew, for the legacy storefront\'s add eve
   expect(addedProducts(before, after)).toEqual(['desk', 'cup']);
   expect(addedProducts(after, before)).toEqual([]);
 });
+
+it('still sends on browsers without AbortSignal.timeout (iOS ≤ 15, Chrome < 103), aborting after 2.5 s itself', () => {
+  vi.useFakeTimers();
+  const timeout = AbortSignal.timeout;
+  try {
+    Object.defineProperty(AbortSignal, 'timeout', { value: undefined, configurable: true, writable: true });
+    privacy.save('old-safari', true);
+    const analytics = analyticsFor('old-safari');
+    analytics.record({ type: 'page_view', path: 'index.html' });
+    analytics.flush();
+    const [request] = sent();
+    expect(request.body.events).toEqual([{ type: 'page_view', path: 'index.html' }]);
+    const signal = request.init.signal as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    vi.advanceTimersByTime(2500);
+    expect(signal.aborted).toBe(true);
+  } finally {
+    Object.defineProperty(AbortSignal, 'timeout', { value: timeout, configurable: true, writable: true });
+    vi.useRealTimers();
+  }
+});

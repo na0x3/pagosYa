@@ -9,6 +9,17 @@ type AnalyticsEvent = { type: string; productId?: string; target?: string; step?
 const includes = (list: readonly string[], value: unknown): value is string => typeof value === 'string' && list.includes(value);
 const PRODUCT_EVENTS = ['product_card_impression', 'product_card_click', 'product_view', 'add_to_cart'];
 const BATCH = 20;
+/**
+ * A request deadline that also works where AbortSignal.timeout is missing (iOS Safari ≤ 15, Chrome < 103): calling it
+ * there threw inside the send, and every batch was lost.
+ */
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') return AbortSignal.timeout(ms);
+  if (typeof AbortController === 'undefined') return undefined;
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
 
 /** Keeps only allow-listed events and fields: whatever the store's frame posts, nothing else leaves this page. */
 function clean(raw: unknown): AnalyticsEvent | null {
@@ -61,7 +72,7 @@ export function createStoreAnalytics(slug: string, preview: boolean, session: ()
       referrer = undefined;
       try {
         void fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/events`, {
-          method: 'POST', credentials: 'omit', keepalive: true, headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(2500),
+          method: 'POST', credentials: 'omit', keepalive: true, headers: { 'Content-Type': 'application/json' }, body, signal: timeoutSignal(2500),
         }).catch(() => {});
       } catch { /* Analytics must never interrupt buying. */ }
     }
