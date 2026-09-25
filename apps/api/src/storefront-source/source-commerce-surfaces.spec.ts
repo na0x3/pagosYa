@@ -321,6 +321,22 @@ describe('product card preview', () => {
     chip.click();
     expect(w.__modal).toContain(doc.querySelector('dialog[data-pagosya-product]'));
   });
+  it('anchors the quick-look chip to the photo, not the card: a row template keeps its price clear', () => {
+    const ROW = '<template data-pagosya-product-template><article class="row"><a data-product-link data-product-media><img data-product-field="image" alt=""></a><div><h3><a data-product-link><span data-product-field="name"></span></a></h3></div><p data-product-field="price"></p><button data-product-add>Añadir</button></article></template>';
+    const { w, doc } = boot({ ...DNA, card: 'quick-look' }, { items: [TWO], body: `${ROW}<section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>` });
+    const card = doc.querySelector('.menu-item'), photo = card.querySelector('.menu-item__image'), chip = card.querySelector('.menu-item__quick-look');
+    // The chip is never nested in the photo's link, and sits right after it (the photo's box, not the card's corner).
+    expect(chip.closest('a,button:not(.menu-item__quick-look)')).toBeNull();
+    expect(chip.previousElementSibling?.contains(photo)).toBe(true);
+    // A row: photo on the left (120px), price at the top right of the card.
+    card.getBoundingClientRect = () => ({ left: 0, top: 0, right: 600, bottom: 120, width: 600, height: 120, x: 0, y: 0, toJSON() {} });
+    photo.getBoundingClientRect = () => ({ left: 0, top: 0, right: 120, bottom: 120, width: 120, height: 120, x: 0, y: 0, toJSON() {} });
+    card.dispatchEvent(new w.Event('pointerover', { bubbles: true }));
+    expect([chip.style.getPropertyValue('--look-top'), chip.style.getPropertyValue('--look-left')]).toEqual(['0px', '120px']);
+    const rule = rules(dnaCss(doc)).find(r => r.selector === ':root[data-dna-card=quick-look] .menu-item__quick-look');
+    expect(rule?.body).toMatch(/top:calc\(var\(--look-top,0px\) \+ 10px\)/);
+    expect(rule?.body).toMatch(/left:calc\(var\(--look-left,100%\) - 10px\)/);
+  });
   it('a long press previews the second photo on touch, and lifting the finger ends it', () => {
     jest.useFakeTimers();
     try {
