@@ -1,4 +1,4 @@
-import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateStoreKitCss } from './source-kit-css';
+import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
 import { BadGatewayException } from '@nestjs/common';
 import { build } from 'esbuild';
 import postcss from 'postcss';
@@ -502,7 +502,8 @@ export async function compileNextPreview(files: SourceProjectFileDto[], purpose:
   // Tailwind may resolve a different PostCSS 8 patch; its plugin uses the same runtime contract.
   const css = await postcss([tailwindcss({ content: authored.filter(f => f.path.endsWith('.tsx')).map(f => ({ raw: f.content, extension: 'tsx' })), corePlugins: { preflight: true } }) as unknown as import('postcss').Plugin])
     .process('@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' + globals.rest, { from: undefined });
-  const compiled: SourceProjectFileDto[] = [{ path: 'styles.css', content: css.css }, { path: 'site.js', content: '/* React components own authored interactions. */' }];
+  // Tailwind utilities are authored CSS too (`[&_.menu-add]:opacity-0`): the compiled sheet meets the protected-element rules.
+  const compiled: SourceProjectFileDto[] = [{ path: 'styles.css', content: validateAuthoredCss(css.css, 'styles.css').css }, { path: 'site.js', content: '/* React components own authored interactions. */' }];
   if (storeKit) compiled.push({ path: SOURCE_KIT_CSS_PATH, content: storeKit });
   for (const page of pages) {
     const entry = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {flushSync} from 'react-dom'; import {CreativeProvider} from '@pagosya/creative'; import Page from './components/${page.name}'; flushSync(()=>createRoot(document.getElementById('pagosya-react-root')).render(React.createElement(CreativeProvider, null, React.createElement(Page))));`;

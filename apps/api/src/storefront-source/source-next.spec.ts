@@ -21,6 +21,14 @@ describe('Next.js storefront compilation', () => {
     expect(plain.some(f => f.path === 'styles/kit.css')).toBe(false);
     expect(plain.find(f => f.path === 'index.html')!.content).not.toContain('kit.css');
   });
+  it('holds the compiled Tailwind output to the protected-element rules: an arbitrary variant cannot fade the buy button', async () => {
+    const source = nextStoreFiles().map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content + '\n// [&_.menu-add]:opacity-0 [&_.checkout-button]:hidden [&_.hero]:opacity-0\n' } : f);
+    expect(source.some(f => f.content.includes('[&_.menu-add]:opacity-0'))).toBe(true);
+    const css = (await compileNextPreview(source)).find(f => f.path === 'styles.css')!.content;
+    expect(css).toMatch(/\.hero\s*\{\s*opacity:\s*0/);
+    expect(css).not.toMatch(/\.menu-add\s*\{\s*opacity:\s*0/);
+    expect(css).not.toMatch(/\.checkout-button\s*\{\s*display:\s*none/);
+  });
   it.each([
     '<img src="foto.png" />', '<img src="foto.png"></img>',
     '<img {...props} />', '<img alt="" />', '<img alt={""} />',

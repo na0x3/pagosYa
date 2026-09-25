@@ -1,4 +1,5 @@
 import postcss, { type AtRule, type ChildNode, type Container, type Declaration, type Root, type Rule } from 'postcss';
+import * as ts from 'typescript';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 
 /**
@@ -31,7 +32,7 @@ const QUALIFIER = /^(?:html|:root)(?:\[data-dna-[\w-]+(?:[~|^$*]?=(?:"[^"]*"|'[^
 /** A kit surface compound: the class or hook itself, or its BEM element/modifier (never `.checkout-buttonX`). */
 const KIT_ROOT = /^(?:[a-z][a-z0-9-]*)?(?:\.(?:cart-drawer|cart-added|order-item|checkout-review|menu-item|menu-add|checkout-button|quantity)(?:(?:__|--)[\w-]*)?(?![\w-])|\.product-detail__[\w-]|\.pagosya-contact-[\w-]|\[data-pagosya-(?:checkout(?:-page)?|product(?:-page)?|contact|privacy)(?=[\]~|^$*=\s]))/i;
 /** Price, total, buy/pay button, quantity, legal and privacy text, the status line. */
-const PROTECTED = /\.[\w-]*(?:price|total)[\w-]*|\.(?:checkout-button|menu-add|quantity|pagosya-policies|pagosya-secure-note)(?![\w-])|\.product-detail__(?:buy|quantity|status)|\[data-(?:pay|add|checkout|product-quantity|pagosya-status|pagosya-checkout-status|pagosya-privacy|pagosya-policy|pagosya-policies)(?![\w-])|\[data-product-field=["']?price/i;
+const PROTECTED = /\.[\w-]*(?:price|total)[\w-]*|\.(?:checkout-button|menu-add|quantity|pagosya-policies|pagosya-secure-note)(?![\w-])|\.product-detail__(?:buy|quantity|status)|\[data-(?:pay|add|product-add|checkout|product-quantity|pagosya-status|pagosya-checkout-status|pagosya-privacy|pagosya-policy|pagosya-policies)(?![\w-])|\[data-product-field=["']?price/i;
 /** Legal, privacy and status compounds: every descendant is protected text. */
 const LEGAL = /\.(?:pagosya-policies|pagosya-secure-note)(?![\w-])|\.product-detail__status(?![\w-])|\[data-(?:pagosya-status|pagosya-checkout-status|pagosya-privacy|pagosya-policy|pagosya-policies)(?![\w-])/i;
 /** Under a protected compound every descendant is protected (the label span of a pay button…) except media and icons. */
@@ -388,6 +389,136 @@ export function validateAuthoredCss(css: string, path: string): { css: string; r
   return { css: root.toString(), repairs: notes.list() };
 }
 
+/* ---- inline styles in static pages ---- */
+const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+const HTML_TOKEN = /<!--[\s\S]*?-->|<(script|style)\b([^>]*)>([\s\S]*?)<\/\1\s*>|<\/([a-zA-Z][\w-]*)\s*>|<([a-zA-Z][\w-]*)((?:\s+[^\s=>/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>/g;
+const HTML_ATTRIBUTE = /([^\s=>/]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
+const cssIdent = (value: string) => value.replace(/[^\w-]/g, char => `\\${char}`);
+/** The element as one selector compound: its tag, id, classes and other attributes with their values. */
+function elementCompound(tag: string, attributes: string): string {
+  let compound = tag.toLowerCase();
+  for (const [, name, quoted] of attributes.matchAll(HTML_ATTRIBUTE)) {
+    const value = quoted === undefined ? '' : quoted.replace(/^["']|["']$/g, '');
+    const lower = name.toLowerCase();
+    if (lower === 'style') continue;
+    if (lower === 'class') compound += value.split(/\s+/).filter(Boolean).map(name => '.' + cssIdent(name)).join('');
+    else if (lower === 'id' && value) compound += '#' + cssIdent(value);
+    else compound += quoted === undefined ? `[${cssIdent(lower)}]` : `[${cssIdent(lower)}="${value.replace(/["\\]/g, '')}"]`;
+  }
+  return compound;
+}
+/**
+ * A static page's inline CSS meets the same rules as its stylesheets: <style> elements are validated as stylesheets, and a
+ * style="" attribute is read as a rule on the element's own selector under its ancestors (a price in a card template,
+ * a paragraph in the privacy notice). Script bodies and comments are skipped. Byte-identical when clean.
+ */
+export function validateInlineHtml(html: string, path: string): { html: string; repairs: string[] } {
+  const repairs: string[] = [];
+  const stack: Array<{ tag: string; compound: string }> = [];
+  const out = html.replace(HTML_TOKEN, (whole, rawTag: string | undefined, rawAttributes: string, body: string, closing: string | undefined, tag: string | undefined, attributes: string | undefined) => {
+    if (rawTag) {
+      if (rawTag.toLowerCase() !== 'style') return whole;
+      const checked = validateAuthoredCss(body, `${path} <style>`);
+      repairs.push(...checked.repairs);
+      return checked.css === body ? whole : whole.replace(body, () => checked.css);
+    }
+    if (closing) {
+      const index = stack.map(entry => entry.tag).lastIndexOf(closing.toLowerCase());
+      if (index >= 0) stack.length = index;
+      return whole;
+    }
+    if (!tag) return whole;
+    const compound = elementCompound(tag, attributes ?? '');
+    const selector = [...stack.map(entry => entry.compound), compound].join(' ');
+    if (!VOID_ELEMENTS.has(tag.toLowerCase()) && !whole.endsWith('/>')) stack.push({ tag: tag.toLowerCase(), compound });
+    const style = (attributes ?? '').match(/(\s+)style\s*=\s*("([^"]*)"|'([^']*)')/i);
+    if (!style) return whole;
+    const declarations = style[3] ?? style[4] ?? '';
+    let root: Root;
+    try { root = postcss.parse(`${selector}{${declarations}}`); } catch { return whole; }
+    const notes = new Notes(path);
+    root.walkDecls(decl => { clampMotion(decl, notes); if (decl.parent) checkProtected(decl, notes); });
+    if (!notes.size) return whole;
+    repairs.push(...notes.list());
+    const kept = ((root.first as Rule | undefined)?.nodes ?? []).filter((node): node is Declaration => node.type === 'decl').map(decl => `${decl.prop}:${decl.value}${decl.important ? ' !important' : ''}`).join(';');
+    const quote = style[3] !== undefined ? '"' : "'";
+    return whole.replace(style[0], () => kept ? `${style[1]}style=${quote}${kept}${quote}` : '');
+  });
+  return { html: repairs.length ? out : html, repairs };
+}
+
+/* ---- JSX style objects in component projects ---- */
+const UNITLESS = new Set(['opacity', 'z-index', 'flex', 'flex-grow', 'flex-shrink', 'font-weight', 'line-height', 'order', 'scale', 'zoom', 'orphans', 'widows', 'fill-opacity', 'stroke-opacity']);
+const kebab = (name: string) => name.startsWith('--') ? name : name.replace(/^(Webkit|Moz|ms)(?=[A-Z])/, prefix => '-' + prefix.toLowerCase()).replace(/[A-Z]/g, char => '-' + char.toLowerCase());
+/** A JSX element as one selector compound: an intrinsic tag, and its literal className and attributes. */
+function jsxCompound(element: ts.JsxOpeningLikeElement): string {
+  const name = element.tagName.getText();
+  let compound = /^[a-z][\w-]*$/.test(name) ? name : '';
+  for (const attribute of element.attributes.properties) {
+    if (!ts.isJsxAttribute(attribute)) continue;
+    const key = attribute.name.getText(), init = attribute.initializer;
+    const value = !init ? null : ts.isStringLiteral(init) ? init.text : ts.isJsxExpression(init) && init.expression && ts.isStringLiteralLike(init.expression) ? init.expression.text : undefined;
+    if (value === undefined || key === 'style' || key === 'key') continue;
+    if (key === 'className' || key === 'class') compound += (value ?? '').split(/\s+/).filter(Boolean).map(name => '.' + cssIdent(name)).join('');
+    else if (key === 'id' && value) compound += '#' + cssIdent(value);
+    else compound += value === null ? `[${cssIdent(key.toLowerCase())}]` : `[${cssIdent(key.toLowerCase())}="${value.replace(/["\\]/g, '')}"]`;
+  }
+  return compound;
+}
+/**
+ * A component's literal style={{…}} objects meet the protected-element rules: each literal property is read as a
+ * declaration on the element's selector under its JSX ancestors, and a violating property is removed from the object.
+ * Computed values and spreads are left alone (they cannot be read before render).
+ */
+export function validateJsxStyles(source: string, path: string): { source: string; repairs: string[] } {
+  if (!/style\s*=\s*\{\s*\{/.test(source)) return { source, repairs: [] };
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const repairs: string[] = [], edits: Array<{ start: number; end: number; text: string }> = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxAttribute(node) && node.name.getText() === 'style' && node.initializer && ts.isJsxExpression(node.initializer) && node.initializer.expression && ts.isObjectLiteralExpression(node.initializer.expression)) {
+      const object = node.initializer.expression;
+      const chain: string[] = [];
+      for (let parent: ts.Node | undefined = node.parent.parent; parent; parent = parent.parent) {
+        if (ts.isJsxSelfClosingElement(parent)) chain.unshift(jsxCompound(parent));
+        else if (ts.isJsxElement(parent)) chain.unshift(jsxCompound(parent.openingElement));
+      }
+      const selector = chain.filter(Boolean).join(' ');
+      const readable = object.properties.flatMap(property => {
+        if (!ts.isPropertyAssignment(property)) return [];
+        const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name) ? property.name.text : null;
+        const init = property.initializer;
+        const value = ts.isStringLiteralLike(init) ? init.text : ts.isNumericLiteral(init) ? init.text : ts.isPrefixUnaryExpression(init) && init.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(init.operand) ? '-' + init.operand.text : null;
+        if (!key || value === null) return [];
+        const prop = kebab(key);
+        return [{ property, prop, value: /^-?[\d.]+$/.test(value) && !UNITLESS.has(prop) && !prop.startsWith('--') && Number(value) !== 0 ? value + 'px' : value }];
+      });
+      if (selector && readable.length) {
+        let root: Root | null = null;
+        try { root = postcss.parse(`${selector}{${readable.map(entry => `${entry.prop}:${entry.value}`).join(';')}}`); } catch { root = null; }
+        const decls: Declaration[] = [];
+        root?.walkDecls(decl => { decls.push(decl); });
+        if (root && decls.length === readable.length) {
+          const notes = new Notes(path);
+          const removed = new Set<ts.ObjectLiteralElementLike>();
+          decls.forEach((decl, index) => { const before = notes.size; checkProtected(decl, notes); if (notes.size > before) removed.add(readable[index].property); });
+          if (removed.size) {
+            repairs.push(...notes.list());
+            const kept = object.properties.filter(property => !removed.has(property)).map(property => property.getText(file));
+            if (kept.length) edits.push({ start: object.getStart(file), end: object.getEnd(), text: `{ ${kept.join(', ')} }` });
+            else edits.push({ start: node.getFullStart(), end: node.getEnd(), text: '' });
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  if (!edits.length) return { source, repairs };
+  let out = source;
+  for (const edit of edits.sort((a, b) => b.start - a.start)) out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
+  return { source: out, repairs };
+}
+
 const rebaseAssets = (value: string) => value.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi, (whole, _quote, target: string) => {
   const match = target.trim().match(ASSET_URL);
   return match ? `url("../${match[1]}/${match[2]}")` : whole;
@@ -521,6 +652,11 @@ export function applySourceKitCss<T extends SourceProjectFileDto>(files: T[], op
   const text = (file: SourceProjectFileDto) => file.encoding !== 'base64' && typeof file.content === 'string';
   if (options.next) {
     return { files: files.map(file => {
+      if (authored && file.path.endsWith('.tsx') && text(file)) {
+        const checked = validateJsxStyles(file.content, file.path);
+        repairs.push(...checked.repairs);
+        return checked.source === file.content ? file : { ...file, content: checked.source };
+      }
       if (file.path !== 'styles/globals.css' || !text(file)) return file;
       if (unterminated(file.content)) { repairs.push(`${file.path}: a /* pagosya-kit:start */ has no /* pagosya-kit:end */; the file was left as written and its kit rules were not applied (add the end marker)`); return file; }
       let count = 0, block: string | null = null;
@@ -543,6 +679,11 @@ export function applySourceKitCss<T extends SourceProjectFileDto>(files: T[], op
       if (!kit.css) return [];
       present = true;
       return [kit.css === file.content ? file : { ...file, content: kit.css }];
+    }
+    if (authored && file.path.endsWith('.html')) {
+      const page = validateInlineHtml(file.content, file.path);
+      repairs.push(...page.repairs);
+      return [page.html === file.content ? file : { ...file, content: page.html }];
     }
     if (authored && file.path.endsWith('.css') && !PLATFORM_CSS.has(file.path)) {
       const css = validateAuthoredCss(file.content, file.path);

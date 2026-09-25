@@ -332,6 +332,30 @@ describe('applySourceKitCss: static projects', () => {
     }
   });
 
+  it('holds inline <style> elements and style attributes to the protected-element rules', () => {
+    const html = [
+      '<!doctype html><html><head><link rel="stylesheet" href="styles.css"><style>.menu-add{display:none}.hero{color:red}</style></head><body>',
+      '<div class="hero" style="opacity:0">x</div><!-- <b class="menu-add" style="display:none"> -->',
+      '<template data-pagosya-product-card><article class="menu-item"><img src="a.png" style="opacity:.5"><strong data-product-field="price" style="visibility:hidden;color:red">1</strong><button type="button" style=\'opacity:.2\'>+</button></article></template>',
+      '<div data-pagosya-privacy><p style="font-size:8px">Aviso</p><br><a href="/privacidad" style="color:rgba(0,0,0,.1)">Privacidad</a></div>',
+      '<script>const s = \'<b class="menu-add" style="display:none">\';</script></body></html>',
+    ].join('');
+    const { files, repairs } = applySourceKitCss([{ path: 'index.html', content: html }, { path: 'styles.css', content: '' }], { next: false });
+    const out = files.find((f: { path: string }) => f.path === 'index.html')!.content;
+    expect(out).toContain('<style>.hero{color:red}</style>');
+    expect(out).toContain('<div class="hero" style="opacity:0">');
+    expect(out).toContain('<!-- <b class="menu-add" style="display:none"> -->');
+    expect(out).toContain('<img src="a.png" style="opacity:.5">');
+    expect(out).toContain('<strong data-product-field="price" style="color:red">');
+    expect(out).toContain('<button type="button">+</button>');
+    expect(out).toContain('<p>Aviso</p>');
+    expect(out).toContain('<a href="/privacidad">Privacidad</a>');
+    expect(out).toContain(`<script>const s = '<b class="menu-add" style="display:none">';</script>`);
+    expect(repairs.filter(note => note.startsWith('index.html'))).toHaveLength(5);
+    expect(applySourceKitCss(files, { next: false }).repairs).toEqual([]);
+    expect(applySourceKitCss([{ path: 'index.html', content: html }], { next: false, authored: false }).files[0].content).toContain('<p style="font-size:8px">');
+  });
+
   it('leaves the store\'s other stylesheets alone when asked to (a merchant\'s own save)', () => {
     const { files } = applySourceKitCss(project(), { next: false, authored: false });
     expect(files.find((f: { path: string }) => f.path === 'styles.css')!.content).toBe('.menu-add{display:none;color:red}');
@@ -349,6 +373,30 @@ describe('applySourceKitCss: component projects', () => {
     expect(repairs.join('\n')).toMatch(/styles\/globals\.css: removed selector \.hero/);
     expect(repairs.join('\n')).toMatch(/styles\/globals\.css: removed `font-size:8px`/);
     expect(applySourceKitCss(files, { next: true })).toEqual({ files, repairs: [] });
+  });
+
+  it('holds JSX style objects to the protected-element rules, under their JSX ancestors', () => {
+    const tsx = [
+      'export default function Home() {',
+      '  return <main><div className="hero" style={{ opacity: 0 }} />',
+      '    <template data-pagosya-product-template><article className="menu-item">',
+      '      <strong data-product-field="price" style={{ visibility: \'hidden\', color: \'red\' }}>1</strong>',
+      '      <button type="button" data-product-add style={{ opacity: 0.2 }}>+</button>',
+      '      <img src="a.png" alt="" style={{ opacity: 0.5 }} />',
+      '    </article></template>',
+      '    <div data-pagosya-privacy><p style={{ fontSize: 8, color: fade }}>Aviso</p></div></main>;',
+      '}',
+    ].join('\n');
+    const { files, repairs } = applySourceKitCss([{ path: 'components/home.tsx', content: tsx }], { next: true });
+    const out = files[0].content;
+    expect(out).toContain('<div className="hero" style={{ opacity: 0 }} />');
+    expect(out).toContain('<strong data-product-field="price" style={{ color: \'red\' }}>1</strong>');
+    expect(out).toContain('<button type="button" data-product-add>+</button>');
+    expect(out).toContain('<img src="a.png" alt="" style={{ opacity: 0.5 }} />');
+    expect(out).toContain('<p style={{ color: fade }}>Aviso</p>');
+    expect(repairs.filter(note => note.startsWith('components/home.tsx'))).toHaveLength(3);
+    expect(applySourceKitCss(files, { next: true }).repairs).toEqual([]);
+    expect(applySourceKitCss([{ path: 'components/home.tsx', content: tsx }], { next: true, authored: false }).files[0].content).toBe(tsx);
   });
 
   it('reads every block', () => {
