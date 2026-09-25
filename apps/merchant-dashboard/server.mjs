@@ -136,7 +136,7 @@ const server = createServer(async (req, res) => {
       res.end(font);
       return;
     }
-    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css"].includes(requestUrl.pathname)) {
+    if (["/src/domain-shop.mjs", "/src/domain-shop.css", "/src/store-settings.mjs", "/src/workspace-design.css", "/src/dashboard.css", "/src/dashboard.js", "/src/shipment-panel.mjs", "/src/rewards.mjs", "/src/companions.mjs", "/src/html.mjs", "/src/rewards-panel.mjs", "/src/cobros.mjs", "/src/cobros-panel.mjs", "/src/cobros.css", "/src/growth.mjs", "/src/growth-panel.mjs", "/src/growth.css", "/src/proposals.mjs", "/src/proposals-panel.mjs", "/src/proposals.css", "/src/contracts.mjs", "/src/contracts-panel.mjs", "/src/contracts.css"].includes(requestUrl.pathname)) {
       const filename = path.basename(requestUrl.pathname);
       const content = await readFile(path.join(dirname, 'src', filename), 'utf8');
       res.writeHead(200, { 'content-type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });

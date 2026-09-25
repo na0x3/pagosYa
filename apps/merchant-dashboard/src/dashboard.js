@@ -5,6 +5,7 @@ import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
 import { mountProposalsPanel } from "/src/proposals-panel.mjs";
+import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -430,6 +431,19 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
       setDashboardView("cobros");
       cobros.open(id, options);
     },
+    // D3: "Crear contrato" on an accepted proposal opens the Contratos composer, prefilled.
+    openContract: (proposal) => {
+      setDashboardView("contracts");
+      contracts.startFromProposal(proposal);
+    },
+  });
+  // Documentos → Contratos (D3).
+  const contracts = mountContractsPanel({
+    api,
+    storeId: () => currentStoreId,
+    store: () => lastStores.find((candidate) => candidate.id === currentStoreId) || null,
+    signedIn: () => !!sessionToken,
+    apiBase: () => apiBaseEl.value,
   });
   // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
   const growth = mountGrowthPanel({
@@ -727,6 +741,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
     cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
     proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
+    contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
@@ -880,6 +895,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
     if (nextView === "cobros") cobros.show();
     if (nextView === "growth") growth.show();
     if (nextView === "proposals") proposals.show();
+    if (nextView === "contracts") contracts.show();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
     }
@@ -1676,6 +1692,7 @@ import { mountProposalsPanel } from "/src/proposals-panel.mjs";
       cobros.reset();
       growth.reset();
       proposals.reset();
+      contracts.reset();
       rewards.load().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
   }

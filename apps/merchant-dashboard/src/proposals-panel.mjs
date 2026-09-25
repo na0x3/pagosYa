@@ -30,6 +30,7 @@ import {
  *   signedIn()          whether a merchant session exists
  *   apiBase()           the API base URL ("…/v1"), for the public PDF link
  *   openCobro(id)       switch to Cobros and open that cobro's share sheet
+ *   openContract(doc)   switch to Contratos and open the composer prefilled from this accepted proposal (D3)
  */
 export function mountProposalsPanel(deps) {
   const root = document.getElementById("proposalsRoot");
@@ -951,6 +952,7 @@ export function mountProposalsPanel(deps) {
             ${cobro
               ? `<button type="button" class="primary" data-proposal-action="open-cobro">Ver el cobro</button>`
               : `<button type="button" class="primary" data-proposal-action="cobro">Crear cobro</button>`}
+            ${deps.openContract ? `<button type="button" class="proposal-secondary" data-proposal-action="contract">Crear contrato</button>` : ""}
           </div>
           ${cobro ? "" : `<p class="proposal-hint">Crea un cobro con estos mismos ítems y compártelo por WhatsApp: tu cliente paga con QR o tarjeta.</p>`}
         </div>`
@@ -993,6 +995,7 @@ export function mountProposalsPanel(deps) {
     const action = button.dataset.proposalAction;
     if (action === "share") { openShare(doc); return; }
     if (action === "edit") { openEditor(doc); return; }
+    if (action === "contract") { await closeSheet(); deps.openContract?.(doc); return; }
 
     if (action === "void-ask") { panel.querySelector("[data-proposal-void-confirm]").hidden = false; button.hidden = true; panel.querySelector('[data-proposal-action="void-cancel"]')?.focus(); return; }
     if (action === "void-cancel") { panel.querySelector("[data-proposal-void-confirm]").hidden = true; const ask = panel.querySelector('[data-proposal-action="void-ask"]'); ask.hidden = false; ask.focus(); return; }
