@@ -2112,6 +2112,45 @@
     renderContact();
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
   }
+  /* T1 templates: a store may author the markup of a kit surface. Read at use time (React may render the
+   * <template> after this script, and puts its children on the element instead of .content). */
+  function kitTemplate(name, flag, isValid) {
+    const template = document.querySelector(`template[data-pagosya-${name}-template]`);
+    if (!template) return null;
+    const source = template.content && template.content.children.length ? template.content : template;
+    const root = source.firstElementChild;
+    if (source.children.length !== 1 || !root || !isValid(root)) { document.documentElement.dataset[flag] = 'true'; return null; }
+    delete document.documentElement.dataset[flag];
+    return { make: () => root.cloneNode(true) };
+  }
+  const imgField = (root, selector) => { const node = root.querySelector(selector); return !node || node.tagName === 'IMG'; };
+  const cartLineTemplate = () => kitTemplate('cart-line', 'cartLineTemplateInvalid', root =>
+    ['name', 'line-total', 'quantity'].every(field => root.querySelector(`[data-cart-field="${field}"]`)) && imgField(root, '[data-cart-field="photo"]'));
+  function applyLineTemplate(el, views, template) {
+    [...el.querySelectorAll('.order-items > li.order-item')].forEach((li, index) => {
+      const view = views[index];
+      if (!view) return;
+      const root = template.make();
+      const field = name => root.querySelector(`[data-cart-field="${name}"]`);
+      const text = (name, value) => { const node = field(name); if (!node) return; node.textContent = value; node.hidden = !value; };
+      root.classList.add('order-item');
+      root.dataset.cartLine = view.id;
+      text('name', view.p.name);
+      text('line-total', money(view.amount * view.quantity, view.p.currency));
+      text('option', view.option);
+      text('unit', view.unit);
+      text('stock', view.stock);
+      const photo = field('photo');
+      if (photo) {
+        photo.hidden = !view.image;
+        if (view.image) { photo.src = view.image; photo.alt = ''; photo.loading = 'lazy'; } else photo.removeAttribute('src');
+      }
+      field('quantity').replaceChildren(li.querySelector('.quantity'));
+      const remove = field('remove');
+      if (remove) { remove.setAttribute('type', 'button'); remove.setAttribute('data-remove-line', view.id); remove.setAttribute('aria-label', `Quitar ${view.name} del pedido`); }
+      li.replaceWith(root);
+    });
+  }
   function renderCart() {
     if (hosted && ready) notifyHostedCart();
     else if (!preview && ready) {
@@ -2127,6 +2166,7 @@
     });
     let total = 0, count = 0, savings = 0;
     const rows = [];
+    const lineViews = [];
     for (const [id, quantity] of cart) {
       const line = cartLine(id);
       if (!line) continue;
@@ -2141,6 +2181,9 @@
       const unitCopy = quantity > 1 || saved ? `<p class="order-item__unit">${money(amount, p.currency)} c/u${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
       const few = Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? `<p class="order-item__stock">${p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`}</p>` : '';
       rows.push(`<li class="order-item"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
+      lineViews.push({ id, p, name, amount, quantity, image, option,
+        unit: quantity > 1 || saved ? `${money(amount, p.currency)} c/u${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
+        stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
     document.querySelectorAll("[data-cart-count]").forEach((el) => { el.textContent = String(count); });
     document.querySelectorAll("[data-pagosya-cart]").forEach((el) => {
@@ -2164,6 +2207,8 @@
       const action = review ? payment ? "data-finish-demo" : "data-pay" : "data-checkout";
       const actionLabel = review ? payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
       el.innerHTML = `<ul class="order-items">${rows.join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`;
+      const lineTemplate = cartLineTemplate();
+      if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
       if (hosted) secureFields(el, ['shippingAddress', 'creditCode'], 'Tu dirección y tu saldo se piden en el formulario seguro de pagosYa al continuar.');
       if (previewOptions) {
         const note = document.createElement('p'); note.className = 'order-note';
@@ -2847,6 +2892,7 @@
       if (MOTIFS.length) playMotifs(p);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a tu pedido.`;
     }
+    if (button.hasAttribute("data-remove-line")) { cart.delete(button.dataset.removeLine); renderCart(); message("Pedido actualizado."); return; }
     if (button.hasAttribute("data-remove")) { const id = button.dataset.remove; const quantity = cart.get(id) || 0; if (quantity > 1) cart.set(id, quantity - 1); else cart.delete(id); renderCart(); message("Pedido actualizado."); }
     if (button.hasAttribute("data-checkout")) openCheckout(button);
     if (button.hasAttribute('data-shipping-quote')) { void shippingQuote(button.closest('[data-pagosya-cart]')); return; }
