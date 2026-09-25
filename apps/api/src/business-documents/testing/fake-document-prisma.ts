@@ -128,6 +128,7 @@ export class FakePrisma {
     aggregate: async ({ where }: Row) => ({ _max: { number: Math.max(0, ...this.documents.filter((row) => matches(row, where)).map((row) => row.number ?? 0)) || null } }),
   };
   businessDocumentItem = {
+    findMany: async ({ where }: Row) => this.items.filter((row) => matches(row, where)).sort((a, b) => a.position - b.position),
     deleteMany: async ({ where }: Row) => { this.items = this.items.filter((row) => row.documentId !== where.documentId); },
     createMany: async ({ data }: Row) => { data.forEach((item: Row) => this.items.push({ id: id("item"), paymentLinkId: null, ...item })); },
   };

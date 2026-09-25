@@ -299,6 +299,29 @@ describe("ProposalsService — the customer accepts", () => {
     expect(ctx.prisma.events.filter((event) => event.type === "merchant_notified")).toEqual([expect.objectContaining({ data: { to: "hola@illimani.bo", reason: "accepted" } })]);
   });
 
+  it("shows the merchant exactly the version the customer accepted, not unsent edits made after it", async () => {
+    const ctx = setupProposals();
+    const { id, token } = await sentProposal(ctx);
+    // Edited after sending v1, never re-sent: the customer still reads v1.
+    await ctx.documents.update("m_1", "store_1", id, {
+      title: "Borrador nuevo", items: [{ description: "Otra cosa", quantity: 1, unitAmount: 99_999_900 }], discountAmount: 0,
+      content: [{ type: "paragraph", title: "Introducción", text: "Cambiado" }],
+    });
+    await ctx.proposals.accept(token, { name: "Ana Quispe", email: "ana@example.com", version: 1 }, CONTEXT);
+    const doc = await ctx.documents.get("m_1", "store_1", id);
+    expect(doc).toEqual(expect.objectContaining({ title: "Identidad visual", subtotalAmount: 220000, discountAmount: 20000, totalAmount: 200000 }));
+    expect(doc.items.map(({ description, quantity, unitAmount }) => ({ description, quantity, unitAmount }))).toEqual([
+      { description: "Diseño de logo", quantity: 1, unitAmount: 150000 },
+      { description: "Tarjetas", quantity: 2, unitAmount: 35000 },
+    ]);
+    expect(doc.content).toEqual([{ type: "paragraph", title: "Introducción", text: "Hola" }]);
+    const summary = await ctx.proposals.summary("m_1", "store_1");
+    expect(summary.totals).toEqual([{ currency: "BOB", open: 0, accepted30: 200000 }]);
+    const mail = ctx.email.send.mock.calls[0][0];
+    expect(mail.body).toMatch(/«Identidad visual» por 2\.000,00 BOB/);
+    expect(mail.body).not.toContain("Borrador nuevo");
+  });
+
   it("answers a double tap with the same acceptance, without a second record or email", async () => {
     const ctx = setupProposals();
     const { token } = await sentProposal(ctx);

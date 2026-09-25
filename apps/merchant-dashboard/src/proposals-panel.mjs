@@ -501,7 +501,7 @@ export function mountProposalsPanel(deps) {
   }
 
   function saveLabel() {
-    return { saved: "Guardado", saving: "Guardando…", dirty: "Sin guardar", error: "No se pudo guardar" }[editor?.saveState || "saved"];
+    return { saved: "Guardado", saving: "Guardando…", dirty: "Sin guardar", error: "No se pudo guardar", conflict: "Cambió en otro lado" }[editor?.saveState || "saved"];
   }
 
   function validHint() {
@@ -688,6 +688,12 @@ export function mountProposalsPanel(deps) {
         if (current.saveState === "saving") current.saveState = "saved";
         return true;
       } catch (error) {
+        if (error?.status === 409) {
+          // Someone else changed it first: the customer accepted it, or another tab saved.
+          current.saveState = "conflict";
+          void onEditConflict(current);
+          return false;
+        }
         current.saveState = "error";
         notify(errorText(error), "bad");
         return false;
@@ -697,6 +703,31 @@ export function mountProposalsPanel(deps) {
       }
     });
     return saving;
+  }
+
+  /** A save refused with 409: reload what is on the server and say why the edit did not land. */
+  async function onEditConflict(current) {
+    clearTimeout(saveTimer);
+    let doc;
+    try {
+      doc = await deps.api(docPath(current.id));
+    } catch (error) {
+      notify(errorText(error), "bad");
+      return;
+    }
+    if (editor !== current || layer.hidden) return;
+    editor = null;
+    sheetDoc = doc;
+    const state = proposalState(doc);
+    const accepted = (doc.events || []).find((event) => event.type === "accepted");
+    const notice = state === "accepted"
+      ? `Tu cliente aceptó la versión ${accepted?.version || accepted?.data?.version || doc.currentVersion} mientras editabas. Esa es la versión que vale: tus cambios sin enviar no se guardaron.`
+      : state === "expired" || state === "voided"
+        ? "Esta propuesta ya no se puede editar: está cerrada. Tus últimos cambios no se guardaron."
+        : "Esta propuesta cambió en otra pestaña o dispositivo. Te mostramos la versión guardada; revisa y vuelve a editar.";
+    openSheet(detailHtml(doc, notice), "detail");
+    panel.dataset.docId = doc.id;
+    void load();
   }
 
   async function regenerate(index) {
@@ -861,7 +892,7 @@ export function mountProposalsPanel(deps) {
     }
   }
 
-  function detailHtml(doc) {
+  function detailHtml(doc, notice = "") {
     const now = new Date();
     const state = proposalState(doc, now);
     const events = doc.events || [];
@@ -913,6 +944,7 @@ export function mountProposalsPanel(deps) {
           <strong class="proposal-detail-amount">${doc.totalAmount ? esc(formatMoney(doc.totalAmount, doc.currency)) : "Sin monto"}</strong>
           <p class="proposal-hint">${esc([doc.customer?.name || "Sin cliente", validityLine(doc, now)].filter(Boolean).join(" · "))}</p>
         </div>
+        ${notice ? `<p class="proposal-note is-conflict" role="alert" data-proposal-conflict>${ICON.alert}<span>${esc(notice)}</span></p>` : ""}
         ${changesNote}${acceptedNote}${closedNote}
         <div class="proposal-detail-actions">${actions}</div>
         <section class="proposal-detail-block" aria-label="Inversión">

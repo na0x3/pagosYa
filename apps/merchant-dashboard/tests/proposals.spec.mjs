@@ -118,6 +118,7 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
       if (!match[2] && method === "GET") return json(detail(doc));
       if (!match[2] && method === "DELETE") { documents.splice(documents.indexOf(doc), 1); return json({ deleted: true }); }
       if (!match[2] && method === "PATCH") {
+        if (["ACCEPTED", "EXPIRED", "VOIDED"].includes(doc.status)) return json({ statusCode: 409, message: "Este documento ya no se puede editar" }, 409);
         if (body.title !== undefined) doc.title = body.title;
         if (body.customerName !== undefined) doc.customer = { ...doc.customer, name: body.customerName, email: body.customerEmail, phone: body.customerPhone };
         if (body.items) Object.assign(doc, totals(body.items));
@@ -287,6 +288,24 @@ for (const width of [390, 1280]) {
       await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "cobros");
       await expect(page.locator("[data-cobro-sheet] #cobroSheetTitle")).toHaveText("¡Cobro COB-0001 listo!");
       expect(api.requests.some((request) => request.method === "POST" && request.path === "/stores/store_1/documents/pdoc_acc/cobro")).toBe(true);
+    });
+
+    test("an edit that lands after the customer accepted reloads the accepted proposal and says which version counts", async ({ page }) => {
+      const api = fakeApi([proposal({ id: "pdoc_view", title: "Fotos de producto" })]);
+      await openProposals(page, api);
+      await page.locator("[data-proposal-card]").first().click();
+      const sheet = page.locator("[data-proposal-sheet]");
+      await sheet.getByRole("button", { name: "Editar" }).click();
+      const editor = page.locator("[data-proposal-editor]");
+      await expect(editor).toBeVisible();
+      // Meanwhile the customer accepts version 1.
+      const doc = api.documents.find((row) => row.id === "pdoc_view");
+      doc.status = "ACCEPTED";
+      doc.events = [...doc.events, { id: "acc", type: "accepted", version: 1, at: new Date().toISOString(), data: { name: "Ana Quispe", email: "ana@example.com", version: 1 } }];
+      await page.locator("#proposalTitle").fill("Fotos de producto y video");
+      await expect(sheet.locator("[data-proposal-conflict]")).toContainText("Tu cliente aceptó la versión 1");
+      await expect(sheet.locator("[data-proposal-accepted-note]")).toContainText("Aceptada por Ana Quispe");
+      await expect(editor).toHaveCount(0);
     });
 
     test("the catalog picker only adds products in the proposal's currency", async ({ page }) => {

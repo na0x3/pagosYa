@@ -262,6 +262,7 @@ export class ProposalsService {
       if (!version) throw new NotFoundException("No encontramos esta propuesta");
       const { count } = await tx.businessDocument.updateMany({ where: { id, status: { in: OPEN_PROPOSAL }, currentVersion: dto.version }, data: { status: S.ACCEPTED } });
       if (!count) throw new ConflictException("Esta propuesta ya no se puede aceptar.");
+      const accepted = await this.restoreAcceptedVersion(tx, id, version.content as unknown as DocumentSnapshot);
       const name = dto.name.trim();
       const email = dto.email.trim().toLowerCase();
       const event = await tx.businessDocumentEvent.create({
@@ -270,7 +271,7 @@ export class ProposalsService {
           data: { name, email, version: version.version, sha256: version.sha256 },
         },
       });
-      return { kind: "accepted" as const, doc, name, email, at: event.at };
+      return { kind: "accepted" as const, doc: { ...doc, ...accepted }, name, email, at: event.at };
     });
     if (outcome.kind === "closed") throw new ConflictException(outcome.message);
     if (outcome.kind === "accepted") {
@@ -317,6 +318,39 @@ export class ProposalsService {
     if (outcome.kind === "closed") throw new ConflictException(outcome.message);
     await this.notifyMerchant(outcome.doc, "changes", { name, email, message });
     return { status: S.CHANGES_REQUESTED };
+  }
+
+  /**
+   * From acceptance on, the merchant sees exactly what the customer accepted (card, detail, summary,
+   * email, cobro): edits saved after that version was sent could never be sent (accepted is final),
+   * so the working copy returns to the accepted snapshot. Product links survive where the line did.
+   */
+  private async restoreAcceptedVersion(tx: Prisma.TransactionClient, id: string, snapshot: DocumentSnapshot) {
+    const fields = {
+      title: snapshot.title,
+      currency: snapshot.currency,
+      customerName: snapshot.customer.name,
+      customerEmail: snapshot.customer.email,
+      customerPhone: snapshot.customer.phone,
+      customerDocument: snapshot.customer.document,
+      subtotalAmount: snapshot.subtotalAmount,
+      discountAmount: snapshot.discountAmount,
+      totalAmount: snapshot.totalAmount,
+      dueAt: snapshot.dueAt ? new Date(snapshot.dueAt) : null,
+      validUntil: snapshot.validUntil ? new Date(snapshot.validUntil) : null,
+    };
+    await tx.businessDocument.updateMany({ where: { id }, data: { ...fields, content: snapshot.blocks as unknown as Prisma.InputJsonValue } });
+    const current = await tx.businessDocumentItem.findMany({ where: { documentId: id }, orderBy: { position: "asc" } });
+    const same = current.length === snapshot.items.length
+      && snapshot.items.every((item, index) => current[index].description === item.description && current[index].quantity === item.quantity && current[index].unitAmount === item.unitAmount);
+    if (!same) {
+      const linkOf = (item: DocumentSnapshot["items"][number]) => current.find((row) => row.description === item.description && row.unitAmount === item.unitAmount)?.paymentLinkId ?? null;
+      await tx.businessDocumentItem.deleteMany({ where: { documentId: id } });
+      await tx.businessDocumentItem.createMany({
+        data: snapshot.items.map((item, position) => ({ documentId: id, position, description: item.description, quantity: item.quantity, unitAmount: item.unitAmount, amount: item.amount, paymentLinkId: linkOf(item) })),
+      });
+    }
+    return fields;
   }
 
   // ── worker ────────────────────────────────────────────────────────────

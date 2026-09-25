@@ -217,6 +217,8 @@ body.proposal-sheet-open { overflow: hidden; }
 .proposal-note.is-changes { background: #fff4e5; border-color: #8a3b00; }
 .proposal-note.is-accepted { background: #e9f7ee; border-color: #16603a; }
 .proposal-note.is-closed { background: var(--prop-soft, #f1f1ea); border-color: var(--pg-border, #d8d9ce); color: var(--pg-text-muted); }
+.proposal-note.is-conflict { display: flex; align-items: flex-start; gap: 8px; background: #eef4ff; border-color: #1d4ed8; color: #1e3a8a; font-weight: 600; line-height: 1.45; }
+.proposal-note.is-conflict svg { width: 18px; height: 18px; margin-top: 1px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
 .proposal-note-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
 .proposal-note-title small { color: var(--pg-text-muted); font-size: 12px; }
 .proposal-note blockquote { margin: 0; padding: 10px 12px; border-left: 4px solid #8a3b00; border-radius: 6px; background: #fff; white-space: pre-line; overflow-wrap: anywhere; line-height: 1.5; }
