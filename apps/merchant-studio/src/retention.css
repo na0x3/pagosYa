@@ -3,9 +3,9 @@
 .retention-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 16px 0; border-block: 2px solid currentColor; }
 .retention-summary strong { font-size: 24px; font-variant-numeric: tabular-nums; }
 .retention-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-.retention-nav button[aria-pressed=true] { background: var(--ink, #11110f); color: var(--paper, #f4f4f5); }
+.retention-nav button[aria-pressed=true] { background: #20211e; color: #fff; border-color: #20211e; }
 .retention-dialog .retention-toggle { display: flex; align-items: center; gap: 12px; min-height: 44px; }
-.retention-dialog .retention-toggle input { width: 20px; height: 20px; accent-color: #11110f; }
+.retention-dialog .retention-toggle input { width: 20px; height: 20px; accent-color: #55416e; }
 .retention-section { padding: 24px 0; border-top: 1px solid currentColor; }
 .retention-message:empty { display: none; }
 .retention-message, .retention-notice { border: 1px solid currentColor; padding: 12px; background: #fff; }
@@ -13,7 +13,7 @@
 .retention-row p { margin: 4px 0; font-size: 12px; }
 .retention-preview { border: 2px solid currentColor; padding: 20px; margin: 20px 0; background: #fff; }
 .retention-body { white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 480px) { .retention-dialog { padding: 16px; } .retention-dialog h2 { font-size: 24px; } .retention-nav button { flex: 1; } }
+@media (max-width: 480px) { .retention-dialog { --dialog-pad: 16px; } .retention-dialog h2 { font-size: 24px; } .retention-nav button { flex: 1; } }
 
 /* Match the merchant workspace while preserving each storefront's card typography. */
 .retention-dialog { font: 14px/1.6 Arial, sans-serif; }
@@ -44,3 +44,5 @@
 .retention-embedded .button--publish { background: #f3f36b; color: #20211e; border: 1px solid #20211e; border-radius: 6px; box-shadow: 2px 2px 0 #20211e; }
 @media (max-width: 800px) { .retention-card-layout { grid-template-columns: 1fr; gap: 20px; } .retention-card-preview { max-width: 520px; width: 100%; } }
 @media (max-width: 480px) { .retention-card-preview { padding: 16px; } .retention-card-preview .comeback-card { padding: 18px; } }
+/* Embedded pages drop the dialog inset, so the sticky header and actions stay flush. */
+.retention-dialog.retention-embedded { --dialog-pad: 0px; }

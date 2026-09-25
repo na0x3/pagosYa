@@ -70,7 +70,7 @@ test('personal loyalty card uses the reference layout, real QR and accurate avai
   await page.setContent('<style>body{margin:0;background:#faf9f6;color:#241e19;font-family:system-ui}main{padding:24px}</style><main><section id="card"></section></main>');
   await page.addScriptTag({ content: runtime });
   await page.evaluate(qr => (window as any).PAGOSYA_COMEBACK_RENDER(document.querySelector('#card'), { brand: { name: 'Urban Roasters Co', background: '#b69b88', foreground: '#241e19', stamp: 'coffee' }, customerName: 'Doris', visits: 27, visitsRequired: 10, availableRewards: 2, rewardLabel: 'Un café de la casa', code: 'CB-test-1234567890123456', qrImageDataUrl: qr, cardUrl: 'https://checkout.example/s/urban?comeback=private' }), qr);
-  await expect(page.getByText('2 premios', { exact: true })).toBeVisible();
+  await expect(page.getByText('2 premios listos', { exact: true })).toBeVisible();
   await expect(page.locator('.comeback-stamps [data-earned=true]')).toHaveCount(7);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: '.test-artifacts/comeback-card-desktop.png' });

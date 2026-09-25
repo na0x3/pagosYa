@@ -11,7 +11,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EMAIL_PROVIDER } from '../dashboard/tokens';
 import { EmailProvider } from '../dashboard/interfaces/email-provider.interface';
-import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
+import { DEFAULT_RETENTION, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
 const token = () => randomBytes(32).toString('hex');
 const normalized = (email: string) => email.trim().toLowerCase();

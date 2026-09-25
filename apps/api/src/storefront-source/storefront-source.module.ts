@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
+import { RewardsModule } from "../rewards/rewards.module";
 import { UploadsModule } from "../uploads/uploads.module";
 import { AiUsageModule } from "../ai-usage/ai-usage.module";
 import { BrandModule } from "../brand/brand.module";
@@ -24,7 +25,7 @@ import { MerchantThrottlerGuard } from "./source-compile-budget";
 /** AI-generated storefront source projects (Studio): YAPI chat, generation, design jobs,
  * visual review, and publishing. See docs/ARCHITECTURE.md for the pipeline. */
 @Module({
-  imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule],
+  imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule],
   controllers: [SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController],
   providers: [MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService],
 })

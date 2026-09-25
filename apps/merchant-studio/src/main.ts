@@ -1,4 +1,5 @@
 import "./style.css";
+import { fitEmbeddedDialogs } from "./embedded-dialogs";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const params = new URLSearchParams(location.search);
 async function mount() {
@@ -11,4 +12,5 @@ async function mount() {
   if (params.get('demo') === '1') return import('./demo-studio');
   return (await import('./connected-studio')).mountConnectedStudio(app);
 }
+fitEmbeddedDialogs();
 void mount().catch(() => { app.textContent = 'No pudimos abrir el Studio. Recarga la página para volver a intentar.'; });

@@ -1,10 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
-import { MerchantStatus, PaymentIntentStatus, StoreStatus } from "@prisma/client";
+import { MerchantStatus, StoreStatus } from "@prisma/client";
 import * as argon2 from "argon2";
 import { createHash } from "node:crypto";
 import { customAlphabet } from "nanoid";
 import { GoogleIdentityService } from "../auth/google-identity.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { boliviaDayKey } from "../rewards/reward-policy";
+import { countStoreSales, gameXpForStore, wheelSpinsToday } from "../rewards/reward-queries";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
@@ -174,12 +176,14 @@ export class MerchantSessionService {
         where: { id: merchantUserId },
         select: { dailyLoginStars: true, lastDailyStarAt: true },
       });
+      const spins = await wheelSpinsToday(tx, merchantUserId, boliviaDayKey(now));
 
       return {
         awarded: update.count === 1,
         totalStars: user.dailyLoginStars,
         awardedAt: user.lastDailyStarAt,
         nextRewardAt,
+        wheelAvailable: spins.used < spins.allowed,
       };
     });
   }
@@ -187,14 +191,8 @@ export class MerchantSessionService {
   private async authoritativeProgressLevel(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true, viewCount: true } });
     if (!store) throw new NotFoundException("Tienda no encontrada");
-    const paymentCount = await this.prisma.paymentIntent.count({
-      where: {
-        merchantId,
-        status: PaymentIntentStatus.SUCCEEDED,
-        metadata: { path: ["storeId"], equals: storeId },
-      },
-    });
-    const xp = paymentCount * PROGRESS_XP_PER_SALE + store.viewCount * PROGRESS_XP_PER_VIEW;
+    const [paymentCount, gameXp] = await Promise.all([countStoreSales(this.prisma, merchantId, storeId), gameXpForStore(this.prisma, storeId)]);
+    const xp = paymentCount * PROGRESS_XP_PER_SALE + store.viewCount * PROGRESS_XP_PER_VIEW + gameXp;
     return PROGRESS_XP_THRESHOLDS.reduce<number>((level, threshold, index) => xp >= threshold ? index : level, 0);
   }
 

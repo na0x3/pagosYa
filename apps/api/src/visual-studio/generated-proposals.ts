@@ -1063,7 +1063,7 @@ export function ensureGeneratedCommercePages(
   }
 
   const visualMedia = assets.filter((asset) => asset.url !== store.logoUrl).map((asset) => asset.url);
-  const sections = document.sections.map((section, sectionIndex) => {
+  const sections = document.sections.map((section) => {
     if (!section.pageId) return section;
     if (section.kind === "catalog") {
       const pageIndex = Math.max(0, pages.findIndex((page) => page.id === section.pageId));

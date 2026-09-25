@@ -37,7 +37,10 @@ videos/
 # Design-review screenshots from the impeccable/visual-qa skills. Regenerated on
 # demand; 32MB of PNGs that churn on every review round.
 .impeccable/
-"visor (1).pdf"
+# Bank and regulator paperwork and ad-hoc screenshots dropped at the root.
+# Documents live outside the repo; these rules keep a stray one from being committed.
+/*.pdf
+/Screenshot *.png
 
 # Premium design benchmark RUNS. Every one of these directories is script output
 # (captures, evidence.json, receipt.json and the generated site) — regenerate with

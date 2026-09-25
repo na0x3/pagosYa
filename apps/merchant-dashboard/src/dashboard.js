@@ -1,29 +1,11 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
+import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
+import { escapeHtml as esc } from "/src/html.mjs";
+import { mountRewardsPanel } from "/src/rewards-panel.mjs";
+
   (() => {
-  const DASHBOARD_THEME_KEY = "pagosya_dashboard_theme";
-  const dashboardThemeButtons = [...document.querySelectorAll("[data-dashboard-theme-value]")];
-
-  function setDashboardTheme(theme, remember = true) {
-    const nextTheme = theme === "light" ? "light" : "dark";
-    document.documentElement.dataset.dashboardTheme = nextTheme;
-    document.getElementById("dashboardThemeColor").content = nextTheme === "light" ? "#eee7dc" : "#0a0a0a";
-    dashboardThemeButtons.forEach((button) => {
-      button.setAttribute("aria-pressed", String(button.dataset.dashboardThemeValue === nextTheme));
-    });
-    document.getElementById("merchantStudioFrame")?.contentWindow?.postMessage({ type: "pagosya:workspace-theme", theme: nextTheme }, location.origin);
-    if (remember) {
-      try {
-        localStorage.setItem(DASHBOARD_THEME_KEY, nextTheme);
-      } catch {
-        // The visual preference still applies for this visit when storage is unavailable.
-      }
-    }
-  }
-
-  dashboardThemeButtons.forEach((button) => {
-    button.addEventListener("click", () => setDashboardTheme(button.dataset.dashboardThemeValue));
-  });
-  setDashboardTheme(document.documentElement.dataset.dashboardTheme, false);
+  // The dashboard ships a single light theme; drop any preference left by the old switcher.
+  try { localStorage.removeItem("pagosya_dashboard_theme"); } catch { /* storage unavailable */ }
 
   // Keep XP current while the merchant leaves the dashboard open. A newly
   // completed sale can therefore unlock and announce its companion in-session.
@@ -77,10 +59,6 @@
   let pendingLoginSessionId = null;
   let resolveProfileSelection = null;
 
-  function profileAvatarSvg(avatarId) {
-    const normalized = Number(avatarId) >= 1 && Number(avatarId) <= 4 ? Number(avatarId) : 1;
-    return `<img class="profile-avatar-image profile-avatar-image-${normalized}" src="/assets/profile-${normalized}.png" alt="">`;
-  }
 
   function profileAvatarStorageKey() {
     return PROFILE_AVATAR_STORAGE_PREFIX + String(emailEl.value || "default").trim().toLocaleLowerCase("es");
@@ -102,12 +80,12 @@
   }
 
   function renderProfileAvatar() {
-    const markup = profileAvatarSvg(selectedProfileAvatar);
+    const markup = profileAvatarHtml(selectedProfileAvatar);
     profileTriggerAvatarEl.innerHTML = markup;
     profileMenuAvatarEl.innerHTML = markup;
     document.querySelectorAll("[data-profile-avatar]").forEach((button) => {
       const avatarId = Number(button.dataset.profileAvatar);
-      button.innerHTML = profileAvatarSvg(avatarId);
+      button.innerHTML = profileAvatarHtml(avatarId);
       button.setAttribute("aria-pressed", String(avatarId === selectedProfileAvatar));
     });
   }
@@ -116,7 +94,7 @@
     selectedLoginAvatar = avatarId >= 1 && avatarId <= 4 ? avatarId : 1;
     document.querySelectorAll("[data-login-avatar]").forEach((button) => {
       const optionId = Number(button.dataset.loginAvatar);
-      button.innerHTML = profileAvatarSvg(optionId);
+      button.innerHTML = profileAvatarHtml(optionId);
       button.setAttribute("aria-pressed", String(optionId === selectedLoginAvatar));
     });
   }
@@ -193,7 +171,7 @@
     applyCurrentSessionIdentity(sessions.find((session) => session.current));
     profileSessionsEl.innerHTML = sessions.map((session) => `<div class="profile-session-row">
       <div class="profile-session-person">
-        <span class="profile-session-avatar" aria-hidden="true">${profileAvatarSvg(session.profileAvatarId)}</span>
+        <span class="profile-session-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span>
         <div class="profile-session-copy"><strong>${esc(session.profileName || "Sin nombre")}</strong><small>Inicio: ${esc(formatSessionDate(session.createdAt))}${session.isPrimary ? " · Principal" : ""}</small></div>
       </div>
       <div class="profile-session-actions">
@@ -203,7 +181,7 @@
       </div>
       ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${Number(session.profileAvatarId) || 1}">
         <label>Nombre del perfil<input name="profileName" value="${esc(session.profileName || "")}" maxlength="32" autocomplete="off" required></label>
-        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${[1, 2, 3, 4].map((avatarId) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${avatarId}" aria-label="Elegir avatar ${avatarId}" aria-pressed="${avatarId === Number(session.profileAvatarId)}">${profileAvatarSvg(avatarId)}</button>`).join("")}</div>
+        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${[1, 2, 3, 4].map((avatarId) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${avatarId}" aria-label="Elegir avatar ${avatarId}" aria-pressed="${avatarId === Number(session.profileAvatarId)}">${profileAvatarHtml(avatarId)}</button>`).join("")}</div>
         <div class="profile-session-edit-actions"><button class="ghost" type="button" data-cancel-session-edit>Cancelar</button><button class="primary" type="submit">Guardar</button></div>
       </form>` : ""}
     </div>`).join("");
@@ -245,7 +223,7 @@
     });
     sessionProfileExistingEl.hidden = choices.length === 0;
     sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${Number(session.profileAvatarId) || 1}" aria-pressed="false">
-      <span class="session-profile-choice-avatar" aria-hidden="true">${profileAvatarSvg(session.profileAvatarId)}</span><span>${esc(session.profileName)}</span>
+      <span class="session-profile-choice-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span><span>${esc(session.profileName)}</span>
     </button>`).join("");
 
     const isUnassigned = !currentSession?.profileName || currentSession.profileName === "Seleccionar perfil";
@@ -418,21 +396,23 @@
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
+  const rewards = mountRewardsPanel({
+    api,
+    storeId: () => currentStoreId,
+    signedIn: () => !!sessionToken,
+    currentXp: () => (lastFinances ? gamificationState(lastFinances).xp : 0),
+    companionAsset: () => ADVENTURE_LEVELS[selectedGamificationCompanion(lastFinances ? gamificationState(lastFinances).levelIndex : 0)].asset,
+    rerender: (announce) => { if (lastFinances) renderGamification(lastFinances, { announce }); },
+    burstConfetti,
+    playTouchSound: playAdventureTouchSound,
+    audioContext: adventureAudio,
+  });
+  let luckWheelModalShownThisLoad = false;
   let lastTotalFinances = null;
   let lastBalances = null;
   const GAMIFICATION_XP_PER_SALE = 50;
   const GAMIFICATION_XP_PER_VISIT = 2;
-  // Progression tuning lives here. Change xpRequired values without touching map rendering or animation code.
-  const ADVENTURE_LEVELS = [
-    { id: 1, name: "Perdiz", englishName: "Quail", xpRequired: 0, character: "Pipa", rarity: "Exploradora", asset: "/assets/profile-1.png", alt: "Una perdiz ilustrada", description: "Curiosa, veloz y siempre lista para dar el primer paso." },
-    { id: 2, name: "Capibara", englishName: "Capybara", xpRequired: 100, character: "Capi", rarity: "Compañero", asset: "/assets/profile-2.png", alt: "Un capibara ilustrado", description: "Convierte el crecimiento constante en un paseo tranquilo." },
-    { id: 3, name: "Oso hormiguero", englishName: "Anteater", xpRequired: 250, character: "Turi", rarity: "Rastreador", asset: "/assets/profile-3.png", alt: "Un oso hormiguero ilustrado", description: "Encuentra oportunidades donde otros solo ven camino." },
-    { id: 4, name: "Suricata", englishName: "Meerkat", xpRequired: 450, character: "Suri", rarity: "Vigía", asset: "/assets/profile-4.png", alt: "Una suricata ilustrada", description: "Mira lejos y te recuerda cuál es la próxima meta." },
-    { id: 5, name: "Loro vaquero", englishName: "Cowboy Parrot", xpRequired: 700, character: "Pico", rarity: "Raro", asset: "/assets/gamification-1.png", alt: "Un loro colorido con sombrero vaquero", description: "Cruza la selva con estilo y celebra cada avance." },
-    { id: 6, name: "Guacamaya azul", englishName: "Blue Macaw", xpRequired: 1000, character: "Ala", rarity: "Épico", asset: "/assets/gamification-2.png", alt: "Una guacamaya azul volando", description: "Toma altura para mostrarte todo lo que ya construiste." },
-    { id: 7, name: "Lechuza", englishName: "Owl", xpRequired: 1400, character: "Luma", rarity: "Épico", asset: "/assets/gamification-3.png", alt: "Una lechuza aventurera", description: "La constancia ilumina incluso los caminos más oscuros." },
-    { id: 8, name: "Perezoso", englishName: "Sloth", xpRequired: 1900, character: "Moro", rarity: "Legendario", asset: "/assets/gamification-4.png", alt: "Un perezoso en la etapa final", description: "Crecer con paciencia también merece una gran celebración." },
-  ];
+
   window.ADVENTURE_LEVELS = ADVENTURE_LEVELS;
   // World rewards use only signals the application already owns. Benefits that
   // require billing or promotion infrastructure are deliberately not implied.
@@ -463,12 +443,7 @@
     { type: "reward", rewardIndex: 6 },
     { type: "character", id: "character-8", levelIndex: 7, special: true },
   ];
-  const GAMIFICATION_RUNNERS = [
-    { name: "Perdiz", asset: "/assets/profile-1.png", description: "Paso atento" },
-    { name: "Capibara", asset: "/assets/profile-2.png", description: "Ritmo sereno" },
-    { name: "Oso hormiguero", asset: "/assets/profile-3.png", description: "Ruta curiosa" },
-    { name: "Suricata", asset: "/assets/profile-4.png", description: "Mirada alerta" },
-  ];
+
   const GAMIFICATION_STARS = [
     { id: "first-view", title: "Primera mirada", description: "El enlace de tu tienda recibió su primera visita.", earned: ({ visits }) => visits >= 1, progress: ({ visits }) => `${Math.min(visits, 1)}/1 visita` },
     { id: "first-sale", title: "Primera venta", description: "Completaste tu primer pago exitoso.", earned: ({ sales }) => sales >= 1, progress: ({ sales }) => `${Math.min(sales, 1)}/1 venta` },
@@ -477,7 +452,7 @@
     { id: "unstoppable", title: "Negocio imparable", description: "Llegaste a 25 ventas y 500 visitas.", earned: ({ sales, visits }) => sales >= 25 && visits >= 500, progress: ({ sales, visits }) => `${Math.min(sales, 25)}/25 ventas · ${Math.min(visits, 500)}/500 visitas` },
   ];
   let gamificationToastTimer = null;
-  let gamificationAnnouncementQueue = [];
+  const gamificationAnnouncementQueue = [];
   let activeGamificationAnnouncement = null;
   const progressCelebrationFetches = new Set();
   const queuedProgressLevels = new Set();
@@ -802,7 +777,7 @@
       }
       return;
     }
-    if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; frame.contentWindow?.postMessage({ type: "pagosya:workspace-theme", theme: document.documentElement.dataset.dashboardTheme }, location.origin); deliverStudioAction(); return; }
+    if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; deliverStudioAction(); return; }
     if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
       if (pendingStudioAction?.action === "compose") document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
@@ -1636,6 +1611,8 @@
       lastDebtCollectionLinks = [];
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
+      rewards.reset();
+      rewards.load().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
   }
 
@@ -2516,7 +2493,8 @@
     const visits = Math.max(0, Number(finances?.totalStoreViews) || 0);
     const salesXp = sales * GAMIFICATION_XP_PER_SALE;
     const visitsXp = visits * GAMIFICATION_XP_PER_VISIT;
-    const xp = salesXp + visitsXp;
+    const gameXp = Math.max(0, Number(rewards.state()?.bonusXp) || 0);
+    const xp = salesXp + visitsXp + gameXp;
     let levelIndex = 0;
     ADVENTURE_LEVELS.forEach((entry, index) => { if (xp >= entry.xpRequired) levelIndex = index; });
     const level = ADVENTURE_LEVELS[levelIndex];
@@ -2524,7 +2502,7 @@
     const span = nextLevel ? nextLevel.xpRequired - level.xpRequired : 1;
     const progress = nextLevel ? Math.max(0, Math.min(100, Math.round(((xp - level.xpRequired) / span) * 100))) : 100;
     const stars = GAMIFICATION_STARS.map((star) => ({ ...star, isEarned: star.earned({ sales, visits }) }));
-    return { sales, visits, salesXp, visitsXp, xp, levelIndex, level, nextLevel, progress, stars, earnedStars: stars.filter((star) => star.isEarned).length, dailyLoginStars: Math.max(0, Number(dailyLoginReward.totalStars) || 0) };
+    return { sales, visits, salesXp, visitsXp, gameXp, xp, levelIndex, level, nextLevel, progress, stars, earnedStars: stars.filter((star) => star.isEarned).length, dailyLoginStars: Math.max(0, Number(dailyLoginReward.totalStars) || 0) };
   }
 
   function getProgressState(currentXP, levels = ADVENTURE_LEVELS) {
@@ -2611,12 +2589,17 @@
   }
 
   let adventureAudioContext = null;
+  // One AudioContext for every dashboard sound; null where the browser has none.
+  function adventureAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    adventureAudioContext ||= new AudioContext();
+    return adventureAudioContext;
+  }
   function playAdventureTouchSound(kind = "open") {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      adventureAudioContext ||= new AudioContext();
-      const context = adventureAudioContext;
+      const context = adventureAudio();
+      if (!context) return;
       if (context.state === "suspended") context.resume();
       const now = context.currentTime;
       const notes = kind === "close" ? [620, 430] : [480, 720];
@@ -2654,7 +2637,7 @@
     const runnerIndex = selectedGamificationRunner();
     const runner = GAMIFICATION_RUNNERS[runnerIndex];
     document.getElementById("gamificationRunnerPicker").innerHTML = GAMIFICATION_RUNNERS.map((entry, index) => `<button class="adventure-runner-option" type="button" data-runner-select="${index}" aria-pressed="${index === runnerIndex}" aria-label="Elegir a ${esc(entry.name)} para las celebraciones" title="${esc(entry.name)}">
-      <span class="gamification-runner-face">${profileAvatarSvg(index + 1)}</span><span><strong>${esc(entry.name)}</strong><span>${esc(entry.description)}</span></span>
+      <span class="gamification-runner-face">${profileAvatarHtml(index + 1)}</span><span><strong>${esc(entry.name)}</strong><span>${esc(entry.description)}</span></span>
     </button>`).join("");
     const currentLevel = state?.currentLevel || ADVENTURE_LEVELS[0];
     document.getElementById("adventurePlayerFace").innerHTML = `<img class="profile-avatar-image" src="${esc(currentLevel.asset)}" alt="">`;
@@ -2693,10 +2676,8 @@
   function scheduleJourneySoundtrack() {
     if (!journeySoundEnabled) return;
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      adventureAudioContext ||= new AudioContext();
-      const context = adventureAudioContext;
+      const context = adventureAudio();
+      if (!context) return;
       if (context.state === "suspended") context.resume();
       [261.63,329.63,392,329.63,293.66,349.23,440,349.23].forEach((frequency, index) => {
         const oscillator = context.createOscillator(); const gain = context.createGain(); const start = context.currentTime + .04 + (index * .34);
@@ -2739,7 +2720,7 @@
     document.getElementById("gamificationRunnerPicker").innerHTML = ADVENTURE_LEVELS.slice(0, state.currentLevelIndex + 1).map((level, index) => `<button class="journey-companion-option" type="button" data-journey-companion="${index}" aria-pressed="${index === selected}" aria-label="Elegir a ${esc(level.character)}" title="${esc(level.character)} · ${esc(level.rarity)}"><img src="${esc(level.asset)}" alt=""></button>`).join("");
   }
   function ensureJourneyMarkup() {
-    const root = document.getElementById("animalAdventure"); if (root.querySelector(".journey-shell")) return;
+    const root = document.getElementById("animalAdventure"); if (!root || root.querySelector(".journey-shell")) return;
     root.className = "animal-adventure journey-experience";
     root.innerHTML = `<div class="journey-shell">
       <header class="journey-topbar"><div class="journey-title"><small>Ruta de crecimiento</small><h2 id="adventureMapTitle">Horizonte pagosYa</h2></div><div class="journey-progress-card" aria-live="polite"><div class="journey-progress-heading"><span id="adventureCurrentLevel">Nivel 1 · Pipa</span><strong id="adventureXpValue">0 / 100 XP</strong></div><div class="journey-xp-track" id="adventureXpTrack" role="progressbar" aria-label="Progreso de la etapa actual" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="adventureXpFill"></span></div><div class="journey-progress-meta"><span id="adventureXpRemaining">100 XP para Capi</span><span id="adventureOverallProgress">0% de la ruta</span></div></div><div class="journey-actions"><button class="journey-icon-button" id="journeySoundToggle" type="button" aria-pressed="false" aria-label="Reproducir música de la ruta" title="Música de la ruta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></button><button class="journey-icon-button" type="button" data-journey-scroll="-1" aria-label="Explorar hacia atrás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><button class="journey-icon-button" type="button" data-journey-scroll="1" aria-label="Explorar hacia adelante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></header>
@@ -2771,6 +2752,8 @@
     const previousState = adventureRenderedXp === null || adventureRenderedScope !== scope ? null : getProgressState(adventureRenderedXp);
     const commerceState = commerce || lastAdventureCommerceState || { sales: 0, visits: 0, dailyLoginStars: 0 };
     lastAdventureState = state; lastAdventureCommerceState = commerceState;
+    // The Horizonte map was removed from the dashboard; keep the progress state for the rest of gamification.
+    if (!document.getElementById("animalAdventure")) return;
     ensureJourneyMarkup();
     const positions = renderJourneyNodes(state, commerceState);
     renderJourneyCompanions(state);
@@ -2859,6 +2842,7 @@
     }
     window.clearTimeout(gamificationToastTimer);
     toast.hidden = false;
+    requestAnimationFrame(() => burstConfetti(toast, { count: achievementId ? 56 : 28 }));
     gamificationToastTimer = window.setTimeout(hideGamificationToast, 8500);
   }
 
@@ -2955,8 +2939,11 @@
       dailyLoginReward = {
         awarded: reward?.awarded === true,
         totalStars: Math.max(0, Number(reward?.totalStars) || 0),
+        wheelAvailable: reward?.wheelAvailable === true,
       };
+      await rewards.load();
       if (lastFinances) renderGamification(lastFinances, { announce: false });
+      if (dailyLoginReward.wheelAvailable && rewards.state()?.wheel.available && !luckWheelModalShownThisLoad) { luckWheelModalShownThisLoad = true; rewards.openWheelModal(); }
       if (!dailyLoginReward.awarded) return;
 
       const state = gamificationState(lastFinances);
@@ -2987,6 +2974,64 @@
   function renderGamificationMap(state) {
     renderAnimalAdventure(resolvedAdventureXp(state.xp), { commerce: state });
   }
+
+  let topbarRenderedXp = null;
+  let topbarRenderedScope = null;
+  let topbarXpGainTimer = null;
+  function renderTopbarXp(state, companion) {
+    const bar = document.getElementById("topbarXp");
+    const scope = gamificationStorageScope();
+    const nextCopy = state.nextLevel ? `${(state.nextLevel.xpRequired - state.xp).toLocaleString("es-BO")} XP para nivel ${state.levelIndex + 2}` : "Nivel máximo";
+    document.getElementById("topbarXpImage").src = companion.asset;
+    document.getElementById("topbarXpLevel").textContent = `Nivel ${state.levelIndex + 1} · ${state.level.name}`;
+    document.getElementById("topbarXpNext").textContent = nextCopy;
+    const track = document.getElementById("topbarXpTrack");
+    track.setAttribute("aria-valuenow", String(state.progress));
+    track.setAttribute("aria-valuetext", `${state.progress}% del nivel ${state.levelIndex + 1}. ${nextCopy}`);
+    document.getElementById("topbarXpFill").style.transform = `scaleX(${state.progress / 100})`;
+    bar.setAttribute("aria-label", `Nivel ${state.levelIndex + 1}, ${state.xp.toLocaleString("es-BO")} XP. ${nextCopy}. Ver tu progreso`);
+    bar.hidden = false;
+    const gained = topbarRenderedScope === scope && topbarRenderedXp !== null ? state.xp - topbarRenderedXp : 0;
+    topbarRenderedXp = state.xp; topbarRenderedScope = scope;
+    if (gained <= 0) return;
+    const chip = document.getElementById("topbarXpGain");
+    window.clearTimeout(topbarXpGainTimer);
+    chip.textContent = `+${gained.toLocaleString("es-BO")} XP`;
+    chip.hidden = true; bar.classList.remove("is-gaining");
+    void bar.offsetWidth;
+    chip.hidden = false; bar.classList.add("is-gaining");
+    topbarXpGainTimer = window.setTimeout(() => { chip.hidden = true; bar.classList.remove("is-gaining"); }, 1600);
+  }
+
+  const CONFETTI_COLORS = ["#ffc956", "#f27a62", "#7fd3c3", "#818cf8", "#fff5bd", "#15352f"];
+  function burstConfetti(origin, { count = 36, spread = 1 } = {}) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const rect = origin?.getBoundingClientRect?.();
+    const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    const layer = document.createElement("div");
+    layer.className = "confetti-layer";
+    layer.setAttribute("aria-hidden", "true");
+    document.body.append(layer);
+    let remaining = count;
+    for (let index = 0; index < count; index++) {
+      const piece = document.createElement("span");
+      piece.style.left = `${x}px`; piece.style.top = `${y}px`;
+      piece.style.background = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
+      if (index % 3 === 0) piece.style.borderRadius = "50%";
+      layer.append(piece);
+      const angle = Math.random() * Math.PI * 2;
+      const distance = (90 + Math.random() * 190) * spread;
+      const dx = Math.cos(angle) * distance;
+      const dy = Math.sin(angle) * distance - 80 * spread;
+      piece.animate([
+        { transform: "translate(-50%,-50%) rotate(0deg)", opacity: 1 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${Math.random() * 540 - 270}deg)`, opacity: 1, offset: .55 },
+        { transform: `translate(calc(-50% + ${dx * 1.1}px), calc(-50% + ${dy + 160}px)) rotate(${Math.random() * 720 - 360}deg) scale(.6)`, opacity: 0 },
+      ], { duration: 1100 + Math.random() * 600, easing: "cubic-bezier(.2,.7,.3,1)", fill: "forwards" }).finished.catch(() => {}).then(() => { if (--remaining === 0) layer.remove(); });
+    }
+  }
+
 
   function renderGamification(finances, { announce = true } = {}) {
     const state = gamificationState(finances);
@@ -3052,6 +3097,8 @@
     }).join("");
 
     renderGamificationMap(state);
+    renderTopbarXp(state, companion);
+    rewards.renderWheel();
     if (activeGamificationAnnouncement?.achievementId) {
       document.querySelector(`[data-achievement-id="${activeGamificationAnnouncement.achievementId}"]`)?.classList.add("is-unlocking");
     }
@@ -3124,15 +3171,14 @@
       if (storeId !== currentStoreId) return;
       renderTotalFinances(totalFinances);
       renderFinances(scopedFinances);
+      // New sales may have earned a board roll; loading rewards pops the board when they did.
+      void rewards.load();
     }).catch(() => {
       // The product mutation already succeeded. Keep the last summary instead
       // of turning a non-critical refresh into a blocking error.
     });
   }
 
-  function esc(s) {
-    return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  }
   // Shows only the last 4 digits — a payout row has no reason to repeat the
   // full account number on every line.
   function maskBankAccount(s) {
@@ -3469,8 +3515,7 @@
       button.textContent = original;
     } finally {
       button.disabled = false;
-      if (button.textContent === "PDF descargado") return;
-      button.textContent = original;
+      if (button.textContent !== "PDF descargado") button.textContent = original;
     }
   });
   document.getElementById("downloadSalesCsv").addEventListener("click", async (event) => {
@@ -4410,7 +4455,7 @@
         },
       });
       window.google.accounts.id.renderButton(document.getElementById("merchantGoogleButton"), {
-        theme: document.documentElement.dataset.dashboardTheme === "light" ? "outline" : "filled_black",
+        theme: "outline",
         size: "large",
         shape: "rectangular",
         text: "continue_with",

@@ -43,10 +43,7 @@ import {
   type SiteArtDirection,
   type SiteSectionBlock,
   type SiteSectionFamily,
-  type StoreCanvasTextStyle,
   type StoreSiteDocument,
-  type StoreSiteFooter,
-  type StoreSiteNavigationItem,
   type StoreSitePage,
 } from "@pagosya/shared-types";
 

@@ -12,6 +12,8 @@ function makeFakePrisma() {
     merchant: { update: jest.fn() },
     store: { findFirst: jest.fn(), updateMany: jest.fn() },
     paymentIntent: { count: jest.fn() },
+    dailyWheelSpin: { findMany: jest.fn().mockResolvedValue([]) },
+    rewardGrant: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }) },
     merchantProgressCelebration: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     apiKey: { updateMany: jest.fn() },
     webhookEndpoint: { updateMany: jest.fn() },
@@ -167,7 +169,9 @@ describe("MerchantSessionService.claimDailyLoginStar", () => {
       totalStars: 7,
       awardedAt: now,
       nextRewardAt: new Date("2026-08-21T04:00:00.000Z"),
+      wheelAvailable: true,
     });
+    expect(prisma.dailyWheelSpin.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { merchantUserId: "user_1", day: "2026-08-20" } }));
     expect(prisma.merchantUser.updateMany).toHaveBeenCalledWith({
       where: {
         id: "user_1",

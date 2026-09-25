@@ -48,7 +48,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let checks: SourceCheck[] | null = null, checksKey = '', checking = false;
   let checkAbort: AbortController | null = null;
   let setup: SourceSetup | null = null;
-  let generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
+  const generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
   try {
     const raw = localStorage.getItem(SOURCE_MODEL_STORAGE);
     const saved = raw?.startsWith('{') ? JSON.parse(raw) as { model?: string; at?: number } : { model: raw ?? undefined, at: 0 };
@@ -64,8 +64,6 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let productPhoto = false;
   let chatExpanded = false;
   let visualEditing = false, visualEditPending = false;
-  let workspaceTheme = 'light';
-  try { workspaceTheme = localStorage.getItem('pagosya_dashboard_theme') === 'dark' ? 'dark' : 'light'; } catch { /* Use the default palette. */ }
   let productForm: ReturnType<typeof createProductForm> | null = null;
   let buildProgress: BuildProgress | null = null;
   let buildStatus = '';
@@ -137,10 +135,6 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   });
   window.addEventListener('message', event => {
     if (!embedded || event.origin !== location.origin || event.source !== window.parent) return;
-    if (event.data?.type === 'pagosya:workspace-theme') {
-      workspaceTheme = event.data.theme === 'dark' ? 'dark' : 'light';
-      app.querySelector<HTMLElement>('.source-mode')?.setAttribute('data-workspace-theme', workspaceTheme); return;
-    }
     if (event.data?.type !== 'pagosya:studio-action' || event.data.storeId !== storeId || loading) return;
     const action = event.data.action;
     if (action === 'compose' && typeof event.data.text === 'string') {
@@ -448,7 +442,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     const store = stores.find(s => s.id === storeId);
-    app.innerHTML = `<div class="studio-shell source-mode ${embedded ? 'source-embedded' : ''}" data-workspace-theme="${workspaceTheme}">
+    app.innerHTML = `<div class="studio-shell source-mode ${embedded ? 'source-embedded' : ''}">
       <header class="topbar connected-topbar">
         <a class="product-mark" href="/" aria-label="pagosYa Merchant Studio"><img src="${import.meta.env.BASE_URL}logo-mark.png" alt=""><span>pagosYa</span><i></i><strong>Merchant Studio</strong></a>
         <div class="connected-store-select"><span>Mi tienda</span><strong>${escape(store?.name || 'Sin tienda')}</strong></div>

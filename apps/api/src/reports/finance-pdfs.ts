@@ -282,9 +282,8 @@ export async function createFinancesPdf(finances: FinanceSummaryPdfPayload): Pro
   if (!finances.salesByWeekday.length) {
     doc.fillColor(MUTED).text("Sin datos de actividad para esta ventana.");
   } else {
-    finances.bestSalesDay
-      ? doc.text(`Día más activo: ${finances.bestSalesDay.name} · ${finances.bestSalesDay.paymentCount} ventas`)
-      : doc.text("Sin día más activo definido.");
+    if (finances.bestSalesDay) doc.text(`Día más activo: ${finances.bestSalesDay.name} · ${finances.bestSalesDay.paymentCount} ventas`);
+    else doc.text("Sin día más activo definido.");
     finances.salesByWeekday.forEach((row) => {
       doc.fillColor(INK);
       ensureNewPage(doc, 24, scopeLabel);

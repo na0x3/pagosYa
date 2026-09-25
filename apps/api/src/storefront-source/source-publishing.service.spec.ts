@@ -165,7 +165,7 @@ describe('versioned trusted runtime publications', () => {
   }
 
   it('records the bytes checked before the transaction even if the installed kit changes during publication', async () => {
-    const { service, prisma, record, bundles, store } = checkedPublishing();
+    const { service, prisma, record, bundles } = checkedPublishing();
     const check = await record();
     prisma.$transaction.mockImplementationOnce(async (work: any) => {
       const readFile = fs.readFile;

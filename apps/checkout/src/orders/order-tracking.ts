@@ -131,7 +131,7 @@ export function trackingClaimUrl(token: string): string {
   return url.toString();
 }
 
-export function trackedReviewHtml(order: TrackedOrder, token: string): string {
+export function trackedReviewHtml(order: TrackedOrder, _token: string): string {
   if (order.status !== "DELIVERED" || !order.store?.slug) return "";
   const products = Array.isArray(order.items)
     ? order.items.filter((item) => typeof item.paymentLinkId === "string").filter((item, index, list) => list.findIndex((candidate) => candidate.paymentLinkId === item.paymentLinkId) === index)

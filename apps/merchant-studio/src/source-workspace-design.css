@@ -6,10 +6,6 @@
   height: 100dvh; min-height: 0; overflow: hidden; background: var(--paper); color: var(--ink);
   font-family: Arial,sans-serif;
 }
-.source-mode[data-workspace-theme="dark"] {
-  color-scheme: dark; --paper: #171815; --warm-paper: #262722; --surface: #20211e;
-  --ink: #f8f8f2; --muted: #c3c4b7; --line: #484a40; --line-firm: #85877a; --lavender: #463c55;
-}
 .studio-shell.source-mode .studio-workspace { display: grid; grid-template-columns: clamp(280px,26vw,360px) minmax(0,1fr); grid-template-rows: minmax(0,1fr); gap: 14px; min-height: 0; overflow: hidden; padding: 10px 14px 12px; }
 .source-mode .source-canvas { grid-column: 2; grid-row: 1; min-height: 0; height: 100%; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 2px 8px #20211e05; overflow: hidden; grid-template-rows: auto minmax(0,1fr) 26px; }
 .source-mode .source-frame-wrap iframe { min-height: 0; }

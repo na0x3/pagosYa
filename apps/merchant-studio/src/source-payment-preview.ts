@@ -1,4 +1,4 @@
-import { sourceCheckoutBranding } from "@pagosya/shared-types";
+import { sourceCheckoutBranding, sourceComebackBranding } from "@pagosya/shared-types";
 import { CHECKOUT_ORIGIN } from './api';
 import type { SourceSnapshot } from '@pagosya/storefront-preview';
 import './source-payment-preview.css';
@@ -30,6 +30,9 @@ export function bindSourcePaymentPreview(sourceFrame: () => HTMLIFrameElement | 
       const config = current.files.find(f => f.path === 'config.js')?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
       const store = config ? JSON.parse(config[1]).data : {};
       const branding = sourceCheckoutBranding({ ...store, name: summary.merchantName }, current);
+      // A test sale shows the same sample Comeback card a real buyer would get, with no visit recorded.
+      const retention = store?.retention || {};
+      const comeback = retention.comebackEnabled === true ? { brand: sourceComebackBranding({ ...store, name: summary.merchantName }, current), visitsRequired: retention.visitsRequired ?? 5, rewardLabel: retention.rewardLabel ?? 'Tu premio por volver' } : null;
       dialog.querySelector('strong')!.textContent = `${summary.merchantName} · Pago de prueba`;
       dialog.style.background = branding.background;
       dialog.style.color = branding.foreground;
@@ -40,7 +43,7 @@ export function bindSourcePaymentPreview(sourceFrame: () => HTMLIFrameElement | 
       url.hash = new URLSearchParams({ ...delivery, ...Object.fromEntries(Object.entries(summary).map(([key, value]) => [key, String(value)])), parent_origin: location.origin }).toString();
       window.addEventListener('message', event => {
         if (event.source !== payment.contentWindow || event.origin !== url.origin || event.data?.source !== 'pagosya-checkout') return;
-        if (event.data.type === 'CHECKOUT_READY') { clearTimeout(timer); status.hidden = true; payment.contentWindow?.postMessage({ source: 'pagosya-studio', type: 'CHECKOUT_PREVIEW_BRANDING', branding }, url.origin); }
+        if (event.data.type === 'CHECKOUT_READY') { clearTimeout(timer); status.hidden = true; payment.contentWindow?.postMessage({ source: 'pagosya-studio', type: 'CHECKOUT_PREVIEW_BRANDING', branding, comeback }, url.origin); }
         if (event.data.type === 'PAYMENT_PREVIEW_CLOSED') close();
       }, { signal: controller.signal });
       payment.src = url.href;

@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { DebtCollectionLinkStatus, DebtRecordStatus, MerchantStatus, StoreStatus } from "@prisma/client";
 import { chunkDebtCsvForAi, compactDebtCsvForAi, DebtCollectionsService, normalizeCustomerDocument } from "./debt-collections.service";
 

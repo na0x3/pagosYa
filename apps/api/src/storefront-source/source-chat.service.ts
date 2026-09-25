@@ -145,7 +145,7 @@ export class SourceChatService {
       const site = sourceSiteContext((previous?.snapshot as unknown as SourceProjectSnapshot)?.files || []);
       const catalogInstruction = continuedCatalogRequest(setupDraft.pendingCatalogRequest, input.instruction, !current.revision);
       const referenceUrls = sourceWebsiteReferenceUrls(input.instruction, setupDraft.prompt);
-      const websiteReferences = referenceUrls.length ? await Promise.all(referenceUrls.map(url => {
+      const websiteReferences = referenceUrls.length ? await Promise.all(referenceUrls.map(async url => {
         const saved = setupDraft.websiteReferences?.find(ref => ref.url === url && ref.status === 'inspected');
         return saved || inspectSourceWebsite(url);
       })) : setupDraft.websiteReferences || [];

@@ -1,6 +1,6 @@
+import { escapeHtml as esc } from './html.mjs';
 const LABELS = { BOOKING: 'Reservando', BOOKED: 'Guía lista', PICKED_UP: 'Recogido', IN_TRANSIT: 'En camino', DELIVERED: 'Entregado', FAILED: 'Falló la reserva', CANCELED: 'Cancelado', RETURNED: 'Devuelto' };
 const TRACKABLE = ['BOOKED', 'PICKED_UP', 'IN_TRANSIT'];
-const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 export async function renderShipmentPanel(container, api, orderId) {
   let shipment = await api(`/orders/${encodeURIComponent(orderId)}/shipment`);

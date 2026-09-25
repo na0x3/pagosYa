@@ -115,7 +115,7 @@ async function bootstrap() {
     }
   };
   await refreshCustomOrigins();
-  setInterval(refreshCustomOrigins, 60_000).unref();
+  setInterval(() => void refreshCustomOrigins(), 60_000).unref();
   app.enableCors({
     origin(origin, callback) {
       if (!origin || configuredOrigins.has(origin) || customStorefrontOrigins.has(origin)) return callback(null, true);

@@ -45,10 +45,10 @@ import { validateSourcePreflight } from './source-preflight';
 import { repairSourceContracts } from './source-autorepair';
 import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
-import { BadGatewayException, BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { Script } from "node:vm";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
@@ -59,7 +59,7 @@ import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
 
 import { Prisma } from '@prisma/client';
-import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourcePromptCacheKey, sourceUsage, type SourceModel, type SourceModelChoice } from './source-generation-policy';
+import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-generation-policy';
 import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
 import { kitPath } from '@pagosya/storefront-kit';
@@ -124,7 +124,14 @@ export { merchantFacingSourceFailure } from './source-validation-error';
 
 @Injectable()
 export class SourceGenerationService {
-  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner()) {}
+  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner(), @Optional() private readonly rewards?: RewardsService) {}
+  private readonly logger = new Logger(SourceGenerationService.name);
+
+  /** Reward credits are a courtesy discount: a failure here must never fail the merchant's generation. */
+  private async coverWithRewardCredits(merchantId: string, generationId: string, credits: number) {
+    try { return (await this.rewards?.redeemForGeneration(merchantId, generationId, credits)) ?? 0; }
+    catch (error) { this.logger.warn(`Reward credit redemption failed for ${generationId}: ${(error as Error).message}`); return 0; }
+  }
 
   protected exploreDesign() { return sourceDesignExploration(); }
   protected composeUi(input: SourceCompositionInput) { return sourceUiCompositions(input); }
@@ -679,7 +686,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const successfulAttempts = attempts.filter(attempt => attempt.status === 'COMPLETED');
     // Failed attempts are absorbed. Unknown provider usage is never invented or billed.
     const credits = successfulAttempts.every(attempt => attempt.usage) ? Math.min(maxCredits, Math.ceil(successfulAttempts.reduce((sum, attempt) => sum + attempt.usage!.providerMicroUsd, 0) / CREDIT_MICRO_USD)) : 0;
-    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths };
+    const receipt = { id: run.id, requestedModel: plan.requestedModel, model, credits, maxCredits, attempts, durationMs: Date.now() - started, status: 'COMPLETED', autoRepairs, unusedImagePaths, ...({} as { rewardCreditsCovered?: number }) };
     await progress?.('saving');
     const saveInput = { revision: dto.revision, label: generated.label, brief: dto.brief, files: await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
       ...generated.files, ...kitFiles, ...assets,
@@ -702,9 +709,11 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       signal.throwIfAborted();
       const completed = await this.prisma.storeSourceGeneration.updateMany({ where: { id: run.id, status: 'RUNNING', activeStoreId: storeId }, data: { model, credits, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: receipt.durationMs, status: 'CANDIDATE', activeStoreId: null, completedAt: new Date() } });
       if (completed.count !== 1) throw new ConflictException('La generación expiró. Tu revisión anterior sigue guardada.');
+      receipt.rewardCreditsCovered = await this.coverWithRewardCredits(merchantId, run.id, credits);
       return { revision: dto.revision, label: generated.label, digest: sourceProjectDigest(candidate), createdAt: new Date(), restoredFrom: null, createdProducts: [], updatedProducts: [], deletedProducts: [], optionChanges: [], generation: receipt, candidate };
     }
     const saved = await this.projects.save(merchantId, storeId, saveInput, { id: run.id, enablePayments: dto.revision === 0, products, productOperations, data: { model, credits, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: receipt.durationMs, status: 'COMPLETED', activeStoreId: null, revision: dto.revision + 1, completedAt: new Date() } });
+    receipt.rewardCreditsCovered = await this.coverWithRewardCredits(merchantId, run.id, credits);
     return { ...saved, generation: receipt, ...({} as { candidate?: SourceProjectSnapshot }) };
     } catch (error) {
       execution?.onAttempts?.(attempts);

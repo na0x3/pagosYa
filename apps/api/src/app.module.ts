@@ -44,6 +44,7 @@ import { ConsumerModule } from "./consumer/consumer.module";
 // Store-level CRM, inventory, appointments, delivery, POS, and integrations.
 import { OperationsModule } from "./operations/operations.module";
 import { InboxModule } from "./inbox/inbox.module";
+import { RewardsModule } from "./rewards/rewards.module";
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { InboxModule } from "./inbox/inbox.module";
     OpsModule,
     LimitsModule,
     DashboardModule,
+    RewardsModule,
     HealthModule,
     StoresModule,
     StorefrontSourceModule,

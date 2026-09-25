@@ -1,6 +1,6 @@
 /** What the buyer sees after paying: success with receipt printing, failure, required actions, and international returns. */
 import { mountDigitalDownloads } from "../digital-downloads";
-import { mountComebackCard } from "../comeback-card";
+import { mountComebackCard, mountComebackPreviewCard } from "../comeback-card";
 import { CheckoutSession, simulateRailCallback, fetchSession } from "../api";
 import { isNavigableRedirect, rememberReturn, recallReturn } from "../international";
 import { postToParent } from "../postmessage";
@@ -178,6 +178,8 @@ export function renderSuccess(order: OrderSummary, preview = false) {
   app.querySelector('#preview-back')?.addEventListener('click', closeSourcePaymentPreview);
   if (!preview && state.activeOrderTrackingToken) void mountDigitalDownloads(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken);
   if (!preview && state.activeOrderTrackingToken) void mountComebackCard(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken, order.id);
+  const previewComeback = preview ? (order as CheckoutSession).previewComeback : null;
+  if (previewComeback) mountComebackPreviewCard(app.querySelector('.payment-success-panel')!, previewComeback, (order as { customerName?: string | null }).customerName);
   app.querySelector<HTMLButtonElement>(".receipt-print")?.addEventListener("click", () => window.print());
   launchPaymentPrinter(order.id, {
     receiptContentHtml,
@@ -270,6 +272,7 @@ export function launchPaymentPrinter(
     document.removeEventListener("keydown", handleKeydown);
     celebration.remove();
     app.removeAttribute("inert");
+    document.dispatchEvent(new CustomEvent("pagosya:receipt-closed"));
     if (!document.querySelector(".payment-success-overlay")) {
       document.documentElement.classList.remove("payment-success-overlay-open");
       document.body.classList.remove("payment-success-overlay-open");

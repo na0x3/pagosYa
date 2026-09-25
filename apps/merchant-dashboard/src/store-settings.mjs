@@ -1,3 +1,4 @@
+import { escapeHtml } from "./html.mjs";
 // Store settings the live checkout reads: identity, how an order ends, support
 // contact, pickup/delivery locations with their stock, and link buttons.
 // Everything saves straight to the store (PATCH /stores/:id, PUT /links).
@@ -21,9 +22,7 @@ const POLICY_FIELDS = /** @type {const} */ ([
 /** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, publicVisibility?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
 
 /** @type {Record<string, string>} */
-const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 /** @param {unknown} value */
-const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 /** @param {unknown} error */
 const messageOf = (error) => error instanceof Error ? error.message : String(error);
 
@@ -226,7 +225,7 @@ export function mountStoreSettings(root, deps) {
     const items = activeProducts();
     locationsList.innerHTML = locations.map((location, index) => {
       const id = escapeHtml(location.id);
-      const hours = (location.openingHours || defaultHours()).map((entry) => `<div class="store-location-hours-row"><span>${DAYS[entry.day]}</span><input type="time" data-location-hours-day="${entry.day}" data-location-hours-field="open" value="${escapeHtml(entry.open)}" ${entry.closed ? "disabled" : ""} aria-label="Apertura ${DAYS[entry.day]}"><input type="time" data-location-hours-day="${entry.day}" data-location-hours-field="close" value="${escapeHtml(entry.close)}" ${entry.closed ? "disabled" : ""} aria-label="Cierre ${DAYS[entry.day]}"><label><input type="checkbox" data-location-hours-day="${entry.day}" data-location-hours-field="closed" ${entry.closed ? "checked" : ""}> Cerrado</label></div>`).join("");
+      const hours = (location.openingHours || defaultHours()).map((entry) => `<div class="store-location-hours-row"><span>${DAYS[entry.day]}</span><input type="time" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="open" value="${escapeHtml(entry.open)}" ${entry.closed ? "disabled" : ""} aria-label="Apertura ${DAYS[entry.day]}"><input type="time" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="close" value="${escapeHtml(entry.close)}" ${entry.closed ? "disabled" : ""} aria-label="Cierre ${DAYS[entry.day]}"><label><input type="checkbox" data-location-hours-day="${Number(entry.day)}" data-location-hours-field="closed" ${entry.closed ? "checked" : ""}> Cerrado</label></div>`).join("");
       const stock = items.length ? items.map((product) => {
         const value = location.inventory?.[product.id];
         const unlimited = value === null;

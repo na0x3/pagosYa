@@ -9,7 +9,6 @@ import {
   IsEmail,
   IsIn,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
   Matches,

@@ -44,6 +44,17 @@ Phases 3–5 are the large ones; each should be split into several PRs.
 - **Phase 4 — done (2026-09-19).** `checkout/src/main.ts` 10.2k → 0.2k. First its 47 module-level variables moved onto `state` in `state.ts`, then declarations moved into `storefront/`, `cart/`, `checkout/`, `orders/`, `preview-editor/`, `ui/` (see `docs/ARCHITECTURE.md`). No import cycles were added. Remaining large module: `storefront/store-page.ts` (3.5k) — `renderStore`, `renderProductPage`, the cart review dialog and in-store navigation call each other; separating them needs a small render/navigation registry. Checkout suite 237/237 and `vite build` pass after each step.
 - **Follow-up round (2026-09-19).** `StoresService` split into `StoresService` (management), `PublicStoresService` (public reads, view counting) and `StoreCheckoutService` (cart checkout, leads); `VisualStudioService` split into `VisualStudioService` (saved editor state), `VisualAiService`, `VisualProposalsService` and `VisualRevisionService`. Specs build them through `testing-*-services.ts` helpers that forward spies to the owning service. Checkout's storefront loop is broken with a `storefrontPages` registry in `storefront/navigation.ts` (filled by `main.ts`), so the product page, cart review dialog and cart bar are separate modules; `storefront/store-page.ts` is now 2.6k lines, nearly all of it the single `renderStore` function. Verified: API 1396 unit + 96 e2e, checkout 237, Studio CI browser suite 31/31, dashboard CI browser suite 12/15 with only the three known failures below.
 - **Phase 5 — started.** The dashboard's inline CSS (3.6k lines) and inline script (14.5k lines) moved verbatim to `src/dashboard.css` and `src/dashboard.js`; `index.html` is now 1.8k lines of markup. Converting `dashboard.js` into Vite-built modules is the remaining work and is not mechanical: the whole script runs inside one `PagosYaStoreEditorReady.then(...)` callback, so every function shares that closure's variables, and 50 inline `on…=` attributes depend on globals it sets. It needs the closure's variables hoisted onto a state object first (as done for checkout in phase 4), and more reliable browser coverage before it is safe: the full dashboard Playwright suite (not only the CI subset) currently has 39 failing tests — identical before and after the extraction — mostly in `store-settings.spec.mjs`, which CI does not run.
+- **Phase 5, continued (2026-09-24).** The browser coverage it was waiting on now exists: the whole
+  dashboard Playwright suite is green (73 passed, 1 intentional skip) and CI runs every spec file.
+  `dashboard.js` is an ES module. Screen code now leaves the closure one module at a time with
+  **`mountX(deps)`**: the code moves verbatim, and each closure variable it used becomes an explicit
+  dependency (a getter for mutable state such as `storeId: () => currentStoreId`). No state object
+  is needed first. First extraction: the rewards (wheel, album, dice board) went to
+  `src/rewards-panel.mjs`, taking `dashboard.js` from 5.1k to 4.9k lines. Mount a module where its
+  old state was declared, not where its functions were: init code that runs earlier may call it,
+  and a `const` read before its declaration is a TDZ crash. Next candidates, each self-contained:
+  profile/sessions menu, payment-link lists, finance charts, product/catalog import.
+
 - **Phase 0 tooling, finished (2026-09-22).** ESLint was the half of phase 0 that never landed
   (finding #8): `depcruise` enforced layering, but nothing caught the mistakes `tsc` cannot see.
   `eslint.config.mjs` at the root is type-aware and deliberately *not* a style config — no
@@ -67,8 +78,14 @@ Phases 3–5 are the large ones; each should be split into several PRs.
   | 1 each | `await-thenable`, `no-implied-eval`, `no-unsafe-finally` | reviewed, none live defects |
   | 867 | warnings | 324 `no-explicit-any`, 241 `no-unnecessary-type-assertion`, 150 `require-await` |
 
-  Not yet in CI: it would fail on the 72 standing errors. Turn on `pnpm lint` in `ci.yml` once
-  they reach zero — the config is already a ratchet, so a *new* floating promise fails today.
+  **Errors reached zero on 2026-09-24 (74 → 0) and `pnpm lint` now runs in CI.** Most were
+  mechanical (unused imports, `prefer-const`). Two config decisions came with it:
+  `no-unused-vars` ignores rest siblings (`({ image, ...rest }) => rest` is how the code drops
+  fields), and in the browser apps `no-misused-promises` no longer checks async functions passed
+  as arguments. Every one of those ~27 sites (DOM listeners, timers) was read and each catches
+  its own errors; the API keeps the full rule, since there an ignored promise is a lost write.
+  One real fix: `countStoreSales` was counting test-mode payments toward dice-board rolls.
+  954 warnings remain; promote each rule to "error" as its count reaches zero.
 
 - **Phase 6 — done.** `no-circular` is now an error; the five cycles that predate it stay listed in `.dependency-cruiser-known-violations.json`, and a new cycle fails `pnpm check:boundaries` in CI.
 - **Browser suite, measured 2026-09-22.** The figure recorded below — "39 failing tests" in the

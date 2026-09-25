@@ -661,7 +661,7 @@ describe('Independent source generation',()=>{
     expect(prisma.storeSourceGeneration.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED', credits: 0, activeStoreId: null }) }));
   });
   it('checks ownership and revision before requesting a paid generation',async()=>{
-    const fetchMock=jest.spyOn(globalThis,'fetch');const {service,prisma,projects}=setup();
+    const fetchMock=jest.spyOn(globalThis,'fetch');const {service,projects}=setup();
     projects.current.mockRejectedValueOnce(new Error('Store not found'));await expect(service.generate('other','s',input)).rejects.toThrow('Store not found');
     projects.current.mockResolvedValueOnce({revision:2});await expect(service.generate('m','s',input)).rejects.toThrow('cambió');expect(fetchMock).not.toHaveBeenCalled();
   });

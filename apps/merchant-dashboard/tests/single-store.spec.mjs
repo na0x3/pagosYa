@@ -46,7 +46,10 @@ test('an existing profile creates another store and switches independently', asy
   await editor.getByRole('button', { name: '← Mis tiendas', exact: true }).click();
   await expect(page.locator('.store-row')).toHaveCount(2);
   await expect(page.locator('#openCreateStore')).toBeVisible();
-  await page.getByRole('combobox', { name: 'Tienda activa', exact: true }).selectOption('only-store');
+  // Stores are switched from their card; the sidebar picker is hidden in the workspace layout.
+  await page.locator('.store-row[data-id="only-store"]').click();
+  await expect(page.locator('#merchantStudioFrame')).toHaveAttribute('data-store-id', 'only-store');
+  await page.evaluate(() => window.setDashboardView('stores'));
   await expect(page.locator('.store-row.active')).toHaveAttribute('data-id', 'only-store');
   expect(requests.filter(req => req.path === '/stores' && req.method === 'POST')).toHaveLength(1);
 });

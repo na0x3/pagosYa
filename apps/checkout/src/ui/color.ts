@@ -80,7 +80,7 @@ export function accentContrastColor(hex: string): "#ffffff" | "#000000" {
 export function backgroundTheme(backgroundColor: string | null): { light: boolean; textColor: "#000000" | "#ffffff" } {
   const effectiveBackground = backgroundColor && /^#[0-9a-f]{6}$/i.test(backgroundColor)
     ? backgroundColor
-    : "#0a0a0a";
+    : "#f5f5f5";
   const textColor = binaryContrastColor(effectiveBackground);
   return { light: textColor === "#000000", textColor };
 }

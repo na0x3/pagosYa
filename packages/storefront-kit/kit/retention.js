@@ -12,21 +12,34 @@
     if (!document.getElementById('pagosya-comeback-style')) {
       const style = document.createElement('style'); style.id = 'pagosya-comeback-style';
       style.textContent = `
-        .comeback-wrap{box-sizing:border-box;width:min(100%,420px);margin:32px auto;font:16px/1.5 system-ui,sans-serif;text-align:left}
-        .comeback-wrap *{box-sizing:border-box}.comeback-wrap .comeback-heading{margin:0 0 16px;font:600 18px/1.4 system-ui,sans-serif;color:inherit}
-        .comeback-card{padding:24px;border-radius:var(--comeback-radius,14px);background:var(--comeback-paper);color:var(--comeback-ink);font-family:var(--comeback-font);overflow:hidden}
-        .comeback-brand{display:flex;align-items:center;gap:12px;min-height:36px}.comeback-brand strong{font-family:var(--comeback-heading-font,var(--comeback-font));font-size:24px;line-height:1.25;overflow-wrap:anywhere}.comeback-brand>img{width:44px;height:44px;object-fit:contain;background:#fff;border-radius:4px;padding:4px}
-        .comeback-stamps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;list-style:none;padding:0;margin:28px 0 24px}
-        .comeback-stamps li{aspect-ratio:1;display:grid;place-items:center;border-radius:50%;border:1.5px solid currentColor;background:color-mix(in srgb,var(--comeback-paper),#fff 80%);color:var(--comeback-ink);min-width:0}
-        .comeback-stamps li[data-earned=false]{background:transparent;border-style:dashed}.comeback-stamps li[data-earned=false] .comeback-stamp{opacity:.25}
-        .comeback-stamp{display:grid;place-items:center;width:58%;height:58%;font-weight:700;font-size:18px}.comeback-stamp svg,.comeback-stamp img{width:100%;height:100%;object-fit:contain}.comeback-stamp img{background:#fff;border-radius:50%;padding:3px}.comeback-stamps li[data-earned=true]{background:var(--comeback-ink);color:var(--comeback-paper);border-color:var(--comeback-ink)}
-        .comeback-details{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0}.comeback-details dt{font-size:11px;line-height:1.4;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}.comeback-details dd{font-size:22px;line-height:1.25;margin:0;overflow-wrap:anywhere}
-        .comeback-card .comeback-progress{font-size:14px;line-height:1.5;margin:20px 0 0}.comeback-card .comeback-reward{font-size:14px;line-height:1.5;margin:6px 0 0}
-        .comeback-qr{width:152px;margin:28px auto 0;padding:4px 4px 8px;background:#fff;color:#241e19;border-radius:6px;text-align:center}.comeback-qr img{display:block;width:144px;height:144px}.comeback-qr figcaption{font:12px/1.4 system-ui,sans-serif;margin:0 6px}
-        .comeback-card .comeback-code{display:block;font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere;user-select:all;margin:16px 0 0;text-align:center}
-        .comeback-wrap .comeback-note{font:14px/1.55 system-ui,sans-serif;margin:16px 0 0;color:inherit}.comeback-wrap .comeback-action{display:block;width:100%;min-height:48px;padding:12px 16px;margin:16px 0 0;background:var(--comeback-ink);color:var(--comeback-paper);border:1px solid var(--comeback-ink);border-radius:8px;font:600 14px/1.5 system-ui,sans-serif;text-align:center;text-decoration:none;cursor:pointer}
+        .comeback-wrap{box-sizing:border-box;width:min(100%,400px);margin:32px auto;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:left;color:inherit}
+        .comeback-wrap *{box-sizing:border-box}.comeback-wrap .comeback-heading{margin:0 0 14px;font:600 17px/1.35 system-ui,-apple-system,sans-serif;letter-spacing:-.01em;color:inherit}
+        .comeback-card{position:relative;isolation:isolate;padding:22px 22px 18px;border-radius:var(--comeback-radius,22px);background:var(--comeback-paper);color:var(--comeback-ink);font-family:var(--comeback-font);overflow:hidden;box-shadow:0 1px 0 rgb(255 255 255 / .18) inset,0 18px 40px -18px rgb(0 0 0 / .45),0 2px 6px rgb(0 0 0 / .08)}
+        .comeback-card::before{content:"";position:absolute;inset:-40% -20% auto auto;z-index:-1;width:70%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--comeback-ink) 14%,transparent),transparent 70%)}
+        .comeback-brand{display:flex;align-items:center;gap:10px;min-height:32px}.comeback-brand strong{flex:1;min-width:0;font-family:var(--comeback-heading-font,var(--comeback-font));font-size:19px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+        .comeback-brand>img{width:34px;height:34px;object-fit:contain;background:#fff;border-radius:9px;padding:3px}
+        .comeback-kind{flex:none;padding:4px 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--comeback-ink) 35%,transparent);font:600 10px/1.2 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+        .comeback-count{display:flex;align-items:baseline;gap:8px;margin:22px 0 12px}.comeback-count strong{font:700 44px/1 system-ui,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.comeback-count span{font-size:14px;opacity:.8}
+        .comeback-stamps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:0}
+        .comeback-stamps li{aspect-ratio:1;display:grid;place-items:center;border-radius:50%;border:1.5px dashed color-mix(in srgb,var(--comeback-ink) 45%,transparent);color:var(--comeback-ink);min-width:0;transition:transform .3s}
+        .comeback-stamps li[data-earned=false] .comeback-stamp{opacity:.28}
+        .comeback-stamps li[data-earned=true]{border:0;background:var(--comeback-ink);color:var(--comeback-paper);box-shadow:0 4px 10px -4px rgb(0 0 0 / .45)}
+        .comeback-stamps li[data-latest]{animation:comeback-stamp .6s cubic-bezier(.2,1.4,.4,1) .25s both}
+        @keyframes comeback-stamp{from{transform:scale(1.6) rotate(-12deg);opacity:0}}
+        .comeback-stamp{display:grid;place-items:center;width:52%;height:52%;font-weight:700;font-size:16px}.comeback-stamp svg,.comeback-stamp img{width:100%;height:100%;object-fit:contain}.comeback-stamp img{background:#fff;border-radius:50%;padding:3px}
+        .comeback-meter{height:6px;margin:16px 0 0;border-radius:999px;background:color-mix(in srgb,var(--comeback-ink) 16%,transparent);overflow:hidden}.comeback-meter span{display:block;height:100%;border-radius:inherit;background:var(--comeback-ink);transform-origin:left;animation:comeback-meter .8s cubic-bezier(.2,.8,.2,1) .2s both}
+        @keyframes comeback-meter{from{transform:scaleX(0)}}
+        .comeback-card .comeback-progress{font-size:13px;line-height:1.5;margin:8px 0 0;opacity:.85}
+        .comeback-prize{display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--comeback-ink) 10%,transparent)}
+        .comeback-prize svg{flex:none;width:22px;height:22px}.comeback-prize small{display:block;font:600 10px/1.3 system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;opacity:.7}
+        .comeback-card .comeback-reward{font-size:15px;font-weight:600;line-height:1.35;margin:2px 0 0;overflow-wrap:anywhere}
+        .comeback-foot{display:flex;justify-content:space-between;gap:12px;margin:16px 0 0;padding:12px 0 0;border-top:1px solid color-mix(in srgb,var(--comeback-ink) 18%,transparent);font-size:13px}.comeback-foot span:last-child{opacity:.75;text-align:right}
+        .comeback-qr{width:152px;margin:20px auto 0;padding:4px 4px 8px;background:#fff;color:#241e19;border-radius:12px;text-align:center}.comeback-qr img{display:block;width:144px;height:144px}.comeback-qr figcaption{font:12px/1.4 system-ui,sans-serif;margin:0 6px}
+        .comeback-card .comeback-code{display:block;font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere;user-select:all;margin:14px 0 0;text-align:center}
+        .comeback-wrap .comeback-note{font:13px/1.55 system-ui,sans-serif;margin:14px 0 0;color:inherit;opacity:.75}.comeback-wrap .comeback-action{display:block;width:100%;min-height:46px;padding:12px 16px;margin:14px 0 0;background:var(--comeback-ink);color:var(--comeback-paper);border:0;border-radius:12px;font:600 14px/1.5 system-ui,sans-serif;text-align:center;text-decoration:none;cursor:pointer}
         .comeback-wrap .comeback-action:hover{filter:brightness(.92)}.comeback-wrap .comeback-action:focus-visible{outline:3px solid currentColor;outline-offset:4px}.comeback-wrap .comeback-action:disabled{opacity:.6;cursor:wait}.comeback-wrap [role=status]:empty{display:none}
-        @media(max-width:360px){.comeback-card{padding:20px}.comeback-stamps{gap:7px}.comeback-details dd{font-size:20px}}
+        @media(prefers-reduced-motion:reduce){.comeback-stamps li,.comeback-meter span{animation:none!important}}
+        @media(max-width:360px){.comeback-card{padding:18px}.comeback-stamps{gap:6px}.comeback-count strong{font-size:38px}}
         @media print{.comeback-wrap{display:none}}
       `;
       document.head.append(style);
@@ -44,15 +57,20 @@
     const coffee = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 4h13v3h2a4 4 0 0 1 0 8h-2.4A5 5 0 0 1 11 18H8a5 5 0 0 1-5-5V4Zm13 5v4h2a2 2 0 0 0 0-4h-2ZM2 20h19v2H2z"/></svg>';
     const bread = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18C1 15 4 9 9 5s9-4 11-1 0 8-5 12-8 5-11 2Z"/><path d="m8 8 3 3m1-6 3 3m-9 4 3 3"/></svg>';
     const stamp = logo ? `<img src="${escape(logo)}" alt="" referrerpolicy="no-referrer">` : brand.stamp === 'coffee' ? coffee : brand.stamp === 'bread' ? bread : escape((brand.name || '✓').trim().slice(0, 1).toUpperCase());
-    const rewards = card.currentPurchaseOnly ? 'Por correo' : `${card.availableRewards ?? Math.floor(visits / required)} ${(card.availableRewards ?? Math.floor(visits / required)) === 1 ? 'premio' : 'premios'}`;
+    const available = card.availableRewards ?? Math.floor(visits / required);
+    const rewards = card.currentPurchaseOnly ? 'Premios por correo' : `${available} ${available === 1 ? 'premio listo' : 'premios listos'}`;
+    const remaining = Math.max(0, required - count);
+    const gift = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z"/></svg>';
     el.innerHTML = `<div class="comeback-wrap">
-      <h2 class="comeback-heading">Tu tarjeta Comeback</h2>
+      ${options.heading === false ? '' : `<h2 class="comeback-heading">${escape(options.heading || 'Tu tarjeta Comeback')}</h2>`}
       <article class="comeback-card" aria-label="Tarjeta de ${escape(brand.name || 'tu tienda')}">
-        <header class="comeback-brand">${logo ? `<img src="${escape(logo)}" alt="" referrerpolicy="no-referrer">` : ''}<strong>${escape(brand.name || 'Tu tienda')}</strong></header>
-        <ol class="comeback-stamps" aria-label="${count} de ${required} sellos${card.currentPurchaseOnly ? ', solo esta compra' : ''}">${Array.from({ length: required }, (_, i) => `<li data-earned="${i < count}" aria-label="Sello ${i + 1}, ${i < count ? 'completado' : 'pendiente'}"><span class="comeback-stamp" aria-hidden="true">${stamp}</span></li>`).join('')}</ol>
-        <dl class="comeback-details"><div><dt>Nombre</dt><dd>${escape(card.customerName || 'Cliente')}</dd></div><div><dt>${card.currentPurchaseOnly ? 'Tu saldo completo' : 'Premios disponibles'}</dt><dd>${escape(rewards)}</dd></div></dl>
-        <p class="comeback-progress">${card.currentPurchaseOnly ? 'Esta compra cuenta para tu sello de hoy.' : `${visits} ${visits === 1 ? 'día de compras' : 'días de compras'} · ${card.code ? 'Tu premio está listo.' : `Faltan ${Math.max(0, required - visits)} para tu premio.`}`}</p>
-        <p class="comeback-reward">${escape(card.rewardLabel)}</p>
+        <header class="comeback-brand">${logo ? `<img src="${escape(logo)}" alt="" referrerpolicy="no-referrer">` : ''}<strong>${escape(brand.name || 'Tu tienda')}</strong><span class="comeback-kind">Comeback</span></header>
+        <p class="comeback-count"><strong>${count}</strong><span>de ${required} sellos${card.currentPurchaseOnly ? ' · esta compra' : ''}</span></p>
+        <ol class="comeback-stamps" aria-label="${count} de ${required} sellos${card.currentPurchaseOnly ? ', solo esta compra' : ''}">${Array.from({ length: required }, (_, i) => `<li data-earned="${i < count}"${i === count - 1 ? ' data-latest' : ''} aria-label="Sello ${i + 1}, ${i < count ? 'completado' : 'pendiente'}"><span class="comeback-stamp" aria-hidden="true">${stamp}</span></li>`).join('')}</ol>
+        <div class="comeback-meter" aria-hidden="true"><span></span></div>
+        <p class="comeback-progress">${card.code ? '¡Tu premio está listo!' : card.currentPurchaseOnly ? `Esta compra suma tu sello de hoy. Te ${remaining === 1 ? 'falta 1 compra' : `faltan ${remaining} compras`} para tu premio.` : `${visits} ${visits === 1 ? 'día de compras' : 'días de compras'} · ${remaining === 1 ? 'Falta 1' : `Faltan ${remaining}`} para tu premio.`}</p>
+        <div class="comeback-prize">${gift}<div><small>Tu premio</small><p class="comeback-reward">${escape(card.rewardLabel)}</p></div></div>
+        <footer class="comeback-foot"><span>${escape(card.customerName || 'Cliente')}</span><span>${escape(rewards)}</span></footer>
         ${/^data:image\/png;base64,[a-z\d+/=]+$/i.test(card.qrImageDataUrl || '') ? `<figure class="comeback-qr"><img src="${card.qrImageDataUrl}" width="144" height="144" alt="${card.code ? 'QR para canjear el premio' : 'QR para volver a abrir tu tarjeta'}"><figcaption>${card.code ? 'Muestra tu premio' : 'Guarda tu tarjeta'}</figcaption></figure>` : ''}
         ${card.code ? `<code class="comeback-code">${escape(card.code)}</code>` : ''}
       </article>
@@ -62,6 +80,7 @@
       <p class="comeback-note" role="status" aria-live="polite"></p>
     </div>`;
     const wrap = el.querySelector('.comeback-wrap');
+    wrap.querySelector('.comeback-meter span').style.width = `${Math.round(count / required * 100)}%`;
     const safeFont = value => typeof value === 'string' && value.length <= 180 && /^[\w\s,"'-]+$/.test(value) ? value : '';
     const fontStyle = document.createElement('style');
     fontStyle.textContent = (Array.isArray(brand.fonts) ? brand.fonts : []).slice(0, 2).filter(f => f && /^[\w -]{1,80}$/.test(f.family) && typeof f.source === 'string' && f.source.length <= 800000 && /^data:font\/(?:ttf|woff2?|otf);base64,[A-Za-z0-9+/]+=*$/.test(f.source)).map(f => `@font-face{font-family:"${f.family}";src:url("${f.source}");font-weight:${/^\d{3}(?: \d{3})?$/.test(f.weight) ? f.weight : '100 900'};font-style:${f.style === 'italic' ? 'italic' : 'normal'};font-display:swap}`).join('\n');

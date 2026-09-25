@@ -134,7 +134,7 @@ form.addEventListener("submit", (event) => {
   if (currentSearch) url.searchParams.set("search", currentSearch);
   else url.searchParams.delete("search");
   history.replaceState(null, "", url);
-  loadDirectory(1);
+  void loadDirectory(1);
 });
 loadMore.addEventListener("click", () => loadDirectory(currentPage + 1, true));
 document.getElementById("retryDirectory")!.addEventListener("click", () => loadDirectory(currentPage || 1, currentPage > 1));
@@ -142,8 +142,8 @@ document.getElementById("clearSearch")!.addEventListener("click", () => {
   searchInput.value = "";
   currentSearch = "";
   history.replaceState(null, "", location.pathname);
-  loadDirectory(1);
+  void loadDirectory(1);
 });
 
 searchInput.value = currentSearch;
-loadDirectory();
+void loadDirectory();

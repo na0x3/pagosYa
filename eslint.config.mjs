@@ -30,6 +30,7 @@ export default tseslint.config(
       "apps/matcho-showcase/**",
       "apps/merchant-dashboard/public/**",
       "packages/storefront-kit/kit/**",
+      "packages/widget-js/tsup.config.ts",
       "**/*.d.ts",
     ],
   },
@@ -73,9 +74,11 @@ export default tseslint.config(
       "@typescript-eslint/restrict-template-expressions": "off",
       "@typescript-eslint/unbound-method": "off",
 
+      // A `let` declared early so a close handler can clear what is assigned later.
+      "prefer-const": ["error", { ignoreReadBeforeAssign: true }],
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true },
       ],
     },
   },
@@ -88,6 +91,17 @@ export default tseslint.config(
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
       parserOptions: { projectService: false, project: false },
+    },
+  },
+  {
+    // Browser apps pass async functions to addEventListener and setTimeout all
+    // the time, and the DOM ignores what a listener returns. Every such site was
+    // reviewed on 2026-09-24 and each catches its own errors, so flagging them
+    // is noise. The server keeps the full rule: there an ignored promise is a
+    // lost write (the idempotency defect). Floating promises stay an error here too.
+    files: ["apps/checkout/src/**/*.ts", "apps/merchant-studio/src/**/*.ts", "packages/storefront-preview/src/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { arguments: false } }],
     },
   },
   {

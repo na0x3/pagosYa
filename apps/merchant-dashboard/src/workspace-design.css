@@ -1,5 +1,5 @@
 /* Pagosnet palette, with a persistent commerce navigation and YAPI dock. */
-:root[data-dashboard-theme="light"] {
+:root {
   color-scheme: light;
   --pg-bg: #f8f8f2; --pg-surface: #fff; --pg-text: #20211e;
   --pg-text-muted: #61625b; --pg-text-faint: #61625b;
@@ -9,7 +9,6 @@
   --bento-keyline: #20211e; --pg-shadow: 4px 4px 0 #20211e;
   --workspace-sidebar: #f0f0e7;
 }
-:root[data-dashboard-theme="dark"] { --workspace-sidebar: #20211e; }
 body.is-logged-in { background: var(--pg-bg); background-image: none; font-family: var(--pg-font-sans); }
 body.is-logged-in::before, body.is-logged-in::after { display: none; }
 body.is-logged-in :is(button,input,textarea,select) { font-family: inherit; }
@@ -44,6 +43,8 @@ body.is-logged-in table th { background: var(--pg-bg); color: var(--pg-text-mute
 body.is-logged-in table td { font-size: 13px; }
 .workspace-yapi { display: none; }
 body.is-logged-in:not([data-dashboard-view="workspace"]):not([data-dashboard-view="products"]):not([data-dashboard-view="store-settings"]) .workspace-yapi { display: block; position: fixed; z-index: 110; bottom: 20px; left: calc(50% + 120px); transform: translateX(-50%); width: min(760px, calc(100vw - 310px)); padding: 12px 16px; border: var(--bento-line) solid var(--bento-keyline); border-radius: 12px; box-shadow: var(--bento-shadow-sm); background: var(--pg-surface); }
+/* A Studio plugin form is open in an embedded frame: keep the dock from covering it. */
+body.studio-dialog-open .workspace-yapi { display: none !important; }
 .workspace-yapi-heading { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-bottom: 8px; }
 .workspace-yapi-heading strong { background: var(--pg-accent-soft); padding: 5px 8px; border-radius: 4px; }
 .workspace-yapi-heading span { color: var(--pg-text-muted); }

@@ -1,4 +1,4 @@
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+import { escapeHtml } from './html.mjs';
 const price = row => new Intl.NumberFormat('es-BO', { style: 'currency', currency: row.currency }).format(row.amount / 100);
 const labels = { AWAITING_PAYMENT: 'Esperando tu pago', REGISTERING: 'Registrando tu dominio', CONNECTING: 'Activando tu tienda y HTTPS', ACTIVE: 'Conectado', REVIEW_REQUIRED: 'En revisión con soporte', CANCELED: 'Compra cancelada', TEST_COMPLETE: 'Prueba completada' };
 const fields = [
