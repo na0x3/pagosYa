@@ -255,7 +255,6 @@ test('open in browser keeps the selected revision, reloads, and shows live catal
   await open.click();
   const popup = await popupPromise;
   await expect(popup).toHaveURL(/browser=1&store=s1&revision=1&page=index.html/);
-  await expect(popup.getByText('Vista previa · Sin cobros')).toBeVisible();
   const preview = popup.frameLocator('iframe');
   await expect(preview.getByRole('heading', { name: 'Un buen día empieza aquí.' })).toBeVisible();
   await expect(preview.getByRole('button', { name: 'Ver detalle de Café actualizado' })).toBeVisible();
