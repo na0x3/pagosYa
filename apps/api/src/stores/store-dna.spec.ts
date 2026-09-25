@@ -15,8 +15,12 @@ describe('publishedStoreDna', () => {
     const result = await publishedStoreDna(config({ button: 'sparkle', review: 'ticket', evil: 'x' }), 'store-1', 3);
     expect(result).toEqual({ ...seeded, review: 'ticket' });
   });
+  it('serves no DNA for a store without a published source revision (classic stores render as today)', async () => {
+    const prisma = config({ button: 'pill' });
+    for (const revision of [null, undefined]) await expect(publishedStoreDna(prisma, 'store-1', revision)).resolves.toBeNull();
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+  });
   it.each([
-    ['no published revision', null, config({ button: 'pill' })],
     ['a failing query', 2, { $queryRaw: jest.fn(async () => { throw new Error('db'); }) }],
     ['an unreadable config', 2, { $queryRaw: jest.fn(async () => [{ content: 'window.PAGOSYA_CONFIG = {oops' }]) }],
     ['no config.js', 2, { $queryRaw: jest.fn(async () => []) }],
