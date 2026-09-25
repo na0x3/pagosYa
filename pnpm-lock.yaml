@@ -451,6 +451,19 @@ importers:
         specifier: ^1.55.0
         version: 1.62.1
 
+  packages/blob-characters:
+    dependencies:
+      blobatar:
+        specifier: 2.7.0
+        version: 2.7.0(react@19.2.6)
+    devDependencies:
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1(supports-color@10.2.2)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   packages/sdk-node:
     dependencies:
       '@pagosya/shared-types':
