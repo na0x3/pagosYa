@@ -359,3 +359,72 @@ describe("proposals — the public view and expiry", () => {
     expect(ctx.prisma.events.filter((event) => event.type === "expired")).toHaveLength(1);
   });
 });
+
+describe("ProposalsService — Crear cobro from an accepted proposal", () => {
+  async function acceptedProposal(extra: Record<string, unknown> = {}) {
+    const ctx = setupProposals();
+    const proposal = await sentProposal(ctx, extra);
+    await ctx.proposals.accept(proposal.token, { name: "Ana Quispe", email: "ana@example.com", version: 1 }, CONTEXT);
+    return { ...ctx, proposal };
+  }
+
+  it("charges the accepted version's frozen items, discount and customer, links both ways, and freezes the cobro", async () => {
+    const ctx = await acceptedProposal();
+    // The working copy is final once accepted, but even a stray change must not reach the cobro.
+    ctx.prisma.items.filter((item) => item.documentId === ctx.proposal.id).forEach((item) => { item.unitAmount = 1; item.amount = 1; });
+    const result = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    expect(result.created).toBe(true);
+    const cobro = result.cobro;
+    expect(cobro).toEqual(expect.objectContaining({ kind: "INVOICE", status: "SENT", numberLabel: "COB-0001", title: "Identidad visual", subtotalAmount: 220000, discountAmount: 20000, totalAmount: 200000 }));
+    expect(cobro.items.map(({ description, quantity, unitAmount }) => ({ description, quantity, unitAmount }))).toEqual([
+      { description: "Diseño de logo", quantity: 1, unitAmount: 150000 },
+      { description: "Tarjetas", quantity: 2, unitAmount: 35000 },
+    ]);
+    expect(cobro.customer).toEqual({ name: "Café Aroma", email: "aroma@example.com", phone: null, document: null });
+    expect(new Date(cobro.dueAt!).getTime() - Date.now()).toBeGreaterThan(6 * 86_400_000);
+    expect(result.publicUrl).toMatch(/^https:\/\/pay\.example\/d\//);
+    expect(ctx.prisma.events.filter((event) => event.documentId === ctx.proposal.id && event.type === "cobro_created")).toEqual([
+      expect.objectContaining({ dedupeKey: "cobro", data: { cobroId: cobro.id } }),
+    ]);
+    expect(ctx.prisma.events.find((event) => event.documentId === cobro.id && event.type === "created")?.data).toEqual({ fromProposal: { documentId: ctx.proposal.id, numberLabel: "PRO-0001" } });
+    expect((cobro.content as Array<{ text: string }>)[0].text).toMatch(/^Según la propuesta PRO-0001 aceptada el /);
+  });
+
+  it("uses the accepter's name and email when the proposal had no customer", async () => {
+    const ctx = await acceptedProposal({ customerName: undefined, customerEmail: undefined });
+    const { cobro } = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    expect(cobro.customer).toEqual(expect.objectContaining({ name: "Ana Quispe", email: "ana@example.com" }));
+  });
+
+  it("is idempotent: a second tap (or a retry after a failed send) returns the same cobro", async () => {
+    const ctx = await acceptedProposal();
+    const first = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    // A retry finds the draft left by a send that failed, and sends it.
+    ctx.prisma.documents.find((row) => row.id === first.cobro.id)!.currentVersion = 1;
+    const second = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    expect(second.created).toBe(false);
+    expect(second.cobro.id).toBe(first.cobro.id);
+    expect(ctx.prisma.documents.filter((row) => row.kind === "INVOICE")).toHaveLength(1);
+    expect(ctx.prisma.rawQueries.filter((sql) => /FOR UPDATE/.test(sql)).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("sends a cobro left as a draft by an earlier failed send", async () => {
+    const ctx = await acceptedProposal();
+    const send = jest.spyOn(ctx.documents, "send").mockRejectedValueOnce(new Error("se cortó"));
+    await expect(ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {})).rejects.toThrow("se cortó");
+    send.mockRestore();
+    const retry = await ctx.proposals.createCobro("m_1", "store_1", ctx.proposal.id, {});
+    expect(retry.cobro.status).toBe("SENT");
+    expect(ctx.prisma.documents.filter((row) => row.kind === "INVOICE")).toHaveLength(1);
+  });
+
+  it("refuses a proposal that is not accepted, another store's, and one with no priced items", async () => {
+    const ctx = setupProposals();
+    const open = await sentProposal(ctx);
+    await expect(ctx.proposals.createCobro("m_1", "store_1", open.id, {})).rejects.toThrow(ConflictException);
+    await expect(ctx.proposals.createCobro("m_2", "store_1", open.id, {})).rejects.toThrow(NotFoundException);
+    const empty = await sentProposal(ctx, { items: [], discountAmount: 0 });
+    await ctx.proposals.accept(empty.token, { name: "Ana", email: "ana@example.com", version: 1 }, CONTEXT);
+    await expect(ctx.proposals.createCobro("m_1", "store_1", empty.id, {})).rejects.toThrow(UnprocessableEntityException);
+  });
+});

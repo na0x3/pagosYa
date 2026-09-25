@@ -1,4 +1,4 @@
-import { ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { BusinessDocumentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -6,7 +6,7 @@ import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { StructuredCompletionService } from "../ai/structured-completion";
 import { BusinessDocumentsService, expireProposal, OPEN_PROPOSAL } from "./business-documents.service";
-import { documentNumberLabel, type DocumentBlock } from "./business-document-snapshot";
+import { computeTotals, documentNumberLabel, type DocumentBlock, type DocumentSnapshot } from "./business-document-snapshot";
 import { DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./document-link-token";
 import { buildProposalMerchantEmail } from "./proposal-email";
 import type { AcceptanceContext } from "../legal/terms-acceptance.service";
@@ -26,7 +26,7 @@ import {
   type ProposalSectionOutput,
   type ProposalTone,
 } from "./proposal-draft";
-import type { AcceptProposalDto, DraftProposalDto, RegenerateProposalSectionDto, RequestProposalChangesDto } from "./dto/business-document.dto";
+import type { AcceptProposalDto, CreateCobroFromProposalDto, DraftProposalDto, RegenerateProposalSectionDto, RequestProposalChangesDto } from "./dto/business-document.dto";
 
 const S = BusinessDocumentStatus;
 
@@ -173,6 +173,67 @@ export class ProposalsService {
         accepted30: sum(acceptedRows, currency),
       })),
     };
+  }
+
+  // ── merchant: accepted → cobro ────────────────────────────────────────
+
+  /**
+   * "Crear cobro": an INVOICE from the accepted version exactly as the customer accepted it
+   * (frozen items, discount, currency, customer), linked both ways, then frozen like D1's
+   * one-tap create. A second tap, or a retry after a failed send, returns the same cobro.
+   */
+  async createCobro(merchantId: string, storeId: string, id: string, dto: CreateCobroFromProposalDto) {
+    await this.ownedStore(merchantId, storeId);
+    const linked = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      const doc = await tx.businessDocument.findFirst({ where: { id, storeId } });
+      if (!doc || doc.kind !== "PROPOSAL") throw new NotFoundException("Propuesta no encontrada");
+      const link = await tx.businessDocumentEvent.findFirst({ where: { documentId: id, type: "cobro_created" } });
+      const existingId = ((link?.data ?? {}) as { cobroId?: string }).cobroId;
+      if (existingId && (await tx.businessDocument.findFirst({ where: { id: existingId, storeId }, select: { id: true } }))) return { cobroId: existingId, created: false };
+      if (doc.status !== S.ACCEPTED) throw new ConflictException("Solo una propuesta aceptada se convierte en cobro.");
+      const accepted = await tx.businessDocumentEvent.findFirst({ where: { documentId: id, type: "accepted" } });
+      const acceptedBy = (accepted?.data ?? {}) as { name?: string; email?: string; version?: number };
+      const version = await tx.businessDocumentVersion.findUnique({ where: { documentId_version: { documentId: id, version: acceptedBy.version ?? doc.currentVersion } } });
+      if (!version) throw new NotFoundException("Propuesta no encontrada");
+      const snapshot = version.content as unknown as DocumentSnapshot;
+      const priced = snapshot.items.filter((item) => item.unitAmount > 0);
+      if (!priced.length) throw new UnprocessableEntityException("Esta propuesta no tiene ítems con precio. Crea el cobro a mano desde Cobros.");
+      const subtotal = priced.reduce((sum, item) => sum + item.quantity * item.unitAmount, 0);
+      const totals = computeTotals(priced.map(({ description, quantity, unitAmount }) => ({ description, quantity, unitAmount })), Math.min(snapshot.discountAmount, subtotal));
+      const acceptedOn = new Intl.DateTimeFormat("es-BO", { day: "numeric", month: "long", year: "numeric", timeZone: "America/La_Paz" }).format(accepted?.at ?? new Date());
+      const cobro = await tx.businessDocument.create({
+        data: {
+          storeId,
+          merchantId: doc.merchantId,
+          kind: "INVOICE",
+          title: snapshot.title.slice(0, 200),
+          currency: snapshot.currency,
+          businessCustomerId: doc.businessCustomerId,
+          customerName: snapshot.customer.name ?? acceptedBy.name ?? null,
+          customerEmail: snapshot.customer.email ?? acceptedBy.email ?? null,
+          customerPhone: snapshot.customer.phone,
+          customerDocument: snapshot.customer.document,
+          subtotalAmount: totals.subtotalAmount,
+          discountAmount: totals.discountAmount,
+          totalAmount: totals.totalAmount,
+          content: [{ type: "paragraph", text: `Según la propuesta ${snapshot.numberLabel} aceptada el ${acceptedOn}.` }],
+          dueAt: dto.dueAt ? new Date(dto.dueAt) : endOfLaPazDay(7),
+          autoReminders: true,
+          items: { create: totals.items.map((item, position) => ({ position, description: item.description, quantity: item.quantity, unitAmount: item.unitAmount, amount: item.amount })) },
+          events: { create: [{ type: "created", data: { fromProposal: { documentId: id, numberLabel: snapshot.numberLabel } } }] },
+        },
+      });
+      await tx.businessDocumentEvent.create({ data: { documentId: id, type: "cobro_created", version: doc.currentVersion, dedupeKey: "cobro", data: { cobroId: cobro.id } } });
+      return { cobroId: cobro.id, created: true };
+    });
+    // Frozen with email off (D1's one-tap create): the dashboard then offers WhatsApp, email and copy.
+    let cobro = await this.documents.get(merchantId, storeId, linked.cobroId);
+    if (cobro.status === S.DRAFT) {
+      await this.documents.send(merchantId, storeId, linked.cobroId, { email: false });
+      cobro = await this.documents.get(merchantId, storeId, linked.cobroId);
+    }
+    return { cobro, created: linked.created, publicUrl: cobro.publicUrl };
   }
 
   // ── public: the customer's answer ─────────────────────────────────────
