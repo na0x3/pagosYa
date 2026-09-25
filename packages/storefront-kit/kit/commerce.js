@@ -1403,8 +1403,11 @@
     if (mode === 'quick-look' && !fullProductPage) return { chip: true };
     return {};
   }
-  const cardAltMarkup = url => `<img class="menu-item__image-alt" src="${escape(url)}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
-  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}" alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
+  // The second photo is fetched only when the shopper reaches the card (pointer, focus or touch): see loadCardAlt.
+  const CARD_SIZES = '(max-width: 820px) 50vw, 25vw';
+  const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
+  // Swatch thumbnails are 22px: the smallest rendition is enough.
+  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
   const cardChipMarkup = p => `<button type="button" class="menu-item__quick-look" data-product="${escape(p.id)}" aria-label="Vista rápida de ${escape(p.name)}">Vista rápida</button>`;
   function customProductCard(p, image, complex) {
     const template = document.querySelector('template[data-pagosya-product-template]');
@@ -1964,9 +1967,15 @@
   }
   /* Card preview listeners (DNA stores only). The second photo follows the photo's box; a long press previews
    * it on touch (and swallows the click that follows); keyboard focus previews it too (CSS :focus-within). */
+  function loadCardAlt(alt) {
+    if (!alt?.dataset.src || alt.hasAttribute('src')) return;
+    if (alt.dataset.srcset) { alt.srcset = alt.dataset.srcset; alt.sizes = alt.dataset.sizes || CARD_SIZES; }
+    alt.src = alt.dataset.src;
+  }
   function syncCardAlt(card) {
     const photo = card?.querySelector('.menu-item__image'), alt = card?.querySelector('.menu-item__image-alt');
     if (!photo || !alt) return;
+    loadCardAlt(alt);
     const style = getComputedStyle(photo);
     Object.assign(alt.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: style.borderRadius, objectPosition: style.objectPosition });
   }
@@ -1989,6 +1998,7 @@
     document.addEventListener('touchstart', event => {
       const card = photoPress(event);
       if (!card) return;
+      loadCardAlt(card.querySelector('.menu-item__image-alt'));
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => { syncCardAlt(card); card.setAttribute('data-previewing', ''); pressedCard = card; }, 450);
     }, { passive: true });
@@ -2001,7 +2011,9 @@
       const card = swatch?.closest('.menu-item'), photo = card?.querySelector('.menu-item__image');
       if (!photo) return;
       event.preventDefault();
-      photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
+      const set = responsiveSrcset(swatch.dataset.cardSwatch);
+      if (set) { photo.srcset = set; photo.sizes = photo.getAttribute('sizes') || CARD_SIZES; } else { photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); }
+      photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
       card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
     }, true);
     // Tilt follows a fine pointer only, and never with reduced motion.

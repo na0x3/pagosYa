@@ -277,8 +277,27 @@ describe('product card preview', () => {
   it.each([false, true])('second-photo adds the second image only when there is one (template: %s)', template => {
     const { doc } = catalog('second-photo', [TWO, ONE], template);
     const alts = Array.from(doc.querySelectorAll('.menu-item__image-alt') as ArrayLike<any>);
-    expect(alts.map(img => [img.getAttribute('src'), img.getAttribute('alt'), img.getAttribute('aria-hidden')])).toEqual([['https://cdn.test/b.jpg', '', 'true']]);
+    expect(alts.map(img => [img.getAttribute('data-src'), img.getAttribute('alt'), img.getAttribute('aria-hidden')])).toEqual([['https://cdn.test/b.jpg', '', 'true']]);
     expect(doc.querySelectorAll('.menu-item')).toHaveLength(2);
+  });
+  const upload = (n: number) => `https://api.test/v1/uploads/0000000${n}-0000-4000-8000-000000000000.jpg`;
+  it.each(['pointerover', 'focusin', 'touchstart'])('downloads the second photo only when the shopper reaches the card (%s), responsively', type => {
+    const { w, doc } = catalog('second-photo', [{ ...TWO, imageUrls: [upload(1), upload(2)] }]);
+    const card = doc.querySelector('.menu-item'), alt = card.querySelector('.menu-item__image-alt');
+    expect([alt.hasAttribute('src'), alt.hasAttribute('srcset')]).toEqual([false, false]);
+    card.querySelector('.menu-item__image').dispatchEvent(new w.Event(type, { bubbles: true }));
+    expect(alt.getAttribute('src')).toBe(upload(2));
+    expect(alt.getAttribute('srcset')).toContain(`${upload(2)}?w=`);
+    expect(alt.getAttribute('sizes')).toBeTruthy();
+  });
+  it('swatch thumbnails ask for the smallest rendition, and a swapped photo stays responsive', () => {
+    const variants = COLORS.variants.slice(0, 2).map((v, i) => ({ ...v, options: [], imageUrl: upload(i + 3) }));
+    const { doc } = catalog('swatch-swap', [{ ...COLORS, imageUrls: [upload(1)], variants }]);
+    const thumbs = Array.from(doc.querySelectorAll('.menu-item__swatches img') as ArrayLike<any>);
+    expect(thumbs.map(img => [img.getAttribute('sizes'), img.getAttribute('srcset')?.includes(`${upload(3)}?w=`) || img.getAttribute('srcset')?.includes(`${upload(4)}?w=`)])).toEqual([['22px', true], ['22px', true]]);
+    doc.querySelectorAll('[data-card-swatch]')[1].click();
+    const photo = doc.querySelector('.menu-item__image');
+    expect([photo.getAttribute('src'), photo.getAttribute('srcset')?.includes(`${upload(4)}?w=`)]).toEqual([upload(4), true]);
   });
   it('adds no preview markup without DNA or for a still card', () => {
     for (const handle of [catalog(null, [TWO, COLORS]), catalog('still', [TWO, COLORS])]) {
