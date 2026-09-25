@@ -13,13 +13,17 @@ export const requestsArtwork = (text: string) => !/\b(?:sin|no|without)\b.{0,35}
 export class SourceScopeConflict extends BadGatewayException {
   constructor(detail: string) { super('El cambio excede lo solicitado: ' + detail + ' Conserva el diseño anterior fuera de la sección pedida.'); }
 }
-export function validateSourceArtwork(previous: File[], next: File[], instruction: string) {
+/** `motifPaths` are the DNA motif files the platform declared for this build (sub-project 3): the only drawings a page
+ * may newly reference without an art request. They reach the page as `motifs/<slug>.svg` files the sanitiser checked,
+ * never as an inline <svg>, which stays unrequested art. */
+export function validateSourceArtwork(previous: File[], next: File[], instruction: string, motifPaths: readonly string[] = []) {
   if (requestsArtwork(instruction) || /\b(?:iconos?|icons?|grafic[oa]s?|charts?|diagramas?|diagrams?)\b/.test(currentRequest(instruction))) return;
   const authored = (files: File[]) => files.filter(f => /\.(tsx|html|css)$/.test(f.path)).map(f => f.content).join('\n');
   const before = authored(previous), after = authored(next);
   const drawingCount = (text: string) => (text.match(/<(?:svg|canvas)\b/g) || []).length;
   const introducedAssets = [...after.matchAll(/assets\/creative\/[\w/.-]+/g)].map(m => m[0]).filter(path => !before.includes(path));
-  if (drawingCount(after) > drawingCount(before) || introducedAssets.length) {
+  const undeclaredMotifs = [...after.matchAll(/motifs\/[\w.-]+\.svg/g)].map(m => m[0]).filter(path => !before.includes(path) && !motifPaths.includes(path));
+  if (drawingCount(after) > drawingCount(before) || introducedAssets.length || undeclaredMotifs.length) {
     throw new SourceScopeConflict('Se añadieron ilustraciones no solicitadas. Usa las fotos aprobadas y composición tipográfica.');
   }
 }

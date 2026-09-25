@@ -199,6 +199,23 @@ describe('store kit CSS on save', () => {
   });
 });
 
+describe('DNA motifs on save (sub-project 3)', () => {
+  it("re-sanitises a merchant's hand-edited config.js motifs and motif files", async () => {
+    const { service } = setup();
+    const hostile = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><foreignObject><img src=x onerror="alert(1)"></foreignObject><path onclick="alert(1)" d="M1 1h20"/></svg>';
+    const prepared = await service.prepare({ revision: 0, label: 'Static', brief: nextBrief, files: [
+      { path: 'index.html', content: '<!doctype html><html><head></head><body></body></html>' },
+      { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ slug: 'cafe', motifs: [{ file: 'motifs/lampara.svg', for: 'product', target: 'Lámpara', behavior: 'glow', trigger: 'hover', placement: 'product', svg: hostile }] })};` },
+      { path: 'motifs/lampara.svg', content: hostile },
+      { path: 'package.json', content: JSON.stringify({ name: 'x', private: true, type: 'module', scripts: { build: 'node build.mjs', start: 'node server.mjs' } }) }, { path: 'README.md', content: '# x' },
+    ] } as any);
+    const file = (path: string) => prepared.files.find((f: any) => f.path === path)!.content;
+    expect(file('motifs/lampara.svg')).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h20"/></svg>');
+    expect(file('config.js')).not.toMatch(/foreignObject|onerror|onclick/);
+    expect(file('config.js')).toContain('<path d=\\"M1 1h20\\"/>');
+  });
+});
+
 describe('design fingerprint memory', () => {
   const designFile = (dna?: unknown) => ({ path: 'design-direction.json', content: JSON.stringify({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
     name, premise: 'Handmade ceramics', opening: `${name} opening`, flow: `${name} flow`, typography: 'Fraunces / Instrument Sans', imagery: 'None', mobile: 'Stack',

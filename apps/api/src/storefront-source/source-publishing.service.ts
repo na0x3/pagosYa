@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { sourceProjectDigest, sourceProjectSnapshot, type SourceProjectSnapshot } from './source-project';
 import { sourceMotionMode, withSourceMotion } from './source-motion';
 import { withSeededDna } from './source-dna';
+import { isSourceMotifFile } from './source-motifs';
 
 const PUBLIC_ASSET = /\.(png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i;
 const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', mp4: 'video/mp4', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf' };
@@ -190,7 +191,8 @@ export class SourcePublishingService {
     const assetPath = `/stores/public/${encodeURIComponent(slug)}/source-site/assets/${await this.assetVersion(store.id, revision)}/`;
     // Stores published before the DNA existed get one seeded by the store id, without regenerating.
     const publicFiles = withSeededDna(files, store.id)
-      .filter(f => /\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) && !['server.mjs', 'build.mjs'].includes(f.path))
+      // DNA motif drawings travel as text (every save sanitises them); the preview inlines them for a hero <img>.
+      .filter(f => (/\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) || isSourceMotifFile(f.path) && f.encoding !== 'base64') && !['server.mjs', 'build.mjs'].includes(f.path))
       // Binary media is served by publicAsset; the site JSON only names it.
       .map(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path) ? { path: f.path, encoding: 'url' as const, content: '' } : f);
     return { published: true, revision, visitToken, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };

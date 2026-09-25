@@ -49,6 +49,11 @@ describe('Next.js storefront compilation', () => {
     files.push({ path: 'components/photo.tsx', content: `export const Photo = (props: any) => ${markup};` });
     expect(() => validateNextSources(files)).not.toThrow();
   });
+  it('accepts DNA motif drawings as the one non-component output, and nothing else', () => {
+    const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><path d="M0 0h4"/></svg>';
+    expect(() => validateNextSources([...nextStoreFiles(), { path: 'motifs/lampara.svg', content: drawing }])).not.toThrow();
+    for (const path of ['motifs/a/b.svg', 'assets/lampara.svg', 'motifs/lampara.js']) expect(() => validateNextSources([...nextStoreFiles(), { path, content: drawing }])).toThrow('Archivo React no permitido');
+  });
   it('trusts UI components but still validates authored images in their children', () => {
     const files = nextStoreFiles();
     files.push({ path: 'components/photo.tsx', content: 'import { ProductImage as Photo } from "@pagosya/ui"; export const Gallery = () => <Photo />;' });

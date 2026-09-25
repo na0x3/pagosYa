@@ -277,3 +277,18 @@ describe('versioned trusted runtime publications', () => {
     expect(publications).toHaveLength(history);
   });
 });
+
+it('serves the sanitised DNA motif drawings with the public site, as text the preview inlines', async () => {
+  const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'c'.repeat(64) }) } };
+  const service = new SourcePublishingService(prisma);
+  const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h20"/></svg>';
+  jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [
+    { path: 'index.html', content: '<img src="motifs/sol.svg" alt="" aria-hidden="true">', encoding: 'utf8' },
+    { path: 'motifs/sol.svg', content: drawing, encoding: 'utf8' },
+    { path: 'assets/other.svg', content: drawing, encoding: 'utf8' },
+  ] } as any);
+  const site = await service.publicSite('demo');
+  expect(site.snapshot?.files.find(f => f.path === 'motifs/sol.svg')).toEqual({ path: 'motifs/sol.svg', content: drawing, encoding: 'utf8' });
+  // Only motif drawings, which every save sanitises; other SVG files stay private as before.
+  expect(site.snapshot?.files.some(f => f.path === 'assets/other.svg')).toBe(false);
+});

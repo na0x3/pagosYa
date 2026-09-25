@@ -20,6 +20,7 @@ import { UploadsService } from "../uploads/uploads.service";
 import { EditSourceFileDto, SaveSourceProjectDto } from "./dto/save-source-project.dto";
 import { validateLegacySources } from './source-legacy';
 import { applySourceKitCss, SOURCE_KIT_CSS_PATH } from './source-kit-css';
+import { withSanitizedMotifs } from './source-motifs';
 import { sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot, SourceProjectSnapshot } from "./source-project";
 import type { SourceProduct, SourceProductOperation } from './source-products';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -98,6 +99,8 @@ export class SourceProjectsService {
   }
 
   async prepare(input: SaveSourceProjectDto) {
+    // DNA motifs are inlined into kit slots, so every save re-sanitises them, the merchant's own edits included.
+    input = { ...input, files: withSanitizedMotifs(input.files).files };
     let snapshot = sourceProjectSnapshot({ ...input, files: applySourceLayoutBaseline(await withSourceFonts(input.files)) });
     if (isNextSource(snapshot.files)) {
       const compiled = await compileNextPreview(snapshot.files.filter(f => nextSourceFile(f.path)), sourceSitePurpose(snapshot.brief));

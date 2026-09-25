@@ -1,4 +1,5 @@
 import { extractKitBlock, SOURCE_KIT_CSS_PATH, storeKitLink, validateAuthoredCss, validateStoreKitCss } from './source-kit-css';
+import { isSourceMotifFile } from './source-motifs';
 import { BadGatewayException } from '@nestjs/common';
 import { build } from 'esbuild';
 import postcss from 'postcss';
@@ -37,6 +38,8 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
   const seen = new Set<string>();
   const missingAlt: string[] = [];
   for (const file of files) {
+    // DNA motif drawings are the one non-component output; the sanitiser, not this validator, owns them.
+    if (file && typeof file.path === 'string' && isSourceMotifFile(file.path) && typeof file.content === 'string' && file.encoding !== 'base64') continue;
     if (!file || typeof file.path !== 'string' || !nextSourceFile(file.path) || seen.has(file.path.toLowerCase()) || typeof file.content !== 'string' || file.content.length > 180000 || file.encoding === 'base64') throw new BadGatewayException(`Archivo React no permitido: ${file?.path}`);
     seen.add(file.path.toLowerCase());
     if (file.path.endsWith('.css')) {
