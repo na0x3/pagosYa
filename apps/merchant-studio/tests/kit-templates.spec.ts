@@ -33,6 +33,9 @@ async function mount(browserPage: any, templates: string) {
 
 for (const width of [1280, 390]) test(`a fully templated store shops end to end at ${width}px`, async ({ page: browserPage }) => {
   await browserPage.setViewportSize({ width, height: 900 });
+  // Fix round 2, finding 8: screenshots taken mid cart/checkout transition were flaky evidence.
+  // Reduced motion settles every kit transition instantly so the shot reflects final layout.
+  await browserPage.emulateMedia({ reducedMotion: 'reduce' });
   const shop = await mount(browserPage, TEMPLATES);
   await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
   await expect(shop.getByRole('heading', { name: 'Tu canasta 🐾' })).toBeVisible();
@@ -41,9 +44,31 @@ for (const width of [1280, 390]) test(`a fully templated store shops end to end 
   await browserPage.screenshot({ path: `${SHOTS}/cart-${width}.png` });
   await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
   await expect(shop.locator('.revision [data-review-slot="summary"] .order-total')).toBeVisible();
-  await expect(shop.locator('.revision [data-review-slot="fields"] .checkout-button')).toBeVisible();
+  const payButton = shop.locator('.revision [data-review-slot="fields"] .checkout-button');
+  await expect(payButton).toBeVisible();
+  if (width === 1280) {
+    // Fix round 2, finding 1: with a single templated child, a plain 2-column .checkout-review
+    // grid squeezed the review root into column 1 instead of spanning the full row.
+    const review = (await shop.locator('[data-checkout-review]').boundingBox())!;
+    const root = (await shop.locator('[data-checkout-review] [data-review-root]').boundingBox())!;
+    expect(root.width).toBeGreaterThan(review.width * 0.95);
+  }
   await browserPage.screenshot({ path: `${SHOTS}/review-${width}.png` });
   expect(await shop.locator('html').evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // Fix round 2, finding 9 (spec §7 gap): the flow continues past the review into the simulated
+  // pay step and all the way to the preview's own completion, as far as a preview allows.
+  await payButton.click();
+  await expect(shop.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();
+  const finishButton = shop.locator('.revision [data-review-slot="fields"] .checkout-button');
+  await expect(finishButton).toHaveText(/Completar prueba/);
+  await finishButton.click();
+  await expect(shop.locator('[data-pagosya-status]').filter({ hasText: 'Prueba completada' }).first()).toBeVisible();
+});
+
+test('a fully templated store passes checkSourceWebsite with no failed rows', async ({ page: browserPage }) => {
+  await mount(browserPage, TEMPLATES);
+  const results = await checkBroken(browserPage, TEMPLATES);
+  expect(results.filter((row: any) => row.status === 'failed')).toEqual([]);
 });
 
 async function checkBroken(browserPage: any, broken: string) {
@@ -90,4 +115,34 @@ test('a broken product-page template fails the checks and names the product page
   await mount(browserPage, broken);
   const results = await checkBroken(browserPage, broken);
   expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('página de producto') })]));
+});
+
+// Fix round 2, finding 2: `hidden` on a template slot/field was only beaten by the browser's UA
+// style, so any authored `display` rule on the same selector could show a slot the kit meant to
+// keep hidden (the "empty" slot under a non-empty cart, in this case). The kit CSS must win.
+test('an authored display rule cannot show a hidden cart slot while the cart has items', async ({ page: browserPage }) => {
+  const shop = await mount(browserPage, TEMPLATES + '<style>[data-cart-slot="empty"]{display:grid}</style>');
+  await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
+  await expect(shop.locator('[data-cart-slot="empty"]')).toBeHidden();
+});
+
+// Fix round 2, finding 4: the kit also rejects a template with more than one root element, or with
+// "photo" on a non-<img>, but the probe's failure text only described missing fields, so a merchant
+// hit by either of these saw a misleading reason. These prove the same 'Plantillas de compra'
+// failure now names the actual cause.
+test('a cart-line template with more than one root element fails the checks and mentions the extra root', async ({ page: browserPage }) => {
+  const broken = TEMPLATES.replace(
+    '<li class="linea"><img data-cart-field="photo" alt=""><div><h3 data-cart-field="name"></h3><p data-cart-field="unit"></p><div data-cart-field="quantity"></div></div><strong data-cart-field="line-total"></strong><button data-cart-field="remove">Quitar</button></li></template>',
+    '<li class="linea"><img data-cart-field="photo" alt=""><div><h3 data-cart-field="name"></h3><p data-cart-field="unit"></p><div data-cart-field="quantity"></div></div><strong data-cart-field="line-total"></strong><button data-cart-field="remove">Quitar</button></li><li class="extra"></li></template>',
+  );
+  await mount(browserPage, broken);
+  const results = await checkBroken(browserPage, broken);
+  expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('elemento raíz') })]));
+});
+
+test('a cart-line template with photo not on an <img> fails the checks and mentions the photo requirement', async ({ page: browserPage }) => {
+  const broken = TEMPLATES.replace('<img data-cart-field="photo" alt="">', '<div data-cart-field="photo"></div>');
+  await mount(browserPage, broken);
+  const results = await checkBroken(browserPage, broken);
+  expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('Plantillas de compra'), status: 'failed', detail: expect.stringContaining('<img>') })]));
 });
