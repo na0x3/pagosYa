@@ -14,6 +14,14 @@ export function readSourcePaymentPreview(hash: string): CheckoutSession {
   return { id: 'source-payment-preview', amount, currency, merchantName, description, status: 'REQUIRES_PAYMENT_METHOD', branding: normalizeCheckoutBranding(null, merchantName), recipient: null, trackingToken: null, metadata: { cart: [], ...(fulfillment ? { fulfillment } : {}) } };
 }
 
+/** Display-only sample card; the renderer re-validates brand colors and URLs. */
+function previewComeback(value: unknown): CheckoutSession['previewComeback'] {
+  if (!value || typeof value !== 'object') return null;
+  const { brand, visitsRequired, rewardLabel } = value as Record<string, unknown>;
+  if (!Number.isInteger(visitsRequired) || (visitsRequired as number) < 1 || (visitsRequired as number) > 20 || typeof rewardLabel !== 'string') return null;
+  return { brand: brand && typeof brand === 'object' ? brand as Record<string, unknown> : {}, visitsRequired: visitsRequired as number, rewardLabel: rewardLabel.slice(0, 120) };
+}
+
 export function closeSourcePaymentPreview() {
   const value = new URLSearchParams(location.hash.slice(1)).get('parent_origin');
   if (!value || window.parent === window) return;
@@ -30,6 +38,7 @@ export function bindPreviewBranding(session: CheckoutSession, onChange: () => vo
   const listener = (event: MessageEvent) => {
     if (window.parent === window || event.source !== window.parent || event.origin !== origin || event.data?.source !== 'pagosya-studio' || event.data?.type !== 'CHECKOUT_PREVIEW_BRANDING') return;
     session.branding = normalizeCheckoutBranding(event.data.branding, session.merchantName);
+    session.previewComeback = previewComeback(event.data.comeback);
     onChange();
   };
   window.addEventListener('message', listener);

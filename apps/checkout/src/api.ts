@@ -14,6 +14,8 @@ export interface CheckoutSession {
   description: string | null;
   merchantName: string;
   branding?: import("@pagosya/shared-types").CheckoutBranding | null;
+  /** Source payment previews only: the sample Comeback card sent by Studio. */
+  previewComeback?: { brand: Record<string, unknown>; visitsRequired: number; rewardLabel: string } | null;
   metadata: Record<string, unknown> | null;
   recipient: {
     name: string | null;
