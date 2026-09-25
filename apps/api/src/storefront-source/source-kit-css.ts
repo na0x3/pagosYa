@@ -31,8 +31,14 @@ const QUALIFIER = /^(?:html|:root)(?:\[data-dna-[\w-]+(?:[~|^$*]?=(?:"[^"]*"|'[^
 const KIT_ROOT = /^(?:[a-z][a-z0-9-]*)?(?:\.cart-drawer|\.cart-added|\.order-item|\.checkout-review|\[data-pagosya-checkout|\[data-pagosya-product|\.product-detail__|\.menu-item|\.menu-add|\.checkout-button|\.pagosya-contact-|\[data-pagosya-contact|\[data-pagosya-privacy|\.quantity)/i;
 /** Price, total, buy/pay button, quantity, legal and privacy text, the status line. */
 const PROTECTED = /\.[\w-]*(?:price|total)[\w-]*|\.(?:checkout-button|menu-add|quantity|pagosya-policies|pagosya-secure-note)(?![\w-])|\.product-detail__(?:buy|quantity|status)|\[data-(?:pay|add|checkout|product-quantity|pagosya-status|pagosya-checkout-status|pagosya-privacy|pagosya-policy|pagosya-policies)(?![\w-])|\[data-product-field=["']?price/i;
-const TEXT_ELEMENT = /^(?:button|span|strong|output|small|\*)(?=$|[:[])/i;
+/** Legal, privacy and status compounds: every descendant is protected text. */
+const LEGAL = /\.(?:pagosya-policies|pagosya-secure-note)(?![\w-])|\.product-detail__status(?![\w-])|\[data-(?:pagosya-status|pagosya-checkout-status|pagosya-privacy|pagosya-policy|pagosya-policies)(?![\w-])/i;
+/** Under a protected compound every descendant is protected (the label span of a pay button…) except media and icons. */
+const MEDIA = /^(?:svg|path|use|g|circle|rect|line|polyline|polygon|img|picture|source|video|canvas|iframe)(?![\w-])/i;
+/** A bare control or any-element subject under a kit surface: it may be the buy or pay control itself. */
+const BARE_CONTROL = /^(?:button|a|input|\*)?(?=$|[:[])/i;
 const PSEUDO_ELEMENT = /::|:(?:before|after|first-letter|first-line)\b/i;
+/** A state qualifier on the compound itself: its contents inside :has()/:is()/:where()/:not() never count. */
 const STATE = /:disabled|\[disabled|\[aria-disabled|:empty|\[hidden/i;
 const ALLOWED_AT_RULES = new Set(['media', 'supports', 'container', 'starting-style', 'keyframes', '-webkit-keyframes']);
 const ASSET_URL = /^(?:\.\/|\.\.\/|\/)?(assets|motifs)\/((?:(?!\.\.)[\w.@%+-]+\/?)+)$/;
@@ -80,6 +86,8 @@ function compounds(selector: string): string[] {
   return parts;
 }
 const withoutNot = (compound: string) => compound.replace(/:not\((?:[^()]|\([^()]*\))*\)/gi, '');
+/** The compound's own simple selectors: functional pseudo-classes and their arguments removed. */
+const ownSimple = (compound: string) => compound.replace(/:(?:not|is|where|has|matches|-webkit-any|-moz-any)\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)/gi, '');
 
 /** 'surface' when rooted on a kit surface, 'root' for a bare :root/html (tokens only), else null. */
 function kitSelector(selector: string): 'surface' | 'root' | null {
@@ -88,13 +96,23 @@ function kitSelector(selector: string): 'surface' | 'root' | null {
   if (first === parts.length) return 'root';
   return KIT_ROOT.test(parts[first]) ? 'surface' : null;
 }
-function protectedSelector(selector: string): { protected: boolean; state: boolean } {
+/**
+ * 'element': a protected element (every rule applies). 'container': any other product-page hook; it holds the buy flow, so
+ * nothing may hide, move, fade or clip it. null: free. `state` exempts hiding and fading (:disabled, [hidden]…).
+ */
+function protectedSelector(selector: string): { protected: 'element' | 'container' | null; state: boolean } {
   const parts = compounds(selector);
   const subject = parts.at(-1) ?? '';
-  if (PSEUDO_ELEMENT.test(subject)) return { protected: false, state: false };
-  const own = withoutNot(subject);
-  const hit = PROTECTED.test(own) || (TEXT_ELEMENT.test(own) && parts.slice(0, -1).some(part => PROTECTED.test(withoutNot(part))));
-  return { protected: hit, state: STATE.test(own) };
+  if (PSEUDO_ELEMENT.test(subject)) return { protected: null, state: false };
+  const own = withoutNot(subject), ancestors = parts.slice(0, -1).map(withoutNot);
+  const state = STATE.test(ownSimple(subject));
+  const bare = ownSimple(subject).replace(/\[[^\]]*\]|:[\w-]+/g, '');
+  const hit = PROTECTED.test(own)
+    || ancestors.some(part => LEGAL.test(part))
+    || (!MEDIA.test(bare) && ancestors.some(part => PROTECTED.test(part)))
+    || (BARE_CONTROL.test(bare) && !/[.#]/.test(bare) && ancestors.some(part => KIT_ROOT.test(part)));
+  if (hit) return { protected: 'element', state };
+  return { protected: SOURCE_KIT_PRODUCT_HOOK.test(selector) ? 'container' : null, state };
 }
 const insideKeyframes = (node: ChildNode) => {
   for (let parent = node.parent as Container | undefined; parent; parent = parent.parent as Container | undefined) if (parent.type === 'atrule' && /keyframes$/i.test((parent as AtRule).name)) return true;
@@ -161,11 +179,24 @@ function scaleFactors(value: string): number[] {
   }
   return factors;
 }
-const farOffset = (value: string) => value.split(/\s+/).some(part => { const px = lengthPx(part, { vw: 10, vh: 10 }); return px !== null && !part.endsWith('%') && px <= -500; });
+/** An offset that puts the element a phone's width (320px) or its own containing block (100%) away: off screen, or out of an
+ * overflow-hidden card. Shorthands are read side by side; only left/right sides count when they are large and positive. */
+function farOffset(prop: string, value: string): boolean {
+  const parts = value.split(/\s+/).filter(Boolean);
+  const shorthand = prop === 'margin' || prop === 'inset';
+  const horizontalAt = (index: number) => !shorthand ? /left|right|inline|indent/.test(prop) : parts.length === 1 || index % 2 === 1;
+  return parts.some((part, index) => {
+    const horizontal = horizontalAt(index);
+    if (part.endsWith('%')) { const n = parseFloat(part); return Number.isFinite(n) && (n <= -100 || (horizontal && n >= 100)); }
+    const px = lengthPx(part, PHONE);
+    return px !== null && (px <= -320 || (horizontal && px >= 320));
+  });
+}
 
 /** Why a declaration hides, fades or shrinks a protected element, or null. */
-function protectedViolation(decl: Declaration, state: boolean): string | null {
+function protectedViolation(decl: Declaration, state: boolean, level: 'element' | 'container'): string | null {
   const prop = decl.prop.toLowerCase(), value = decl.value.trim().toLowerCase();
+  if (level === 'container' && /^(?:font-size|color|-webkit-text-fill-color|background(?:-color)?)$/.test(prop)) return null;
   if (!state) {
     if (prop === 'display' && /^none\b/.test(value)) return 'hides';
     if (prop === 'visibility' && /^(?:hidden|collapse)\b/.test(value)) return 'hides';
@@ -180,7 +211,7 @@ function protectedViolation(decl: Declaration, state: boolean): string | null {
   if ((prop === 'scale' || prop === 'zoom') && value.split(/\s+/).some(part => { const n = parseFloat(part); return Number.isFinite(n) && (part.endsWith('%') ? n / 100 : n) < 0.9; })) return 'shrinks';
   if (prop === 'transform' && [...value.matchAll(/translate(?:3d|x|y)?\(([^)]*)\)/gi)].some(m => m[1].split(/[\s,]+/).some(part => { const px = lengthPx(part, { vw: 10, vh: 10 }); return px !== null && !part.endsWith('%') && Math.abs(px) >= 1000; }))) return 'moves off screen';
   if (prop === 'translate' && value.split(/\s+/).some(part => { const px = lengthPx(part, { vw: 10, vh: 10 }); return px !== null && !part.endsWith('%') && Math.abs(px) >= 1000; })) return 'moves off screen';
-  if (/^(?:left|right|top|bottom|inset(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|text-indent)$/.test(prop) && farOffset(value)) return 'moves off screen';
+  if (/^(?:left|right|top|bottom|inset(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|text-indent)$/.test(prop) && farOffset(prop, value)) return 'moves off screen';
   if ((prop === 'color' || prop === '-webkit-text-fill-color') && TRANSPARENT.test(value)) return 'makes its text invisible';
   if (prop === 'color' || /^background(?:-color)?$/.test(prop)) {
     const rule = decl.parent as Rule;
@@ -213,9 +244,9 @@ function checkProtected(decl: Declaration, notes: Notes): void {
   for (const selector of splitSelectors((rule as Rule).selector)) {
     const hit = protectedSelector(selector);
     if (!hit.protected) continue;
-    const reason = protectedViolation(decl, hit.state);
+    const reason = protectedViolation(decl, hit.state, hit.protected);
     if (!reason) continue;
-    notes.add(`removed \`${decl.prop}:${decl.value.trim()}\` on ${selector} (${reason} a protected element)`);
+    notes.add(`removed \`${decl.prop}:${decl.value.trim()}\` on ${selector} (${reason} a protected ${hit.protected === 'element' ? 'element' : 'product-page container'})`);
     decl.remove();
     return;
   }

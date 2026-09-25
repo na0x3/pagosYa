@@ -73,7 +73,38 @@ describe('protected elements', () => {
     '.checkout-button[disabled]{opacity:.5}', '.menu-add:disabled{opacity:.5;pointer-events:none}', '.menu-add::before{display:none}',
     '.menu-add{transform:scale(.96)}', '.checkout-review .order-total{font-size:13px}', '.checkout-button svg{display:none}', '.menu-item{opacity:.8}',
     '.menu-add{clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}', '.cart-drawer{transform:translateX(100%)}', '.menu-add{font-size:clamp(13px,1vw,16px)}',
-    '.menu-item :not(.menu-add){opacity:.5}', '.menu-add{opacity:1}', '.checkout-button{font-size:max(12px,1vw)}',
+    '.menu-add{opacity:1}', '.checkout-button{font-size:max(12px,1vw)}',
+  ])('keeps %s', css => {
+    const out = kit(css);
+    expect(sheet(out.css).length).toBe(sheet(css).length);
+    expect(out.repairs).toEqual([]);
+  });
+});
+
+describe('protected scope: the product page buy flow and legal text', () => {
+  it.each([
+    '.product-detail__purchase{display:none}', '[data-pagosya-product] *{visibility:hidden}', '.product-detail__buy{margin-left:-100%}',
+    '.product-detail__buybox{opacity:.2}', '.product-detail__layout{clip-path:inset(50%)}', '.product-detail__copy{visibility:hidden}',
+    '.product-detail__summary{display:none}', '.product-detail__pricing{opacity:0}', '[data-pagosya-product]{display:none}',
+    '.product-detail__gallery{transform:translateX(-200vw)}', '[data-pagosya-product] .product-detail__sticky{pointer-events:none}',
+    '[data-pagosya-privacy] p{display:none}', '[data-pagosya-privacy] a{visibility:hidden}', '[data-pagosya-privacy] label{font-size:8px}',
+    '[data-pagosya-checkout] .pagosya-policies a{opacity:0}', '[data-pagosya-privacy] > div{display:none}', '[data-pagosya-checkout] [data-pagosya-status]{display:none}',
+    '[data-pagosya-checkout] .pagosya-secure-note svg{display:none}', '.menu-item button{display:none}', '.cart-drawer a{visibility:hidden}', '.menu-item *{opacity:0}',
+    '.checkout-button p{display:none}', '.menu-item :not(.menu-add){opacity:.5}', '.menu-add:has(:empty){display:none}', '.menu-add:where(:disabled,*){opacity:0}',
+  ])('strips %s', css => {
+    const out = kit(css);
+    expect(sheet(out.css)).toEqual([]);
+    expect(out.repairs.join('\n')).toMatch(/protected/);
+  });
+
+  it('checks product-page rules in the store\'s own stylesheets too', () => {
+    const out = validateAuthoredCss('.product-detail__purchase{display:none;gap:4px}[data-pagosya-privacy] p{opacity:.1}', 'styles.css');
+    expect(sheet(out.css).map(d => d.prop)).toEqual(['gap']);
+  });
+
+  it.each([
+    '.product-detail__gallery{gap:4px;border-radius:9px}', '.product-detail__thumbnails [hidden]{display:none}', '.product-detail__buy::before{display:none}',
+    '.product-detail__layout{grid-template-columns:1fr 1fr}', '[data-pagosya-privacy] p{color:#333;font-size:13px}', '.menu-item button{border-radius:0}',
   ])('keeps %s', css => {
     const out = kit(css);
     expect(sheet(out.css).length).toBe(sheet(css).length);
