@@ -1372,14 +1372,6 @@
   }
   .profile-trigger-avatar { display: block; width: 40px; height: 40px; overflow: hidden; border: var(--bento-line-soft) solid var(--bento-ink); border-radius: 50%; background: #fff; }
   .profile-trigger-avatar svg, .profile-avatar-option svg { display: block; width: 100%; height: 100%; }
-  .profile-avatar-image {
-    display: block; width: 100%; height: 100%; object-fit: cover;
-    transform: scale(var(--avatar-face-scale, 2.5)); transform-origin: var(--avatar-face-origin, 50% 25%);
-  }
-  .profile-avatar-image-1 { --avatar-face-scale: 1.8; --avatar-face-origin: 85% 28%; }
-  .profile-avatar-image-2 { --avatar-face-scale: 1.5; --avatar-face-origin: 45% 30%; }
-  .profile-avatar-image-3 { --avatar-face-scale: 1.5; --avatar-face-origin: 40% 30%; }
-  .profile-avatar-image-4 { --avatar-face-scale: 1.5; --avatar-face-origin: 38% 30%; }
   .profile-trigger::after {
     content: ""; position: absolute; right: -5px; bottom: -5px; width: 12px; height: 12px;
     border: var(--bento-line-soft) solid var(--bento-keyline); border-radius: 50%; background: var(--bento-green);
@@ -2479,3 +2471,7 @@
   @media (prefers-reduced-motion: reduce) {
     .rewards-board-token.is-hopping, .rewards-board-die.is-rolling { animation: none; }
   }
+
+  /* Blob characters (B1): profile blobs. The placeholder holds the circle until the API sends the seed. */
+  .blob-avatar-pending { display: block; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 42%, var(--pg-border-strong) 0 28%, var(--pg-surface) 29%); }
+  .profile-avatar-shuffle, .session-profile-avatar-shuffle { min-height: 44px; margin-top: 10px; padding: 0 14px; font-size: .72rem; font-weight: 900; }

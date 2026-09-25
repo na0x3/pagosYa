@@ -1,5 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
+import { normalizeVariation, profileBlobHtml, randomVariation, variationChoices } from "/src/profile-blob.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
@@ -38,6 +39,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   const profileMenuTriggerEl = document.getElementById("profileMenuTrigger");
   const profileTriggerAvatarEl = document.getElementById("profileTriggerAvatar");
   const profileMenuAvatarEl = document.getElementById("profileMenuAvatar");
+  const profileAvatarOptionsEl = document.getElementById("profileAvatarOptions");
+  const sessionProfileAvatarsEl = document.getElementById("sessionProfileAvatars");
   const profileDisplayNameEl = document.getElementById("profileDisplayName");
   const profileSessionsEl = document.getElementById("profileSessions");
   const profileSessionCountEl = document.getElementById("profileSessionCount");
@@ -55,6 +58,12 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
   const PROFILE_AVATAR_STORAGE_PREFIX = "pagosya_merchant_avatar:";
+  // B1: the API's one-way blob seed, cached per email so the picture paints at once on the next load.
+  const PROFILE_BLOB_SEED_STORAGE_PREFIX = "pagosya_merchant_blob_seed:";
+  let currentBlobSeed = "";
+  let profileVariationChoices = [];
+  let loginVariationChoices = [];
+  let editingVariationChoices = [];
   let selectedProfileAvatar = 1;
   let currentProfileName = "";
   let selectedLoginAvatar = 1;
@@ -70,11 +79,27 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   function readProfileAvatar() {
     try {
-      const stored = Number(localStorage.getItem(profileAvatarStorageKey()));
-      return stored >= 1 && stored <= 4 ? stored : 1;
+      return normalizeVariation(localStorage.getItem(profileAvatarStorageKey()));
     } catch {
       return 1;
     }
+  }
+
+  function blobSeedStorageKey() {
+    return PROFILE_BLOB_SEED_STORAGE_PREFIX + String(emailEl.value || "default").trim().toLocaleLowerCase("es");
+  }
+
+  function readBlobSeed() {
+    try { return localStorage.getItem(blobSeedStorageKey()) || ""; } catch { return ""; }
+  }
+
+  /** Takes the blob seed from a /dashboard/sessions answer; an answer without one changes nothing. */
+  function rememberBlobSeed(seed) {
+    if (typeof seed !== "string" || !seed || seed === currentBlobSeed) return;
+    currentBlobSeed = seed;
+    try { localStorage.setItem(blobSeedStorageKey(), seed); } catch {}
+    renderProfileAvatar();
+    setLoginAvatar(selectedLoginAvatar);
   }
 
   function profileNameFromEmail(email) {
@@ -84,28 +109,24 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   }
 
   function renderProfileAvatar() {
-    const markup = profileAvatarHtml(selectedProfileAvatar);
-    profileTriggerAvatarEl.innerHTML = markup;
-    profileMenuAvatarEl.innerHTML = markup;
-    document.querySelectorAll("[data-profile-avatar]").forEach((button) => {
-      const avatarId = Number(button.dataset.profileAvatar);
-      button.innerHTML = profileAvatarHtml(avatarId);
-      button.setAttribute("aria-pressed", String(avatarId === selectedProfileAvatar));
-    });
+    const name = currentProfileName || profileNameFromEmail(emailEl.value);
+    // The trigger button carries its own label, so its blob is decorative; the menu head is the named picture.
+    profileTriggerAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
+    profileMenuAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, name });
+    if (!profileVariationChoices.includes(selectedProfileAvatar)) profileVariationChoices = variationChoices(selectedProfileAvatar);
+    profileAvatarOptionsEl.innerHTML = profileVariationChoices.map((variation) => `<button class="profile-avatar-option" type="button" data-profile-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === selectedProfileAvatar}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("");
   }
 
   function setLoginAvatar(avatarId) {
-    selectedLoginAvatar = avatarId >= 1 && avatarId <= 4 ? avatarId : 1;
-    document.querySelectorAll("[data-login-avatar]").forEach((button) => {
-      const optionId = Number(button.dataset.loginAvatar);
-      button.innerHTML = profileAvatarHtml(optionId);
-      button.setAttribute("aria-pressed", String(optionId === selectedLoginAvatar));
-    });
+    selectedLoginAvatar = normalizeVariation(avatarId);
+    if (!loginVariationChoices.includes(selectedLoginAvatar)) loginVariationChoices = variationChoices(selectedLoginAvatar);
+    sessionProfileAvatarsEl.innerHTML = loginVariationChoices.map((variation) => `<button class="session-profile-avatar-option" type="button" data-login-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === selectedLoginAvatar}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("");
   }
 
   function applyProfileIdentity() {
     const email = emailEl.value || "tu cuenta del panel";
     selectedProfileAvatar = readProfileAvatar();
+    currentBlobSeed = readBlobSeed();
     profileDisplayNameEl.textContent = currentProfileName || profileNameFromEmail(email);
     loggedInAsEl.textContent = email;
     profileMenuTriggerEl.setAttribute("aria-label", `Abrir perfil de ${email}`);
@@ -114,33 +135,48 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
 
   function applyCurrentSessionIdentity(session) {
     if (!session) return;
-    selectedProfileAvatar = Number(session.profileAvatarId) || 1;
+    selectedProfileAvatar = normalizeVariation(session.profileAvatarId);
     currentProfileName = session.profileName || profileNameFromEmail(emailEl.value);
     profileDisplayNameEl.textContent = currentProfileName;
     try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
     renderProfileAvatar();
   }
 
-  document.querySelectorAll("[data-profile-avatar]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const previousAvatar = selectedProfileAvatar;
-      selectedProfileAvatar = Number(button.dataset.profileAvatar);
-      try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
+  async function selectProfileVariation(variation) {
+    const previousAvatar = selectedProfileAvatar;
+    selectedProfileAvatar = normalizeVariation(variation);
+    try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
+    renderProfileAvatar();
+    const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
+    if (!currentSession) return;
+    try {
+      await updateProfileSession(currentSession.id, currentSession.profileName, selectedProfileAvatar);
+      await loadProfileSessions(false);
+    } catch (error) {
+      selectedProfileAvatar = previousAvatar;
+      try { localStorage.setItem(profileAvatarStorageKey(), String(previousAvatar)); } catch {}
       renderProfileAvatar();
-      const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
-      if (!currentSession) return;
-      try {
-        await updateProfileSession(currentSession.id, currentSession.profileName, selectedProfileAvatar);
-        await loadProfileSessions(false);
-      } catch (error) {
-        selectedProfileAvatar = previousAvatar;
-        renderProfileAvatar();
-        profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
-      }
-    });
+      profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
+    }
+  }
+  profileAvatarOptionsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-profile-avatar]");
+    if (button) void selectProfileVariation(Number(button.dataset.profileAvatar));
   });
-  document.querySelectorAll("[data-login-avatar]").forEach((button) => {
-    button.addEventListener("click", () => setLoginAvatar(Number(button.dataset.loginAvatar)));
+  // "Otra variación": a fresh blob, saved at once, with three new alternatives beside it.
+  document.getElementById("profileAvatarShuffle").addEventListener("click", () => {
+    const next = randomVariation(profileVariationChoices);
+    profileVariationChoices = variationChoices(next);
+    void selectProfileVariation(next);
+  });
+  sessionProfileAvatarsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-login-avatar]");
+    if (button) setLoginAvatar(Number(button.dataset.loginAvatar));
+  });
+  document.getElementById("sessionProfileAvatarShuffle").addEventListener("click", () => {
+    const next = randomVariation(loginVariationChoices);
+    loginVariationChoices = variationChoices(next);
+    setLoginAvatar(next);
   });
   renderProfileAvatar();
   setLoginAvatar(1);
@@ -166,6 +202,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const limit = Number(payload?.limit) || 3;
     const active = Number.isFinite(Number(payload?.active)) ? Number(payload.active) : sessions.length;
     lastProfileSessionsPayload = { ...payload, limit, active, sessions };
+    rememberBlobSeed(payload?.blobSeed);
     profileSessionCountEl.textContent = `${active} / ${limit}`;
     if (!sessions.length) {
       profileSessionsEl.innerHTML = '<p class="profile-session-state">No se encontraron sesiones activas.</p>';
@@ -175,7 +212,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     applyCurrentSessionIdentity(sessions.find((session) => session.current));
     profileSessionsEl.innerHTML = sessions.map((session) => `<div class="profile-session-row">
       <div class="profile-session-person">
-        <span class="profile-session-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span>
+        <span class="profile-session-avatar" aria-hidden="true">${profileBlobHtml({ blobSeed: currentBlobSeed, variation: session.profileAvatarId, decorative: true })}</span>
         <div class="profile-session-copy"><strong>${esc(session.profileName || "Sin nombre")}</strong><small>Inicio: ${esc(formatSessionDate(session.createdAt))}${session.isPrimary ? " · Principal" : ""}</small></div>
       </div>
       <div class="profile-session-actions">
@@ -183,9 +220,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
         ${(session.current || payload.canManageSessions) ? `<button class="profile-session-action" type="button" data-edit-session="${esc(session.id)}" aria-label="Cambiar nombre de ${esc(session.profileName || "esta sesión")}" title="Cambiar nombre y avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button>` : ""}
         ${!session.current && payload.canManageSessions ? `<button class="profile-session-action" type="button" data-revoke-session="${esc(session.id)}" aria-label="Cerrar la sesión de ${esc(session.profileName || "este perfil")}" title="Cerrar esta sesión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>` : ""}
       </div>
-      ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${Number(session.profileAvatarId) || 1}">
+      ${editingProfileSessionId === session.id ? `<form class="profile-session-edit-form" data-session-edit-form="${esc(session.id)}" data-avatar-id="${normalizeVariation(session.profileAvatarId)}">
         <label>Nombre del perfil<input name="profileName" value="${esc(session.profileName || "")}" maxlength="32" autocomplete="off" required></label>
-        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${[1, 2, 3, 4].map((avatarId) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${avatarId}" aria-label="Elegir avatar ${avatarId}" aria-pressed="${avatarId === Number(session.profileAvatarId)}">${profileAvatarHtml(avatarId)}</button>`).join("")}</div>
+        <div class="profile-session-edit-avatars" role="group" aria-label="Avatar del perfil">${editingVariationChoices.map((variation) => `<button class="profile-session-edit-avatar" type="button" data-edit-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === normalizeVariation(session.profileAvatarId)}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("")}</div>
         <div class="profile-session-edit-actions"><button class="ghost" type="button" data-cancel-session-edit>Cancelar</button><button class="primary" type="submit">Guardar</button></div>
       </form>` : ""}
     </div>`).join("");
@@ -216,6 +253,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   }
 
   function renderSessionProfileChoices(payload, currentSession) {
+    rememberBlobSeed(payload?.blobSeed);
     const seen = new Set();
     const choices = (payload?.profiles?.length ? payload.profiles : payload?.sessions || []).filter((session) => {
       const name = String(session.profileName || "").trim();
@@ -226,13 +264,13 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       return true;
     });
     sessionProfileExistingEl.hidden = choices.length === 0;
-    sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${Number(session.profileAvatarId) || 1}" aria-pressed="false">
-      <span class="session-profile-choice-avatar" aria-hidden="true">${profileAvatarHtml(session.profileAvatarId)}</span><span>${esc(session.profileName)}</span>
+    sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" data-profile-choice-avatar="${normalizeVariation(session.profileAvatarId)}" aria-pressed="false">
+      <span class="session-profile-choice-avatar" aria-hidden="true">${profileBlobHtml({ blobSeed: currentBlobSeed, variation: session.profileAvatarId, decorative: true })}</span><span>${esc(session.profileName)}</span>
     </button>`).join("");
 
     const isUnassigned = !currentSession?.profileName || currentSession.profileName === "Seleccionar perfil";
     sessionProfileNameEl.value = isUnassigned ? "" : currentSession.isPrimary ? profileNameFromEmail(emailEl.value) : currentSession.profileName;
-    setLoginAvatar(Number(currentSession?.profileAvatarId) || 1);
+    setLoginAvatar(currentSession?.profileAvatarId);
   }
 
   async function chooseProfileForNewLogin(loginResult) {
@@ -312,6 +350,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const editButton = event.target.closest("[data-edit-session]");
     if (editButton) {
       editingProfileSessionId = editButton.dataset.editSession;
+      const editing = lastProfileSessionsPayload?.sessions?.find((session) => session.id === editingProfileSessionId);
+      editingVariationChoices = variationChoices(editing?.profileAvatarId);
       renderProfileSessions(lastProfileSessionsPayload);
       profileSessionsEl.querySelector(`[data-session-edit-form="${CSS.escape(editingProfileSessionId)}"] input`)?.focus();
       return;
@@ -4474,6 +4514,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     document.body.classList.remove("is-logged-in");
     document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
     currentProfileName = "";
+    currentBlobSeed = "";
     if (profileMenuEl.matches(":popover-open")) profileMenuEl.hidePopover();
     loginFormEl.style.display = "grid";
     loggedInBarEl.style.display = "none";
@@ -4486,6 +4527,8 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     loginFormEl.style.display = "none";
     loggedInBarEl.style.display = "flex";
     applyProfileIdentity();
+    // The blob seed and the saved variation come from the sessions list; fetch it now, not only when the menu opens.
+    loadProfileSessions(false).catch(() => undefined);
   }
 
   function loadGoogleIdentity() {

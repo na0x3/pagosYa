@@ -121,7 +121,9 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
 
   await expect(page.locator("#sessionProfileDialog")).toBeVisible();
   await page.locator("#sessionProfileName").fill("María");
-  await page.locator('[data-login-avatar="3"]').click();
+  const loginChoice = page.locator("#sessionProfileAvatars [data-login-avatar]").nth(2);
+  const loginVariation = Number(await loginChoice.getAttribute("data-login-avatar"));
+  await loginChoice.click();
   await page.locator("#sessionProfileContinue").click();
   await expect(page.locator("#app")).toBeVisible();
   await expect(page.locator("#profileMenuTrigger")).toBeVisible();
@@ -131,13 +133,15 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await expect(page.locator("#loggedInAs")).toContainText("owner@gmail.com");
   await expect(page.locator("#profileSessionCount")).toHaveText("1 / 3");
   await expect(page.locator("#profileDisplayName")).toHaveText("María");
-  await expect(page.locator('[data-profile-avatar="1"] img')).toHaveAttribute("src", "/assets/profile-1.png?v=3");
-  await page.locator('[data-profile-avatar="4"]').click();
-  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:owner@gmail.com"))).toBe("4");
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${loginVariation}"]`)).toHaveAttribute("aria-pressed", "true");
+  const menuChoice = page.locator("#profileAvatarOptions [data-profile-avatar]").nth(3);
+  const menuVariation = await menuChoice.getAttribute("data-profile-avatar");
+  await menuChoice.click();
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:owner@gmail.com"))).toBe(menuVariation);
   await page.locator("#moneyVisibilityToggle").click();
   await expect(page.locator("#moneyVisibilityLabel")).toHaveText("Mostrar montos");
   expect(requests).toContainEqual({ path: "/dashboard/google", method: "POST", body: { credential: "google-id-token" } });
-  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_current", method: "PATCH", body: { profileName: "María", profileAvatarId: 3 } });
+  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_current", method: "PATCH", body: { profileName: "María", profileAvatarId: loginVariation } });
   expect(await page.evaluate(() => sessionStorage.getItem("pagosya_merchant_session"))).toBe("dash_google");
 });
 
@@ -223,9 +227,11 @@ test("main session can rename another logged-in profile", async ({ page }) => {
   await page.locator("#profileMenuTrigger").click();
   await page.locator('[data-edit-session="session_other"]').click();
   await page.locator('[data-session-edit-form="session_other"] input[name="profileName"]').fill("Carlos");
-  await page.locator('[data-session-edit-form="session_other"] [data-edit-avatar="4"]').click();
+  const editChoice = page.locator('[data-session-edit-form="session_other"] [data-edit-avatar]').nth(3);
+  const editVariation = Number(await editChoice.getAttribute("data-edit-avatar"));
+  await editChoice.click();
   await page.locator('[data-session-edit-form="session_other"] button[type="submit"]').click();
 
   await expect(page.locator(".profile-session-row", { hasText: "Carlos" })).toBeVisible();
-  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_other", method: "PATCH", body: { profileName: "Carlos", profileAvatarId: 4 } });
+  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_other", method: "PATCH", body: { profileName: "Carlos", profileAvatarId: editVariation } });
 });

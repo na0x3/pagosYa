@@ -76,3 +76,68 @@ test("the dashboard serves Blobatar and the blob module as browser modules, and 
   }
   expect((await page.request.get("/vendor/blob-characters/blob-motion.css")).headers()["content-type"]).toContain("text/css");
 });
+
+for (const width of [390, 1280]) test(`the profile editor shows your blob, offers three more and saves "Otra variación" at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  const state = await openDashboard(page);
+  await expect(page.locator("#profileTriggerAvatar svg.profile-blob")).toHaveAttribute("aria-hidden", "true");
+  await page.locator("#profileMenuTrigger").click();
+  const picture = page.locator("#profileMenuAvatar svg");
+  await expect(picture).toHaveAttribute("role", "img");
+  await expect(picture.locator("title")).toHaveText("Dueño");
+  const options = page.locator("#profileAvatarOptions [data-profile-avatar]");
+  await expect(options).toHaveCount(4);
+  await expect(options.first()).toHaveAttribute("data-profile-avatar", "1");
+  await expect(options.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(options.nth(1)).toHaveAttribute("aria-label", /^Variación \d+$/);
+  await page.screenshot({ path: `${SHOTS}/profile-editor-${width}.png` });
+  const before = await page.locator("#profileTriggerAvatar").innerHTML();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  const saved = state.patches[0].profileAvatarId;
+  expect(Number.isInteger(saved) && saved >= 1 && saved <= 999 && saved !== 1).toBe(true);
+  expect(state.patches[0]).toMatchObject({ id: "session_current", profileName: "Dueño" });
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${saved}"]`)).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("#profileTriggerAvatar").innerHTML()).not.toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe(String(saved));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("an old animal avatar id is kept as that blob variation; a broken stored value never breaks the picture", async ({ page }) => {
+  const state = await openDashboard(page, { sessions: [session({ profileAvatarId: 3 })], localAvatar: "not-a-number" });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator('#profileAvatarOptions [data-profile-avatar="3"]')).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe("3");
+  expect(state.patches).toEqual([]);
+});
+
+test("a profile with no name is still named: the picture falls back to the name from the email", async ({ page }) => {
+  await openDashboard(page, { sessions: [session({ profileName: "" })] });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileMenuAvatar svg title")).toHaveText("Merchant");
+});
+
+test("without a seed from the API the picture keeps its place and its name, and nothing breaks", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openDashboard(page, { blobSeed: null });
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileMenuAvatar .blob-avatar-pending")).toHaveAttribute("aria-label", "Dueño");
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  expect(errors).toEqual([]);
+});
+
+test("a full profile menu (three sessions and an open edit form) renders only static blobs, each on a plate", async ({ page }) => {
+  await openDashboard(page, { sessions: [
+    session(),
+    session({ id: "s2", profileName: "Ana", profileAvatarId: 3, isPrimary: false, current: false }),
+    session({ id: "s3", profileName: "Luis", profileAvatarId: 998, isPrimary: false, current: false }),
+  ] });
+  await page.locator("#profileMenuTrigger").click();
+  await page.locator('[data-edit-session="s2"]').click();
+  await expect(page.locator('[data-session-edit-form="s2"] [data-edit-avatar]')).toHaveCount(4);
+  await expect(page.locator('[data-session-edit-form="s2"] [data-edit-avatar="3"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#profileMenu svg.blob-figure")).toHaveCount(12);
+  expect(await page.locator("#profileMenu .mo-root").count()).toBe(0);
+  expect(await page.locator("#profileMenu svg.blob-figure:not(:has(.blob-plate))").count()).toBe(0);
+});

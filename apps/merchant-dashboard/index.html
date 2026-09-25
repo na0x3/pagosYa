@@ -40,7 +40,7 @@
       </div>
       <div class="profile-menu" id="profileMenu" popover aria-label="Perfil y sesión">
         <div class="profile-menu-head">
-          <span class="profile-menu-main-avatar" id="profileMenuAvatar" aria-hidden="true"></span>
+          <span class="profile-menu-main-avatar" id="profileMenuAvatar"></span>
           <div class="profile-identity">
             <strong id="profileDisplayName">Mi perfil</strong>
             <span id="loggedInAs"></span>
@@ -51,12 +51,8 @@
         </div>
         <fieldset class="profile-avatar-picker">
           <legend>Avatar del perfil</legend>
-          <div class="profile-avatar-options">
-            <button class="profile-avatar-option" type="button" data-profile-avatar="1" aria-label="Elegir la perdiz"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="2" aria-label="Elegir el capibara"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="3" aria-label="Elegir el oso hormiguero"></button>
-            <button class="profile-avatar-option" type="button" data-profile-avatar="4" aria-label="Elegir la vizcacha"></button>
-          </div>
+          <div class="profile-avatar-options" id="profileAvatarOptions"></div>
+          <button class="ghost profile-avatar-shuffle" id="profileAvatarShuffle" type="button">Otra variación</button>
         </fieldset>
         <section class="profile-sessions" aria-labelledby="profileSessionsTitle">
           <div class="profile-sessions-head">
@@ -764,7 +760,7 @@
 
     <section class="account-workspace" id="accountSection" data-dashboard-page="account">
       <header class="account-identity">
-        <span class="account-identity-avatar" id="accountAvatar" aria-hidden="true"></span>
+        <span class="account-identity-avatar" id="accountAvatar"></span>
         <div class="account-identity-copy">
           <p class="account-eyebrow">Tu cuenta</p>
           <h2 id="accountName">Mi perfil</h2>
@@ -995,12 +991,8 @@
           </label>
           <div class="session-profile-avatar-field">
             <label id="sessionProfileAvatarLabel">Avatar</label>
-            <div class="session-profile-avatars" role="group" aria-labelledby="sessionProfileAvatarLabel">
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="1" aria-label="Elegir la perdiz"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="2" aria-label="Elegir el capibara"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="3" aria-label="Elegir el oso hormiguero"></button>
-              <button class="session-profile-avatar-option" type="button" data-login-avatar="4" aria-label="Elegir la vizcacha"></button>
-            </div>
+            <div class="session-profile-avatars" id="sessionProfileAvatars" role="group" aria-labelledby="sessionProfileAvatarLabel"></div>
+            <button class="ghost session-profile-avatar-shuffle" id="sessionProfileAvatarShuffle" type="button">Otra variación</button>
           </div>
         </div>
         <p class="session-profile-error" id="sessionProfileError" role="alert" hidden></p>
