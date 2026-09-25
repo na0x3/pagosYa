@@ -151,6 +151,24 @@ export class ShareCobroDto {
   channel!: (typeof COBRO_SHARE_CHANNELS)[number];
 }
 
+export const COBRO_MANUAL_PAYMENT_METHODS = ["cash", "transfer", "other"] as const;
+
+export class MarkCobroPaidDto {
+  @ApiProperty({ enum: COBRO_MANUAL_PAYMENT_METHODS, description: "How the customer paid outside pagosYa." })
+  @IsIn(COBRO_MANUAL_PAYMENT_METHODS)
+  method!: (typeof COBRO_MANUAL_PAYMENT_METHODS)[number];
+
+  @ApiPropertyOptional({ description: "A note for the merchant's records (receipt, transfer number)." })
+  @IsOptional() @IsString() @IsSafeText() @MaxLength(200)
+  reference?: string;
+}
+
+export class CobroRemindersDto {
+  @ApiProperty({ description: "Email the customer on the due date and 3 days after it." })
+  @IsBoolean()
+  autoReminders!: boolean;
+}
+
 export class DocumentCustomersQueryDto {
   @ApiPropertyOptional({ description: "Part of a name, email or phone." })
   @IsOptional() @IsString() @MaxLength(80)

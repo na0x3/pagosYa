@@ -389,3 +389,46 @@ describe("CobrosService — maintenance (overdue and automatic reminders)", () =
     expect((await context.cobros.runMaintenance(now)).reminders).toBe(1);
   });
 });
+
+describe("CobrosService — marcar como pagado and the reminders switch", () => {
+  const now = new Date("2026-10-10T15:00:00Z");
+
+  it("marks an open cobro paid by hand with the method and note, closes its unstarted checkout and stops reminders", async () => {
+    const { documents, cobros, prisma, email } = setup();
+    const { id, token } = await sentCobro(documents);
+    await cobros.pay(token);
+    const result = await cobros.markPaid("m_1", "store_1", id, { method: "transfer", reference: "Transferencia BNB 123" });
+    expect(result).toEqual(expect.objectContaining({ id, status: "PAID", paidAt: expect.any(Date) }));
+    expect(prisma.events.find((event) => event.type === "paid_manually")).toEqual(expect.objectContaining({ version: 1, data: { method: "transfer", reference: "Transferencia BNB 123" } }));
+    expect(prisma.paymentIntents[0].status).toBe("CANCELED");
+    // A paid cobro is never reminded again.
+    Object.assign(prisma.documents[0], { dueAt: new Date(now.getTime() + 8 * 3600_000), sentAt: new Date(now.getTime() - 3 * 86_400_000) });
+    await cobros.shared("m_1", "store_1", id, { channel: "whatsapp" }).catch(() => undefined);
+    expect((await cobros.runMaintenance(now)).reminders).toBe(0);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("refuses a draft, a paid, a voided cobro and another merchant's", async () => {
+    const { documents, cobros, prisma } = setup();
+    const draft = await documents.create("m_1", "store_1", invoice);
+    await expect(cobros.markPaid("m_1", "store_1", draft.id, { method: "cash" })).rejects.toThrow(ConflictException);
+    const { id } = await sentCobro(documents);
+    await expect(cobros.markPaid("m_2", "store_1", id, { method: "cash" })).rejects.toThrow(NotFoundException);
+    for (const status of ["PAID", "VOIDED"]) {
+      prisma.documents.find((doc) => doc.id === id)!.status = status;
+      await expect(cobros.markPaid("m_1", "store_1", id, { method: "cash" })).rejects.toThrow(ConflictException);
+    }
+  });
+
+  it("turns automatic reminders off and back on after creation, and records it", async () => {
+    const { documents, cobros, prisma } = setup();
+    const { id } = await sentCobro(documents);
+    await expect(cobros.setAutoReminders("m_1", "store_1", id, { autoReminders: false })).resolves.toEqual(expect.objectContaining({ autoReminders: false }));
+    expect(prisma.documents[0].autoReminders).toBe(false);
+    await cobros.setAutoReminders("m_1", "store_1", id, { autoReminders: true });
+    expect(prisma.documents[0].autoReminders).toBe(true);
+    expect(prisma.events.filter((event) => event.type.startsWith("reminders_")).map((event) => event.type)).toEqual(["reminders_off", "reminders_on"]);
+    prisma.documents[0].status = "PAID";
+    await expect(cobros.setAutoReminders("m_1", "store_1", id, { autoReminders: false })).rejects.toThrow(ConflictException);
+  });
+});

@@ -11,7 +11,7 @@ import { businessDocumentLink, cancelStaleCheckout } from "./cobro-payment";
 import { buildDocumentEmail, type DocumentReminderStage } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
 import type { DocumentSnapshot } from "./business-document-snapshot";
-import type { RemindCobroDto, ShareCobroDto } from "./dto/business-document.dto";
+import type { CobroRemindersDto, MarkCobroPaidDto, RemindCobroDto, ShareCobroDto } from "./dto/business-document.dto";
 import { DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./document-link-token";
 
 const S = BusinessDocumentStatus;
@@ -166,6 +166,48 @@ export class CobrosService {
     if (doc.currentVersion < 1 || doc.status === S.VOIDED) throw new ConflictException("Este documento no tiene un enlace para compartir");
     await this.prisma.businessDocumentEvent.create({ data: { documentId: id, type: "shared", version: doc.currentVersion, data: { channel: dto.channel } } });
     return { shared: true };
+  }
+
+  /**
+   * "Marcar como pagado": the customer paid in cash, by transfer or otherwise outside
+   * pagosYa. The cobro closes as PAID (so reminders stop and it counts in "Cobrado"),
+   * its unstarted checkout is closed, and the timeline says how it was paid. A checkout
+   * already in progress is left alone; if it also succeeds it lands as payment_after_close.
+   */
+  async markPaid(merchantId: string, storeId: string, id: string, dto: MarkCobroPaidDto) {
+    await this.ownedStore(merchantId, storeId);
+    await this.prisma.$transaction(async (tx) => {
+      // Document first, intent never waited for (lock order: cobro-payment.ts cancelStaleCheckout).
+      await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
+      const doc = await tx.businessDocument.findFirst({ where: { id, storeId } });
+      if (!doc) throw new NotFoundException("Documento no encontrado");
+      const refusal = "Solo puedes marcar como pagado un cobro enviado que aún no se pagó";
+      if (doc.kind !== "INVOICE" || doc.currentVersion < 1) throw new ConflictException(refusal);
+      const { count } = await tx.businessDocument.updateMany({ where: { id, status: { in: OPEN } }, data: { status: S.PAID, paidAt: new Date() } });
+      if (!count) throw new ConflictException(refusal);
+      if (doc.paymentIntentId) await cancelStaleCheckout(tx, doc.paymentIntentId);
+      const reference = dto.reference?.trim();
+      await tx.businessDocumentEvent.create({
+        data: { documentId: id, type: "paid_manually", version: doc.currentVersion, data: { method: dto.method, ...(reference && { reference }) } },
+      });
+    });
+    return this.documents.get(merchantId, storeId, id);
+  }
+
+  /** The automatic reminders switch after creation; only while the cobro can still be paid. */
+  async setAutoReminders(merchantId: string, storeId: string, id: string, dto: CobroRemindersDto) {
+    await this.ownedStore(merchantId, storeId);
+    const doc = await this.prisma.businessDocument.findFirst({ where: { id, storeId }, select: { id: true, kind: true, currentVersion: true } });
+    if (!doc) throw new NotFoundException("Documento no encontrado");
+    const { count } = await this.prisma.businessDocument.updateMany({
+      where: { id, kind: "INVOICE", status: { in: [S.DRAFT, ...OPEN] } },
+      data: { autoReminders: dto.autoReminders },
+    });
+    if (!count) throw new ConflictException("Este cobro ya está cerrado: no tiene recordatorios");
+    await this.prisma.businessDocumentEvent.create({
+      data: { documentId: id, type: dto.autoReminders ? "reminders_on" : "reminders_off", version: doc.currentVersion || null },
+    });
+    return this.documents.get(merchantId, storeId, id);
   }
 
   /**
