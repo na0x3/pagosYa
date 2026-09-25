@@ -65,3 +65,46 @@ describe('published source assets', () => {
     expect(res.status).toHaveBeenCalledWith(304);
   });
 });
+
+describe('published source assets — review fixes', () => {
+  it('serves every media file the site JSON lists, including fonts the runtime adds at publish time', async () => {
+    const { service, loads } = harness();
+    loads.mockImplementation(async () => { const copy = structuredClone(snapshot); copy.files.push({ path: 'styles.css', content: "@font-face{font-family:F;src:url('assets/fraunces.ttf')}", encoding: 'utf8' }); return copy as any; });
+    const site: any = await service.publicSite('tienda');
+    const listed: string[] = site.snapshot.files.filter((f: any) => f.encoding === 'url').map((f: any) => f.path);
+    expect(listed).toContain('assets/fraunces.ttf');
+    for (const path of listed) await expect(service.publicAsset('tienda', '3-aaaaaaaaaaaa', path)).resolves.toMatchObject({ bytes: expect.any(Buffer) });
+  });
+
+  it('loads a revision once for a burst of concurrent requests, and retries after a failed load', async () => {
+    const { service, loads } = harness();
+    await Promise.all(Array.from({ length: 6 }, () => service.publicAsset('tienda', '3-aaaaaaaaaaaa', 'assets/a.png')));
+    expect(loads).toHaveBeenCalledTimes(1);
+    const other = harness();
+    other.loads.mockRejectedValueOnce(new Error('db down'));
+    await expect(other.service.publicAsset('tienda', '3-aaaaaaaaaaaa', 'assets/a.png')).rejects.toThrow('db down');
+    await expect(other.service.publicAsset('tienda', '3-aaaaaaaaaaaa', 'assets/a.png')).resolves.toMatchObject({ contentType: 'image/png' });
+  });
+
+  it('answers byte ranges so Safari can play video, and refuses unsatisfiable ones', async () => {
+    const { service } = harness();
+    const controller = new SourceSiteController(service);
+    const call = async (range?: string) => {
+      const headers: Record<string, string> = {};
+      const res: any = { set: (h: Record<string, string>) => Object.assign(headers, h), status: jest.fn() };
+      const body = await controller.asset('tienda', '3-aaaaaaaaaaaa', ['assets', 'a.png'], res, undefined, range);
+      return { headers, status: res.status, body };
+    };
+    const full = await call();
+    expect(full.headers['Accept-Ranges']).toBe('bytes');
+    const part = await call('bytes=0-3');
+    expect(part.status).toHaveBeenCalledWith(206);
+    expect(part.headers).toMatchObject({ 'Content-Range': `bytes 0-3/${png.length}`, 'Content-Length': '4', 'Accept-Ranges': 'bytes' });
+    const tail = await call('bytes=10-');
+    expect(tail.headers).toMatchObject({ 'Content-Range': `bytes 10-${png.length - 1}/${png.length}`, 'Content-Length': String(png.length - 10) });
+    const bad = await call('bytes=99-');
+    expect(bad.status).toHaveBeenCalledWith(416);
+    expect(bad.headers['Content-Range']).toBe(`bytes */${png.length}`);
+    expect(bad.body).toBeUndefined();
+  });
+});

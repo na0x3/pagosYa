@@ -184,14 +184,7 @@ export class SourcePublishingService {
       }
       revision = visit.variant === 'B' ? experiment.variantRevision : experiment.controlRevision; visitToken = visit.token;
     }
-    const snapshot = await this.snapshot(store.id, revision);
-    // Hosted publications keep their trusted kit even after a deployment; previews use the current kit.
-    const runtime = store.publishedRuntimeDigest
-      ? await this.prisma.sourceRuntimeBundle.findUniqueOrThrow({ where: { digest: store.publishedRuntimeDigest } })
-      : null;
-    const { files } = runtime
-      ? await withSourceRuntime(snapshot, { digest: runtime.digest, files: runtime.files as SourceRuntimeFiles })
-      : await currentSourceRuntime(snapshot);
+    const { snapshot, files } = await this.publicRevisionFiles(store.id, revision, store.publishedRuntimeDigest);
     // Export tooling is private. Only the selected public revision's browser assets leave the API.
     const assetPath = `/stores/public/${encodeURIComponent(slug)}/source-site/assets/${await this.assetVersion(store.id, revision)}/`;
     const publicFiles = files
@@ -201,7 +194,21 @@ export class SourcePublishingService {
     return { published: true, revision, visitToken, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };
   }
 
-  private readonly assetCache = new Map<string, Map<string, Buffer>>();
+  /** One in-flight load per revision: a burst of first requests shares it instead of each decoding the snapshot. */
+  private readonly assetCache = new Map<string, Promise<Map<string, { bytes: Buffer; etag: string }>>>();
+
+  /** The files a visitor receives: the revision merged with its trusted runtime. Site JSON and asset route share it. */
+  private async publicRevisionFiles(storeId: string, revision: number, runtimeDigest: string | null) {
+    const snapshot = await this.snapshot(storeId, revision);
+    // Hosted publications keep their trusted kit even after a deployment; previews use the current kit.
+    const runtime = runtimeDigest
+      ? await this.prisma.sourceRuntimeBundle.findUniqueOrThrow({ where: { digest: runtimeDigest } })
+      : null;
+    const { files } = runtime
+      ? await withSourceRuntime(snapshot, { digest: runtime.digest, files: runtime.files as SourceRuntimeFiles })
+      : await currentSourceRuntime(snapshot);
+    return { snapshot, files };
+  }
 
   /** Revisions a visitor can already see: the published one and a running experiment's arms. */
   private async servableRevisions(storeId: string, published: number): Promise<number[]> {
@@ -220,20 +227,22 @@ export class SourcePublishingService {
     const match = /^(\d+)-([a-f0-9]{12})$/.exec(version);
     if (!match || !PUBLIC_ASSET.test(path) || path.split('/').some(part => !part || part === '.' || part === '..')) throw missing();
     const revision = Number(match[1]);
-    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true } });
+    const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true, publishedRuntimeDigest: true } });
     if (!store?.publishedSourceRevision || !(await this.servableRevisions(store.id, store.publishedSourceRevision)).includes(revision)) throw missing();
     // The digest pins the URL to this store's exact revision, so a reused slug never inherits cached media.
     if (await this.assetVersion(store.id, revision) !== version) throw missing();
-    const key = `${store.id}:${revision}`;
-    let files = this.assetCache.get(key);
-    if (!files) {
-      const snapshot = await this.snapshot(store.id, revision);
-      files = new Map(snapshot.files.filter(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path)).map(f => [f.path, Buffer.from(f.content, 'base64')]));
-      this.assetCache.set(key, files);
-      while (this.assetCache.size > ASSET_CACHE_REVISIONS) this.assetCache.delete(this.assetCache.keys().next().value!);
-    }
-    const bytes = files.get(path);
-    if (!bytes) throw missing();
-    return { bytes, contentType: ASSET_TYPES[path.split('.').pop()!.toLowerCase()], etag: `"${createHash('sha1').update(bytes).digest('base64url')}"` };
+    const key = `${store.id}:${revision}:${store.publishedRuntimeDigest ?? 'current'}`;
+    let load = this.assetCache.get(key);
+    if (load) this.assetCache.delete(key); // re-inserted below: least recently used is evicted first
+    else load = this.publicRevisionFiles(store.id, revision, store.publishedRuntimeDigest).then(({ files }) => new Map(files
+      .filter(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path))
+      .map(f => { const bytes = Buffer.from(f.content, 'base64'); return [f.path, { bytes, etag: `"${createHash('sha1').update(bytes).digest('base64url')}"` }] as const; })));
+    this.assetCache.set(key, load);
+    while (this.assetCache.size > ASSET_CACHE_REVISIONS) this.assetCache.delete(this.assetCache.keys().next().value!);
+    let files: Map<string, { bytes: Buffer; etag: string }>;
+    try { files = await load; } catch (error) { if (this.assetCache.get(key) === load) this.assetCache.delete(key); throw error; }
+    const file = files.get(path);
+    if (!file) throw missing();
+    return { bytes: file.bytes, contentType: ASSET_TYPES[path.split('.').pop()!.toLowerCase()], etag: file.etag };
   }
 }
