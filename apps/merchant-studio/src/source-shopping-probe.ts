@@ -218,7 +218,7 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       if (cart().length) {
         const checkout = visible('button[data-checkout]:not(:disabled)');
         checkout?.click(); await pause();
-        let panel = visible('[data-checkout-review]');
+        const panel = visible('[data-checkout-review]');
         if (panel) {
           const branch = panel.querySelector<HTMLSelectElement>('[name=location]');
           const method = () => panel!.querySelector<HTMLSelectElement>('[name=method]');

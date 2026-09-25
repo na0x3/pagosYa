@@ -41,7 +41,7 @@ import {
 } from "./storefront-engine";
 import { storefrontMediaCandidates } from "./agent-revision";
 import { normalizedBrandColors, proposalArtDirections, localSiteDocument, applyGeneratedBrandPalette, withGeneratedDefaultFooter, ensureGeneratedCommercePages, enforceGeneratedNarrative, enforceGeneratedHeroOpening, enforceUniqueGeneratedAnimationTypes, finalizeGeneratedPages, advancesGeneratedBatch, staticGeneratedPhotography, repairGeneratedPrimaryCatalog, generatedAnimationSuite, freshGeneratedVisualReset, expandMotionSections, brandAnalysisCache, BRAND_ANALYSIS_SCHEMA, type BrandAnalysis, AI_DIRECTIONS_SCHEMA, passesPremiumDirectionGuardrails, generatedCopy } from "./generated-proposals";
-import { storedSectionLocks, snapshot, storedSiteDocument, legacyConfigFromSiteDocument, type StoreProductContext, type StoreLinkContext, type ProposalPreset, normalizeStoreFontStyle, MOTION_EXPERIENCES, type MaterializedAiDirection } from "./visual-config";
+import { storedSectionLocks, storedSiteDocument, legacyConfigFromSiteDocument, type StoreProductContext, type StoreLinkContext, type ProposalPreset, normalizeStoreFontStyle, MOTION_EXPERIENCES, type MaterializedAiDirection } from "./visual-config";
 import { VisualAiService } from "./visual-ai.service";
 import { ownedStore } from "./visual-config";
 

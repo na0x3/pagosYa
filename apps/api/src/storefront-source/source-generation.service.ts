@@ -49,7 +49,6 @@ import { BadGatewayException, BadRequestException, ConflictException, Injectable
 import { RewardsService } from "../rewards/rewards.service";
 import { ConfigService } from "@nestjs/config";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { Script } from "node:vm";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
@@ -60,7 +59,7 @@ import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import type { SourceProjectFileDto } from "./dto/save-source-project.dto";
 
 import { Prisma } from '@prisma/client';
-import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourcePromptCacheKey, sourceUsage, type SourceModel, type SourceModelChoice } from './source-generation-policy';
+import { CREDIT_MICRO_USD, DEFAULT_MAX_CREDITS, SOURCE_MODELS, sourceGenerationPlan, sourceGenerationEstimate, sourceOutputBudget, sourcePromptCacheKey, sourceUsage, type SourceModel } from './source-generation-policy';
 import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
 import { kitPath } from '@pagosya/storefront-kit';

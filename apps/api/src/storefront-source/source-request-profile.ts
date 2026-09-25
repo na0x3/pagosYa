@@ -19,7 +19,7 @@ const has = (task: string, pattern: RegExp) => pattern.test(task);
  * Converts ordinary merchant language into a small internal design brief.
  * The merchant never sees this object and never needs design vocabulary.
  */
-export function sourceRequestProfile(instruction: string, hasExistingSite: boolean): SourceRequestProfile {
+export function sourceRequestProfile(instruction: string, _hasExistingSite: boolean): SourceRequestProfile {
   const task = normalize(instruction.split('Pedido actual del comercio:').at(-1) || instruction).trim();
   const redesign = sourceRedesignRequested(instruction);
   const marqueeRequested = has(task, /\b(?:marquesin\w*|marquee|ticker|announcement|banner)\b/);

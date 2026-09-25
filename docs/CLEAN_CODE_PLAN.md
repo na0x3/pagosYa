@@ -67,8 +67,14 @@ Phases 3–5 are the large ones; each should be split into several PRs.
   | 1 each | `await-thenable`, `no-implied-eval`, `no-unsafe-finally` | reviewed, none live defects |
   | 867 | warnings | 324 `no-explicit-any`, 241 `no-unnecessary-type-assertion`, 150 `require-await` |
 
-  Not yet in CI: it would fail on the 72 standing errors. Turn on `pnpm lint` in `ci.yml` once
-  they reach zero — the config is already a ratchet, so a *new* floating promise fails today.
+  **Errors reached zero on 2026-09-24 (74 → 0) and `pnpm lint` now runs in CI.** Most were
+  mechanical (unused imports, `prefer-const`). Two config decisions came with it:
+  `no-unused-vars` ignores rest siblings (`({ image, ...rest }) => rest` is how the code drops
+  fields), and in the browser apps `no-misused-promises` no longer checks async functions passed
+  as arguments. Every one of those ~27 sites (DOM listeners, timers) was read and each catches
+  its own errors; the API keeps the full rule, since there an ignored promise is a lost write.
+  One real fix: `countStoreSales` was counting test-mode payments toward dice-board rolls.
+  954 warnings remain; promote each rule to "error" as its count reaches zero.
 
 - **Phase 6 — done.** `no-circular` is now an error; the five cycles that predate it stay listed in `.dependency-cruiser-known-violations.json`, and a new cycle fails `pnpm check:boundaries` in CI.
 - **Browser suite, measured 2026-09-22.** The figure recorded below — "39 failing tests" in the

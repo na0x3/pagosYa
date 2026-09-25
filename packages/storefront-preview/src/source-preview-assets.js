@@ -1,5 +1,7 @@
 /* Runs inside the preview sandbox before authored scripts. Resolve media at the
  * DOM boundary so computed URLs work just like literal asset paths. */
+// A fragment: source-preview.ts imports it ?raw and appends the call arguments.
+// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 (function (assets, page, editing) {
   const base = new URL(page, 'https://source.invalid/');
   const resolve = value => {

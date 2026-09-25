@@ -48,7 +48,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let checks: SourceCheck[] | null = null, checksKey = '', checking = false;
   let checkAbort: AbortController | null = null;
   let setup: SourceSetup | null = null;
-  let generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
+  const generationSettings: SourceGenerationSettings = { model: 'auto', maxCredits: 50, motion: 'auto', scrollFeel: 'soft', sitePurpose: 'shop' };
   try {
     const raw = localStorage.getItem(SOURCE_MODEL_STORAGE);
     const saved = raw?.startsWith('{') ? JSON.parse(raw) as { model?: string; at?: number } : { model: raw ?? undefined, at: 0 };

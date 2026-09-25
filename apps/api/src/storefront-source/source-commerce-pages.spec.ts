@@ -298,7 +298,7 @@ describe('Inline storefront product options', () => {
 
   it('refreshes an already open modal against changed live variants', async () => {
     const p = product();
-    const { query, choose } = await shop({ mode: 'live', items: [p], refreshedItems: [{ ...p, variants: [variant('red-s', 'Rojo', 'S', 7000, 1)] }], onStart: w => {
+    const { query } = await shop({ mode: 'live', items: [p], refreshedItems: [{ ...p, variants: [variant('red-s', 'Rojo', 'S', 7000, 1)] }], onStart: w => {
       w.document.querySelector('.menu-add').click();
       w.document.querySelector('[data-product-option="0"][data-option-value="1"]').click();
       w.document.querySelector('[data-product-option="1"][data-option-value="1"]').click();

@@ -1,5 +1,5 @@
 import { DesignRetryableConflict } from './source-design-errors';
-import { BadRequestException, ConflictException, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { Prisma, type StoreSourceDesignJob } from '@prisma/client';
 import { SourceDesignJobsService, DESIGN_JOB_CAPS, DESIGN_JOB_REPAIR_MODEL, DesignBudgetError, designDigest } from './source-design-jobs.service';

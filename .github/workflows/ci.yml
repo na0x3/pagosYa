@@ -60,6 +60,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Type-aware, so it runs after the Prisma client and workspace builds exist.
+      # Errors fail the build; the warning backlog stays visible for burn-down.
+      - name: Lint
+        run: pnpm lint
+
       - name: Test
         run: pnpm test
 

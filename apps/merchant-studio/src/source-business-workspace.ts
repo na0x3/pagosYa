@@ -235,7 +235,7 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                     analyticsForm.querySelector('[data-analytics-clear]')?.addEventListener('click', () => save(''));
                 }
                 const form = app.querySelector<HTMLFormElement>('[data-connection-form]')!;
-                form.elements.namedItem('kind') && ((form.elements.namedItem('kind') as HTMLSelectElement).value = connectionDraft.kind);
+                if (form.elements.namedItem('kind')) (form.elements.namedItem('kind') as HTMLSelectElement).value = connectionDraft.kind;
                 form.addEventListener('input', () => { dirty = true; const data = new FormData(form); connectionDraft = { name: String(data.get('name')), kind: String(data.get('kind')) }; });
                 form.addEventListener('submit', event => { event.preventDefault(); const data = new FormData(form); void run(async () => { issued = await api.createIntegrationConnection(storeId, { kind: String(data.get('kind')), name: String(data.get('name')) }); connections = await api.integrationConnections(storeId); connectionDraft = { name: '', kind: 'CUSTOM_DATABASE' }; dirty = false; }, drawIntegrations); });
                 app.querySelectorAll<HTMLButtonElement>('[data-link-connection]').forEach(button => button.onclick = () => {

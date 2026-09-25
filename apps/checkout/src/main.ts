@@ -231,4 +231,4 @@ window.onpopstate = (event) => {
 };
 
 Object.assign(storefrontPages, { renderStore, renderProductPage });
-main();
+void main();

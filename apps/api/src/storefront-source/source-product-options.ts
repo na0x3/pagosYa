@@ -199,7 +199,7 @@ export function requestedVariantOperations(value: unknown, instruction: string, 
 
 /** Apply deltas to inventory read inside the save transaction; never copy old model stock. */
 export function applyVariantOperations(existing: ProductVariant[], operations: SourceVariantOperation[]): ProductVariant[] {
-  let next: ProductVariantDto[] = existing.map(variant=>({...variant}));
+  const next: ProductVariantDto[] = existing.map(variant=>({...variant}));
   for (const operation of operations) {
     if (operation.action === 'add') next.push(operation.changes as ProductVariantDto);
     else {

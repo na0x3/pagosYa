@@ -8,7 +8,7 @@ const booked = { id: 'shp_1', status: 'BOOKED', carrier: { name: 'Servientrega B
 test('renders a booked manual shipment with waybill download and tracking form', async () => {
   const { window } = new JSDOM('<div id="c"></div>'); globalThis.document = window.document;
   const calls = [];
-  const api = async (path, init) => { calls.push(path); return path.endsWith('/shipment') ? booked : { ...booked, status: 'IN_TRANSIT', trackingNumber: 'SV-1' }; };
+  const api = async (path) => { calls.push(path); return path.endsWith('/shipment') ? booked : { ...booked, status: 'IN_TRANSIT', trackingNumber: 'SV-1' }; };
   const c = window.document.getElementById('c');
   await renderShipmentPanel(c, api, 'ord_1');
   assert.match(c.textContent, /Servientrega Bolivia/);

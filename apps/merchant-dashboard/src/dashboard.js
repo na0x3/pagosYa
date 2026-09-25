@@ -440,7 +440,7 @@ import { escapeHtml as esc } from "/src/html.mjs";
     { id: "unstoppable", title: "Negocio imparable", description: "Llegaste a 25 ventas y 500 visitas.", earned: ({ sales, visits }) => sales >= 25 && visits >= 500, progress: ({ sales, visits }) => `${Math.min(sales, 25)}/25 ventas · ${Math.min(visits, 500)}/500 visitas` },
   ];
   let gamificationToastTimer = null;
-  let gamificationAnnouncementQueue = [];
+  const gamificationAnnouncementQueue = [];
   let activeGamificationAnnouncement = null;
   const progressCelebrationFetches = new Set();
   const queuedProgressLevels = new Set();
@@ -3789,8 +3789,7 @@ import { escapeHtml as esc } from "/src/html.mjs";
       button.textContent = original;
     } finally {
       button.disabled = false;
-      if (button.textContent === "PDF descargado") return;
-      button.textContent = original;
+      if (button.textContent !== "PDF descargado") button.textContent = original;
     }
   });
   document.getElementById("downloadSalesCsv").addEventListener("click", async (event) => {

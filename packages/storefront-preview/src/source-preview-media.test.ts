@@ -10,6 +10,8 @@ describe('preview variant photography', () => {
     const compact = compactPreviewImageData('window.PAGOSYA_CONFIG = ' + JSON.stringify(config) + ';');
     expect(compact.length).toBeLessThan(image.length + 6000);
     const target: {PAGOSYA_CONFIG?: unknown} = {};
+    // Evaluating the shipped runtime string is what this test checks.
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
     new Function('window', compact)(target);
     expect(target.PAGOSYA_CONFIG).toEqual(config);
     expect(compactPreviewImageData('window.PAGOSYA_CONFIG = unsafe();')).toBe('window.PAGOSYA_CONFIG = unsafe();');

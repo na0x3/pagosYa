@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { join, posix } from 'node:path';
+import { posix } from 'node:path';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { kitPath } from '@pagosya/storefront-kit';
 
