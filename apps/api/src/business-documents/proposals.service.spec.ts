@@ -298,6 +298,27 @@ describe("proposals — validity", () => {
   });
 });
 
+describe("proposals — two tabs editing the same proposal", () => {
+  it("refuses a save made from an older copy (If-Match), and never over a customer's view", async () => {
+    const ctx = setupProposals();
+    const draft = await ctx.documents.create("m_1", "store_1", { kind: "PROPOSAL", title: "Letrero", items: [{ description: "Letrero", quantity: 1, unitAmount: 80000 }] });
+    expect(draft.editTag).toMatch(/^[0-9a-f]{16,}$/);
+    // Tab A saves; tab B still holds the tag it loaded.
+    const saved = await ctx.documents.update("m_1", "store_1", draft.id, { title: "Letrero luminoso" }, draft.editTag);
+    expect(saved.editTag).not.toBe(draft.editTag);
+    await expect(ctx.documents.update("m_1", "store_1", draft.id, { title: "Letrero de madera" }, draft.editTag)).rejects.toThrow(ConflictException);
+    await expect(ctx.documents.update("m_1", "store_1", draft.id, { title: "Letrero de madera" }, `"${draft.editTag}"`)).rejects.toThrow(/otra pestaña/);
+    expect(ctx.prisma.documents.find((row) => row.id === draft.id)!.title).toBe("Letrero luminoso");
+    // Without the header (older clients) a save still goes through.
+    await expect(ctx.documents.update("m_1", "store_1", draft.id, { title: "Letrero" })).resolves.toBeDefined();
+    // The customer opening the link changes the status, not what the merchant edits.
+    const { id, token } = await sentProposal(ctx);
+    const before = await ctx.documents.get("m_1", "store_1", id);
+    await ctx.documents.publicView(token, CONTEXT);
+    await expect(ctx.documents.update("m_1", "store_1", id, { title: "Otro título" }, before.editTag)).resolves.toEqual(expect.objectContaining({ title: "Otro título" }));
+  });
+});
+
 describe("ProposalsService — the customer accepts", () => {
   it("records who accepted which exact version, from where, once — and tells the merchant", async () => {
     const ctx = setupProposals();

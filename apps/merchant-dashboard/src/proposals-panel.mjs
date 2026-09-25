@@ -432,6 +432,8 @@ export function mountProposalsPanel(deps) {
       numberLabel: doc.numberLabel,
       status: doc.status,
       currency: doc.currency || "BOB",
+      /** The server's tag of what this editor loaded; a save from a copy that is behind answers 409. */
+      editTag: doc.editTag || null,
       currentVersion: doc.currentVersion || 0,
       ai: ai || (doc.events || []).some((event) => event.type === "ai_drafted"),
       title: doc.title || "",
@@ -689,7 +691,9 @@ export function mountProposalsPanel(deps) {
     if (label) label.textContent = saveLabel();
     saving = saving.then(async () => {
       try {
-        await deps.api(docPath(current.id), { method: "PATCH", body: JSON.stringify(body) });
+        const headers = current.editTag ? { "if-match": `"${current.editTag}"` } : {};
+        const saved = await deps.api(docPath(current.id), { method: "PATCH", body: JSON.stringify(body), headers });
+        if (saved?.editTag) current.editTag = saved.editTag;
         if (current.saveState === "saving") current.saveState = "saved";
         return true;
       } catch (error) {

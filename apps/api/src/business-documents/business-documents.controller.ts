@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -41,8 +41,9 @@ export class BusinessDocumentsController {
     @Param("storeId") storeId: string,
     @Param("id") id: string,
     @Body() dto: UpdateBusinessDocumentDto,
+    @Headers("if-match") ifMatch?: string,
   ) {
-    return this.documents.update(merchant.id, storeId, id, dto);
+    return this.documents.update(merchant.id, storeId, id, dto, ifMatch || undefined);
   }
 
   @Delete(":id")

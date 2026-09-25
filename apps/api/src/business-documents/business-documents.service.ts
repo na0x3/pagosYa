@@ -18,8 +18,10 @@ import type { EmailProvider } from "../dashboard/interfaces/email-provider.inter
 import { buildDocumentEmail } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
 import { cancelStaleCheckout } from "./cobro-payment";
+import { sha256Hex } from "../legal/legal-documents.service";
 import {
   buildSnapshot,
+  canonicalJson,
   computeTotals,
   documentNumberLabel,
   findPlaceholders,
@@ -136,6 +138,28 @@ const isUniqueViolation = (error: unknown) => (error as { code?: string } | null
 type DocumentWithItems = Prisma.BusinessDocumentGetPayload<{ include: { items: true } }>;
 
 /**
+ * What the merchant edits, hashed. Two tabs compare it (If-Match on PATCH) so one never silently
+ * overwrites the other; a send, a customer's view or a status change leaves it as it was.
+ */
+export function editTag(doc: DocumentWithItems): string {
+  const iso = (value: Date | null) => (value ? value.toISOString() : null);
+  return sha256Hex(canonicalJson({
+    title: doc.title,
+    currency: doc.currency,
+    businessCustomerId: doc.businessCustomerId,
+    customer: [doc.customerName, doc.customerEmail, doc.customerPhone, doc.customerDocument],
+    discountAmount: doc.discountAmount,
+    content: doc.content,
+    dueAt: iso(doc.dueAt),
+    validUntil: iso(doc.validUntil),
+    autoReminders: doc.autoReminders,
+    items: [...doc.items].sort((a, b) => a.position - b.position).map((item) => [item.description, item.quantity, item.unitAmount, item.paymentLinkId ?? null]),
+  })).slice(0, 24);
+}
+
+const sameTag = (header: string, tag: string) => header.split(",").some((value) => value.trim().replace(/^W\//, "").replace(/"/g, "") === tag);
+
+/**
  * Cobros, proposals and contracts share one lifecycle: a draft the merchant
  * edits, and on every send an immutable, hashed version the customer sees
  * through a signed link. D1–D3 add their own transitions on top.
@@ -219,7 +243,8 @@ export class BusinessDocumentsService {
     };
   }
 
-  async update(merchantId: string, storeId: string, id: string, dto: UpdateBusinessDocumentDto) {
+  /** `ifMatch`: the editTag the editor loaded; a different current tag means another tab saved first (409). */
+  async update(merchantId: string, storeId: string, id: string, dto: UpdateBusinessDocumentDto, ifMatch?: string) {
     await this.ownedStore(merchantId, storeId);
     const initial = await this.load(storeId, id);
     if (FINAL.includes(initial.status)) throw new ConflictException("Este documento ya no se puede editar");
@@ -228,10 +253,15 @@ export class BusinessDocumentsService {
     const customer = await this.customerFields(storeId, dto, dto.businessCustomerId === undefined);
     const pricedItems = dto.items ? await this.pricedItems(storeId, dto.items) : null;
     await this.prisma.$transaction(async (tx) => {
+      // A conditional save holds the row, so two tabs cannot both pass the check below.
+      if (ifMatch) await tx.$queryRaw`SELECT id FROM "BusinessDocument" WHERE id = ${id} FOR UPDATE`;
       // Totals come from the row this transaction reads, not from the first read.
       const doc = await tx.businessDocument.findFirst({ where: { id, storeId }, include: { items: { orderBy: { position: "asc" } } } });
       if (!doc) throw new NotFoundException("Documento no encontrado");
       if (FINAL.includes(doc.status)) throw new ConflictException("Este documento ya no se puede editar");
+      if (ifMatch && !sameTag(ifMatch, editTag(doc))) {
+        throw new ConflictException("Este documento cambió en otra pestaña o dispositivo. Recarga para ver la última versión antes de seguir editando.");
+      }
       const totals = computeTotals(pricedItems ?? doc.items, dto.discountAmount ?? doc.discountAmount);
       // Conditional and written first, so a void, payment or signature landing meanwhile refuses the whole edit.
       const { count } = await tx.businessDocument.updateMany({
@@ -642,6 +672,7 @@ export class BusinessDocumentsService {
       autoReminders: doc.autoReminders,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      editTag: editTag(doc),
       publicUrl: doc.currentVersion > 0 ? this.publicUrl(doc.id) : null,
     };
   }

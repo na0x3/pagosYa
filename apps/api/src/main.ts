@@ -123,7 +123,7 @@ async function bootstrap() {
     },
     credentials: false,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["authorization", "content-type", "idempotency-key"],
+    allowedHeaders: ["authorization", "content-type", "idempotency-key", "if-match"],
     maxAge: 600,
   });
 

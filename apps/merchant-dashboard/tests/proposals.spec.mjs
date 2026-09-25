@@ -47,7 +47,7 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
     const subtotal = priced.reduce((sum, item) => sum + item.amount, 0);
     return { items: priced, subtotalAmount: subtotal, discountAmount: discount, totalAmount: subtotal - discount };
   };
-  const detail = (doc) => ({ ...doc, payment: { testMode: false, manual: false, afterClose: false, mismatch: false }, previewUrl: doc.publicUrl ? `${doc.publicUrl}?preview=prev` : null, versions: [], events: doc.events || [] });
+  const detail = (doc) => ({ editTag: "tag0", ...doc, payment: { testMode: false, manual: false, afterClose: false, mismatch: false }, previewUrl: doc.publicUrl ? `${doc.publicUrl}?preview=prev` : null, versions: [], events: doc.events || [] });
   const expired = (doc) => doc.status === "EXPIRED" || doc.status === "VOIDED" || (OPEN.includes(doc.status) && doc.validUntil && new Date(doc.validUntil) < new Date());
   function create(body) {
     const doc = {
@@ -66,7 +66,7 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
     const path = url.pathname.replace("/v1", "");
     const method = request.method();
     const body = request.postData() ? request.postDataJSON() : undefined;
-    requests.push({ method, path, body, query: url.search });
+    requests.push({ method, path, body, query: url.search, headers: request.headers() });
     const json = (value, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(value) });
     if (path === "/stores") return json([store]);
     if (path === "/merchants/balance") return json({ payableBalance: 0 });
@@ -119,6 +119,9 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
       if (!match[2] && method === "DELETE") { documents.splice(documents.indexOf(doc), 1); return json({ deleted: true }); }
       if (!match[2] && method === "PATCH") {
         if (["ACCEPTED", "EXPIRED", "VOIDED"].includes(doc.status)) return json({ statusCode: 409, message: "Este documento ya no se puede editar" }, 409);
+        const ifMatch = request.headers()["if-match"];
+        if (ifMatch && ifMatch.replace(/"/g, "") !== (doc.editTag || "tag0")) return json({ statusCode: 409, message: "Este documento cambió en otra pestaña o dispositivo." }, 409);
+        doc.editTag = `tag${requests.length}`;
         if (body.title !== undefined) doc.title = body.title;
         if (body.customerName !== undefined) doc.customer = { ...doc.customer, name: body.customerName, email: body.customerEmail, phone: body.customerPhone };
         if (body.items) Object.assign(doc, totals(body.items));
@@ -342,6 +345,25 @@ for (const width of [390, 1280]) {
       await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "cobros");
       await expect(page.locator("[data-cobro-sheet] #cobroSheetTitle")).toHaveText("¡Cobro COB-0001 listo!");
       expect(api.requests.some((request) => request.method === "POST" && request.path === "/stores/store_1/documents/pdoc_acc/cobro")).toBe(true);
+    });
+
+    test("a save from a second tab that is behind is refused and the editor reloads what was saved", async ({ page }) => {
+      const api = fakeApi([proposal({ id: "pdoc_view", title: "Fotos de producto" })]);
+      await openProposals(page, api);
+      await page.locator("[data-proposal-card]").first().click();
+      const sheet = page.locator("[data-proposal-sheet]");
+      await sheet.getByRole("button", { name: "Editar" }).click();
+      await page.locator("#proposalTitle").fill("Fotos de producto 2026");
+      await expect(page.locator("[data-proposal-save-state]")).toHaveText("Guardado");
+      const first = api.requests.filter((request) => request.method === "PATCH").pop();
+      expect(first.headers["if-match"]).toBe('"tag0"');
+      // Another tab saves meanwhile.
+      const doc = api.documents.find((row) => row.id === "pdoc_view");
+      Object.assign(doc, { editTag: "other-tab", title: "Fotos y video (otra pestaña)" });
+      await page.locator("#proposalTitle").fill("Fotos de producto 2027");
+      await expect(sheet.locator("[data-proposal-conflict]")).toContainText("cambió en otra pestaña");
+      await expect(sheet.locator("#proposalSheetTitle")).toHaveText("Fotos y video (otra pestaña)");
+      await expect(page.locator("[data-proposal-editor]")).toHaveCount(0);
     });
 
     test("the catalog picker only adds products in the proposal's currency", async ({ page }) => {
