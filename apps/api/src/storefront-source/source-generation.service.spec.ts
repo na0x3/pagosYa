@@ -418,6 +418,24 @@ describe('Independent source generation',()=>{
     expect(projects.save).toHaveBeenCalledTimes(1);
     expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'index.html').content).not.toContain('Generic hero');
   });
+  it('adds eyebrow guidance to a repair when the failed candidate labels more than two sections', async () => {
+    const { service } = setup();
+    const response = (source: any) => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'Menu', files: source }) }] }] }));
+    const wrong = files(); wrong[0].content = wrong[0].content.replace('<main>', '<main>' + ['a', 'b', 'c'].map(id => `<section id="${id}"><p class="eyebrow">Etiqueta</p><h2>${id}</h2></section>`).join(''));
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response(wrong)).mockResolvedValueOnce(response(files()));
+    await service.generate('m', 's', input);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).not.toContain('Stock pattern:');
+    expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string).input[0].content[1].text).toContain('Stock pattern: 3 sections');
+  });
+  it('tells a redesign that the previous pages overused eyebrows, without failing', async () => {
+    const { service, projects } = setup();
+    const previous = files(); previous[0].content = previous[0].content.replace('<main>', '<main>' + ['a', 'b', 'c'].map(id => `<section id="${id}"><span class="kicker">Etiqueta</span><h2>${id}</h2></section>`).join(''));
+    projects.current.mockResolvedValue({ revision: 1 }); projects.version.mockResolvedValue({ snapshot: { files: previous } });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ design: design(), label: 'New direction', edits: [], appends: [], files: files() }) }] }] })));
+    await service.generate('m', 's', { ...input, revision: 1, instruction: 'Make the site completely different' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[1].text).toContain('Stock pattern: 3 sections');
+    expect(projects.save).toHaveBeenCalledTimes(1);
+  });
   it('does not add a source repair when planning already used the shared repair allowance', async () => {
     jest.mocked(SourceDesignPlanner.prototype.explore).mockRestore();
     const { service, projects } = setup();

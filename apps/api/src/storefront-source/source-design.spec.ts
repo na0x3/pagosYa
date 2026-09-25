@@ -1,4 +1,5 @@
 import { relaxSourceTracking, validateSourcePresentation, adoptTrailingDesignSections, savedSourceDesign,sourceDesignExploration, SOURCE_DESIGN_CONTRACT, validateSourceDesign, validateSourceDesignImplementation , SOURCE_PRODUCT_PAGE_STYLES } from './source-design';
+import { sourceDesignSchema, sourceEyebrowNote, sourceEyebrowSections, SOURCE_STOCK_PATTERNS } from './source-design';
 import { validDna } from './fixtures/dna';
 
 const proposal = () => ({ selected: 1, concepts: ['Market', 'Workshop', 'Object'].map(name => ({
@@ -190,7 +191,7 @@ it('pins one eight-step spacing scale with a real gap contrast and a five-slot a
   expect(SOURCE_GAP_CONTRAST_MIN).toBe(6);
   expect(SOURCE_SPACING_SCALE_FACTOR).toEqual({ min: 0.85, max: 1.25 });
   expect(SOURCE_ACCENT_SLOTS).toHaveLength(5);
-  expect(SOURCE_ACCENT_SLOTS).toEqual(['announcement bar fill', 'rating marks', 'eyebrow text', 'selected-state ring or fill', 'primary action fill']);
+  expect(SOURCE_ACCENT_SLOTS).toEqual(['announcement bar fill', 'rating marks', 'small label text', 'selected-state ring or fill', 'primary action fill']);
   expect(SOURCE_HAIRLINES_PER_SCREEN_MAX).toBe(3);
   expect(SOURCE_MEDIA_TO_CONTROL_RADIUS).toEqual({ min: 1.2, max: 2 });
   expect(SOURCE_RHYTHM_DIRECTION).toContain('4 / 8 / 12 / 20 / 32 / 48 / 72 / 112');
@@ -257,5 +258,69 @@ describe('design DNA in concepts', () => {
     expect(validateSourceDesign(planned(), 1, true).concepts.every(concept => concept.dna)).toBe(true);
     expect(validateSourceDesign(proposal(), 1).concepts.some(concept => 'dna' in concept)).toBe(false);
     expect(SOURCE_PRODUCT_PAGE_STYLES).toEqual(['editorial', 'dense', 'image-led', 'story-led']);
+  });
+});
+
+describe('no stock patterns by default', () => {
+  const planned = () => {
+    const value = proposal() as any;
+    for (const concept of value.concepts) {
+      concept.layout = { sections: ['opening', 'menu'], catalogSection: 'menu', standaloneIntro: true, productsInOpening: false };
+      concept.story = { promise: 'A clear reason to visit', eyebrow: '', headline: `${concept.name} para compartir hoy`, support: 'Una propuesta breve y clara.', primaryAction: 'Ver menú', beats: [
+        { section: 'opening', role: 'opening', headline: 'Empieza por una pausa', media: 'hero' },
+        { section: 'menu', role: 'offer', headline: 'Elige algo rico', media: 'product' },
+      ] };
+      concept.motion = { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [] };
+    }
+    return value;
+  };
+
+  it('accepts an empty eyebrow in the schema and the validator, and keeps it empty', () => {
+    const story = (sourceDesignSchema.properties.concepts.items.properties as any).story;
+    expect(story.required).toContain('eyebrow');
+    expect(story.properties.eyebrow.minLength).toBe(0);
+    const checked = validateSourceDesign(planned(), 1, true, true);
+    expect(checked.concepts[1].story?.eyebrow).toBe('');
+    const missing = planned(); delete missing.concepts[1].story.eyebrow;
+    expect(validateSourceDesign(missing, 1, true, true).concepts[1].story?.eyebrow).toBe('');
+    const long = planned(); long.concepts[1].story.eyebrow = 'x'.repeat(41);
+    expect(() => validateSourceDesign(long, 1, true, true)).toThrow('story');
+  });
+
+  it('stops asking for an eyebrow and names the stock patterns to avoid', () => {
+    expect(SOURCE_DESIGN_CONTRACT).not.toMatch(/opening eyebrow/);
+    for (const pattern of ['uppercase eyebrow above every heading', 'centred hero with two buttons', 'three icon-and-text columns', 'Why choose us', 'testimonial carousel without real reviews']) {
+      expect(SOURCE_STOCK_PATTERNS).toContain(pattern);
+    }
+    expect(SOURCE_DESIGN_CONTRACT).toContain(SOURCE_STOCK_PATTERNS);
+    expect(SOURCE_TYPE_ROLE_DIRECTION).not.toMatch(/label: eyebrows/);
+  });
+});
+
+describe('soft eyebrow counter', () => {
+  const css = '.kicker-ish{font-size:12px;text-transform:uppercase;letter-spacing:.14em} .tag{text-transform:uppercase} .note{letter-spacing:0.2em;text-transform:uppercase;font-size:2rem}';
+  const html = `<main>
+    <section id="a"><p class="kicker-ish">Desde 1998</p><h2>Pan de masa madre</h2></section>
+    <section id="b"><span class="section-eyebrow">Hecho aquí</span><h2>Nuestro horno</h2></section>
+    <section id="c"><h2>Visítanos</h2><p class="kicker-ish">Abierto hoy</p></section>
+    <section id="d"><p class="tag">Nuevo</p><h3>Sin tracking</h3></section>
+    <section id="e"><p class="note">Grande</p><h2>Demasiado grande para ser eyebrow</h2></section>
+  </main>`;
+  const tsx = 'export default function Home(){return <main><section id="x"><Eyebrow>Temporada</Eyebrow><Heading>Hola</Heading></section><section id="y"><Hero eyebrow="Recién hecho" title="Pan"/></section></main>}';
+
+  it('counts sections whose heading is preceded by an eyebrow-like label', () => {
+    expect(sourceEyebrowSections([{ path: 'styles.css', content: css }, { path: 'index.html', content: html }])).toBe(2);
+    expect(sourceEyebrowSections([{ path: 'components/home.tsx', content: tsx }])).toBe(2);
+    expect(sourceEyebrowSections([{ path: 'styles.css', content: css }, { path: 'index.html', content: html }, { path: 'components/home.tsx', content: tsx }])).toBe(4);
+  });
+
+  it('adds guidance only above two sections, and never throws', () => {
+    expect(sourceEyebrowNote([{ path: 'styles.css', content: css }, { path: 'index.html', content: html }])).toBeNull();
+    const note = sourceEyebrowNote([{ path: 'styles.css', content: css }, { path: 'index.html', content: html }, { path: 'components/home.tsx', content: tsx }]);
+    expect(note).toContain('4 sections');
+    for (const broken of ['<section><h2', '<section class="', '{{{', '.a{text-transform:uppercase;letter-spacing:', '']) {
+      expect(() => sourceEyebrowNote([{ path: 'styles.css', content: broken }, { path: 'index.html', content: broken }])).not.toThrow();
+    }
+    expect(sourceEyebrowNote([{ path: 'assets/x.png', content: 'AAAA', encoding: 'base64' }])).toBeNull();
   });
 });

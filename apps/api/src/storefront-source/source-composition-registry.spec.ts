@@ -151,3 +151,11 @@ describe('signature scenes reach the recipe', () => {
     expect(all.filter(direction => direction.fx === 'none').length).toBeLessThan(all.length * 0.7);
   });
 });
+
+describe('no stock eyebrow in the examples a model copies', () => {
+  it('never hands a recipe an eyebrow prop', () => {
+    for (const family of SOURCE_COMPOSITION_FAMILIES) for (const direction of family.directions) {
+      expect(sourceUiCompositionRecipe({ ...direction, family: family.id, direction: direction.direction })).not.toMatch(/eyebrow/i);
+    }
+  });
+});
