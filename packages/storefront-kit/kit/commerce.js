@@ -29,7 +29,23 @@
     ...Object.entries(MOTION_TOKENS).map(([name, t]) => `:root[data-dna-motion=${name}]{--motion-ease:${t.ease};--motion-ease-settle:${t.settle};--motion-ease-exit:${t.exit};--motion-ease-settle-exit:${t.settleExit};--motion-fast:${t.fast}ms;--motion-base:${t.base}ms;--motion-slow:${t.slow}ms;--motion-distance:${t.distance}px;--motion-stagger:${t.stagger}ms;--motion-parallax:${t.parallax};--motion-press-scale:${t.press}}`),
     /* The kit's long-referenced but never-defined eases become the personality's settle curve. */
     ':root[data-dna-motion]{--ease-out:var(--motion-ease-settle);--ease-drawer:var(--motion-ease-settle)}',
+    /* Leaving: panels on the settle exit curve (never anticipates), the notice's slide on the exit curve. */
+    ':root[data-dna-motion] .cart-drawer:not([open]){transition-timing-function:var(--motion-ease-settle-exit)}',
+    ':root[data-dna-motion] .cart-added:not([data-visible=true]){transition:opacity var(--motion-fast) var(--motion-ease-settle-exit),transform var(--motion-fast) var(--motion-ease-exit),visibility var(--motion-fast) linear}',
+    /* The ribbon hangs from a screen edge: an overshoot would open a gap above it. */
+    ':root[data-dna-added=ribbon] .cart-added{--motion-ease:var(--motion-ease-settle);--motion-ease-exit:var(--motion-ease-settle-exit)}',
   ];
+  const MOTION_TOKEN_NAMES = { ease: '--motion-ease', settle: '--motion-ease-settle', exit: '--motion-ease-exit', settleExit: '--motion-ease-settle-exit', fast: '--motion-fast', base: '--motion-base', slow: '--motion-slow', distance: '--motion-distance', stagger: '--motion-stagger', parallax: '--motion-parallax', press: '--motion-press-scale' };
+  /* One token for WAAPI, which cannot read the cascade: the store's own --motion-* value (computed), else the personality's
+   * table value, else the use site's literal (today's value). */
+  function motionValue(name, fallback) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(MOTION_TOKEN_NAMES[name]).trim();
+    if (raw && typeof fallback === 'string') return raw;
+    const number = raw.match(/^(-?\d*\.?\d+)(ms|s|px)?$/);
+    if (number) return Number(number[1]) * (number[2] === 's' ? 1000 : 1);
+    const personality = document.documentElement.getAttribute('data-dna-motion');
+    return Object.hasOwn(MOTION_TOKENS, personality ?? '') ? MOTION_TOKENS[personality][name] : fallback;
+  }
   // product is the one exception: render() sets it from productPageStyle(), the page this kit actually draws.
   const hasDna = Boolean(config.dna && typeof config.dna === 'object');
   if (hasDna) {
@@ -1250,9 +1266,13 @@
     // The confirmation remains visible with reduced motion or motion explicitly off.
     if (!keyboard && config.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const targets = [button, ...document.querySelectorAll('[data-cart-count]')];
+      const duration = motionValue('fast', 200), scale = motionValue('press', .96);
+      const ease = motionValue('ease', 'cubic-bezier(.23,1,.32,1)'), settle = motionValue('settle', 'cubic-bezier(.23,1,.32,1)');
       for (const target of targets) if (target.isConnected && target.animate) {
         target.getAnimations().forEach(animation => animation.cancel());
-        target.animate([{ transform: 'scale(0.96)', opacity: 0.65 }, { transform: 'scale(1)', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' });
+        // Two animations so a playful overshoot moves only the scale; the fade always settles.
+        target.animate([{ transform: `scale(${scale})` }, { transform: 'scale(1)' }], { duration, easing: ease });
+        target.animate([{ opacity: .65 }, { opacity: 1 }], { duration, easing: settle });
       }
     }
   }
@@ -1260,7 +1280,7 @@
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
   // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
   shoppingStyle.textContent = `@layer pagosya-commerce {
-    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform 250ms var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),display 250ms allow-discrete,overlay 250ms allow-discrete}
+    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
     .pagosya-secure-note{margin:12px 0 0;font-size:13px;opacity:.78}
     .pagosya-policies{display:flex;flex-wrap:wrap;gap:4px 16px;margin:12px 0 0}.cart-drawer>.pagosya-policies{padding:0 24px 20px}
@@ -1309,7 +1329,7 @@
     .cart-drawer .checkout-button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:52px;padding:16px 20px;border:0;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))}
     .cart-drawer button:disabled{opacity:.5;cursor:default}.cart-drawer__continue{display:block;margin:0 auto 32px;border:0;background:transparent;text-decoration:underline;text-underline-offset:4px}
     .cart-drawer :focus-visible,.cart-added :focus-visible{outline:3px solid currentColor;outline-offset:3px}
-    .cart-added{position:fixed;inset:auto 24px 24px auto;z-index:2147483001;display:flex;align-items:center;gap:20px;max-width:min(480px,calc(100vw - 48px));padding:12px 16px;background:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));color:var(--store-background,var(--brand-background,var(--paper,#fff)));font:inherit;box-shadow:0 8px 24px #0002;opacity:0;transform:translateY(12px);visibility:hidden;transition:opacity 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),transform 200ms var(--ease-out,cubic-bezier(.23,1,.32,1)),visibility 200ms}
+    .cart-added{position:fixed;inset:auto 24px 24px auto;z-index:2147483001;display:flex;align-items:center;gap:20px;max-width:min(480px,calc(100vw - 48px));padding:12px 16px;background:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));color:var(--store-background,var(--brand-background,var(--paper,#fff)));font:inherit;box-shadow:0 8px 24px #0002;opacity:0;transform:translateY(12px);visibility:hidden;transition:opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),transform var(--motion-fast,200ms) var(--motion-ease,var(--ease-out,cubic-bezier(.23,1,.32,1))),visibility var(--motion-fast,200ms)}
     .cart-added[data-visible=true]{opacity:1;transform:translateY(0);visibility:visible}.cart-added span{overflow-wrap:anywhere}.cart-added button{flex-shrink:0;min-height:44px;background:transparent;border:0;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:4px}
     @media(max-width:700px){.cart-drawer{width:100vw}.cart-drawer__header{padding:20px}.cart-drawer__body{padding:8px 20px 24px}.cart-added{inset:auto 12px 12px;max-width:none;gap:12px}}
     .cart-drawer[data-instant=true],.cart-added[data-instant=true]{transition:none}[data-cart-count]{display:inline-block}
@@ -1864,7 +1884,7 @@
   const dnaButtonRules = (buttons, steppers) => [
     /* Primary pay, checkout and buy buttons (.checkout-button) keep their full size (52px cart, 48px checkout and product) and padding. */
     `:root[data-dna-button] ${buttons}:not(.checkout-button){min-height:44px;padding:var(--kit-btn-pad)}`,
-    `:root[data-dna-button] ${buttons}{border:var(--kit-btn-border);border-radius:var(--kit-btn-radius);background:var(--kit-btn-bg);color:var(--kit-btn-fg);text-transform:var(--kit-btn-case);font-variant-caps:var(--kit-btn-caps,normal);letter-spacing:var(--kit-btn-tracking);text-decoration:var(--kit-btn-decor);clip-path:var(--kit-btn-clip);box-shadow:var(--kit-btn-shadow);transition:transform 160ms var(--kit-ease),box-shadow 160ms var(--kit-ease),background-position 480ms var(--kit-ease),background-size 240ms var(--kit-ease),filter 160ms}`,
+    `:root[data-dna-button] ${buttons}{border:var(--kit-btn-border);border-radius:var(--kit-btn-radius);background:var(--kit-btn-bg);color:var(--kit-btn-fg);text-transform:var(--kit-btn-case);font-variant-caps:var(--kit-btn-caps,normal);letter-spacing:var(--kit-btn-tracking);text-decoration:var(--kit-btn-decor);clip-path:var(--kit-btn-clip);box-shadow:var(--kit-btn-shadow);transition:transform var(--motion-fast,160ms) var(--motion-ease,var(--kit-ease)),box-shadow var(--motion-fast,160ms) var(--kit-ease),background-position var(--motion-slow,480ms) var(--kit-ease),background-size var(--motion-base,240ms) var(--kit-ease),filter var(--motion-fast,160ms)}`,
     `:root[data-dna-button] ${steppers}{border-radius:var(--kit-radius);border-width:max(var(--kit-border),1px)}`,
     /* Hover (and keyboard focus): never the only focus indicator. */
     dnaHover(buttons, 'lift', 'transform:translateY(-2px);box-shadow:var(--kit-btn-shadow),0 8px 18px -8px color-mix(in srgb,currentColor 60%,transparent)'),
@@ -1966,18 +1986,18 @@
     /* Catalog cards: framing, and how the card previews the product (hover, keyboard focus, long press on touch). */
     ':root[data-dna-frame=bleed]{--kit-photo-round:min(var(--kit-radius),28px)}:root[data-dna-frame=inset]{--kit-photo-round:min(var(--kit-radius),24px)}:root[data-dna-frame=rounded]{--kit-photo-round:18px}:root[data-dna-frame=arch]{--kit-photo-round:50% 50% 8px 8px / 42% 42% 8px 8px}:root[data-dna-frame=polaroid]{--kit-photo-round:2px}',
     ':root[data-dna-frame] .menu-item :is(.menu-item__image,.menu-item__image-alt){box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background-color:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
-    ':root[data-dna-card=second-photo] .menu-item__image-alt{position:absolute;z-index:0;top:0;left:0;width:100%;height:auto;object-fit:cover;opacity:0;pointer-events:none;transition:opacity 320ms var(--kit-ease)}',
+    ':root[data-dna-card=second-photo] .menu-item__image-alt{position:absolute;z-index:0;top:0;left:0;width:100%;height:auto;object-fit:cover;opacity:0;pointer-events:none;transition:opacity var(--motion-base,320ms) var(--kit-ease)}',
     '@media(hover:hover){:root[data-dna-card=second-photo] .menu-item:hover .menu-item__image-alt{opacity:1}}:root[data-dna-card=second-photo] .menu-item:is(:focus-within,[data-previewing]) .menu-item__image-alt{opacity:1}',
     ':root[data-dna-card=swatch-swap] .menu-item__swatches{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0}',
     ':root[data-dna-card=swatch-swap] .menu-item__swatches button{display:grid;place-items:center;width:36px;height:36px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer}',
     ':root[data-dna-card=swatch-swap] .menu-item__swatches span{display:block;width:22px;height:22px;overflow:hidden;border-radius:50%;background:var(--swatch,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 28%,transparent)}:root[data-dna-card=swatch-swap] .menu-item__swatches img{display:block;width:100%;height:100%;object-fit:cover}',
     ':root[data-dna-card=swatch-swap] .menu-item__swatches button[aria-pressed=true] span{box-shadow:0 0 0 2px var(--kit-paper),0 0 0 3.5px currentColor}:root[data-dna-card=swatch-swap] .menu-item__swatches button:focus-visible{outline:2px solid currentColor;outline-offset:1px}',
-    ':root[data-dna-card=zoom] .menu-item__image{clip-path:inset(0 round var(--kit-photo-round,0px));transition:transform 600ms var(--kit-ease),clip-path 600ms var(--kit-ease)}',
+    ':root[data-dna-card=zoom] .menu-item__image{clip-path:inset(0 round var(--kit-photo-round,0px));transition:transform var(--motion-slow,600ms) var(--motion-ease,var(--kit-ease)),clip-path var(--motion-slow,600ms) var(--kit-ease)}',
     '@media(hover:hover){:root[data-dna-card=zoom] .menu-item:hover .menu-item__image{transform:scale(1.08);clip-path:inset(3.7% round var(--kit-photo-round,0px))}}:root[data-dna-card=zoom] .menu-item:focus-within .menu-item__image{transform:scale(1.08);clip-path:inset(3.7% round var(--kit-photo-round,0px))}',
-    ':root[data-dna-card=quick-look] .menu-item__quick-look{position:absolute;z-index:3;top:calc(var(--look-top,0px) + 10px);left:calc(var(--look-left,100%) - 10px);right:auto;min-height:36px;margin:0;padding:6px 14px;border:1px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);color:var(--kit-ink);font:inherit;font-size:13px;line-height:1.2;cursor:pointer;opacity:0;transform:translate(-100%,-4px);transition:opacity 200ms var(--kit-ease),transform 200ms var(--kit-ease)}',
+    ':root[data-dna-card=quick-look] .menu-item__quick-look{position:absolute;z-index:3;top:calc(var(--look-top,0px) + 10px);left:calc(var(--look-left,100%) - 10px);right:auto;min-height:36px;margin:0;padding:6px 14px;border:1px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);color:var(--kit-ink);font:inherit;font-size:13px;line-height:1.2;cursor:pointer;opacity:0;transform:translate(-100%,-4px);transition:opacity var(--motion-fast,200ms) var(--kit-ease),transform var(--motion-fast,200ms) var(--motion-ease,var(--kit-ease))}',
     '@media(hover:hover){:root[data-dna-card=quick-look] .menu-item:hover .menu-item__quick-look{opacity:1;transform:translateX(-100%)}}:root[data-dna-card=quick-look] .menu-item:focus-within .menu-item__quick-look{opacity:1;transform:translateX(-100%)}@media(hover:none){:root[data-dna-card=quick-look] .menu-item__quick-look{opacity:1;transform:translateX(-100%)}}',
     ':root[data-dna-card=quick-look] .menu-item__quick-look:focus-visible{outline:3px solid currentColor;outline-offset:2px}',
-    ':root[data-dna-card=tilt] .menu-item{transition:transform 240ms var(--kit-ease)}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:perspective(900px) rotateX(var(--card-tilt-y,0deg)) rotateY(var(--card-tilt-x,0deg))}',
+    ':root[data-dna-card=tilt] .menu-item{transition:transform var(--motion-fast,240ms) var(--kit-ease)}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:perspective(900px) rotateX(var(--card-tilt-y,0deg)) rotateY(var(--card-tilt-x,0deg))}',
   ];
   const DNA_REDUCED_MOTION = `@media(prefers-reduced-motion:reduce){:root[data-dna-button] ${KIT_BUTTONS},:root[data-dna-cart] .cart-drawer,:root[data-dna-added] .cart-added,:root[data-dna-card] .menu-item,:root[data-dna-card] .menu-item :is(.menu-item__image,.menu-item__image-alt,.menu-item__quick-look){transition:none}:root[data-dna-card=tilt] .menu-item[data-tilting]{transform:none}}`;
   const DNA_PAGE_CSS = [

@@ -1,5 +1,7 @@
 jest.setTimeout(90_000);
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright';
 import { kitPath } from '@pagosya/storefront-kit';
 import { SOURCE_MOTION_TOKENS } from './source-motion-tokens';
@@ -7,6 +9,9 @@ import { SOURCE_MOTION_TOKENS } from './source-motion-tokens';
 /** Sub-project 6: the store's motion personality (html[data-dna-motion]) drives the kit's timing through --motion-* tokens.
  * jsdom drops any stylesheet with @layer, so the resolved tokens and transitions are read in Chromium. */
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
+const motionRuntime = readFileSync(kitPath('motion.js'), 'utf8');
+const ui = readFileSync(kitPath('ui.tsx'), 'utf8');
+const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
 const ITEM = { id: 'taza', name: 'Taza', amount: 12000, currency: 'BOB', stock: 5, imageUrls: [] };
 const DNA = { version: 1, button: 'pill', hover: 'lift', press: 'squash', radius: 'round', border: 'hairline', frame: 'rounded', cart: 'drawer', added: 'toast', review: 'split', card: 'still' };
 const CATALOG = '<header><button type="button" data-cart-open>Pedido <span data-cart-count>0</span></button></header><section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p>';
@@ -63,6 +68,119 @@ describe('motion tokens resolve through the kit CSS', () => {
       try {
         expect({ dna: dna ? 'dna' : 'none', tokens: await rootTokens(page, ['--motion-base', '--motion-ease', '--ease-out', '--ease-drawer']) })
           .toEqual({ dna: dna ? 'dna' : 'none', tokens: { '--motion-base': '', '--motion-ease': '', '--ease-out': '', '--ease-drawer': '' } });
+      } finally { await page.close(); }
+    }
+  });
+});
+
+/** jsdom: records every animate() call the kit makes when a product is added with a pointer. */
+function addWithPointer(options: { dna?: Record<string, unknown>; reduce?: boolean; settings?: Record<string, unknown> } = {}) {
+  const dom = new JSDOM(`<html><head></head><body>${CATALOG}</body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
+  const w = dom.window;
+  w.HTMLElement.prototype.scrollIntoView = () => {};
+  w.matchMedia = (query: string) => ({ matches: /reduce/.test(query) ? Boolean(options.reduce) : /hover/.test(query), addEventListener() {}, removeEventListener() {} });
+  const calls: Array<{ el: string; keyframes: Keyframe[]; options: KeyframeAnimationOptions }> = [];
+  w.Element.prototype.animate = function (keyframes: Keyframe[], timing: KeyframeAnimationOptions) {
+    calls.push({ el: this.matches('[data-cart-count]') ? 'count' : this.tagName.toLowerCase(), keyframes, options: timing });
+    return { cancel() {}, finish() {}, pause() {}, play() {}, finished: Promise.resolve() };
+  };
+  w.Element.prototype.getAnimations = () => [];
+  w.PAGOSYA_PREVIEW = true;
+  const data = { storeName: 'Marca', items: [ITEM] };
+  w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...(options.dna ? { dna: options.dna } : {}), ...options.settings };
+  w.fetch = jest.fn(async () => ({ ok: true, json: async () => data }));
+  w.eval(commerce);
+  const add = w.document.querySelector('[data-pagosya-catalog] [data-add]');
+  add.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+  w.close();
+  return calls;
+}
+
+describe('the add pulse takes the personality', () => {
+  const pulse = (calls: ReturnType<typeof addWithPointer>) => calls.filter(call => call.el === 'button');
+  it('without a personality it is today\'s pulse: 200ms from scale .96 and opacity .65 on cubic-bezier(.23,1,.32,1)', () => {
+    for (const dna of [undefined, DNA]) {
+      const calls = pulse(addWithPointer({ dna }));
+      expect(calls.map(c => [c.keyframes, c.options])).toEqual([
+        [[{ transform: 'scale(0.96)' }, { transform: 'scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }],
+        [[{ opacity: 0.65 }, { opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }],
+      ]);
+    }
+  });
+  it.each(PERSONALITIES)('%s: fast duration, press scale; the transform takes the enter curve, the opacity the settle curve', personality => {
+    const t = SOURCE_MOTION_TOKENS[personality];
+    const calls = pulse(addWithPointer({ dna: { ...DNA, motion: personality } }));
+    expect(calls.map(c => [c.keyframes, c.options])).toEqual([
+      [[{ transform: `scale(${t.press})` }, { transform: 'scale(1)' }], { duration: t.fast, easing: t.ease }],
+      [[{ opacity: 0.65 }, { opacity: 1 }], { duration: t.fast, easing: t.settle }],
+    ]);
+  });
+  it('pulses the cart count too', () => {
+    expect(addWithPointer({ dna: { ...DNA, motion: 'snappy' } }).filter(call => call.el === 'count')).toHaveLength(2);
+  });
+});
+
+describe('overshoot stays on transforms', () => {
+  it('every var(--motion-ease) or var(--motion-ease-exit) in kit CSS times a transform, never another property', () => {
+    for (const [file, source] of [['commerce.js', commerce], ['motion.js', motionRuntime], ['ui.tsx', ui]] as const) {
+      const uses = [...source.matchAll(/var\(--motion-ease(?:-exit)?[,)]/g)];
+      for (const use of uses) {
+        const before = source.slice(Math.max(0, use.index! - 120), use.index);
+        const property = before.match(/([a-z-]+)\s+var\(--motion-(?:fast|base|slow)(?:,[^()]*(?:\([^()]*\))?)?\)\s+$/)?.[1];
+        expect({ file, at: before.slice(-60), property }).toEqual({ file, at: before.slice(-60), property: 'transform' });
+      }
+    }
+  });
+});
+
+describe('kit transitions take the personality in the browser', () => {
+  const timing = (page: Page, selector: string) => page.evaluate(selector => {
+    const style = getComputedStyle(document.querySelector(selector)!);
+    return { duration: style.transitionDuration, easing: style.transitionTimingFunction };
+  }, selector);
+  it('the cart drawer keeps today\'s 250/200ms without a personality and follows it with one', async () => {
+    for (const [dna, duration] of [[undefined, '0.25s, 0.2s, 0.25s, 0.25s'], [DNA, '0.25s, 0.2s, 0.25s, 0.25s'], [{ ...DNA, motion: 'cinematic' }, '0.52s, 0.26s, 0.52s, 0.52s'], [{ ...DNA, motion: 'snappy' }, '0.2s, 0.12s, 0.2s, 0.2s']] as const) {
+      const page = await open({ dna });
+      try {
+        await page.waitForSelector('.menu-add');
+        expect({ dna: (dna as any)?.motion ?? String(Boolean(dna)), duration: (await timing(page, '.cart-drawer')).duration }).toEqual({ dna: (dna as any)?.motion ?? String(Boolean(dna)), duration });
+      } finally { await page.close(); }
+    }
+  });
+  it('the cart drawer never overshoots, not even for playful, and closes on the settle exit curve', async () => {
+    const page = await open({ dna: { ...DNA, motion: 'playful' } });
+    try {
+      await page.waitForSelector('.menu-add');
+      expect((await timing(page, '.cart-drawer')).easing).toBe('cubic-bezier(0.5, 0, 0.75, 0)'); // one curve, repeated for every transitioned property
+      await page.click('[data-cart-open]');
+      await page.waitForSelector('.cart-drawer[open]');
+      expect((await timing(page, '.cart-drawer')).easing).toBe('cubic-bezier(0.22, 1, 0.36, 1), cubic-bezier(0.22, 1, 0.36, 1), ease, ease');
+    } finally { await page.close(); }
+  });
+  it('the added notice keeps 200ms without a personality and takes the fast token with one', async () => {
+    for (const [dna, duration] of [[undefined, '0.2s, 0.2s, 0.2s'], [{ ...DNA, motion: 'snappy' }, '0.12s, 0.12s, 0.12s']] as const) {
+      const page = await open({ dna });
+      try {
+        await page.waitForSelector('.menu-add');
+        expect((await timing(page, '.cart-added')).duration).toBe(duration);
+      } finally { await page.close(); }
+    }
+  });
+  it('the playful notice slides on its overshoot curves, except the ribbon, which hangs from the screen edge', async () => {
+    for (const [added, easing] of [['toast', 'cubic-bezier(0.5, 0, 0.75, 0), cubic-bezier(0.36, 0, 0.66, -0.56), linear'], ['ribbon', 'cubic-bezier(0.5, 0, 0.75, 0), cubic-bezier(0.5, 0, 0.75, 0), linear']] as const) {
+      const page = await open({ dna: { ...DNA, added, motion: 'playful' } });
+      try {
+        await page.waitForSelector('.menu-add');
+        expect({ added, easing: (await timing(page, '.cart-added')).easing }).toEqual({ added, easing });
+      } finally { await page.close(); }
+    }
+  });
+  it('the DNA button transitions keep their literals without a personality and follow it with one', async () => {
+    for (const [dna, duration] of [[DNA, '0.16s, 0.16s, 0.48s, 0.24s, 0.16s'], [{ ...DNA, motion: 'snappy' }, '0.12s, 0.12s, 0.32s, 0.2s, 0.12s']] as const) {
+      const page = await open({ dna });
+      try {
+        await page.waitForSelector('.menu-add');
+        expect((await timing(page, '.menu-add')).duration).toBe(duration);
       } finally { await page.close(); }
     }
   });
