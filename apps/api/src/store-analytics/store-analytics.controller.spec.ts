@@ -21,10 +21,10 @@ describe('POST v1/stores/public/:slug/events', () => {
   afterAll(() => app.close());
   beforeEach(() => ingest.mockClear());
 
-  it('answers 202 and hands the raw body, the user agent and the GPC signal to the service', async () => {
+  it('answers 202 and hands the raw body, the user agent, the GPC signal and the Origin to the service', async () => {
     const body = { sessionId: SESSION, events: [{ type: 'page_view', email: 'a@b.co' }], extra: true };
-    await request(app.getHttpServer()).post('/v1/stores/public/shop/events').set('User-Agent', 'UA/1').set('Sec-GPC', '1').send(body).expect(202, { accepted: 1 });
-    expect(ingest).toHaveBeenCalledWith('shop', body, { userAgent: 'UA/1', gpc: true });
+    await request(app.getHttpServer()).post('/v1/stores/public/shop/events').set('User-Agent', 'UA/1').set('Sec-GPC', '1').set('Origin', 'https://pay.pagosya.test').send(body).expect(202, { accepted: 1 });
+    expect(ingest).toHaveBeenCalledWith('shop', body, { userAgent: 'UA/1', gpc: true, origin: 'https://pay.pagosya.test' });
   });
 
   it('is throttled to 30 requests a minute', () => {

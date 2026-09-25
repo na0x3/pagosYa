@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,10 +7,13 @@ import { addDays, boliviaDay, boliviaDayStart, dayCount } from './store-analytic
 import { buildAnalyticsReport, ROLLUP_ALL } from './store-analytics-report';
 import { ANALYTICS_RETENTION_MONTHS, ANALYTICS_SESSION_DAILY_CAP, ANALYTICS_SESSION_DAILY_PAGE_VIEW_CAP } from './store-analytics.constants';
 
-export type IngestContext = { userAgent?: string; gpc?: boolean };
+/** `origin` is the request's Origin header: a browser always sends it on this cross-origin POST. */
+export type IngestContext = { userAgent?: string; gpc?: boolean; origin?: string };
 const PRUNE_BATCH = 5000;
 const MAX_REPORT_DAYS = 400;
 const DEFAULT_DAILY_CAP = 50_000;
+/** The checkout app in development (configuration.ts adds the 127.0.0.1 alias the same way). */
+const DEFAULT_ORIGINS = ['http://localhost:5174', 'http://127.0.0.1:5174'];
 /** How long an instance trusts its own count of a store's day before reading the table again. */
 const BUDGET_RESYNC_MS = 5 * 60_000;
 /** Report days are real calendar days in these years (the query DTO pins the same bounds). */
@@ -53,12 +56,25 @@ export class StoreAnalyticsService {
     return allowed;
   }
 
+  /**
+   * Stores are shown by the checkout app, on its own origin or on the store's custom domain, so a browser request from
+   * any other page is refused. No Origin means no browser (a script can forge anything anyway: the daily ceiling and
+   * the rollup's per-session cap bound what it can do).
+   */
+  private async originAllowed(storeId: string, origin: string): Promise<boolean> {
+    if ((this.config?.get<string[]>('app.corsOrigins') ?? DEFAULT_ORIGINS).includes(origin)) return true;
+    let hostname: string;
+    try { const url = new URL(origin); if (url.protocol !== 'https:' || url.origin !== origin) return false; hostname = url.hostname; } catch { return false; }
+    return !!await this.prisma.customDomain.findFirst({ where: { storeId, hostname, status: 'ACTIVE' }, select: { id: true } });
+  }
+
   /** Consent is enforced in the browser (the host page sends nothing without it); GPC is honoured here too. */
   async ingest(slug: string, body: unknown, context: IngestContext = {}): Promise<{ accepted: number }> {
     const batch = normalizeAnalyticsBatch(body);
     // The funnel's eligibility: only a live, published, unpaused store collects anything.
     const store = await this.prisma.store.findFirst({ where: { slug, status: 'ACTIVE', sourcePublicationPaused: false, publishedSourceRevision: { not: null } }, select: { id: true } });
     if (!store) throw new NotFoundException('Tienda no publicada');
+    if (context.origin !== undefined && !await this.originAllowed(store.id, context.origin)) throw new ForbiddenException('Origen no permitido');
     if (context.gpc || !batch.events.length) return { accepted: 0 };
     const ids = [...new Set(batch.events.map(event => event.productId).filter((id): id is string => !!id))];
     const known = new Set(ids.length ? (await this.prisma.paymentLink.findMany({ where: { storeId: store.id, id: { in: ids } }, select: { id: true } })).map(product => product.id) : []);

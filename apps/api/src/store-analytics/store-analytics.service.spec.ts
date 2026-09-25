@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { StoreAnalyticsService } from './store-analytics.service';
 
 const SESSION = '3b241101-e2bb-4255-8caf-4136c566a962';
@@ -8,6 +8,7 @@ function fakePrisma() {
   return {
     store: { findFirst: jest.fn().mockResolvedValue({ id: 's1' }) },
     paymentLink: { findMany: jest.fn().mockResolvedValue([{ id: 'lamp' }]) },
+    customDomain: { findFirst: jest.fn().mockResolvedValue(null) },
     storeAnalyticsEvent: { createMany: jest.fn().mockResolvedValue({ count: 0 }), count: jest.fn().mockResolvedValue(0) },
   };
 }
@@ -119,5 +120,37 @@ describe('StoreAnalyticsService.ingest daily ceiling', () => {
   it('defaults to 50 000 events a store a day', async () => {
     const prisma = fakePrisma(); prisma.storeAnalyticsEvent.count.mockResolvedValue(49_999);
     await expect(new StoreAnalyticsService(prisma as never).ingest('shop', pageViews(3))).resolves.toEqual({ accepted: 1 });
+  });
+});
+
+describe('StoreAnalyticsService.ingest origin check', () => {
+  const batch = { sessionId: SESSION, events: [{ type: 'page_view' }] };
+  const make = () => {
+    const prisma = fakePrisma();
+    return { prisma, service: new StoreAnalyticsService(prisma as never, config({ 'app.corsOrigins': ['https://pay.pagosya.test'] }) as never) };
+  };
+
+  it('accepts a request from the checkout origin, or with no Origin at all', async () => {
+    const { prisma, service } = make();
+    await expect(service.ingest('shop', batch, { origin: 'https://pay.pagosya.test' })).resolves.toEqual({ accepted: 1 });
+    await expect(service.ingest('shop', batch, {})).resolves.toEqual({ accepted: 1 });
+    expect(prisma.customDomain.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('accepts the store\'s own active custom domain', async () => {
+    const { prisma, service } = make();
+    prisma.customDomain.findFirst.mockResolvedValue({ id: 'd1' });
+    await expect(service.ingest('shop', batch, { origin: 'https://tienda.example.bo' })).resolves.toEqual({ accepted: 1 });
+    expect(prisma.customDomain.findFirst).toHaveBeenCalledWith({ where: { storeId: 's1', hostname: 'tienda.example.bo', status: 'ACTIVE' }, select: { id: true } });
+  });
+
+  it.each([
+    ['another site', 'https://evil.example'],
+    ['an opaque (sandboxed) origin', 'null'],
+    ['a plain-http look-alike of the checkout', 'http://pay.pagosya.test'],
+  ])('refuses %s and stores nothing', async (_name, origin) => {
+    const { prisma, service } = make();
+    await expect(service.ingest('shop', batch, { origin })).rejects.toThrow(ForbiddenException);
+    expect(prisma.storeAnalyticsEvent.createMany).not.toHaveBeenCalled();
   });
 });

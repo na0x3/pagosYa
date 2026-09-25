@@ -19,8 +19,8 @@ class AnalyticsQuery {
 export class StoreAnalyticsPublicController {
   constructor(private readonly analytics: StoreAnalyticsService) {}
   @Post() @HttpCode(202) @Throttle({ default: { limit: 30, ttl: 60000 } })
-  record(@Param('slug') slug: string, @Body() body: Record<string, unknown>, @Headers('user-agent') userAgent?: string, @Headers('sec-gpc') gpc?: string) {
-    return this.analytics.ingest(slug, body, { userAgent, gpc: gpc === '1' });
+  record(@Param('slug') slug: string, @Body() body: Record<string, unknown>, @Headers('user-agent') userAgent?: string, @Headers('sec-gpc') gpc?: string, @Headers('origin') origin?: string) {
+    return this.analytics.ingest(slug, body, { userAgent, gpc: gpc === '1', origin });
   }
 }
 
