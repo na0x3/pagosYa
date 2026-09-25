@@ -29,7 +29,8 @@ export type CobroView =
   | {
       kind: string;
       numberLabel: string;
-      status: "SENT" | "VIEWED" | "OVERDUE" | "PAID" | "EXPIRED" | string;
+      /** SENT, VIEWED, OVERDUE, PAID or EXPIRED. */
+      status: string;
       version: number;
       sentAt: string | null;
       updatedAfterFirstSend: boolean;
@@ -43,7 +44,7 @@ export type CobroView =
   | { kind: string; numberLabel: string; title: string; status: "VOIDED"; voidedAt: string | null; store: StoreView };
 
 const ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-const esc = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (char) => ESCAPES[char]);
+const esc = (value: string | number | null | undefined) => String(value ?? "").replace(/[&<>"']/g, (char) => ESCAPES[char]);
 
 export function cobroMoney(amount: number, currency: string): string {
   const figure = new Intl.NumberFormat("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount / 100);

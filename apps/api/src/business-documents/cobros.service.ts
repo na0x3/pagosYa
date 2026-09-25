@@ -1,6 +1,6 @@
 import { ConflictException, HttpException, Inject, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { BusinessDocumentStatus, MerchantStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
+import { BusinessDocumentStatus, MerchantStatus, PaymentIntentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
