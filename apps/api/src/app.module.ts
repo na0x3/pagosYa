@@ -40,6 +40,7 @@ import { CollectionsModule } from "./collections/collections.module";
 import { FinancesModule } from "./finances/finances.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { DebtCollectionsModule } from "./debt-collections/debt-collections.module";
+import { BusinessDocumentsModule } from "./business-documents/business-documents.module";
 import { ConsumerModule } from "./consumer/consumer.module";
 // Store-level CRM, inventory, appointments, delivery, POS, and integrations.
 import { OperationsModule } from "./operations/operations.module";
@@ -109,6 +110,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     FinancesModule,
     UploadsModule,
     DebtCollectionsModule,
+    BusinessDocumentsModule,
     ConsumerModule,
     OperationsModule,
     CommercePlatformModule,

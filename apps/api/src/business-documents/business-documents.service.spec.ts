@@ -335,3 +335,105 @@ describe("BusinessDocumentsService — send", () => {
     expect(email.send).not.toHaveBeenCalled();
   });
 });
+
+describe("BusinessDocumentsService — void", () => {
+  it("voids a sent document with the reason in the timeline", async () => {
+    const { service, prisma } = setup();
+    const created = await service.create("m_1", "store_1", invoice);
+    await service.send("m_1", "store_1", created.id, { email: false });
+    const voided = await service.void("m_1", "store_1", created.id, { reason: "Duplicado" });
+    expect(voided).toEqual(expect.objectContaining({ status: "VOIDED", voidedAt: expect.any(Date) }));
+    expect(prisma.events.at(-1)).toEqual(expect.objectContaining({ type: "voided", version: 1, data: { reason: "Duplicado" } }));
+  });
+
+  it("refuses to void a paid, signed or already voided document", async () => {
+    const { service, prisma } = setup();
+    const created = await service.create("m_1", "store_1", invoice);
+    for (const status of ["PAID", "SIGNED", "VOIDED"]) {
+      prisma.documents[0].status = status;
+      await expect(service.void("m_1", "store_1", created.id, {})).rejects.toThrow(ConflictException);
+    }
+    await expect(service.void("m_2", "store_1", created.id, {})).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe("BusinessDocumentsService — public link", () => {
+  const context = { ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0" };
+  async function sent(service: BusinessDocumentsService) {
+    const created = await service.create("m_1", "store_1", invoice);
+    const result = await service.send("m_1", "store_1", created.id, { email: false });
+    return { id: created.id, token: result.publicUrl.split("/d/")[1] };
+  }
+
+  it("404s a bad token, another secret's token and a document never sent", async () => {
+    const { service } = setup();
+    const draft = await service.create("m_1", "store_1", invoice);
+    const draftToken = service.publicUrl(draft.id).split("/d/")[1];
+    await expect(service.publicView("nope", context)).rejects.toThrow(NotFoundException);
+    await expect(service.publicView(`${draftToken}x`, context)).rejects.toThrow(NotFoundException);
+    await expect(service.publicView(draftToken, context)).rejects.toThrow(NotFoundException);
+  });
+
+  it("shows the frozen version only, with no internal ids", async () => {
+    const { service, prisma } = setup();
+    const { id, token } = await sent(service);
+    // An unsent edit must not leak through the public link.
+    await service.update("m_1", "store_1", id, { title: "Borrador interno" });
+    const view = await service.publicView(token, context);
+    expect(view).toEqual({
+      kind: "INVOICE",
+      numberLabel: "COB-0001",
+      status: "VIEWED",
+      version: 1,
+      sha256: prisma.versions[0].sha256,
+      sentAt: expect.any(Date),
+      updatedAfterFirstSend: false,
+      store: { name: "Estudio Illimani", logoUrl: "/v1/uploads/logo.png" },
+      document: prisma.versions[0].content,
+    });
+    expect(view.document.title).toBe("Diseño de logo");
+    const serialized = JSON.stringify(view);
+    for (const internal of ["store_1", "m_1", id, "pl_", "cust_", "hola@illimani.bo"]) expect(serialized).not.toContain(internal);
+  });
+
+  it("records viewed once per version, with the viewer's IP and user agent", async () => {
+    const { service, prisma } = setup();
+    const { id, token } = await sent(service);
+    await service.publicView(token, context);
+    await service.publicView(token, { ipAddress: "10.0.0.2", userAgent: "Other" });
+    const viewed = () => prisma.events.filter((event) => event.type === "viewed");
+    expect(viewed()).toEqual([expect.objectContaining({ version: 1, ipAddress: "190.0.0.1", userAgent: "Mozilla/5.0", dedupeKey: "viewed:v1" })]);
+    expect(prisma.documents[0].viewedAt).toEqual(expect.any(Date));
+
+    await service.update("m_1", "store_1", id, { title: "Diseño de logo y tarjetas" });
+    await service.send("m_1", "store_1", id, { email: false });
+    expect(prisma.documents[0].status).toBe("SENT");
+    const second = await service.publicView(token, context);
+    expect(second).toEqual(expect.objectContaining({ version: 2, status: "VIEWED", updatedAfterFirstSend: true }));
+    expect(viewed().map((event) => event.version)).toEqual([1, 2]);
+  });
+
+  it("treats a concurrent duplicate view as already recorded", async () => {
+    const { service, prisma } = setup();
+    const { token } = await sent(service);
+    jest.spyOn(prisma.businessDocumentEvent, "create").mockRejectedValueOnce(Object.assign(new Error("dup"), { code: "P2002" }));
+    await expect(service.publicView(token, context)).resolves.toEqual(expect.objectContaining({ version: 1 }));
+  });
+
+  it("never moves a paid or voided document back to viewed", async () => {
+    const { service, prisma } = setup();
+    const { token } = await sent(service);
+    prisma.documents[0].status = "PAID";
+    expect((await service.publicView(token, context)).status).toBe("PAID");
+    expect(prisma.documents[0].status).toBe("PAID");
+  });
+
+  it("serves the frozen version as a PDF without recording a view", async () => {
+    const { service, prisma } = setup();
+    const { token } = await sent(service);
+    const pdf = await service.publicPdf(token);
+    expect(pdf.filename).toBe("COB-0001.pdf");
+    expect(pdf.buffer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(prisma.events.some((event) => event.type === "viewed")).toBe(false);
+  });
+});

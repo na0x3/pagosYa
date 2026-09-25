@@ -21,16 +21,21 @@ import {
   snapshotSha256,
   type DocumentSnapshot,
 } from "./business-document-snapshot";
-import { createDocumentLinkToken, DEVELOPMENT_DOCUMENT_LINK_SECRET } from "./document-link-token";
+import { createDocumentLinkToken, DEVELOPMENT_DOCUMENT_LINK_SECRET, readDocumentLinkToken } from "./document-link-token";
+import type { AcceptanceContext } from "../legal/terms-acceptance.service";
 import type {
   BusinessDocumentItemDto,
   CreateBusinessDocumentDto,
   ListBusinessDocumentsQueryDto,
   SendBusinessDocumentDto,
   UpdateBusinessDocumentDto,
+  VoidBusinessDocumentDto,
 } from "./dto/business-document.dto";
 
 const S = BusinessDocumentStatus;
+
+/** A paid cobro needs a refund and a signed contract is evidence: neither is voided here. */
+const NOT_VOIDABLE: BusinessDocumentStatus[] = [S.PAID, S.SIGNED, S.VOIDED];
 
 /** Accepted, signed, paid, declined, expired or voided documents are records, not drafts. */
 const FINAL: BusinessDocumentStatus[] = [S.ACCEPTED, S.SIGNED, S.PAID, S.DECLINED, S.EXPIRED, S.VOIDED];
@@ -234,6 +239,93 @@ export class BusinessDocumentsService {
       }
     }
     return { document: this.view(await this.load(storeId, id)), publicUrl, emailed };
+  }
+
+  async void(merchantId: string, storeId: string, id: string, dto: VoidBusinessDocumentDto) {
+    await this.ownedStore(merchantId, storeId);
+    const doc = await this.load(storeId, id);
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      // Conditional, so a payment or signature landing meanwhile is never voided over.
+      const { count } = await tx.businessDocument.updateMany({
+        where: { id, status: { notIn: NOT_VOIDABLE } },
+        data: { status: S.VOIDED, voidedAt: now },
+      });
+      if (!count) throw new ConflictException("Este documento ya no se puede anular");
+      await tx.businessDocumentEvent.create({
+        data: { documentId: id, type: "voided", version: doc.currentVersion || null, ...(dto.reason && { data: { reason: dto.reason } }) },
+      });
+    });
+    return this.view(await this.load(storeId, id));
+  }
+
+  // ── public link ───────────────────────────────────────────────────────
+
+  /**
+   * What the customer's link shows: the latest sent version exactly as frozen,
+   * plus the store's name and logo. Opening it records "viewed" once per version.
+   */
+  async publicView(token: string, context: AcceptanceContext) {
+    const { doc, version, snapshot } = await this.publicVersion(token);
+    const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true, logoUrl: true } });
+    const status = (await this.recordView(doc.id, version.version, context)) && doc.status === S.SENT ? S.VIEWED : doc.status;
+    return {
+      kind: doc.kind,
+      numberLabel: snapshot.numberLabel,
+      status,
+      version: version.version,
+      sha256: version.sha256,
+      sentAt: version.sentAt,
+      updatedAfterFirstSend: version.version > 1,
+      store: { name: store?.name ?? "", logoUrl: store?.logoUrl ?? null },
+      document: snapshot,
+    };
+  }
+
+  async publicPdf(token: string) {
+    const { doc, version, snapshot } = await this.publicVersion(token);
+    const store = await this.prisma.store.findUnique({ where: { id: doc.storeId }, select: { name: true } });
+    const buffer = await renderBusinessDocumentPdf({
+      storeName: store?.name ?? "",
+      numberLabel: snapshot.numberLabel,
+      version: version.version,
+      sha256: version.sha256,
+      snapshot,
+    });
+    return { buffer, filename: `${snapshot.numberLabel}.pdf` };
+  }
+
+  private async publicVersion(token: string) {
+    const notFound = () => new NotFoundException("No encontramos este documento");
+    const id = readDocumentLinkToken(token, this.secret());
+    if (!id) throw notFound();
+    const doc = await this.prisma.businessDocument.findUnique({
+      where: { id },
+      select: { id: true, storeId: true, kind: true, status: true, currentVersion: true },
+    });
+    // A never-sent draft answers exactly like a bad token.
+    if (!doc || doc.currentVersion < 1) throw notFound();
+    const version = await this.prisma.businessDocumentVersion.findUnique({
+      where: { documentId_version: { documentId: id, version: doc.currentVersion } },
+    });
+    if (!version) throw notFound();
+    return { doc, version, snapshot: version.content as unknown as DocumentSnapshot };
+  }
+
+  /** True when this call recorded the view; false when this version was already viewed. */
+  private async recordView(documentId: string, version: number, context: AcceptanceContext): Promise<boolean> {
+    try {
+      await this.prisma.businessDocumentEvent.create({
+        data: { documentId, type: "viewed", version, ipAddress: context.ipAddress, userAgent: context.userAgent, dedupeKey: `viewed:v${version}` },
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) return false;
+      throw error;
+    }
+    const now = new Date();
+    await this.prisma.businessDocument.updateMany({ where: { id: documentId, status: S.SENT }, data: { status: S.VIEWED } });
+    await this.prisma.businessDocument.updateMany({ where: { id: documentId, viewedAt: null }, data: { viewedAt: now } });
+    return true;
   }
 
   // ── helpers ───────────────────────────────────────────────────────────
