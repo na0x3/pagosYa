@@ -19,6 +19,7 @@ import { sourcePaymentPreview, renderForm, enterPaymentFlow } from "./checkout/p
 import { escapeHtml } from "./ui/html";
 import { storefrontRouteFromLocation, productIdFromLocation } from "./storefront/routes";
 import { renderOrderTracking } from "./orders/order-tracking";
+import { renderCobroPage } from "./documents/cobro-page";
 import { renderDebtCollection } from "./checkout/debt-collection";
 import { suppressStoreViewForMerchant } from "./storefront/merchant-views";
 import { standaloneStorePreviewPatch } from "./preview-editor/patch";
@@ -30,6 +31,7 @@ import { storefrontPages } from "./storefront/navigation";
 import { renderProductPage } from "./storefront/product-page";
 import { renderStore } from "./storefront/store-page";
 import { rememberStoreDna } from "./checkout-branding";
+import { rememberConfirmationMotif } from "./checkout-motif";
 
 async function main() {
   const verificationRoute = /^\/verificar\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
@@ -37,6 +39,15 @@ async function main() {
     let slug = '';
     try { slug = decodeURIComponent(verificationRoute); } catch {}
     await mountVerificationPage(slug, app);
+    return;
+  }
+  // A cobro a merchant sent (business document link, D1): its own page, no store scripts.
+  const cobroToken = /^\/d\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
+  if (cobroToken) {
+    let token = '';
+    try { token = decodeURIComponent(cobroToken); } catch {}
+    await renderCobroPage(token);
+    observeResize(app);
     return;
   }
   const intlReturn = parseReturnParams(window.location.search);
@@ -143,6 +154,7 @@ async function main() {
     try {
       const store = await fetchStore(linkSlug, { preview: suppressStoreViewForMerchant(linkSlug) });
       rememberStoreDna(store.dna);
+      rememberConfirmationMotif(store.confirmationMotif);
       const proposalPatch = standaloneStorePreviewPatch();
       const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;
       const routedProduct = renderedStore.items.find(item => item.id === productIdFromLocation());
