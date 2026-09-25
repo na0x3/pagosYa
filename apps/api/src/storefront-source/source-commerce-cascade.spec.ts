@@ -74,4 +74,26 @@ describe('cascade: kit defaults < DNA < authored store CSS', () => {
       expect(await page.evaluate(() => [document.querySelector('style[data-pagosya-kit="dna"]'), document.querySelector('.cart-drawer__grip,.menu-item__image-alt,.menu-item__quick-look,.menu-item__swatches'), Array.from(document.documentElement.getAttributeNames()).filter(name => name.startsWith('data-dna-')).length])).toEqual([null, null, 0]);
     } finally { await page.close(); }
   });
+
+  it.each([['pill', 'lift'], ['tag', 'fill'], ['block', 'invert'], ['underline', 'underline-grow']])('keyboard focus on the %s form (%s hover) shows an ink ring with a paper halo, unclipped', async (button, hover) => {
+    const page = await open({ dna: { ...DNA, button, hover } });
+    try {
+      await page.emulateMedia({ reducedMotion: 'reduce' }); // read the settled ring, not a transition frame
+      await page.waitForSelector('.menu-add');
+      await page.keyboard.press('Tab');
+      await page.evaluate(() => (document.querySelector('.menu-add') as HTMLElement).focus());
+      expect(await page.evaluate(() => document.querySelector('.menu-add')!.matches(':focus-visible'))).toBe(true);
+      const ring = await computed(page, '.menu-add', ['outline-style', 'outline-color', 'box-shadow', 'clip-path']);
+      expect(ring).toEqual({ 'outline-style': 'solid', 'outline-color': 'rgb(32, 33, 29)', 'box-shadow': expect.stringContaining('rgb(255, 255, 255) 0px 0px 0px'), 'clip-path': 'none' });
+    } finally { await page.close(); }
+  });
+  it('the store\'s own focus style still wins', async () => {
+    const page = await open({ dna: DNA, css: '.menu-add:focus-visible{outline:2px dashed rgb(200, 0, 0)}' });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.keyboard.press('Tab');
+      await page.evaluate(() => (document.querySelector('.menu-add') as HTMLElement).focus());
+      expect(await computed(page, '.menu-add', ['outline-style', 'outline-color'])).toEqual({ 'outline-style': 'dashed', 'outline-color': 'rgb(200, 0, 0)' });
+    } finally { await page.close(); }
+  });
 });

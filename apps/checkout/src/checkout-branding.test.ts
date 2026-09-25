@@ -32,4 +32,12 @@ describe("confirmation DNA styles", () => {
     expect(css).toMatch(/\[data-dna-button\] #app \.payment-success-panel \.receipt-action\{/);
     expect(css).not.toMatch(/data-dna-[^{]*payment-printer/);
   });
+  it("keep a visible, unclipped focus ring on every DNA button: foreground ring on a background halo", () => {
+    const ring = css.match(/body\.store-branded-checkout\[data-dna-button\] #app :is\(button\.primary,\.payment-success-panel \.receipt-action\):focus-visible\{([^}]*)\}/)?.[1] ?? "";
+    expect(ring).toContain("clip-path:none");
+    expect(ring).toMatch(/outline:3px solid var\(--checkout-foreground\)/);
+    expect(ring).toMatch(/box-shadow:0 0 0 2px var\(--checkout-background\)/);
+    // A shadow list with `none` in it is invalid: the empty shadow token must be a real (transparent) shadow.
+    expect(css).not.toMatch(/--checkout-dna-btn-shadow,none/);
+  });
 });

@@ -91,6 +91,24 @@ describe('DNA tokens and buttons', () => {
   });
 });
 
+describe('focus ring', () => {
+  it('every button form keeps a visible ring: ink with a paper halo, never clipped, drawn after the hover effects', () => {
+    const css = dnaCss(boot(DNA).doc);
+    const all = rules(css);
+    const rings = all.filter(rule => rule.selector.includes(':focus-visible') && /(^|;)outline:/.test(rule.body) && (rule.selector.includes('.menu-add') || rule.selector.includes('.product-detail__buy')));
+    expect(rings.length).toBe(2); // the layered kit buttons and the product page copy
+    for (const ring of rings) {
+      expect(ring.body).toMatch(/outline:3px solid var\(--kit-ink\)/);
+      expect(ring.body).toMatch(/box-shadow:0 0 0 \d+px var\(--kit-paper\)/);
+      expect(ring.body).toContain('clip-path:none');
+      // No hover declaration for :focus-visible comes after the ring (it would replace the halo).
+      const index = all.indexOf(ring);
+      const later = all.slice(index + 1).filter(rule => rule.selector.includes(':focus-visible') && rule.selector.includes(ring.selector.includes('.menu-add') ? '.menu-add' : '.product-detail__buy'));
+      expect(later.map(rule => rule.selector)).toEqual([]);
+    }
+  });
+});
+
 describe('cart placement', () => {
   const drawerRule = (css: string, cart: string) => rules(css).find(rule => rule.selector.split(',').some(part => part.trim() === `:root[data-dna-cart=${cart}] .cart-drawer`));
   it('gives the sheet a grab handle, and adds nothing without DNA', () => {
