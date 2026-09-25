@@ -298,8 +298,36 @@ describe('component mode reads the same DNA', () => {
     expect(ui).toMatch(/\.ui-card__add\{[^}]*border-radius:var\(--kit-btn-radius,var\(--ui-radius-control\)\)/);
     expect(ui).toMatch(/\.ui-cart\{[^}]*border-radius:var\(--kit-btn-radius,999px\)/);
   });
-  it('the catalog hover effects yield to the DNA card preview', () => {
-    expect(ui).toContain(':root:not([data-dna-card]) [data-fx~=zoom] .ui-card:hover .ui-card__media img');
-    expect(ui).toContain(':root:not([data-dna-card=tilt]) [data-fx~=lift] .ui-card:hover');
+  const uiCss = ui.match(/const UI_CSS = `([\s\S]*?)\n`;/)![1];
+  /** Declarations that reach `target` in a document with these root attributes (pseudo-classes dropped: jsdom has no hover). */
+  function reaching(markup: string, target: string, root: Record<string, string> = {}) {
+    const dom = new JSDOM(`<html><body>${markup}</body></html>`, { virtualConsole: new VirtualConsole() });
+    for (const [name, value] of Object.entries(root)) dom.window.document.documentElement.setAttribute(name, value);
+    const el = dom.window.document.querySelector(target);
+    const out = rules(uiCss).filter(rule => rule.selector.split(',').some(part => {
+      try { return el.matches(part.replace(/:hover(:not\(:disabled\))?/g, '')); } catch { return false; }
+    })).map(rule => rule.body).join(';');
+    dom.window.close();
+    return out;
+  }
+  it('the cart button keeps its inherited case and tracking without DNA; only the DNA sets them', () => {
+    const cart = '<header><button class="ui-cart">Pedido</button></header>';
+    expect(reaching(cart, '.ui-cart')).not.toMatch(/text-transform|letter-spacing/);
+    const styled = reaching(cart, '.ui-cart', { 'data-dna-button': 'block' });
+    expect(styled).toContain('text-transform:var(--kit-btn-case');
+    expect(styled).toContain('letter-spacing:var(--kit-btn-tracking');
+  });
+  it('the author\'s card fx (zoom, lift) survives a DNA store; only the DNA preview that drives the same property replaces it', () => {
+    const card = '<div data-fx="zoom lift"><article class="ui-card menu-item"><a class="ui-card__media"><img></a></article></div>';
+    for (const mode of [null, 'still', 'second-photo', 'swatch-swap', 'quick-look', 'tilt']) {
+      const root: Record<string, string> = mode ? { 'data-dna-card': mode } : {};
+      expect({ mode, zoom: reaching(card, '.ui-card__media img', root) }).toEqual({ mode, zoom: expect.stringContaining('transform:scale(1.06)') });
+    }
+    for (const mode of [null, 'still', 'second-photo', 'zoom']) {
+      const root: Record<string, string> = mode ? { 'data-dna-card': mode } : {};
+      expect({ mode, lift: reaching(card, '.ui-card', root) }).toEqual({ mode, lift: expect.stringContaining('transform:translateY(-6px)') });
+    }
+    expect(reaching(card, '.ui-card', { 'data-dna-card': 'tilt' })).not.toContain('translateY(-6px)');
+    expect(reaching(card, '.ui-card__media img', { 'data-dna-card': 'zoom' })).not.toContain('scale(1.06)');
   });
 });
