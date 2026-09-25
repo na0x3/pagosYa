@@ -141,6 +141,16 @@ describe("the customer's cobro page (/d/:token)", () => {
     expect(document.querySelector<HTMLButtonElement>("[data-cobro-pay]")!.disabled).toBe(true);
   });
 
+  it.each([
+    ["70000001", "https://wa.me/59170000001"],
+    ["6000 0002", "https://wa.me/59160000002"],
+    ["+591 70000001", "https://wa.me/59170000001"],
+    ["+54 11 5555 0000", "https://wa.me/541155550000"],
+  ])("opens WhatsApp with the country code for the store's number %s", async (contactPhone, href) => {
+    await loadCobroPage(openCobro({ store: { ...store, contactPhone } }));
+    expect(document.querySelector<HTMLAnchorElement>(".cobro-contact a[href^='https://wa.me']")!.href).toBe(href);
+  });
+
   it("explains a link that does not open", async () => {
     await loadCobroPage({ status: 404, body: { message: "No encontramos este documento" } });
     expect(document.querySelector("[data-cobro-page]")!.textContent).toContain("No encontramos este documento");

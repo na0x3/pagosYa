@@ -62,7 +62,12 @@ const initials = (name: string) => {
   return words.length === 1 ? words[0].slice(0, 2).toUpperCase() : (words[0][0] + words[1][0]).toUpperCase();
 };
 
-const whatsAppHref = (phone: string) => `https://wa.me/${phone.replace(/\D/g, "")}`;
+/** wa.me needs the country code: an 8-digit Bolivian mobile (6…/7…) gets 591, like the dashboard's helper. */
+export function whatsAppHref(phone: string): string {
+  let digits = phone.replace(/\D/g, "");
+  if (/^[67]\d{7}$/.test(digits)) digits = `591${digits}`;
+  return `https://wa.me/${digits}`;
+}
 
 function brandHtml(store: StoreView, numberLabel: string): string {
   const logo = assetUrl(store.logoUrl);
