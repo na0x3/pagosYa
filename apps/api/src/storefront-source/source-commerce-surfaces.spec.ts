@@ -231,3 +231,34 @@ describe('product card preview', () => {
     expect(css).toMatch(/prefers-reduced-motion:reduce\)\{[^@]*\.menu-item/);
   });
 });
+
+describe('contact, privacy and sticky buy bar', () => {
+  const privacy = readFileSync(kitPath('privacy.js'), 'utf8');
+  function privacyPanel(dna: boolean) {
+    const dom = new JSDOM('<html><head></head><body></body></html>', { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole: new VirtualConsole() });
+    const w = dom.window;
+    if (dna) w.document.documentElement.setAttribute('data-dna-button', 'pill');
+    w.eval(privacy);
+    w.PAGOSYA_PRIVACY.mount('marca', { analyticsAvailable: true });
+    const root = w.document.querySelector('[data-pagosya-privacy]');
+    const result = { html: root.outerHTML, css: w.document.querySelector('#pagosya-privacy-style').textContent };
+    w.close();
+    return result;
+  }
+  it('the contact launcher and panel take the store tokens and DNA shape, inside the contact layer', () => {
+    const contact = Array.from(boot(DNA).doc.querySelectorAll('style') as ArrayLike<any>).map(s => s.textContent).find(text => text.includes('@layer pagosya-contact-base')) ?? '';
+    const launcher = rules(contact).find(rule => rule.selector.startsWith(':root[data-dna-button] [data-pagosya-contact] .pagosya-contact-launcher'));
+    expect(launcher?.body).toMatch(/border-radius:var\(--kit-radius-panel\)/);
+    expect(launcher?.body).toMatch(/background:var\(--kit-accent\)!important/);
+    expect(rules(contact).find(rule => rule.selector.startsWith(':root[data-dna-button] [data-pagosya-contact] .pagosya-contact-panel'))?.body).toContain('var(--kit-paper)');
+  });
+  it('the privacy dialog reads the store tokens and DNA shape and keeps its wording, choices and order', () => {
+    const [plain, styled] = [privacyPanel(false), privacyPanel(true)];
+    expect(styled.html).toBe(plain.html);
+    expect(styled.css).toMatch(/:root\[data-dna-button\] \[data-pagosya-privacy\] button\{[^}]*border-radius:var\(--kit-radius/);
+    expect(styled.css).toMatch(/:root\[data-dna-button\] \[data-privacy-panel\]:not\(\[hidden\]\)\{[^}]*var\(--store-background/);
+  });
+  it('the mobile sticky buy bar takes the button form', () => {
+    expect(dnaCss(boot(DNA).doc)).toContain('.product-detail__sticky button');
+  });
+});
