@@ -266,7 +266,7 @@ export async function collectStoreSample(input: { id: string; name: string; snap
     surfaces[surface] = { ...surfaces[surface], ...Object.fromEntries(Object.entries(sample).map(([key, value]) => [viewport === 'desktop' ? key : `m.${key}`, value])) };
   }
   const dna = views.desktop?.dna ?? views.mobile?.dna ?? {};
-  surfaces.page = { ...Object.fromEntries(Object.entries(dna).map(([name, value]) => [`dna.${name}`, value])), motionHooks: staticMotionHooks(input.snapshot.files), motionTokens: staticMotionTokens(input.snapshot.files) };
+  surfaces.page = { ...Object.fromEntries(Object.entries(dna).map(([name, value]) => [`dna.${name}`, value])), motionHooks: staticMotionHooks(input.snapshot.files) };
   let shopping: Pick<QualityFacts, 'shopping' | 'shoppingError'> = { shopping: 'unsupported' };
   try {
     const probes = await probeSourceShopping(runtime, options.signal);
@@ -283,7 +283,7 @@ export async function collectStoreSample(input: { id: string; name: string; snap
     missingImages: missing.length ? Math.max(...missing) : null,
     buyContrast: contrasts.length ? Math.round(Math.min(...contrasts) * 100) / 100 : null,
   };
-  return { sample: { id: input.id, name: input.name, surfaces, quality, errors }, screenshots };
+  return { sample: { id: input.id, name: input.name, surfaces, quality, errors, info: { motionTokens: staticMotionTokens(input.snapshot.files) } }, screenshots };
 }
 
 const productImage = (label: string, color: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="800" height="1000" fill="${color}"/><text x="400" y="520" font-family="sans-serif" font-size="64" text-anchor="middle" fill="#fff">${label}</text></svg>`;

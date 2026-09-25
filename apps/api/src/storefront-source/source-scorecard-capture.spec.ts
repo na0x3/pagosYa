@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { collectStoreSample, kitDefaultSnapshot, snapshotFromDirectory, staticMotionHooks, staticMotionTokens } from './source-scorecard-capture';
-import { SURFACE_NAMES, surfaceDistance } from './source-scorecard';
+import { scoreStores, SURFACE_NAMES, surfaceDistance } from './source-scorecard';
 
 it('collects every surface for the kit default store, with clean quality', async () => {
   const { sample, screenshots } = await collectStoreSample({ id: 'kit', name: 'Kit default', snapshot: await kitDefaultSnapshot() }, { screenshots: true });
@@ -14,7 +14,8 @@ it('collects every surface for the kit default store, with clean quality', async
   expect(sample.surfaces.added).toEqual(expect.objectContaining({ position: 'bottom-right' }));
   expect(sample.surfaces.product).toEqual(expect.objectContaining({ style: expect.any(String), gallery: expect.any(String) }));
   expect(sample.surfaces.review).toEqual(expect.objectContaining({ columns: 2, summary: expect.any(String), 'm.columns': 1 }));
-  expect(sample.surfaces.page).toEqual({ motionHooks: 0, motionTokens: 0 });
+  expect(sample.surfaces.page).toEqual({ motionHooks: 0 });
+  expect(sample.info).toEqual({ motionTokens: 0 });
   expect(sample.quality).toEqual(expect.objectContaining({ shopping: 'passed', overflow: { desktop: false, mobile: false }, fontsLoaded: true, missingImages: 0 }));
   expect(sample.quality.buyContrast).toBeGreaterThan(4.5);
   expect(screenshots.map(s => s.name)).toEqual(['added-desktop', 'cart-desktop', 'added-mobile', 'cart-mobile']);
@@ -90,6 +91,15 @@ it('measures the cart with the product in it when the home page cannot add to th
   const { sample } = await collectStoreSample({ id: 'n', name: 'n', snapshot: noCatalog });
   expect(sample.surfaces.cart).toEqual(expect.objectContaining({ stepRadius: expect.any(Number) }));
   expect(sample.surfaces.cart!.stepRadius).toBeGreaterThanOrEqual(0);
+});
+
+it('keeps authored motion-token counts out of the page distance: one var(--motion-base) does not make a store unlike the default', async () => {
+  const kit = await kitDefaultSnapshot();
+  const tokened = { ...kit, files: kit.files.map(f => f.path === 'index.html' ? { ...f, content: f.content.replace('</head>', '<style>h1{transition:opacity var(--motion-base,300ms)}</style></head>') } : f) };
+  const [base, store] = await Promise.all([kit, tokened].map((snapshot, i) => collectStoreSample({ id: String(i), name: String(i), snapshot })));
+  expect(scoreStores([store.sample], base.sample).surfaces.page.tooCloseToDefault).toEqual(['1']);
+  expect(store.sample.surfaces.page).toEqual(base.sample.surfaces.page);
+  expect(store.sample.info).toEqual({ motionTokens: 1 });
 });
 
 it('counts motion hooks in authored files only', () => {

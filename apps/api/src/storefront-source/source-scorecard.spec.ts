@@ -80,6 +80,13 @@ describe('scoreStores', () => {
     expect(card.surfaces.button.fromDefault).toEqual({});
     expect(card.surfaces.review.missing).toEqual(['a', 'b']);
   });
+  it('reports authored motion tokens per store without scoring them', () => {
+    const page = { 'dna.motion': 'snappy', motionHooks: 2 };
+    const card = scoreStores([{ ...store('a', { page }), info: { motionTokens: 5 } }, store('b', { page })], { ...store('kit', { page }), info: { motionTokens: 0 } });
+    expect(card.surfaces.page.tooCloseToDefault).toEqual(['a', 'b']);
+    expect(card.stores.map(s => s.motionTokens)).toEqual([5, null]);
+    expect(scorecardMarkdown(card, { title: 'T', source: 's', createdAt: 'now' })).toMatch(/\| A \| page \| page \| 5 \|/);
+  });
   it('counts quality failures per store', () => {
     const card = scoreStores([store('a', {}, { overflow: { desktop: false, mobile: true }, buyContrast: 3.1 }), store('b', {})], store('kit', {}));
     expect(card.stores[0].failures).toEqual(['overflow at 390', 'buy button contrast 3.10 < 4.5']);

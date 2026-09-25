@@ -8,7 +8,9 @@ export type QualityFacts = {
   overflow: { desktop: boolean | null; mobile: boolean | null };
   fontsLoaded: boolean | null; missingImages: number | null; buyContrast: number | null;
 };
-export type StoreSample = { id: string; name: string; surfaces: Partial<Record<SurfaceName, SurfaceSample>>; quality: QualityFacts; errors: string[] };
+/** `info`: facts reported per store but never scored (not part of any surface distance). motionTokens: how often the
+ * store's own files use var(--motion-…) (sub-project 6); a token use alone does not make a store look different. */
+export type StoreSample = { id: string; name: string; surfaces: Partial<Record<SurfaceName, SurfaceSample>>; quality: QualityFacts; errors: string[]; info?: { motionTokens?: number } };
 export type Pair = { a: string; b: string; distance: number };
 export type SurfaceScore = {
   measured: number; closest: Pair | null; mean: number | null; pairs: Pair[];
@@ -17,7 +19,7 @@ export type SurfaceScore = {
 export type Scorecard = {
   thresholds: { minPairDistance: number; minDefaultDistance: number; minBuyContrast: number };
   surfaces: Record<SurfaceName, SurfaceScore>;
-  stores: Array<{ id: string; name: string; shopping: QualityFacts['shopping']; failures: string[]; tooCloseToStore: SurfaceName[]; tooCloseToDefault: SurfaceName[] }>;
+  stores: Array<{ id: string; name: string; shopping: QualityFacts['shopping']; failures: string[]; tooCloseToStore: SurfaceName[]; tooCloseToDefault: SurfaceName[]; motionTokens: number | null }>;
   qualityFailures: number;
   kitDna: KitDnaScore;
 };
@@ -131,6 +133,7 @@ export function scoreStores(stores: StoreSample[], kitDefault: StoreSample): Sco
     id: store.id, name: store.name, shopping: store.quality.shopping, failures: qualityFailures(store.quality),
     tooCloseToStore: SURFACE_NAMES.filter(surface => surfaces[surface].tooCloseToStore.includes(store.id)),
     tooCloseToDefault: SURFACE_NAMES.filter(surface => surfaces[surface].tooCloseToDefault.includes(store.id)),
+    motionTokens: store.info?.motionTokens ?? null,
   }));
   return {
     thresholds: { minPairDistance: MIN_PAIR_DISTANCE, minDefaultDistance: MIN_DEFAULT_DISTANCE, minBuyContrast: MIN_BUY_CONTRAST },
@@ -175,8 +178,8 @@ export function scorecardMarkdown(card: Scorecard, meta: { title: string; source
     '| Store | Shopping | Failures |', '|---|---|---|',
     ...card.stores.map(store => `| ${cell(store.name)} | ${store.shopping} | ${cell(store.failures.join('; ') || '—')} |`),
     '', '## Per store', '',
-    '| Store | Too close to another store on | Too close to the kit default on |', '|---|---|---|',
-    ...card.stores.map(store => `| ${cell(store.name)} | ${store.tooCloseToStore.join(', ') || '—'} | ${store.tooCloseToDefault.join(', ') || '—'} |`),
+    '| Store | Too close to another store on | Too close to the kit default on | var(--motion-…) uses (not scored) |', '|---|---|---|---|',
+    ...card.stores.map(store => `| ${cell(store.name)} | ${store.tooCloseToStore.join(', ') || '—'} | ${store.tooCloseToDefault.join(', ') || '—'} | ${store.motionTokens ?? '—'} |`),
   ];
   return lines.join('\n') + '\n';
 }
