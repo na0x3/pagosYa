@@ -68,6 +68,13 @@ describe('DNA tokens and buttons', () => {
     }
   });
 
+  it('carries the DNA type case and tracking into open button forms and kit panel titles', () => {
+    const css = dnaCss(boot(DNA).doc);
+    for (const field of ['case', 'tracking']) for (const value of DNA_VALUES[field]) expect(css).toContain(`:root[data-dna-${field}=${value}]{`);
+    for (const form of ['pill', 'outline', 'ghost', 'split', 'underline']) expect(css).toMatch(new RegExp(`:root\\[data-dna-button=${form}\\]\\{[^}]*--kit-btn-case:var\\(--kit-type-case`));
+    const title = rules(css).find(rule => rule.selector.includes('.cart-drawer__header h2') && rule.selector.includes('.checkout-review__summary h2'));
+    expect(title?.body).toContain('text-transform:var(--kit-type-case)');
+  });
   it('gives every commerce button the shared button tokens and keeps focus visible', () => {
     const css = dnaCss(boot(DNA).doc);
     const button = rules(css).find(rule => rule.selector.includes('.menu-add') && rule.body.includes('var(--kit-btn-radius)'));
@@ -106,6 +113,12 @@ describe('cart placement', () => {
     for (const cart of ['sheet', 'page']) expect(phone).toMatch(new RegExp(`:root\\[data-dna-cart=${cart}\\] \\.cart-drawer[^{]*\\{[^}]*width:100vw`));
     expect(drawerRule(css, 'sheet')?.body).toMatch(/bottom|inset:auto 0 0/);
     expect(drawerRule(css, 'overlay')?.body).toContain('margin:auto');
+  });
+  it('the page cart and the stacked review draw the DNA border weight', () => {
+    const css = dnaCss(boot(DNA).doc);
+    expect(rules(css).find(rule => rule.selector === ':root[data-dna-cart=page] .cart-drawer')?.body).toContain('border-top:var(--kit-border) solid var(--kit-accent)');
+    expect(css).toMatch(/:root\[data-dna-review=stacked\] \.checkout-review__summary\{[^}]*border-width:var\(--kit-border\) 0/);
+    expect(css).toContain(':root[data-dna-frame=bleed]{--kit-photo-radius:min(var(--kit-radius),28px)');
   });
   it('frames cart photos and shapes the quantity buttons from the DNA', () => {
     const css = dnaCss(boot(DNA).doc);
