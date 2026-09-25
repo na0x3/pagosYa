@@ -41,6 +41,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   const profileTriggerAvatarEl = document.getElementById("profileTriggerAvatar");
   const profileMenuAvatarEl = document.getElementById("profileMenuAvatar");
   const profileAvatarOptionsEl = document.getElementById("profileAvatarOptions");
+  const accountAvatarEl = document.getElementById("accountAvatar");
   const sessionProfileAvatarsEl = document.getElementById("sessionProfileAvatars");
   const profileDisplayNameEl = document.getElementById("profileDisplayName");
   const profileSessionsEl = document.getElementById("profileSessions");
@@ -101,7 +102,9 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     try { localStorage.setItem(blobSeedStorageKey(), seed); } catch {}
     renderProfileAvatar();
     setLoginAvatar(selectedLoginAvatar);
-    void rewards.renderBoard();
+    // Only the runner token's image, never the whole board: renderBoard() can briefly show "No pudimos
+    // cargar el tablero." when sessions arrive before rewards has loaded, and this fires before that.
+    rewards.refreshRunner();
   }
 
   function profileNameFromEmail(email) {
@@ -110,19 +113,45 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     return localPart.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("es"));
   }
 
+  /**
+   * Renders a row of variation-option buttons by updating existing <button> elements in place rather
+   * than rebuilding them with `innerHTML`, so a re-render while one of them holds keyboard focus (a
+   * save in flight, a menu refresh under a focused user) never drops focus to <body>.
+   */
+  function renderVariationOptionButtons(container, className, dataAttr, variations, selected) {
+    const buttons = Array.from(container.children);
+    while (buttons.length < variations.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = className;
+      container.appendChild(button);
+      buttons.push(button);
+    }
+    while (buttons.length > variations.length) buttons.pop().remove();
+    variations.forEach((variation, index) => {
+      const button = buttons[index];
+      button.dataset[dataAttr] = String(variation);
+      button.setAttribute("aria-label", `Variación ${variation}`);
+      button.setAttribute("aria-pressed", String(variation === selected));
+      button.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true });
+    });
+  }
+
   function renderProfileAvatar() {
     const name = currentProfileName || profileNameFromEmail(emailEl.value);
     // The trigger button carries its own label, so its blob is decorative; the menu head is the named picture.
     profileTriggerAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
     profileMenuAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, name });
     if (!profileVariationChoices.includes(selectedProfileAvatar)) profileVariationChoices = variationChoices(selectedProfileAvatar);
-    profileAvatarOptionsEl.innerHTML = profileVariationChoices.map((variation) => `<button class="profile-avatar-option" type="button" data-profile-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === selectedProfileAvatar}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("");
+    renderVariationOptionButtons(profileAvatarOptionsEl, "profile-avatar-option", "profileAvatar", profileVariationChoices, selectedProfileAvatar);
+    // The account page has its own heading naming the person, so its picture stays decorative here too.
+    if (accountAvatarEl) accountAvatarEl.innerHTML = profileBlobHtml({ blobSeed: currentBlobSeed, variation: selectedProfileAvatar, decorative: true });
   }
 
   function setLoginAvatar(avatarId) {
     selectedLoginAvatar = normalizeVariation(avatarId);
     if (!loginVariationChoices.includes(selectedLoginAvatar)) loginVariationChoices = variationChoices(selectedLoginAvatar);
-    sessionProfileAvatarsEl.innerHTML = loginVariationChoices.map((variation) => `<button class="session-profile-avatar-option" type="button" data-login-avatar="${variation}" aria-label="Variación ${variation}" aria-pressed="${variation === selectedLoginAvatar}">${profileBlobHtml({ blobSeed: currentBlobSeed, variation, decorative: true })}</button>`).join("");
+    renderVariationOptionButtons(sessionProfileAvatarsEl, "session-profile-avatar-option", "loginAvatar", loginVariationChoices, selectedLoginAvatar);
   }
 
   function applyProfileIdentity() {
@@ -145,14 +174,15 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
   }
 
   // Guards selectProfileVariation against overlapping requests: while a save is in flight, the
-  // option buttons and the shuffle button are disabled (native `disabled` blocks the click before
-  // any further call can start), and the function itself re-checks the flag as a second line of defense.
+  // option buttons and the shuffle button are marked aria-disabled (the click handlers below re-check
+  // this flag, which is what actually blocks a second call — native `disabled` would do that too, but
+  // it also blurs a focused element to <body> immediately, so aria-disabled is used instead).
   let profileVariationSaveInFlight = false;
 
   function setProfileAvatarControlsBusy(busy) {
-    profileAvatarOptionsEl.querySelectorAll("[data-profile-avatar]").forEach((button) => { button.disabled = busy; });
+    profileAvatarOptionsEl.querySelectorAll("[data-profile-avatar]").forEach((button) => button.setAttribute("aria-disabled", String(busy)));
     const shuffleButton = document.getElementById("profileAvatarShuffle");
-    if (shuffleButton) shuffleButton.disabled = busy;
+    if (shuffleButton) shuffleButton.setAttribute("aria-disabled", String(busy));
   }
 
   async function selectProfileVariation(variation) {
@@ -161,6 +191,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     selectedProfileAvatar = normalizeVariation(variation);
     try { localStorage.setItem(profileAvatarStorageKey(), String(selectedProfileAvatar)); } catch {}
     renderProfileAvatar();
+    rewards.refreshRunner();
     const currentSession = lastProfileSessionsPayload?.sessions?.find((session) => session.current);
     if (!currentSession) return;
     profileVariationSaveInFlight = true;
@@ -171,6 +202,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
       selectedProfileAvatar = previousAvatar;
       try { localStorage.setItem(profileAvatarStorageKey(), String(previousAvatar)); } catch {}
       renderProfileAvatar();
+      rewards.refreshRunner();
       profileSessionsEl.innerHTML = `<p class="profile-session-state">No pudimos guardar el avatar. ${esc(error.message)} <button class="ghost" type="button" data-retry-sessions>Reintentar</button></p>`;
       profileVariationSaveInFlight = false;
       setProfileAvatarControlsBusy(false);
@@ -1469,9 +1501,7 @@ import { mountContractsPanel } from "/src/contracts-panel.mjs";
     const nameEl = document.getElementById("accountName");
     const profileName = document.getElementById("profileDisplayName")?.textContent?.trim();
     nameEl.textContent = profileName && profileName !== "Mi perfil" ? profileName : email.split("@")[0] || "Mi perfil";
-    const avatar = document.getElementById("accountAvatar");
-    const menuAvatar = document.getElementById("profileMenuAvatar");
-    if (avatar && menuAvatar) avatar.innerHTML = menuAvatar.innerHTML;
+    // The avatar itself is kept in sync by renderProfileAvatar (decorative here: the heading above already names the person).
 
     document.getElementById("accountKycValue").textContent = KYC_LABELS[kyc?.status] || kyc?.status || "—";
     document.getElementById("accountInvoicingValue").textContent = invoicing?.cuis ? "Activa" : "Sin configurar";

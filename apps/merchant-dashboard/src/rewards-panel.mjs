@@ -236,6 +236,16 @@ export function mountRewardsPanel(deps) {
     token.style.gridRow = String(row); token.style.gridColumn = String(col); token.dataset.tile = String(index);
   }
 
+  /**
+   * Only the dice-board runner token's image, from the merchant's current blob. Safe to call whenever
+   * the blob seed or the chosen variation changes, even before the board itself has ever loaded (unlike
+   * renderBoard, it never touches the "couldn't load" hint or the roll button).
+   */
+  function refreshRunner() {
+    const token = document.getElementById("rewardsBoardToken");
+    if (token) token.style.backgroundImage = `url("${deps.runnerImage()}")`;
+  }
+
   async function renderRewardsBoard() {
     const board = document.getElementById("rewardsBoard");
     if (!board) return;
@@ -257,10 +267,9 @@ export function mountRewardsPanel(deps) {
         board.appendChild(tile);
       });
     }
-    const token = document.getElementById("rewardsBoardToken");
-    token.style.backgroundImage = `url("${deps.runnerImage()}")`;
+    refreshRunner();
     if (rewardsBoardRolling) return;
-    placeBoardToken(token, state.position, boardTileCoords);
+    placeBoardToken(document.getElementById("rewardsBoardToken"), state.position, boardTileCoords);
     button.disabled = state.rollsAvailable <= 0;
     const kicker = document.getElementById("rewardsBoardKicker");
     if (kicker) kicker.textContent = state.rollsAvailable > 1 ? `¡Tus ventas te dieron ${state.rollsAvailable.toLocaleString("es-BO")} tiros de dado!` : "¡Completaste 10 ventas! Ganaste un tiro de dado.";
@@ -308,6 +317,7 @@ export function mountRewardsPanel(deps) {
     reset: () => { rewardsState = null; },
     renderWheel: renderLuckWheel,
     renderBoard: renderRewardsBoard,
+    refreshRunner,
     openWheelModal: openLuckWheelModal,
   };
 }

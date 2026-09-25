@@ -46,7 +46,7 @@ async function openDashboard(page, options = {}) {
       return json({ session: { id, ...body, isPrimary: id === "session_current" } });
     }
     if (path === "/dashboard/daily-login-reward") return json({ awarded: false, totalStars: 1, wheelAvailable: false });
-    if (path === "/dashboard/rewards") return json(options.rewards ?? rewardsState());
+    if (path === "/dashboard/rewards") { if (options.rewardsGate) await options.rewardsGate; return json(options.rewards ?? rewardsState()); }
     if (path === "/dashboard/progress-celebrations") return json({ newlyUnlockedLevels: options.unlockLevels ?? [] });
     if (path === "/dashboard/progress-celebrations/acknowledge") return json({ acknowledged: true });
     if (path.startsWith("/dashboard/limits")) return json({ level: 1, levelName: "Persona", liveEnabled: true, monthlyLimit: 1_000_000, perPaymentLimit: 200_000, used: 0, month: "2026-09", resetsAt: "2026-10-01T04:00:00.000Z" });
@@ -109,6 +109,19 @@ test("an old animal avatar id is kept as that blob variation; a broken stored va
   await expect(page.locator('#profileAvatarOptions [data-profile-avatar="3"]')).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => localStorage.getItem("pagosya_merchant_avatar:merchant@example.com"))).toBe("3");
   expect(state.patches).toEqual([]);
+});
+
+test("the account page avatar is decorative (the heading already names the person) and stays in sync with a new variation", async ({ page }) => {
+  const state = await openDashboard(page, { hash: "/#dashboard-account" });
+  const avatar = page.locator("#accountAvatar svg");
+  await expect.poll(() => avatar.count()).toBeGreaterThan(0);
+  await expect(avatar).toHaveAttribute("aria-hidden", "true");
+  expect(await avatar.locator("title").count()).toBe(0);
+  const before = await page.locator("#accountAvatar").innerHTML();
+  await page.locator("#profileMenuTrigger").click();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  expect(await page.locator("#accountAvatar").innerHTML()).not.toBe(before);
 });
 
 test("a profile with no name is still named: the picture falls back to the name from the email", async ({ page }) => {
@@ -193,6 +206,35 @@ test('rapid double-clicks on "Otra variación" send only one PATCH while a save 
   expect(state.patches.length).toBe(1);
 });
 
+test("choosing a variation with the keyboard keeps focus on it, through the busy state and the sessions refresh that follows", async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  const options = page.locator("#profileAvatarOptions [data-profile-avatar]");
+  await expect(options).toHaveCount(4);
+  await options.nth(1).focus();
+  const targetVariation = await options.nth(1).getAttribute("data-profile-avatar");
+  await page.keyboard.press("Enter");
+  // The busy window (native `disabled` would blur a focused element to <body> here).
+  await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-profile-avatar"))).toBe(targetVariation);
+  await expect(page.locator(`#profileAvatarOptions [data-profile-avatar="${targetVariation}"]`)).toHaveAttribute("aria-pressed", "true");
+  // Settle through the post-save sessions refresh (renderProfileAvatar runs again under the focused button).
+  await expect.poll(() => state.patches.length).toBe(1);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => document.activeElement?.getAttribute("data-profile-avatar"))).toBe(targetVariation);
+});
+
+test('"Otra variación" keeps focus on the shuffle button through the busy state', async ({ page }) => {
+  const state = await openDashboard(page);
+  await page.locator("#profileMenuTrigger").click();
+  await expect(page.locator("#profileAvatarOptions [data-profile-avatar]")).toHaveCount(4);
+  await page.locator("#profileAvatarShuffle").focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("profileAvatarShuffle");
+  await expect.poll(() => state.patches.length).toBe(1);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => document.activeElement?.id)).toBe("profileAvatarShuffle");
+});
+
 for (const width of [390, 1280]) test(`Progreso shows the level's blob companion at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await openDashboard(page, { sales: 3, hash: "/#dashboard-progress" });
@@ -240,9 +282,35 @@ test("with reduced motion the celebration shows the happy blob at once and never
 for (const width of [390, 1280]) test(`the dice board runner is your own blob at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await openDashboard(page, { rewards: rewardsState({ ...idleBoard, rollsAvailable: 1, salesUntilNextRoll: 4 }) });
-  await expect(page.locator("#rewardsBoardModal")).toBeVisible();
+  const modal = page.locator("#rewardsBoardModal");
+  await expect(modal).toBeVisible();
+  // Wait out the modal's fade-in before shooting, so the screenshot never lands mid-animation.
+  await modal.evaluate((node) => Promise.all(node.getAnimations({ subtree: true }).map((animation) => animation.finished)));
   const token = page.locator("#rewardsBoardToken");
   // Only the profile blob has a plate; the companion stand-in has none.
   await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).toContain(encodeURIComponent('class="blob-plate"'));
   await page.screenshot({ path: `${SHOTS}/dice-board-${width}.png` });
+});
+
+test("the blob seed arriving never shows the dice board's \"couldn't load\" hint; only the runner image updates", async ({ page }) => {
+  let releaseRewards;
+  const rewardsGate = new Promise((resolve) => { releaseRewards = resolve; });
+  await openDashboard(page, { rewardsGate });
+  // Sessions (and the blobSeed inside them) resolve without waiting on the gate; rewards stays pending.
+  await page.waitForTimeout(300);
+  expect(await page.locator("#rewardsBoardHint").textContent()).not.toBe("No pudimos cargar el tablero.");
+  expect(await page.locator("#rewardsBoardToken").evaluate((node) => node.style.backgroundImage)).toContain(encodeURIComponent('class="blob-plate"'));
+  releaseRewards();
+  await expect(page.locator("#rewardsBoardHint")).not.toHaveText("No pudimos cargar el tablero.");
+});
+
+test("selecting a new variation repaints the dice-board runner", async ({ page }) => {
+  const state = await openDashboard(page);
+  const token = page.locator("#rewardsBoardToken");
+  await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).not.toBe("");
+  const before = await token.evaluate((node) => node.style.backgroundImage);
+  await page.locator("#profileMenuTrigger").click();
+  await page.getByRole("button", { name: "Otra variación" }).click();
+  await expect.poll(() => state.patches.length).toBe(1);
+  await expect.poll(() => token.evaluate((node) => node.style.backgroundImage)).not.toBe(before);
 });
