@@ -2,6 +2,7 @@
 import { ADVENTURE_LEVELS, GAMIFICATION_RUNNERS, profileAvatarHtml } from "/src/companions.mjs";
 import { escapeHtml as esc } from "/src/html.mjs";
 import { mountRewardsPanel } from "/src/rewards-panel.mjs";
+import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -407,6 +408,15 @@ import { mountRewardsPanel } from "/src/rewards-panel.mjs";
     playTouchSound: playAdventureTouchSound,
     audioContext: adventureAudio,
   });
+  // Documentos → Cobros (D1); the module owns its view, this is only the glue.
+  const cobros = mountCobrosPanel({
+    api,
+    storeId: () => currentStoreId,
+    store: () => lastStores.find((candidate) => candidate.id === currentStoreId) || null,
+    signedIn: () => !!sessionToken,
+    invoicingReady: () => Boolean(lastInvoicingProfile?.cuis),
+    apiBase: () => apiBaseEl.value,
+  });
   let luckWheelModalShownThisLoad = false;
   let lastTotalFinances = null;
   let lastBalances = null;
@@ -670,6 +680,7 @@ import { mountRewardsPanel } from "/src/rewards-panel.mjs";
     media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
     workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
     "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
+    cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
     inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
     "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
     payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
@@ -819,6 +830,7 @@ import { mountRewardsPanel } from "/src/rewards-panel.mjs";
     document.getElementById("workspaceDescription").textContent = description;
     if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     syncMerchantStoreWorkspace(nextView);
+    if (nextView === "cobros") cobros.show();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch {}
     }
@@ -1612,6 +1624,7 @@ import { mountRewardsPanel } from "/src/rewards-panel.mjs";
       renderDebtCollectionLinks([]);
       resetInventoryImportState();
       rewards.reset();
+      cobros.reset();
       rewards.load().then(() => { if (lastFinances) renderGamification(lastFinances, { announce: false }); });
     }
   }
@@ -3864,7 +3877,11 @@ import { mountRewardsPanel } from "/src/rewards-panel.mjs";
     if (options.raw && res.ok) return res.blob();
     const body = await res.json().catch(() => null);
     if (res.status === 429) {
-      throw new Error("El panel recibió demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo.");
+      const error = new Error("El panel recibió demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo.");
+      // Keep the server's own words (e.g. the daily document email cap) for views that can show them.
+      error.status = 429;
+      error.serverMessage = typeof body?.message === "string" ? body.message : "";
+      throw error;
     }
     if (!res.ok) {
       const responseMessage = Array.isArray(body?.message)
