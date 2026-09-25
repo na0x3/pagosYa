@@ -7,7 +7,7 @@ import type { EmailProvider } from "../dashboard/interfaces/email-provider.inter
 import { PaymentIntentsService } from "../payment-intents/payment-intents.service";
 import { paymentCheckoutUrl } from "../operations/operations-helpers";
 import { BusinessDocumentsService } from "./business-documents.service";
-import { businessDocumentLink } from "./cobro-payment";
+import { businessDocumentLink, cancelStaleCheckout } from "./cobro-payment";
 import { buildDocumentEmail, type DocumentReminderStage } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
 import type { DocumentSnapshot } from "./business-document-snapshot";
@@ -96,8 +96,9 @@ export class CobrosService {
         if (sameCharge && REUSABLE_INTENT.includes(existing.status)) return this.checkout(existing);
         // A checkout the customer never started (or that failed) is closed; one in progress
         // (a QR on screen) is left to finish, and the paid hook records whichever succeeds.
+        // Never waits for the intent's lock (see cancelStaleCheckout for the lock order).
         if (existing.status === PaymentIntentStatus.REQUIRES_PAYMENT_METHOD || existing.status === PaymentIntentStatus.FAILED) {
-          await tx.paymentIntent.update({ where: { id: existing.id }, data: { status: PaymentIntentStatus.CANCELED } });
+          await cancelStaleCheckout(tx, existing.id);
         }
       }
 

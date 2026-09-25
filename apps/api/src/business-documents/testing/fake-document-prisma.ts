@@ -160,10 +160,21 @@ export class FakePrisma {
       return { count: rows.length };
     },
   };
-  /** Raw SQL the service ran (the row lock), as text. */
+  /** Raw SQL the service ran (the row locks), as text. */
   rawQueries: string[] = [];
-  $queryRaw = async (strings: TemplateStringsArray | { strings?: string[] }) => {
-    this.rawQueries.push(Array.isArray(strings) ? strings.join("?") : String((strings as { strings?: string[] }).strings?.join("?") ?? strings));
+  /** PaymentIntent rows another transaction holds (a checkout being confirmed or captured). */
+  lockedIntents = new Set<string>();
+  /** Runs when a PaymentIntent row lock is taken: lets a test commit a change "just before" it. */
+  onIntentLock?: (intentId: string) => void;
+  $queryRaw = async (strings: TemplateStringsArray | { strings?: string[] }, ...values: unknown[]) => {
+    const sql = Array.isArray(strings) ? strings.join("?") : String((strings as { strings?: string[] }).strings?.join("?") ?? strings);
+    this.rawQueries.push(sql);
+    if (/"PaymentIntent"/.test(sql) && /SKIP LOCKED|NOWAIT/.test(sql)) {
+      const intentId = String(values[0]);
+      this.onIntentLock?.(intentId);
+      const row = this.paymentIntents.find((candidate) => candidate.id === intentId);
+      return row && !this.lockedIntents.has(intentId) ? [{ id: intentId }] : [];
+    }
     return [];
   };
   $transaction = async (fn: (tx: this) => Promise<unknown>) => fn(this);

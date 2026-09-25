@@ -10,13 +10,14 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { BusinessDocumentStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
+import { BusinessDocumentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import { UploadsService } from "../uploads/uploads.service";
 import type { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
 import { buildDocumentEmail } from "./business-document-email";
 import { renderBusinessDocumentPdf } from "./business-document-pdf";
+import { cancelStaleCheckout } from "./cobro-payment";
 import {
   buildSnapshot,
   computeTotals,
@@ -311,12 +312,9 @@ export class BusinessDocumentsService {
       if (!count) throw new ConflictException("Este documento ya no se puede anular");
       // A checkout the customer has not started is closed with it; one already in progress
       // (a QR on screen) is left to finish, and a payment then lands as payment_after_close.
-      if (doc.paymentIntentId) {
-        await tx.paymentIntent.updateMany({
-          where: { id: doc.paymentIntentId, status: PaymentIntentStatus.REQUIRES_PAYMENT_METHOD },
-          data: { status: PaymentIntentStatus.CANCELED },
-        });
-      }
+      // The document row is held from here on; the intent is never waited for (lock order in
+      // cobro-payment.ts cancelStaleCheckout).
+      if (doc.paymentIntentId) await cancelStaleCheckout(tx, doc.paymentIntentId);
       await tx.businessDocumentEvent.create({
         data: { documentId: id, type: "voided", version: doc.currentVersion || null, ...(dto.reason && { data: { reason: dto.reason } }) },
       });

@@ -569,6 +569,18 @@ describe("BusinessDocumentsService — cobros (D1)", () => {
     expect(prisma.paymentIntents).toEqual([{ id: "pi_open", status: "CANCELED" }, { id: "pi_other", status: "REQUIRES_PAYMENT_METHOD" }]);
   });
 
+  it("never waits for a checkout another transaction holds when voiding (no deadlock with a capture)", async () => {
+    const { service, prisma } = setup();
+    const { id } = await sent(service);
+    prisma.documents[0].paymentIntentId = "pi_busy";
+    prisma.paymentIntents.push({ id: "pi_busy", status: "REQUIRES_PAYMENT_METHOD" });
+    prisma.lockedIntents.add("pi_busy");
+    await service.void("m_1", "store_1", id, {});
+    expect(prisma.documents[0].status).toBe("VOIDED");
+    expect(prisma.paymentIntents[0].status).toBe("REQUIRES_PAYMENT_METHOD");
+    expect(prisma.rawQueries.some((sql) => /"PaymentIntent".*FOR UPDATE SKIP LOCKED/s.test(sql))).toBe(true);
+  });
+
   it("reads the store logo from its own uploads for the PDF, never from a remote URL", async () => {
     const { prisma } = setup();
     const uploads = { getBuffer: jest.fn().mockResolvedValue(Buffer.from("png")) };

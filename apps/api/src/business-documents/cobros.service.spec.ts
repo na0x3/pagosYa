@@ -106,6 +106,30 @@ describe("CobrosService — pay", () => {
     expect(prisma.paymentIntents[1].status).toBe("REQUIRES_ACTION");
   });
 
+  it("never waits for an old checkout another transaction holds: it opens a new one and leaves the old one alone", async () => {
+    const { documents, cobros, prisma } = setup();
+    const { id, token } = await sentCobro(documents);
+    await cobros.pay(token);
+    await documents.update("m_1", "store_1", id, { items: [{ description: "Boceto", quantity: 3, unitAmount: 1500 }] });
+    await documents.send("m_1", "store_1", id, { email: false });
+    prisma.lockedIntents.add("pi_1"); // being confirmed right now
+    expect((await cobros.pay(token)).paymentIntentId).toBe("pi_2");
+    expect(prisma.paymentIntents[0].status).toBe("REQUIRES_PAYMENT_METHOD");
+    expect(prisma.rawQueries.some((sql) => /"PaymentIntent".*FOR UPDATE SKIP LOCKED/s.test(sql))).toBe(true);
+  });
+
+  it("cancels an old checkout only if it is still unstarted once locked", async () => {
+    const { documents, cobros, prisma } = setup();
+    const { id, token } = await sentCobro(documents);
+    await cobros.pay(token);
+    await documents.update("m_1", "store_1", id, { items: [{ description: "Boceto", quantity: 3, unitAmount: 1500 }] });
+    await documents.send("m_1", "store_1", id, { email: false });
+    // The customer's confirm committed between pay's read and its lock.
+    prisma.onIntentLock = (intentId) => { prisma.paymentIntents.find((row) => row.id === intentId)!.status = "PROCESSING"; };
+    await cobros.pay(token);
+    expect(prisma.paymentIntents[0].status).toBe("PROCESSING");
+  });
+
   it("uses test mode while the merchant or the store is not active", async () => {
     const { documents, cobros, prisma, paymentIntents } = setup();
     prisma.merchants[0].status = "PENDING_REVIEW";

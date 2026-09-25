@@ -1,4 +1,4 @@
-import { BusinessDocumentStatus, Prisma } from "@prisma/client";
+import { BusinessDocumentStatus, PaymentIntentStatus, Prisma } from "@prisma/client";
 
 const S = BusinessDocumentStatus;
 
@@ -67,4 +67,29 @@ export async function markBusinessDocumentPaid(
     data: { status: S.PAID, paidAt: new Date(), paymentIntentId: intent.id },
   });
   await record(count ? "paid" : "payment_after_close");
+}
+
+/** A checkout the customer never started, or one that failed and could be retried. */
+const CANCELABLE: PaymentIntentStatus[] = [PaymentIntentStatus.REQUIRES_PAYMENT_METHOD, PaymentIntentStatus.FAILED];
+
+/**
+ * Closes a cobro's stale checkout (pay on a new version, void, "marcar como pagado").
+ *
+ * Lock order (the one rule that keeps pay/void/mark-paid and a capture from deadlocking):
+ * - applyRailResult / confirm: PaymentIntent (FOR UPDATE, waits) → BusinessDocument (updateMany).
+ * - pay / void / mark-paid:    BusinessDocument (FOR UPDATE or updateMany) → PaymentIntent
+ *   with FOR UPDATE SKIP LOCKED — never waiting. A held intent is being confirmed or captured
+ *   right now, so it is left to finish; the paid hook then records whatever it becomes.
+ *
+ * The cancel itself is conditional on the status, so a confirm that committed between the
+ * caller's read and this lock is never overwritten. Returns whether it was canceled.
+ */
+export async function cancelStaleCheckout(tx: Prisma.TransactionClient, paymentIntentId: string): Promise<boolean> {
+  const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "PaymentIntent" WHERE id = ${paymentIntentId} FOR UPDATE SKIP LOCKED`;
+  if (!locked.length) return false;
+  const { count } = await tx.paymentIntent.updateMany({
+    where: { id: paymentIntentId, status: { in: CANCELABLE } },
+    data: { status: PaymentIntentStatus.CANCELED },
+  });
+  return count > 0;
 }
