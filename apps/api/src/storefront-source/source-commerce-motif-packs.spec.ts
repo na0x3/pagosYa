@@ -317,3 +317,51 @@ describe('the pattern in a real browser', () => {
     } finally { await page.close(); }
   });
 });
+
+describe('the divider and sticker placements', () => {
+  const BODY = CATALOG + '<div class="sep" data-motif-divider></div><div class="said" data-motif-divider>Texto</div><hr data-motif-divider><span class="badge" data-motif-sticker>¡Nuevo!</span>';
+
+  it('draws an empty marked divider as a hidden separator, and leaves one with content alone', () => {
+    const shop = boot({ pack: fixturePack(), body: BODY });
+    const sep = shop.$('.sep');
+    expect(sep.getAttribute('data-motif-divider')).toBe('placed');
+    expect(sep.getAttribute('aria-hidden')).toBe('true');
+    expect(sep.getAttribute('role')).toBe('presentation');
+    expect(sep.querySelector('.pagosya-motif[data-motif-slot="divider"] svg')).not.toBeNull();
+    expect(shop.$('.said').textContent).toBe('Texto');
+    expect(shop.$('.said .pagosya-motif')).toBeNull();
+    expect(shop.$('hr').childNodes).toHaveLength(0);
+  });
+
+  it('leads a sticker\'s own text with the drawing, once, hidden from assistive tech', async () => {
+    const shop = boot({ pack: fixturePack(), body: BODY });
+    const badge = shop.$('.badge');
+    expect(badge.firstElementChild.matches('.pagosya-motif[data-motif-slot="sticker"][aria-hidden="true"]')).toBe(true);
+    expect(badge.textContent.trim()).toBe('¡Nuevo!');
+    // A badge the store's scripts add later is placed too, and the first badge is not decorated twice.
+    const later = shop.doc.createElement('span');
+    later.className = 'later'; later.setAttribute('data-motif-sticker', ''); later.textContent = 'Oferta';
+    shop.doc.body.append(later);
+    await shop.tick();
+    expect(later.querySelector('.pagosya-motif[data-motif-slot="sticker"]')).not.toBeNull();
+    expect(badge.querySelectorAll('.pagosya-motif')).toHaveLength(1);
+  });
+
+  it('does nothing without the pack drawings, and never plays with reduced motion', () => {
+    const bare = boot({ pack: fixturePack(['card']), body: BODY });
+    expect(bare.$('.sep').getAttribute('data-motif-divider')).toBe('');
+    expect(bare.$('.badge .pagosya-motif')).toBeNull();
+    const calm = boot({ pack: fixturePack(), body: BODY, reduced: true });
+    expect(calm.$$('.pagosya-motif[data-motif-play]')).toHaveLength(0);
+  });
+
+  it('takes a sticker drawing off a price it would cover (real browser)', async () => {
+    const body = CATALOG + '<div style="position:relative;height:80px"><strong class="menu-item__price" style="position:absolute;top:0;left:0;width:140px;height:40px">Bs 35,90</strong><span data-motif-sticker style="position:absolute;top:0;left:0">¡Nuevo!</span></div>';
+    const page = await openShop({ pack: fixturePack(), body });
+    try {
+      await page.waitForSelector('[data-motif-sticker="placed"]');
+      await page.waitForTimeout(120);
+      expect(await page.$$eval('[data-motif-sticker] .pagosya-motif', els => els.length)).toBe(0);
+    } finally { await page.close(); }
+  });
+});

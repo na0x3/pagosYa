@@ -1666,6 +1666,38 @@
       section.setAttribute('data-motif-pattern', 'placed');
     }
   }
+  /* Divider and sticker placements. An empty element marked data-motif-divider becomes a decorative separator (hairlines
+   * either side of the drawing); an element with content is the store's own and is left alone. A badge marked
+   * data-motif-sticker ("¡Nuevo!") keeps its text; the drawing leads it and comes off a price it would cover. */
+  const markedHosts = (root, attribute) => [...(root.matches?.(`[${attribute}]`) ? [root] : []), ...root.querySelectorAll(`[${attribute}]`)]
+    .filter(host => host.getAttribute(attribute) !== 'placed' && !host.closest('template'));
+  function placeDividers(root) {
+    const index = packMotif('divider');
+    if (index < 0 || !root?.querySelectorAll) return;
+    for (const host of markedHosts(root, 'data-motif-divider')) {
+      if (/^(?:HR|IMG|INPUT|BR)$/.test(host.tagName) || host.childElementCount || host.textContent.trim()) continue;
+      const holder = motifSlot(index, 'divider');
+      if (!holder) return;
+      host.append(holder);
+      host.setAttribute('data-motif-divider', 'placed');
+      host.setAttribute('aria-hidden', 'true');
+      if (!host.hasAttribute('role')) host.setAttribute('role', 'presentation');
+      armMotif(holder, host);
+      guardMotif(holder, document.body);
+    }
+  }
+  function placeStickers(root) {
+    const index = packMotif('sticker');
+    if (index < 0 || !root?.querySelectorAll) return;
+    for (const host of markedHosts(root, 'data-motif-sticker')) {
+      const holder = motifSlot(index, 'sticker');
+      if (!holder) return;
+      host.prepend(holder);
+      host.setAttribute('data-motif-sticker', 'placed');
+      armMotif(holder, host);
+      guardMotif(holder, document.body);
+    }
+  }
   if (MOTIFS.length) {
     const motifStyle = document.createElement('style');
     motifStyle.dataset.pagosyaKit = 'motifs';
@@ -1714,6 +1746,11 @@
     '.pagosya-motif[data-motif-slot=button]{width:1.15em;height:1.15em;color:inherit}',
     ':root[data-dna-button=split] :is(.product-detail__buy,.product-detail__sticky button)>[data-motif-icon]{display:none}',
     '[data-motif-pattern=placed]{background-image:var(--pagosya-pattern)!important;background-repeat:repeat!important;background-size:auto!important;background-position:0 0!important}',
+    '[data-motif-divider=placed]{display:flex;align-items:center;gap:16px;margin-block:clamp(16px,4vw,40px);color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}',
+    '[data-motif-divider=placed]::before,[data-motif-divider=placed]::after{content:"";flex:1;height:1px;background:currentColor;opacity:.35}',
+    '.pagosya-motif[data-motif-slot=divider]{width:64px;height:24px}',
+    '[data-motif-sticker=placed]{display:inline-flex;align-items:center;gap:.35em}',
+    '.pagosya-motif[data-motif-slot=sticker]{width:1.7em;height:1.7em}',
   ];
   if (PACK_MOTIFS.length) {
     const packStyle = document.createElement('style');
@@ -1723,8 +1760,8 @@
   }
   /* Store-marked slots are placed once the page is parsed, and again whenever the store's own scripts (React) add or
    * replace them. Only a store with a pack observes anything. */
-  const MOTIF_SLOTS = '[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"]),[data-motif-pattern]:not([data-motif-pattern="placed"]):not([data-motif-pattern="skipped"])';
-  function placeIdentityMotifs(root) { placeButtonMotifs(root); placePatterns(root); }
+  const MOTIF_SLOTS = '[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"]),[data-motif-pattern]:not([data-motif-pattern="placed"]):not([data-motif-pattern="skipped"]),[data-motif-divider]:not([data-motif-divider="placed"]),[data-motif-sticker]:not([data-motif-sticker="placed"])';
+  function placeIdentityMotifs(root) { placeButtonMotifs(root); placePatterns(root); placeDividers(root); placeStickers(root); }
   if (PACK_MOTIFS.length) {
     const startIdentity = () => {
       placeIdentityMotifs(document.body);
