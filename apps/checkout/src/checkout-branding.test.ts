@@ -49,3 +49,23 @@ describe("confirmation DNA styles", () => {
     expect(css).not.toMatch(/--checkout-dna-btn-shadow,none/);
   });
 });
+
+describe("identity button forms (T2b)", () => {
+  const css = readFileSync(`${process.cwd()}/src/checkout-branding.css`, "utf8");
+  afterEach(() => { rememberStoreDna(null); applyCheckoutBranding(document.createElement("div"), null); });
+  it("carries the four new forms onto a branded checkout", () => {
+    for (const form of ["sticker", "ticket", "bubbly", "brutal"]) {
+      rememberStoreDna({ version: 1, button: form });
+      applyCheckoutBranding(document.createElement("div"), branding as never);
+      expect(document.body.dataset.dnaButton).toBe(form);
+    }
+  });
+  it("fill the pay button with the accent pair, and drop the ticket notches on focus", () => {
+    for (const form of ["sticker", "ticket", "bubbly", "brutal"]) {
+      const rule = css.match(new RegExp(`body\\.store-branded-checkout\\[data-dna-button=${form}\\]\\{([^}]*)\\}`))?.[1] ?? "";
+      expect(rule).toContain("--checkout-dna-btn-bg:var(--checkout-accent)");
+      expect(rule).toContain("--checkout-dna-btn-fg:var(--checkout-accent-foreground)");
+    }
+    expect(css).toContain("body.store-branded-checkout[data-dna-button=ticket] #app :is(button.primary,.payment-success-panel .receipt-action):focus-visible{-webkit-mask:none;mask:none}");
+  });
+});

@@ -3,7 +3,7 @@ import { assetUrl } from './api';
 const loaded = new Map<string, { face: FontFace; source: string }>();
 
 // Design DNA (sub-project 5): the order confirmation takes the store's button form and radius. Same values as the kit.
-const DNA_FIELDS = { button: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split'], radius: ['none', 'soft', 'round', 'pill'] } as const;
+const DNA_FIELDS = { button: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split', 'sticker', 'ticket', 'bubbly', 'brutal'], radius: ['none', 'soft', 'round', 'pill'] } as const;
 let storeDna: Record<string, unknown> | null = null;
 /** The public store JSON carries the store's runtime DNA; the payment flow that follows reads it here. */
 export function rememberStoreDna(dna: unknown) { storeDna = dna && typeof dna === 'object' && !Array.isArray(dna) ? dna as Record<string, unknown> : null; }
