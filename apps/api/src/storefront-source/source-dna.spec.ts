@@ -160,4 +160,15 @@ describe('identity libraries (T2b) DNA values', () => {
     const forms = new Set(Array.from({ length: 500 }, (_, i) => defaultDna(`seed-${i}`).buttons.form));
     for (const form of ['sticker', 'ticket', 'bubbly', 'brutal']) expect(forms.has(form as any)).toBe(false);
   });
+
+  it('accepts the three new frames, and never seeds them either', () => {
+    for (const frame of ['blob', 'stamp', 'tape']) {
+      const raw = validDna() as any;
+      raw.shape.frame = frame;
+      expect(normalizeDna(raw, 'store-1')).toEqual({ dna: raw, repairs: [] });
+      expect(dnaRuntimeConfig(raw).frame).toBe(frame);
+    }
+    const frames = new Set(Array.from({ length: 500 }, (_, i) => defaultDna(`seed-${i}`).shape.frame));
+    for (const frame of ['blob', 'stamp', 'tape']) expect(frames.has(frame as any)).toBe(false);
+  });
 });

@@ -9,7 +9,7 @@ export const SOURCE_DNA_FONTS = SOURCE_FONT_IDS;
 
 export const SOURCE_DNA_ENUMS = {
   type: { display: SOURCE_DNA_FONTS, text: SOURCE_DNA_FONTS, case: ['none', 'upper', 'small-caps'], tracking: ['tight', 'normal', 'wide'] },
-  shape: { radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid'] },
+  shape: { radius: ['none', 'soft', 'round', 'pill'], border: ['none', 'hairline', 'bold'], frame: ['bleed', 'inset', 'rounded', 'arch', 'polaroid', 'blob', 'stamp', 'tape'] },
   buttons: {
     form: ['pill', 'block', 'underline', 'tag', 'stamp', 'outline', 'ghost', 'split', 'sticker', 'ticket', 'bubbly', 'brutal'],
     hover: ['lift', 'fill', 'underline-grow', 'tilt', 'shine', 'invert'], press: ['squash', 'sink', 'pop', 'none'],
@@ -40,7 +40,7 @@ export type SourceDesignDna = { version: 1 } & { -readonly [G in keyof Enums]: {
 const RUNTIME_NAMES: Record<string, string> = { 'buttons.form': 'button', 'motion.personality': 'motion' };
 /** Identity libraries (T2b) appended these values. The seeded default never picks them: withSeededDna seeds every stored
  * store without a DNA on each public view, so a new value in the draw would silently restyle stores published long ago. */
-const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'] };
+const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'], 'shape.frame': ['blob', 'stamp', 'tape'] };
 const FIELDS = Object.entries(SOURCE_DNA_ENUMS).flatMap(([group, keys]) => Object.entries(keys).map(([key, values]) => (
   { group, key, name: RUNTIME_NAMES[`${group}.${key}`] ?? key, values: values as readonly string[],
     seeded: (values as readonly string[]).filter(value => !(NOT_SEEDED[`${group}.${key}`] ?? []).includes(value)) })));

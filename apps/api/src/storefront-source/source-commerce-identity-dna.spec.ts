@@ -119,3 +119,27 @@ describe('form details', () => {
     }
   });
 });
+
+describe('identity frames', () => {
+  const PHOTO = 'data:image/svg+xml;base64,' + Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 50"><rect width="40" height="50" fill="#c96"/><circle cx="20" cy="22" r="10" fill="#734"/></svg>').toString('base64');
+
+  it('frames card and cart photos as a blob, a perforated stamp and taped corners', async () => {
+    const facts: Record<string, any> = {};
+    for (const frame of ['blob', 'stamp', 'tape']) {
+      const page = await open({ dna: { ...BASE, button: 'pill', frame }, css: PALETTES.light, items: [{ ...ITEM, imageUrls: [PHOTO] }], cart: [{ id: 'taza', quantity: 1 }] });
+      try {
+        await page.waitForSelector('.menu-item .menu-item__image');
+        facts[frame] = await page.$eval('.menu-item .menu-item__image', el => { const s = getComputedStyle(el); return { radius: s.borderTopLeftRadius, mask: s.maskImage, image: s.backgroundImage, pad: s.paddingTop }; });
+        await page.click('[data-cart-open]');
+        await page.waitForSelector('dialog.cart-drawer[open] .order-item__photo');
+        facts[`${frame}-cart`] = await page.$eval('dialog.cart-drawer .order-item__photo', el => { const s = getComputedStyle(el); return { mask: s.maskImage, image: s.backgroundImage }; });
+      } finally { await page.close(); }
+    }
+    expect(facts.blob.radius).toMatch(/%/);
+    expect(facts.stamp.mask).toContain('radial-gradient');
+    expect(facts.stamp.pad).toBe('8px');
+    expect(facts['stamp-cart'].mask).toContain('radial-gradient');
+    expect(facts.tape.image.match(/linear-gradient/g)).toHaveLength(4);
+    expect(facts['tape-cart'].image.match(/linear-gradient/g)).toHaveLength(4);
+  });
+});
