@@ -83,6 +83,8 @@ export interface AppConfig {
   consumerDashboardOrigin: string;
   merchantDashboardOrigin: string;
   orderTrackingSecret: string;
+  /** Signs public cobro / proposal / contract links (business-documents/document-link-token.ts). */
+  documentLinkSecret: string;
   operationsEncryptionKey: string;
   corsOrigins: string[];
   exposeDocs: boolean;
@@ -195,6 +197,7 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
   requireSecret("INTERNAL_RAIL_CALLBACK_SECRET", app.internalRailCallbackSecret);
   requireSecret("INTERNAL_OPS_SECRET", app.internalOpsSecret);
   requireSecret("ORDER_TRACKING_SECRET", app.orderTrackingSecret);
+  requireSecret("DOCUMENT_LINK_SECRET", app.documentLinkSecret);
   requireSecret("OPERATIONS_ENCRYPTION_KEY", app.operationsEncryptionKey);
   requireHttps("CHECKOUT_ORIGIN", app.checkoutOrigin);
   requireHttps("CONSUMER_DASHBOARD_ORIGIN", app.consumerDashboardOrigin);
@@ -262,6 +265,7 @@ export default (): { app: AppConfig } => {
     consumerDashboardOrigin: process.env.CONSUMER_DASHBOARD_ORIGIN ?? "http://localhost:4324",
     merchantDashboardOrigin: process.env.MERCHANT_DASHBOARD_ORIGIN ?? "http://localhost:4322",
     orderTrackingSecret: process.env.ORDER_TRACKING_SECRET ?? "development-only-order-tracking-secret-change-me",
+    documentLinkSecret: process.env.DOCUMENT_LINK_SECRET ?? "development-only-document-link-secret-change-me",
     operationsEncryptionKey: process.env.OPERATIONS_ENCRYPTION_KEY ?? "development-only-operations-key",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,

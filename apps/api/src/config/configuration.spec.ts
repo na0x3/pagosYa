@@ -13,6 +13,7 @@ const SECURITY_ENV_KEYS = [
   "CONSUMER_DASHBOARD_ORIGIN",
   "MERCHANT_DASHBOARD_ORIGIN",
   "ORDER_TRACKING_SECRET",
+  "DOCUMENT_LINK_SECRET",
   "OPERATIONS_ENCRYPTION_KEY",
   "PAGOSYA_WEB_ORIGIN",
   "ADDITIONAL_CORS_ORIGINS",
@@ -41,6 +42,7 @@ function setStrongProductionEnv() {
   process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
   process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
   process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+  process.env.DOCUMENT_LINK_SECRET = "documents_" + "e".repeat(48);
   process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
   process.env.ADDITIONAL_CORS_ORIGINS = "https://ops.pagosya.bo,https://dashboard.pagosya.bo";
   process.env.BANECO_QR_ENABLED = "false";
@@ -95,6 +97,7 @@ describe("production security configuration", () => {
     process.env.MERCHANT_DASHBOARD_ORIGIN = "https://comercios.pagosya.bo";
     process.env.ORDER_TRACKING_SECRET = "tracking_" + "d".repeat(48);
     process.env.OPERATIONS_ENCRYPTION_KEY = "calendar_" + "c".repeat(48);
+    process.env.DOCUMENT_LINK_SECRET = "documents_" + "e".repeat(48);
     process.env.PAGOSYA_WEB_ORIGIN = "https://pagosya.bo";
     process.env.ADDITIONAL_CORS_ORIGINS = "https://ops.pagosya.bo,https://dashboard.pagosya.bo";
     process.env.BANECO_QR_ENABLED = "false";
@@ -105,6 +108,14 @@ describe("production security configuration", () => {
     expect(result.app.trustProxy).toBe(1);
     expect(result.app.exposeDocs).toBe(false);
     expect(result.app.databaseUrl).toContain("connection_limit=10");
+  });
+
+  it("refuses production without a strong document link secret", () => {
+    setStrongProductionEnv();
+    delete process.env.DOCUMENT_LINK_SECRET;
+    expect(configuration).toThrow("DOCUMENT_LINK_SECRET");
+    process.env.DOCUMENT_LINK_SECRET = "development-only-document-link-secret-change-me";
+    expect(configuration).toThrow("DOCUMENT_LINK_SECRET");
   });
 
   it("refuses an FX rate in production while dLocal would run on fixtures", () => {
