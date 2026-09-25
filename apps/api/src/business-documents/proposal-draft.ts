@@ -1,5 +1,5 @@
 import type { DocumentBlock, DocumentBlockType } from "./business-document-snapshot";
-import { merchantAmounts, numberToCents, type MerchantAmount } from "./proposal-money";
+import { merchantAmounts, moneyInText, type MerchantAmount } from "./proposal-money";
 
 /**
  * D2: what YAPI is asked for when it drafts a proposal, and the rules the server
@@ -197,18 +197,17 @@ export function merchantAllowed(evidence: MerchantEvidence, currency = "BOB"): S
   return new Set(evidence.amounts.filter((amount) => !amount.currency || amount.currency === currency).map((amount) => amount.cents));
 }
 
-const NUMBER = String.raw`(\d(?:[\d.,]*\d)?)`;
-
-const PREFIX_MONEY = new RegExp(String.raw`(?<![\p{L}\d])(?:US\$|USD|BOB|Bs\.?|\$)\s?${NUMBER}(\s*mil\b)?`, "giu");
-const SUFFIX_MONEY = new RegExp(String.raw`(?<![\p{L}\d.,])${NUMBER}(\s*mil)?\s?(?:Bs\b\.?|BOB\b|bolivianos\b|dólares\b|USD\b)`, "giu");
-
-/** A money mention nobody wrote (not in `allowed`) becomes {{precio}}; percentages and counts stay. */
+/**
+ * A money mention nobody wrote (not in `allowed`, or in a currency nobody uses here) becomes
+ * {{precio}}; a range is one mention. Percentages, counts, dates and years stay.
+ */
 export function guardMoneyText(text: string, allowed: Set<number>): string {
-  const replace = (match: string, token: string, thousands: string | undefined) => {
-    const cents = numberToCents(token, Boolean(thousands));
-    return cents && allowed.has(cents) ? match : PRICE_PLACEHOLDER;
-  };
-  return text.replace(PREFIX_MONEY, replace).replace(SUFFIX_MONEY, replace);
+  let out = text;
+  for (const mention of moneyInText(text).reverse()) {
+    const ok = mention.currency !== "OTHER" && mention.values.every((value) => allowed.has(value));
+    if (!ok) out = `${out.slice(0, mention.start)}${PRICE_PLACEHOLDER}${out.slice(mention.end)}`;
+  }
+  return out;
 }
 
 const clean = (value: string | null | undefined, max: number, allowed: Set<number>) => guardMoneyText(String(value ?? "").trim(), allowed).slice(0, max);

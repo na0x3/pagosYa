@@ -103,6 +103,29 @@ describe("proposal draft — the price guard", () => {
     expect(guardMoneyText("Pagas 50% al aprobar y el resto en 2 cuotas.", allowed)).toBe("Pagas 50% al aprobar y el resto en 2 cuotas.");
   });
 
+  it("catches every way money is written (the review's probe)", () => {
+    const replaced: Array<[string, string]> = [
+      ["Bs. 1.500", "{{precio}}"], ["Bs.- 1.500", "{{precio}}"], ["Bs.-1500", "{{precio}}"], ["$us 200", "{{precio}}"], ["$us. 200", "{{precio}}"],
+      ["Sus 200", "{{precio}}"], ["1500 bolivianos", "{{precio}}"], ["1500 dolares", "{{precio}}"], ["1500 dólares americanos", "{{precio}}"],
+      ["Bs  1500", "{{precio}}"], ["Bs 1500", "{{precio}}"], ["USD 90", "{{precio}}"], ["US$ 90", "{{precio}}"], ["1.500 Bs", "{{precio}}"],
+      ["precio de 1500 por el servicio", "precio de {{precio}} por el servicio"], ["total: 1.500", "total: {{precio}}"],
+      ["mil quinientos bolivianos", "{{precio}}"], ["Bs 1500-2000", "{{precio}}"], ["entre Bs 1.500 y 2.000", "entre {{precio}}"],
+      ["Bs 1 500", "{{precio}}"], ["1,5 mil Bs", "{{precio}}"], ["Bs 50 por persona", "{{precio}} por persona"], ["Bs 2026", "{{precio}}"],
+      ["Bs 70012345", "{{precio}}"], ["1500 Bs.", "{{precio}}."], ["1500Bs", "{{precio}}"], ["1500 BOB", "{{precio}}"], ["1500 pesos", "{{precio}}"],
+      ["Bs 15", "{{precio}}"], ["a Bs. 3 mil", "a {{precio}}"], ["Bs 1.500,50", "{{precio}}"], ["1.500,00 Bs", "{{precio}}"], ["Bs1,500.00", "{{precio}}"],
+      ["ciento cincuenta Bs", "{{precio}}"], ["Bs 1500k", "{{precio}}"], ["Bs 1.5k", "{{precio}}"], ["150 bs por plato", "{{precio}} por plato"],
+      ["Bs 150/plato", "{{precio}}/plato"], ["Bs150", "{{precio}}"], ["BS 150", "{{precio}}"], ["Semana 1 — Anticipo de 1500", "Semana 1 — Anticipo de {{precio}}"],
+      ["un costo de 2.500 más envío", "un costo de {{precio}} más envío"],
+    ];
+    for (const [text, expected] of replaced) expect([text, guardMoneyText(text, new Set())]).toEqual([text, expected]);
+    const kept = ["50% de anticipo", "₿ 3", "Semana 1 — Bocetos", "Dos rondas de revisiones", "Catering para 50 personas el 15 de octubre de 2026, 3 cocineros, llamar al 70012345",
+      "Casa con 200 m² de área verde", "precio vigente en 2026", "Pagas 50% al aprobar y el resto en 2 cuotas.", "total de 120 invitados"];
+    for (const text of kept) expect([text, guardMoneyText(text, new Set())]).toEqual([text, text]);
+    const allowed = new Set([150000]);
+    for (const text of ["Bs 1.500", "1.500 bolivianos", "precio de 1500", "mil quinientos bolivianos", "1,5 mil Bs", "Bs 1.5k", "Bs.- 1.500"]) expect([text, guardMoneyText(text, allowed)]).toEqual([text, text]);
+    expect(guardMoneyText("entre Bs 1.500 y 2.000", allowed)).toBe("entre {{precio}}");
+  });
+
   it("allows the proposal's own amounts in the text (lines and total)", () => {
     const doc = draftToDocument(output({ investmentNote: "Total Bs 2.300; el logo cuesta Bs 1.500 y el letrero Bs 800. Extra: Bs 5.000" }), {
       catalog: context.catalog,

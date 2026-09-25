@@ -244,3 +244,20 @@ export function merchantAmounts(brief: string | null | undefined, budgetHint?: s
   }
   return amounts;
 }
+
+/** In the AI's text a bare number is money near these words ("Anticipo de 1500", "total: 1.500", "1.500 de inversión"). */
+const TEXT_CUES = new Set([...PRICE_CUES, "inversión", "inversion", "anticipo", "adelanto", "saldo", "pago", "pagos", "importe", "cuota", "presupuestos"]);
+
+/**
+ * The money mentions of a text the AI wrote: anything with a currency, and a bare number of 100 or
+ * more within three words of a price word (or right after "a"/"por") that is not a count, date,
+ * time, percentage or year.
+ */
+export function moneyInText(text: string): MoneyMention[] {
+  return scanMoney(text).filter((mention) => {
+    if (mention.currency) return true;
+    if (mention.notMoney || mention.yearInContext) return false;
+    if (mention.values.some((value) => value < 10_000)) return false;
+    return mention.before.some((word) => TEXT_CUES.has(word)) || mention.after.some((word) => TEXT_CUES.has(word)) || ADJACENT_CUES.has(mention.before[mention.before.length - 1] ?? "");
+  });
+}
