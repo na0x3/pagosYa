@@ -92,7 +92,7 @@ jobs:
       # is green locally (72 passed, 1 intentional skip), merchant-workspace
       # included.
       - name: Test merchant navigation, settings, and account access
-        run: pnpm --filter @pagosya/merchant-dashboard exec playwright test tests/merchant-workspace.spec.mjs tests/auth-account.spec.mjs tests/consumer-auth-account.spec.mjs tests/store-settings.spec.mjs tests/domain-shop.spec.mjs tests/international-payments.spec.mjs tests/dashboard-smoke.spec.mjs tests/rewards.spec.mjs tests/merchant-levels.spec.mjs tests/terms-acceptance.spec.mjs tests/shipment-panel.spec.mjs tests/single-store.spec.mjs --workers=1
+        run: pnpm --filter @pagosya/merchant-dashboard exec playwright test tests/merchant-workspace.spec.mjs tests/auth-account.spec.mjs tests/consumer-auth-account.spec.mjs tests/store-settings.spec.mjs tests/domain-shop.spec.mjs tests/international-payments.spec.mjs tests/dashboard-smoke.spec.mjs tests/rewards.spec.mjs tests/merchant-levels.spec.mjs tests/terms-acceptance.spec.mjs tests/shipment-panel.spec.mjs tests/single-store.spec.mjs tests/blob-characters.spec.mjs --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
