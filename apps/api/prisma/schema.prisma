@@ -2846,3 +2846,145 @@ model AiCreditRedemption {
 
   @@index([merchantId])
 }
+
+// ── Business documents (cobros, proposals, contracts) ─────────────────────
+// docs/superpowers/specs/2026-09-25-document-foundations-design.md.
+// No relations to existing models (plain indexed ids, like BusinessCustomer),
+// so these tables were added without altering any existing table.
+
+enum BusinessDocumentKind {
+  INVOICE
+  PROPOSAL
+  CONTRACT
+}
+
+enum BusinessDocumentStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  CHANGES_REQUESTED
+  SIGNED
+  PAID
+  OVERDUE
+  DECLINED
+  EXPIRED
+  VOIDED
+}
+
+enum BusinessDocumentSignerRole {
+  MERCHANT
+  CUSTOMER
+}
+
+enum BusinessDocumentSignatureMethod {
+  TYPED
+  DRAWN
+}
+
+model BusinessDocument {
+  id                 String                      @id @default(cuid())
+  storeId            String
+  merchantId         String
+  kind               BusinessDocumentKind
+  // Assigned on the first send, per store and kind; drafts have none.
+  number             Int?
+  status             BusinessDocumentStatus      @default(DRAFT)
+  title              String
+  currency           String                      @default("BOB")
+  // Customer snapshot; businessCustomerId optionally links the store CRM row.
+  businessCustomerId String?
+  customerName       String?
+  customerEmail      String?
+  customerPhone      String?
+  customerDocument   String?
+  // Integer minor units.
+  subtotalAmount     Int                         @default(0)
+  discountAmount     Int                         @default(0)
+  totalAmount        Int                         @default(0)
+  // Typed blocks: heading | paragraph | list | clause.
+  content            Json                        @default("[]")
+  dueAt              DateTime?
+  validUntil         DateTime?
+  // Latest sent version (0 = never sent). The public link shows only that version.
+  currentVersion     Int                         @default(0)
+  sentAt             DateTime?
+  viewedAt           DateTime?
+  voidedAt           DateTime?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  items              BusinessDocumentItem[]
+  versions           BusinessDocumentVersion[]
+  events             BusinessDocumentEvent[]
+  signatures         BusinessDocumentSignature[]
+
+  @@unique([storeId, kind, number])
+  @@index([storeId, kind, status, createdAt])
+  @@index([merchantId, createdAt])
+}
+
+model BusinessDocumentItem {
+  id            String           @id @default(cuid())
+  documentId    String
+  document      BusinessDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  position      Int
+  description   String
+  quantity      Int
+  unitAmount    Int
+  amount        Int
+  paymentLinkId String?
+
+  @@index([documentId, position])
+}
+
+/// Immutable: one row per send that changed the document.
+model BusinessDocumentVersion {
+  id         String           @id @default(cuid())
+  documentId String
+  document   BusinessDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version    Int
+  sha256     String
+  content    Json
+  createdAt  DateTime         @default(now())
+  sentAt     DateTime?
+
+  @@unique([documentId, version])
+}
+
+model BusinessDocumentEvent {
+  id         String           @id @default(cuid())
+  documentId String
+  document   BusinessDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  // created | sent | emailed | email_failed | viewed | voided (D1–D3 add more).
+  type       String
+  version    Int?
+  at         DateTime         @default(now())
+  ipAddress  String?
+  userAgent  String?
+  data       Json?
+  // Set for events that must happen once, e.g. "viewed:v2".
+  dedupeKey  String?
+
+  @@unique([documentId, dedupeKey])
+  @@index([documentId, at])
+}
+
+/// D3 e-signature evidence; one signature per role per version.
+model BusinessDocumentSignature {
+  id             String                          @id @default(cuid())
+  documentId     String
+  document       BusinessDocument                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  role           BusinessDocumentSignerRole
+  name           String
+  method         BusinessDocumentSignatureMethod
+  imageUrl       String?
+  email          String
+  codeVerifiedAt DateTime?
+  ipAddress      String?
+  userAgent      String?
+  version        Int
+  versionSha256  String
+  signedAt       DateTime                        @default(now())
+
+  @@unique([documentId, version, role])
+}
