@@ -62,4 +62,19 @@ describe('buildAnalyticsReport', () => {
     expect(empty.checkoutSteps.map(step => step.dropOff)).toEqual([null, null, null, null, null, null]);
     expect(buildAnalyticsReport([row('2026-09-01', 'checkout_step', 5, 5, { target: 'review' })], new Map(), '2026-09-01', '2026-09-01').checkoutSteps[1].dropOff).toBeNull();
   });
+
+  it('counts a session once per type and day from the rollup\'s (type, day) row, not once per product or label', () => {
+    const star = { productId: '*', target: '*' };
+    const oneShopper = buildAnalyticsReport([
+      row('2026-09-01', 'product_view', 1, 1, { productId: 'a' }), row('2026-09-01', 'product_view', 1, 1, { productId: 'b' }), row('2026-09-01', 'product_view', 1, 1, { productId: 'c' }),
+      row('2026-09-01', 'product_view', 3, 1, star),
+      row('2026-09-01', 'cta_click', 1, 1, { target: 'hero-cta' }), row('2026-09-01', 'cta_click', 1, 1, { target: 'nav-cart' }), row('2026-09-01', 'cta_click', 2, 1, star),
+    ], new Map(), '2026-09-01', '2026-09-02');
+    expect(oneShopper.totals.product_view).toEqual({ count: 3, sessions: 1 });
+    expect(oneShopper.totals.cta_click).toEqual({ count: 2, sessions: 1 });
+    expect(oneShopper.series.product_view).toEqual([{ day: '2026-09-01', count: 3, sessions: 1 }, { day: '2026-09-02', count: 0, sessions: 0 }]);
+    // The (type, day) row is not a product or a label.
+    expect(oneShopper.topProducts.map(product => product.productId)).toEqual(['a', 'b', 'c']);
+    expect(oneShopper.topCtas.map(cta => cta.target)).toEqual(['hero-cta', 'nav-cart']);
+  });
 });

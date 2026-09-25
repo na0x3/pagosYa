@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { deviceClass, normalizeAnalyticsBatch } from './store-analytics-input';
 import { addDays, boliviaDay, boliviaDayStart, dayCount } from './store-analytics-days';
-import { buildAnalyticsReport } from './store-analytics-report';
+import { buildAnalyticsReport, ROLLUP_ALL } from './store-analytics-report';
 import { ANALYTICS_RETENTION_MONTHS } from './store-analytics.constants';
 
 export type IngestContext = { userAgent?: string; gpc?: boolean };
@@ -43,7 +43,8 @@ export class StoreAnalyticsService {
   /**
    * Rebuilds the rollup of the last `days` Bolivia days (today included) from the raw rows: remove those days, insert
    * fresh ones, in one transaction under an advisory lock (a second instance skips). Running it again gives the same
-   * rows. Derived rows from page_view: `_device` (target = device) and `_referrer` (target = the session's referrer
+   * rows. Each type also gets a (type, day) row with productId and target `*` whose sessions are distinct across every
+   * product and label (the report's totals and series read it). Derived rows from page_view: `_device` (target = device) and `_referrer` (target = the session's referrer
    * host, or `direct`; count = sessions). createdAt is UTC wall time, so the Bolivia day is createdAt − 4 h; the
    * bounds are cast explicitly because the server's TimeZone setting is not UTC everywhere.
    */
@@ -62,6 +63,9 @@ export class StoreAnalyticsService {
         ), r AS (
           SELECT "storeId", day, "type", "productId", "target", COUNT(*)::int AS count, COUNT(DISTINCT "sessionHash")::int AS sessions
           FROM e GROUP BY "storeId", day, "type", "productId", "target"
+          UNION ALL
+          SELECT "storeId", day, "type", '*', '*', COUNT(*)::int, COUNT(DISTINCT "sessionHash")::int
+          FROM e GROUP BY "storeId", day, "type"
           UNION ALL
           SELECT "storeId", day, '_device', '', "device", COUNT(*)::int, COUNT(DISTINCT "sessionHash")::int
           FROM e WHERE "type" = 'page_view' GROUP BY "storeId", day, "device"
@@ -102,7 +106,7 @@ export class StoreAnalyticsService {
       select: { day: true, type: true, productId: true, target: true, count: true, uniqueSessions: true },
     });
     const rollup = rows.map(row => ({ ...row, day: row.day.toISOString().slice(0, 10) }));
-    const ids = [...new Set(rollup.filter(row => row.productId).map(row => row.productId))];
+    const ids = [...new Set(rollup.filter(row => row.productId && row.productId !== ROLLUP_ALL).map(row => row.productId))];
     const names = new Map(ids.length ? (await this.prisma.paymentLink.findMany({ where: { storeId, id: { in: ids } }, select: { id: true, name: true } })).map(product => [product.id, product.name]) : []);
     return buildAnalyticsReport(rollup, names, from, to);
   }

@@ -3,6 +3,11 @@ import { daysBetween } from './store-analytics-days';
 
 /** One StoreAnalyticsDaily row with its day as YYYY-MM-DD. `productId` / `target` are '' for none. */
 export type RollupRow = { day: string; type: string; productId: string; target: string; count: number; uniqueSessions: number };
+/**
+ * The rollup's per-(type, day) row (productId and target both `*`): its uniqueSessions is COUNT(DISTINCT session) over
+ * every product and label of that type, so a shopper who views three products is one session, not three.
+ */
+export const ROLLUP_ALL = '*';
 type Tally = { count: number; sessions: number };
 export type CheckoutStep = { step: string; optional: boolean; sessions: number; dropOff: number | null };
 
@@ -25,7 +30,9 @@ const rate = (part: number, whole: number) => Math.round((part / whole) * 1000) 
 export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, string>, from: string, to: string) {
   const days = daysBetween(from, to);
   const totals = Object.fromEntries(ANALYTICS_EVENT_TYPES.map(type => [type, { count: 0, sessions: 0 }])) as Record<AnalyticsEventType, Tally>;
+  // Per (type, day): the rollup's `*` row when present; rows rolled before it existed fall back to the sum.
   const daily = new Map<string, Tally>();
+  const dailyAll = new Map<string, Tally>();
   const products = new Map<string, { impressions: number; cardClicks: number; views: number; adds: number; viewSessions: number; addSessions: number }>();
   const ctas = new Map<string, { clicks: number; sessions: number }>();
   const devices = new Map<string, { pageViews: number; sessions: number }>([['mobile', { pageViews: 0, sessions: 0 }], ['desktop', { pageViews: 0, sessions: 0 }]]);
@@ -34,10 +41,9 @@ export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, strin
   for (const row of rows) {
     if (row.type === '_device') { const device = devices.get(row.target); if (device) { device.pageViews += row.count; device.sessions += row.uniqueSessions; } continue; }
     if (row.type === '_referrer') { referrers.set(row.target, (referrers.get(row.target) || 0) + row.uniqueSessions); continue; }
-    const total = totals[row.type as AnalyticsEventType];
-    if (!total) continue;
-    total.count += row.count; total.sessions += row.uniqueSessions;
+    if (!totals[row.type as AnalyticsEventType]) continue;
     const key = `${row.type}|${row.day}`;
+    if (row.productId === ROLLUP_ALL && row.target === ROLLUP_ALL) { dailyAll.set(key, { count: row.count, sessions: row.uniqueSessions }); continue; }
     const point = daily.get(key) || { count: 0, sessions: 0 };
     point.count += row.count; point.sessions += row.uniqueSessions; daily.set(key, point);
     const stepKey = `${row.type}|${row.target}`;
@@ -55,6 +61,8 @@ export function buildAnalyticsReport(rows: RollupRow[], names: Map<string, strin
       products.set(row.productId, product);
     }
   }
+  for (const [key, point] of dailyAll) daily.set(key, point);
+  for (const [key, point] of daily) { const total = totals[key.slice(0, key.indexOf('|')) as AnalyticsEventType]; total.count += point.count; total.sessions += point.sessions; }
   const series = Object.fromEntries(ANALYTICS_EVENT_TYPES.map(type => [type, days.map(day => ({ day, ...(daily.get(`${type}|${day}`) || { count: 0, sessions: 0 }) }))])) as Record<AnalyticsEventType, ({ day: string } & Tally)[]>;
   const topProducts = [...products].sort(([, a], [, b]) => b.views - a.views || b.adds - a.adds).slice(0, 10).map(([productId, p]) => ({
     productId, name: names.get(productId) ?? 'Producto eliminado', impressions: p.impressions, cardClicks: p.cardClicks, views: p.views, adds: p.adds,
