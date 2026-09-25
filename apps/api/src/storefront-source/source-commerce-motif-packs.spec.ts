@@ -2,9 +2,11 @@ jest.setTimeout(90_000);
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { chromium, type Browser, type Page } from 'playwright';
 import { kitPath } from '@pagosya/storefront-kit';
 import { fixturePack } from './fixtures/motif-pack';
 import { LAMP_SVG } from './fixtures/motifs';
+import { contrastRatio } from './source-scorecard';
 import { sourceMotifConfig, sourceMotifPaths } from './source-motifs';
 import type { SourceDnaMotif } from './source-dna';
 
@@ -21,6 +23,18 @@ const PRODUCT = '<main data-pagosya-product-page></main><section data-pagosya-ca
 const own = (...motifs: SourceDnaMotif[]) => sourceMotifConfig(motifs, sourceMotifPaths(motifs).map(path => ({ path, content: LAMP_SVG })));
 const opened: any[] = [];
 afterEach(() => { while (opened.length) opened.pop().close(); });
+let browser: Browser | undefined;
+const chrome = async () => (browser ??= await chromium.launch({ headless: true }));
+afterAll(async () => { await browser?.close(); });
+async function openShop(options: { pack?: unknown; css?: string; body?: string; query?: string; width?: number; dna?: Record<string, unknown>; reduced?: boolean; cart?: unknown[] }): Promise<Page> {
+  const page = await (await chrome()).newPage({ viewport: { width: options.width ?? 1280, height: 800 }, reducedMotion: options.reduced ? 'reduce' : 'no-preference' });
+  const config = { slug: 'huellitas', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', demo: true, data: { storeName: 'Huellitas', items: ITEMS, categories: [{ id: 'snacks', name: 'Snacks' }] },
+    dna: options.dna ?? { version: 1, motion: 'calm' }, ...(options.pack ? { motifPack: options.pack } : {}) };
+  await page.setContent(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${options.css ?? ''}</style></head><body>${options.body ?? CATALOG}</body></html>`);
+  await page.addScriptTag({ content: `window.PAGOSYA_PREVIEW=true;window.PAGOSYA_PREVIEW_QUERY=${JSON.stringify(options.query ?? '')};${options.cart ? `window.PAGOSYA_PREVIEW_CART=${JSON.stringify(options.cart)};` : ''}window.PAGOSYA_CONFIG=${JSON.stringify(config)};` });
+  await page.addScriptTag({ content: commerce });
+  return page;
+}
 
 function boot(options: { pack?: unknown; motifs?: unknown; body?: string; query?: string; cart?: unknown[]; reduced?: boolean; settings?: Record<string, unknown> } = {}) {
   const virtualConsole = new VirtualConsole();
@@ -74,15 +88,15 @@ describe('pack placements the kit already had: product, card, cart', () => {
     const { $$, tick } = boot({ pack: fixturePack(), motifs: own({ for: 'product', target: 'galletas', meaning: 'm', behavior: 'glow', trigger: 'hover', placement: 'card' }) });
     await tick();
     const [galleta, hueso] = $$('.menu-item');
-    expect(galleta.querySelector('.pagosya-motif').dataset.motifBehavior).toBe('glow');
-    expect(hueso.querySelector('.pagosya-motif').dataset.motifBehavior).toBe('bounce');
+    expect(galleta.querySelector('.pagosya-motif[data-motif-slot="card"]').dataset.motifBehavior).toBe('glow');
+    expect(hueso.querySelector('.pagosya-motif[data-motif-slot="card"]').dataset.motifBehavior).toBe('bounce');
   });
 
   it('uses one pack of at most 8 placements, each placement once', async () => {
     const pack = fixturePack();
     const { $$, tick } = boot({ pack: { id: pack.id, motifs: [...pack.motifs, ...pack.motifs.map(motif => ({ ...motif, behavior: 'spin' }))] } });
     await tick();
-    expect($$('.menu-item .pagosya-motif').map((holder: any) => holder.dataset.motifBehavior)).toEqual(['bounce', 'bounce']);
+    expect($$('.menu-item .pagosya-motif[data-motif-slot="card"]').map((holder: any) => holder.dataset.motifBehavior)).toEqual(['bounce', 'bounce']);
   });
 
   it('never inserts a hostile pack drawing: script, foreignObject, external href, handler, external url()', async () => {
@@ -135,5 +149,104 @@ describe('the empty placement', () => {
       expect(shop.$('.pagosya-motif[data-motif-slot="empty"]')).not.toBeNull();
       expect(shop.$$('.pagosya-motif[data-motif-play]')).toHaveLength(0);
     }
+  });
+});
+
+describe('the button placement and the data-motif-icon slot', () => {
+  it('puts the pack icon first in the add and buy buttons, beside the label and outside the price', async () => {
+    const product = boot({ pack: fixturePack(), body: PRODUCT, query: '?id=galleta' });
+    const buy = product.$('.product-detail__buy');
+    const slot = buy.firstElementChild;
+    expect(slot.getAttribute('data-motif-icon')).toBe('placed');
+    expect(slot.getAttribute('aria-hidden')).toBe('true');
+    expect(slot.querySelector('.pagosya-motif[data-motif-slot="button"] svg')).not.toBeNull();
+    expect(buy.textContent).toContain('Añadir al pedido');
+    expect(buy.querySelector('.product-detail__buy-total .pagosya-motif')).toBeNull();
+    const catalog = boot({ pack: fixturePack() });
+    await catalog.tick();
+    expect(catalog.$$('.menu-add > [data-motif-icon="placed"] .pagosya-motif')).toHaveLength(2);
+  });
+
+  it('never decorates the cart\'s checkout or pay button', async () => {
+    const shop = boot({ pack: fixturePack(), cart: [{ id: 'galleta', quantity: 1 }] });
+    await shop.tick();
+    shop.$('[data-cart-open]').click();
+    await shop.tick();
+    expect(shop.$$('.checkout-button').length).toBeGreaterThan(0);
+    expect(shop.$$('.checkout-button:not(.product-detail__buy) .pagosya-motif')).toHaveLength(0);
+  });
+
+  it('fills a store\'s own slot, skips one inside a <template>, and fills one the store\'s scripts add later', async () => {
+    const shop = boot({ pack: fixturePack(), body: CATALOG + '<a class="cta" href="#catalogo">Ver snacks <span data-motif-icon></span></a>' });
+    expect(shop.$('.cta [data-motif-icon="placed"] .pagosya-motif')).not.toBeNull();
+    const fresh = shop.doc.createElement('a');
+    fresh.className = 'cta2'; fresh.innerHTML = 'Comprar <span data-motif-icon></span>';
+    shop.doc.body.append(fresh);
+    // React puts a <template>'s children on the element itself: they sit in the document but must stay untouched.
+    const template = shop.doc.createElement('template'), inner = shop.doc.createElement('span');
+    inner.setAttribute('data-motif-icon', ''); template.appendChild(inner); shop.doc.body.append(template);
+    await shop.tick();
+    expect(shop.$('.cta2 [data-motif-icon="placed"] .pagosya-motif')).not.toBeNull();
+    expect(inner.getAttribute('data-motif-icon')).toBe('');
+    expect(inner.childNodes).toHaveLength(0);
+  });
+
+  it('leaves a store\'s slot empty, with no pack style, when there is no pack button drawing', () => {
+    for (const pack of [undefined, fixturePack(['card', 'empty'])]) {
+      const shop = boot({ pack, body: CATALOG + '<a class="cta" href="#">Ver <span data-motif-icon></span></a>' });
+      expect(shop.$('.cta [data-motif-icon]').getAttribute('data-motif-icon')).toBe('');
+      expect(shop.$('.cta [data-motif-icon]').childNodes).toHaveLength(0);
+    }
+  });
+
+  it('plays on hover and never with reduced motion', async () => {
+    for (const reduced of [false, true]) {
+      const shop = boot({ pack: fixturePack(), body: PRODUCT, query: '?id=galleta', reduced });
+      const buy = shop.$('.product-detail__buy');
+      buy.dispatchEvent(new shop.w.Event('pointerenter'));
+      expect(buy.querySelector('.pagosya-motif').hasAttribute('data-motif-play')).toBe(!reduced);
+    }
+  });
+});
+
+describe('button icons in a real browser', () => {
+  it('removes the icon from a narrow phone button whose label it would wrap, and keeps it on a roomy one', async () => {
+    const body = CATALOG + '<p><button class="narrow" type="button">Comprar ahora<span data-motif-icon></span></button></p><p><button class="wide" type="button">Comprar ahora <span data-motif-icon></span></button></p>';
+    // Monospace: 13ch is exactly the label, so the label fits alone and the icon (1.15em + gap) cannot.
+    const css = 'body{margin:8px} button{font:16px/1.25 monospace;padding:6px 8px;box-sizing:border-box} .narrow{width:calc(13ch + 20px)}';
+    const page = await openShop({ pack: fixturePack(), body, css, width: 320 });
+    try {
+      await page.waitForSelector('.wide [data-motif-icon="placed"] svg');
+      await page.waitForFunction(() => document.querySelector('.narrow [data-motif-icon]')?.getAttribute('data-motif-icon') === 'removed');
+      expect(await page.$('.narrow .pagosya-motif')).toBeNull();
+      // Back on one line: as tall as the roomy button that kept its icon.
+      const [narrow, wide] = await Promise.all(['.narrow', '.wide'].map(selector => page.$eval(selector, el => el.getBoundingClientRect().height)));
+      expect(Math.abs(narrow - wide)).toBeLessThan(3);
+      expect(await page.$('.wide .pagosya-motif')).not.toBeNull();
+    } finally { await page.close(); }
+  });
+
+  it('removes the icon from a small fixed round add button it would overflow', async () => {
+    const css = '[data-pagosya-catalog] .menu-add{display:inline-flex!important;align-items:center;justify-content:center;width:36px!important;height:36px!important;min-height:0!important;padding:0!important;overflow:hidden}';
+    const page = await openShop({ pack: fixturePack(), css, width: 390 });
+    try {
+      await page.waitForSelector('.menu-add');
+      await page.waitForTimeout(120);
+      expect(await page.$$eval('.menu-add .pagosya-motif', els => els.length)).toBe(0);
+    } finally { await page.close(); }
+  });
+
+  it('keeps the buy button\'s label on one line with the icon and never over its total', async () => {
+    const page = await openShop({ pack: fixturePack(), body: PRODUCT, query: '?id=galleta', width: 390 });
+    try {
+      await page.waitForSelector('[data-pagosya-product] .product-detail__buy [data-motif-icon="placed"] svg');
+      await page.waitForTimeout(120);
+      const facts = await page.$eval('[data-pagosya-product] .product-detail__buy', buy => {
+        const icon = buy.querySelector('.pagosya-motif')!.getBoundingClientRect(), total = buy.querySelector('.product-detail__buy-total')?.getBoundingClientRect();
+        return { height: buy.getBoundingClientRect().height, overlaps: !!total && total.width > 0 && total.left < icon.right && total.right > icon.left && total.top < icon.bottom && total.bottom > icon.top };
+      });
+      expect(facts.overlaps).toBe(false);
+      expect(facts.height).toBeLessThan(64);
+    } finally { await page.close(); }
   });
 });

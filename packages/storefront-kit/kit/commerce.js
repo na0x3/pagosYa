@@ -1063,7 +1063,7 @@
       for (const child of [...copy.children]) (child.matches('.product-detail__options,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__highlights,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
     }
-    if (MOTIFS.length) placeProductMotif(p);
+    if (MOTIFS.length) { placeProductMotif(p); placeButtonMotifs(detail); }
     watchHighlights();
     watchStickyBar();
     decorateProductReviews();
@@ -1552,6 +1552,61 @@
       armMotif(holder, host);
     }
   }
+  /* The button placement and the data-motif-icon slot (T2a/T2b): the pack's small drawing beside the label of the add and
+   * buy buttons, and inside any element a store marks data-motif-icon (its own calls to action). Never on the cart's
+   * checkout or pay buttons, never over a price, and never at the cost of the label: an icon that would wrap the label or
+   * overflow its button is taken out again (the slot says "removed", so it is not retried). */
+  const MOTIF_PRICES = '.menu-item__price,[data-product-field="price"],[data-product-pricing],.product-detail__buy-total,.order-total';
+  const KIT_ICON_BUTTONS = '.menu-add,.product-detail__buy,.product-detail__sticky button';
+  const NO_ICON = '.checkout-button:not(.product-detail__buy),[data-pay],[data-checkout],[data-finish-demo],template *';
+  function fillIconSlot(slot, button) {
+    const index = packMotif('button');
+    if (index < 0 || slot.getAttribute('data-motif-icon') === 'placed') return;
+    const holder = motifSlot(index, 'button');
+    if (!holder) return;
+    const before = button.getBoundingClientRect();
+    const spareX = button.scrollWidth - button.clientWidth, spareY = button.scrollHeight - button.clientHeight;
+    slot.replaceChildren(holder);
+    slot.setAttribute('data-motif-icon', 'placed');
+    slot.setAttribute('aria-hidden', 'true');
+    armMotif(holder, button);
+    const check = () => {
+      if (!holder.isConnected) return;
+      const after = button.getBoundingClientRect();
+      if (!after.width) return; // nothing laid out to measure
+      const box = holder.getBoundingClientRect();
+      const wraps = before.height > 0 && after.height > before.height + 1;
+      // A flex button can hide true overflow by shrinking its other content instead of growing: measure with every
+      // child's shrink neutralised (a same-frame, no-paint probe), then put every value straight back.
+      const kids = [...button.children], shrinks = kids.map(kid => kid.style.flexShrink);
+      kids.forEach(kid => { kid.style.flexShrink = '0'; });
+      const overflows = button.scrollWidth - button.clientWidth > Math.max(0, spareX) + 1 || button.scrollHeight - button.clientHeight > Math.max(0, spareY) + 1;
+      kids.forEach((kid, i) => { kid.style.flexShrink = shrinks[i]; });
+      const scope = button.closest('.menu-item,[data-custom-product],[data-pagosya-product],.product-detail__sticky') || button;
+      const onPrice = [...scope.querySelectorAll(MOTIF_PRICES)].some(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; });
+      if (!wraps && !overflows && !onPrice) return;
+      holder.remove();
+      if (slot.hasAttribute('data-motif-kit')) slot.remove(); else slot.setAttribute('data-motif-icon', 'removed');
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check); else check();
+  }
+  function placeButtonMotifs(root) {
+    if (packMotif('button') < 0 || !root?.querySelectorAll) return;
+    root.querySelectorAll(KIT_ICON_BUTTONS).forEach(button => {
+      if (button.matches(NO_ICON) || button.querySelector(':scope > [data-motif-icon]')) return;
+      const slot = document.createElement('span');
+      slot.setAttribute('data-motif-icon', '');
+      slot.setAttribute('data-motif-kit', '');
+      button.insertBefore(slot, button.firstChild);
+      fillIconSlot(slot, button);
+    });
+    root.querySelectorAll('[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"])').forEach(slot => {
+      if (slot.closest('template')) return;
+      const host = slot.closest('button,a,[role="button"]') || slot;
+      if (host.matches(NO_ICON)) return;
+      fillIconSlot(slot, host);
+    });
+  }
   if (MOTIFS.length) {
     const motifStyle = document.createElement('style');
     motifStyle.dataset.pagosyaKit = 'motifs';
@@ -1595,12 +1650,33 @@
    * Later placements add their rules to this list. */
   const PACK_CSS = [
     '.pagosya-motif[data-motif-slot=empty]{display:block!important;width:64px;height:64px;margin:0 0 12px}',
+    '[data-motif-icon=placed]{display:inline-flex;vertical-align:middle;line-height:0}',
+    '[data-motif-icon=placed][data-motif-kit]{margin-inline-end:.45em}',
+    '.pagosya-motif[data-motif-slot=button]{width:1.15em;height:1.15em;color:inherit}',
+    ':root[data-dna-button=split] :is(.product-detail__buy,.product-detail__sticky button)>[data-motif-icon]{display:none}',
   ];
   if (PACK_MOTIFS.length) {
     const packStyle = document.createElement('style');
     packStyle.dataset.pagosyaKit = 'motif-pack';
     packStyle.textContent = `@layer pagosya-commerce {\n${PACK_CSS.join('\n')}\n}`;
     document.head.append(packStyle);
+  }
+  /* Store-marked slots are placed once the page is parsed, and again whenever the store's own scripts (React) add or
+   * replace them. Only a store with a pack observes anything. */
+  const MOTIF_SLOTS = '[data-motif-icon]:not([data-motif-icon="placed"]):not([data-motif-icon="removed"])';
+  function placeIdentityMotifs(root) { placeButtonMotifs(root); }
+  if (PACK_MOTIFS.length) {
+    const startIdentity = () => {
+      placeIdentityMotifs(document.body);
+      if (typeof MutationObserver !== 'function') return;
+      new MutationObserver(records => {
+        for (const record of records) for (const node of record.addedNodes) {
+          if (node.nodeType !== 1 || node.classList?.contains('pagosya-motif')) continue;
+          if (node.matches?.(MOTIF_SLOTS) || node.querySelector?.(MOTIF_SLOTS)) { placeIdentityMotifs(node.parentElement || node); return; }
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) startIdentity(); else document.addEventListener('DOMContentLoaded', startIdentity, { once: true });
   }
   const shoppingStyle = document.createElement('style');
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
@@ -2130,7 +2206,7 @@
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
-      if (MOTIFS.length) placeCardMotifs(el);
+      if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     observeCards();
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
