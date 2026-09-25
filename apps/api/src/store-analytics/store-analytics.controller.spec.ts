@@ -27,10 +27,10 @@ describe('POST v1/stores/public/:slug/events', () => {
     expect(ingest).toHaveBeenCalledWith('shop', body, { userAgent: 'UA/1', gpc: true, origin: 'https://pay.pagosya.test' });
   });
 
-  it('is throttled to 30 requests a minute', () => {
+  it('is throttled to 240 requests a minute per IP (shoppers behind one carrier NAT share an address)', () => {
     const limits = Reflect.getMetadata('THROTTLER:LIMITdefault', StoreAnalyticsPublicController.prototype.record);
     const ttl = Reflect.getMetadata('THROTTLER:TTLdefault', StoreAnalyticsPublicController.prototype.record);
-    expect([limits, ttl]).toEqual([30, 60000]);
+    expect([limits, ttl]).toEqual([240, 60000]);
   });
 });
 

@@ -18,7 +18,11 @@ class AnalyticsQuery {
 @Controller('v1/stores/public/:slug/events')
 export class StoreAnalyticsPublicController {
   constructor(private readonly analytics: StoreAnalyticsService) {}
-  @Post() @HttpCode(202) @Throttle({ default: { limit: 30, ttl: 60000 } })
+  /**
+   * 240 a minute per IP: Bolivian mobile carriers put many shoppers behind one NAT address, and one busy tab sends a
+   * batch every 5 s. What a single abuser can do is bounded by the per-store daily ceiling and the rollup's per-session cap.
+   */
+  @Post() @HttpCode(202) @Throttle({ default: { limit: 240, ttl: 60000 } })
   record(@Param('slug') slug: string, @Body() body: Record<string, unknown>, @Headers('user-agent') userAgent?: string, @Headers('sec-gpc') gpc?: string, @Headers('origin') origin?: string) {
     return this.analytics.ingest(slug, body, { userAgent, gpc: gpc === '1', origin });
   }
